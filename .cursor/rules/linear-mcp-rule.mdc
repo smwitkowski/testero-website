@@ -1,0 +1,23 @@
+---
+description: This rule provides guidance on using Linear effectively, adhering to the core principles and practices of the "Linear Method" to enhance productivity and maintain focus when managing software projects. Use this when discussing Linear tasks, planning cycles, or reviewing project progress.
+globs: 
+alwaysApply: false
+---
+### Core Principles
+
+1.  **Build for the Creators:** Prioritize keeping individual contributors productive. Focus on the end-users (engineers, designers) when discussing or assigning work. Avoid getting bogged down in generating perfect reports if it hinders individual flow.
+2.  **Purpose-Built:** Recognize that Linear is designed for specific workflows. Avoid trying to force highly customized or complex processes onto it that deviate significantly from its intended use. Stick to standard concepts like Projects, Cycles, and Issues.
+3.  **Create Momentum, Don't Sprint:** Emphasize finding a sustainable cadence through Cycles (e.g., 1-2 weeks). Avoid overloading cycles; it's okay for unfinished work to move to the next cycle. The goal is steady progress, not burnout.
+4.  **Meaningful Direction:** Ensure daily tasks (Issues) connect to larger goals (Projects, Initiatives). Regularly reference the project or initiative an issue belongs to.
+5.  **Aim for Clarity:** Use standard terminology (Project, Cycle, Issue, Bug). Avoid team-specific jargon when interacting with Linear or discussing tasks.
+6.  **Say No to Busy Work:** Automate or minimize "work about work." Focus discussions and actions on tasks that deliver value, not just tool upkeep.
+7.  **Simple First, Then Powerful:** Start with basic Linear features. Introduce more advanced functionalities (Roadmaps, Initiatives, custom Views) only as the team scales and complexity genuinely requires them.
+8.  **Decide and Move On:** Encourage decisiveness. If blocked on a minor decision regarding a Linear task, prioritize making a choice and progressing rather than getting stuck.
+
+### Key Practices
+
+1.  **Connect Work to Goals:** When creating or discussing issues, always link them to a Project. Ensure Projects align with higher-level Initiatives or Roadmaps if used.
+2.  **Work in Cycles:** Plan work in fixed-length cycles (e.g., 1-2 weeks). Review progress at the end of cycles. Unfinished *planned* work should roll over automatically.
+3.  **Manageable Backlog:** Keep the backlog focused. Regularly triage and archive/close issues that are unlikely to be addressed. Don't let the backlog become a dumping ground. Prioritize ruthlessly during cycle planning.
+4.  **Mix Feature and Quality Work:** Intentionally include bugs, tech debt, and quality improvements in each cycle alongside new feature work. Use labels (`Bug`, `Improvement`) appropriately.
+5.  **Use Standard Features:** Leverage built-in features like Projects, Cycles, Labels, Priorities, Statuses, and Views as intended before considering complex workarounds.

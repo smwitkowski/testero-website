@@ -1,0 +1,88 @@
+import { StaggeredText } from "@/components/ui/staggered-text";
+import { HoverButton } from "@/components/ui/hover-button";
+import { BenefitsSection } from "@/components/ui/benefits-section";
+import { WaitlistForm } from "@/components/ui/waitlist-form";
+import { SocialProofSection } from "@/components/ui/social-proof-section";
+import { FinalCtaSection } from "@/components/ui/final-cta-section";
+
+export default function Home() {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-start bg-gradient-to-b from-slate-50 to-slate-100">
+      {/* Hero Section */}
+      <div className="w-full relative flex flex-col items-center justify-center p-4 sm:p-8 md:p-24 overflow-hidden">
+        {/* Background pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-10 left-1/4 w-64 h-64 rounded-full bg-blue-500 mix-blend-multiply blur-3xl"></div>
+          <div className="absolute bottom-10 right-1/4 w-64 h-64 rounded-full bg-orange-500 mix-blend-multiply blur-3xl"></div>
+        </div>
+        
+        <div className="z-10 max-w-5xl w-full flex flex-col items-center justify-center space-y-8">
+          {/* Illustration */}
+          <div className="mb-8 flex justify-center items-center relative">
+            <div className="relative">
+              <div className="absolute -top-12 -right-16 w-24 h-24 bg-blue-50 rounded-lg shadow-sm flex items-center justify-center transform rotate-12 border border-blue-100">
+                <img src="/window.svg" alt="Cloud Platform" width={40} height={40} className="opacity-70" />
+              </div>
+              <div className="bg-gradient-to-br from-slate-100 to-slate-200 p-10 rounded-2xl shadow-lg border border-slate-200 flex items-center justify-center">
+                <img src="/globe.svg" alt="Certification" width={80} height={80} className="opacity-80" />
+              </div>
+              <div className="absolute -bottom-10 -left-14 w-28 h-28 bg-orange-50 rounded-xl shadow-sm flex items-center justify-center transform -rotate-6 border border-orange-100">
+                <img src="/file.svg" alt="Exam" width={44} height={44} className="opacity-70" />
+              </div>
+            </div>
+          </div>
+          
+          <StaggeredText className="text-center space-y-6" delay={0.2}>
+            <h1 className="text-3xl sm:text-4xl md:text-7xl font-extrabold">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-800 via-slate-700 to-slate-900">Ace Your Certification Exams</span>
+              <br/>
+              <span className="relative inline-block bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
+                Confidently
+                <span className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-red-600 rounded-full"></span>
+              </span>
+            </h1>
+            
+            {/* Sub-headline */}
+            <p className="text-lg sm:text-xl md:text-2xl text-slate-700 max-w-3xl mx-auto leading-relaxed">
+              Testero is the upcoming AI learning platform that generates always-current practice questions, builds your adaptive study plan, and predicts precisely when you're ready to ace Google Cloud, AWS, and Azure exams.
+            </p>
+
+            {/* Offer Statement with highlight box */}
+            <div className="bg-orange-50 border border-orange-100 rounded-lg px-6 py-4 max-w-3xl mx-auto">
+              <p className="text-lg md:text-xl text-orange-700 font-medium">
+                Join the waitlist today for priority beta access (July 2025), lock in a <strong className="font-semibold bg-orange-100 px-2 py-1 rounded-md">30% lifetime Pro discount</strong>, and shape the future of Testero.
+              </p>
+            </div>
+            
+            {/* Above-the-Fold CTA with styled container */}
+            <div className="pt-6 w-full max-w-md mx-auto">
+              <div className="bg-white p-5 rounded-xl shadow-md border border-slate-100">
+                <p className="text-sm text-slate-600 mb-3 font-medium">Enter your email to join the waitlist:</p>
+                <WaitlistForm buttonText="Reserve My Spot" />
+              </div>
+              <p className="text-xs text-slate-500 mt-3 opacity-75">Join 1,200+ cloud pros already on the waitlist</p>
+            </div>
+        </StaggeredText>
+        </div>
+      </div>
+
+      {/* Social Proof Section */}
+      <SocialProofSection />
+
+      {/* Benefits Section */}
+      <BenefitsSection />
+      
+      {/* Placeholder for Optional Teaser Features Section */}
+      {/* <section className="w-full bg-slate-50 py-12 md:py-20 px-6"> ... </section> */}
+
+      {/* Placeholder for Optional "Why Join Now?" Section */}
+      {/* <section className="w-full py-12 md:py-20 px-6"> ... </section> */}
+
+      {/* Final CTA Section */}
+      <FinalCtaSection />
+
+      {/* === WAITLIST PAGE CONTENT END === */}
+
+    </main>
+  );
+}
