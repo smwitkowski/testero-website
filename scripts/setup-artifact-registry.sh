@@ -32,16 +32,11 @@ else
   echo "Repository created: $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY_NAME"
 fi
 
-# Set up lifecycle policy for image cleanup
-echo "Setting up lifecycle policy for automatic cleanup of old images..."
-gcloud artifacts repositories update $REPOSITORY_NAME \
-  --location=$REGION \
-  --cleanup-policies=policy-name=keep-recent-versions,action=DELETE,condition="versionCount>10 AND tag!~^latest$ AND tag!~^v[0-9]+\.[0-9]+\.[0-9]+$"
-
-# Add another policy to clean up untagged images older than 14 days
-gcloud artifacts repositories update $REPOSITORY_NAME \
-  --location=$REGION \
-  --cleanup-policies=policy-name=cleanup-untagged,action=DELETE,condition="tag='' AND createTime<-P14D"
+# Note: Lifecycle policies need to be configured manually in the GCP Console
+echo "Note: Please set up lifecycle policies manually in the GCP Console"
+echo "Recommended policies:"
+echo "1. Keep only the 10 most recent versions (excluding 'latest' and semantic version tags)"
+echo "2. Remove untagged images older than 14 days"
 
 echo "Artifact Registry repository setup complete!"
 echo ""

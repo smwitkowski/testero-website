@@ -200,6 +200,18 @@ If you encounter issues:
 4. Ensure all required environment variables are set
 5. Check for any region-specific issues
 
+For specific issues with Artifact Registry (such as 404 errors when pushing images), refer to our detailed troubleshooting guide:
+- [Troubleshooting Artifact Registry Issues](./docs/troubleshooting-artifact-registry.md)
+
+We've also provided a troubleshooting script that can automatically identify and fix common issues:
+```bash
+# Make the script executable
+chmod +x scripts/troubleshoot-artifact-registry.sh
+
+# Run the script
+./scripts/troubleshoot-artifact-registry.sh
+```
+
 ## Cost Management
 
 Cloud Run charges based on:

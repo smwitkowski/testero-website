@@ -30,7 +30,7 @@ This script will:
 
 ## Lifecycle Policies
 
-The repository is configured with the following lifecycle policies:
+The repository should be configured with the following lifecycle policies (these need to be set up manually in the GCP Console):
 
 1. **keep-recent-versions**:
    - Action: DELETE
@@ -43,6 +43,8 @@ The repository is configured with the following lifecycle policies:
    - Description: Removes untagged images that are older than 14 days
 
 These policies help manage storage costs and keep the repository clean by automatically removing old and unused images.
+
+**Note**: The setup script previously attempted to set these policies automatically, but this feature is not available in the standard gcloud CLI. You'll need to configure these policies manually through the GCP Console.
 
 ## Usage
 
