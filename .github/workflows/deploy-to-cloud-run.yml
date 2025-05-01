@@ -92,7 +92,7 @@ jobs:
           cache-to: type=gha,mode=max
       
       - name: Image digest
-        run: echo "Image digest: ${{ steps.build-image.outputs.digest }}"
+        run: echo "Image digest=${{ steps.build-image.outputs.digest }}"
       
       - name: Set image output
         run: echo "image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }}" >> $GITHUB_OUTPUT
