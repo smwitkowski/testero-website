@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { HoverButton } from "@/components/ui/hover-button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -266,9 +266,9 @@ export function WaitlistForm({
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-slate-800">You're on the list!</h3>
+              <h3 className="text-xl font-semibold text-slate-800">You&apos;re on the list!</h3>
               <p className="text-slate-600">
-                Thanks for joining the Testero waitlist. We'll notify you when beta access is available in July 2025.
+                Thanks for joining the Testero waitlist. We&apos;ll notify you when beta access is available in July 2025.
               </p>
               <p className="text-green-600 font-medium">
                 Your 30% lifetime discount has been reserved.

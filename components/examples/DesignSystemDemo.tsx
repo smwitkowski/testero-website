@@ -1,11 +1,7 @@
 "use client";
 
 import React from 'react';
-import { colors, colorUsage } from '@/lib/design-system/colors';
-import { typography } from '@/lib/design-system/typography';
-import { spacing } from '@/lib/design-system/spacing';
-import { button, card, form, badge } from '@/lib/design-system/components';
-import { animationPresets } from '@/lib/design-system/animations';
+import { colors } from '@/lib/design-system/colors';
 import { cn } from '@/lib/utils';
 
 /**
@@ -232,7 +228,7 @@ export const DesignSystemDemo: React.FC = () => {
               type="text" 
               className={cn(
                 "w-full px-4 py-2 border border-slate-300 rounded",
-                "focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-500"
+                "focus:outline-none focus:ring-2 focus:ring-orange-100 focus:focus:border-orange-500"
               )}
               placeholder="Enter text here" 
             />
@@ -246,11 +242,11 @@ export const DesignSystemDemo: React.FC = () => {
               type="email" 
               className={cn(
                 "w-full px-4 py-2 border border-slate-300 rounded",
-                "focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-500"
+                "focus:outline-none focus:ring-2 focus:ring-orange-100 focus:focus:border-orange-500"
               )}
               placeholder="Enter email" 
             />
-            <p className="text-sm text-slate-500 mt-1">We'll never share your email with anyone else.</p>
+            <p className="text-sm text-slate-500 mt-1">We&apos;ll never share your email with anyone else.</p>
           </div>
           
           <div>
@@ -260,7 +256,7 @@ export const DesignSystemDemo: React.FC = () => {
             <select 
               className={cn(
                 "w-full px-4 py-2 border border-slate-300 rounded",
-                "focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-500"
+                "focus:outline-none focus:ring-2 focus:ring-orange-100 focus:focus:border-orange-500"
               )}
             >
               <option>Option 1</option>
@@ -276,7 +272,7 @@ export const DesignSystemDemo: React.FC = () => {
             <textarea 
               className={cn(
                 "w-full px-4 py-2 border border-slate-300 rounded",
-                "focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-500"
+                "focus:outline-none focus:ring-2 focus:ring-orange-100 focus:focus:border-orange-500"
               )}
               rows={3}
               placeholder="Enter longer text here" 
@@ -291,7 +287,7 @@ export const DesignSystemDemo: React.FC = () => {
               type="text" 
               className={cn(
                 "w-full px-4 py-2 border border-red-500 rounded",
-                "focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-500"
+                "focus:outline-none focus:ring-2 focus:ring-red-100 focus:focus:border-red-500"
               )}
               placeholder="Enter text here" 
             />

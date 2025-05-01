@@ -1,9 +1,9 @@
 import { StaggeredText } from "@/components/ui/staggered-text";
-import { HoverButton } from "@/components/ui/hover-button";
 import { BenefitsSection } from "@/components/ui/benefits-section";
 import { WaitlistForm } from "@/components/ui/waitlist-form";
 import { SocialProofSection } from "@/components/ui/social-proof-section";
 import { FinalCtaSection } from "@/components/ui/final-cta-section";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -21,13 +21,13 @@ export default function Home() {
           <div className="mb-8 flex justify-center items-center relative">
             <div className="relative">
               <div className="absolute -top-12 -right-16 w-24 h-24 bg-blue-50 rounded-lg shadow-sm flex items-center justify-center transform rotate-12 border border-blue-100">
-                <img src="/window.svg" alt="Cloud Platform" width={40} height={40} className="opacity-70" />
+                <Image src="/window.svg" alt="Cloud Platform" width={40} height={40} className="opacity-70" />
               </div>
               <div className="bg-gradient-to-br from-slate-100 to-slate-200 p-10 rounded-2xl shadow-lg border border-slate-200 flex items-center justify-center">
-                <img src="/globe.svg" alt="Certification" width={80} height={80} className="opacity-80" />
+                <Image src="/globe.svg" alt="Certification" width={80} height={80} className="opacity-80" />
               </div>
               <div className="absolute -bottom-10 -left-14 w-28 h-28 bg-orange-50 rounded-xl shadow-sm flex items-center justify-center transform -rotate-6 border border-orange-100">
-                <img src="/file.svg" alt="Exam" width={44} height={44} className="opacity-70" />
+                <Image src="/file.svg" alt="Exam" width={44} height={44} className="opacity-70" />
               </div>
             </div>
           </div>
@@ -44,7 +44,7 @@ export default function Home() {
             
             {/* Sub-headline */}
             <p className="text-lg sm:text-xl md:text-2xl text-slate-700 max-w-3xl mx-auto leading-relaxed">
-              Testero is the upcoming AI learning platform that generates always-current practice questions, builds your adaptive study plan, and predicts precisely when you're ready to ace Google Cloud, AWS, and Azure exams.
+              Testero is the upcoming AI learning platform that generates always-current practice questions, builds your adaptive study plan, and predicts precisely when you&apos;re ready to ace Google Cloud, AWS, and Azure exams.
             </p>
 
             {/* Offer Statement with highlight box */}

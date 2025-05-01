@@ -2,10 +2,8 @@
 
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { colors, colorUsage } from '@/lib/design-system/colors';
-import { animationPresets, duration, easing } from '@/lib/design-system/animations';
-import { spacing } from '@/lib/design-system/spacing';
-import { card } from '@/lib/design-system/components';
+import { colors } from '@/lib/design-system/colors';
+import { duration, easing } from '@/lib/design-system/animations';
 
 interface BenefitCardProps {
   icon: React.ReactNode;

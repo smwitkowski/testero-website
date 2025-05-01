@@ -3,9 +3,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { colors } from '@/lib/design-system/colors';
-import { animationPresets, duration, easing } from '@/lib/design-system/animations';
-import { spacing } from '@/lib/design-system/spacing';
-import { card } from '@/lib/design-system/components';
+import { duration, easing } from '@/lib/design-system/animations';
 
 interface SocialProofCardProps {
   icon: React.ReactNode;
@@ -161,7 +159,7 @@ export function SocialProofSection() {
               </svg>
             }
             title="Real Results"
-            subtitle='"Cut my study time in half!"'
+            subtitle='&quot;Cut my study time in half!&quot;'
             color={colors.accent[600]}
             delay={duration.fast * 5}
           />
@@ -176,7 +174,7 @@ export function SocialProofSection() {
           }}
         >
           <blockquote className="text-base sm:text-lg italic text-slate-700">
-            "Testero's AI-powered practice questions helped me focus on what matters most. I felt more confident and passed my certification on the first try!"
+            &quot;Testero&apos;s AI-powered practice questions helped me focus on what matters most. I felt more confident and passed my certification on the first try!&quot;
           </blockquote>
           <div className="mt-4 flex items-center justify-center">
             <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center text-slate-700 font-medium">JD</div>

@@ -26,7 +26,8 @@ export async function POST(req: NextRequest) {
     console.log("Waitlist submission:", result.data);
 
     return NextResponse.json({ success: true });
-  } catch (err) {
+  } catch (error: Error | unknown) {
+    console.error(error);
     return NextResponse.json(
       { error: "Failed to process submission" },
       { status: 500 }
