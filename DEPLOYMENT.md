@@ -50,12 +50,33 @@ gcloud services enable artifactregistry.googleapis.com
 
 ### 3.1. Create Artifact Registry repository
 
+We've provided a script to create and configure the Artifact Registry repository:
+
+```bash
+# Make the script executable
+chmod +x scripts/setup-artifact-registry.sh
+
+# Run the script
+./scripts/setup-artifact-registry.sh
+```
+
+This script will:
+1. Check if the repository already exists
+2. Create a Docker repository named `testero` in the us-central1 region if it doesn't exist
+3. Set up lifecycle policies for automatic cleanup:
+   - Keep only the 10 most recent versions (excluding 'latest' and semantic version tags)
+   - Remove untagged images older than 14 days
+
+Alternatively, you can create the repository manually:
+
 ```bash
 gcloud artifacts repositories create testero \
   --repository-format=docker \
   --location=us-central1 \
   --description="Docker repository for Testero frontend"
 ```
+
+Note that the manual approach doesn't set up lifecycle policies.
 
 ### 4. Build and deploy manually
 
@@ -83,9 +104,33 @@ gcloud run deploy testero-frontend \
   --set-env-vars=NODE_ENV=production
 ```
 
-## Automated Deployment with Cloud Build
+## Automated Deployment
 
-For automated CI/CD deployment:
+### GitHub Actions
+
+For automated CI/CD deployment using GitHub Actions:
+
+1. Set up the required GitHub secrets as described in [GitHub Secrets Setup](./docs/github-secrets-setup.md)
+2. Push to the main branch to trigger the full CI/CD pipeline
+3. Create pull requests to run code quality checks and build verification without deployment
+
+The comprehensive CI/CD pipeline is configured in `.github/workflows/deploy-to-cloud-run.yml` and includes:
+
+- **Code Quality Checks**: Linting and type checking
+- **Build Verification**: Building and pushing Docker images
+- **Deployment**: Deploying to Cloud Run (only on main branch)
+
+The workflow provides:
+- Automated quality checks for all pull requests
+- Build verification without deployment for pull requests
+- Full deployment pipeline for main branch pushes
+- Status notifications for deployment success or failure
+
+See [GitHub Actions Deployment](./docs/github-actions-deployment.md) for detailed information about the CI/CD pipeline.
+
+### Cloud Build (Alternative)
+
+Alternatively, you can use Cloud Build for automated CI/CD deployment:
 
 1. Connect your GitHub repository to Cloud Build
 2. Create a trigger that uses the `cloudbuild.yaml` configuration
