@@ -57,7 +57,7 @@ jobs:
       id-token: write
     
     outputs:
-      image: ${{ steps.build-image.outputs.image }}
+      image: ${{ steps.set-image.outputs.image }}
     
     steps:
       - name: Checkout code
@@ -95,7 +95,8 @@ jobs:
         run: echo "Image digest=${{ steps.build-image.outputs.digest }}"
       
       - name: Set image output
-        run: echo "image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }}" >> $GITHUB_OUTPUT
+        id: set-image
+        run: echo "image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
   
   # Job for deploying to Cloud Run (only on main branch)
   deploy:
