@@ -124,7 +124,7 @@ jobs:
       
       # ----- Add this step for debugging -----
       - name: Debug Image Output
-        run: echo "Image from build job is: [${{ needs.build.outputs.image }}]"
+        run: echo Image from build job is: [${{ needs.build.outputs.image }}]
       # --------------------------------------
       
       - name: Deploy to Cloud Run
