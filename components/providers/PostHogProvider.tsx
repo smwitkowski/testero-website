@@ -2,7 +2,7 @@
 import { PostHogProvider as PHProvider, usePostHog } from 'posthog-js/react'
 import posthog from 'posthog-js'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useEffect, ReactNode } from 'react'
+import { useEffect, ReactNode, Suspense } from 'react' // Import Suspense
 
 // Check that PostHog is client-side (used to handle Next.js SSR)
 if (typeof window !== 'undefined') {
@@ -43,7 +43,10 @@ export function PostHogProvider({ children }: { children: ReactNode }) {
   return (
     <PHProvider client={posthog}>
       {children}
-      <PostHogPageview />
+      {/* Wrap PostHogPageview in Suspense */}
+      <Suspense fallback={null}>
+        <PostHogPageview />
+      </Suspense>
     </PHProvider>
   )
 }
