@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { usePostHog } from "posthog-js/react"; // Import usePostHog
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { HoverButton } from "@/components/ui/hover-button";
@@ -26,6 +27,7 @@ interface WaitlistFormProps {
   className?: string;
   buttonText?: string;
   includeExamDropdown?: boolean;
+  ctaLocation?: string; // Add optional prop for CTA location context
   onSuccess?: (data: FormValues) => void;
 }
 
@@ -33,12 +35,14 @@ export function WaitlistForm({
   className = "", 
   buttonText = "Join the Waitlist & Get 30% Off",
   includeExamDropdown = false,
+  ctaLocation = 'unknown', // Default location if not provided
   onSuccess 
 }: WaitlistFormProps) {
   // Form submission states
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const posthog = usePostHog(); // Get PostHog instance
 
   // Initialize the form
   const form = useForm<FormValues>({
@@ -70,13 +74,28 @@ export function WaitlistForm({
       // Handle success
       setIsSuccess(true);
 
+      // Capture PostHog event
+      if (posthog) {
+        posthog.capture('waitlist_joined', {
+          email: data.email,
+          examType: data.examType || 'not_selected', // Include exam type if present
+        });
+      }
+
       // Call the success callback if provided
       if (onSuccess) {
         onSuccess(data);
       }
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Something went wrong. Please try again.";
       // Handle error
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(errorMessage);
+      // Capture PostHog error event
+      if (posthog) {
+        posthog.capture('waitlist_form_submission_error', {
+          error_message: errorMessage,
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -125,6 +144,11 @@ export function WaitlistForm({
                             autoComplete="email"
                             autoFocus
                             {...field}
+                            onFocus={() => { // Track form interaction start
+                              if (posthog) {
+                                posthog.capture('waitlist_form_interaction_start');
+                              }
+                            }}
                           />
                         </FormControl>
                         
@@ -189,6 +213,11 @@ export function WaitlistForm({
                   className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-xl font-semibold shadow-lg w-full transition-all"
                   type="submit"
                   disabled={isSubmitting}
+                  onClick={() => { // Track CTA click intent using the location prop
+                    if (posthog) {
+                      posthog.capture('cta_click', { cta_location: ctaLocation });
+                    }
+                  }}
                 >
                   {isSubmitting ? (
                     <div className="flex items-center justify-center">

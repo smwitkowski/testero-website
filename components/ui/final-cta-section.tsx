@@ -101,6 +101,7 @@ export function FinalCtaSection() {
               includeExamDropdown={true} 
               buttonText="Claim My Spot & Discount" 
               className="space-y-5"
+              ctaLocation="final_cta_section" // Add location prop here
             />
             
             {/* Trust indicators */}
