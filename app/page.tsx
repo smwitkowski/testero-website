@@ -1,3 +1,8 @@
+"use client"; // Make this a client component
+
+import { useEffect } from "react";
+import { useInView } from "react-intersection-observer";
+import { usePostHog } from "posthog-js/react";
 import { StaggeredText } from "@/components/ui/staggered-text";
 import { BenefitsSection } from "@/components/ui/benefits-section";
 import { WaitlistForm } from "@/components/ui/waitlist-form";
@@ -5,7 +10,28 @@ import { SocialProofSection } from "@/components/ui/social-proof-section";
 import { FinalCtaSection } from "@/components/ui/final-cta-section";
 import Image from "next/image";
 
+// Helper hook for tracking section views
+function useTrackSectionView(sectionName: string) {
+  const posthog = usePostHog();
+  const { ref, inView } = useInView({
+    triggerOnce: true, // Only trigger once per section
+    threshold: 0.1, // Trigger when 10% of the section is visible
+  });
+
+  useEffect(() => {
+    if (inView && posthog) {
+      posthog.capture('section_viewed', { section_name: sectionName });
+    }
+  }, [inView, sectionName, posthog]);
+
+  return ref;
+}
+
 export default function Home() {
+  const socialProofRef = useTrackSectionView("social_proof");
+  const benefitsRef = useTrackSectionView("benefits");
+  const finalCtaRef = useTrackSectionView("final_cta");
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-start bg-gradient-to-b from-slate-50 to-slate-100">
       {/* Hero Section */}
@@ -58,7 +84,7 @@ export default function Home() {
             <div className="pt-6 w-full max-w-md mx-auto">
               <div className="bg-white p-5 rounded-xl shadow-md border border-slate-100">
                 <p className="text-sm text-slate-600 mb-3 font-medium">Enter your email to join the waitlist:</p>
-                <WaitlistForm buttonText="Reserve My Spot" />
+                <WaitlistForm buttonText="Reserve My Spot" ctaLocation="hero_section" />
               </div>
               <p className="text-xs text-slate-500 mt-3 opacity-75">Join 1,200+ cloud pros already on the waitlist</p>
             </div>
@@ -67,10 +93,14 @@ export default function Home() {
       </div>
 
       {/* Social Proof Section */}
-      <SocialProofSection />
+      <div ref={socialProofRef}>
+        <SocialProofSection />
+      </div>
 
       {/* Benefits Section */}
-      <BenefitsSection />
+      <div ref={benefitsRef}>
+        <BenefitsSection />
+      </div>
       
       {/* Placeholder for Optional Teaser Features Section */}
       {/* <section className="w-full bg-slate-50 py-12 md:py-20 px-6"> ... </section> */}
@@ -79,7 +109,9 @@ export default function Home() {
       {/* <section className="w-full py-12 md:py-20 px-6"> ... </section> */}
 
       {/* Final CTA Section */}
-      <FinalCtaSection />
+      <div ref={finalCtaRef}>
+        <FinalCtaSection />
+      </div>
 
       {/* === WAITLIST PAGE CONTENT END === */}
 
