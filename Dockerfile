@@ -5,6 +5,17 @@ FROM node:20-alpine AS base
 FROM base AS deps
 WORKDIR /app
 
+# Install system dependencies for Sharp image processing
+RUN apk add --no-cache \
+    build-base \
+    g++ \
+    cairo-dev \
+    jpeg-dev \
+    pango-dev \
+    giflib-dev \
+    librsvg-dev \
+    fontconfig-dev
+
 # Copy package.json and package-lock.json
 COPY package.json package-lock.json ./
 
@@ -14,6 +25,18 @@ RUN npm ci
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+
+# Install system dependencies for Sharp image processing in the builder stage
+RUN apk add --no-cache \
+    build-base \
+    g++ \
+    cairo-dev \
+    jpeg-dev \
+    pango-dev \
+    giflib-dev \
+    librsvg-dev \
+    fontconfig-dev
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 

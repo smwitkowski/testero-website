@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "generate:sitemap": "node scripts/generate-sitemap.js",
-    "generate:social-images": "node scripts/generate-social-images.js",
+    "generate:social-images": "node scripts/generate-social-images.js || echo 'Warning: Social image generation failed, continuing build'",
     "generate:seo": "npm run generate:sitemap && npm run generate:social-images",
     "prebuild": "npm run generate:seo"
   },
