@@ -7,6 +7,7 @@ A modern frontend application built with:
 - shadcn/ui
 - TypeScript
 - Tailwind CSS
+- PostHog
 
 ## Getting Started
 
