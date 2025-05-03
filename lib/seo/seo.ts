@@ -1,4 +1,33 @@
 import type { Metadata, Viewport } from "next";
+import fs from "fs";
+import path from "path";
+
+// Define image URL types
+type ImageUrls = {
+  ogImage: {
+    jpg: string;
+    webp: string;
+  };
+  twitterImage: {
+    jpg: string;
+    webp: string;
+  };
+  logo: {
+    png: string;
+    webp: string;
+  };
+};
+
+// Try to load CDN image URLs if available
+let cdnImageUrls: ImageUrls | null = null;
+try {
+  const imageUrlsPath = path.join(process.cwd(), 'public', 'image-urls.json');
+  if (fs.existsSync(imageUrlsPath)) {
+    cdnImageUrls = JSON.parse(fs.readFileSync(imageUrlsPath, 'utf8')) as ImageUrls;
+  }
+} catch (error) {
+  console.warn('Failed to load CDN image URLs:', error);
+}
 
 type SeoProps = {
   title?: string;
@@ -8,6 +37,7 @@ type SeoProps = {
   twitterImage?: string;
   noIndex?: boolean;
   canonical?: string;
+  useCdn?: boolean;
 };
 
 /**
@@ -35,7 +65,12 @@ export function generateMetadata(props: SeoProps = {}): Metadata {
     twitterImage = "/twitter-image.jpg",
     noIndex = false,
     canonical = "/",
+    useCdn = true,
   } = props;
+
+  // Use CDN URLs if available and enabled
+  const finalOgImage = (useCdn && cdnImageUrls?.ogImage?.jpg) || ogImage;
+  const finalTwitterImage = (useCdn && cdnImageUrls?.twitterImage?.jpg) || twitterImage;
 
   return {
     metadataBase: new URL("https://testero.ai"),
@@ -66,10 +101,14 @@ export function generateMetadata(props: SeoProps = {}): Metadata {
       description,
       images: [
         {
-          url: ogImage,
+          url: finalOgImage,
           width: 1200,
           height: 630,
           alt: "Testero - AI-Powered Certification Exam Preparation",
+          // Add WebP version if available
+          ...(useCdn && cdnImageUrls?.ogImage?.webp && {
+            secureUrl: cdnImageUrls.ogImage.webp,
+          }),
         },
       ],
     },
@@ -77,7 +116,7 @@ export function generateMetadata(props: SeoProps = {}): Metadata {
       card: "summary_large_image",
       title,
       description,
-      images: [twitterImage],
+      images: [finalTwitterImage],
       creator: "@testero_ai",
     },
   };
@@ -100,9 +139,16 @@ export function generateViewport(): Viewport {
  * Generates JSON-LD structured data for SEO
  * 
  * @param customData - Optional custom data to merge with default structured data
+ * @param useCdn - Whether to use CDN URLs for images
  * @returns JSON-LD structured data as a string
  */
-export function generateJsonLd(customData: Record<string, unknown> = {}): string {
+export function generateJsonLd(
+  customData: Record<string, unknown> = {}, 
+  useCdn: boolean = true
+): string {
+  // Use CDN URL for logo if available and enabled
+  const logoUrl = (useCdn && cdnImageUrls?.logo?.png) || "https://testero.ai/logo.png";
+  
   const defaultData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -115,8 +161,8 @@ export function generateJsonLd(customData: Record<string, unknown> = {}): string
           "@type": "ImageObject",
           "@id": "https://testero.ai/#logo",
           "inLanguage": "en-US",
-          "url": "https://testero.ai/logo.png",
-          "contentUrl": "https://testero.ai/logo.png",
+          "url": logoUrl,
+          "contentUrl": logoUrl,
           "width": 512,
           "height": 512,
           "caption": "Testero AI"

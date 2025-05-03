@@ -1,0 +1,14 @@
+{
+  "ogImage": {
+    "jpg": "https://media.testero.ai/images/og-image.jpg",
+    "webp": "https://media.testero.ai/images/og-image.webp"
+  },
+  "twitterImage": {
+    "jpg": "https://media.testero.ai/images/twitter-image.jpg",
+    "webp": "https://media.testero.ai/images/twitter-image.webp"
+  },
+  "logo": {
+    "png": "https://media.testero.ai/images/logo.png",
+    "webp": "https://media.testero.ai/images/logo.webp"
+  }
+}

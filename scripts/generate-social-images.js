@@ -1,14 +1,105 @@
-// This script generates optimized images for social sharing
+// This script generates optimized images for social sharing and uploads them to GCP Cloud Storage
 // Run with: node scripts/generate-social-images.js
+
+// Load environment variables from .env.local
+require('dotenv').config({ path: '.env.local' });
 
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
+const { Storage } = require('@google-cloud/storage');
+const os = require('os');
 
 const PUBLIC_DIR = path.join(__dirname, '../public');
+const TEMP_DIR = path.join(os.tmpdir(), 'testero-images');
+
+// GCP Storage configuration
+const BUCKET_NAME = process.env.GCP_STORAGE_BUCKET_NAME || 'testero-media';
+const CDN_URL = process.env.GCP_CDN_URL || 'https://media.testero.ai';
+const USE_GCP = process.env.USE_GCP_STORAGE === 'true';
+const PROJECT_ID = process.env.GCP_PROJECT_ID;
+
+// Debug environment variables
+console.log('Environment Variables:');
+console.log('- USE_GCP_STORAGE:', USE_GCP);
+console.log('- GCP_STORAGE_BUCKET_NAME:', BUCKET_NAME);
+console.log('- GCP_CDN_URL:', CDN_URL);
+console.log('- GCP_PROJECT_ID:', PROJECT_ID);
+
+// Create temp directory if it doesn't exist
+if (!fs.existsSync(TEMP_DIR)) {
+  fs.mkdirSync(TEMP_DIR, { recursive: true });
+}
+
+// Initialize GCP Storage client if needed
+let storage;
+if (USE_GCP) {
+  const keyFilePath = process.env.GCP_KEY_FILE_PATH;
+  
+  if (keyFilePath) {
+    storage = new Storage({
+      keyFilename: keyFilePath,
+    });
+  } else {
+    storage = new Storage();
+  }
+}
+
+/**
+ * Upload a file to GCP Cloud Storage
+ * 
+ * @param {string} filePath - Local file path
+ * @param {string} destination - Destination path in the bucket
+ * @param {object} options - Upload options
+ * @returns {string} URL of the uploaded file
+ */
+async function uploadToGCP(filePath, destination, options = {}) {
+  if (!USE_GCP) {
+    return `/${path.basename(filePath)}`;
+  }
+
+  const {
+    contentType,
+    cacheControl = 'public, max-age=31536000', // 1 year default cache
+  } = options;
+
+  const bucket = storage.bucket(BUCKET_NAME);
+  
+  // Upload options
+  const uploadOptions = {
+    destination,
+    metadata: {
+      cacheControl,
+    },
+  };
+  
+  // Add content type if provided
+  if (contentType) {
+    uploadOptions.metadata.contentType = contentType;
+  }
+
+  // Upload the file
+  await bucket.upload(filePath, uploadOptions);
+  
+  // Return the CDN URL
+  return `${CDN_URL}/${destination}`;
+}
 
 async function generateSocialImages() {
   try {
+    // File paths
+    const ogImagePath = USE_GCP 
+      ? path.join(TEMP_DIR, 'og-image.jpg')
+      : path.join(PUBLIC_DIR, 'og-image.jpg');
+    
+    const twitterImagePath = USE_GCP
+      ? path.join(TEMP_DIR, 'twitter-image.jpg')
+      : path.join(PUBLIC_DIR, 'twitter-image.jpg');
+    
+    const logoPath = USE_GCP
+      ? path.join(TEMP_DIR, 'logo.png')
+      : path.join(PUBLIC_DIR, 'logo.png');
+    
     // Generate Open Graph image (1200x630)
     await sharp({
       create: {
@@ -32,10 +123,20 @@ async function generateSocialImages() {
         gravity: 'center'
       }
     ])
-    .jpeg()
-    .toFile(path.join(PUBLIC_DIR, 'og-image.jpg'));
+    .jpeg({ quality: 90 })
+    .toFile(ogImagePath);
     
     console.log('Generated og-image.jpg');
+
+    // Generate WebP version of Open Graph image
+    if (USE_GCP) {
+      const ogImageWebPPath = path.join(TEMP_DIR, 'og-image.webp');
+      await sharp(ogImagePath)
+        .webp({ quality: 85 })
+        .toFile(ogImageWebPPath);
+      
+      console.log('Generated og-image.webp');
+    }
 
     // Generate Twitter image (same dimensions but optimized for Twitter)
     await sharp({
@@ -60,10 +161,20 @@ async function generateSocialImages() {
         gravity: 'center'
       }
     ])
-    .jpeg()
-    .toFile(path.join(PUBLIC_DIR, 'twitter-image.jpg'));
+    .jpeg({ quality: 90 })
+    .toFile(twitterImagePath);
     
     console.log('Generated twitter-image.jpg');
+
+    // Generate WebP version of Twitter image
+    if (USE_GCP) {
+      const twitterImageWebPPath = path.join(TEMP_DIR, 'twitter-image.webp');
+      await sharp(twitterImagePath)
+        .webp({ quality: 85 })
+        .toFile(twitterImageWebPPath);
+      
+      console.log('Generated twitter-image.webp');
+    }
 
     // Generate logo placeholder (512x512)
     await sharp({
@@ -85,13 +196,84 @@ async function generateSocialImages() {
       }
     ])
     .png()
-    .toFile(path.join(PUBLIC_DIR, 'logo.png'));
+    .toFile(logoPath);
     
     console.log('Generated logo.png');
+
+    // Generate WebP version of logo
+    if (USE_GCP) {
+      const logoWebPPath = path.join(TEMP_DIR, 'logo.webp');
+      await sharp(logoPath)
+        .webp({ quality: 90 })
+        .toFile(logoWebPPath);
+      
+      console.log('Generated logo.webp');
+    }
+
+    // Upload to GCP if enabled
+    if (USE_GCP) {
+      // Upload JPEG/PNG versions
+      const ogImageUrl = await uploadToGCP(ogImagePath, 'images/og-image.jpg', { contentType: 'image/jpeg' });
+      const twitterImageUrl = await uploadToGCP(twitterImagePath, 'images/twitter-image.jpg', { contentType: 'image/jpeg' });
+      const logoUrl = await uploadToGCP(logoPath, 'images/logo.png', { contentType: 'image/png' });
+      
+      console.log('Uploaded JPEG/PNG images to GCP Cloud Storage');
+      console.log(`OG Image URL: ${ogImageUrl}`);
+      console.log(`Twitter Image URL: ${twitterImageUrl}`);
+      console.log(`Logo URL: ${logoUrl}`);
+      
+      // Upload WebP versions
+      const ogImageWebPUrl = await uploadToGCP(
+        path.join(TEMP_DIR, 'og-image.webp'), 
+        'images/og-image.webp', 
+        { contentType: 'image/webp' }
+      );
+      
+      const twitterImageWebPUrl = await uploadToGCP(
+        path.join(TEMP_DIR, 'twitter-image.webp'), 
+        'images/twitter-image.webp', 
+        { contentType: 'image/webp' }
+      );
+      
+      const logoWebPUrl = await uploadToGCP(
+        path.join(TEMP_DIR, 'logo.webp'), 
+        'images/logo.webp', 
+        { contentType: 'image/webp' }
+      );
+      
+      console.log('Uploaded WebP images to GCP Cloud Storage');
+      console.log(`OG Image WebP URL: ${ogImageWebPUrl}`);
+      console.log(`Twitter Image WebP URL: ${twitterImageWebPUrl}`);
+      console.log(`Logo WebP URL: ${logoWebPUrl}`);
+      
+      // Create a JSON file with image URLs for reference
+      const imageUrls = {
+        ogImage: {
+          jpg: ogImageUrl,
+          webp: ogImageWebPUrl
+        },
+        twitterImage: {
+          jpg: twitterImageUrl,
+          webp: twitterImageWebPUrl
+        },
+        logo: {
+          png: logoUrl,
+          webp: logoWebPUrl
+        }
+      };
+      
+      fs.writeFileSync(
+        path.join(PUBLIC_DIR, 'image-urls.json'), 
+        JSON.stringify(imageUrls, null, 2)
+      );
+      
+      console.log('Created image-urls.json with CDN URLs');
+    }
 
     console.log('All social images generated successfully!');
   } catch (error) {
     console.error('Error generating social images:', error);
+    throw error; // Re-throw to ensure the build fails if images can't be generated
   }
 }
 

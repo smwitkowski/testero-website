@@ -10,11 +10,14 @@
     "generate:sitemap": "node scripts/generate-sitemap.js",
     "generate:social-images": "node scripts/generate-social-images.js || echo 'Warning: Social image generation failed, continuing build'",
     "generate:seo": "npm run generate:sitemap && npm run generate:social-images",
-    "prebuild": "npm run generate:seo"
+    "prebuild": "npm run generate:seo",
+    "setup:gcp-storage": "node scripts/setup-gcp-storage.js",
+    "gcp:enable": "cross-env USE_GCP_STORAGE=true npm run generate:social-images"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@google-cloud/storage": "^7.16.0",
     "@hookform/resolvers": "^5.0.1",
     "@mui/material": "^7.0.2",
     "@radix-ui/react-label": "^2.1.4",
@@ -42,6 +45,8 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.5.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.1",
     "prettier": "^3.5.3",
