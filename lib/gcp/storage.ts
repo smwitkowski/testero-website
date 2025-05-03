@@ -1,5 +1,4 @@
-import { Storage } from '@google-cloud/storage';
-import path from 'path';
+import { Storage, UploadOptions, SaveOptions, GetSignedUrlConfig } from '@google-cloud/storage';
 
 // Constants
 export const BUCKET_NAME = process.env.GCP_STORAGE_BUCKET_NAME || 'testero-media';
@@ -61,13 +60,22 @@ export async function uploadFile(
   const bucket = storageClient.bucket(BUCKET_NAME);
   
   // Upload options
-  const uploadOptions: any = {
+  const uploadOptions: UploadOptions = {
     destination,
     metadata: {
       cacheControl,
       metadata,
+    } as {
+      cacheControl?: string;
+      contentType?: string;
+      metadata?: Record<string, string>;
     },
   };
+  
+  // Ensure metadata is defined
+  if (!uploadOptions.metadata) {
+    uploadOptions.metadata = {};
+  }
   
   // Add content type if provided
   if (contentType) {
@@ -111,13 +119,22 @@ export async function uploadBuffer(
   const file = bucket.file(destination);
   
   // File options
-  const fileOptions: any = {
+  const fileOptions: SaveOptions = {
     resumable: false,
     metadata: {
       cacheControl,
       metadata,
+    } as {
+      cacheControl?: string;
+      contentType?: string;
+      metadata?: Record<string, string>;
     },
   };
+  
+  // Ensure metadata is defined
+  if (!fileOptions.metadata) {
+    fileOptions.metadata = {};
+  }
   
   // Add content type if provided
   if (contentType) {
@@ -158,7 +175,7 @@ export async function getSignedUrl(
   const file = bucket.file(filename);
   
   // Signed URL options
-  const signedUrlOptions: any = {
+  const signedUrlOptions: GetSignedUrlConfig = {
     action,
     expires: Date.now() + expires * 1000,
   };

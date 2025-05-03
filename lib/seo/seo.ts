@@ -1,6 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import fs from "fs";
-import path from "path";
 
 // Define image URL types
 type ImageUrls = {
@@ -18,16 +16,23 @@ type ImageUrls = {
   };
 };
 
-// Try to load CDN image URLs if available
-let cdnImageUrls: ImageUrls | null = null;
-try {
-  const imageUrlsPath = path.join(process.cwd(), 'public', 'image-urls.json');
-  if (fs.existsSync(imageUrlsPath)) {
-    cdnImageUrls = JSON.parse(fs.readFileSync(imageUrlsPath, 'utf8')) as ImageUrls;
+// Default CDN image URLs
+// In a production environment, these would be loaded from a configuration
+// or fetched from an API endpoint
+const cdnImageUrls: ImageUrls = {
+  ogImage: {
+    jpg: "/og-image.jpg",
+    webp: "/og-image.webp"
+  },
+  twitterImage: {
+    jpg: "/twitter-image.jpg",
+    webp: "/twitter-image.webp"
+  },
+  logo: {
+    png: "/logo.png",
+    webp: "/logo.webp"
   }
-} catch (error) {
-  console.warn('Failed to load CDN image URLs:', error);
-}
+};
 
 type SeoProps = {
   title?: string;

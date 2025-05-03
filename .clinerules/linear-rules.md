@@ -40,7 +40,7 @@ This rule provides comprehensive guidance on using Linear effectively, adhering 
 6. **Say No to Busy Work:**
    - Eliminate or automate "work about work" wherever possible
    - Focus on tasks that deliver actual value
-   - Don't create processes that require people to manage tools rather than produce work
+   - Don't create processes that require people to manage tools rather than produce work 
    - Question any ritual that feels like a burden without clear value
    - Automate repetitive tasks with Linear's native features
 

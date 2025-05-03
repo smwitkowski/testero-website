@@ -36,7 +36,8 @@ export function WaitlistForm({
   buttonText = "Join the Waitlist & Get 30% Off",
   includeExamDropdown = false,
   ctaLocation = 'unknown', // Default location if not provided
-  onSuccess 
+  onSuccess,
+  ...props
 }: WaitlistFormProps) {
   // Form submission states
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,7 +113,7 @@ export function WaitlistForm({
   ];
 
   return (
-    <div className={className}>
+    <div className={className} {...props}>
       <AnimatePresence mode="wait">
         {!isSuccess ? (
           <motion.div
@@ -128,29 +129,31 @@ export function WaitlistForm({
                   name="email"
                   render={({ field, fieldState }) => (
                     <FormItem>
-                      <div className="relative">
-                        <FormControl>
-                          <Input
-                            type="email"
-                            placeholder="Enter your email address"
-                            className={`px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg rounded-md transition-all duration-300 border-2 ${
-                              fieldState.error 
-                                ? "border-red-400 bg-red-50" 
-                                : fieldState.isDirty && !fieldState.error
-                                  ? "border-green-400 bg-green-50" 
-                                  : "border-slate-300 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
-                            }`}
-                            disabled={isSubmitting}
-                            autoComplete="email"
-                            autoFocus
-                            {...field}
-                            onFocus={() => { // Track form interaction start
-                              if (posthog) {
-                                posthog.capture('waitlist_form_interaction_start');
-                              }
-                            }}
-                          />
-                        </FormControl>
+              <div className="relative">
+                <FormControl>
+                  <Input
+                    type="email"
+                    placeholder="Enter your email address"
+                    className={`px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg rounded-md transition-all duration-300 border-2 ${
+                      fieldState.error 
+                        ? "border-red-400 bg-red-50" 
+                        : fieldState.isDirty && !fieldState.error
+                          ? "border-green-400 bg-green-50" 
+                          : "border-slate-300 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+                    }`}
+                    disabled={isSubmitting}
+                    autoComplete="email"
+                    autoFocus
+                    aria-required="true"
+                    aria-invalid={fieldState.error ? "true" : "false"}
+                    {...field}
+                    onFocus={() => { // Track form interaction start
+                      if (posthog) {
+                        posthog.capture('waitlist_form_interaction_start');
+                      }
+                    }}
+                  />
+                </FormControl>
                         
                         {/* Validation icon */}
                         {fieldState.isDirty && (
@@ -187,6 +190,7 @@ export function WaitlistForm({
                                   : "border-slate-300 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
                               }`}
                               disabled={isSubmitting}
+                              aria-label="Select your main certification interest"
                               {...field}
                             >
                               {examOptions.map((option) => (
@@ -197,7 +201,7 @@ export function WaitlistForm({
                             </select>
                           </FormControl>
                           {/* Custom dropdown arrow */}
-                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500" aria-hidden="true">
                             <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                               <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                             </svg>
@@ -213,6 +217,7 @@ export function WaitlistForm({
                   className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-xl font-semibold shadow-lg w-full transition-all"
                   type="submit"
                   disabled={isSubmitting}
+                  aria-busy={isSubmitting ? "true" : "false"}
                   onClick={() => { // Track CTA click intent using the location prop
                     if (posthog) {
                       posthog.capture('cta_click', { cta_location: ctaLocation });
@@ -226,6 +231,7 @@ export function WaitlistForm({
                         xmlns="http://www.w3.org/2000/svg" 
                         fill="none" 
                         viewBox="0 0 24 24"
+                        aria-hidden="true"
                       >
                         <circle 
                           className="opacity-25" 
@@ -246,7 +252,7 @@ export function WaitlistForm({
                   ) : (
                     <div className="flex items-center justify-center gap-2">
                       <span>{buttonText}</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                       </svg>
                     </div>
@@ -258,9 +264,11 @@ export function WaitlistForm({
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-red-50 border border-red-200 rounded-md px-4 py-3 text-center"
+                    role="alert"
+                    aria-live="assertive"
                   >
                     <p className="text-red-600 font-medium flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                       </svg>
                       {error}
@@ -277,9 +285,11 @@ export function WaitlistForm({
             exit={{ opacity: 0 }}
             key="success"
             className="bg-green-50 p-6 rounded-lg border border-green-200 text-center"
+            role="status"
+            aria-live="polite"
           >
             <div className="flex flex-col items-center space-y-4">
-              <div className="bg-green-100 p-3 rounded-full">
+              <div className="bg-green-100 p-3 rounded-full" aria-hidden="true">
                 <svg 
                   className="h-8 w-8 text-green-600" 
                   xmlns="http://www.w3.org/2000/svg" 
