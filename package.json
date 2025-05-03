@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate:sitemap": "node scripts/generate-sitemap.js",
+    "generate:social-images": "node scripts/generate-social-images.js",
+    "generate:seo": "npm run generate:sitemap && npm run generate:social-images",
+    "prebuild": "npm run generate:seo"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -40,6 +44,8 @@
     "@types/react-dom": "^18",
     "eslint": "^9",
     "eslint-config-next": "15.3.1",
+    "prettier": "^3.5.3",
+    "sharp": "^0.34.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

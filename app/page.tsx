@@ -9,6 +9,7 @@ import { WaitlistForm } from "@/components/ui/waitlist-form";
 import { SocialProofSection } from "@/components/ui/social-proof-section";
 import { FinalCtaSection } from "@/components/ui/final-cta-section";
 import Image from "next/image";
+import { JsonLd } from "./page.metadata";
 
 // Helper hook for tracking section views
 function useTrackSectionView(sectionName: string) {
@@ -34,6 +35,8 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-start bg-gradient-to-b from-slate-50 to-slate-100">
+      {/* Add JSON-LD structured data */}
+      <JsonLd />
       {/* Hero Section */}
       <div className="w-full relative flex flex-col items-center justify-center p-4 sm:p-8 md:p-24 overflow-hidden">
         {/* Background pattern */}
