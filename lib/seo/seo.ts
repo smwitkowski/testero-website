@@ -97,15 +97,6 @@ export function generateViewport(): Viewport {
 }
 
 /**
- * Type for JSON-LD structured data
- */
-type JsonLdData = {
-  "@context": string;
-  "@graph": Array<Record<string, unknown>>;
-  [key: string]: unknown;
-};
-
-/**
  * Generates JSON-LD structured data for SEO
  * 
  * @param customData - Optional custom data to merge with default structured data
