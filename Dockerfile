@@ -82,10 +82,10 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy GCP service account key if it exists
-COPY --from=builder /app/gcp-service-account.json* ./gcp-service-account.json* 2>/dev/null || :
+    # Copy GCP service account key if it exists
+    COPY --from=builder --chown=nextjs:nodejs /app/gcp-service-account.json* ./gcp-service-account.json*
 
-# Create a non-root user to run the application
+    # Create a non-root user to run the application
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
