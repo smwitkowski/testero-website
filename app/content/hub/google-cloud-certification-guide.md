@@ -4,7 +4,7 @@ description: "A comprehensive roadmap to Google Cloud certifications – which o
 date: "2025-05-03"
 author: "Testero Team"
 tags: ["Google Cloud", "Certification", "Cloud Computing", "Career Development"]
-coverImage: "/images/google-cloud-certs.jpg"
+coverImage: "/images/google-cloud-certification-guide.jpg"
 ---
 
 # The Ultimate Google Cloud Certification Guide for 2025

@@ -4,6 +4,7 @@ description: "Does the Google Data Analytics Certificate deliver on its promise 
 date: "2025-05-04"
 author: "Testero Team"
 tags: ["Google", "Data Analytics", "Certification", "Coursera", "Career Development"]
+coverImage: "/images/google-data-analytics-professional.jpg"
 ---
 
 # Google Data Analytics Professional Certificate: 2025 Guide
