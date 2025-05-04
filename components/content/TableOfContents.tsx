@@ -1,0 +1,97 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+
+interface Heading {
+  id: string;
+  text: string;
+  level: number;
+}
+
+interface TableOfContentsProps {
+  contentId: string;
+  className?: string;
+}
+
+export default function TableOfContents({ contentId, className = '' }: TableOfContentsProps) {
+  const [headings, setHeadings] = useState<Heading[]>([]);
+  const [activeId, setActiveId] = useState<string>('');
+
+  useEffect(() => {
+    const contentElement = document.getElementById(contentId);
+    if (!contentElement) return;
+
+    // Extract all headings from h2 to h4
+    const elements = Array.from(contentElement.querySelectorAll('h2, h3, h4'));
+    
+    const headingsData = elements.map((element) => {
+      // Make sure all headings have IDs for scrolling
+      if (!element.id) {
+        const id = element.textContent
+          ?.toLowerCase()
+          .replace(/[^\w\s]/g, '')
+          .replace(/\s+/g, '-') || `heading-${Math.random().toString(36).substr(2, 9)}`;
+        element.id = id;
+      }
+      
+      return {
+        id: element.id,
+        text: element.textContent || '',
+        level: parseInt(element.tagName.substring(1)),
+      };
+    });
+    
+    setHeadings(headingsData);
+    
+    // Setup intersection observer for active heading highlighting
+    const callback = (entries: IntersectionObserverEntry[]) => {
+      // Find the first heading that is in view
+      const visible = entries.filter(entry => entry.isIntersecting);
+      if (visible.length > 0) {
+        setActiveId(visible[0].target.id);
+      }
+    };
+    
+    const observer = new IntersectionObserver(callback, {
+      rootMargin: '0px 0px -80% 0px',
+    });
+    
+    elements.forEach(element => observer.observe(element));
+    
+    return () => observer.disconnect();
+  }, [contentId]);
+  
+  if (headings.length === 0) return null;
+  
+  return (
+    <nav className={`${className}`}>
+      <h3 className="text-lg font-bold mb-3">Table of Contents</h3>
+      <ul className="space-y-2">
+        {headings.map((heading) => (
+          <li
+            key={heading.id}
+            className={`${heading.level === 2 ? '' : heading.level === 3 ? 'ml-4' : 'ml-8'}`}
+          >
+            <Link
+              href={`#${heading.id}`}
+              className={`text-sm block py-1 border-l-2 pl-3 hover:text-blue-600 transition-colors ${
+                activeId === heading.id
+                  ? 'border-blue-600 text-blue-600 font-medium'
+                  : 'border-gray-200 text-gray-600'
+              }`}
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById(heading.id)?.scrollIntoView({
+                  behavior: 'smooth',
+                });
+              }}
+            >
+              {heading.text}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}

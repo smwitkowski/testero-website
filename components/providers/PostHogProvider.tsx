@@ -8,6 +8,8 @@ import { useEffect, ReactNode, Suspense } from 'react' // Import Suspense
 if (typeof window !== 'undefined') {
   posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
     api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST!,
+    // Disable web vitals tracking to prevent console errors
+    capture_pageview: false, // We'll handle pageviews manually
     // Enable debug mode in development
     loaded: (posthog) => {
       if (process.env.NODE_ENV === 'development') posthog.debug()

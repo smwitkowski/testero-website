@@ -119,3 +119,82 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom styles for certification content */
+.certification-content h2, 
+.certification-content h3,
+.certification-content h4 {
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+  font-weight: 600;
+}
+
+.certification-content p {
+  margin-bottom: 1em;
+}
+
+.certification-content strong {
+  font-weight: 600;
+}
+
+/* Fix list formatting */
+.certification-content ul,
+.certification-content ol {
+  margin-top: 0.5em;
+  margin-bottom: 1.5em;
+  padding-left: 1.5em;
+}
+
+.certification-content ul {
+  list-style-type: disc;
+}
+
+.certification-content ol {
+  list-style-type: decimal;
+}
+
+.certification-content li {
+  margin-bottom: 0.5em;
+  position: relative;
+}
+
+.certification-content li p {
+  margin-bottom: 0.5em;
+}
+
+/* Format certification sections */
+.certification-content h3 + ul {
+  margin-top: 0.5em;
+}
+
+.certification-content h3 + p + ul {
+  margin-top: 0.5em;
+}
+
+/* Properly format certification description sections */
+.certification-content p strong:first-child {
+  display: inline-block;
+  min-width: 120px;
+  font-weight: 700;
+}
+
+/* Focus, Topics, Difficulty, Ideal for sections */
+.certification-content p:has(> strong:first-child:contains("Focus")),
+.certification-content p:has(> strong:first-child:contains("Topics")),
+.certification-content p:has(> strong:first-child:contains("Difficulty")),
+.certification-content p:has(> strong:first-child:contains("Ideal for")) {
+  margin-bottom: 0.5em;
+  padding-left: 0.5em;
+  border-left: 3px solid #e5e7eb;
+}
+
+/* Add spacing between certification descriptions */
+.certification-content h3 + p + p {
+  margin-top: 0.5em;
+}
+
+/* Enhance certification description sections */
+.certification-content h3 {
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 0.5em;
+}
