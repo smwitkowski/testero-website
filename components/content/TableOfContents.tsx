@@ -66,28 +66,40 @@ export default function TableOfContents({ contentId, className = '' }: TableOfCo
   
   return (
     <nav className={`${className}`}>
-      <h3 className="text-lg font-bold mb-3">Table of Contents</h3>
-      <ul className="space-y-2">
+      <h3 className="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Table of Contents</h3>
+      <ul className="space-y-1">
         {headings.map((heading) => (
           <li
             key={heading.id}
-            className={`${heading.level === 2 ? '' : heading.level === 3 ? 'ml-4' : 'ml-8'}`}
+            className={`${
+              heading.level === 2 
+                ? 'mb-2' 
+                : heading.level === 3 
+                  ? 'ml-3 mb-1' 
+                  : 'ml-6 text-sm'
+            }`}
           >
             <Link
               href={`#${heading.id}`}
-              className={`text-sm block py-1 border-l-2 pl-3 hover:text-blue-600 transition-colors ${
-                activeId === heading.id
-                  ? 'border-blue-600 text-blue-600 font-medium'
-                  : 'border-gray-200 text-gray-600'
-              }`}
+              className={`
+                block py-1.5 pl-3 rounded-md transition-all duration-200
+                ${heading.level === 2 ? 'font-medium' : ''}
+                ${activeId === heading.id
+                  ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600 font-medium'
+                  : 'border-l-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                }
+              `}
               onClick={(e) => {
                 e.preventDefault();
                 document.getElementById(heading.id)?.scrollIntoView({
                   behavior: 'smooth',
                 });
+                setActiveId(heading.id); // Immediately set active for better feedback
               }}
             >
-              {heading.text}
+              <span className={`${heading.level > 2 ? 'text-sm' : ''}`}>
+                {heading.text}
+              </span>
             </Link>
           </li>
         ))}

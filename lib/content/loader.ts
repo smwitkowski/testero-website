@@ -41,6 +41,15 @@ const parseContentFile = async (filePath: string, slug: string, type: 'hub' | 's
   const fileContents = fs.readFileSync(filePath, 'utf8');
   const { data, content } = matter(fileContents);
   
+  // Normalize special characters before processing
+  const normalizedContent = content
+    // Replace non-breaking hyphens with regular hyphens
+    .replace(/‑/g, '-')
+    // Make sure HTML anchors are formatted correctly
+    .replace(/<a id="([^"]+)"><\/a>/g, '<a id="$1" class="anchor-link"></a>')
+    // Ensure proper spacing around anchor links
+    .replace(/<a id="([^"]+)"><\/a>\s*##/g, '<a id="$1" class="anchor-link"></a>\n\n##');
+  
   // Process markdown to HTML with improved rendering
   // Using a full rehype pipeline for better HTML output
   const processedContent = await remark()
@@ -48,7 +57,7 @@ const parseContentFile = async (filePath: string, slug: string, type: 'hub' | 's
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw) // Parse HTML in the markdown
     .use(rehypeStringify)
-    .process(content);
+    .process(normalizedContent);
   
   const htmlContent = processedContent.toString();
   

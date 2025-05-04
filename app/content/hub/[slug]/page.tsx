@@ -20,9 +20,9 @@ export async function generateStaticParams() {
 }
 
 // Generate metadata for the hub page
-export async function generateMetadata() {
-  // Default to our main hub content for metadata
-  const content = await getHubContent('google-cloud-certification-guide');
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const content = await getHubContent(slug);
   if (!content) return {};
   return generateContentMetadata(content);
 }
@@ -77,14 +77,12 @@ const SpokeCard = ({ title, description, slug, date, readingTime, coverImage }: 
   );
 };
 
-// For now, we'll just use our default hub content directly
-// This is a workaround for Next.js params issues in SSR
-export default async function HubPage() {
-  // Default to showing our main hub content
-  const content = await getHubContent('google-cloud-certification-guide');
+export default async function HubPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const content = await getHubContent(slug);
   if (!content) notFound();
   
-  const spokes = await getSpokesForHub('google-cloud-certification-guide');
+  const spokes = await getSpokesForHub(slug);
   const recommendedContent = await getAllHubContent();
   
   // JSON-LD structured data
@@ -98,16 +96,16 @@ export default async function HubPage() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
         
-        <header className="mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">{content.meta.title}</h1>
+        <header className="mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 leading-tight">{content.meta.title}</h1>
           <SocialShare 
             title={content.meta.title}
             url={`/content/hub/${content.slug}`}
             description={content.meta.description}
-            className="mb-4"
+            className="mb-5"
           />
           {content.meta.author && (
-            <div className="text-gray-600 mb-4">
+            <div className="text-gray-600 mb-5 font-medium">
               By {content.meta.author} • 
               {new Date(content.meta.date).toLocaleDateString('en-US', {
                 year: 'numeric',
@@ -115,14 +113,17 @@ export default async function HubPage() {
                 day: 'numeric',
               })}
               {content.meta.readingTime && (
-                <span> • {content.meta.readingTime} min read</span>
+                <span className="ml-1">• {content.meta.readingTime} min read</span>
               )}
             </div>
           )}
           {content.meta.tags && content.meta.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-6">
+            <div className="flex flex-wrap gap-2 mb-8">
               {content.meta.tags.map(tag => (
-                <span key={tag} className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm">
+                <span 
+                  key={tag} 
+                  className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-md text-sm font-medium"
+                >
                   {tag}
                 </span>
               ))}
@@ -141,17 +142,21 @@ export default async function HubPage() {
           )}
         </header>
         
-        <div className="flex flex-col lg:flex-row gap-8">
-          <article className="prose prose-lg max-w-none mb-12 lg:flex-grow" id="article-content">
+        <div className="flex flex-col lg:flex-row gap-10">
+          <article className="prose prose-lg max-w-none mb-12 lg:flex-grow lg:pr-8" id="article-content">
             <div 
               dangerouslySetInnerHTML={{ __html: content.content }} 
               className="certification-content"
+              id="certification-content"
             />
           </article>
           
-          <div className="lg:w-64 lg:flex-shrink-0">
+          <div className="lg:w-72 lg:flex-shrink-0">
             <div className="sticky top-8">
-              <TableOfContents contentId="article-content" className="bg-gray-50 p-4 rounded-lg" />
+              <TableOfContents 
+                contentId="article-content" 
+                className="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-100"
+              />
             </div>
           </div>
         </div>

@@ -1,3 +1,12 @@
+---
+title: "The 2025 Google Cloud Digital Leader Certification Roadmap"
+description: "A guide to the Google Cloud Digital Leader certification, covering its value, exam details, study plan, and career impact for business and technical professionals."
+date: "2025-05-04"
+author: "Testero Team"
+tags: ["Google Cloud", "Certification", "Cloud Digital Leader", "Business Strategy", "Cloud Computing"]
+coverImage: "/images/cloud-digital-leader.jpg"
+---
+
 # The 2025 Google Cloud Digital Leader Certification Roadmap
 
 Ever felt like you're drowning in a sea of cloud certifications, wondering which one might actually propel your career forward?
