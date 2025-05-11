@@ -1,36 +1,54 @@
 "use client"; // Make this a client component
 
-import { useEffect } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useInView } from "react-intersection-observer";
 import { usePostHog } from "posthog-js/react";
+import dynamic from "next/dynamic";
 import { StaggeredText } from "@/components/ui/staggered-text";
-import { BenefitsSection } from "@/components/ui/benefits-section";
+import { BenefitsSectionSkeleton } from "@/components/ui/benefits-section";
 import { WaitlistForm } from "@/components/ui/waitlist-form";
 import { SocialProofSection } from "@/components/ui/social-proof-section";
 import { FinalCtaSection } from "@/components/ui/final-cta-section";
 import { JsonLd } from "./page.metadata";
 
-// Helper hook for tracking section views
-function useTrackSectionView(sectionName: string) {
+// Dynamically import the BenefitsSection component
+const BenefitsSection = dynamic(
+  () => import("@/components/ui/benefits-section").then((mod) => mod.BenefitsSection),
+  { 
+    loading: () => <BenefitsSectionSkeleton />,
+    ssr: false // Disable server-side rendering for this component
+  }
+);
+
+// Helper hook for tracking section views and lazy loading
+function useTrackSectionView(sectionName: string, loadThreshold = 0.1) {
   const posthog = usePostHog();
+  const [shouldLoad, setShouldLoad] = useState(false);
   const { ref, inView } = useInView({
     triggerOnce: true, // Only trigger once per section
-    threshold: 0.1, // Trigger when 10% of the section is visible
+    threshold: loadThreshold, // Trigger when specified portion of the section is visible
+    rootMargin: "200px 0px", // Start loading 200px before the element comes into view
   });
 
   useEffect(() => {
-    if (inView && posthog) {
-      posthog.capture('section_viewed', { section_name: sectionName });
+    if (inView) {
+      // Track the view in PostHog
+      if (posthog) {
+        posthog.capture('section_viewed', { section_name: sectionName });
+      }
+      
+      // Set the component to load
+      setShouldLoad(true);
     }
   }, [inView, sectionName, posthog]);
 
-  return ref;
+  return { ref, shouldLoad, inView };
 }
 
 export default function Home() {
-  const socialProofRef = useTrackSectionView("social_proof");
-  const benefitsRef = useTrackSectionView("benefits");
-  const finalCtaRef = useTrackSectionView("final_cta");
+  const { ref: socialProofRef, shouldLoad: loadSocialProof } = useTrackSectionView("social_proof");
+  const { ref: benefitsRef, shouldLoad: loadBenefits } = useTrackSectionView("benefits");
+  const { ref: finalCtaRef, shouldLoad: loadFinalCta } = useTrackSectionView("final_cta");
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-start bg-gradient-to-b from-slate-50 to-slate-100">
@@ -107,9 +125,9 @@ export default function Home() {
           <SocialProofSection />
         </section>
 
-        {/* Benefits Section */}
+        {/* Benefits Section - Lazy loaded */}
         <section ref={benefitsRef} aria-labelledby="benefits-heading">
-          <BenefitsSection />
+          {loadBenefits ? <BenefitsSection /> : <BenefitsSectionSkeleton />}
         </section>
         
         {/* Placeholder for Optional Teaser Features Section */}

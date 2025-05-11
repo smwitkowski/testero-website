@@ -3,6 +3,7 @@ import "./globals.css";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
 import Script from "next/script";
 import { generateMetadata, generateJsonLd, generateViewport } from "@/lib/seo";
+import Navbar from "@/components/ui/navbar"; // Import the Navbar component
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,13 +42,16 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         {/* Skip to content link for accessibility */}
-        <a 
-          href="#main-content" 
+        <a
+          href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white focus:text-black focus:outline-none"
         >
           Skip to content
         </a>
-        <PostHogProvider>{children}</PostHogProvider>
+        <Navbar /> {/* Add the Navbar component here */}
+        <main id="main-content" className="pt-[72px]"> {/* Add padding to main content */}
+          <PostHogProvider>{children}</PostHogProvider>
+        </main>
       </body>
     </html>
   );

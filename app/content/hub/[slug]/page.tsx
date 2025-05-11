@@ -47,7 +47,9 @@ const SpokeCard = ({ title, description, slug, date, readingTime, coverImage }: 
             alt={title} 
             fill 
             className="object-cover"
-            sizes="(max-width: 768px) 100vw, 33vw"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
+            loading="lazy"
+            quality={80}
           />
         </div>
       )}
@@ -137,6 +139,8 @@ export default async function HubPage({ params }: { params: Promise<{ slug: stri
                 fill 
                 className="object-cover"
                 priority
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 1200px, 1200px"
+                quality={85}
               />
             </div>
           )}

@@ -137,6 +137,72 @@ const pulse = `
   }
 `;
 
+// Skeleton loader component for the benefits section
+export function BenefitsSectionSkeleton() {
+  return (
+    <section className="w-full py-10 sm:py-16 md:py-24 px-4 sm:px-6 relative">
+      {/* Background element */}
+      <div 
+        className="absolute right-0 top-1/4 -translate-y-1/2 w-64 h-64 bg-blue-50 rounded-full opacity-20 blur-3xl"
+        aria-hidden="true"
+      ></div>
+      <div 
+        className="absolute left-0 bottom-1/4 translate-y-1/2 w-64 h-64 bg-orange-50 rounded-full opacity-20 blur-3xl"
+        aria-hidden="true"
+      ></div>
+      
+      <div className="max-w-4xl mx-auto text-center space-y-8 relative z-10">
+        {/* Skeleton heading */}
+        <div className="h-12 bg-slate-200 rounded-lg w-3/4 mx-auto animate-pulse"></div>
+        
+        {/* Skeleton paragraph */}
+        <div className="h-6 bg-slate-200 rounded-lg w-5/6 mx-auto animate-pulse"></div>
+        
+        {/* Skeleton cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+          {[...Array(4)].map((_, index) => (
+            <div key={index} className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-slate-100 animate-pulse">
+              <div className="flex items-start space-x-4">
+                <div className="p-3 rounded-lg bg-slate-200 h-12 w-12"></div>
+                <div className="flex-1">
+                  <div className="h-6 bg-slate-200 rounded w-3/4 mb-3"></div>
+                  <div className="h-4 bg-slate-200 rounded w-full mb-2"></div>
+                  <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Skeleton comparison */}
+        <div className="mt-12 sm:mt-16 pt-6 sm:pt-8 border-t border-slate-200">
+          <div className="flex flex-col md:flex-row justify-center items-center gap-8">
+            <div className="flex-1">
+              <div className="h-6 bg-slate-200 rounded w-1/2 mx-auto md:ml-auto md:mr-0 mb-4"></div>
+              <div className="space-y-2">
+                {[...Array(3)].map((_, index) => (
+                  <div key={index} className="h-4 bg-slate-200 rounded w-3/4 mx-auto md:ml-auto md:mr-0"></div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="hidden md:block h-40 border-l border-slate-300" aria-hidden="true"></div>
+            
+            <div className="flex-1">
+              <div className="h-6 bg-slate-200 rounded w-1/2 mx-auto md:mr-auto md:ml-0 mb-4"></div>
+              <div className="space-y-2">
+                {[...Array(3)].map((_, index) => (
+                  <div key={index} className="h-4 bg-slate-200 rounded w-3/4 mx-auto md:mr-auto md:ml-0"></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function BenefitsSection() {
   return (
     <section className="w-full py-10 sm:py-16 md:py-24 px-4 sm:px-6 relative">
