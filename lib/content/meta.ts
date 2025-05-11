@@ -7,7 +7,7 @@ import { Content } from './loader';
 export function generateContentMetadata(content: Content): Metadata {
   const { meta } = content;
   
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://testero.io';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://testero.ai';
   const imageUrl = meta.coverImage 
     ? `${baseUrl}${meta.coverImage}` 
     : `${baseUrl}/og-image.jpg`;
@@ -85,7 +85,7 @@ interface StructuredDataArticle {
 export function generateStructuredData(content: Content): StructuredDataArticle {
   const { meta } = content;
   
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://testero.io';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://testero.ai';
   const contentUrl = `${baseUrl}/${meta.type === 'hub' ? 'hub' : 'content'}/${meta.slug}`;
   const imageUrl = meta.coverImage 
     ? `${baseUrl}${meta.coverImage}` 

@@ -192,4 +192,4 @@ A retail company wants to enhance its customer experience and operational effici
 
 The Google Cloud Digital Leader certification is an excellent entry point into the Google Cloud ecosystem, especially for those in non-technical or business-oriented roles. By validating your understanding of cloud concepts and Google Cloud's capabilities, you'll be better equipped to contribute to cloud initiatives and digital transformation efforts within your organization.
 
-Ready to take the next step in your Google Cloud journey? Check out our guides to other Google Cloud certifications, including the [Associate Cloud Engineer](https://testero.io/content/spoke/associate-cloud-engineer-certification) and [Professional Cloud Architect](https://testero.io/content/spoke/professional-cloud-architect-certification).
+Ready to take the next step in your Google Cloud journey? Check out our guides to other Google Cloud certifications, including the [Associate Cloud Engineer](https://testero.ai/content/spoke/associate-cloud-engineer-certification) and [Professional Cloud Architect](https://testero.ai/content/spoke/professional-cloud-architect-certification).

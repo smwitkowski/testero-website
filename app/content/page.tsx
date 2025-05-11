@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Google Certification Guides | Testero',
     description: 'Comprehensive guides for Google certifications to accelerate your career in cloud, data analytics, machine learning, and more.',
-    url: 'https://testero.io/content',
+    url: 'https://testero.ai/content',
     siteName: 'Testero',
     locale: 'en_US',
     type: 'website',

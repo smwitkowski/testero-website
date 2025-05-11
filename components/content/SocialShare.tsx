@@ -18,7 +18,7 @@ export default function SocialShare({
   const [copied, setCopied] = useState(false);
   
   // Ensure we're using the full URL
-  const fullUrl = url.startsWith('http') ? url : `https://testero.io${url}`;
+  const fullUrl = url.startsWith('http') ? url : `https://testero.ai${url}`;
   
   // Prepare sharing URLs
   const shareUrls = {
