@@ -78,7 +78,7 @@ const Navbar = () => {
         <div className="flex-shrink-0 md:mr-6">
           {/* Replace with actual logo component */}
           <Link href="/" aria-label="Testero Home">
-            <span className="text-xl font-bold" style={{ color: colors.primary[800] }}>Logo</span> {/* Replace with actual logo */}
+            <span className="text-xl font-bold" style={{ color: colors.primary[800] }}>Testero</span> {/* Replace with actual logo */}
           </Link>
         </div>
 
