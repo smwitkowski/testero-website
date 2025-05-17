@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { usePostHog } from "posthog-js/react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { StaggeredText } from "@/components/ui/staggered-text";
 import { BenefitsSectionSkeleton } from "@/components/ui/benefits-section";
 import { WaitlistForm } from "@/components/ui/waitlist-form";
@@ -147,10 +148,10 @@ export default function Home() {
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-8">Explore Related Content</h2>
           <div className="flex flex-wrap justify-center gap-6">
-            <a href="/content/hub/google-cloud-certification-guide" className="text-blue-600 hover:underline text-lg">Google Cloud Certification Guide</a>
-            <a href="/content/hub/google-data-analytics-professional-certificate-2025-guide" className="text-blue-600 hover:underline text-lg">Google Data Analytics Professional Certificate Guide</a>
-            <a href="/content/hub/google-professional-machine-learning-engineer-certification-roadmap-2025" className="text-blue-600 hover:underline text-lg">Google Professional Machine Learning Engineer Certification Roadmap</a>
-            <a href="/faq" className="text-blue-600 hover:underline text-lg">Frequently Asked Questions</a>
+            <Link href="/content/hub/google-cloud-certification-guide" className="text-blue-600 hover:underline text-lg">Google Cloud Certification Guide</Link>
+            <Link href="/content/hub/google-data-analytics-professional-certificate-2025-guide" className="text-blue-600 hover:underline text-lg">Google Data Analytics Professional Certificate Guide</Link>
+            <Link href="/content/hub/google-professional-machine-learning-engineer-certification-roadmap-2025" className="text-blue-600 hover:underline text-lg">Google Professional Machine Learning Engineer Certification Roadmap</Link>
+            <Link href="/faq" className="text-blue-600 hover:underline text-lg">Frequently Asked Questions</Link>
           </div>
         </div>
       </section>

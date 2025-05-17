@@ -1,23 +1,21 @@
-import React from 'react';
+import { ReactNode } from 'react';
+import { generateMetadata as generateSeoMetadata } from '@/lib/seo/seo';
 import Link from 'next/link';
-import type { Metadata } from 'next';
 
 // Placeholder for a simpler navigation if needed for FAQ, or reuse existing
 // For now, let's assume a simple header or reuse ContentNavigation if appropriate
 // import ContentNavigation from '@/components/content/ContentNavigation';
 
-export const metadata: Metadata = {
-  title: {
-    template: '%s | FAQ | Testero',
-    default: 'Frequently Asked Questions | Testero',
-  },
-  description: 'Find answers to common questions about Testero and our services.',
-};
+export const metadata = generateSeoMetadata({
+  title: 'Frequently Asked Questions | Testero',
+  description: 'Find answers to common questions about Testero and Google Cloud certifications.',
+  canonical: '/faq',
+});
 
 export default function FaqLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="min-h-screen flex flex-col">
