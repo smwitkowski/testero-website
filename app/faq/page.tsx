@@ -7,6 +7,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { generateMetadata as generateSeoMetadata } from '@/lib/seo/seo';
+
+// Generate metadata for the FAQ page
+export const metadata = generateSeoMetadata({
+  title: 'Frequently Asked Questions | Testero',
+  description: 'Find answers to common questions about Testero and Google Cloud certifications.',
+  canonical: '/faq',
+});
 
 // Group FAQs by their pillar
 const groupFaqsByPillar = () => {
