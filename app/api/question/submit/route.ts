@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       correctOptionKey: correctOption.label,
       explanationText,
     });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: 'Invalid request or server error.' }, { status: 500 });
   }
 } 

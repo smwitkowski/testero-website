@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
-import type { Database } from '@/lib/supabase/database.types';
 
 export async function GET() {
-  // Fetch the first available question
+  // Fetch the first available question (no is_active filter)
   const { data: question, error: questionError } = await supabase
     .from('questions')
     .select('*')
-    .eq('is_active', true)
+    .order('id', { ascending: false })
     .limit(1)
     .single();
 

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { FaqEntry } from '@/lib/content/faqData';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
 interface FaqClientContentProps {

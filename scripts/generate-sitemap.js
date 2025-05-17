@@ -7,9 +7,11 @@ const prettier = require('prettier');
 const { faqData } = require('../lib/content/faqData'); // Import faqData
 
 // Configuration
-const SITE_URL = 'https://testero.ai';
+const SITE_URL = 'https://testero.ai'; // Used for sitemap <loc> tags
+const LOCAL_API_URL = 'http://localhost:3000'; // Used for fetching data locally
 const PUBLIC_DIR = path.join(__dirname, '../public');
 const APP_DIR = path.join(__dirname, '../app');
+const fetch = require('node-fetch'); // For making API calls
 const HUB_CONTENT_DIR = path.join(__dirname, '../app/content/hub');
 const SPOKE_CONTENT_DIR = path.join(__dirname, '../app/content/spokes');
 
@@ -73,8 +75,8 @@ const getMarkdownSlugs = (dir, routePrefix) => {
 };
 
 
-// Generate sitemap XML
-const generateSitemap = async (routes) => {
+// Generate sitemap XML for specific routes and filename
+const generateIndividualSitemap = async (routes, filename) => {
   const currentDate = getCurrentDate();
 
   const sitemap = `
@@ -105,45 +107,120 @@ const generateSitemap = async (routes) => {
     printWidth: 100,
   });
 
-  fs.writeFileSync(path.join(PUBLIC_DIR, 'sitemap.xml'), formattedSitemap);
-  console.log('Sitemap generated successfully!');
+  fs.writeFileSync(path.join(PUBLIC_DIR, filename), formattedSitemap);
+  console.log(`${filename} generated successfully!`);
 };
+
+// Generate sitemap index XML
+const generateSitemapIndex = async (sitemapFiles) => {
+  const currentDate = getCurrentDate();
+  const sitemapIndex = `
+    <?xml version="1.0" encoding="UTF-8"?>
+    <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+      ${sitemapFiles
+        .map(sitemapFile => `
+          <sitemap>
+            <loc>${SITE_URL}/${sitemapFile}</loc>
+            <lastmod>${currentDate}</lastmod>
+          </sitemap>
+        `)
+        .join('')}
+    </sitemapindex>
+  `;
+
+  const formattedSitemapIndex = await prettier.format(sitemapIndex, {
+    parser: 'html',
+    printWidth: 100,
+  });
+
+  fs.writeFileSync(path.join(PUBLIC_DIR, 'sitemap.xml'), formattedSitemapIndex);
+  console.log('Sitemap index (sitemap.xml) generated successfully!');
+};
+
+
+// Fetch question IDs from the API
+const getQuestionRoutes = async () => {
+  try {
+    const response = await fetch(`${LOCAL_API_URL}/api/questions/list`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch question list: ${response.status} ${response.statusText}`);
+    }
+    const data = await response.json();
+    if (!data.questionIds || !Array.isArray(data.questionIds)) {
+      throw new Error('Invalid data format for question IDs');
+    }
+    return data.questionIds.map(id => `/practice/question/${id}`);
+  } catch (error) {
+    console.error('Error fetching question routes:', error);
+    return []; // Return empty array on error
+  }
+};
+
 
 // Main function
 async function main() {
   try {
-    // Install prettier if not already installed
+    // Install prettier and node-fetch if not already installed
+    const packagesToInstall = [];
     try {
       require.resolve('prettier');
     } catch (error) {
-      console.log('Installing prettier...');
-      // It's generally better to ensure dev dependencies are installed via package.json
-      // but for this script's self-containment, we'll keep it.
-      // Consider moving prettier to devDependencies in package.json
-      require('child_process').execSync('npm install --save-dev prettier');
+      packagesToInstall.push('prettier');
+    }
+    try {
+      require.resolve('node-fetch');
+    } catch (error) {
+      packagesToInstall.push('node-fetch@2'); // Specify version 2 for CommonJS compatibility
     }
 
-    let routes = getPageRoutes(APP_DIR);
+    if (packagesToInstall.length > 0) {
+      console.log(`Installing ${packagesToInstall.join(' and ')}...`);
+      // It's generally better to ensure dev dependencies are installed via package.json
+      // but for this script's self-containment, we'll keep it.
+      require('child_process').execSync(`npm install --save-dev ${packagesToInstall.join(' ')}`);
+      // Re-require fetch if it was just installed
+      if (packagesToInstall.includes('node-fetch@2')) {
+        global.fetch = require('node-fetch');
+      }
+    }
+
+
+    // Generate sitemap for pages
+    let pageRoutes = getPageRoutes(APP_DIR);
 
     // Add FAQ routes
     const faqRoutes = faqData.map(faq => `/faq/${faq.slug}`);
-    routes = [...routes, ...faqRoutes];
+    pageRoutes = [...pageRoutes, ...faqRoutes];
 
     // Add Hub content routes
     const hubRoutes = getMarkdownSlugs(HUB_CONTENT_DIR, '/content/hub');
-    routes = [...routes, ...hubRoutes];
+    pageRoutes = [...pageRoutes, ...hubRoutes];
 
     // Add Spoke content routes
     const spokeRoutes = getMarkdownSlugs(SPOKE_CONTENT_DIR, '/content/spoke');
-    routes = [...routes, ...spokeRoutes];
-
+    pageRoutes = [...pageRoutes, ...spokeRoutes];
 
     // Remove duplicate routes if any
-    routes = [...new Set(routes)];
+    pageRoutes = [...new Set(pageRoutes)];
+    await generateIndividualSitemap(pageRoutes, 'sitemap-pages.xml');
 
-    await generateSitemap(routes);
+    // Generate sitemap for questions
+    const questionRoutes = await getQuestionRoutes();
+    if (questionRoutes.length > 0) {
+      await generateIndividualSitemap(questionRoutes, 'sitemap-questions.xml');
+    } else {
+      console.log('No question routes found, skipping sitemap-questions.xml generation.');
+    }
+
+    // Generate sitemap index
+    const sitemapFiles = ['sitemap-pages.xml'];
+    if (questionRoutes.length > 0) {
+      sitemapFiles.push('sitemap-questions.xml');
+    }
+    await generateSitemapIndex(sitemapFiles);
+
   } catch (error) {
-    console.error('Error generating sitemap:', error);
+    console.error('Error generating sitemaps:', error);
   }
 }
 

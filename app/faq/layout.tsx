@@ -1,7 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { cn } from '@/lib/utils'; // Import cn utility
 import { Button } from '@/components/ui/button'; // Import Button component
 
 // Placeholder for a simpler navigation if needed for FAQ, or reuse existing

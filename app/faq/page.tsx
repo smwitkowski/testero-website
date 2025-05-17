@@ -80,7 +80,7 @@ export default function FaqPage() {
             transition={{ duration: 0.5, ease: 'easeOut' }}
             className="text-5xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-slate-50 dark:to-slate-300"
           >
-            Questions? We've Got You Covered
+            Questions? We&apos;ve Got You Covered
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0 }}
@@ -190,8 +190,8 @@ export default function FaqPage() {
         >
           <h2 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">Still have questions?</h2>
           <p className="text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-6">
-            Our team is here to help. If you can't find the answer you're looking for, 
-            don't hesitate to reach out to us directly.
+            Our team is here to help. If you can&apos;t find the answer you&apos;re looking for, 
+            don&apos;t hesitate to reach out to us directly.
           </p>
           <Button className="bg-orange-500 hover:bg-orange-600 text-white py-2 px-6 rounded-full shadow-sm">
             Contact Support

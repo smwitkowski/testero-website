@@ -10,16 +10,8 @@ const navigationItems = [
   { name: 'Home', href: '/' },
   { name: 'Content Hub', href: '/content' },
   { name: 'FAQ', href: '/faq' },
-  { name: 'Design System', href: '/design-system' },
-  {
-    name: 'Resources',
-    href: '#', // Or a placeholder if no main resources page
-    dropdown: [
-      { name: 'Google Cloud', href: '/resources/google-cloud' },
-      { name: 'AWS', href: '/resources/aws' },
-      { name: 'Azure', href: '/resources/azure' },
-    ],
-  },
+  // Design System link removed
+  // Resources dropdown temporarily removed until pages are created
 ];
 
 const Navbar = () => {
@@ -141,7 +133,7 @@ const Navbar = () => {
                   </div>
                 )}
               </div>
-            ) : (
+            ) :
               <Link
                 key={item.name}
                 href={item.href}

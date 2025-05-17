@@ -12,7 +12,8 @@
     "generate:seo": "npm run generate:sitemap && npm run generate:social-images",
     "prebuild": "npm run generate:seo",
     "setup:gcp-storage": "node scripts/setup-gcp-storage.js",
-    "gcp:enable": "cross-env USE_GCP_STORAGE=true npm run generate:social-images"
+    "gcp:enable": "cross-env USE_GCP_STORAGE=true npm run generate:social-images",
+    "indexnow:submit": "node scripts/submit-to-indexnow.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -54,10 +55,12 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "axios": "^1.9.0",
     "cross-env": "^7.0.3",
     "dotenv": "^16.5.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.1",
+    "fast-xml-parser": "^5.2.3",
     "prettier": "^3.5.3",
     "sharp": "^0.34.1",
     "tailwindcss": "^4",

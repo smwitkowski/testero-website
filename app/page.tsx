@@ -1,6 +1,6 @@
 "use client"; // Make this a client component
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { usePostHog } from "posthog-js/react";
 import dynamic from "next/dynamic";
@@ -48,7 +48,7 @@ function useTrackSectionView(sectionName: string, loadThreshold = 0.1) {
 export default function Home() {
   const { ref: socialProofRef, shouldLoad: loadSocialProof } = useTrackSectionView("social_proof");
   const { ref: benefitsRef, shouldLoad: loadBenefits } = useTrackSectionView("benefits");
-  const { ref: finalCtaRef, shouldLoad: loadFinalCta } = useTrackSectionView("final_cta");
+  const { ref: finalCtaRef } = useTrackSectionView("final_cta");
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-start bg-gradient-to-b from-slate-50 to-slate-100">
@@ -122,7 +122,7 @@ export default function Home() {
       <div role="main" id="main-content">
         {/* Social Proof Section */}
         <section ref={socialProofRef} aria-labelledby="social-proof-heading">
-          <SocialProofSection />
+          {loadSocialProof ? <SocialProofSection /> : null}
         </section>
 
         {/* Benefits Section - Lazy loaded */}
