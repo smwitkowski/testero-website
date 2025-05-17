@@ -91,7 +91,7 @@ export function generateMetadata(props: SeoProps = {}): Metadata {
       telephone: false,
     },
     alternates: {
-      canonical,
+      canonical: canonical.startsWith('/') ? `https://testero.ai${canonical}` : canonical,
     },
     robots: {
       index: !noIndex,
@@ -100,7 +100,7 @@ export function generateMetadata(props: SeoProps = {}): Metadata {
     openGraph: {
       type: "website",
       locale: "en_US",
-      url: `https://testero.ai${canonical}`,
+      url: canonical.startsWith('/') ? `https://testero.ai${canonical}` : canonical,
       siteName: "Testero",
       title,
       description,

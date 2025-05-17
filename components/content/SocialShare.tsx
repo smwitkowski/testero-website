@@ -17,8 +17,18 @@ export default function SocialShare({
 }: SocialShareProps) {
   const [copied, setCopied] = useState(false);
   
-  // Ensure we're using the full URL
-  const fullUrl = url.startsWith('http') ? url : `https://testero.ai${url}`;
+  // Ensure we're using the full URL and correct path format
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://testero.ai';
+  
+  // Make sure URL is properly formatted with /content/ prefix for hub and spoke content
+  let formattedUrl = url;
+  if (url.startsWith('/hub/')) {
+    formattedUrl = `/content${url}`;
+  } else if (!url.startsWith('/content/') && (url.includes('/hub/') || url.includes('/spoke/'))) {
+    formattedUrl = `/content${url.substring(url.indexOf('/'))}`;
+  }
+  
+  const fullUrl = formattedUrl.startsWith('http') ? formattedUrl : `${baseUrl}${formattedUrl}`;
   
   // Prepare sharing URLs
   const shareUrls = {

@@ -19,7 +19,7 @@ export function generateContentMetadata(content: Content): Metadata {
       title: meta.title,
       description: meta.description,
       type: 'article',
-      url: `${baseUrl}/${meta.type === 'hub' ? 'hub' : 'content'}/${meta.slug}`,
+      url: `${baseUrl}/content/${meta.type === 'hub' ? 'hub' : 'spoke'}/${meta.slug}`,
       images: [
         {
           url: imageUrl,
@@ -34,7 +34,7 @@ export function generateContentMetadata(content: Content): Metadata {
       tags: meta.tags,
     },
     alternates: {
-      canonical: `${baseUrl}/${meta.type === 'hub' ? 'hub' : 'content'}/${meta.slug}`,
+      canonical: `${baseUrl}/content/${meta.type === 'hub' ? 'hub' : 'spoke'}/${meta.slug}`,
     },
     twitter: {
       card: 'summary_large_image',
@@ -89,7 +89,7 @@ export function generateStructuredData(content: Content): StructuredDataArticle 
   const { meta } = content;
   
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://testero.ai';
-  const contentUrl = `${baseUrl}/${meta.type === 'hub' ? 'hub' : 'content'}/${meta.slug}`;
+  const contentUrl = `${baseUrl}/content/${meta.type === 'hub' ? 'hub' : 'spoke'}/${meta.slug}`;
   const imageUrl = meta.coverImage 
     ? `${baseUrl}${meta.coverImage}` 
     : `${baseUrl}/og-image.jpg`;

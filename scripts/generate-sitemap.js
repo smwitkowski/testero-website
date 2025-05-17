@@ -4,9 +4,25 @@
 const fs = require('fs');
 const path = require('path');
 const prettier = require('prettier');
-const { faqData } = require('../lib/content/faqData'); // Import faqData
 require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') }); // Load environment variables
-const { supabase } = require('../lib/supabase/client'); // Import Supabase client
+
+// Try to import dependencies, but don't fail if they're missing
+let faqData = [];
+let supabase;
+
+try {
+  const faqDataModule = require('../lib/content/faqData');
+  faqData = faqDataModule.faqData || [];
+} catch (err) {
+  console.warn('Warning: Could not load faqData module. FAQ routes will not be included in sitemap.');
+}
+
+try {
+  const supabaseModule = require('../lib/supabase/client');
+  supabase = supabaseModule.supabase;
+} catch (err) {
+  console.warn('Warning: Could not load Supabase client. Question routes will not be included in sitemap.');
+}
 
 // Configuration
 const SITE_URL = 'https://testero.ai'; // Used for sitemap <loc> tags
@@ -142,6 +158,12 @@ const generateSitemapIndex = async (sitemapFiles) => {
 
 // Fetch question IDs directly from Supabase
 const getQuestionRoutes = async () => {
+  // If supabase client wasn't loaded, return empty array
+  if (!supabase) {
+    console.warn('Supabase client not available, skipping question routes.');
+    return [];
+  }
+  
   try {
     const { data: questions, error: questionError } = await supabase
       .from('questions')
@@ -192,9 +214,11 @@ async function main() {
     // Generate sitemap for pages
     let pageRoutes = getPageRoutes(APP_DIR);
 
-    // Add FAQ routes
-    const faqRoutes = faqData.map(faq => `/faq/${faq.slug}`);
-    pageRoutes = [...pageRoutes, ...faqRoutes];
+    // Add FAQ routes if faqData is available
+    if (faqData && faqData.length > 0) {
+      const faqRoutes = faqData.map(faq => `/faq/${faq.slug}`);
+      pageRoutes = [...pageRoutes, ...faqRoutes];
+    }
 
     // Add Hub content routes
     const hubRoutes = getMarkdownSlugs(HUB_CONTENT_DIR, '/content/hub');
