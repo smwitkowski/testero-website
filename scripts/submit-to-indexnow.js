@@ -7,7 +7,7 @@ const { XMLParser } = require('fast-xml-parser'); // Using a common XML parsing 
 const INDEXNOW_API_KEY = process.env.INDEXNOW_KEY || process.argv[2];
 const SITEMAP_PATH = path.join(__dirname, '..', 'public', 'sitemap.xml');
 const INDEXNOW_ENDPOINT = 'https://api.indexnow.org/indexnow'; // Generic endpoint, also Yandex, Bing, Seznam etc. have their own
-const HOST_DOMAIN = 'www.testero.ai'; // Replace with your actual domain if different, or make it dynamic
+const HOST_DOMAIN = 'testero.ai'; // Replace with your actual domain if different, or make it dynamic
 const MAX_URLS_PER_REQUEST = 10000;
 
 // --- Helper Functions ---
