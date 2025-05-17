@@ -4,8 +4,6 @@ import React from 'react';
 import Link from 'next/link';
 import { usePostHog } from "posthog-js/react";
 import { WaitlistForm } from "@/components/ui/waitlist-form";
-import { colors } from '@/lib/design-system/colors';
-import { typography } from '@/lib/design-system/typography';
 import { motion } from "framer-motion";
 
 const WaitlistPage = () => {
@@ -99,7 +97,7 @@ const WaitlistPage = () => {
           </div>
           <div className="bg-white p-5 rounded-lg shadow-md border border-slate-200 mb-6">
             <h3 className="font-medium text-slate-700 mb-2">Which certification exams will be supported?</h3>
-            <p className="text-slate-600">At launch, we'll support Google Cloud (GCP), AWS, and Microsoft Azure certification exams, with more platforms being added based on user demand.</p>
+            <p className="text-slate-600">At launch, we&apos;ll support Google Cloud (GCP), AWS, and Microsoft Azure certification exams, with more platforms being added based on user demand.</p>
           </div>
           <Link 
             href="/faq" 

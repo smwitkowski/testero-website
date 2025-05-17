@@ -15,6 +15,13 @@
   </url>
 
   <url>
+    <loc>https://testero.ai/login</loc>
+    <lastmod>2025-05-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
     <loc>https://testero.ai/</loc>
     <lastmod>2025-05-17</lastmod>
     <changefreq>weekly</changefreq>
@@ -26,6 +33,13 @@
     <lastmod>2025-05-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://testero.ai/waitlist</loc>
+    <lastmod>2025-05-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
 
   <url>
