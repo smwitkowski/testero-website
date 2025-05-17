@@ -33,6 +33,9 @@ export function generateContentMetadata(content: Content): Metadata {
       authors: meta.author ? [meta.author] : undefined,
       tags: meta.tags,
     },
+    alternates: {
+      canonical: `${baseUrl}/${meta.type === 'hub' ? 'hub' : 'content'}/${meta.slug}`,
+    },
     twitter: {
       card: 'summary_large_image',
       title: meta.title,

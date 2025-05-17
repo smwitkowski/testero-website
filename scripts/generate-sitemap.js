@@ -5,13 +5,15 @@ const fs = require('fs');
 const path = require('path');
 const prettier = require('prettier');
 const { faqData } = require('../lib/content/faqData'); // Import faqData
+require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') }); // Load environment variables
+const { supabase } = require('../lib/supabase/client'); // Import Supabase client
 
 // Configuration
 const SITE_URL = 'https://testero.ai'; // Used for sitemap <loc> tags
-const LOCAL_API_URL = 'http://localhost:3000'; // Used for fetching data locally
+// const LOCAL_API_URL = 'http://localhost:3000'; // No longer needed
 const PUBLIC_DIR = path.join(__dirname, '../public');
 const APP_DIR = path.join(__dirname, '../app');
-const fetch = require('node-fetch'); // For making API calls
+// const fetch = require('node-fetch'); // No longer needed
 const HUB_CONTENT_DIR = path.join(__dirname, '../app/content/hub');
 const SPOKE_CONTENT_DIR = path.join(__dirname, '../app/content/spokes');
 
@@ -31,8 +33,8 @@ const getPageRoutes = (dir, basePath = '') => {
     const relativePath = path.join(basePath, entry.name);
 
     if (entry.isDirectory()) {
-      // Skip directories that start with _ or .
-      if (entry.name.startsWith('_') || entry.name.startsWith('.')) {
+      // Skip directories that start with _ or ., or are the design-system directory
+      if (entry.name.startsWith('_') || entry.name.startsWith('.') || entry.name === 'design-system') {
         continue;
       }
 
@@ -138,20 +140,21 @@ const generateSitemapIndex = async (sitemapFiles) => {
 };
 
 
-// Fetch question IDs from the API
+// Fetch question IDs directly from Supabase
 const getQuestionRoutes = async () => {
   try {
-    const response = await fetch(`${LOCAL_API_URL}/api/questions/list`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch question list: ${response.status} ${response.statusText}`);
+    const { data: questions, error: questionError } = await supabase
+      .from('questions')
+      .select('id')
+      .order('id', { ascending: true });
+
+    if (questionError || !questions) {
+      console.error('Error fetching question routes from Supabase:', questionError);
+      return []; // Return empty array on error
     }
-    const data = await response.json();
-    if (!data.questionIds || !Array.isArray(data.questionIds)) {
-      throw new Error('Invalid data format for question IDs');
-    }
-    return data.questionIds.map(id => `/practice/question/${id}`);
+    return questions.map(q => `/practice/question/${q.id}`);
   } catch (error) {
-    console.error('Error fetching question routes:', error);
+    console.error('Error in getQuestionRoutes:', error);
     return []; // Return empty array on error
   }
 };
@@ -160,7 +163,8 @@ const getQuestionRoutes = async () => {
 // Main function
 async function main() {
   try {
-    // Install prettier and node-fetch if not already installed
+    // Install prettier if not already installed
+    // dotenv is also a dependency now
     const packagesToInstall = [];
     try {
       require.resolve('prettier');
@@ -168,22 +172,22 @@ async function main() {
       packagesToInstall.push('prettier');
     }
     try {
-      require.resolve('node-fetch');
+      require.resolve('dotenv');
     } catch (error) {
-      packagesToInstall.push('node-fetch@2'); // Specify version 2 for CommonJS compatibility
+      packagesToInstall.push('dotenv');
     }
+
 
     if (packagesToInstall.length > 0) {
       console.log(`Installing ${packagesToInstall.join(' and ')}...`);
       // It's generally better to ensure dev dependencies are installed via package.json
       // but for this script's self-containment, we'll keep it.
       require('child_process').execSync(`npm install --save-dev ${packagesToInstall.join(' ')}`);
-      // Re-require fetch if it was just installed
-      if (packagesToInstall.includes('node-fetch@2')) {
-        global.fetch = require('node-fetch');
+      // Re-require dotenv if it was just installed
+      if (packagesToInstall.includes('dotenv')) {
+        require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
       }
     }
-
 
     // Generate sitemap for pages
     let pageRoutes = getPageRoutes(APP_DIR);

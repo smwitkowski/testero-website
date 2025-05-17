@@ -18,6 +18,8 @@ coverImage: "/images/google-professional-machine-learning-engineer.jpg"
 
 # Google Professional Machine Learning Engineer Certification Guide (2025)
 
+[Is the Google Professional Machine Learning Engineer certification worth it?](/faq/is-the-google-professional-machine-learning-engineer-certification-worth-it)
+
 Ready to prove you can turn cutting‑edge models into production‑grade business value? The Google Professional Machine Learning Engineer (PMLE) certification is the industry's litmus test for engineers who design, build, and maintain ML on Google Cloud. This guide walks you through **everything**—from how the exam works to what, when, and how to study—so you pass on the first try and immediately leverage the credential for career growth.
 
 ---
@@ -38,7 +40,7 @@ Ready to prove you can turn cutting‑edge models into production‑grade busine
 | Item | Details |
 |---|---|
 | **Question count** | 50–60 |
-| **Duration** | 120 minutes |
+| **Duration** | 120 minutes ([How long is the Google ML Engineer exam?](/faq/how-long-is-the-google-ml-engineer-exam)) |
 | **Format** | Multiple‑choice & multiple‑select |
 | **Delivery** | Online proctored or test centre |
 | **Cost** | $200 USD |

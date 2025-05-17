@@ -35,6 +35,9 @@ The Google Data Analytics Certificate runs $49 monthly in the U.S. and Canada, a
 
 Most people carve out about 10 hours weekly and finish in 3-6 months:
 
+- [How long to complete the Google Data Analytics certification?](/faq/how-long-to-complete-google-data-analytics-certification)
+- [How long does the Google Data Analytics certification take?](/faq/how-long-does-the-google-data-analytics-certification-take)
+
 - Sprint through in 3 months: Pay roughly $147
 - Take a steady 6-month approach: Spend around $294
 
@@ -52,6 +55,8 @@ Beyond just courses, your subscription unlocks valuable extras: access to an exc
 **The takeaway:** At under $300 for the complete program, the certificate offers solid value compared to traditional education options, especially with the included career resources.
 
 ## Is the Google Data Analytics Certificate Worth It?
+
+[Is the Google Data Analytics certification worth it?](/faq/is-google-data-analytics-certification-worth-it)
 
 "Will this actually help me get hired?" Let's face it – that's the million-dollar question.
 

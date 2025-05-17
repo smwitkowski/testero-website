@@ -1,10 +1,12 @@
 import React, { Suspense } from 'react';
 import { faqData } from '@/lib/content/faqData';
-import type { Metadata } from 'next'; // Remove PageProps import
-import FaqClientContent from './FaqClientContent'; // Import the new Client Component
+import type { Metadata } from 'next';
+import FaqClientContent from './FaqClientContent';
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> { // Correct prop type
-  const unwrappedParams = await params; // Await params
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://testero.ai';
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const unwrappedParams = await params;
   const faq = faqData.find((f) => f.slug === unwrappedParams.slug);
 
   if (!faq) {
@@ -16,17 +18,20 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   return {
     title: faq.question,
-    description: faq.answer.substring(0, 160) + (faq.answer.length > 160 ? '...' : ''), // Truncate description
+    description: faq.answer.substring(0, 160) + (faq.answer.length > 160 ? '...' : ''),
+    alternates: {
+      canonical: `${baseUrl}/faq/${faq.slug}`,
+    },
   };
 }
 
-export default async function FaqSlugPage({ params }: { params: Promise<{ slug: string }> }) { // Correct prop type and make async
-  const unwrappedParams = await params; // Await params
-  const faq = faqData.find((f) => f.slug === unwrappedParams.slug); // Find FAQ data on the server
+export default async function FaqSlugPage({ params }: { params: Promise<{ slug: string }> }) {
+  const unwrappedParams = await params;
+  const faq = faqData.find((f) => f.slug === unwrappedParams.slug);
 
   return (
     <Suspense fallback={<div>Loading FAQ...</div>}>
-      <FaqClientContent faq={faq} /> {/* Pass FAQ data to Client Component */}
+      <FaqClientContent faq={faq} />
     </Suspense>
   );
 }

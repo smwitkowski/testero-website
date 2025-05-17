@@ -1,7 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { Button } from '@/components/ui/button'; // Import Button component
 
 // Placeholder for a simpler navigation if needed for FAQ, or reuse existing
 // For now, let's assume a simple header or reuse ContentNavigation if appropriate
@@ -47,9 +46,6 @@ export default function FaqLayout({
           <p className="text-slate-600 dark:text-slate-400 mb-4">
             Need more help? 
           </p>
-          <Button asChild variant="outline" className="rounded-full hover:scale-105 transition-transform">
-             <Link href="/contact">Contact Us</Link>
-          </Button>
           <div className="mt-8 text-slate-500 dark:text-slate-500">
             <p>© {new Date().getFullYear()} Testero. All rights reserved.</p>
           </div>

@@ -20,18 +20,18 @@ export async function generateStaticParams() {
 }
 
 // Generate metadata for the spoke page
-export async function generateMetadata() {
-  // Default to our main spoke content for metadata
-  const content = await getSpokeContent('google-cloud-digital-leader-certification');
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const content = await getSpokeContent(slug);
   if (!content) return {};
   return generateContentMetadata(content);
 }
 
 // For now, we'll just use our default spoke content directly
 // This is a workaround for Next.js params issues in SSR
-export default async function SpokePage() {
-  // Default to showing our main spoke content
-  const content = await getSpokeContent('google-cloud-digital-leader-certification');
+export default async function SpokePage({ params }: { params: { slug: string } }) {
+  const { slug } = params;
+  const content = await getSpokeContent(slug);
   if (!content) notFound();
   
   // Get the parent hub if available
