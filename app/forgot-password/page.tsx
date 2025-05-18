@@ -180,7 +180,7 @@ const ForgotPasswordPage = () => {
                                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                                   {fieldState.error ? (
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                                     </svg>
                                   ) : (
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
@@ -216,7 +216,7 @@ const ForgotPasswordPage = () => {
                       {/* Instructions */}
                       <div className="bg-blue-50 border border-blue-100 rounded-md px-4 py-3">
                         <p className="text-blue-700 text-sm">
-                          We'll send you an email with a link to reset your password. The link will expire after 24 hours.
+                          We&apos;ll send you an email with a link to reset your password. The link will expire after 24 hours.
                         </p>
                       </div>
 
@@ -254,7 +254,7 @@ const ForgotPasswordPage = () => {
                           </div>
                         ) : (
                           <div className="flex items-center justify-center">
-                            <span>Send Reset Link</span>
+                            <span>&#39;Send Reset Link&#39;</span>
                           </div>
                         )}
                       </HoverButton>
@@ -277,20 +277,20 @@ const ForgotPasswordPage = () => {
                     </div>
                     <h3 className="text-lg font-medium text-slate-900 mb-2">Check your email</h3>
                     <p className="text-slate-600 mb-1">
-                      We've sent a password reset link to:
+                      We&apos;ve sent a password reset link to:
                     </p>
                     <p className="text-slate-900 font-medium mb-4">
                       {submittedEmail}
                     </p>
                     <p className="text-slate-600 text-sm">
-                      If you don't see it in your inbox, please check your spam folder.
+                      If you don&apos;t see it in your inbox, please check your spam folder.
                     </p>
                   </div>
 
                   {/* Resend Email Option */}
                   <div className="border-t border-slate-200 pt-4 text-center">
                     <p className="text-slate-600 text-sm mb-3">
-                      Didn't receive the email?
+                      Didn&apos;t receive the email?
                     </p>
                     <button
                       type="button"
