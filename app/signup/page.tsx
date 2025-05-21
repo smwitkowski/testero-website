@@ -15,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { motion, AnimatePresence } from "framer-motion";
 
 // Define the form schema with zod validation
-const loginFormSchema = z.object({
+const signupFormSchema = z.object({
   email: z
     .string()
     .min(1, { message: "Email is required" })
@@ -26,12 +26,13 @@ const loginFormSchema = z.object({
     .min(8, { message: "Password must be at least 8 characters" }),
 });
 
-type LoginFormValues = z.infer<typeof loginFormSchema>;
+type SignupFormValues = z.infer<typeof signupFormSchema>;
 
-const LoginPage = () => {
+const SignupPage = () => {
   // Form submission states
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const posthog = usePostHog(); // Get PostHog instance
   const router = useRouter();
   const { user } = useAuth();
@@ -44,59 +45,70 @@ const LoginPage = () => {
   }, [user, router]);
 
   // Initialize the form
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginFormSchema),
+  const form = useForm<SignupFormValues>({
+    resolver: zodResolver(signupFormSchema),
     defaultValues: {
       email: "",
       password: "",
     },
   });
 
+  // Track page view in PostHog
+  React.useEffect(() => {
+    if (posthog) {
+      posthog.capture('signup_page_viewed');
+    }
+  }, [posthog]);
+
   // Handle form submission
-  async function onSubmit(data: LoginFormValues) {
+  async function onSubmit(data: SignupFormValues) {
     setIsSubmitting(true);
     setError(null);
+    setSuccessMessage(null);
     
     try {
-      // Track login attempt in PostHog
+      // Track signup attempt in PostHog
       if (posthog) {
-        posthog.capture('login_attempt', {
+        posthog.capture('signup_attempt', {
           email: data.email,
         });
       }
 
-      // Call Supabase auth API to sign in
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      // Sign up with Supabase - use redirectTo to specify where to go after email verification
+      const { error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/verify-email`,
+        }
       });
 
-      if (signInError) {
-        setError(signInError.message);
+      if (signUpError) {
+        setError(signUpError.message);
         
         // Track error in PostHog
         if (posthog) {
-          posthog.capture('login_error', {
-            error_message: signInError.message,
+          posthog.capture('signup_error', {
+            error_message: signUpError.message,
           });
         }
       } else {
-        // Track success in PostHog
-        if (posthog) {
-          posthog.capture('login_success');
-        }
+        setSuccessMessage("Success! Please check your email to confirm your account. You will be redirected to the login page after verification.");
+        form.reset(); // Reset form on success
         
-        // Redirect will be handled by AuthProvider
-        router.push('/practice/question');
+        // Track signup success in PostHog
+        if (posthog) {
+          posthog.capture('signup_success');
+        }
       }
       
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred. Please try again.";
       setError(errorMessage);
       
       // Track error in PostHog
       if (posthog) {
-        posthog.capture('login_error', {
+        posthog.capture('signup_error', {
           error_message: errorMessage,
         });
       }
@@ -117,8 +129,8 @@ const LoginPage = () => {
         >
           {/* Header */}
           <div className="px-6 py-8 text-center border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">Welcome Back</h1>
-            <p className="text-slate-600">Sign in to your Testero account</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">Create Account</h1>
+            <p className="text-slate-600">Join Testero and start practicing</p>
           </div>
 
           {/* Form Container */}
@@ -158,7 +170,7 @@ const LoginPage = () => {
                                 {...field}
                                 onFocus={() => {
                                   if (posthog) {
-                                    posthog.capture('login_form_interaction_start');
+                                    posthog.capture('signup_form_interaction_start');
                                   }
                                 }}
                               />
@@ -203,7 +215,7 @@ const LoginPage = () => {
                                       : "border-slate-300 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
                                 }`}
                                 disabled={isSubmitting}
-                                autoComplete="current-password"
+                                autoComplete="new-password"
                                 aria-required="true"
                                 aria-invalid={fieldState.error ? "true" : "false"}
                                 {...field}
@@ -230,16 +242,6 @@ const LoginPage = () => {
                       )}
                     />
 
-                    {/* Forgot Password Link */}
-                    <div className="flex justify-end">
-                      <Link 
-                        href="/forgot-password" 
-                        className="text-sm text-orange-500 hover:text-orange-600 transition-colors font-medium"
-                      >
-                        Forgot password?
-                      </Link>
-                    </div>
-
                     {/* Error Alert */}
                     {error && (
                       <motion.div
@@ -258,7 +260,38 @@ const LoginPage = () => {
                       </motion.div>
                     )}
 
-                    {/* Login Button */}
+                    {/* Success Message */}
+                    {successMessage && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-green-50 border border-green-200 rounded-md px-4 py-3 text-center"
+                        role="alert"
+                        aria-live="assertive"
+                      >
+                        <p className="text-green-600 font-medium flex items-center justify-center text-sm">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          {successMessage}
+                        </p>
+                      </motion.div>
+                    )}
+
+                    {/* Password Requirements and Email Verification Info */}
+                    <div className="bg-blue-50 border border-blue-100 rounded-md px-4 py-3 space-y-2">
+                      <p className="text-blue-700 text-sm">
+                        Password must be at least 8 characters long.
+                      </p>
+                      <p className="text-blue-700 text-sm border-t border-blue-100 pt-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Email verification will be required after registration.
+                      </p>
+                    </div>
+
+                    {/* Signup Button */}
                     <HoverButton
                       className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 py-3 rounded-md text-base font-semibold shadow-md w-full transition-all"
                       type="submit"
@@ -288,11 +321,11 @@ const LoginPage = () => {
                               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                             ></path>
                           </svg>
-                          Signing in...
+                          Creating Account...
                         </div>
                       ) : (
                         <div className="flex items-center justify-center">
-                          <span>Sign In</span>
+                          <span>Create Account</span>
                         </div>
                       )}
                     </HoverButton>
@@ -303,15 +336,15 @@ const LoginPage = () => {
           </div>
         </motion.div>
 
-        {/* Sign Up Link */}
+        {/* Login Link */}
         <div className="mt-8 text-center">
           <p className="text-slate-600">
-            Don&apos;t have an account?{' '}
+            Already have an account?{' '}
             <Link 
-              href="/signup" 
+              href="/login" 
               className="text-orange-500 hover:text-orange-600 transition-colors font-medium"
             >
-              Sign Up
+              Log In
             </Link>
           </p>
         </div>
@@ -326,4 +359,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default SignupPage;

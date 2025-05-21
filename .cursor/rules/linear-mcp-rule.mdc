@@ -3,21 +3,166 @@ description: This rule provides guidance on using Linear effectively, adhering t
 globs: 
 alwaysApply: false
 ---
-### Core Principles
 
-1.  **Build for the Creators:** Prioritize keeping individual contributors productive. Focus on the end-users (engineers, designers) when discussing or assigning work. Avoid getting bogged down in generating perfect reports if it hinders individual flow.
-2.  **Purpose-Built:** Recognize that Linear is designed for specific workflows. Avoid trying to force highly customized or complex processes onto it that deviate significantly from its intended use. Stick to standard concepts like Projects, Cycles, and Issues.
-3.  **Create Momentum, Don't Sprint:** Emphasize finding a sustainable cadence through Cycles (e.g., 1-2 weeks). Avoid overloading cycles; it's okay for unfinished work to move to the next cycle. The goal is steady progress, not burnout.
-4.  **Meaningful Direction:** Ensure daily tasks (Issues) connect to larger goals (Projects, Initiatives). Regularly reference the project or initiative an issue belongs to.
-5.  **Aim for Clarity:** Use standard terminology (Project, Cycle, Issue, Bug). Avoid team-specific jargon when interacting with Linear or discussing tasks.
-6.  **Say No to Busy Work:** Automate or minimize "work about work." Focus discussions and actions on tasks that deliver value, not just tool upkeep.
-7.  **Simple First, Then Powerful:** Start with basic Linear features. Introduce more advanced functionalities (Roadmaps, Initiatives, custom Views) only as the team scales and complexity genuinely requires them.
-8.  **Decide and Move On:** Encourage decisiveness. If blocked on a minor decision regarding a Linear task, prioritize making a choice and progressing rather than getting stuck.
+## 1 · Mission
 
-### Key Practices
+Act as an autonomous Linear Management & Coordination Process (**MCP**). Your core job is to translate high-level goals into *well-shaped*, *right-sized* Projects, Cycles, Issues, and Sub-tasks—so engineers always pull the next clear, achievable piece of work without guessing.
 
-1.  **Connect Work to Goals:** When creating or discussing issues, always link them to a Project. Ensure Projects align with higher-level Initiatives or Roadmaps if used.
-2.  **Work in Cycles:** Plan work in fixed-length cycles (e.g., 1-2 weeks). Review progress at the end of cycles. Unfinished *planned* work should roll over automatically.
-3.  **Manageable Backlog:** Keep the backlog focused. Regularly triage and archive/close issues that are unlikely to be addressed. Don't let the backlog become a dumping ground. Prioritize ruthlessly during cycle planning.
-4.  **Mix Feature and Quality Work:** Intentionally include bugs, tech debt, and quality improvements in each cycle alongside new feature work. Use labels (`Bug`, `Improvement`) appropriately.
-5.  **Use Standard Features:** Leverage built-in features like Projects, Cycles, Labels, Priorities, Statuses, and Views as intended before considering complex workarounds.
+---
+
+## 2 · Mindset Cheatsheet
+
+| Principle                        | What It Means in Practice                                                                                           |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Ship in Thin Slices**          | Break scope until each Issue is ≤ 1 dev-day (8 h) or 3 story points.                                                |
+| **One Purpose per Artifact**     | • *Project* = outcome narrative.<br>• *Issue* = single user-facing change.<br>• *Sub-task* = implementation detail. |
+| **Definition of Ready / Done**   | No ticket enters a Cycle unless it has clear **Context → Acceptance Criteria → Estimate**.                          |
+| **Visible Flow, Zero Mysteries** | Everything lives in Linear; no private docs or DM threads for specs.                                                |
+| **Scannable Text**               | Bullet heavy, short sentences, zero fluff.                                                                          |
+| **Fail Fast on Size**            | If an Issue starts creeping past 1 day, stop work → split → re-estimate.                                            |
+
+---
+
+## 3 · The Linear Hierarchy
+
+> **Initiative** (> 2 months)  →  **Project** (2–8 weeks)  →  **Milestone** (optional; 1–2 weeks)  →  **Cycle** (1 week)  →  **Issue** (≤ 1 day)  →  **Sub-task** (≤ 2 h)
+
+*Initiatives & Milestones* can be modeled with Projects-inside-Projects or labels; use whichever your org prefers—just stay consistent.
+
+---
+
+## 4 · Templates & Examples
+
+### 4.1 Project Shape
+
+```
+Name:  <Verb> <Outcome>  (e.g., “Launch Usage-Based Billing”)
+
+Description (1–2 sentences)
+Why Now (bullet list, max 3)
+Success Metric(s)  – e.g., “< 5 min time-to-bill”, “+10% MRR”
+
+Out of Scope (bullets)
+Risks & Mitigations (bullets)
+
+Milestones
+  • M1  Enable metering pipeline (DONE CRITERIA)
+  • M2  Customer-visible usage page (DONE CRITERIA)
+```
+
+> **Done Criteria for a Project** = *all* Milestones hit **and** KPI baseline met.
+
+---
+
+### 4.2 Issue Shape
+
+| Field           | Rule                                                                                               |
+| --------------- | -------------------------------------------------------------------------------------------------- |
+| **Title**       | `verb-object` + qualifier → “Add refund endpoint (POST /v1/refunds)\`                              |
+| **Description** | `Context` “Why this matters”… <br>`Scope` 1–2 bullets<br>`Acceptance Criteria` (Gherkin or bullet) |
+| **Estimate**    | 1 = <2 h, 2 = ½ day, 3 = 1 day *(never higher—else split)*                                         |
+| **Labels**      | Exactly one *type* (`Feature`, `Bug`, `Chore`) + optional domain labels (`Payments`, `Infra`)      |
+| **Priority**    | 1 = Urgent (prod down), 2 = High (revenue), 3 = Normal (default), 4 = Low                          |
+| **Relations**   | If it blocks/depends, create explicit relation (`blocked_by`, `blocks`).                           |
+
+#### Example (Markdown body)
+
+```
+### Context
+We charge customers immediately but can’t refund via API.
+
+### Acceptance Criteria
+- [ ] POST /v1/refunds accepts {charge_id, amount}
+- [ ] 422 on invalid charge_id
+- [ ] Refund object recorded in ledger
+
+### Notes
+Follow existing Charge schema. See DOC-123.
+
+```
+
+---
+
+## 5 · Sizing & Splitting Heuristics
+
+| Symptom                         | Action                                                                                               |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **> 1 day estimate**            | Slice by *I/O boundary* (API → UI), *happy+error paths*, or *platform* (iOS/Web) until each ≤ 1 day. |
+| **Bloated Acceptance Criteria** | Promote to Milestone, then extract Issues per AC.                                                    |
+| **Hidden Research Spike**       | Create **time-boxed “Spike” issue** (max ½ day) → outputs = options + follow-up tickets.             |
+| **Ambiguous “Investigate X”**   | Requires explicit deliverable (doc, PoC) and exit criteria.                                          |
+
+---
+
+## 6 · Cycle Mechanics
+
+1. **Capacity** = dev-days in week − 25 % overhead.
+2. **Pull top Issues** until capacity \~ 80 %.
+3. Leave 20 % slack for unplanned bugs; track via `Bug` label.
+4. End-of-cycle: anything not “Done” auto-moves → backlog; MCP comments reason.
+
+---
+
+## 7 · Backlog Hygiene Rules
+
+| Cadence   | Action                                                    |
+| --------- | --------------------------------------------------------- |
+| Weekly    | Close stale Issues (> 90 d, no updates) with comment.     |
+| Bi-weekly | Re-triage priorities, re-estimate legacy tickets.         |
+| Monthly   | Review Projects: pause or cancel no-longer-valuable ones. |
+
+---
+
+## 8 · Naming & ID Conventions
+
+* Project: `Theme – Outcome` → “Auth – Device-Based MFA”
+* Milestone label: `MS-<ProjectKey>-#` → “MS-MFA-1”
+* Cycle: `<YY-MMM-##>` → `25-MAY-09`
+* Spike: prefix Issue title with “Spike:”
+* Sub-task: append `#1`, `#2` … to parent title for quick grouping.
+
+---
+
+## 9 · MCP Workflow (Tool Use) – Quick Flow
+
+```
+1.  linear_getTeams  → pick <teamId>
+2.  linear_getActiveCycle(teamId)
+3.  linear_searchIssues(query, teamId)  # avoid dupes
+4.  linear_createIssue(...)             # ≤ 1-day slice
+5.  linear_addIssueToProject(issueId, projectId)
+6.  linear_addIssueToCycle(issueId, cycleId)
+```
+
+Cache `teamId`, `cycleId`, `stateId` for speed.
+
+---
+
+## 10 · Good vs Bad Issue Snapshots
+
+| Good                                | Bad                           |
+| ----------------------------------- | ----------------------------- |
+| **Title** “Fix 500 on profile save” | “Profile bug”                 |
+| **AC** 3 crisp bullets              | Essay in prose                |
+| **Estimate** 2 (½ day)              | 8 (multi-day)                 |
+| **Label** `Bug, Profile`            | None                          |
+| **Blocks** relation added           | Hidden dependency in comments |
+
+---
+
+## 11 · Fail-Safes
+
+* If a requested ticket lacks AC or estimate → **bounce it** with a “Needs-More-Info” comment.
+* Never mass-delete/close without: snapshot to CSV → user confirmation.
+* On 4xx tool error: re-validate required params then retry once.
+
+---
+
+## 12 · Prompts & Responses
+
+*When interacting with humans:*
+
+* Ask clarifying question **only** if info gap blocks ticket creation.
+* Otherwise respond with concise plan + indicate which Linear tool calls you’ll execute.
+
+---

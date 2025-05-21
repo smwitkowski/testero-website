@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { colors } from '@/lib/design-system/colors';
 import { typography } from '@/lib/design-system/typography';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 const navigationItems = [
   { name: 'Home', href: '/' },
@@ -14,11 +15,19 @@ const navigationItems = [
   // Resources dropdown temporarily removed until pages are created
 ];
 
+// Profile menu items for authenticated users
+const profileMenuItems = [
+  { name: 'Dashboard', href: '/practice/question' },
+  { name: 'Profile', href: '/profile' },
+  // Add more items as needed
+];
+
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  // const [isResourcesDropdownOpen, setIsResourcesDropdownOpen] = useState(false); // Removed
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { user, signOut, isLoading } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -52,11 +61,25 @@ const Navbar = () => {
     };
   }, [isMobileMenuOpen]);
 
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (isProfileMenuOpen && !target.closest('#profile-menu-container')) {
+        setIsProfileMenuOpen(false);
+      }
+    };
 
-  // Removed unused click handler for dropdown toggle
-  // const handleResourcesClick = () => {
-  //   setIsResourcesDropdownOpen(!isResourcesDropdownOpen);
-  // };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfileMenuOpen]);
+
+  const handleLogout = async () => {
+    await signOut();
+    setIsProfileMenuOpen(false);
+  };
 
   return (
     <header
@@ -112,20 +135,75 @@ const Navbar = () => {
 
         {/* Action Elements (Desktop) */}
         <div className="hidden md:flex items-center space-x-4 flex-shrink-0 ml-auto">
-          <Link
-            href="/waitlist"
-            className="px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-accent-500"
-            style={{ backgroundColor: colors.accent[500], color: colors.ui.white, ...typography.button.default }}
-          >
-            Join Waitlist
-          </Link>
-          <Link
-            href="/login"
-            className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
-            style={{ color: colors.primary[800], ...typography.button.default }}
-          >
-            Login
-          </Link>
+          {isLoading ? (
+            // Loading state placeholder
+            <div className="h-10 w-20 bg-gray-200 animate-pulse rounded"></div>
+          ) : user ? (
+            // Authenticated user - show profile menu
+            <div id="profile-menu-container" className="relative">
+              <button
+                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-accent-500 rounded-full"
+                aria-expanded={isProfileMenuOpen}
+                aria-haspopup="true"
+              >
+                <div className="w-8 h-8 rounded-full bg-accent-500 flex items-center justify-center text-white">
+                  {/* Use first letter of email as avatar placeholder */}
+                  {user.email?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              </button>
+              
+              {/* Profile dropdown menu */}
+              {isProfileMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-ui-border-light"
+                     style={{ borderColor: colors.ui.border.light }}
+                     role="menu"
+                     aria-orientation="vertical"
+                     aria-labelledby="user-menu-button">
+                  <div className="px-4 py-2 text-sm text-gray-500 border-b border-ui-border-light" style={{ borderColor: colors.ui.border.light }}>
+                    {user.email}
+                  </div>
+                  {profileMenuItems.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className="block px-4 py-2 text-sm text-primary-800 hover:bg-gray-100"
+                      style={{ color: colors.primary[800] }}
+                      onClick={() => setIsProfileMenuOpen(false)}
+                      role="menuitem"
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100"
+                    role="menuitem"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            // Not authenticated - show login/signup buttons
+            <>
+              <Link
+                href="/signup"
+                className="px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-accent-500"
+                style={{ backgroundColor: colors.accent[500], color: colors.ui.white, ...typography.button.default }}
+              >
+                Sign Up
+              </Link>
+              <Link
+                href="/login"
+                className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                style={{ color: colors.primary[800], ...typography.button.default }}
+              >
+                Login
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
@@ -145,14 +223,48 @@ const Navbar = () => {
                 {item.name}
               </Link>
             ))}
-            {/* Action elements (Mobile) */}
+            
+            {/* Auth-related actions for mobile */}
             <div className="flex flex-col space-y-4 mt-4 pt-4 border-t border-ui-border-light" style={{ borderColor: colors.ui.border.light }}>
-              <Link href="/waitlist" className="px-4 py-2 rounded text-center focus:outline-none focus:ring-2 focus:ring-accent-500" style={{ backgroundColor: colors.accent[500], color: colors.ui.white, ...typography.button.default }} onClick={() => setIsMobileMenuOpen(false)}>
-                Join Waitlist
-              </Link>
-              <Link href="/login" className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500" style={{ color: colors.primary[800], ...typography.button.default }} onClick={() => setIsMobileMenuOpen(false)}>
-                Login
-              </Link>
+              {isLoading ? (
+                // Loading state placeholder
+                <div className="h-10 bg-gray-200 animate-pulse rounded"></div>
+              ) : user ? (
+                // Authenticated user - show profile links
+                <>
+                  <div className="px-4 py-2 text-sm text-gray-500">
+                    {user.email}
+                  </div>
+                  {profileMenuItems.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className="text-primary-800 hover:text-accent-500 transition-colors duration-200"
+                      style={{ color: colors.primary[800], ...typography.button.default }}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
+                  <button
+                    onClick={handleLogout}
+                    className="text-left text-red-500 hover:text-red-700 transition-colors duration-200"
+                    style={{ ...typography.button.default }}
+                  >
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                // Not authenticated - show login/signup buttons
+                <>
+                  <Link href="/signup" className="px-4 py-2 rounded text-center focus:outline-none focus:ring-2 focus:ring-accent-500" style={{ backgroundColor: colors.accent[500], color: colors.ui.white, ...typography.button.default }} onClick={() => setIsMobileMenuOpen(false)}>
+                    Sign Up
+                  </Link>
+                  <Link href="/login" className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500" style={{ color: colors.primary[800], ...typography.button.default }} onClick={() => setIsMobileMenuOpen(false)}>
+                    Login
+                  </Link>
+                </>
+              )}
             </div>
           </nav>
         </div>
