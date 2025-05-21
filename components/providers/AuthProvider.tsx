@@ -83,6 +83,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (isAuthRoute && session) {
       router.push('/practice/question');
     }
+
+    // Check for early access flag if user is authenticated and not on a public route
+    if (session && !isPublicRoute) {
+      // Assuming 'is_early_access' is stored in user_metadata
+      const isEarlyAccess = session.user?.user_metadata?.is_early_access === true;
+
+      if (!isEarlyAccess) {
+        // Redirect users who are logged in but not in early access
+        router.push('/early-access-coming-soon'); // Redirect to a specific page
+      }
+    }
+
   }, [isLoading, session, pathname, router]);
 
   const handleSessionChange = (newSession: Session | null) => {

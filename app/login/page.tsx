@@ -10,6 +10,7 @@ import { HoverButton } from "@/components/ui/hover-button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from '@/lib/supabase/client'; // Import supabase client
 
 // Define the form schema with zod validation
 const loginFormSchema = z.object({
@@ -53,20 +54,23 @@ const LoginPage = () => {
         });
       }
 
-      // TODO: Replace with actual login logic
-      console.log('Login form submitted', data);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // For demonstration, showing error state
-      // Remove this in production and implement actual authentication
-      setError('Login functionality is not yet implemented. Please join the waitlist.');
-      
+      // Replace with actual login logic
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // If successful, Supabase's onAuthStateChange listener in AuthProvider
+      // will handle the session update and redirection.
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Something went wrong. Please try again.";
       setError(errorMessage);
-      
+
       // Track error in PostHog
       if (posthog) {
         posthog.capture('login_error', {
