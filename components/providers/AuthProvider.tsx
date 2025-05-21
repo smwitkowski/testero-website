@@ -65,37 +65,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Skip during initial load or when no pathname
     if (isLoading || !pathname) return;
 
-    // Check if the current route is a protected route
-    const isPublicRoute = publicRoutes.some(route => 
-      pathname === route || pathname.startsWith(`${route}/`)
-    );
-    
-    const isAuthRoute = authRoutes.some(route => 
+    const isPublicRoute = publicRoutes.some(route =>
       pathname === route || pathname.startsWith(`${route}/`)
     );
 
-    // Protected route but no user
-    if (!isPublicRoute && !session) {
-      router.push('/login');
-    }
+    const isAuthRoute = authRoutes.some(route =>
+      pathname === route || pathname.startsWith(`${route}/`)
+    );
 
-    // Auth route but user is already logged in
-    if (isAuthRoute && session) {
-      router.push('/practice/question');
-    }
-
-    // Check for early access flag if user is authenticated and not on a public route
-    if (session && !isPublicRoute) {
-      // Assuming 'is_early_access' is stored in user_metadata
-      const isEarlyAccess = session.user?.user_metadata?.is_early_access === true;
-
-      if (!isEarlyAccess) {
-        // Redirect users who are logged in but not in early access
-        router.push('/early-access-coming-soon'); // Redirect to a specific page
+    // If user is authenticated
+    if (session) {
+      // If on an auth route, redirect to the main app page
+      if (isAuthRoute) {
+        router.push('/practice/question');
+      } else if (!isPublicRoute) {
+        // If on a protected route, check early access flag
+        const isEarlyAccess = session.user?.user_metadata?.is_early_access === true;
+        if (!isEarlyAccess) {
+          // Redirect users who are logged in but not in early access
+          router.push('/early-access-coming-soon'); // Redirect to a specific page
+        }
+        // If they have early access, they stay on the protected page
       }
+      // If on a public route and authenticated, they can stay on the public route
+    } else {
+      // If user is NOT authenticated
+      // If on a protected route, redirect to login
+      if (!isPublicRoute) {
+        router.push('/login');
+      }
+      // If on a public route and not authenticated, they can stay on the public route
     }
 
-  }, [isLoading, session, pathname, router]);
+  }, [isLoading, session, pathname, router]); // Dependencies remain the same
 
   const handleSessionChange = (newSession: Session | null) => {
     setSession(newSession);
