@@ -73,17 +73,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       pathname === route || pathname.startsWith(`${route}/`)
     );
 
+    console.log('[Auth Routing]', { 
+      pathname, 
+      isPublicRoute, 
+      isAuthRoute, 
+      isAuthenticated: !!session,
+      userMetadata: session?.user?.user_metadata,
+      isEarlyAccess: session?.user?.user_metadata?.is_early_access === true
+    });
+
     // If user is authenticated
     if (session) {
       // If on an auth route, redirect to the main app page
       if (isAuthRoute) {
+        console.log('[Auth Routing] Redirecting from auth route to practice page');
         router.push('/practice/question');
       } else if (!isPublicRoute) {
         // If on a protected route, check early access flag
         const isEarlyAccess = session.user?.user_metadata?.is_early_access === true;
         if (!isEarlyAccess) {
           // Redirect users who are logged in but not in early access
+          console.log('[Auth Routing] User not in early access, redirecting to coming soon page');
           router.push('/early-access-coming-soon'); // Redirect to a specific page
+        } else {
+          console.log('[Auth Routing] User has early access, allowing access to protected route');
         }
         // If they have early access, they stay on the protected page
       }
@@ -92,6 +105,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // If user is NOT authenticated
       // If on a protected route, redirect to login
       if (!isPublicRoute) {
+        console.log('[Auth Routing] Unauthenticated user on protected route, redirecting to login');
         router.push('/login');
       }
       // If on a public route and not authenticated, they can stay on the public route

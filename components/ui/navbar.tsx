@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { colors } from '@/lib/design-system/colors';
 import { typography } from '@/lib/design-system/typography';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 const navigationItems = [
   { name: 'Home', href: '/' },
@@ -19,6 +20,7 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   // const [isResourcesDropdownOpen, setIsResourcesDropdownOpen] = useState(false); // Removed
   const pathname = usePathname();
+  const { session, signOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -112,20 +114,41 @@ const Navbar = () => {
 
         {/* Action Elements (Desktop) */}
         <div className="hidden md:flex items-center space-x-4 flex-shrink-0 ml-auto">
-          <Link
-            href="/waitlist"
-            className="px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-accent-500"
-            style={{ backgroundColor: colors.accent[500], color: colors.ui.white, ...typography.button.default }}
-          >
-            Join Waitlist
-          </Link>
-          <Link
-            href="/login"
-            className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
-            style={{ color: colors.primary[800], ...typography.button.default }}
-          >
-            Login
-          </Link>
+          {session ? (
+            <>
+              <Link
+                href="/practice/question"
+                className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                style={{ color: colors.primary[800], ...typography.button.default }}
+              >
+                Practice
+              </Link>
+              <button
+                onClick={signOut}
+                className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                style={{ color: colors.primary[800], ...typography.button.default }}
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/waitlist"
+                className="px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-accent-500"
+                style={{ backgroundColor: colors.accent[500], color: colors.ui.white, ...typography.button.default }}
+              >
+                Join Waitlist
+              </Link>
+              <Link
+                href="/login"
+                className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                style={{ color: colors.primary[800], ...typography.button.default }}
+              >
+                Login
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
@@ -147,12 +170,47 @@ const Navbar = () => {
             ))}
             {/* Action elements (Mobile) */}
             <div className="flex flex-col space-y-4 mt-4 pt-4 border-t border-ui-border-light" style={{ borderColor: colors.ui.border.light }}>
-              <Link href="/waitlist" className="px-4 py-2 rounded text-center focus:outline-none focus:ring-2 focus:ring-accent-500" style={{ backgroundColor: colors.accent[500], color: colors.ui.white, ...typography.button.default }} onClick={() => setIsMobileMenuOpen(false)}>
-                Join Waitlist
-              </Link>
-              <Link href="/login" className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500" style={{ color: colors.primary[800], ...typography.button.default }} onClick={() => setIsMobileMenuOpen(false)}>
-                Login
-              </Link>
+              {session ? (
+                <>
+                  <Link 
+                    href="/practice/question" 
+                    className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500" 
+                    style={{ color: colors.primary[800], ...typography.button.default }} 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Practice
+                  </Link>
+                  <button
+                    onClick={() => {
+                      signOut();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                    style={{ color: colors.primary[800], ...typography.button.default }}
+                  >
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link 
+                    href="/waitlist" 
+                    className="px-4 py-2 rounded text-center focus:outline-none focus:ring-2 focus:ring-accent-500" 
+                    style={{ backgroundColor: colors.accent[500], color: colors.ui.white, ...typography.button.default }} 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Join Waitlist
+                  </Link>
+                  <Link 
+                    href="/login" 
+                    className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500" 
+                    style={{ color: colors.primary[800], ...typography.button.default }} 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Login
+                  </Link>
+                </>
+              )}
             </div>
           </nav>
         </div>
