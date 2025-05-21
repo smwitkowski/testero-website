@@ -6,9 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from 'next/link';
 import { usePostHog } from "posthog-js/react";
-import { supabase } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/providers/AuthProvider';
 import { HoverButton } from "@/components/ui/hover-button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
@@ -33,15 +30,6 @@ const LoginPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const posthog = usePostHog(); // Get PostHog instance
-  const router = useRouter();
-  const { user } = useAuth();
-  
-  // If user is already authenticated, redirect to dashboard
-  React.useEffect(() => {
-    if (user) {
-      router.push('/practice/question');
-    }
-  }, [user, router]);
 
   // Initialize the form
   const form = useForm<LoginFormValues>({
@@ -65,30 +53,15 @@ const LoginPage = () => {
         });
       }
 
-      // Call Supabase auth API to sign in
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-      });
-
-      if (signInError) {
-        setError(signInError.message);
-        
-        // Track error in PostHog
-        if (posthog) {
-          posthog.capture('login_error', {
-            error_message: signInError.message,
-          });
-        }
-      } else {
-        // Track success in PostHog
-        if (posthog) {
-          posthog.capture('login_success');
-        }
-        
-        // Redirect will be handled by AuthProvider
-        router.push('/practice/question');
-      }
+      // TODO: Replace with actual login logic
+      console.log('Login form submitted', data);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // For demonstration, showing error state
+      // Remove this in production and implement actual authentication
+      setError('Login functionality is not yet implemented. Please join the waitlist.');
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Something went wrong. Please try again.";
@@ -308,10 +281,10 @@ const LoginPage = () => {
           <p className="text-slate-600">
             Don&apos;t have an account?{' '}
             <Link 
-              href="/signup" 
+              href="/waitlist" 
               className="text-orange-500 hover:text-orange-600 transition-colors font-medium"
             >
-              Sign Up
+              Join the waitlist
             </Link>
           </p>
         </div>

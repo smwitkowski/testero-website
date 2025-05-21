@@ -1,14 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { usePostHog } from "posthog-js/react";
-import { supabase } from '@/lib/supabase/client';
-import { useAuth } from '@/components/providers/AuthProvider';
 import { HoverButton } from "@/components/ui/hover-button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
@@ -33,15 +30,6 @@ const ForgotPasswordPage = () => {
   const [submittedEmail, setSubmittedEmail] = useState<string>("");
   const [resendEnabled, setResendEnabled] = useState<boolean>(false);
   const posthog = usePostHog(); // Get PostHog instance
-  const router = useRouter();
-  const { user } = useAuth();
-  
-  // If user is already authenticated, redirect to dashboard
-  useEffect(() => {
-    if (user) {
-      router.push('/practice/question');
-    }
-  }, [user, router]);
 
   // Initialize the form
   const form = useForm<ForgotPasswordFormValues>({
@@ -80,30 +68,17 @@ const ForgotPasswordPage = () => {
         });
       }
 
-      // Call Supabase auth API to send password reset email
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        data.email,
-        {
-          redirectTo: `${window.location.origin}/reset-password`,
-        }
-      );
-
-      if (resetError) {
-        throw new Error(resetError.message);
-      }
+      // TODO: Replace with actual password reset logic
+      console.log('Password reset requested for', data.email);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Store email for confirmation screen
       setSubmittedEmail(data.email);
       
       // Show success state
       setIsSubmitted(true);
-      
-      // Track success in PostHog
-      if (posthog) {
-        posthog.capture('password_reset_email_sent', {
-          email: data.email,
-        });
-      }
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Something went wrong. Please try again.";
@@ -121,54 +96,23 @@ const ForgotPasswordPage = () => {
   }
 
   // Handle resend request
-  async function handleResend() {
+  function handleResend() {
     if (!resendEnabled) return;
     
-    setResendEnabled(false);
-    setError(null);
-    
-    try {
-      // Track resend request in PostHog
-      if (posthog) {
-        posthog.capture('password_reset_resend_requested', {
-          email: submittedEmail,
-        });
-      }
-      
-      // Call Supabase auth API to resend password reset email
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        submittedEmail,
-        {
-          redirectTo: `${window.location.origin}/reset-password`,
-        }
-      );
-
-      if (resetError) {
-        throw new Error(resetError.message);
-      }
-      
-      // Track success in PostHog
-      if (posthog) {
-        posthog.capture('password_reset_email_resent', {
-          email: submittedEmail,
-        });
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to resend email. Please try again.";
-      setError(errorMessage);
-      
-      // Track error in PostHog
-      if (posthog) {
-        posthog.capture('password_reset_resend_error', {
-          error_message: errorMessage,
-        });
-      }
-    } finally {
-      // Enable resend button again after 60 seconds
-      setTimeout(() => {
-        setResendEnabled(true);
-      }, 60000);
+    // Track resend request in PostHog
+    if (posthog) {
+      posthog.capture('password_reset_resend_requested', {
+        email: submittedEmail,
+      });
     }
+    
+    setResendEnabled(false);
+    
+    // Simulate resend
+    setTimeout(() => {
+      // Enable resend button again after 60 seconds
+      setResendEnabled(true);
+    }, 60000);
   }
 
   return (
