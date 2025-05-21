@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 const EarlyAccessComingSoonPage = () => {
   return (
@@ -11,13 +12,13 @@ const EarlyAccessComingSoonPage = () => {
           You are logged in, but your account does not currently have early access.
         </p>
         <p className="mt-2 text-sm text-gray-600">
-          We'll notify you when early access is available for your account.
+          We&apos;ll notify you when early access is available for your account.
         </p>
         {/* Optional: Add a link back to the waitlist or home page */}
         <div className="mt-6">
-          <a href="/" className="font-medium text-orange-600 hover:text-orange-500">
+          <Link href="/" className="font-medium text-orange-600 hover:text-orange-500">
             Go back to Home
-          </a>
+          </Link>
         </div>
       </div>
     </div>
