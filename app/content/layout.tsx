@@ -1,6 +1,5 @@
 import React from 'react';
 import Link from 'next/link';
-import ContentNavigation from '@/components/content/ContentNavigation';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -18,8 +17,7 @@ export default function ContentLayout({
 }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <ContentNavigation />
-      <div className="flex-grow">{children}</div>
+      <main className="flex-grow">{children}</main>
       <footer className="bg-gray-50 border-t">
         <div className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">

@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/components/providers/AuthProvider"; // Import AuthProvider
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
 import Script from "next/script";
 import { generateMetadata, generateJsonLd, generateViewport } from "@/lib/seo";
@@ -48,10 +49,12 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        <Navbar /> {/* Add the Navbar component here */}
-        <main id="main-content" className="pt-[72px]"> {/* Add padding to main content */}
-          <PostHogProvider>{children}</PostHogProvider>
-        </main>
+        <AuthProvider>
+          <Navbar />
+          <main id="main-content" className="pt-[72px]"> {/* Add padding to main content */}
+            <PostHogProvider>{children}</PostHogProvider>
+          </main>
+        </AuthProvider>
       </body>
     </html>
   );

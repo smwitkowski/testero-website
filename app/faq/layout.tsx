@@ -1,10 +1,6 @@
 import { ReactNode } from 'react';
 import { generateMetadata as generateSeoMetadata } from '@/lib/seo/seo';
-import Link from 'next/link';
-
-// Placeholder for a simpler navigation if needed for FAQ, or reuse existing
-// For now, let's assume a simple header or reuse ContentNavigation if appropriate
-// import ContentNavigation from '@/components/content/ContentNavigation';
+// import Link from 'next/link'; // Removed unused import
 
 export const metadata = generateSeoMetadata({
   title: 'Frequently Asked Questions | Testero',
@@ -19,25 +15,6 @@ export default function FaqLayout({
 }) {
   return (
     <div className="min-h-screen flex flex-col">
-      {/* <ContentNavigation /> */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center">
-            {/* Replace with your logo component or image */}
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">Testero</span>
-          </Link>
-          <nav>
-            <ul className="flex space-x-4">
-              <li>
-                <Link href="/faq" className="text-slate-600 dark:text-slate-400 hover:text-orange-500 dark:hover:text-orange-400 transition-colors">
-                  FAQs
-                </Link>
-              </li>
-              {/* Add other navigation links as needed */}
-            </ul>
-          </nav>
-        </div>
-      </header>
       <main className="flex-grow">{children}</main> {/* Use main tag for content */}
       <footer className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
         <div className="container mx-auto px-4 py-8 text-center">
