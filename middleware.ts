@@ -33,6 +33,7 @@ export const config = {
     '/api/question/:id*', // Fetching a specific question requires authentication
     '/api/question/current', // Fetching the current question requires authentication
     '/api/questions/list', // Listing questions requires authentication
+    '/api/diagnostic/:path*', // Diagnostic routes require authentication
     /*
      * The following paths are intentionally NOT matched by this middleware
      * as they are designed for unauthenticated access or handled differently:
