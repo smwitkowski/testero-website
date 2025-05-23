@@ -82,8 +82,8 @@ const DiagnosticSessionPage = () => {
         throw new Error(data.error || 'Failed to submit answer.');
       }
       setFeedback(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setSubmitting(false);
     }
@@ -104,8 +104,8 @@ const DiagnosticSessionPage = () => {
           throw new Error(data.error || 'Failed to fetch results.');
         }
         setResults(data);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
       }
