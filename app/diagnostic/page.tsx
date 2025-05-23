@@ -18,18 +18,41 @@ const DiagnosticStartPage = () => {
   }, [user, isAuthLoading, router]);
 
   const handleStartDiagnostic = async () => {
+    // Client-side validation
+    if (!examType || typeof examType !== 'string') {
+      setError('Please select a valid exam type.');
+      return;
+    }
+    
+    if (!numQuestions || numQuestions < 1 || numQuestions > 20) {
+      setError('Please select between 1 and 20 questions.');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/diagnostic/start', {
+      const res = await fetch('/api/diagnostic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ examType, numQuestions }),
+        body: JSON.stringify({ 
+          action: 'start',
+          data: { examType, numQuestions }
+        }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to start diagnostic.');
+        // Handle specific error types
+        if (res.status === 429) {
+          setError('You have too many active sessions. Please complete your existing tests first.');
+        } else if (res.status === 401) {
+          setError('Authentication required. Please log in again.');
+          router.push('/login');
+        } else {
+          setError(data.error || 'Failed to start diagnostic.');
+        }
+        return;
       }
 
       // Redirect to the diagnostic session page
@@ -64,11 +87,18 @@ const DiagnosticStartPage = () => {
             type="number"
             id="numQuestions"
             value={numQuestions}
-            onChange={(e) => setNumQuestions(parseInt(e.target.value))}
+            onChange={(e) => {
+              const value = parseInt(e.target.value);
+              if (!isNaN(value) && value >= 1 && value <= 20) {
+                setNumQuestions(value);
+              }
+            }}
             min="1"
             max="20"
+            step="1"
             style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
           />
+          <small style={{ color: '#666', fontSize: 12 }}>Choose between 1 and 20 questions</small>
         </div>
         <button
           onClick={handleStartDiagnostic}

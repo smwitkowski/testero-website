@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export async function POST(req: Request) {
   try {
@@ -8,6 +8,18 @@ export async function POST(req: Request) {
 
     if (!questionId || !selectedOptionKey) {
       return NextResponse.json({ error: 'Missing questionId or selectedOptionKey.' }, { status: 400 });
+    }
+
+    // Create server-side Supabase client and check authentication
+    const supabase = createServerSupabaseClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      console.log('Auth check failed in question submit API:', authError?.message);
+      return NextResponse.json({ 
+        error: 'Authentication required. Please log in to submit answers.',
+        authError: authError?.message 
+      }, { status: 401 });
     }
 
     // Fetch options for the question
@@ -42,7 +54,11 @@ export async function POST(req: Request) {
       correctOptionKey: correctOption.label,
       explanationText,
     });
-  } catch {
-    return NextResponse.json({ error: 'Invalid request or server error.' }, { status: 500 });
+  } catch (error) {
+    console.error('Question submit API error:', error);
+    return NextResponse.json({ 
+      error: 'Invalid request or server error.',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 } 

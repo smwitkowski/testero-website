@@ -8,17 +8,27 @@ interface Option {
 }
 
 interface QuestionData {
+  id: number;
   stem: string;
   options: Option[];
 }
 
-interface DiagnosticResults {
-  sessionId: string;
+interface DiagnosticSessionData {
+  id: string;
+  userId: string;
   examType: string;
+  questions: QuestionData[];
+  answers: Record<number, string>;
+  startedAt: string;
+  currentQuestion: number;
+}
+
+interface DiagnosticResults {
   totalQuestions: number;
   correctAnswers: number;
   score: number;
-  topicRecommendations: string[];
+  recommendations: string[];
+  examType: string;
 }
 
 const DiagnosticSessionPage = () => {
@@ -26,13 +36,13 @@ const DiagnosticSessionPage = () => {
   const router = useRouter();
   const sessionId = params?.sessionId as string;
 
-  const [questions, setQuestions] = useState<QuestionData[]>([]);
+  const [sessionData, setSessionData] = useState<DiagnosticSessionData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOptionLabel, setSelectedOptionLabel] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
     isCorrect: boolean;
-    correctOptionLabel: string;
-    explanationText: string;
+    correctAnswer: string;
+    explanation: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,40 +50,60 @@ const DiagnosticSessionPage = () => {
   const [results, setResults] = useState<DiagnosticResults | null>(null);
 
   useEffect(() => {
-    if (!sessionId) {
-      setError("Session ID not found in URL.");
-      setLoading(false);
-      return;
-    }
+    const fetchSession = async () => {
+      if (!sessionId) {
+        setError("Session ID not found in URL.");
+        setLoading(false);
+        return;
+      }
 
-    // Fetch questions from local storage if available (from /api/diagnostic/start response)
-    const storedQuestions = localStorage.getItem(`diagnostic_questions_${sessionId}`);
-    if (storedQuestions) {
-      setQuestions(JSON.parse(storedQuestions));
-      setLoading(false);
-    } else {
-      // If not in local storage, it means the user navigated directly or refreshed.
-      // In a real app, you'd fetch the session details and questions from the backend.
-      // For this MVP, we'll just show an error or redirect.
-      setError("Diagnostic session not found or expired. Please start a new diagnostic.");
-      setLoading(false);
-    }
+      try {
+        const res = await fetch(`/api/diagnostic?sessionId=${sessionId}`);
+        const data = await res.json();
+        if (!res.ok) {
+          // Handle specific error types
+          if (res.status === 404) {
+            setError('session_not_found');
+          } else if (res.status === 410) {
+            setError('session_expired');
+          } else if (res.status === 401) {
+            setError('authentication_required');
+          } else if (res.status === 429) {
+            setError('too_many_sessions');
+          } else {
+            setError(data.error || 'Failed to fetch diagnostic session.');
+          }
+          return;
+        }
+        setSessionData(data.session);
+        setCurrentQuestionIndex(Object.keys(data.session.answers).length); // Resume from last answered question
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'An error occurred while fetching session.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSession();
   }, [sessionId]);
 
-  const currentQuestion = questions[currentQuestionIndex];
+  const currentQuestion = sessionData?.questions[currentQuestionIndex];
 
   const handleSubmitAnswer = async () => {
     if (!currentQuestion || selectedOptionLabel === null) return;
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/diagnostic/answer', {
+      const res = await fetch('/api/diagnostic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'answer',
           sessionId,
-          questionId: `placeholder-id-${currentQuestionIndex}`, // Placeholder ID for now
-          selectedLabel: selectedOptionLabel,
+          data: {
+            questionId: currentQuestion.id,
+            selectedLabel: selectedOptionLabel,
+          },
         }),
       });
 
@@ -92,13 +122,20 @@ const DiagnosticSessionPage = () => {
   const handleNextQuestion = async () => {
     setFeedback(null);
     setSelectedOptionLabel(null);
-    if (currentQuestionIndex < questions.length - 1) {
+    if (sessionData && currentQuestionIndex < sessionData.questions.length - 1) {
       setCurrentQuestionIndex(prevIndex => prevIndex + 1);
     } else {
       // All questions answered, fetch results
       setLoading(true);
       try {
-        const res = await fetch(`/api/diagnostic/results?sessionId=${sessionId}`);
+        const res = await fetch('/api/diagnostic', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'complete',
+            sessionId,
+          }),
+        });
         const data = await res.json();
         if (!res.ok) {
           throw new Error(data.error || 'Failed to fetch results.');
@@ -113,7 +150,150 @@ const DiagnosticSessionPage = () => {
   };
 
   if (loading) return <main style={{ padding: 24 }}><div>Loading diagnostic...</div></main>;
-  if (error) return <main style={{ padding: 24 }}><div style={{ color: "red" }}>Error: {error}</div></main>;
+  
+  if (error) {
+    if (error === 'session_not_found') {
+      return (
+        <main style={{ maxWidth: 600, margin: '2rem auto', padding: 24, border: '1px solid #eee', borderRadius: 8 }}>
+          <h1>Session Not Found</h1>
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ color: '#d32f2f', marginBottom: 16 }}>
+              Your diagnostic session has expired or could not be found. This can happen if:
+            </p>
+            <ul style={{ color: '#666', marginBottom: 24 }}>
+              <li>The session expired due to inactivity</li>
+              <li>The server was restarted during development</li>
+              <li>The session ID is invalid</li>
+            </ul>
+            <p>Please start a new diagnostic test to continue.</p>
+          </div>
+          <button
+            onClick={() => router.push('/diagnostic')}
+            style={{
+              padding: '12px 32px',
+              borderRadius: 6,
+              background: '#0070f3',
+              color: 'white',
+              border: 'none',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Start New Diagnostic
+          </button>
+        </main>
+      );
+    }
+
+    if (error === 'session_expired') {
+      return (
+        <main style={{ maxWidth: 600, margin: '2rem auto', padding: 24, border: '1px solid #eee', borderRadius: 8 }}>
+          <h1>Session Expired</h1>
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ color: '#d32f2f', marginBottom: 16 }}>
+              Your diagnostic session has expired after 30 minutes of inactivity for security reasons.
+            </p>
+            <p>Please start a new diagnostic test to continue.</p>
+          </div>
+          <button
+            onClick={() => router.push('/diagnostic')}
+            style={{
+              padding: '12px 32px',
+              borderRadius: 6,
+              background: '#0070f3',
+              color: 'white',
+              border: 'none',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Start New Diagnostic
+          </button>
+        </main>
+      );
+    }
+
+    if (error === 'too_many_sessions') {
+      return (
+        <main style={{ maxWidth: 600, margin: '2rem auto', padding: 24, border: '1px solid #eee', borderRadius: 8 }}>
+          <h1>Too Many Active Sessions</h1>
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ color: '#d32f2f', marginBottom: 16 }}>
+              You have reached the maximum number of active diagnostic sessions (3).
+            </p>
+            <p>Please complete your existing tests before starting a new one, or wait for them to expire.</p>
+          </div>
+          <button
+            onClick={() => router.push('/diagnostic')}
+            style={{
+              padding: '12px 32px',
+              borderRadius: 6,
+              background: '#0070f3',
+              color: 'white',
+              border: 'none',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Go to Diagnostic
+          </button>
+        </main>
+      );
+    }
+
+    if (error === 'authentication_required') {
+      return (
+        <main style={{ maxWidth: 600, margin: '2rem auto', padding: 24, border: '1px solid #eee', borderRadius: 8 }}>
+          <h1>Authentication Required</h1>
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ color: '#d32f2f', marginBottom: 16 }}>
+              You need to be logged in to access this diagnostic session.
+            </p>
+          </div>
+          <button
+            onClick={() => router.push('/login')}
+            style={{
+              padding: '12px 32px',
+              borderRadius: 6,
+              background: '#0070f3',
+              color: 'white',
+              border: 'none',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Go to Login
+          </button>
+        </main>
+      );
+    }
+
+    // Generic error fallback
+    return (
+      <main style={{ maxWidth: 600, margin: '2rem auto', padding: 24, border: '1px solid #eee', borderRadius: 8 }}>
+        <h1>Error</h1>
+        <div style={{ marginBottom: 24 }}>
+          <p style={{ color: '#d32f2f', marginBottom: 16 }}>
+            Error: {error}
+          </p>
+        </div>
+        <button
+          onClick={() => router.push('/diagnostic')}
+          style={{
+            padding: '12px 32px',
+            borderRadius: 6,
+            background: '#0070f3',
+            color: 'white',
+            border: 'none',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Start New Diagnostic
+        </button>
+      </main>
+    );
+  }
 
   if (results) {
     return (
@@ -125,7 +305,7 @@ const DiagnosticSessionPage = () => {
         <p>Score: {results.score}%</p>
         <h2>Topic Recommendations:</h2>
         <ul>
-          {results.topicRecommendations.map((rec, index) => (
+          {results.recommendations.map((rec: string, index: number) => (
             <li key={index}>{rec}</li>
           ))}
         </ul>
@@ -152,7 +332,7 @@ const DiagnosticSessionPage = () => {
 
   return (
     <main style={{ maxWidth: 600, margin: '2rem auto', padding: 24, border: '1px solid #eee', borderRadius: 8 }}>
-      <h1>Diagnostic Question {currentQuestionIndex + 1} of {questions.length}</h1>
+      <h1>Diagnostic Question {currentQuestionIndex + 1} of {sessionData?.questions.length}</h1>
       <section style={{ margin: '2rem 0' }}>
         <div style={{ fontSize: 20, fontWeight: 500, marginBottom: 24 }}>
           {currentQuestion.stem}
@@ -160,7 +340,7 @@ const DiagnosticSessionPage = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
           {currentQuestion.options.map((option) => {
             const isSelected = selectedOptionLabel === option.label;
-            const isCorrectOption = feedback?.correctOptionLabel === option.label;
+            const isCorrectOption = feedback?.correctAnswer === option.label;
             const isIncorrectSelected = feedback && isSelected && !feedback.isCorrect;
             const isDisabled = !!feedback;
 
@@ -234,7 +414,7 @@ const DiagnosticSessionPage = () => {
               </div>
               <div style={{ marginBottom: 12 }}>
                 <strong>Explanation:</strong>
-                <div>{feedback.explanationText || 'No explanation provided.'}</div>
+                <div>{feedback.explanation || 'No explanation provided.'}</div>
               </div>
             </div>
             <button
@@ -250,7 +430,7 @@ const DiagnosticSessionPage = () => {
                 cursor: "pointer",
               }}
             >
-              {currentQuestionIndex < questions.length - 1 ? 'Next Question' : 'View Results'}
+              {currentQuestionIndex < (sessionData?.questions.length || 0) - 1 ? 'Next Question' : 'View Results'}
             </button>
           </>
         )}
