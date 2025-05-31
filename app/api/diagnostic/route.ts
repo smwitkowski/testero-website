@@ -21,339 +21,482 @@ interface DiagnosticSession {
   expiresAt: string; // Added expiration
 }
 
-// Simple in-memory storage for MVP (replace with Redis/DB later)
-const diagnosticSessions = new Map<string, DiagnosticSession>();
+// import { createServerActionClient } from '@supabase/auth-helpers-nextjs'; // Example, adjust if using different helper
 
 // Security constants
-const MAX_SESSIONS_PER_USER = 3;
-const SESSION_TIMEOUT_MINUTES = 30;
+const SESSION_TIMEOUT_MINUTES = 30; // Can be adjusted, e.g., 24 * 60 for anonymous
 const MAX_QUESTIONS = 20;
 const MIN_QUESTIONS = 1;
 
 // Utility functions
-function cleanExpiredSessions() {
-  const now = new Date();
-  for (const [sessionId, session] of diagnosticSessions.entries()) {
-    if (new Date(session.expiresAt) < now) {
-      diagnosticSessions.delete(sessionId);
-      console.log(`Expired session ${sessionId} cleaned up`);
-    }
+async function cleanExpiredSessions(supabase: any) {
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from('diagnostics_sessions')
+    .delete()
+    .lt('expires_at', now)
+    .is('completed_at', null);
+
+  if (error) {
+    console.error('Error cleaning expired sessions:', error);
+  } else {
+    console.log('Expired sessions cleaned up.');
   }
 }
 
-function getUserSessionCount(userId: string): number {
-  cleanExpiredSessions();
-  return Array.from(diagnosticSessions.values()).filter(s => s.userId === userId).length;
-}
-
-function validateStartRequest(data: any): { examType: string; numQuestions: number } | null {
+// examType is the string from the frontend, examId is the integer FK for public.exams
+function validateStartRequest(data: any): { examType: string; numQuestions: number, anonymousSessionId?: string } | null {
   if (!data || typeof data !== 'object') return null;
   
-  const examType = typeof data.examType === 'string' ? data.examType.trim() : 'general';
+  const examType = typeof data.examType === 'string' ? data.examType.trim() : 'Google ML Engineer'; // Default or ensure valid
   const numQuestions = typeof data.numQuestions === 'number' ? 
-    Math.max(MIN_QUESTIONS, Math.min(MAX_QUESTIONS, Math.floor(data.numQuestions))) : 3;
-    
-  // Sanitize examType
-  const allowedExamTypes = ['Google Cloud Architect', 'AWS Solutions Architect', 'Azure Administrator', 'general'];
-  const sanitizedExamType = allowedExamTypes.includes(examType) ? examType : 'general';
+    Math.max(MIN_QUESTIONS, Math.min(MAX_QUESTIONS, Math.floor(data.numQuestions))) : 5; // Default num questions
   
-  return { examType: sanitizedExamType, numQuestions };
+  const anonymousSessionId = typeof data.anonymousSessionId === 'string' ? data.anonymousSessionId.trim() : undefined;
+
+  // Basic validation for examType, more robust validation/mapping to exam_id will happen in the handler
+  if (!examType) return null;
+  
+  return { examType, numQuestions, anonymousSessionId };
 }
 
-function validateAnswerRequest(data: any): { questionId: number; selectedLabel: string } | null {
+function validateAnswerRequest(data: any): { questionId: string; selectedLabel: string } | null { // questionId is UUID of snapshotted q
   if (!data || typeof data !== 'object') return null;
   
-  const questionId = typeof data.questionId === 'number' ? Math.floor(data.questionId) : null;
+  // questionId is the UUID of the *snapshotted* question in diagnostic_questions table
+  const questionId = typeof data.questionId === 'string' ? data.questionId.trim() : null; 
   const selectedLabel = typeof data.selectedLabel === 'string' ? data.selectedLabel.trim().toUpperCase() : null;
   
-  if (questionId === null || questionId < 1 || !selectedLabel || !['A', 'B', 'C', 'D'].includes(selectedLabel)) {
+  if (!questionId || !selectedLabel || !['A', 'B', 'C', 'D'].includes(selectedLabel)) {
     return null;
   }
   
   return { questionId, selectedLabel };
 }
 
-// Simplified diagnostic questions - hardcoded for now
-const SAMPLE_QUESTIONS: DiagnosticQuestion[] = [
-  {
-    id: 1,
-    stem: "What is the primary benefit of using Google Cloud's managed services?",
-    options: [
-      { label: 'A', text: 'Lower costs' },
-      { label: 'B', text: 'Reduced operational overhead' },
-      { label: 'C', text: 'Better performance' },
-      { label: 'D', text: 'More control' },
-    ],
-    correct: 'B',
-    explanation: 'Managed services reduce operational overhead by handling infrastructure management.'
-  },
-  {
-    id: 2,
-    stem: "Which Google Cloud service is best for running containerized applications?",
-    options: [
-      { label: 'A', text: 'Compute Engine' },
-      { label: 'B', text: 'App Engine' },
-      { label: 'C', text: 'Google Kubernetes Engine' },
-      { label: 'D', text: 'Cloud Functions' },
-    ],
-    correct: 'C',
-    explanation: 'GKE is specifically designed for orchestrating containerized applications.'
-  },
-  {
-    id: 3,
-    stem: "What is the purpose of VPC in Google Cloud?",
-    options: [
-      { label: 'A', text: 'Virtual machine management' },
-      { label: 'B', text: 'Network isolation and security' },
-      { label: 'C', text: 'Data storage' },
-      { label: 'D', text: 'Application deployment' },
-    ],
-    correct: 'B',
-    explanation: 'VPC provides network isolation and security for your cloud resources.'
-  }
-];
+// Define a type for questions fetched from the database
+interface DbQuestion {
+  id: number; // This is original_question_id (BIGINT)
+  stem: string;
+  options: Array<{ label: string; text: string; is_correct: boolean }>; // Options directly from DB
+  explanations?: Array<{ text: string }>; // Explanation from DB
+  // Add other fields like topic, difficulty if needed for client/logic
+}
+
 
 export async function GET(req: Request) {
-  // Get diagnostic session status
+  const supabase = createServerSupabaseClient();
+  await cleanExpiredSessions(supabase); // Clean expired sessions
+
   try {
-    // Clean expired sessions first
-    cleanExpiredSessions();
-    
     const { searchParams } = new URL(req.url);
-    const sessionId = searchParams.get('sessionId');
-    
-    console.log('--- Diagnostic GET Request ---');
-    console.log('Session ID requested:', sessionId);
-    console.log('Available sessions:', Array.from(diagnosticSessions.keys()));
-    
-    // Validate sessionId
+    const sessionId = searchParams.get('sessionId'); // This is diagnostics_sessions.id (UUID)
+    const clientAnonymousSessionId = searchParams.get('anonymousSessionId'); // For anonymous resume attempt
+
     if (!sessionId || typeof sessionId !== 'string') {
       return NextResponse.json({ error: 'Invalid session ID provided' }, { status: 400 });
     }
 
-    // Add authentication check to GET route
-    const supabase = createServerSupabaseClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      console.log('Auth check failed in GET diagnostic');
-      return NextResponse.json({ 
-        error: 'Authentication required to access session data.'
-      }, { status: 401 });
-    }
+    const { data: { user } } = await supabase.auth.getUser();
 
-    const session = diagnosticSessions.get(sessionId);
-    if (!session) {
-      console.log(`Session ${sessionId} not found. Available sessions: ${Array.from(diagnosticSessions.keys()).join(', ')}`);
-      return NextResponse.json({ error: 'Session not found or expired. Please start a new diagnostic test.' }, { status: 404 });
+    // Fetch session from DB
+    const { data: dbSession, error: sessionError } = await supabase
+      .from('diagnostics_sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .single();
+
+    if (sessionError || !dbSession) {
+      console.error('Error fetching session or session not found:', sessionError);
+      return NextResponse.json({ error: 'Session not found or expired.' }, { status: 404 });
     }
 
     // Check session expiration
-    if (new Date(session.expiresAt) < new Date()) {
-      diagnosticSessions.delete(sessionId);
-      console.log(`Session ${sessionId} expired and removed`);
-      return NextResponse.json({ error: 'Session expired. Please start a new diagnostic test.' }, { status: 410 });
+    if (dbSession.expires_at && new Date(dbSession.expires_at) < new Date()) {
+      // Optionally delete it here or rely on cleanExpiredSessions
+      return NextResponse.json({ error: 'Session expired.' }, { status: 410 });
+    }
+    
+    // Authorization check
+    if (dbSession.user_id) { // Session belongs to a logged-in user
+      if (!user || dbSession.user_id !== user.id) {
+        return NextResponse.json({ error: 'Unauthorized to access this session.' }, { status: 403 });
+      }
+    } else { // Anonymous session
+      if (dbSession.anonymous_session_id && clientAnonymousSessionId !== dbSession.anonymous_session_id) {
+         // If the session has an anonymous ID, the client must provide it to resume
+        return NextResponse.json({ error: 'Invalid anonymous session identifier.' }, { status: 403 });
+      }
+      // If dbSession.anonymous_session_id is null, it's an older anonymous session perhaps, or an issue.
+      // For now, if user_id is null and client provides no anonymousId, or if it doesn't match, deny.
     }
 
-    // Verify session belongs to authenticated user
-    if (session.userId !== user.id) {
-      console.log(`Session ${sessionId} belongs to different user`);
-      return NextResponse.json({ error: 'Unauthorized access to session' }, { status: 403 });
-    }
+    // Fetch snapshotted questions for this session
+    const { data: sessionQuestions, error: questionsError } = await supabase
+      .from('diagnostic_questions') // This is the snapshot table
+      .select('id, stem, options, original_question_id') // options are JSONB, correct_label is not sent to client initially
+      .eq('session_id', sessionId);
 
-    console.log(`Session ${sessionId} found successfully for user ${user.id}`);
-    return NextResponse.json({ session });
+    if (questionsError) {
+      console.error('Error fetching session questions:', questionsError);
+      return NextResponse.json({ error: 'Failed to load questions for the session.' }, { status: 500 });
+    }
+    
+    // Reconstruct session object for client, similar to previous structure but from DB
+    const clientSessionData = {
+      id: dbSession.id,
+      userId: dbSession.user_id, // Will be null for anonymous
+      examType: dbSession.exam_type, // Textual exam type
+      questions: sessionQuestions.map(q => ({ // These are from diagnostic_questions (snapshot)
+        id: q.id, // UUID of the snapshotted question
+        stem: q.stem,
+        options: q.options, // JSONB options {label, text}
+        // original_question_id: q.original_question_id // Not strictly needed by client during quiz
+      })),
+      // Answers are not sent back here; client builds them up or fetches current progress differently
+      // For simplicity, client can refetch answers or this endpoint can be extended
+      startedAt: dbSession.started_at,
+      currentQuestion: 0, // Client will determine this based on its state or answers submitted
+      expiresAt: dbSession.expires_at,
+      anonymousSessionId: dbSession.anonymous_session_id // Send back if present
+    };
+
+    return NextResponse.json({ session: clientSessionData });
   } catch (error) {
     console.error('GET diagnostic error:', error);
-    // Don't leak internal error details
-    return NextResponse.json({ error: 'Failed to get session' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
+  const supabase = createServerSupabaseClient();
+  await cleanExpiredSessions(supabase); // Clean expired sessions
+
   try {
-    // Clean expired sessions first
-    cleanExpiredSessions();
-    
     const body = await req.json();
-    const { action, sessionId, data } = body;
-    
-    // Validate action
+    const { action, sessionId, data } = body; // sessionId is diagnostics_sessions.id (UUID)
+
     if (typeof action !== 'string' || !['start', 'answer', 'complete'].includes(action)) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
-    
-    console.log('--- Diagnostic API Request ---');
-    console.log('Action:', action);
-    console.log('Session ID:', sessionId);
 
-    const supabase = createServerSupabaseClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      console.log('Auth check failed: User not authenticated or session missing.');
-      return NextResponse.json({ 
-        error: 'Authentication required. Please log in to take the diagnostic test.'
-      }, { status: 401 });
-    }
-    console.log('User authenticated:', user.id);
-    
+    const { data: { user } } = await supabase.auth.getUser(); // user can be null
+
     switch (action) {
       case 'start':
-        // Validate request data
         const validatedData = validateStartRequest(data);
         if (!validatedData) {
           return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
         }
         
-        // Check session limits
-        const userSessionCount = getUserSessionCount(user.id);
-        if (userSessionCount >= MAX_SESSIONS_PER_USER) {
-          return NextResponse.json({ 
-            error: `Maximum ${MAX_SESSIONS_PER_USER} active sessions allowed. Please complete existing tests first.` 
-          }, { status: 429 });
+        const { examType, numQuestions, anonymousSessionId: clientAnonymousSessionId } = validatedData;
+
+        // 1. Determine exam_id (e.g., "Google ML Engineer" -> 2)
+        // This mapping should be robust, perhaps from a config or query `public.exams`
+        let examIdToUse: number | null = null;
+        // The questions are linked to exam_versions.id = 2, which has exam_id = 6.
+        // So, "Google ML Engineer" should map to exams.id = 6.
+        if (examType === 'Google ML Engineer' || examType === 'Google Professional ML Engineer' || examType === 'Google Professional Machine Learning Engineer') {
+            examIdToUse = 6; 
+        } else {
+            // Fallback or fetch from DB:
+            const { data: examData, error: examError } = await supabase
+                .from('exams')
+                .select('id')
+                .eq('name', examType) // Or use 'code'
+                .single();
+            if (examError || !examData) {
+                console.error(`Exam type '${examType}' not found or error:`, examError);
+                return NextResponse.json({ error: `Invalid exam type: ${examType}` }, { status: 400 });
+            }
+            examIdToUse = examData.id;
+        }
+        if (!examIdToUse) {
+             return NextResponse.json({ error: 'Could not determine exam ID.' }, { status: 400 });
+        }
+
+
+        // 1.b. (Optional) Resume anonymous session
+        if (!user && clientAnonymousSessionId) {
+          const { data: existingAnonSession, error: anonSessionError } = await supabase
+            .from('diagnostics_sessions')
+            .select('id, expires_at, completed_at')
+            .eq('anonymous_session_id', clientAnonymousSessionId)
+            .is('user_id', null)
+            .order('started_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (existingAnonSession && !anonSessionError) {
+            if (!existingAnonSession.completed_at && new Date(existingAnonSession.expires_at) > new Date()) {
+              // Found a resumable anonymous session
+              // Fetch its questions and return
+              const { data: existingQuestions, error: existingQuestionsError } = await supabase
+                .from('diagnostic_questions')
+                .select('id, stem, options')
+                .eq('session_id', existingAnonSession.id);
+              
+              if (existingQuestions && !existingQuestionsError) {
+                return NextResponse.json({
+                  sessionId: existingAnonSession.id,
+                  questions: existingQuestions,
+                  totalQuestions: existingQuestions.length,
+                  expiresAt: existingAnonSession.expires_at,
+                  anonymousSessionId: clientAnonymousSessionId, // return it back
+                  resumed: true
+                });
+              }
+            }
+          }
         }
         
-        // Start a new diagnostic session
-        const newSessionId = crypto.randomUUID();
-        const expiresAt = new Date(Date.now() + SESSION_TIMEOUT_MINUTES * 60 * 1000);
-        const newSession = {
-          id: newSessionId,
-          userId: user.id,
-          examType: validatedData.examType,
-          questions: SAMPLE_QUESTIONS.slice(0, validatedData.numQuestions),
-          answers: {},
-          startedAt: new Date().toISOString(),
-          currentQuestion: 0,
-          expiresAt: expiresAt.toISOString()
-        };
+        // 2. Fetch current exam_version_id for the given examIdToUse
+        const { data: currentExamVersion, error: versionError } = await supabase
+          .from('exam_versions')
+          .select('id')
+          .eq('exam_id', examIdToUse)
+          .eq('is_current', true)
+          .single();
+
+        if (versionError || !currentExamVersion) {
+          console.error(`Error fetching current exam version for exam_id ${examIdToUse}:`, versionError);
+          return NextResponse.json({ error: 'Could not determine current exam version.' }, { status: 500 });
+        }
+        const currentExamVersionId = currentExamVersion.id;
+
+        // 2.b. Fetch questions from public.questions using the currentExamVersionId
+        const { data: dbQuestions, error: questionsFetchError } = await supabase
+          .from('questions')
+          .select('id, stem, topic, difficulty, options(label, text, is_correct), explanations(text)')
+          .eq('exam_version_id', currentExamVersionId)
+          .eq('is_diagnostic_eligible', true)
+        // .order('random()') // This can be slow on large tables. Consider pg_tgrm for similarity or other strategies if true random is too slow.
+          .limit(numQuestions * 5); // Fetch more to randomize in code, or use a DB function for random rows if available & performant.
+
+        if (questionsFetchError || !dbQuestions || dbQuestions.length < numQuestions) {
+          console.error('Error fetching questions from DB or not enough questions:', questionsFetchError);
+          return NextResponse.json({ error: 'Could not fetch enough questions for the diagnostic.' }, { status: 500 });
+        }
         
-        diagnosticSessions.set(newSessionId, newSession);
-        console.log(`Session ${newSessionId} created and stored. Total sessions: ${diagnosticSessions.size}`);
-        
-        // Return questions without correct answers
-        const questionsForClient = newSession.questions.map(q => ({
-          id: q.id,
+        // Simple in-code randomization if DB random is not used
+        const selectedQuestions = dbQuestions.sort(() => 0.5 - Math.random()).slice(0, numQuestions);
+
+        // 3. Create diagnostics_sessions record
+        const newSessionExpiresAt = new Date(Date.now() + SESSION_TIMEOUT_MINUTES * 60 * 1000);
+        const newAnonymousId = user ? null : (clientAnonymousSessionId || crypto.randomUUID());
+
+        const { data: newSessionRecord, error: newSessionError } = await supabase
+          .from('diagnostics_sessions')
+          .insert({
+            user_id: user ? user.id : null,
+            exam_id: examIdToUse,
+            exam_type: examType, // Store the display name/requested type
+            question_count: selectedQuestions.length,
+            started_at: new Date().toISOString(),
+            expires_at: newSessionExpiresAt.toISOString(),
+            anonymous_session_id: newAnonymousId,
+          })
+          .select('id') // Get the generated UUID for the session
+          .single();
+
+        if (newSessionError || !newSessionRecord) {
+          console.error('Error creating new session record:', newSessionError);
+          return NextResponse.json({ error: 'Failed to start diagnostic session.' }, { status: 500 });
+        }
+        const newDbSessionId = newSessionRecord.id;
+
+        // 4. Create diagnostic_questions (snapshot) records
+        const questionSnapshotsToInsert = selectedQuestions.map(q => ({
+          session_id: newDbSessionId,
+          original_question_id: q.id, // This is public.questions.id
           stem: q.stem,
-          options: q.options
+          // Ensure options are in {label: string, text: string} format for snapshot
+          options: q.options.map(opt => ({ label: opt.label, text: opt.text })), 
+          correct_label: q.options.find(opt => opt.is_correct)?.label || '', // Store correct label in snapshot
         }));
+
+        const { error: snapshotInsertError } = await supabase
+          .from('diagnostic_questions')
+          .insert(questionSnapshotsToInsert);
+
+        if (snapshotInsertError) {
+          console.error('Error inserting question snapshots:', snapshotInsertError);
+          // TODO: Consider cleanup / transaction rollback if part of it fails
+          return NextResponse.json({ error: 'Failed to prepare diagnostic questions.' }, { status: 500 });
+        }
         
+        // Fetch the newly created snapshots to get their UUIDs for the client
+        const { data: finalSessionQuestions, error: finalQuestionsError } = await supabase
+            .from('diagnostic_questions')
+            .select('id, stem, options') // only id, stem, options sent to client
+            .eq('session_id', newDbSessionId);
+
+        if (finalQuestionsError || !finalSessionQuestions) {
+            console.error('Error fetching final session questions for client:', finalQuestionsError);
+            return NextResponse.json({ error: 'Failed to load session questions.' }, { status: 500 });
+        }
+
         return NextResponse.json({
-          sessionId: newSessionId,
-          questions: questionsForClient,
-          totalQuestions: questionsForClient.length,
-          expiresAt: expiresAt.toISOString()
+          sessionId: newDbSessionId,
+          questions: finalSessionQuestions, // These are from diagnostic_questions, with their UUIDs
+          totalQuestions: finalSessionQuestions.length,
+          expiresAt: newSessionExpiresAt.toISOString(),
+          anonymousSessionId: newAnonymousId // Send back for anonymous users
         });
-        
+
       case 'answer':
-        // Validate sessionId
         if (typeof sessionId !== 'string' || !sessionId) {
           return NextResponse.json({ error: 'Invalid session ID' }, { status: 400 });
         }
-        
-        // Validate answer data
-        const validatedAnswer = validateAnswerRequest(data);
+        const validatedAnswer = validateAnswerRequest(data); // questionId is UUID of snapshotted q
         if (!validatedAnswer) {
           return NextResponse.json({ error: 'Invalid answer data' }, { status: 400 });
         }
-        
-        const answerSession = diagnosticSessions.get(sessionId);
-        if (!answerSession) {
-          return NextResponse.json({ error: 'Session not found or expired' }, { status: 404 });
+
+        const { questionId: snapshottedQuestionId, selectedLabel } = validatedAnswer;
+
+        // Fetch the session
+        const { data: answerDbSession, error: ansSessErr } = await supabase
+          .from('diagnostics_sessions')
+          .select('id, user_id, expires_at, completed_at, anonymous_session_id')
+          .eq('id', sessionId)
+          .single();
+
+        if (ansSessErr || !answerDbSession) {
+          return NextResponse.json({ error: 'Session not found.' }, { status: 404 });
         }
-        
-        // Check session expiration
-        if (new Date(answerSession.expiresAt) < new Date()) {
-          diagnosticSessions.delete(sessionId);
-          return NextResponse.json({ error: 'Session expired' }, { status: 410 });
+        if (answerDbSession.completed_at) {
+          return NextResponse.json({ error: 'Session already completed.' }, { status: 400 });
         }
-        
-        if (answerSession.userId !== user.id) {
-          return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        if (new Date(answerDbSession.expires_at) < new Date()) {
+          return NextResponse.json({ error: 'Session expired.' }, { status: 410 });
         }
-        
-        const { questionId, selectedLabel } = validatedAnswer;
-        
-        // Verify question exists and hasn't been answered
-        const question = answerSession.questions.find(q => q.id === questionId);
-        if (!question) {
-          return NextResponse.json({ error: 'Question not found' }, { status: 404 });
+
+        // Authorization for answer
+        if (answerDbSession.user_id && (!user || answerDbSession.user_id !== user.id)) {
+          return NextResponse.json({ error: 'Unauthorized.' }, { status: 403 });
         }
-        
-        if (answerSession.answers[questionId]) {
-          return NextResponse.json({ error: 'Question already answered' }, { status: 409 });
+        // For anonymous, if anonymous_session_id is set, client should provide it (not implemented here yet for answer)
+
+
+        // Fetch the snapshotted question to get correct_label and original_question_id
+        const { data: snapQuestion, error: snapQError } = await supabase
+          .from('diagnostic_questions')
+          .select('id, correct_label, original_question_id')
+          .eq('id', snapshottedQuestionId) // UUID of the question in diagnostic_questions
+          .eq('session_id', sessionId)
+          .single();
+
+        if (snapQError || !snapQuestion) {
+          return NextResponse.json({ error: 'Question not found in this session.' }, { status: 404 });
         }
-        
-        answerSession.answers[questionId] = selectedLabel;
-        answerSession.currentQuestion = Object.keys(answerSession.answers).length;
-        
-        const isCorrect = question.correct === selectedLabel;
+
+        const isCorrect = snapQuestion.correct_label === selectedLabel;
+
+        // Store the response
+        const { error: insertResponseError } = await supabase
+          .from('diagnostic_responses')
+          .insert({
+            session_id: sessionId,
+            question_id: snapshottedQuestionId, // Match DB column name (was diagnostic_question_id)
+            selected_label: selectedLabel,
+            is_correct: isCorrect,
+            responded_at: new Date().toISOString(),
+          });
+
+        if (insertResponseError) {
+          console.error('Error inserting response:', insertResponseError);
+          return NextResponse.json({ error: 'Failed to save answer.' }, { status: 500 });
+        }
+
+        // Fetch explanation from public.explanations using original_question_id
+        let explanationText = 'No explanation available.';
+        if (snapQuestion.original_question_id) {
+          const { data: explanationData, error: expError } = await supabase
+            .from('explanations')
+            .select('text')
+            .eq('question_id', snapQuestion.original_question_id)
+            .single();
+          if (explanationData && !expError) {
+            explanationText = explanationData.text;
+          }
+        }
         
         return NextResponse.json({
           isCorrect,
-          correctAnswer: question.correct,
-          explanation: question.explanation
+          correctAnswer: snapQuestion.correct_label,
+          explanation: explanationText,
         });
-        
+
       case 'complete':
-        // Validate sessionId
         if (typeof sessionId !== 'string' || !sessionId) {
           return NextResponse.json({ error: 'Invalid session ID' }, { status: 400 });
         }
-        
-        const completeSession = diagnosticSessions.get(sessionId);
-        if (!completeSession) {
-          return NextResponse.json({ error: 'Session not found or expired' }, { status: 404 });
+
+        // Fetch session
+        const { data: completeDbSession, error: compSessErr } = await supabase
+          .from('diagnostics_sessions')
+          .select('id, user_id, exam_type, question_count, expires_at, completed_at, anonymous_session_id')
+          .eq('id', sessionId)
+          .single();
+
+        if (compSessErr || !completeDbSession) {
+          return NextResponse.json({ error: 'Session not found.' }, { status: 404 });
+        }
+        if (completeDbSession.completed_at) {
+          // Potentially re-fetch results if already completed
+           return NextResponse.json({ error: 'Session already marked as completed.' }, { status: 400 });
+        }
+        if (new Date(completeDbSession.expires_at) < new Date()) {
+          return NextResponse.json({ error: 'Session expired.' }, { status: 410 });
         }
         
-        if (completeSession.userId !== user.id) {
-          return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        // Authorization for complete
+        if (completeDbSession.user_id && (!user || completeDbSession.user_id !== user.id)) {
+          return NextResponse.json({ error: 'Unauthorized.' }, { status: 403 });
+        }
+        // Add anonymous check if needed
+
+        // Fetch all responses for this session
+        const { data: responses, error: responsesError } = await supabase
+          .from('diagnostic_responses')
+          .select('is_correct')
+          .eq('session_id', sessionId);
+
+        if (responsesError) {
+          console.error('Error fetching responses for completion:', responsesError);
+          return NextResponse.json({ error: 'Could not retrieve answers to score.' }, { status: 500 });
+        }
+
+        const correctAnswers = responses.filter(r => r.is_correct).length;
+        const totalQuestionsInSession = completeDbSession.question_count; // Use the count stored at session start
+        
+        const score = totalQuestionsInSession > 0 ? (correctAnswers / totalQuestionsInSession) * 100 : 0;
+
+        // Update session completed_at
+        const { error: updateSessionError } = await supabase
+          .from('diagnostics_sessions')
+          .update({ completed_at: new Date().toISOString() })
+          .eq('id', sessionId);
+
+        if (updateSessionError) {
+          console.error('Error marking session complete:', updateSessionError);
+          // Continue to return results even if update fails, but log it
         }
         
-        // Calculate score
-        let correct = 0;
-        completeSession.questions.forEach(q => {
-          if (completeSession.answers[q.id] === q.correct) {
-            correct++;
-          }
-        });
-        
-        const score = completeSession.questions.length > 0 ? 
-          (correct / completeSession.questions.length) * 100 : 0;
-        
-        // Simple topic recommendations based on score
-        let recommendations = [];
-        if (score < 50) {
-          recommendations = [
-            'Review Google Cloud fundamentals',
-            'Study core services like Compute Engine and Cloud Storage',
-            'Practice with hands-on labs'
-          ];
-        } else if (score < 80) {
-          recommendations = [
-            'Deep dive into advanced topics',
-            'Focus on best practices and optimization',
-            'Explore specialized services'
-          ];
-        } else {
-          recommendations = [
-            'You have a strong foundation!',
-            'Consider pursuing professional certification',
-            'Explore advanced architectural patterns'
-          ];
-        }
-        
-        // Clean up session after completion
-        diagnosticSessions.delete(sessionId);
-        
+        // Simplified recommendations
+        let recommendations = ["Focus on areas where you were unsure."];
+        if (score < 70) recommendations.push("Consider reviewing the fundamentals of " + completeDbSession.exam_type);
+        else recommendations.push("Great job! Consider advanced topics or practice tests.");
+
         return NextResponse.json({
-          totalQuestions: completeSession.questions.length,
-          correctAnswers: correct,
+          totalQuestions: totalQuestionsInSession,
+          correctAnswers: correctAnswers,
           score: Math.round(score),
           recommendations,
-          examType: completeSession.examType
+          examType: completeDbSession.exam_type,
         });
-        
+
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }

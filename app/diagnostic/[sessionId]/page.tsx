@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useAuth } from '@/components/providers/AuthProvider'; // Import useAuth
 
 interface Option {
   label: string;
@@ -34,6 +35,7 @@ interface DiagnosticResults {
 const DiagnosticSessionPage = () => {
   const params = useParams();
   const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth(); // Get user and auth loading state
   const sessionId = params?.sessionId as string;
 
   const [sessionData, setSessionData] = useState<DiagnosticSessionData | null>(null);
@@ -56,27 +58,52 @@ const DiagnosticSessionPage = () => {
         setLoading(false);
         return;
       }
+      if (isAuthLoading) { // Don't fetch if auth state is still loading
+        setLoading(true); // Or a different loading state like "Verifying user..."
+        return;
+      }
+
+      setLoading(true); // Set loading true before fetch
+      setError(null);
+
+      let apiUrl = `/api/diagnostic?sessionId=${sessionId}`;
+      if (!user) { // If no logged-in user, try to append anonymousSessionId
+        const storedAnonId = localStorage.getItem('anonymousSessionId');
+        if (storedAnonId) {
+          apiUrl += `&anonymousSessionId=${storedAnonId}`;
+        }
+      }
 
       try {
-        const res = await fetch(`/api/diagnostic?sessionId=${sessionId}`);
+        const res = await fetch(apiUrl);
         const data = await res.json();
         if (!res.ok) {
-          // Handle specific error types
           if (res.status === 404) {
             setError('session_not_found');
           } else if (res.status === 410) {
             setError('session_expired');
-          } else if (res.status === 401) {
+          } else if (res.status === 401) { // Authentication required (e.g. token expired for logged-in user)
             setError('authentication_required');
-          } else if (res.status === 429) {
-            setError('too_many_sessions');
-          } else {
+          } else if (res.status === 403) { // Forbidden (e.g. wrong user or bad anonymous ID)
+             setError('access_denied_to_session');
+          }
+          // Removed 429 as session limits are removed for now
+          else {
             setError(data.error || 'Failed to fetch diagnostic session.');
           }
           return;
         }
         setSessionData(data.session);
-        setCurrentQuestionIndex(Object.keys(data.session.answers).length); // Resume from last answered question
+        // Resuming logic: API should ideally provide currentQuestionIndex or completed answers
+        // For now, if data.session.answers exists and is an object, we can derive it.
+        // The API currently doesn't send back answers in the GET session response for simplicity.
+        // Client-side might need to track progress or API needs to provide it.
+        // Let's assume currentQuestionIndex is managed by API or starts at 0 for now.
+        // If API sends back answers or currentQuestion, use that.
+        // setCurrentQuestionIndex(data.session.currentQuestion || Object.keys(data.session.answers || {}).length);
+        setCurrentQuestionIndex(0); // Start at 0, API will handle actual progress if resumed.
+                                    // Or, if API sends `resumed: true` and `currentQuestion` index, use that.
+                                    // The current GET /api/diagnostic returns currentQuestion: 0
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'An error occurred while fetching session.');
       } finally {
@@ -85,9 +112,38 @@ const DiagnosticSessionPage = () => {
     };
 
     fetchSession();
-  }, [sessionId]);
+  }, [sessionId, user, isAuthLoading]); // Add user and isAuthLoading to dependency array
 
   const currentQuestion = sessionData?.questions[currentQuestionIndex];
+
+  // ... (rest of the error handling for specific error codes)
+  // Add a case for 'access_denied_to_session'
+  if (error === 'access_denied_to_session') {
+    return (
+      <main style={{ maxWidth: 600, margin: '2rem auto', padding: 24, border: '1px solid #eee', borderRadius: 8 }}>
+        <h1>Access Denied</h1>
+        <div style={{ marginBottom: 24 }}>
+          <p style={{ color: '#d32f2f', marginBottom: 16 }}>
+            You do not have permission to access this diagnostic session, or the session identifier is invalid.
+          </p>
+        </div>
+        <button
+          onClick={() => router.push('/diagnostic')}
+          style={{
+            padding: '12px 32px',
+            borderRadius: 6,
+            background: '#0070f3',
+            color: 'white',
+            border: 'none',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Start New Diagnostic
+        </button>
+      </main>
+    );
+  }
 
   const handleSubmitAnswer = async () => {
     if (!currentQuestion || selectedOptionLabel === null) return;
