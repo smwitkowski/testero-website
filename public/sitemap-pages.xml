@@ -2,77 +2,77 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://testero.ai/content</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/diagnostic</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/early-access-coming-soon</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/faq</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/forgot-password</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/login</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/practice/question</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/waitlist</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/faq/what-is-google-cloud-certification</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/faq/is-google-cloud-certification-worth-it</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -81,35 +81,35 @@
     <loc
       >https://testero.ai/faq/what-are-the-five-sections-of-the-associate-cloud-engineer-certification-by-google</loc
     >
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/faq/how-much-does-google-cloud-digital-leader-cost</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/faq/how-do-you-register-for-google-cloud-certification</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/faq/how-long-to-complete-google-data-analytics-certification</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/faq/is-google-data-analytics-certification-worth-it</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -118,21 +118,21 @@
     <loc
       >https://testero.ai/faq/is-the-google-professional-machine-learning-engineer-certification-worth-it</loc
     >
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/faq/how-long-is-the-google-ml-engineer-exam</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/content/hub/google-cloud-certification-guide</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
@@ -141,7 +141,16 @@
     <loc
       >https://testero.ai/content/hub/google-data-analytics-professional-certificate-2025-guide</loc
     >
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <url>
+    <loc
+      >https://testero.ai/content/hub/google-professional-machine-learning-engineer-certification-expansion-strategy</loc
+    >
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
@@ -150,7 +159,7 @@
     <loc
       >https://testero.ai/content/hub/google-professional-machine-learning-engineer-certification-roadmap-2025</loc
     >
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
@@ -159,14 +168,23 @@
     <loc
       >https://testero.ai/content/hub/the-2025-google-cloud-digital-leader-certification-roadmap</loc
     >
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <url>
+    <loc
+      >https://testero.ai/content/spoke/accelerated-google-ml-certification-30-day-success-story-2025</loc
+    >
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
 
   <url>
     <loc>https://testero.ai/content/spoke/google-cloud-digital-leader-certification</loc>
-    <lastmod>2025-05-23</lastmod>
+    <lastmod>2025-06-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>

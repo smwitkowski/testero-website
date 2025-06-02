@@ -146,24 +146,13 @@ export default async function HubPage({ params }: { params: Promise<{ slug: stri
           )}
         </header>
         
-        <div className="flex flex-col lg:flex-row gap-10">
-          <article className="prose prose-lg max-w-none mb-12 lg:flex-grow lg:pr-8" id="article-content">
-            <div 
-              dangerouslySetInnerHTML={{ __html: content.content }} 
-              className="certification-content"
-              id="certification-content"
-            />
-          </article>
-          
-          <div className="lg:w-72 lg:flex-shrink-0">
-            <div className="sticky top-8">
-              <TableOfContents 
-                contentId="article-content" 
-                className="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-100"
-              />
-            </div>
-          </div>
-        </div>
+        <article className="prose prose-lg prose-gray max-w-3xl mx-auto mb-12" id="article-content">
+          <div 
+            dangerouslySetInnerHTML={{ __html: content.content }} 
+            className="certification-content"
+            id="certification-content"
+          />
+        </article>
         
         {spokes.length > 0 && (
           <section className="mt-16">

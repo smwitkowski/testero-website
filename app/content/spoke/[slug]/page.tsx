@@ -120,20 +120,12 @@ export default async function SpokePage({ params }: { params: Promise<{ slug: st
           )}
         </header>
         
-        <div className="flex flex-col lg:flex-row gap-8">
-          <article className="prose prose-lg max-w-none mb-12 lg:flex-grow" id="article-content">
-            <div 
-              dangerouslySetInnerHTML={{ __html: content.content }} 
-              className="certification-content"
-            />
-          </article>
-          
-          <div className="lg:w-64 lg:flex-shrink-0">
-            <div className="sticky top-8">
-              <TableOfContents contentId="article-content" className="bg-gray-50 p-4 rounded-lg" />
-            </div>
-          </div>
-        </div>
+        <article className="prose prose-lg prose-gray max-w-3xl mx-auto mb-12" id="article-content">
+          <div 
+            dangerouslySetInnerHTML={{ __html: content.content }} 
+            className="certification-content"
+          />
+        </article>
         
         {/* Page navigation */}
         <div className="mt-12 pt-6 border-t flex flex-col sm:flex-row justify-between">
