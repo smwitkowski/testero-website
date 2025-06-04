@@ -31,12 +31,15 @@ async function cleanExpiredSessions(supabase: SupabaseClient) {
 // examType is the string from the frontend, examId is the integer FK for public.exams
 function validateStartRequest(data: unknown): { examType: string; numQuestions: number; anonymousSessionId?: string } | null {
   if (!data || typeof data !== 'object') return null;
-  
-  const examType = typeof data.examType === 'string' ? data.examType.trim() : 'Google ML Engineer'; // Default or ensure valid
-  const numQuestions = typeof data.numQuestions === 'number' ? 
-    Math.max(MIN_QUESTIONS, Math.min(MAX_QUESTIONS, Math.floor(data.numQuestions))) : 5; // Default num questions
-  
-  const anonymousSessionId = typeof data.anonymousSessionId === 'string' ? data.anonymousSessionId.trim() : undefined;
+
+  const body = data as Record<string, unknown>;
+
+  const examType = typeof body.examType === 'string' ? body.examType.trim() : 'Google ML Engineer'; // Default or ensure valid
+  const numQuestions = typeof body.numQuestions === 'number'
+    ? Math.max(MIN_QUESTIONS, Math.min(MAX_QUESTIONS, Math.floor(body.numQuestions)))
+    : 5; // Default num questions
+
+  const anonymousSessionId = typeof body.anonymousSessionId === 'string' ? body.anonymousSessionId.trim() : undefined;
 
   // Basic validation for examType, more robust validation/mapping to exam_id will happen in the handler
   if (!examType) return null;
@@ -46,10 +49,12 @@ function validateStartRequest(data: unknown): { examType: string; numQuestions: 
 
 function validateAnswerRequest(data: unknown): { questionId: string; selectedLabel: string } | null { // questionId is UUID of snapshotted q
   if (!data || typeof data !== 'object') return null;
-  
+
+  const body = data as Record<string, unknown>;
+
   // questionId is the UUID of the *snapshotted* question in diagnostic_questions table
-  const questionId = typeof data.questionId === 'string' ? data.questionId.trim() : null; 
-  const selectedLabel = typeof data.selectedLabel === 'string' ? data.selectedLabel.trim().toUpperCase() : null;
+  const questionId = typeof body.questionId === 'string' ? body.questionId.trim() : null;
+  const selectedLabel = typeof body.selectedLabel === 'string' ? body.selectedLabel.trim().toUpperCase() : null;
   
   if (!questionId || !selectedLabel || !['A', 'B', 'C', 'D'].includes(selectedLabel)) {
     return null;
