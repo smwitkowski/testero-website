@@ -22,7 +22,10 @@ export function createServerSupabaseClient() {
           } catch (error) {
             // The set method can fail in server components where cookies are read-only
             // This is expected behavior for API routes during authentication
-            console.log(`[Server Supabase] Cookie ${name}: Set failed (expected in server components)`, error);
+            console.error(
+              `[Server Supabase] Cookie ${name}: Set failed (expected in server components)`,
+              error
+            );
           }
         },
         async remove(name: string, options: SerializeOptions) {
@@ -31,7 +34,7 @@ export function createServerSupabaseClient() {
             cookieStore.set(name, '', { ...options, maxAge: 0 });
             console.log(`[Server Supabase] Cookie ${name}: Removed successfully`);
           } catch (error) {
-            console.log(`[Server Supabase] Cookie ${name}: Remove failed`, error);
+            console.error(`[Server Supabase] Cookie ${name}: Remove failed`, error);
           }
         },
       },
