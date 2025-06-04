@@ -68,7 +68,7 @@ const DiagnosticStartPage = () => {
     setLoading(true);
     setError(null);
 
-    const requestBody: any = {
+    const requestBody = {
       action: 'start',
       data: { 
         examType: selectedExamName, // Send the 'name' field

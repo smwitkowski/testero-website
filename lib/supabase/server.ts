@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import type { CookieSerializeOptions } from 'next/dist/compiled/@edge-runtime/cookies';
 
 export function createServerSupabaseClient() {
   return createServerClient(
@@ -13,7 +14,7 @@ export function createServerSupabaseClient() {
           console.log(`[Server Supabase] Cookie ${name}: ${cookie ? 'Present' : 'Missing'}`);
           return cookie?.value;
         },
-        async set(name: string, value: string, options: any) {
+        async set(name: string, value: string, options: CookieSerializeOptions) {
           try {
             const cookieStore = await cookies();
             cookieStore.set(name, value, options);
@@ -24,7 +25,7 @@ export function createServerSupabaseClient() {
             console.log(`[Server Supabase] Cookie ${name}: Set failed (expected in server components)`, error);
           }
         },
-        async remove(name: string, options: any) {
+        async remove(name: string, options: CookieSerializeOptions) {
           try {
             const cookieStore = await cookies();
             cookieStore.set(name, '', { ...options, maxAge: 0 });
