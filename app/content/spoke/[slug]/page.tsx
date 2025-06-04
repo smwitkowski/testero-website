@@ -9,7 +9,6 @@ import {
   getSpokesForHub 
 } from '@/lib/content/loader';
 import { generateContentMetadata, generateStructuredData } from '@/lib/content/meta';
-import TableOfContents from '@/components/content/TableOfContents';
 import SocialShare from '@/components/content/SocialShare';
 import RecommendedContent from '@/components/content/RecommendedContent';
 

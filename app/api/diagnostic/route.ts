@@ -2,24 +2,6 @@ import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // Types for better type safety
-interface DiagnosticQuestion {
-  id: number;
-  stem: string;
-  options: Array<{ label: string; text: string }>;
-  correct: string;
-  explanation: string;
-}
-
-interface DiagnosticSession {
-  id: string;
-  userId: string;
-  examType: string;
-  questions: DiagnosticQuestion[];
-  answers: Record<number, string>;
-  startedAt: string;
-  currentQuestion: number;
-  expiresAt: string; // Added expiration
-}
 
 // import { createServerActionClient } from '@supabase/auth-helpers-nextjs'; // Example, adjust if using different helper
 
@@ -29,7 +11,9 @@ const MAX_QUESTIONS = 20;
 const MIN_QUESTIONS = 1;
 
 // Utility functions
-async function cleanExpiredSessions(supabase: any) {
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+async function cleanExpiredSessions(supabase: SupabaseClient) {
   const now = new Date().toISOString();
   const { error } = await supabase
     .from('diagnostics_sessions')
@@ -45,14 +29,17 @@ async function cleanExpiredSessions(supabase: any) {
 }
 
 // examType is the string from the frontend, examId is the integer FK for public.exams
-function validateStartRequest(data: any): { examType: string; numQuestions: number, anonymousSessionId?: string } | null {
+function validateStartRequest(data: unknown): { examType: string; numQuestions: number; anonymousSessionId?: string } | null {
   if (!data || typeof data !== 'object') return null;
-  
-  const examType = typeof data.examType === 'string' ? data.examType.trim() : 'Google ML Engineer'; // Default or ensure valid
-  const numQuestions = typeof data.numQuestions === 'number' ? 
-    Math.max(MIN_QUESTIONS, Math.min(MAX_QUESTIONS, Math.floor(data.numQuestions))) : 5; // Default num questions
-  
-  const anonymousSessionId = typeof data.anonymousSessionId === 'string' ? data.anonymousSessionId.trim() : undefined;
+
+  const body = data as Record<string, unknown>;
+
+  const examType = typeof body.examType === 'string' ? body.examType.trim() : 'Google ML Engineer'; // Default or ensure valid
+  const numQuestions = typeof body.numQuestions === 'number'
+    ? Math.max(MIN_QUESTIONS, Math.min(MAX_QUESTIONS, Math.floor(body.numQuestions)))
+    : 5; // Default num questions
+
+  const anonymousSessionId = typeof body.anonymousSessionId === 'string' ? body.anonymousSessionId.trim() : undefined;
 
   // Basic validation for examType, more robust validation/mapping to exam_id will happen in the handler
   if (!examType) return null;
@@ -60,12 +47,14 @@ function validateStartRequest(data: any): { examType: string; numQuestions: numb
   return { examType, numQuestions, anonymousSessionId };
 }
 
-function validateAnswerRequest(data: any): { questionId: string; selectedLabel: string } | null { // questionId is UUID of snapshotted q
+function validateAnswerRequest(data: unknown): { questionId: string; selectedLabel: string } | null { // questionId is UUID of snapshotted q
   if (!data || typeof data !== 'object') return null;
-  
+
+  const body = data as Record<string, unknown>;
+
   // questionId is the UUID of the *snapshotted* question in diagnostic_questions table
-  const questionId = typeof data.questionId === 'string' ? data.questionId.trim() : null; 
-  const selectedLabel = typeof data.selectedLabel === 'string' ? data.selectedLabel.trim().toUpperCase() : null;
+  const questionId = typeof body.questionId === 'string' ? body.questionId.trim() : null;
+  const selectedLabel = typeof body.selectedLabel === 'string' ? body.selectedLabel.trim().toUpperCase() : null;
   
   if (!questionId || !selectedLabel || !['A', 'B', 'C', 'D'].includes(selectedLabel)) {
     return null;
@@ -75,13 +64,6 @@ function validateAnswerRequest(data: any): { questionId: string; selectedLabel: 
 }
 
 // Define a type for questions fetched from the database
-interface DbQuestion {
-  id: number; // This is original_question_id (BIGINT)
-  stem: string;
-  options: Array<{ label: string; text: string; is_correct: boolean }>; // Options directly from DB
-  explanations?: Array<{ text: string }>; // Explanation from DB
-  // Add other fields like topic, difficulty if needed for client/logic
-}
 
 
 export async function GET(req: Request) {
@@ -485,7 +467,7 @@ export async function POST(req: Request) {
         }
         
         // Simplified recommendations
-        let recommendations = ["Focus on areas where you were unsure."];
+        const recommendations = ["Focus on areas where you were unsure."];
         if (score < 70) recommendations.push("Consider reviewing the fundamentals of " + completeDbSession.exam_type);
         else recommendations.push("Great job! Consider advanced topics or practice tests.");
 
