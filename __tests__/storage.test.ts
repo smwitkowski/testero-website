@@ -1,3 +1,4 @@
+/** @jest-environment node */
 let getCdnUrl: typeof import('../lib/gcp/storage').getCdnUrl;
 
 describe('getCdnUrl', () => {

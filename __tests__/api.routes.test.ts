@@ -1,3 +1,4 @@
+/** @jest-environment node */
 import { NextRequest } from 'next/server';
 
 let serverSupabaseMock: any = { auth: { getUser: jest.fn() }, from: jest.fn() };
