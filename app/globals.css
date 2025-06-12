@@ -286,12 +286,7 @@
   margin-top: 0.5em;
 }
 
-/* Properly format certification description sections */
-.certification-content p strong:first-child {
-  display: inline-block;
-  min-width: 120px;
-  font-weight: 700;
-}
+/* Remove problematic inline-block styling that affects all bold text */
 
 /* Focus, Topics, Difficulty, Ideal for sections */
 .certification-content p:has(> strong:first-child:contains("Focus")),
