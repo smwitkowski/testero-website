@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { AuthResponse, SignUpWithPasswordCredentials } from '@supabase/auth-js';
 
 // In-memory rate limiter (for dev/demo only)
 const rateLimitMap = new Map<string, number[]>();
@@ -23,6 +24,11 @@ const signupSchema = z.object({
   password: z.string().min(8),
 });
 
+// Type for analytics.capture
+interface Analytics {
+  capture: (event: { event: string; properties: Record<string, unknown> }) => void;
+}
+
 /**
  * Pure signup business logic handler
  * @param {Object} args
@@ -37,8 +43,8 @@ export async function signupBusinessLogic({ email, password, ip, supabaseClient,
   email: string;
   password: string;
   ip: string;
-  supabaseClient: { auth: { signUp: Function } };
-  analytics: { capture: Function };
+  supabaseClient: { auth: { signUp: (credentials: SignUpWithPasswordCredentials) => Promise<AuthResponse> } };
+  analytics: Analytics;
 }): Promise<{ status: number, body: any }> {
   // Validate input
   const parse = signupSchema.safeParse({ email, password });
@@ -64,4 +70,6 @@ export async function signupBusinessLogic({ email, password, ip, supabaseClient,
   }
   analytics.capture({ event: 'signup_success', properties: { email } });
   return { status: 200, body: { status: 'ok' } };
-} 
+}
+
+export { rateLimitMap }; 

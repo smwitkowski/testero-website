@@ -17,11 +17,3 @@ export async function useMcpTool(serverName: string, toolName: string, args: any
     }]
   };
 }
-
-export interface McpToolResponse {
-  success: boolean;
-  results: {
-    content: string;
-    url: string;
-  }[];
-}

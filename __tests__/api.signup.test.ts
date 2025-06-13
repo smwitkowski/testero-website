@@ -1,10 +1,12 @@
 import { signupBusinessLogic } from '../lib/auth/signup-handler';
+import { rateLimitMap } from '../lib/auth/signup-handler';
 
 describe('signupBusinessLogic', () => {
   let supabaseClient: any;
   let analytics: any;
 
   beforeEach(() => {
+    rateLimitMap.clear();
     supabaseClient = {
       auth: {
         signUp: jest.fn().mockResolvedValue({ error: null }),
