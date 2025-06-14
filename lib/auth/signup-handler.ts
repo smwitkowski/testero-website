@@ -1,6 +1,23 @@
 import { z } from 'zod';
 import type { AuthResponse, SignUpWithPasswordCredentials } from '@supabase/auth-js';
 
+// Response body types
+export interface SignupSuccessResponse {
+  status: 'ok';
+}
+
+export interface SignupErrorResponse {
+  error: string;
+}
+
+export type SignupResponseBody = SignupSuccessResponse | SignupErrorResponse;
+
+// Response type
+export interface SignupResponse {
+  status: number;
+  body: SignupResponseBody;
+}
+
 // In-memory rate limiter (for dev/demo only)
 const rateLimitMap = new Map<string, number[]>();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
@@ -45,7 +62,7 @@ export async function signupBusinessLogic({ email, password, ip, supabaseClient,
   ip: string;
   supabaseClient: { auth: { signUp: (credentials: SignUpWithPasswordCredentials) => Promise<AuthResponse> } };
   analytics: Analytics;
-}): Promise<{ status: number, body: unknown }> {
+}): Promise<SignupResponse> {
   // Validate input
   const parse = signupSchema.safeParse({ email, password });
   if (!parse.success) {
