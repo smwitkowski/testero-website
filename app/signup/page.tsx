@@ -226,7 +226,7 @@ const SignupPage = () => {
                     </svg>
                   </div>
                   <h3 className="text-lg font-medium text-slate-900">Check your email</h3>
-                  <p className="text-slate-600">We've sent a confirmation link to {form.getValues().email}. Please follow the instructions to complete your registration.</p>
+                  <p className="text-slate-600">We&apos;ve sent a confirmation link to {form.getValues().email}. Please follow the instructions to complete your registration.</p>
                 </motion.div>
               )}
             </AnimatePresence>

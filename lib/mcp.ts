@@ -1,6 +1,7 @@
 import { McpToolResponse } from './types';
 
-export async function useMcpTool(serverName: string, toolName: string, args: any): Promise<McpToolResponse> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function useMcpTool(_serverName: string, _toolName: string, _args: unknown): Promise<McpToolResponse> {
   // In a real implementation, this would make an API call to the MCP server
   // For now, we'll return mock data
   return {

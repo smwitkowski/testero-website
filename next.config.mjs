@@ -18,6 +18,20 @@ const nextConfig = {
     dangerouslyAllowSVG: false,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
+  
+  // Webpack configuration to suppress warnings
+  webpack: (config, { isServer }) => {
+    // Suppress specific warnings
+    config.ignoreWarnings = [
+      // Ignore critical dependency warnings from Supabase
+      {
+        module: /node_modules\/@supabase\/realtime-js/,
+        message: /Critical dependency: the request of a dependency is an expression/,
+      },
+    ];
+    
+    return config;
+  },
 };
 
 export default nextConfig;

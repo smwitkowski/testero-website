@@ -4,16 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "NODE_NO_WARNINGS=1 next build",
     "start": "next start",
     "lint": "next lint",
-    "generate:sitemap": "ts-node scripts/generate-sitemap.js",
-    "generate:social-images": "node scripts/generate-social-images.js || echo 'Warning: Social image generation failed, continuing build'",
+    "generate:sitemap": "NODE_NO_WARNINGS=1 ts-node scripts/generate-sitemap.js",
+    "generate:social-images": "NODE_NO_WARNINGS=1 node scripts/generate-social-images.js || echo 'Warning: Social image generation failed, continuing build'",
     "generate:seo": "npm run generate:sitemap && npm run generate:social-images",
     "prebuild": "npm run generate:seo",
-    "setup:gcp-storage": "node scripts/setup-gcp-storage.js",
+    "setup:gcp-storage": "NODE_NO_WARNINGS=1 node scripts/setup-gcp-storage.js",
     "gcp:enable": "cross-env USE_GCP_STORAGE=true npm run generate:social-images",
-    "indexnow:submit": "node scripts/submit-to-indexnow.js",
+    "indexnow:submit": "NODE_NO_WARNINGS=1 node scripts/submit-to-indexnow.js",
     "test": "jest"
   },
   "dependencies": {

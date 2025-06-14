@@ -48,10 +48,21 @@ export async function POST(req: NextRequest) {
   ) {
     return NextResponse.json({ error: 'Invalid request: email and password must be strings' }, { status: 400 });
   }
-  const ip = req.headers.get('x-forwarded-for') || req.ip || 'unknown';
+  const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
   const { email, password } = body;
   const supabaseClient = createServerSupabaseClient();
-  const analytics = posthog;
+  
+  // Create analytics wrapper to match expected interface
+  const analytics = {
+    capture: (event: { event: string; properties: Record<string, unknown> }) => {
+      posthog.capture({
+        event: event.event,
+        properties: event.properties,
+        distinctId: email || 'anonymous'
+      });
+    }
+  };
+  
   const result = await signupBusinessLogic({ email, password, ip, supabaseClient, analytics });
   return NextResponse.json(result.body, { status: result.status });
 }

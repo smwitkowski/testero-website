@@ -45,7 +45,7 @@ export async function signupBusinessLogic({ email, password, ip, supabaseClient,
   ip: string;
   supabaseClient: { auth: { signUp: (credentials: SignUpWithPasswordCredentials) => Promise<AuthResponse> } };
   analytics: Analytics;
-}): Promise<{ status: number, body: any }> {
+}): Promise<{ status: number, body: unknown }> {
   // Validate input
   const parse = signupSchema.safeParse({ email, password });
   if (!parse.success) {
