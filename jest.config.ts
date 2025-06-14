@@ -16,4 +16,7 @@ export default {
     '^@/(.*)$': '<rootDir>/$1',
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  transformIgnorePatterns: [
+    '/node_modules/(?!(\@supabase|posthog-node)/)',
+  ],
 } satisfies Config;

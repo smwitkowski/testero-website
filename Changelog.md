@@ -1,0 +1,8 @@
+## [Unreleased]
+- Added `/api/auth/signup` API route for Supabase sign-up with email/password, default `early_access: false` metadata, and clean JSON responses.
+- Implemented in-memory rate limiting (5 requests/minute per IP) for sign-up route. Added comments for production upgrade.
+- Added server-side PostHog instrumentation for signup attempts, success, errors, and rate limiting.
+- Added Jest tests for signup API covering valid, invalid, rate-limited, and duplicate email scenarios.
+- Refactored signup business logic into a pure function (`signupBusinessLogic`) in `lib/auth/signup-handler.ts` for testability and maintainability.
+- API route now injects Supabase and analytics dependencies into the handler.
+- Unit tests updated to target the pure handler directly, removing all Web API and Next.js dependencies from the test environment. 

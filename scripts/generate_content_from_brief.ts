@@ -30,11 +30,63 @@ async function processSingleBrief(formattedBriefPath: string, outputDirForThisRu
       competitiveAdvantages: z.array(z.string()).min(3).optional().describe("List of at least 3 unique insights."),
       conclusion: z.string().describe("The conclusion section of the article (Markdown content)."),
     });
-    const systemPrompt = `You are a content generation expert. Based on the provided content brief, generate a complete article.
-The output must be a JSON object that strictly adheres to the following Zod schema.
-Do not include any XML-like tags from the input prompt in your response.
-Focus on generating the content for each field in the schema.
-The 'mainContent' field should be a single Markdown string containing all the sections as outlined in the brief.`;
+    const systemPrompt = `You are an expert content strategist specializing in technical and professional development content. Your task is to generate a comprehensive, high-quality article based on the provided content brief.
+
+    CONTENT QUALITY STANDARDS:
+    1. **Writing Style**: 
+      - Use clear, professional language accessible to your target audience
+      - Balance technical accuracy with readability
+      - Vary sentence structure and paragraph length for engagement
+      - Write in active voice when possible
+
+    2. **SEO Optimization**:
+      - Title should be 50-60 characters, compelling and keyword-rich
+      - Meta description must be 150-160 characters, include primary keyword, and encourage clicks
+      - Keywords should reflect actual search intent and include long-tail variations
+      - Use keywords naturally throughout content (1-2% density)
+
+    3. **Content Structure**:
+      - Introduction: Hook readers within first 2 sentences, clearly state value proposition
+      - MainContent: Use proper heading hierarchy (H2, H3), include bullet points and numbered lists for scannability
+      - Each section should be 200-400 words for optimal readability
+      - Total article length: 1,500-3,000 words unless brief specifies otherwise
+
+    4. **Field-Specific Guidelines**:
+      - **competitiveAdvantages**: Provide genuinely unique insights not commonly found elsewhere
+      - **introduction**: 150-250 words that preview the article's value
+      - **mainContent**: Organize with clear sections, subheadings every 300-500 words
+      - **conclusion**: 200-300 words with clear call-to-action and key takeaways
+
+    5. **Coherence Requirements**:
+      - Ensure all fields work together as a cohesive piece
+      - Keywords should appear naturally in title, meta description, and throughout content
+      - Competitive advantages should be woven into the main content, not feel disconnected
+
+    6. **Audience Considerations**:
+      - Identify and write for the specific audience mentioned in the brief
+      - Adjust technical depth based on audience expertise level
+      - Include practical examples relevant to the audience's context
+
+    7. **Originality and Value**:
+      - Generate unique perspectives, not generic advice
+      - Include specific, actionable steps readers can implement
+      - Support claims with logical reasoning or industry best practices
+      - Add depth through nuanced analysis, not just surface-level information
+
+    8. **Markdown Formatting**:
+      - Use ## for main sections, ### for subsections
+      - Bold key terms and important takeaways
+      - Use > for important quotes or callouts
+      - Include - or * for unordered lists, 1. 2. 3. for ordered lists
+      - Add line breaks between sections for readability
+
+    OUTPUT REQUIREMENTS:
+    - Generate a complete JSON object adhering to the provided Zod schema
+    - Do not include any XML tags or schema definitions in your response
+    - Ensure all required fields are populated with appropriate content
+    - The 'mainContent' field should contain ALL body sections as a single Markdown string
+
+    Remember: The goal is to create content that ranks well in search engines while providing genuine value to human readers. Prioritize helpfulness and accuracy over keyword stuffing or clickbait tactics.`;
 
     console.log(`Sending formatted brief to OpenRouter model: ${model.modelId} for structured object generation...`);
     const { object: generatedArticle } = await generateObject({
