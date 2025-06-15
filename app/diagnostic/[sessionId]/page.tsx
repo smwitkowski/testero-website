@@ -352,13 +352,73 @@ const DiagnosticSessionPage = () => {
   if (!currentQuestion) return <main style={{ padding: 24 }}><div>No questions found for this session.</div></main>;
 
   return (
-    <main style={{ maxWidth: 600, margin: '2rem auto', padding: 24, border: '1px solid #eee', borderRadius: 8 }}>
-      <h1>Diagnostic Question {currentQuestionIndex + 1} of {sessionData?.questions.length}</h1>
-      <section style={{ margin: '2rem 0' }}>
-        <div style={{ fontSize: 20, fontWeight: 500, marginBottom: 24 }}>
+    <main style={{ 
+      maxWidth: 900, // Increased from 600 to give more breathing room
+      margin: '2rem auto', 
+      padding: '32px 48px', // Increased padding for more spacious feel
+      border: '1px solid #eee', 
+      borderRadius: 12, // Slightly larger border radius
+    }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: '3rem', // More space before question
+        paddingBottom: '1rem',
+        borderBottom: '1px solid #f0f0f0'
+      }}>
+        <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600 }}>
+          Diagnostic Assessment
+        </h1>
+        <div style={{ 
+          background: '#f8f9fa',
+          padding: '8px 16px',
+          borderRadius: 20,
+          fontSize: '0.9rem',
+          fontWeight: 500,
+          color: '#6c757d'
+        }}>
+          Question {currentQuestionIndex + 1} of {sessionData?.questions.length}
+        </div>
+      </div>
+
+      <section style={{ margin: 0 }}>
+        {/* Question stem - clean minimal approach */}
+        {/* Other style options to try:
+            
+            Option 1 - Minimal (current):
+            Just typography hierarchy with generous spacing
+            
+            Option 2 - Accent line:
+            Add: paddingBottom: '1.5rem', borderBottom: '3px solid #0070f3'
+            
+            Option 3 - Left accent bar:  
+            Add: paddingLeft: '1.5rem', borderLeft: '4px solid #0070f3'
+            
+            Option 4 - Question icon:
+            Add small Q icon or question mark before text
+            
+            Option 5 - Typography emphasis:
+            Make it larger: fontSize: '1.75rem', fontWeight: 700
+        */}
+        <div style={{ 
+          fontSize: '1.5rem',
+          fontWeight: 400, // Reduced from 600 to be less bold
+          lineHeight: 1.5,
+          marginBottom: '3rem',
+          color: '#4a5568', // Lighter color, less dark than #1a202c
+          letterSpacing: '-0.01em'
+        }}>
           {currentQuestion.stem}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+
+        {/* Answer options with more spacious layout */}
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: 16, // Increased gap between options
+          marginBottom: '3rem' // More space before submit button
+        }}>
           {currentQuestion.options.map((option) => {
             const isSelected = selectedOptionLabel === option.label;
             const isCorrectOption = feedback?.correctAnswer === option.label;
@@ -372,87 +432,143 @@ const DiagnosticSessionPage = () => {
                 onClick={() => !isDisabled && setSelectedOptionLabel(option.label)}
                 disabled={isDisabled}
                 style={{
-                  padding: 12,
-                  borderRadius: 6,
-                  border: isSelected ? '2px solid #0070f3' : '1px solid #ccc',
+                  padding: '1.25rem 1.5rem', // More generous padding
+                  borderRadius: 8,
+                  border: isSelected ? '2px solid #0070f3' : '2px solid #dee2e6', // Keep border thickness consistent
                   background: isCorrectOption
                     ? '#d1fadf'
                     : isIncorrectSelected
                     ? '#ffe0e0'
                     : isSelected
                     ? '#e6f0fd'
-                    : '#fafafa',
-                  fontWeight: isSelected ? 600 : 400,
+                    : '#ffffff',
+                  fontWeight: 400, // Keep font weight consistent - no bold on selection
+                  fontSize: '1.1rem', // Slightly larger text for options
+                  lineHeight: 1.5,
                   color: isCorrectOption
                     ? '#219653'
                     : isIncorrectSelected
                     ? '#d32f2f'
                     : isSelected
                     ? '#0070f3'
-                    : '#222',
-                  transition: 'all 0.15s',
+                    : '#343a40',
+                  transition: 'all 0.2s ease', // Smoother transition
                   opacity: isDisabled && !isSelected && !isCorrectOption ? 0.7 : 1,
                   cursor: isDisabled ? 'not-allowed' : 'pointer',
+                  textAlign: 'left', // Left align for better readability
+                  boxSizing: 'border-box', // Ensure borders don't affect internal spacing
+                  boxShadow: isSelected ? '0 2px 8px rgba(0,112,243,0.15)' : '0 1px 3px rgba(0,0,0,0.05)',
+                  transform: isSelected && !isDisabled ? 'translateY(-1px)' : 'none', // Subtle lift effect
                 }}
               >
-                {option.text}
-                {isCorrectOption && feedback && (
-                  <span style={{ marginLeft: 8, fontWeight: 700 }}>✓</span>
-                )}
-                {isIncorrectSelected && feedback && (
-                  <span style={{ marginLeft: 8, fontWeight: 700 }}>✗</span>
-                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{option.text}</span>
+                  <div>
+                    {isCorrectOption && feedback && (
+                      <span style={{ 
+                        marginLeft: 12, 
+                        fontWeight: 700, 
+                        fontSize: '1.2rem',
+                        color: '#219653'
+                      }}>✓</span>
+                    )}
+                    {isIncorrectSelected && feedback && (
+                      <span style={{ 
+                        marginLeft: 12, 
+                        fontWeight: 700, 
+                        fontSize: '1.2rem',
+                        color: '#d32f2f'
+                      }}>✗</span>
+                    )}
+                  </div>
+                </div>
               </button>
             );
           })}
         </div>
+
         {!feedback ? (
-          <button
-            onClick={handleSubmitAnswer}
-            disabled={selectedOptionLabel === null || submitting}
-            style={{
-              padding: '12px 32px',
-              borderRadius: 6,
-              background: selectedOptionLabel === null || submitting ? '#ccc' : '#0070f3',
-              color: 'white',
-              border: 'none',
-              fontWeight: 600,
-              cursor: selectedOptionLabel === null || submitting ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {submitting ? 'Submitting...' : 'Submit Answer'}
-          </button>
-        ) : (
-          <>
-            <div style={{ marginTop: 32 }}>
-              <div style={{
-                color: feedback.isCorrect ? '#219653' : '#d32f2f',
-                fontWeight: 600,
-                fontSize: 18,
-                marginBottom: 12,
-              }}>
-                {feedback.isCorrect ? 'Correct!' : 'Incorrect.'}
-              </div>
-              <div style={{ marginBottom: 12 }}>
-                <strong>Explanation:</strong>
-                <div>{feedback.explanation || 'No explanation provided.'}</div>
-              </div>
-            </div>
+          <div style={{ textAlign: 'center' }}>
             <button
-              onClick={handleNextQuestion}
+              onClick={handleSubmitAnswer}
+              disabled={selectedOptionLabel === null || submitting}
               style={{
-                marginTop: 16,
-                padding: "10px 28px",
-                borderRadius: 6,
-                background: "#f2f2f2",
-                color: "#222",
-                border: "1px solid #ccc",
+                padding: '16px 48px', // Larger button
+                borderRadius: 8,
+                background: selectedOptionLabel === null || submitting ? '#ccc' : '#0070f3',
+                color: 'white',
+                border: 'none',
                 fontWeight: 600,
-                cursor: "pointer",
+                fontSize: '1.1rem',
+                cursor: selectedOptionLabel === null || submitting ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: selectedOptionLabel !== null && !submitting ? '0 4px 12px rgba(0,112,243,0.3)' : 'none',
+                transform: selectedOptionLabel !== null && !submitting ? 'translateY(-1px)' : 'none',
               }}
             >
-              {currentQuestionIndex < (sessionData?.questions.length || 0) - 1 ? 'Next Question' : 'View Results'}
+              {submitting ? 'Submitting...' : 'Submit Answer'}
             </button>
+          </div>
+        ) : (
+          <>
+            <div style={{ 
+              marginTop: '2rem',
+              padding: '2rem',
+              background: feedback.isCorrect ? '#f0f9f4' : '#fef2f2',
+              borderRadius: 12,
+              border: `1px solid ${feedback.isCorrect ? '#d1fae5' : '#fecaca'}`,
+              marginBottom: '2rem'
+            }}>
+              <div style={{
+                color: feedback.isCorrect ? '#219653' : '#d32f2f',
+                fontWeight: 700,
+                fontSize: '1.25rem',
+                marginBottom: '1rem',
+              }}>
+                {feedback.isCorrect ? '🎉 Correct!' : '❌ Incorrect.'}
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <strong style={{ fontSize: '1.1rem', color: '#374151' }}>Explanation:</strong>
+                <div style={{ 
+                  marginTop: '0.75rem',
+                  fontSize: '1rem',
+                  lineHeight: 1.6,
+                  color: '#4b5563'
+                }}>
+                  {feedback.explanation || 'No explanation provided.'}
+                </div>
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <button
+                onClick={handleNextQuestion}
+                style={{
+                  marginTop: 16,
+                  padding: "16px 48px", // Larger button to match submit button
+                  borderRadius: 8,
+                  background: "#f8f9fa",
+                  color: "#495057",
+                  border: "1px solid #dee2e6",
+                  fontWeight: 600,
+                  fontSize: '1.1rem',
+                  cursor: "pointer",
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#e9ecef';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f8f9fa';
+                  e.currentTarget.style.transform = 'none';
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                }}
+              >
+                {currentQuestionIndex < (sessionData?.questions.length || 0) - 1 ? 'Next Question →' : 'View Results →'}
+              </button>
+            </div>
           </>
         )}
       </section>

@@ -117,6 +117,13 @@ const Navbar = () => {
           {session ? (
             <>
               <Link
+                href="/dashboard"
+                className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
+                style={{ color: colors.primary[800], ...typography.button.default }}
+              >
+                Dashboard
+              </Link>
+              <Link
                 href="/practice/question"
                 className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
                 style={{ color: colors.primary[800], ...typography.button.default }}
@@ -172,6 +179,14 @@ const Navbar = () => {
             <div className="flex flex-col space-y-4 mt-4 pt-4 border-t border-ui-border-light" style={{ borderColor: colors.ui.border.light }}>
               {session ? (
                 <>
+                  <Link 
+                    href="/dashboard" 
+                    className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500" 
+                    style={{ color: colors.primary[800], ...typography.button.default }} 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
                   <Link 
                     href="/practice/question" 
                     className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500" 

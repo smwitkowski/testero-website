@@ -15,17 +15,27 @@ export async function GET() {
       }, { status: 401 });
     }
 
-    // Fetch the first available question (no is_active filter)
-    const { data: question, error: questionError } = await supabase
+    // For MVP, we'll implement a simple question rotation without persistence
+    // TODO: Implement question tracking when user_question_progress table is properly set up
+    
+    // Get all available questions
+    const { data: questions, error: questionError } = await supabase
       .from('questions')
       .select('*')
-      .order('id', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(50); // Get a good sample size
 
-    if (questionError || !question) {
-      return NextResponse.json({ error: 'No question found or database error.' }, { status: 404 });
+    if (questionError || !questions || questions.length === 0) {
+      return NextResponse.json({ error: 'No questions available in the database.' }, { status: 404 });
     }
+
+    // For now, use a simple rotation based on user ID and current time
+    // This ensures different users get different questions and the same user gets variety over time
+    const userId = user.id;
+    const currentHour = new Date().getHours();
+    const userIdHash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const questionIndex = (userIdHash + currentHour + Math.floor(Date.now() / (1000 * 60 * 10))) % questions.length;
+    
+    const question = questions[questionIndex];
 
     // Fetch options for the question
     const { data: options, error: optionsError } = await supabase

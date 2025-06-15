@@ -66,8 +66,7 @@ export async function GET(req: Request) {
           responded_at
         )
       `)
-      .eq('session_id', sessionId)
-      .order('created_at');
+      .eq('session_id', sessionId);
 
     if (questionsError) {
       console.error('Error fetching questions with responses:', questionsError);

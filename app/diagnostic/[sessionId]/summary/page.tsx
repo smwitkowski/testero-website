@@ -347,22 +347,31 @@ const DiagnosticSummaryPage = () => {
                       <span style={{ fontWeight: 'bold', minWidth: '20px' }}>
                         {option.label}.
                       </span>
-                      <span>{option.text}</span>
-                      {isCorrectAnswer && (
-                        <span style={{ marginLeft: 'auto', color: '#22c55e', fontWeight: 'bold' }}>
-                          ✓ Correct
-                        </span>
-                      )}
-                      {isUserAnswer && !isCorrectAnswer && (
-                        <span style={{ marginLeft: 'auto', color: '#ef4444', fontWeight: 'bold' }}>
-                          ✗ Your Answer
-                        </span>
-                      )}
-                      {isUserAnswer && isCorrectAnswer && (
-                        <span style={{ marginLeft: 'auto', color: '#22c55e', fontWeight: 'bold' }}>
-                          ✓ Your Answer
-                        </span>
-                      )}
+                      <span style={{ flex: 1 }}>{option.text}</span>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.5rem',
+                        minWidth: '120px',
+                        justifyContent: 'flex-end'
+                      }}>
+                        {/* Show "Correct" only when it's the correct answer AND user got it wrong */}
+                        {isCorrectAnswer && !isUserAnswer && (
+                          <span style={{ color: '#22c55e', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                            ✓ Correct
+                          </span>
+                        )}
+                        {/* Show "Your Answer" for user's choice */}
+                        {isUserAnswer && (
+                          <span style={{ 
+                            color: isCorrectAnswer ? '#22c55e' : '#ef4444', 
+                            fontWeight: 'bold',
+                            fontSize: '0.9rem'
+                          }}>
+                            {isCorrectAnswer ? '✓' : '✗'} Your Answer
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}

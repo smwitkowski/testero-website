@@ -47,6 +47,28 @@ const PracticeQuestionPage = () => {
       });
   }, []);
 
+  const fetchNewQuestion = async () => {
+    setLoading(true);
+    setError(null);
+    setFeedback(null);
+    setSelectedOptionKey(null);
+    setSubmitError(null);
+    
+    try {
+      const res = await fetch("/api/question/current");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to fetch question");
+      }
+      const data = await res.json();
+      setQuestion(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!question || !selectedOptionKey) return;
     setSubmitting(true);
@@ -162,7 +184,7 @@ const PracticeQuestionPage = () => {
                   <div>{feedback.explanationText || "No explanation provided."}</div>
                 </div>
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={fetchNewQuestion}
                   style={{
                     marginTop: 16,
                     padding: "10px 28px",
