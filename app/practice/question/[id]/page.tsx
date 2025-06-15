@@ -91,7 +91,7 @@ const SpecificPracticeQuestionPage = () => {
   if (!question) return <main style={{ padding: 24 }}><div>Question not found.</div></main>;
 
   return (
-    <main style={{ maxWidth: 600, margin: "2rem auto", padding: 24, border: "1px solid #eee", borderRadius: 8 }}>
+    <div style={{ maxWidth: 800, margin: "2rem auto", padding: 24, border: "1px solid #eee", borderRadius: 8 }}>
       <h1>Practice Question {question.id}</h1>
       <section style={{ margin: "2rem 0" }}>
         <div style={{ fontSize: 20, fontWeight: 500, marginBottom: 24 }}>
@@ -202,7 +202,7 @@ const SpecificPracticeQuestionPage = () => {
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 };
 

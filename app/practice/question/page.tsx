@@ -94,17 +94,17 @@ const PracticeQuestionPage = () => {
   };
 
   return (
-    <main style={{ maxWidth: 600, margin: "2rem auto", padding: 24, border: "1px solid #eee", borderRadius: 8 }}>
-      <h1>Practice Question</h1>
-      <section style={{ margin: "2rem 0" }}>
-        {loading && <div>Loading question...</div>}
-        {error && <div style={{ color: "red" }}>Error: {error}</div>}
+    <main className="max-w-3xl mx-auto my-8 p-6 border border-gray-200 rounded-lg">
+      <h1 className="text-2xl font-bold mb-6">Practice Question</h1>
+      <section className="my-8">
+        {loading && <div className="text-center">Loading question...</div>}
+        {error && <div className="text-red-600 text-center">Error: {error}</div>}
         {!loading && !error && question && (
           <>
-            <div style={{ fontSize: 20, fontWeight: 500, marginBottom: 24 }}>
+            <div className="text-xl font-medium mb-6">
               {question.question_text}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 32 }}>
+            <div className="flex flex-col gap-3 mb-8 max-w-[90%] mx-auto">
               {question.options.map((option) => {
                 const isSelected = selectedOptionKey === option.label;
                 const isCorrect = feedback?.correctOptionKey === option.label;
@@ -116,36 +116,28 @@ const PracticeQuestionPage = () => {
                     type="button"
                     onClick={() => !isDisabled && setSelectedOptionKey(option.label)}
                     disabled={isDisabled}
-                    style={{
-                      padding: 12,
-                      borderRadius: 6,
-                      border: isSelected ? "2px solid #0070f3" : "1px solid #ccc",
-                      background: isCorrect
-                        ? "#d1fadf"
-                        : isIncorrect
-                        ? "#ffe0e0"
-                        : isSelected
-                        ? "#e6f0fd"
-                        : "#fafafa",
-                      fontWeight: isSelected ? 600 : 400,
-                      color: isCorrect
-                        ? "#219653"
-                        : isIncorrect
-                        ? "#d32f2f"
-                        : isSelected
-                        ? "#0070f3"
-                        : "#222",
-                      transition: "all 0.15s",
-                      opacity: isDisabled && !isSelected && !isCorrect ? 0.7 : 1,
-                      cursor: isDisabled ? "not-allowed" : "pointer",
-                    }}
+                    className={`
+                      p-3 rounded-md text-left transition-all duration-150 w-full
+                      ${isSelected ? 'border-2 border-blue-500' : 'border border-gray-300'}
+                      ${isCorrect 
+                        ? 'bg-green-100 text-green-700 border-green-500' 
+                        : isIncorrect 
+                        ? 'bg-red-100 text-red-700 border-red-500'
+                        : isSelected 
+                        ? 'bg-blue-50 text-blue-600' 
+                        : 'bg-gray-50 text-gray-900 hover:bg-gray-100'
+                      }
+                      ${isSelected ? 'font-semibold' : 'font-normal'}
+                      ${isDisabled && !isSelected && !isCorrect ? 'opacity-70' : 'opacity-100'}
+                      ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}
+                    `}
                   >
                     {option.text}
                     {isCorrect && feedback && (
-                      <span style={{ marginLeft: 8, fontWeight: 700 }}>✓</span>
+                      <span className="ml-2 font-bold">✓</span>
                     )}
                     {isIncorrect && feedback && (
-                      <span style={{ marginLeft: 8, fontWeight: 700 }}>✗</span>
+                      <span className="ml-2 font-bold">✗</span>
                     )}
                   </button>
                 );
@@ -155,46 +147,33 @@ const PracticeQuestionPage = () => {
               <button
                 onClick={handleSubmit}
                 disabled={!selectedOptionKey || submitting}
-                style={{
-                  padding: "12px 32px",
-                  borderRadius: 6,
-                  background: !selectedOptionKey || submitting ? "#ccc" : "#0070f3",
-                  color: "white",
-                  border: "none",
-                  fontWeight: 600,
-                  cursor: !selectedOptionKey || submitting ? "not-allowed" : "pointer",
-                }}
+                className={`
+                  px-8 py-3 rounded-md font-semibold text-white transition-colors
+                  ${!selectedOptionKey || submitting 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
+                  }
+                `}
               >
                 {submitting ? "Submitting..." : "Submit"}
               </button>
             ) : null}
-            {submitError && <div style={{ color: "red", marginTop: 16 }}>{submitError}</div>}
+            {submitError && <div className="text-red-600 mt-4">{submitError}</div>}
             {feedback && (
-              <div style={{ marginTop: 32 }}>
-                <div style={{
-                  color: feedback.isCorrect ? "#219653" : "#d32f2f",
-                  fontWeight: 600,
-                  fontSize: 18,
-                  marginBottom: 12,
-                }}>
+              <div className="mt-8">
+                <div className={`
+                  text-lg font-semibold mb-3
+                  ${feedback.isCorrect ? 'text-green-600' : 'text-red-600'}
+                `}>
                   {feedback.isCorrect ? "Correct!" : "Incorrect."}
                 </div>
-                <div style={{ marginBottom: 12 }}>
-                  <strong>Explanation:</strong>
-                  <div>{feedback.explanationText || "No explanation provided."}</div>
+                <div className="mb-3">
+                  <strong className="font-semibold">Explanation:</strong>
+                  <div className="mt-1">{feedback.explanationText || "No explanation provided."}</div>
                 </div>
                 <button
                   onClick={fetchNewQuestion}
-                  style={{
-                    marginTop: 16,
-                    padding: "10px 28px",
-                    borderRadius: 6,
-                    background: "#f2f2f2",
-                    color: "#222",
-                    border: "1px solid #ccc",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
+                  className="mt-4 px-7 py-2.5 rounded-md bg-gray-100 text-gray-800 border border-gray-300 font-semibold hover:bg-gray-200 transition-colors cursor-pointer"
                 >
                   Next Question
                 </button>

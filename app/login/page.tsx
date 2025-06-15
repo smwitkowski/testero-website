@@ -71,7 +71,7 @@ const LoginPage = () => {
       // Add a manual redirect as a backup
       // Sometimes the auth state change might not trigger immediately
       setTimeout(() => {
-        window.location.href = '/practice/question';
+        window.location.href = '/dashboard';
       }, 1500);
 
     } catch (err) {

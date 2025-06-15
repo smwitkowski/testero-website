@@ -86,8 +86,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (session) {
       // If on an auth route, redirect to the main app page
       if (isAuthRoute) {
-        console.log('[Auth Routing] Redirecting from auth route to practice page');
-        router.push('/practice/question');
+        console.log('[Auth Routing] Redirecting from auth route to dashboard');
+        router.push('/dashboard');
       } else if (!isPublicRoute) {
         // If on a protected route, check early access flag
         const isEarlyAccess = session.user?.user_metadata?.is_early_access === true;

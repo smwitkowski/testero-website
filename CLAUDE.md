@@ -111,6 +111,38 @@ export interface ApiResponse {
 }
 ```
 
+### Styling Guidelines
+
+#### Tailwind CSS Best Practices
+- **Prefer Tailwind utility classes** over inline styles for maintainability and consistency
+- **Use responsive design patterns** with Tailwind's responsive prefixes (sm:, md:, lg:, xl:)
+- **Leverage existing design system** - this project uses shadcn/ui components built on Tailwind CSS
+- **Avoid custom CSS** unless absolutely necessary - Tailwind provides comprehensive utilities
+- **Component composition**: Use Tailwind classes for layout, spacing, colors, and typography
+
+#### Modern CSS Framework Stack
+- **Tailwind CSS** - Primary styling framework (utility-first approach)
+- **shadcn/ui** - Pre-built accessible components with Tailwind styling
+- **Radix UI** - Unstyled accessible primitives (used internally by shadcn/ui)
+- **CSS-in-JS alternatives** like inline styles should be converted to Tailwind classes
+
+#### Example Patterns
+```tsx
+// ✅ Good - Using Tailwind classes
+<div className="max-w-3xl mx-auto my-8 p-6 border border-gray-200 rounded-lg">
+  <button className="px-8 py-3 rounded-md font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+    Submit
+  </button>
+</div>
+
+// ❌ Avoid - Inline styles
+<div style={{ maxWidth: 800, margin: "2rem auto", padding: 24 }}>
+  <button style={{ padding: "12px 32px", background: "#0070f3" }}>
+    Submit
+  </button>
+</div>
+```
+
 ### Testing Patterns
 
 #### Unit Testing (Jest)
