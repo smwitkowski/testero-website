@@ -1,5 +1,5 @@
 import { Page, expect } from '@playwright/test';
-import { MOCK_SESSION_RESPONSES, MOCK_SUMMARY_RESPONSE } from './mock-data';
+import { MOCK_SESSION_RESPONSES, MOCK_SUMMARY_RESPONSE, MOCK_EXAM_TYPES } from './mock-data';
 
 export class DiagnosticHelpers {
   constructor(private page: Page) {}

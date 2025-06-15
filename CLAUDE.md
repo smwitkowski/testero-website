@@ -18,9 +18,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run indexnow:submit` - Submit sitemap to search engines
 
 ### Testing Commands
+
+#### Jest Unit Tests
+- `npm test` - Run all Jest unit tests
 - Run single test: `npm test -- --testNamePattern="test name"`
 - Run specific test file: `npm test __tests__/filename.test.ts`
 - Jest runs with jsdom environment and uses `__tests__/*.test.ts?(x)` pattern
+
+#### Playwright E2E Tests
+- `npm run e2e` - Run all E2E tests headlessly
+- `npm run e2e:headed` - Run E2E tests with browser visible
+- `npm run e2e:ui` - Run E2E tests in interactive UI mode
+- `npm run e2e:debug` - Run E2E tests in debug mode with step-by-step execution
+- `npm run e2e:report` - View the latest E2E test report
+- Run specific test file: `npx playwright test e2e/filename.spec.ts`
+- Run single test: `npx playwright test e2e/filename.spec.ts:line_number`
 
 ## Architecture Overview
 
@@ -31,12 +43,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **shadcn/ui** components with Tailwind CSS
 - **PostHog** for analytics
 - **Google Cloud Storage** for static assets
+- **Playwright** for E2E testing across multiple browsers
+- **Jest** with jsdom for unit testing
 
 ### Key Directory Structure
 ```
 app/                    # Next.js App Router pages and API routes
 ├── api/               # API endpoints (diagnostic, auth, questions)
-├── diagnostic/        # Diagnostic test pages
+├── diagnostic/        # Diagnostic test pages and session management
 ├── content/           # Content management system
 └── practice/          # Practice question interface
 
@@ -50,6 +64,13 @@ components/            # React components
 ├── ui/               # shadcn/ui base components
 ├── providers/        # Context providers (Auth, PostHog)
 └── content/          # Content-specific components
+
+e2e/                   # End-to-end testing with Playwright
+├── helpers/          # Test utilities, page objects, and mock data
+└── *.spec.ts         # E2E test files covering user flows
+
+__tests__/             # Jest unit tests
+├── *.test.ts         # Unit test files for business logic
 ```
 
 ### Database Architecture (Supabase)
@@ -64,7 +85,9 @@ Core tables for diagnostic functionality:
 - **Pure Functions**: Business logic separated from API routes (see `lib/auth/signup-handler.ts`)
 - **Type Safety**: Explicit response types with union types for success/error states
 - **Rate Limiting**: In-memory rate limiting for signup and other endpoints
-- **Session Management**: UUID-based sessions with expiration handling
+- **Session Management**: UUID-based sessions with expiration handling and localStorage persistence
+- **Anonymous Users**: Support for anonymous diagnostic sessions with secure session ownership
+- **API Mocking**: Comprehensive mocking infrastructure for isolated E2E testing
 
 ## Development Guidelines
 
@@ -89,10 +112,24 @@ export interface ApiResponse {
 ```
 
 ### Testing Patterns
+
+#### Unit Testing (Jest)
 - Business logic functions should be pure and testable in isolation
 - Use type assertions for testing union types: `(res.body as SuccessResponse).status`
 - Mock external dependencies consistently in `beforeEach`
 - Test both success and error paths
+- Tests located in `__tests__/` directory with `.test.ts` extension
+
+#### E2E Testing (Playwright)
+- **Page Object Pattern**: Use page objects for maintainable test code (see `e2e/helpers/page-objects/`)
+- **Mock API Data**: Use comprehensive mocking via `e2e/helpers/diagnostic-helpers.ts`
+- **Cross-browser Testing**: Tests run on Chrome, Firefox, Safari, and Mobile browsers
+- **Selector Best Practices**: 
+  - Use Playwright's `.first()` method instead of CSS `:first` pseudo-class
+  - Prefer role-based selectors when possible: `page.getByRole('button', { name: /submit/i })`
+  - Use data-testid attributes for complex selectors when needed
+- **Test Organization**: Group related tests in describe blocks, use descriptive test names
+- **Async Handling**: Always await page actions and use proper timeout configurations
 
 ### Content Management
 - Content stored in `app/content/` as Markdown with gray-matter frontmatter
@@ -134,10 +171,59 @@ export interface ApiResponse {
 
 ## Key Files Reference
 
+### Core Application
 - `app/api/diagnostic/route.ts` - Main diagnostic API with session management
+- `app/api/diagnostic/session/[id]/status/route.ts` - Session status checking API
+- `app/api/diagnostic/summary/[sessionId]/route.ts` - Results summary API
+- `app/diagnostic/page.tsx` - Diagnostic start page with resume functionality
+- `app/diagnostic/[sessionId]/page.tsx` - Active diagnostic session page
+- `app/diagnostic/[sessionId]/summary/page.tsx` - Results summary page
+
+### Business Logic & Configuration
 - `lib/auth/signup-handler.ts` - Pure business logic for user signup
 - `lib/supabase/client.ts` - Browser Supabase client factory
 - `lib/supabase/server.ts` - Server-side Supabase client
+- `components/providers/AuthProvider.tsx` - Authentication context with public route support
+
+### Testing Infrastructure
 - `jest.config.ts` - Jest configuration with jsdom and module mapping
+- `playwright.config.ts` - Playwright E2E testing configuration
+- `e2e/helpers/diagnostic-helpers.ts` - E2E test utilities and API mocking
+- `e2e/helpers/page-objects/` - Page object classes for maintainable E2E tests
+
+### Build & Deployment
 - `cloudbuild.yaml` - Google Cloud Build configuration
 - `next.config.mjs` - Next.js config with standalone output and image optimization
+- `CLAUDE.md` - This file with development guidelines and architecture documentation
+
+## E2E Testing Guidelines
+
+### Test Structure
+- Tests are organized in `e2e/` directory with descriptive filenames
+- Each test file covers a specific user flow (e.g., `diagnostic-complete-flow.spec.ts`)
+- Use the Page Object pattern for reusable UI interactions
+- Mock API responses using `DiagnosticHelpers` class for isolated testing
+
+### Common Issues & Solutions
+
+#### Selector Issues
+- **Problem**: `'selector:first' is not a valid selector` 
+- **Solution**: Use Playwright's `.first()` method: `page.locator('div').first()`
+- **Problem**: Elements not found or timing issues
+- **Solution**: Use `await expect(element).toBeVisible({ timeout: 10000 })` for reliable waits
+
+#### Test Isolation
+- Each test should be independent and not rely on state from other tests
+- Use `beforeEach` hooks to set up clean test state
+- Clear localStorage and reset mocks between tests
+
+#### Debugging Tips
+- Use `npm run e2e:headed` to see tests run in browser
+- Use `npm run e2e:debug` for step-by-step debugging
+- Add `await page.pause()` in tests to inspect state
+- Check `playwright-report/` for detailed failure information
+
+### Browser Compatibility
+- Tests run on Chrome, Firefox, Safari (webkit), and Mobile browsers
+- Some features may behave differently across browsers (especially Safari)
+- Use browser-specific test skipping if needed: `test.skip(browserName === 'webkit', 'Safari-specific issue')`
