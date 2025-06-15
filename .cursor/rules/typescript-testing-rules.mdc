@@ -1,0 +1,81 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# TypeScript & Testing Best Practices
+
+## TypeScript Response Typing
+
+When working with API responses or business logic functions that return structured data:
+
+1. **Always define explicit response types** for functions that return structured data
+2. **Use union types** for responses that can have different shapes (success vs error)
+3. **Export types** from modules so they can be reused in tests and other modules
+
+### Example Pattern
+
+```typescript
+// Define response body types
+export interface SuccessResponse {
+  status: 'ok';
+  data?: any;
+}
+
+export interface ErrorResponse {
+  error: string;
+}
+
+export type ResponseBody = SuccessResponse | ErrorResponse;
+
+// Define response type
+export interface ApiResponse {
+  status: number;
+  body: ResponseBody;
+}
+
+// Function signature
+export async function businessLogic(): Promise<ApiResponse> {
+  // implementation
+}
+```
+
+## Testing Patterns
+
+### Type Assertions in Tests
+
+When testing functions that return union types, use type assertions to access specific properties:
+
+```typescript
+import { ApiResponse, SuccessResponse, ErrorResponse } from '../lib/module';
+
+// For success responses
+const res = await businessLogic();
+expect(res.status).toBe(200);
+expect((res.body as SuccessResponse).status).toBe('ok');
+
+// For error responses  
+const res = await businessLogic();
+expect(res.status).toBe(400);
+expect((res.body as ErrorResponse).error).toBe('Expected error message');
+```
+
+### Test Structure
+
+- Import all needed types from the module being tested
+- Use descriptive test names that explain the scenario
+- Mock external dependencies consistently in `beforeEach`
+- Test both success and error paths
+- Verify analytics/tracking calls when applicable
+
+## File Organization
+
+- Keep business logic separate from API route handlers
+- Export types from the same file as the implementation
+- Use consistent naming: `SomethingResponse`, `SomethingError`, etc.
+- Import types and implementation together from modules
+
+## Key Files Reference
+
+- [lib/auth/signup-handler.ts](mdc:lib/auth/signup-handler.ts) - Example of proper type definitions and business logic separation
+- [__tests__/api.signup.test.ts](mdc:__tests__/api.signup.test.ts) - Example of properly typed tests with type assertions

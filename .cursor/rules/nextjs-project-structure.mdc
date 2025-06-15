@@ -1,0 +1,73 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Next.js Project Structure Guide
+
+This project follows modern Next.js 15 conventions with App Router.
+
+## Directory Structure
+
+```
+├── app/                    # Next.js App Router
+│   ├── api/               # API routes
+│   ├── (pages)/           # Page routes
+│   ├── globals.css        # Global styles
+│   ├── layout.tsx         # Root layout
+│   └── page.tsx           # Home page
+├── components/            # Reusable UI components
+│   ├── ui/               # shadcn/ui components
+│   ├── providers/        # Context providers
+│   └── content/          # Content-specific components
+├── lib/                  # Utility functions and business logic
+│   ├── auth/             # Authentication logic
+│   ├── supabase/         # Supabase client and utilities
+│   └── utils.ts          # General utilities
+├── __tests__/            # Jest test files
+└── public/               # Static assets
+```
+
+## Key Patterns
+
+### Separation of Concerns
+
+- **Business Logic**: Keep in `lib/` directory, separate from UI and API routes
+- **API Routes**: Use `app/api/` for Next.js API routes
+- **Pure Functions**: Business logic should be testable pure functions
+- **Type Definitions**: Export types alongside implementations
+
+### Component Organization
+
+- **UI Components**: Generic, reusable components in `components/ui/`
+- **Feature Components**: Domain-specific components in `components/[feature]/`
+- **Page Components**: App Router pages in `app/` directory
+
+### Testing Strategy
+
+- **Unit Tests**: Test business logic functions in isolation
+- **Integration Tests**: Test API endpoints and component integration
+- **Type Safety**: Use proper TypeScript types to catch errors at compile time
+
+## Dependencies
+
+### Core Stack
+- **Next.js 15**: React framework with App Router
+- **React 18.3**: UI library
+- **TypeScript**: Type safety
+- **Tailwind CSS**: Styling framework
+- **shadcn/ui**: UI component library
+
+### Key Libraries
+- **Supabase**: Backend as a Service
+- **Zod**: Schema validation
+- **Jest**: Testing framework
+- **PostHog**: Analytics
+
+## Key Files Reference
+
+- [package.json](mdc:package.json) - Project dependencies and scripts
+- [app/layout.tsx](mdc:app/layout.tsx) - Root application layout
+- [lib/utils.ts](mdc:lib/utils.ts) - Common utility functions
+- [components.json](mdc:components.json) - shadcn/ui configuration
+- [tailwind.config.ts](mdc:tailwind.config.ts) - Tailwind CSS configuration
