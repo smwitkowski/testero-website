@@ -16,7 +16,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // List of routes that don't require authentication
-const publicRoutes = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/waitlist', '/content', '/faq'];
+const publicRoutes = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/waitlist', '/content', '/faq', '/diagnostic'];
 // List of routes that should redirect to dashboard if already authenticated
 const authRoutes = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email'];
 

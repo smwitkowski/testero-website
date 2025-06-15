@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider'; // Assuming this is still relevant for logged-in users
+import { usePostHog } from 'posthog-js/react';
 
 interface ExamTypeOption {
   name: string; // This will be the value sent to the API (e.g., "Google Professional ML Engineer")
@@ -14,8 +15,14 @@ const DiagnosticStartPage = () => {
   const [numQuestions, setNumQuestions] = useState(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resumeSession, setResumeSession] = useState<{
+    sessionId: string;
+    examType: string;
+    startedAt: string;
+  } | null>(null);
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth(); // Keep auth for logged-in user tracking
+  const posthog = usePostHog();
 
   useEffect(() => {
     // Fetch exam types - this part does not require authentication as per new requirements
@@ -47,12 +54,80 @@ const DiagnosticStartPage = () => {
     fetchExamTypes();
   }, []);
 
+  useEffect(() => {
+    // Check for unfinished session on page load
+    const checkUnfinishedSession = async () => {
+      if (isAuthLoading) return; // Wait for auth state to load
+      
+      const storedSessionId = localStorage.getItem('testero_diagnostic_session_id');
+      if (!storedSessionId) return;
+
+      try {
+        let statusUrl = `/api/diagnostic/session/${storedSessionId}/status`;
+        
+        // Include anonymous session ID if user is not logged in
+        if (!user) {
+          const anonymousSessionId = localStorage.getItem('anonymousSessionId');
+          if (anonymousSessionId) {
+            statusUrl += `?anonymousSessionId=${anonymousSessionId}`;
+          }
+        }
+
+        const response = await fetch(statusUrl);
+        const data = await response.json();
+
+        if (data.exists && data.status === 'active') {
+          setResumeSession({
+            sessionId: storedSessionId,
+            examType: data.examType,
+            startedAt: data.startedAt
+          });
+          
+          // Track resume opportunity shown
+          posthog?.capture('diagnostic_resume_shown', {
+            sessionId: storedSessionId,
+            examType: data.examType,
+            startedAt: data.startedAt
+          });
+        } else if (data.status === 'completed' || data.status === 'expired' || data.status === 'not_found') {
+          // Clean up localStorage for completed/expired/not found sessions
+          localStorage.removeItem('testero_diagnostic_session_id');
+        }
+      } catch (err) {
+        console.error('Error checking session status:', err);
+        // Clean up localStorage on error
+        localStorage.removeItem('testero_diagnostic_session_id');
+      }
+    };
+
+    checkUnfinishedSession();
+  }, [user, isAuthLoading, posthog]);
+
   // No longer forcing login for this page
   // useEffect(() => {
   //   if (!isAuthLoading && !user) {
   //     router.push('/login');
   //   }
   // }, [user, isAuthLoading, router]);
+
+  const handleResumeSession = () => {
+    if (resumeSession) {
+      // Track resume action
+      posthog?.capture('diagnostic_resumed', {
+        sessionId: resumeSession.sessionId,
+        examType: resumeSession.examType,
+        startedAt: resumeSession.startedAt
+      });
+      
+      router.push(`/diagnostic/${resumeSession.sessionId}`);
+    }
+  };
+
+  const handleStartOver = () => {
+    // Clear stored session data
+    localStorage.removeItem('testero_diagnostic_session_id');
+    setResumeSession(null);
+  };
 
   const handleStartDiagnostic = async () => {
     if (!selectedExamName) {
@@ -112,6 +187,9 @@ const DiagnosticStartPage = () => {
         localStorage.setItem('anonymousSessionId', responseData.anonymousSessionId);
       }
       
+      // Store diagnostic session ID in localStorage for session persistence
+      localStorage.setItem('testero_diagnostic_session_id', responseData.sessionId);
+      
       // If it was a resumed session, the API might indicate it. For now, just redirect.
       router.push(`/diagnostic/${responseData.sessionId}`);
     } catch (err: unknown) {
@@ -131,6 +209,54 @@ const DiagnosticStartPage = () => {
   return (
     <main style={{ maxWidth: 600, margin: '2rem auto', padding: 24, border: '1px solid #eee', borderRadius: 8 }}>
       <h1>Start Diagnostic</h1>
+      
+      {resumeSession && (
+        <section style={{ 
+          margin: '2rem 0', 
+          padding: '1rem', 
+          backgroundColor: '#f0f8ff', 
+          border: '1px solid #0070f3', 
+          borderRadius: 6 
+        }}>
+          <h2 style={{ margin: '0 0 1rem 0', color: '#0070f3' }}>Unfinished Diagnostic Found</h2>
+          <p style={{ margin: '0 0 1rem 0' }}>
+            You have an unfinished <strong>{resumeSession.examType}</strong> diagnostic 
+            started on {new Date(resumeSession.startedAt).toLocaleString()}.
+          </p>
+          <p style={{ margin: '0 0 1rem 0' }}>Would you like to resume or start over?</p>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button
+              onClick={handleResumeSession}
+              style={{
+                padding: '10px 20px',
+                borderRadius: 6,
+                background: '#0070f3',
+                color: 'white',
+                border: 'none',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Resume
+            </button>
+            <button
+              onClick={handleStartOver}
+              style={{
+                padding: '10px 20px',
+                borderRadius: 6,
+                background: '#fff',
+                color: '#666',
+                border: '1px solid #ccc',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Start Over
+            </button>
+          </div>
+        </section>
+      )}
+      
       <section style={{ margin: '2rem 0' }}>
         <div style={{ marginBottom: 16 }}>
           <label htmlFor="examType" style={{ display: 'block', marginBottom: 8 }}>Exam Type:</label>
@@ -189,8 +315,8 @@ const DiagnosticStartPage = () => {
   );
 };
 
-export default DiagnosticStartPage;
-
 // Constants for question limits, could be imported from a shared config
 const MIN_QUESTIONS = 1; 
 const MAX_QUESTIONS = 20;
+
+export default DiagnosticStartPage;

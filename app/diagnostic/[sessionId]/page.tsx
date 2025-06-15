@@ -24,13 +24,6 @@ interface DiagnosticSessionData {
   currentQuestion: number;
 }
 
-interface DiagnosticResults {
-  totalQuestions: number;
-  correctAnswers: number;
-  score: number;
-  recommendations: string[];
-  examType: string;
-}
 
 const DiagnosticSessionPage = () => {
   const params = useParams();
@@ -49,7 +42,6 @@ const DiagnosticSessionPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [results, setResults] = useState<DiagnosticResults | null>(null);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -196,7 +188,12 @@ const DiagnosticSessionPage = () => {
         if (!res.ok) {
           throw new Error(data.error || 'Failed to fetch results.');
         }
-        setResults(data);
+        
+        // Clean up localStorage when session completes
+        localStorage.removeItem('testero_diagnostic_session_id');
+        
+        // Redirect to summary page instead of showing inline results
+        router.push(`/diagnostic/${sessionId}/summary`);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -351,38 +348,6 @@ const DiagnosticSessionPage = () => {
     );
   }
 
-  if (results) {
-    return (
-      <main style={{ maxWidth: 600, margin: '2rem auto', padding: 24, border: '1px solid #eee', borderRadius: 8 }}>
-        <h1>Diagnostic Results</h1>
-        <p>Exam Type: {results.examType}</p>
-        <p>Total Questions: {results.totalQuestions}</p>
-        <p>Correct Answers: {results.correctAnswers}</p>
-        <p>Score: {results.score}%</p>
-        <h2>Topic Recommendations:</h2>
-        <ul>
-          {results.recommendations.map((rec: string, index: number) => (
-            <li key={index}>{rec}</li>
-          ))}
-        </ul>
-        <button
-          onClick={() => router.push('/diagnostic')}
-          style={{
-            marginTop: 16,
-            padding: "10px 28px",
-            borderRadius: 6,
-            background: "#f2f2f2",
-            color: "#222",
-            border: "1px solid #ccc",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          Start New Diagnostic
-        </button>
-      </main>
-    );
-  }
 
   if (!currentQuestion) return <main style={{ padding: 24 }}><div>No questions found for this session.</div></main>;
 

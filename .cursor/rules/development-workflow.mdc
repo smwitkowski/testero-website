@@ -1,0 +1,115 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Development Workflow & Best Practices
+
+## Code Quality Standards
+
+### TypeScript Compilation
+Always ensure TypeScript compiles without errors before committing:
+
+```bash
+npx tsc --noEmit
+```
+
+### Testing
+Run tests to ensure functionality works as expected:
+
+```bash
+npm test
+```
+
+### Linting
+Maintain code quality with ESLint:
+
+```bash
+npm run lint
+```
+
+## Development Process
+
+### 1. Analysis Before Coding
+- **Think and analyze** before editing code
+- **Use reasoning** - don't assume changes are correct
+- **Be smart, prudent and thorough**
+
+### 2. Differential Diagnosis for Bugs
+- Always conduct differential diagnosis before attempting bug fixes
+- Ask yourself: "Is this really THE issue or just AN issue?"
+- State explicitly: "Let me make sure this is really the issue"
+- Conduct analysis before writing code
+
+### 3. Incremental Changes
+- Only make **one major change at a time**
+- Conduct tests before moving forward
+- Update documentation as you go
+
+## Changelog Management
+
+### Always Update Changelog
+- Update [Changelog.md](mdc:Changelog.md) under `[Unreleased]` when making changes
+- Follow semantic versioning guidelines when releasing
+- When committing staged changes, verify changelog reflects the changes
+
+### Version Release Process
+1. Review `[Unreleased]` changes to determine version bump:
+   - Features → minor version
+   - Fixes → patch version  
+   - Breaking changes → major version
+2. Move changes to new version section with date
+3. Update version in relevant files
+4. Commit as "release: Version X.Y.Z"
+5. Create git tag
+
+## Code Organization
+
+### System Architecture
+- Maintain and check system architecture document
+- Ensure no redundant functionality across modules
+- Keep business logic separate from UI components
+
+### File Structure Patterns
+- Business logic in `lib/` directory
+- API routes in `app/api/`
+- Tests in `__tests__/` directory
+- Components organized by feature/domain
+
+## Git Workflow
+
+### Current Branch
+```
+feat/supabase-signup-api-pure-handler
+```
+
+### Branch Naming Convention
+- `feat/` - New features
+- `fix/` - Bug fixes
+- `chore/` - Maintenance tasks
+
+## Key Development Scripts
+
+```bash
+# Development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Run tests
+npm test
+
+# Type checking
+npx tsc --noEmit
+
+# Generate SEO assets
+npm run generate:seo
+```
+
+## Key Files to Monitor
+
+- [Changelog.md](mdc:Changelog.md) - Project changes tracking
+- [package.json](mdc:package.json) - Dependencies and scripts
+- [tsconfig.json](mdc:tsconfig.json) - TypeScript configuration
+- [jest.config.ts](mdc:jest.config.ts) - Test configuration
