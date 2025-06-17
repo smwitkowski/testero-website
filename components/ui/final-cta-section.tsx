@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import { WaitlistForm } from "@/components/ui/waitlist-form";
+import Link from "next/link";
 import { motion } from "framer-motion";
+import { Button } from "./button";
 
 export function FinalCtaSection() {
   return (
@@ -22,10 +23,6 @@ export function FinalCtaSection() {
             <rect x="80" y="80" width="160" height="160" stroke="#ED8936" strokeWidth="2" strokeDasharray="4 4"/>
           </svg>
         </div>
-        {/* Subtle diagonal lines */}
-        <div className="absolute inset-0 opacity-10" style={{ 
-          backgroundImage: "repeating-linear-gradient(45deg, #ED8936, #ED8936 1px, transparent 1px, transparent 20px)" 
-        }}></div>
       </div>
       
       <div className="max-w-4xl mx-auto space-y-8 relative z-10">
@@ -35,10 +32,10 @@ export function FinalCtaSection() {
           animate={{ scale: [1, 1.05, 1] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
-          <span className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-5 py-2.5 rounded-full text-sm font-medium shadow-md">
-            <span className="mr-2" aria-hidden="true">🔥</span>
-            Limited Time Cloud Certification Offer
-            <span className="ml-2" aria-hidden="true">🔥</span>
+          <span className="bg-gradient-to-r from-green-500 to-green-600 text-white px-5 py-2.5 rounded-full text-sm font-medium shadow-md">
+            <span className="mr-2" aria-hidden="true">✅</span>
+            Available Now - Free Forever
+            <span className="ml-2" aria-hidden="true">✅</span>
           </span>
         </motion.div>
         
@@ -47,99 +44,104 @@ export function FinalCtaSection() {
           id="final-cta-heading"
           className="text-2xl sm:text-3xl md:text-5xl font-bold leading-tight text-slate-800 drop-shadow-sm"
         >
-          Unlock Your <span className="text-orange-500">Fastest Path</span> to Google Cloud, AWS, and Azure Certification
+          Ready to <span className="text-orange-500">Ace</span> Your Cloud Certification?
           <br />
-          Join the Waitlist Now
+          Start Practicing Today
         </h2>
         
         {/* Value proposition with enhanced highlight */}
         <p className="text-base sm:text-lg md:text-xl text-slate-700 max-w-2xl mx-auto leading-relaxed">
-          Be first to access Testero&apos;s AI-powered cloud certification platform and transform your study routine. Limited spots for Google Cloud, AWS, and Azure certification preparation. Secure your advantage today.
+          Join hundreds of cloud professionals already using Testero to master Google Cloud, AWS, and Azure certifications. No credit card required.
         </p>
         
         {/* Feature bullets with icons */}
-        <ul className="flex flex-col md:flex-row gap-4 justify-center text-left max-w-2xl mx-auto" role="list">
+        <ul className="flex flex-col md:flex-row gap-4 justify-center text-left max-w-3xl mx-auto" role="list">
           <li className="bg-white bg-opacity-70 backdrop-blur-sm p-4 rounded-lg border border-orange-200 flex items-start gap-3 flex-1">
             <div className="bg-orange-100 p-2 rounded-full text-orange-600" aria-hidden="true">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
               </svg>
             </div>
             <div>
-              <h3 className="font-semibold text-slate-800">Priority Cloud Certification Access</h3>
-              <p className="text-sm text-slate-600">Be among the first to use Testero for your cloud certifications in July 2025.</p>
+              <h3 className="font-semibold text-slate-800">Smart Diagnostic Tests</h3>
+              <p className="text-sm text-slate-600">Identify your knowledge gaps instantly with personalized assessments.</p>
             </div>
           </li>
           
           <li className="bg-white bg-opacity-70 backdrop-blur-sm p-4 rounded-lg border border-orange-200 flex items-start gap-3 flex-1">
             <div className="bg-orange-100 p-2 rounded-full text-orange-600" aria-hidden="true">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0c1.1.128 1.907 1.077 1.907 2.185Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
               </svg>
             </div>
             <div>
-              <h3 className="font-semibold text-slate-800">30% Lifetime Certification Discount</h3>
-              <p className="text-sm text-slate-600">Lock in your permanent Pro plan discount for all cloud certification prep.</p>
+              <h3 className="font-semibold text-slate-800">Practice Questions</h3>
+              <p className="text-sm text-slate-600">Learn with real exam-style questions and detailed explanations.</p>
+            </div>
+          </li>
+          
+          <li className="bg-white bg-opacity-70 backdrop-blur-sm p-4 rounded-lg border border-orange-200 flex items-start gap-3 flex-1">
+            <div className="bg-orange-100 p-2 rounded-full text-orange-600" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-800">Progress Tracking</h3>
+              <p className="text-sm text-slate-600">Monitor your readiness with detailed analytics and insights.</p>
             </div>
           </li>
         </ul>
           
-          {/* Enhanced Form Container with floating label effect */}
-          <div className="pt-6 mx-auto max-w-md">
-            <motion.div 
-              className="bg-white p-4 sm:p-6 md:p-8 rounded-xl shadow-xl border border-orange-200"
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold text-slate-800" id="waitlist-form-heading">Join the Cloud Certification Waitlist</h3>
-                <div className="bg-orange-100 text-orange-700 text-sm font-medium px-3 py-1 rounded-full flex items-center">
-                  <span className="inline-block w-2 h-2 bg-orange-500 rounded-full mr-2 animate-pulse" aria-hidden="true"></span>
-                  <span aria-live="polite">300 spots left</span>
-                </div>
-              </div>
+        {/* Enhanced CTA Container */}
+        <div className="pt-6 mx-auto max-w-lg">
+          <motion.div 
+            className="bg-white p-6 md:p-8 rounded-xl shadow-xl border border-orange-200"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h3 className="text-xl font-semibold text-slate-800 mb-6" id="final-cta-form-heading">Start Your Certification Journey Today</h3>
             
-            <WaitlistForm 
-              includeExamDropdown={true} 
-              buttonText="Claim My Cloud Certification Discount" 
-              className="space-y-5"
-              ctaLocation="final_cta_section"
-              aria-labelledby="waitlist-form-heading"
-            />
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button asChild size="lg" className="text-lg">
+                <Link href="/signup">
+                  Start Free Practice
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="text-lg">
+                <Link href="/diagnostic">
+                  Take Diagnostic Test
+                </Link>
+              </Button>
+            </div>
             
             {/* Trust indicators */}
-            <ul className="flex flex-col gap-2 mt-4" aria-label="Trust guarantees">
-              <li className="flex items-center text-xs text-slate-500">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1 text-green-500" aria-hidden="true">
+            <ul className="flex flex-col gap-2 mt-6" aria-label="Trust guarantees">
+              <li className="flex items-center justify-center text-sm text-slate-600">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-2 text-green-500" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                 </svg>
-                100% privacy. Your certification prep info stays safe, always.
-              </li>
-              <li className="flex items-center text-xs text-slate-500">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1 text-green-500" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                </svg>
-                No risk. Cancel your cloud certification prep anytime, no obligation.
+                Free forever tier • No credit card required • Instant access
               </li>
             </ul>
           </motion.div>
         </div>
         
-        {/* Countdown and social proof */}
+        {/* Social proof */}
         <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-6 text-sm text-slate-600">
-          <div className="flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1 text-orange-500" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-            </svg>
-            Cloud certification early access begins July 2025
-          </div>
-          <div className="h-1 w-1 bg-slate-300 rounded-full hidden md:block" aria-hidden="true"></div>
           <div className="flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1 text-orange-500" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
             </svg>
-            Join 1,200+ cloud certification professionals already on the waitlist
+            Join hundreds of cloud professionals already practicing
+          </div>
+          <div className="h-1 w-1 bg-slate-300 rounded-full hidden md:block" aria-hidden="true"></div>
+          <div className="flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1 text-orange-500" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 0 0 4.5 4.5H18a3.75 3.75 0 0 0 1.332-7.257 3 3 0 0 0-3.758-3.848 5.25 5.25 0 0 0-10.233 2.33A4.502 4.502 0 0 0 2.25 15Z" />
+            </svg>
+            Supporting Google Cloud, AWS & Azure certifications
           </div>
         </div>
       </div>

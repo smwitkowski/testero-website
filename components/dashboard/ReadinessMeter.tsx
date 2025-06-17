@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { colorSemantic } from '@/lib/design-system';
 
 interface ReadinessMeterProps {
   score: number;
@@ -9,10 +10,10 @@ interface ReadinessMeterProps {
 }
 
 function getReadinessColor(score: number): string {
-  if (score >= 80) return '#10B981'; // Green - Ready
-  if (score >= 60) return '#F59E0B'; // Yellow - Almost ready
-  if (score >= 40) return '#EF4444'; // Red - Needs work
-  return '#6B7280'; // Gray - Just started
+  if (score >= 80) return colorSemantic.success.base; // Green - Ready
+  if (score >= 60) return colorSemantic.warning.base; // Yellow - Almost ready
+  if (score >= 40) return colorSemantic.error.base; // Red - Needs work
+  return colorSemantic.text.muted; // Gray - Just started
 }
 
 function getReadinessText(score: number): string {
@@ -60,7 +61,7 @@ export const ReadinessMeter: React.FC<ReadinessMeterProps> = ({ score, className
               cx="60"
               cy="60"
               r={radius}
-              stroke="#E5E7EB"
+              stroke={colorSemantic.border.default}
               strokeWidth="8"
               fill="transparent"
             />
@@ -93,18 +94,18 @@ export const ReadinessMeter: React.FC<ReadinessMeterProps> = ({ score, className
           <h3 className="text-lg font-semibold" style={{ color }}>
             {statusText}
           </h3>
-          <p className="text-sm text-gray-600 max-w-sm">
+          <p className="text-sm max-w-sm" style={{ color: colorSemantic.text.secondary }}>
             {description}
           </p>
         </div>
 
         {/* Progress bar for mobile/alternative view */}
         <div className="w-full max-w-sm">
-          <div className="flex justify-between text-xs text-gray-500 mb-1">
+          <div className="flex justify-between text-xs mb-1" style={{ color: colorSemantic.text.muted }}>
             <span>0%</span>
             <span>100%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full rounded-full h-2" style={{ backgroundColor: colorSemantic.border.default }}>
             <div
               className="h-2 rounded-full transition-all duration-500 ease-in-out"
               style={{

@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { colors } from '@/lib/design-system/colors';
+import { colorPrimitive } from '@/lib/design-system';
 import { cn } from '@/lib/utils';
 
 /**
@@ -20,7 +20,7 @@ export const DesignSystemDemo: React.FC = () => {
         <div className="mb-6">
           <h3 className="text-xl font-medium mb-2">Primary Colors</h3>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {Object.entries(colors.primary).map(([key, value]) => (
+            {Object.entries(colorPrimitive.orange).map(([key, value]) => (
               <div key={key} className="flex flex-col items-center">
                 <div 
                   className="w-16 h-16 rounded-md mb-2 border border-slate-200" 
@@ -36,7 +36,7 @@ export const DesignSystemDemo: React.FC = () => {
         <div className="mb-6">
           <h3 className="text-xl font-medium mb-2">Accent Colors</h3>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {Object.entries(colors.accent).map(([key, value]) => (
+            {Object.entries(colorPrimitive.slate).map(([key, value]) => (
               <div key={key} className="flex flex-col items-center">
                 <div 
                   className="w-16 h-16 rounded-md mb-2 border border-slate-200" 

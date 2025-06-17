@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { colors } from '@/lib/design-system/colors';
-import { typography } from '@/lib/design-system/typography';
+import { colorPrimitive, typographyPrimitive } from '@/lib/design-system';
 import { useAuth } from '@/components/providers/AuthProvider';
 
 const navigationItems = [
@@ -65,14 +64,14 @@ const Navbar = () => {
       className={`fixed top-0 left-0 right-0 z-50 h-[72px] bg-white bg-opacity-80 backdrop-blur-md ${
         isScrolled ? 'shadow-sm border-b border-ui-border-light' : ''
       }`}
-      style={{ borderColor: colors.ui.border.light }}
+      style={{ borderColor: colorPrimitive.slate[200] }}
     >
       <div className="container mx-auto px-4 h-full flex items-center justify-between md:justify-start">
         {/* Logo Placeholder */}
         <div className="flex-shrink-0 md:mr-6">
           {/* Replace with actual logo component */}
           <Link href="/" aria-label="Testero Home">
-            <span className="text-xl font-bold" style={{ color: colors.primary[800] }}>Testero</span> {/* Replace with actual logo */}
+            <span className="text-xl font-bold" style={{ color: colorPrimitive.slate[800] }}>Testero</span> {/* Replace with actual logo */}
           </Link>
         </div>
 
@@ -81,7 +80,7 @@ const Navbar = () => {
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="text-ui-text-primary focus:outline-none focus:ring-2 focus:ring-accent-500"
-            style={{ color: colors.primary[800] }}
+            style={{ color: colorPrimitive.slate[800] }}
             aria-label="Toggle mobile menu"
             aria-expanded={isMobileMenuOpen}
             aria-controls="mobile-menu"
@@ -98,14 +97,14 @@ const Navbar = () => {
               key={item.name}
               href={item.href}
               className={`relative ${pathname === item.href ? 'text-accent-500' : 'text-primary-800'} hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500`}
-              style={{ ...typography.button.default }}
+              style={{ fontSize: typographyPrimitive.fontSize.base }}
               aria-current={pathname === item.href ? 'page' : undefined}
             >
               {item.name}
               {pathname === item.href && (
                 <span
                   className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-500 transform translate-y-3"
-                  style={{ backgroundColor: colors.accent[500] }}
+                  style={{ backgroundColor: colorPrimitive.orange[500] }}
                 ></span>
               )}
             </Link>
@@ -119,21 +118,21 @@ const Navbar = () => {
               <Link
                 href="/dashboard"
                 className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                style={{ color: colors.primary[800], ...typography.button.default }}
+                style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }}
               >
                 Dashboard
               </Link>
               <Link
                 href="/practice/question"
                 className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                style={{ color: colors.primary[800], ...typography.button.default }}
+                style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }}
               >
                 Practice
               </Link>
               <button
                 onClick={signOut}
                 className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                style={{ color: colors.primary[800], ...typography.button.default }}
+                style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }}
               >
                 Sign Out
               </button>
@@ -143,14 +142,14 @@ const Navbar = () => {
               <Link
                 href="/waitlist"
                 className="px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-accent-500"
-                style={{ backgroundColor: colors.accent[500], color: colors.ui.white, ...typography.button.default }}
+                style={{ backgroundColor: colorPrimitive.orange[500], color: colorPrimitive.white, fontSize: typographyPrimitive.fontSize.base }}
               >
                 Join Waitlist
               </Link>
               <Link
                 href="/login"
                 className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                style={{ color: colors.primary[800], ...typography.button.default }}
+                style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }}
               >
                 Login
               </Link>
@@ -168,7 +167,7 @@ const Navbar = () => {
                 key={item.name}
                 href={item.href}
                 className={`relative ${pathname === item.href ? 'text-accent-500' : 'text-primary-800'} hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500`}
-                style={{ ...typography.button.default }}
+                style={{ fontSize: typographyPrimitive.fontSize.base }}
                 onClick={() => setIsMobileMenuOpen(false)} // Close menu on link click
                 aria-current={pathname === item.href ? 'page' : undefined}
               >
@@ -176,13 +175,13 @@ const Navbar = () => {
               </Link>
             ))}
             {/* Action elements (Mobile) */}
-            <div className="flex flex-col space-y-4 mt-4 pt-4 border-t border-ui-border-light" style={{ borderColor: colors.ui.border.light }}>
+            <div className="flex flex-col space-y-4 mt-4 pt-4 border-t border-ui-border-light" style={{ borderColor: colorPrimitive.slate[200] }}>
               {session ? (
                 <>
                   <Link 
                     href="/dashboard" 
                     className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500" 
-                    style={{ color: colors.primary[800], ...typography.button.default }} 
+                    style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }} 
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Dashboard
@@ -190,7 +189,7 @@ const Navbar = () => {
                   <Link 
                     href="/practice/question" 
                     className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500" 
-                    style={{ color: colors.primary[800], ...typography.button.default }} 
+                    style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }} 
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Practice
@@ -201,7 +200,7 @@ const Navbar = () => {
                       setIsMobileMenuOpen(false);
                     }}
                     className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                    style={{ color: colors.primary[800], ...typography.button.default }}
+                    style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }}
                   >
                     Sign Out
                   </button>
@@ -211,7 +210,7 @@ const Navbar = () => {
                   <Link 
                     href="/waitlist" 
                     className="px-4 py-2 rounded text-center focus:outline-none focus:ring-2 focus:ring-accent-500" 
-                    style={{ backgroundColor: colors.accent[500], color: colors.ui.white, ...typography.button.default }} 
+                    style={{ backgroundColor: colorPrimitive.orange[500], color: colorPrimitive.white, fontSize: typographyPrimitive.fontSize.base }} 
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Join Waitlist
@@ -219,7 +218,7 @@ const Navbar = () => {
                   <Link 
                     href="/login" 
                     className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500" 
-                    style={{ color: colors.primary[800], ...typography.button.default }} 
+                    style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }} 
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Login

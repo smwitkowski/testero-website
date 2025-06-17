@@ -6,11 +6,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from 'next/link';
 import { usePostHog } from "posthog-js/react";
-import { HoverButton } from "@/components/ui/hover-button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from '@/lib/supabase/client';
+import { colorSemantic } from "@/lib/design-system";
 
 const signupFormSchema = z.object({
   email: z
@@ -72,20 +74,20 @@ const SignupPage = () => {
   }
 
   return (
-    <div className="min-h-screen pt-24 pb-12 md:pt-32 flex flex-col items-center justify-start bg-gradient-to-b from-slate-50 to-slate-100">
+    <div className="min-h-screen pt-24 pb-12 md:pt-32 flex flex-col items-center justify-start" style={{ background: `linear-gradient(to bottom, ${colorSemantic.background.default}, ${colorSemantic.primary[100]})` }}>
       <div className="w-full max-w-md px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="bg-white shadow-lg rounded-xl border border-slate-200 overflow-hidden"
         >
-          <div className="px-6 py-8 text-center border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">Create your account</h1>
-            <p className="text-slate-600">Sign up to start practicing with Testero</p>
-          </div>
+          <Card variant="elevated" className="overflow-hidden">
+            <CardHeader className="text-center border-b" style={{ backgroundColor: colorSemantic.background.default, borderColor: colorSemantic.border.default }}>
+              <h1 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: colorSemantic.text.primary }}>Create your account</h1>
+              <p style={{ color: colorSemantic.text.secondary }}>Sign up to start practicing with Testero</p>
+            </CardHeader>
 
-          <div className="px-6 py-8">
+            <CardContent>
             <AnimatePresence mode="wait">
               {!isSubmitted ? (
                 <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -195,8 +197,9 @@ const SignupPage = () => {
                         </motion.div>
                       )}
 
-                      <HoverButton
-                        className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 py-3 rounded-md text-base font-semibold shadow-md w-full transition-all"
+                      <Button
+                        className="w-full text-base"
+                        size="lg"
                         type="submit"
                         disabled={isSubmitting}
                         aria-busy={isSubmitting ? 'true' : 'false'}
@@ -214,7 +217,7 @@ const SignupPage = () => {
                             <span>Sign Up</span>
                           </div>
                         )}
-                      </HoverButton>
+                      </Button>
                     </form>
                   </Form>
                 </motion.div>
@@ -225,18 +228,19 @@ const SignupPage = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <h3 className="text-lg font-medium text-slate-900">Check your email</h3>
-                  <p className="text-slate-600">We&#39;ve sent a confirmation link to {form.getValues().email}. Please follow the instructions to complete your registration.</p>
+                  <h3 className="text-lg font-medium" style={{ color: colorSemantic.text.primary }}>Check your email</h3>
+                  <p style={{ color: colorSemantic.text.secondary }}>We&#39;ve sent a confirmation link to {form.getValues().email}. Please follow the instructions to complete your registration.</p>
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
+            </CardContent>
+          </Card>
         </motion.div>
 
         <div className="mt-8 text-center">
-          <p className="text-slate-600">
+          <p style={{ color: colorSemantic.text.secondary }}>
             Already have an account?{' '}
-            <Link href="/login" className="text-orange-500 hover:text-orange-600 transition-colors font-medium">
+            <Link href="/login" className="hover:opacity-80 transition-colors font-medium" style={{ color: colorSemantic.text.accent }}>
               Sign in
             </Link>
           </p>

@@ -259,3 +259,6 @@ export interface ApiResponse {
 - Tests run on Chrome, Firefox, Safari (webkit), and Mobile browsers
 - Some features may behave differently across browsers (especially Safari)
 - Use browser-specific test skipping if needed: `test.skip(browserName === 'webkit', 'Safari-specific issue')`
+
+## Design System Guidelines
+- As we make new pages, components, sections, etc. we should revisit these design systems. The design systems are not static, but rather live and grow with the website.
