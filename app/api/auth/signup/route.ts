@@ -7,23 +7,23 @@ import { getAnonymousSessionIdFromCookie, clearAnonymousSessionIdCookie } from '
 // --- In-memory rate limiter (for dev/demo only) ---
 // This uses a simple Map to track IPs and timestamps.
 // For production, use a distributed store (e.g., Redis, Upstash) to ensure correct limits across all serverless instances.
-// const rateLimitMap = new Map<string, number[]>();
-// const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-// const RATE_LIMIT_MAX = 5; // 5 requests per window
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 3; // 3 requests per window (standardized with other auth endpoints)
 
-// function checkRateLimit(ip: string): boolean {
-//   const now = Date.now();
-//   const timestamps = rateLimitMap.get(ip) || [];
-//   // Remove timestamps older than window
-//   const recent = timestamps.filter(ts => now - ts < RATE_LIMIT_WINDOW);
-//   if (recent.length >= RATE_LIMIT_MAX) {
-//     rateLimitMap.set(ip, recent);
-//     return false;
-//   }
-//   recent.push(now);
-//   rateLimitMap.set(ip, recent);
-//   return true;
-// }
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = rateLimitMap.get(ip) || [];
+  // Remove timestamps older than window
+  const recent = timestamps.filter(ts => now - ts < RATE_LIMIT_WINDOW);
+  if (recent.length >= RATE_LIMIT_MAX) {
+    rateLimitMap.set(ip, recent);
+    return false;
+  }
+  recent.push(now);
+  rateLimitMap.set(ip, recent);
+  return true;
+}
 
 const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY || '', {
   host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com',
@@ -52,6 +52,16 @@ export async function POST(req: NextRequest) {
   }
   const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
   const { email, password, anonymousSessionId: requestAnonymousSessionId } = body;
+
+  // Rate limiting
+  if (!checkRateLimit(ip)) {
+    posthog.capture({
+      event: 'signup_rate_limited',
+      properties: { ip, email },
+      distinctId: email
+    });
+    return NextResponse.json({ error: 'Too many sign-up attempts' }, { status: 429 });
+  }
   
   // Get anonymous session ID from cookie as fallback
   const cookieAnonymousSessionId = await getAnonymousSessionIdFromCookie();
@@ -72,7 +82,6 @@ export async function POST(req: NextRequest) {
   const result = await signupBusinessLogic({ 
     email, 
     password, 
-    ip, 
     supabaseClient, 
     analytics,
     anonymousSessionId: effectiveAnonymousSessionId 
