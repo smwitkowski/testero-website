@@ -381,130 +381,168 @@ Include in every PR:
 - **Security Review**: Rate limiting, error handling, input validation addressed
 - **Performance Impact**: Any considerations for scale/speed
 
-## Linear Project Management Best Practices
+## Linear Project Management for Claude Code Agents
 
-### Issue Organization & Structure
+### MCP-Based Issue Management Workflows
 
-#### Issue Templates (Critical for Consistency)
-- **Create workspace templates** for cross-team issue types (bugs, feature requests)
-- **Create team-specific templates** for specialized workflows (auth issues, diagnostic features)
-- **Use placeholder text** to guide issue creators: format with `Aa` icon for structured input
-- **Set default templates** per team to ensure consistency
-- **Keyboard shortcut**: `Option/Alt + C` for fastest template access
+#### Issue Creation & Updates (Primary Agent Functions)
+```typescript
+// Create structured issues with required fields
+await mcp__linear__linear_createIssue({
+  title: "Clear, actionable title without user story format",
+  description: "Technical implementation details with acceptance criteria",
+  teamId: "d2118062-2bb1-4680-a81f-ce62b404b7a5", // Testero team
+  priority: 1-4, // 1=Urgent, 2=High, 3=Medium, 4=Low  
+  estimate: 1-8, // Story points or hours
+  labelIds: ["dd989130-9606-4b0b-b0b4-47393fad688f"], // Bug label ID
+  projectId: "project-uuid", // Link to parent project
+  stateId: "c8bd6f5b-12cf-49b1-8c53-34a58afcfb3a" // Backlog state
+});
 
-#### Labels & Prioritization System
-- **Priority levels**: Urgent (P0) → High (P1) → Medium (P2) → Low (P3) → Backlog (P4)
-- **Type labels**: `bug`, `feature`, `enhancement`, `security`, `technical-debt`
-- **Component labels**: `auth`, `diagnostic`, `ui`, `api`, `database`
-- **Status labels**: `blocked`, `needs-review`, `waiting-for-design`
-
-#### Issue Lifecycle Management
-```
-Triage → Backlog → In Progress → In Review → Done
-├── Blocked (any stage)
-├── Needs Info (return to Triage)
-└── Won't Fix (closed)
-```
-
-### Project Structure & Planning
-
-#### Cycles (Sprint Management)
-- **Duration**: 1-2 weeks for fast iteration, 3-4 weeks for larger features
-- **Cooldown periods**: 1-2 days between cycles for planning and technical debt
-- **Planning process**: Assign issues to upcoming cycles (max 15 future cycles)
-- **Velocity tracking**: Monitor completion rates to improve estimation
-
-#### Projects vs Issues
-- **Projects**: Group 5-20 related issues for major features/initiatives
-- **Milestones**: Break projects into 2-4 week deliverable chunks
-- **Cross-team coordination**: Use company-wide projects for integration work
-- **Dependencies**: Link blocking/blocked relationships between issues
-
-#### Roadmap Planning
-- **Quarterly themes**: Align with business objectives (growth, reliability, new features)
-- **Monthly milestones**: Concrete deliverables with success metrics
-- **Weekly cycles**: Tactical implementation with daily standup tracking
-- **Backlog grooming**: Weekly review of upcoming cycle capacity
-
-### Workflow Automation & Integration
-
-#### GitHub Integration (Essential for Development)
-```bash
-# Auto-link with branch names
-git checkout -b "TES-123-feature-description"
-
-# Auto-link with commit messages  
-git commit -m "TES-123: Implement feature
-
-Fixes: TES-123"
-
-# Auto-status updates:
-# Draft PR → "In Progress"
-# PR Ready → "In Review" 
-# PR Merged → "Done"
+// Update issue progress programmatically
+await mcp__linear__linear_updateIssue({
+  id: "issue-uuid",
+  stateId: "67197f8c-e8a9-46bb-9450-7679a3eb8ffa", // In Progress
+  assigneeId: "095911f2-65ad-4465-9884-3fbb36541549", // Stephen
+  priority: 2 // Escalate to High priority
+});
 ```
 
-#### Automation Rules
-- **PR creation** → Auto-assign to issue creator, move to "In Review"
-- **Failed CI** → Add "blocked" label, notify assignee
-- **Issue assigned** → Auto-move to "In Progress" if starting work
-- **Slack notifications** → Team channel for high-priority issues
+#### Issue Organization Patterns
+- **Title Format**: `[Component] Action - Brief description` (e.g., "Auth API: Add rate limiting to signup endpoint")
+- **Priority Assignment**: Use numeric priorities (1-4) based on impact × urgency matrix
+- **Label Strategy**: Component-based (`auth`, `diagnostic`, `ui`) + type (`bug`, `feature`, `improvement`)
+- **State Transitions**: Backlog → Todo → In Progress → Done (skip states for efficiency)
 
-#### Integration Strategy
-- **GitHub**: Bi-directional PR/issue linking with status automation
-- **Slack**: Notifications for @mentions, status changes, cycle completion
-- **PostHog**: Link analytics events to feature issues for impact tracking
-- **Figma**: Attach design specs directly to feature issues
+### Project Structure & Planning Automation
 
-### Team Management & Collaboration
+#### Project Creation & Management
+```typescript
+// Create projects for 5-20 related issues
+await mcp__linear__linear_createProject({
+  name: "Authentication Security Improvements",
+  description: "Critical security fixes identified in audit",
+  state: "planned", // planned, started, paused, completed, canceled
+  teamIds: ["d2118062-2bb1-4680-a81f-ce62b404b7a5"]
+});
 
-#### Cross-Functional Workflow
-```
-Product Manager → Creates project with milestones
-Designer → Adds design specs to feature issues  
-Engineer → Breaks down into technical sub-issues
-QA → Creates test plans linked to feature issues
-DevOps → Adds deployment checklist sub-issues
-```
-
-#### Communication Patterns
-- **@mentions**: Tag specific people for input/review
-- **Comments**: Document decisions, questions, progress updates
-- **Status updates**: Weekly cycle progress, blockers, capacity changes
-- **Handoffs**: Clear acceptance criteria, definition of done
-
-#### Metrics & Reporting
-- **Cycle velocity**: Issues completed per cycle (track trend over time)
-- **Lead time**: Time from creation to completion (identify bottlenecks)
-- **Bug rate**: Percentage of cycle dedicated to bug fixes (quality indicator)
-- **Scope creep**: Issues added mid-cycle (planning accuracy)
-
-### Advanced Optimization Patterns
-
-#### Issue Relationships
-- **Parent/Sub-issues**: Break large features into 2-5 day sub-tasks
-- **Blocking dependencies**: Use "Blocks"/"Blocked by" for critical path
-- **Duplicates**: Link related issues to avoid scattered discussions
-- **Related**: Connect issues for context (similar bugs, related features)
-
-#### Custom Views & Filters
-- **Personal dashboard**: Issues assigned to you, sorted by priority
-- **Team sprint view**: Current cycle issues, grouped by status
-- **Bug triage**: All bugs, filtered by severity and creation date
-- **Feature pipeline**: Features by project, sorted by roadmap priority
-
-#### Keyboard Shortcuts (Speed Optimization)
-```
-C → Create issue
-Option+C → Create from template
-Cmd+K → Quick search/command palette
-G then I → Go to issues view
-G then P → Go to projects view
-/ → Search issues
-Cmd+Enter → Save/submit
+// Query project status for planning
+const projects = await mcp__linear__linear_getProjects();
+const activeProjects = projects.filter(p => p.state === "started");
 ```
 
-This system scales from 2-person teams to 50+ person organizations while maintaining speed and clarity.
+#### Issue-Project Relationships
+- **Project Scope**: 2-4 week deliverable with clear success metrics
+- **Issue Breakdown**: Large features split into 2-5 day implementation tasks
+- **Dependencies**: Use `createIssueRelation` with `blocks`/`blocked_by` types
+- **Sub-tasks**: Convert related issues to sub-tasks with `convertIssueToSubtask`
+
+### Cycle & Sprint Management
+
+#### Cycle Planning Automation
+```typescript
+// Get active cycle for planning
+const activeCycle = await mcp__linear__linear_getActiveCycle({
+  teamId: "d2118062-2bb1-4680-a81f-ce62b404b7a5"
+});
+
+// Add issues to cycle based on priority/capacity
+await mcp__linear__linear_addIssueToCycle({
+  issueId: "high-priority-issue-uuid",
+  cycleId: activeCycle.id
+});
+```
+
+#### Capacity Planning Rules
+- **2-week cycles**: 15-25 story points per developer
+- **Estimation accuracy**: Track velocity over 3+ cycles for reliable planning
+- **Buffer allocation**: Reserve 20% capacity for urgent bugs and technical debt
+- **Cross-project balance**: Limit work-in-progress to 2-3 projects per cycle
+
+### Programmatic Workflow Automation
+
+#### Issue Lifecycle Automation
+```typescript
+// Auto-assign and progress issues
+await mcp__linear__linear_assignIssue({
+  issueId: "uuid",
+  assigneeId: "095911f2-65ad-4465-9884-3fbb36541549"
+});
+
+await mcp__linear__linear_updateIssue({
+  id: "uuid", 
+  stateId: "67197f8c-e8a9-46bb-9450-7679a3eb8ffa" // In Progress
+});
+
+// Add contextual labels based on content
+await mcp__linear__linear_addIssueLabel({
+  issueId: "uuid",
+  labelId: "dd989130-9606-4b0b-b0b4-47393fad688f" // Bug label
+});
+```
+
+#### Search & Filtering Patterns
+```typescript
+// Find issues by criteria for batch operations
+const authIssues = await mcp__linear__linear_searchIssues({
+  query: "auth authentication signup login",
+  teamId: "d2118062-2bb1-4680-a81f-ce62b404b7a5",
+  states: ["Backlog", "Todo"]
+});
+
+// Priority-based triage
+const urgentBugs = await mcp__linear__linear_searchIssues({
+  query: "bug error",
+  states: ["Todo", "In Progress"],
+  limit: 10
+});
+```
+
+### Agent Decision Trees for Issue Management
+
+#### Issue Creation Logic
+1. **Analyze request** → Determine issue type (bug/feature/improvement)
+2. **Check existing issues** → Search for duplicates before creating
+3. **Project assignment** → Link to appropriate project or create new one
+4. **Priority calculation** → Assign based on impact (user-facing, security, performance)
+5. **Estimation** → Use complexity indicators (API changes=5-8, UI updates=2-3, config=1-2)
+
+#### Batch Operations for Efficiency
+```typescript
+// Process multiple issues in sequence
+const issueUpdates = backlogIssues.map(issue => ({
+  id: issue.id,
+  priority: calculatePriority(issue.description),
+  stateId: triageState(issue.labels)
+}));
+
+for (const update of issueUpdates) {
+  await mcp__linear__linear_updateIssue(update);
+}
+```
+
+### Quality Control & Metrics
+
+#### Issue Quality Standards
+- **Title clarity**: Specific action + component (not user stories)
+- **Description structure**: Problem + proposed solution + acceptance criteria
+- **Estimation consistency**: Use Fibonacci sequence (1,2,3,5,8) for complexity
+- **Label completeness**: Every issue has component + type labels
+- **Project linkage**: All issues belong to a project (create if needed)
+
+#### Progress Tracking Patterns
+```typescript
+// Calculate project completion
+const projectIssues = await mcp__linear__linear_getProjectIssues({
+  projectId: "uuid",
+  limit: 100
+});
+
+const completedIssues = projectIssues.filter(i => i.state.type === "completed");
+const completionRate = completedIssues.length / projectIssues.length;
+```
+
+This agent-optimized approach focuses on programmatic operations, structured data patterns, and automated workflows rather than UI interactions.
 
 ## E2E Testing Guidelines
 
