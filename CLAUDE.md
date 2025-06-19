@@ -2,6 +2,49 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Collaboration Best Practices
+
+### Multi-Issue Project Management
+When working on complex projects spanning multiple related issues (3+):
+
+- **Use TodoWrite/TodoRead extensively** for progress tracking and visibility
+- **Break down large features** into specific, actionable tasks with clear priorities
+- **Work sequentially through todos** - mark as "in_progress" BEFORE starting, complete immediately upon finishing
+- **Only have ONE task in_progress** at any time to maintain focus
+- **Map dependencies between issues** using descriptive todo content that references related work
+
+### Efficient Tool Usage Patterns
+Follow these proven workflows for maximum efficiency:
+
+#### Code Discovery & Implementation Workflow
+1. **Grep** → find files containing relevant patterns
+2. **Task** → perform complex searches across large codebase  
+3. **Read (parallel)** → examine multiple related files simultaneously
+4. **MultiEdit** → make coordinated changes across files
+
+#### Git Operations (Always Use Parallel Execution)
+```bash
+# Run these commands together for complete repository state
+git status
+git diff  
+git log --oneline -10
+```
+
+#### Performance Optimizations
+- **Use parallel tool calls** whenever examining multiple files or running multiple commands
+- **Batch TypeScript checks** with `npx tsc --noEmit` after multiple file changes
+- **Target specific test patterns** when debugging: `npm test -- --testNamePattern="auth"`
+- **Use selective E2E testing** during development: `npm run e2e -- auth-*.spec.ts`
+
+### Systematic Codebase Exploration
+Before implementing new features, always:
+
+1. **Find existing patterns** - Search for similar functionality with Grep/Task
+2. **Understand dependencies** - Map related files and imports with parallel Read calls
+3. **Check test coverage** - Look for existing test patterns to follow
+4. **Review error handling** - Understand established error patterns
+5. **Validate security** - Ensure rate limiting and input validation patterns are followed
+
 ## Development Commands
 
 ### Core Commands
@@ -143,25 +186,48 @@ export interface ApiResponse {
 </div>
 ```
 
-### Testing Patterns
+### Testing Strategy & Patterns
+
+#### When to Write Unit vs E2E Tests
+
+**Write Unit Tests For:**
+- Pure business logic functions (e.g., `lib/auth/signup-handler.ts`)
+- API route handlers with mocked dependencies
+- Component validation and form logic
+- Utility functions and helper modules
+
+**Write E2E Tests For:**
+- Complete user workflows (signup → verification → login → dashboard)
+- Cross-browser compatibility requirements
+- Authentication state management and route protection
+- Form interactions with real DOM elements and navigation
+- Integration between multiple system components
 
 #### Unit Testing (Jest)
 - Business logic functions should be pure and testable in isolation
 - Use type assertions for testing union types: `(res.body as SuccessResponse).status`
 - Mock external dependencies consistently in `beforeEach`
-- Test both success and error paths
+- Test both success and error paths extensively
 - Tests located in `__tests__/` directory with `.test.ts` extension
+- Focus on edge cases: empty inputs, network failures, validation errors
 
 #### E2E Testing (Playwright)
-- **Page Object Pattern**: Use page objects for maintainable test code (see `e2e/helpers/page-objects/`)
-- **Mock API Data**: Use comprehensive mocking via `e2e/helpers/diagnostic-helpers.ts`
+- **Test Helper Classes**: Create reusable helper classes like `AuthHelpers` for common workflows
+- **Comprehensive API Mocking**: Mock Supabase auth and internal APIs for consistent test behavior
 - **Cross-browser Testing**: Tests run on Chrome, Firefox, Safari, and Mobile browsers
+- **Authentication Flows**: Test complete flows including analytics tracking and error scenarios
 - **Selector Best Practices**: 
   - Use Playwright's `.first()` method instead of CSS `:first` pseudo-class
-  - Prefer role-based selectors when possible: `page.getByRole('button', { name: /submit/i })`
+  - Prefer role-based selectors: `page.getByRole('button', { name: /submit/i })`
   - Use data-testid attributes for complex selectors when needed
-- **Test Organization**: Group related tests in describe blocks, use descriptive test names
+- **Test Organization**: Group related tests in describe blocks with descriptive names
 - **Async Handling**: Always await page actions and use proper timeout configurations
+
+#### Test Execution Strategy
+- **Development**: Run unit tests frequently (`npm test`)
+- **Feature completion**: Run targeted E2E tests (`npm run e2e -- auth-*.spec.ts`)
+- **PR preparation**: Full test suite (`npm test && npm run e2e`)
+- **Debugging**: Use headed mode (`npm run e2e:headed`) and debug mode (`npm run e2e:debug`)
 
 ### Content Management
 - Content stored in `app/content/` as Markdown with gray-matter frontmatter
@@ -169,13 +235,55 @@ export interface ApiResponse {
 - SEO metadata automatically generated from content
 - Social images generated and stored in GCP
 
-### Authentication Flow
+### Authentication System Architecture
+
+#### Complete User Flows
+- **Signup Flow**: `/api/auth/signup` → email verification → dashboard access
+- **Guest Upgrade**: Anonymous sessions preserved during signup process  
+- **Password Reset**: Forgot password → email → reset form → login with new password
+- **Login Flow**: Email/password → unconfirmed email warnings → resend functionality
+- **Route Protection**: Early access controls + authentication state guards
+
+#### Core Components
 - **Supabase Auth** with email/password signup and email verification
-- **Anonymous diagnostic sessions** supported with `anonymous_session_id`
-- **Rate limiting** on auth endpoints (3 requests/minute recommended)
-- **PostHog analytics** integration for user events
-- **Complete password reset flow** with email confirmation
+- **Anonymous diagnostic sessions** supported with `anonymous_session_id` cookie storage
+- **Guest session upgrade** - preserves diagnostic history when anonymous users sign up
+- **Rate limiting** on all auth endpoints (3 requests/minute recommended)
+- **PostHog analytics** integration for user behavior tracking
+- **Complete password reset flow** with secure token validation
 - **Resend confirmation** functionality for unverified users
+
+#### Database Schema Relationships
+```sql
+-- Users table (managed by Supabase Auth)
+auth.users (
+  id uuid PRIMARY KEY,
+  email text,
+  email_confirmed_at timestamp,
+  user_metadata jsonb  -- Contains is_early_access boolean
+)
+
+-- Anonymous sessions for guest users
+public.anonymous_sessions (
+  id uuid PRIMARY KEY,
+  created_at timestamp,
+  session_data jsonb
+)
+
+-- Links anonymous sessions to authenticated users after signup
+public.user_sessions (
+  user_id uuid REFERENCES auth.users(id),
+  anonymous_session_id uuid,
+  upgraded_at timestamp
+)
+```
+
+#### Security Patterns
+- **Rate limiting on ALL auth endpoints** (signup, login, password reset, resend)
+- **Generic error messages** - never expose raw Supabase errors to users
+- **HTTPS enforcement** with proper redirect URL configuration
+- **Input validation** using Zod schemas for all auth endpoints
+- **Session security** with secure cookie storage and expiration handling
 
 ### API Route Structure
 - Use `app/api/` directory structure
@@ -231,6 +339,173 @@ export interface ApiResponse {
 - `next.config.mjs` - Next.js config with standalone output and image optimization
 - `CLAUDE.md` - This file with development guidelines and architecture documentation
 
+## Git Workflow & Collaboration Standards
+
+### Branch Naming Convention
+- Use descriptive branch names: `TES-XXX-brief-description`
+- Reference Linear issue IDs when applicable
+- Keep branch names concise but meaningful
+
+### Commit Message Standards
+Follow this proven format for clear, comprehensive commits:
+
+```
+TES-XXX: Brief description of change
+
+• Specific implementation details with bullet points
+• Technical considerations and trade-offs made  
+• Testing approach and coverage added
+• Security implications addressed (if applicable)
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+### Git Operations Best Practices
+- **Always use parallel git commands** for efficiency:
+  ```bash
+  git status
+  git diff
+  git log --oneline -10
+  ```
+- **Atomic commits** - each commit should represent a complete, logical change
+- **Run linting and TypeScript checks** before committing: `npm run lint && npx tsc --noEmit`
+- **Test relevant functionality** before pushing: target specific test patterns when possible
+
+### Pull Request Documentation
+Include in every PR:
+- **Summary**: What was implemented and why
+- **Technical Details**: Architecture decisions and patterns used
+- **Test Coverage**: Unit and E2E tests added/modified
+- **Security Review**: Rate limiting, error handling, input validation addressed
+- **Performance Impact**: Any considerations for scale/speed
+
+## Linear Project Management Best Practices
+
+### Issue Organization & Structure
+
+#### Issue Templates (Critical for Consistency)
+- **Create workspace templates** for cross-team issue types (bugs, feature requests)
+- **Create team-specific templates** for specialized workflows (auth issues, diagnostic features)
+- **Use placeholder text** to guide issue creators: format with `Aa` icon for structured input
+- **Set default templates** per team to ensure consistency
+- **Keyboard shortcut**: `Option/Alt + C` for fastest template access
+
+#### Labels & Prioritization System
+- **Priority levels**: Urgent (P0) → High (P1) → Medium (P2) → Low (P3) → Backlog (P4)
+- **Type labels**: `bug`, `feature`, `enhancement`, `security`, `technical-debt`
+- **Component labels**: `auth`, `diagnostic`, `ui`, `api`, `database`
+- **Status labels**: `blocked`, `needs-review`, `waiting-for-design`
+
+#### Issue Lifecycle Management
+```
+Triage → Backlog → In Progress → In Review → Done
+├── Blocked (any stage)
+├── Needs Info (return to Triage)
+└── Won't Fix (closed)
+```
+
+### Project Structure & Planning
+
+#### Cycles (Sprint Management)
+- **Duration**: 1-2 weeks for fast iteration, 3-4 weeks for larger features
+- **Cooldown periods**: 1-2 days between cycles for planning and technical debt
+- **Planning process**: Assign issues to upcoming cycles (max 15 future cycles)
+- **Velocity tracking**: Monitor completion rates to improve estimation
+
+#### Projects vs Issues
+- **Projects**: Group 5-20 related issues for major features/initiatives
+- **Milestones**: Break projects into 2-4 week deliverable chunks
+- **Cross-team coordination**: Use company-wide projects for integration work
+- **Dependencies**: Link blocking/blocked relationships between issues
+
+#### Roadmap Planning
+- **Quarterly themes**: Align with business objectives (growth, reliability, new features)
+- **Monthly milestones**: Concrete deliverables with success metrics
+- **Weekly cycles**: Tactical implementation with daily standup tracking
+- **Backlog grooming**: Weekly review of upcoming cycle capacity
+
+### Workflow Automation & Integration
+
+#### GitHub Integration (Essential for Development)
+```bash
+# Auto-link with branch names
+git checkout -b "TES-123-feature-description"
+
+# Auto-link with commit messages  
+git commit -m "TES-123: Implement feature
+
+Fixes: TES-123"
+
+# Auto-status updates:
+# Draft PR → "In Progress"
+# PR Ready → "In Review" 
+# PR Merged → "Done"
+```
+
+#### Automation Rules
+- **PR creation** → Auto-assign to issue creator, move to "In Review"
+- **Failed CI** → Add "blocked" label, notify assignee
+- **Issue assigned** → Auto-move to "In Progress" if starting work
+- **Slack notifications** → Team channel for high-priority issues
+
+#### Integration Strategy
+- **GitHub**: Bi-directional PR/issue linking with status automation
+- **Slack**: Notifications for @mentions, status changes, cycle completion
+- **PostHog**: Link analytics events to feature issues for impact tracking
+- **Figma**: Attach design specs directly to feature issues
+
+### Team Management & Collaboration
+
+#### Cross-Functional Workflow
+```
+Product Manager → Creates project with milestones
+Designer → Adds design specs to feature issues  
+Engineer → Breaks down into technical sub-issues
+QA → Creates test plans linked to feature issues
+DevOps → Adds deployment checklist sub-issues
+```
+
+#### Communication Patterns
+- **@mentions**: Tag specific people for input/review
+- **Comments**: Document decisions, questions, progress updates
+- **Status updates**: Weekly cycle progress, blockers, capacity changes
+- **Handoffs**: Clear acceptance criteria, definition of done
+
+#### Metrics & Reporting
+- **Cycle velocity**: Issues completed per cycle (track trend over time)
+- **Lead time**: Time from creation to completion (identify bottlenecks)
+- **Bug rate**: Percentage of cycle dedicated to bug fixes (quality indicator)
+- **Scope creep**: Issues added mid-cycle (planning accuracy)
+
+### Advanced Optimization Patterns
+
+#### Issue Relationships
+- **Parent/Sub-issues**: Break large features into 2-5 day sub-tasks
+- **Blocking dependencies**: Use "Blocks"/"Blocked by" for critical path
+- **Duplicates**: Link related issues to avoid scattered discussions
+- **Related**: Connect issues for context (similar bugs, related features)
+
+#### Custom Views & Filters
+- **Personal dashboard**: Issues assigned to you, sorted by priority
+- **Team sprint view**: Current cycle issues, grouped by status
+- **Bug triage**: All bugs, filtered by severity and creation date
+- **Feature pipeline**: Features by project, sorted by roadmap priority
+
+#### Keyboard Shortcuts (Speed Optimization)
+```
+C → Create issue
+Option+C → Create from template
+Cmd+K → Quick search/command palette
+G then I → Go to issues view
+G then P → Go to projects view
+/ → Search issues
+Cmd+Enter → Save/submit
+```
+
+This system scales from 2-person teams to 50+ person organizations while maintaining speed and clarity.
+
 ## E2E Testing Guidelines
 
 ### Test Structure
@@ -262,6 +537,39 @@ export interface ApiResponse {
 - Tests run on Chrome, Firefox, Safari (webkit), and Mobile browsers
 - Some features may behave differently across browsers (especially Safari)
 - Use browser-specific test skipping if needed: `test.skip(browserName === 'webkit', 'Safari-specific issue')`
+
+## Debugging & Troubleshooting Workflows
+
+### TypeScript Compilation Errors
+1. Run `npx tsc --noEmit` to see all errors at once
+2. Fix import/export issues first (affects other files)
+3. Address type mismatches in order of complexity
+4. Verify fixes with incremental compilation
+
+### E2E Test Failures
+1. **Run with headed browser**: `npm run e2e:headed` to see what's happening
+2. **Add debug breakpoints**: `await page.pause()` at failure point
+3. **Check element selectors**: Use `npm run e2e:debug` for step-by-step execution
+4. **Verify API mocking**: Ensure all required endpoints are properly mocked
+5. **Cross-browser issues**: Test with different browsers if behavior varies
+
+### API Route Issues
+1. **Test endpoints directly**: Use curl/Postman before writing tests
+2. **Check rate limiting**: Verify implementation doesn't block legitimate requests
+3. **Supabase client config**: Review server vs client configuration
+4. **Error handling**: Ensure proper response formats and status codes
+5. **Edge case testing**: Invalid input, network failures, timeout scenarios
+
+### Git Workflow Issues
+- **Merge conflicts**: Use VS Code merge editor for complex conflicts
+- **Branch synchronization**: `git fetch origin && git rebase origin/main`
+- **Commit history**: Use `git log --oneline --graph` for visualization
+- **Large commits**: Consider `git add -p` for partial staging
+
+### Performance Investigation
+- **Slow tests**: Use `npm run e2e:headed` to identify bottlenecks
+- **Build issues**: Check `npm run build` output for optimization opportunities
+- **Memory usage**: Monitor with `npm run dev` and browser DevTools
 
 ## Authentication Patterns
 
