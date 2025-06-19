@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { getAnonymousSessionIdFromCookie, setAnonymousSessionIdCookie } from '@/lib/auth/anonymous-session';
+import { getAnonymousSessionIdFromCookie, setAnonymousSessionIdCookie } from '@/lib/auth/anonymous-session-server';
 
 // Types for better type safety
 
