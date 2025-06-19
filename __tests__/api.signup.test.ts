@@ -21,7 +21,14 @@ describe('signupBusinessLogic', () => {
     const res = await signupBusinessLogic({ email: 'test@example.com', password: 'password123', ip: '1.1.1.1', supabaseClient, analytics });
     expect(res.status).toBe(200);
     expect((res.body as SignupSuccessResponse).status).toBe('ok');
-    expect(analytics.capture).toHaveBeenCalledWith({ event: 'signup_success', properties: { email: 'test@example.com' } });
+    expect(analytics.capture).toHaveBeenCalledWith({ 
+      event: 'signup_success', 
+      properties: { 
+        email: 'test@example.com',
+        guestUpgraded: false,
+        sessionsTransferred: 0
+      } 
+    });
   });
 
   it('returns 400 for invalid email', async () => {
