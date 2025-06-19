@@ -93,16 +93,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: 'ok' }, { status: 200 });
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Resend confirmation failed';
+    const detailedError = error instanceof Error ? error.message : 'Resend confirmation failed';
     
-    // Track error
+    // Log detailed error server-side for debugging
+    console.error('Resend confirmation error:', { email, error: detailedError });
+    
+    // Track error with detailed information for analytics
     posthog.capture({
       event: 'resend_confirmation_error',
-      properties: { email, error: errorMessage },
+      properties: { email, error: detailedError },
       distinctId: email
     });
 
-    return NextResponse.json({ error: errorMessage }, { status: 400 });
+    // Return generic error message to prevent information leakage
+    return NextResponse.json({ error: 'Request failed. Please try again.' }, { status: 400 });
   }
 }
 

@@ -150,8 +150,14 @@ export async function signupBusinessLogic({ email, password, supabaseClient, ana
   });
   
   if (error) {
+    // Log detailed error server-side for debugging
+    console.error('Signup error:', { email, error: error.message });
+    
+    // Track detailed error for analytics
     analytics.capture({ event: 'signup_error', properties: { email, error: error.message } });
-    return { status: 400, body: { error: error.message } };
+    
+    // Return generic error message to prevent information leakage
+    return { status: 400, body: { error: 'Request failed. Please try again.' } };
   }
 
   // Handle guest session upgrade if anonymousSessionId is provided
