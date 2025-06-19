@@ -63,9 +63,9 @@ test.describe('TrustedBySection E2E Tests', () => {
   test('logo clicks work correctly', async ({ page }) => {
     // Mock window.open to capture external link clicks
     await page.addInitScript(() => {
-      window.open = () => {
+      window.open = function(url) {
         (window as any).openedUrls = (window as any).openedUrls || [];
-        (window as any).openedUrls.push(arguments[0]);
+        (window as any).openedUrls.push(url);
         return null;
       };
     });
