@@ -32,6 +32,19 @@ const nextConfig = {
     
     return config;
   },
+
+  // Redirect development-only routes away in production
+  async redirects() {
+    return process.env.NODE_ENV === 'production'
+      ? [
+          {
+            source: '/test-marquee',
+            destination: '/',
+            permanent: false,
+          },
+        ]
+      : [];
+  },
 };
 
 export default nextConfig;

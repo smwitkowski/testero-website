@@ -11,7 +11,6 @@ import { FinalCtaSection } from "@/components/ui/final-cta-section";
 import { LampContainer } from "@/components/ui/lamp-effect";
 import { EnhancedSocialProof } from "@/components/ui/enhanced-social-proof";
 import { TestimonialCarousel } from "@/components/ui/testimonial-carousel";
-import { TrustBar } from "@/components/ui/trust-bar";
 import { Button } from "@/components/ui/button";
 import { JsonLd } from "./page.metadata";
 
@@ -104,25 +103,6 @@ export default function Home() {
 
       {/* Main content sections */}
       <div role="main" id="main-content">
-        {/* Trust Bar */}
-        <TrustBar 
-          title="Supporting Major Cloud Platforms"
-          logos={[
-            {
-              name: "Google Cloud",
-              logo: <div className="w-28 h-10 bg-gradient-to-r from-blue-100 to-blue-200 rounded flex items-center justify-center text-blue-600 font-medium text-sm">Google Cloud</div>
-            },
-            {
-              name: "AWS", 
-              logo: <div className="w-28 h-10 bg-gradient-to-r from-orange-100 to-orange-200 rounded flex items-center justify-center text-orange-600 font-medium text-sm">AWS</div>
-            },
-            {
-              name: "Microsoft Azure",
-              logo: <div className="w-28 h-10 bg-gradient-to-r from-blue-100 to-indigo-200 rounded flex items-center justify-center text-indigo-600 font-medium text-sm">Azure</div>
-            }
-          ]}
-        />
-
         {/* Enhanced Social Proof Section */}
         <section ref={socialProofRef} aria-labelledby="social-proof-heading">
           {loadSocialProof ? <EnhancedSocialProof /> : null}
