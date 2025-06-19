@@ -20,23 +20,8 @@ export interface SignupResponse {
   body: SignupResponseBody;
 }
 
-// In-memory rate limiter (for dev/demo only)
-const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 5; // 5 requests per window
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const timestamps = rateLimitMap.get(ip) || [];
-  const recent = timestamps.filter(ts => now - ts < RATE_LIMIT_WINDOW);
-  if (recent.length >= RATE_LIMIT_MAX) {
-    rateLimitMap.set(ip, recent);
-    return false;
-  }
-  recent.push(now);
-  rateLimitMap.set(ip, recent);
-  return true;
-}
+// Note: Rate limiting is now handled at the API route level to maintain consistency
+// across all auth endpoints and avoid double rate limiting.
 
 const signupSchema = z.object({
   email: z.string().email(),
@@ -132,16 +117,14 @@ async function upgradeGuestSessions(
  * @param {Object} args
  * @param {string} args.email
  * @param {string} args.password
- * @param {string} args.ip
  * @param {object} args.supabaseClient - Must have .auth.signUp({ email, password, options })
  * @param {object} args.analytics - Must have .capture({ event, properties })
  * @param {string} [args.anonymousSessionId] - Optional anonymous session ID for guest upgrade
  * @returns {Promise<{ status: number, body: any }>}
  */
-export async function signupBusinessLogic({ email, password, ip, supabaseClient, analytics, anonymousSessionId }: {
+export async function signupBusinessLogic({ email, password, supabaseClient, analytics, anonymousSessionId }: {
   email: string;
   password: string;
-  ip: string;
   supabaseClient: SupabaseClient;
   analytics: Analytics;
   anonymousSessionId?: string;
@@ -151,11 +134,7 @@ export async function signupBusinessLogic({ email, password, ip, supabaseClient,
   if (!parse.success) {
     return { status: 400, body: { error: 'Invalid input' } };
   }
-  // Rate limiting
-  if (!checkRateLimit(ip)) {
-    analytics.capture({ event: 'signup_rate_limited', properties: { ip } });
-    return { status: 429, body: { error: 'Too many sign-up attempts' } };
-  }
+  // Note: Rate limiting is handled at the API route level
   analytics.capture({ event: 'signup_attempt', properties: { 
     email, 
     hasAnonymousSession: !!anonymousSessionId 
@@ -221,4 +200,4 @@ export async function signupBusinessLogic({ email, password, ip, supabaseClient,
   return { status: 200, body: responseBody };
 }
 
-export { rateLimitMap }; 
+// Removed rateLimitMap export as rate limiting is now handled at API route level 

@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { signupBusinessLogic, rateLimitMap } from '@/lib/auth/signup-handler';
+import { signupBusinessLogic } from '@/lib/auth/signup-handler';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Mock crypto.randomUUID for consistent testing
@@ -21,8 +21,7 @@ describe('Guest Session Upgrade', () => {
     // Reset all mocks
     jest.clearAllMocks();
     
-    // Clear rate limit map between tests
-    rateLimitMap.clear();
+    // Rate limiting is now handled at API route level
 
     // Mock analytics
     mockAnalytics = {
@@ -111,7 +110,6 @@ describe('Guest Session Upgrade', () => {
       const result = await signupBusinessLogic({
         email: 'test@example.com',
         password: 'password123',
-        ip: '127.0.0.1',
         supabaseClient: mockSupabaseClient,
         analytics: mockAnalytics,
         anonymousSessionId,
@@ -177,7 +175,6 @@ describe('Guest Session Upgrade', () => {
       const result = await signupBusinessLogic({
         email: 'test@example.com',
         password: 'password123',
-        ip: '127.0.0.1',
         supabaseClient: mockSupabaseClient,
         analytics: mockAnalytics,
         // No anonymousSessionId provided
@@ -234,7 +231,6 @@ describe('Guest Session Upgrade', () => {
       const result = await signupBusinessLogic({
         email: 'test@example.com',
         password: 'password123',
-        ip: '127.0.0.1',
         supabaseClient: mockSupabaseClient,
         analytics: mockAnalytics,
         anonymousSessionId,
@@ -280,7 +276,6 @@ describe('Guest Session Upgrade', () => {
       const result = await signupBusinessLogic({
         email: 'test@example.com',
         password: 'password123',
-        ip: '127.0.0.1',
         supabaseClient: mockSupabaseClient,
         analytics: mockAnalytics,
         anonymousSessionId,
@@ -322,7 +317,6 @@ describe('Guest Session Upgrade', () => {
       const result = await signupBusinessLogic({
         email: 'test@example.com',
         password: 'password123',
-        ip: '127.0.0.1',
         supabaseClient: mockSupabaseClient,
         analytics: mockAnalytics,
         anonymousSessionId: 'anon-session-999',
@@ -346,40 +340,12 @@ describe('Guest Session Upgrade', () => {
       expect(mockSupabaseClient.from).not.toHaveBeenCalled();
     });
 
-    test('should handle rate limiting', async () => {
-      // Mock rate limit check by calling signup multiple times quickly
-      const signupParams = {
-        email: 'test@example.com',
-        password: 'password123',
-        ip: '127.0.0.1',
-        supabaseClient: mockSupabaseClient,
-        analytics: mockAnalytics,
-      };
-
-      // First 5 requests should succeed (within rate limit)
-      for (let i = 0; i < 5; i++) {
-        const result = await signupBusinessLogic(signupParams);
-        expect(result.status).toBe(200);
-      }
-
-      // 6th request should be rate limited
-      const rateLimitedResult = await signupBusinessLogic(signupParams);
-      expect(rateLimitedResult.status).toBe(429);
-      expect(rateLimitedResult.body).toEqual({
-        error: 'Too many sign-up attempts',
-      });
-
-      expect(mockAnalytics.capture).toHaveBeenCalledWith({
-        event: 'signup_rate_limited',
-        properties: { ip: '127.0.0.1' },
-      });
-    });
+    // Rate limiting test removed - now handled at API route level
 
     test('should handle invalid input validation', async () => {
       const result = await signupBusinessLogic({
         email: 'invalid-email',
         password: '123', // Too short
-        ip: '127.0.0.1',
         supabaseClient: mockSupabaseClient,
         analytics: mockAnalytics,
       });
