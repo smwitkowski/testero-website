@@ -79,6 +79,7 @@ export async function signupBusinessLogic({ email, password, ip, supabaseClient,
     password,
     options: {
       data: { early_access: false },
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/verify-email`,
     },
   });
   if (error) {

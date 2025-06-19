@@ -68,11 +68,19 @@ const ForgotPasswordPage = () => {
         });
       }
 
-      // TODO: Replace with actual password reset logic
-      console.log('Password reset requested for', data.email);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call the password reset API
+      const response = await fetch('/api/auth/password-reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: data.email }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Password reset failed');
+      }
       
       // Store email for confirmation screen
       setSubmittedEmail(data.email);
@@ -96,7 +104,7 @@ const ForgotPasswordPage = () => {
   }
 
   // Handle resend request
-  function handleResend() {
+  async function handleResend() {
     if (!resendEnabled) return;
     
     // Track resend request in PostHog
@@ -108,9 +116,28 @@ const ForgotPasswordPage = () => {
     
     setResendEnabled(false);
     
-    // Simulate resend
+    try {
+      // Call the password reset API again
+      const response = await fetch('/api/auth/password-reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: submittedEmail }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Resend failed:', errorData.error);
+        // Don't show error to user, just log it
+      }
+    } catch (err) {
+      console.error('Resend failed:', err);
+      // Don't show error to user, just log it
+    }
+    
+    // Enable resend button again after 60 seconds
     setTimeout(() => {
-      // Enable resend button again after 60 seconds
       setResendEnabled(true);
     }, 60000);
   }
