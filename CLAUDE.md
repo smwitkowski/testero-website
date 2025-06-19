@@ -170,10 +170,12 @@ export interface ApiResponse {
 - Social images generated and stored in GCP
 
 ### Authentication Flow
-- Supabase Auth with email/password signup
-- Anonymous diagnostic sessions supported with `anonymous_session_id`
-- Rate limiting on signup endpoints
-- PostHog analytics integration for user events
+- **Supabase Auth** with email/password signup and email verification
+- **Anonymous diagnostic sessions** supported with `anonymous_session_id`
+- **Rate limiting** on auth endpoints (3 requests/minute recommended)
+- **PostHog analytics** integration for user events
+- **Complete password reset flow** with email confirmation
+- **Resend confirmation** functionality for unverified users
 
 ### API Route Structure
 - Use `app/api/` directory structure
@@ -199,6 +201,7 @@ export interface ApiResponse {
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `NEXT_PUBLIC_POSTHOG_KEY`
+- `NEXT_PUBLIC_SITE_URL` (for auth redirects, required for production)
 - `USE_GCP_STORAGE` (optional, for social image generation)
 
 ## Key Files Reference
@@ -259,6 +262,114 @@ export interface ApiResponse {
 - Tests run on Chrome, Firefox, Safari (webkit), and Mobile browsers
 - Some features may behave differently across browsers (especially Safari)
 - Use browser-specific test skipping if needed: `test.skip(browserName === 'webkit', 'Safari-specific issue')`
+
+## Authentication Patterns
+
+### API Endpoint Standards
+All authentication API endpoints should follow these established patterns:
+
+#### Rate Limiting
+```typescript
+// Standard rate limiting configuration
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 3; // 3 requests per window
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = rateLimitMap.get(ip) || [];
+  const recent = timestamps.filter(ts => now - ts < RATE_LIMIT_WINDOW);
+  if (recent.length >= RATE_LIMIT_MAX) {
+    rateLimitMap.set(ip, recent);
+    return false;
+  }
+  recent.push(now);
+  rateLimitMap.set(ip, recent);
+  return true;
+}
+```
+
+#### PostHog Analytics Integration
+```typescript
+// Standard analytics tracking pattern
+const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY || '', {
+  host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com',
+});
+
+// Event naming convention: {action}_{noun}_{status}
+posthog.capture({
+  event: 'password_reset_requested',
+  properties: { email },
+  distinctId: email
+});
+```
+
+#### Input Validation with Zod
+```typescript
+// Use Zod schemas for all auth endpoints
+const authSchema = z.object({
+  email: z.string().email(),
+  // additional fields...
+});
+
+const parse = authSchema.safeParse(body);
+if (!parse.success) {
+  return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
+}
+```
+
+#### Response Patterns
+```typescript
+// Success response
+return NextResponse.json({ status: 'ok' }, { status: 200 });
+
+// Error response (avoid leaking sensitive info)
+return NextResponse.json({ error: 'Request failed. Please try again.' }, { status: 400 });
+
+// Rate limit response
+return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+```
+
+### Authentication Pages Standards
+
+#### Page Structure
+- Use consistent layout with `max-w-md` container
+- Implement loading, form, success, and error states
+- Follow responsive design patterns with `sm:`, `md:`, `lg:` breakpoints
+- Use Framer Motion for state transitions
+
+#### Form Validation
+- Use `react-hook-form` with Zod resolver for client-side validation
+- Real-time validation feedback with green/red states
+- Accessible error messages with ARIA attributes
+
+#### State Management
+```typescript
+type AuthState = 'loading' | 'form' | 'success' | 'error';
+const [authState, setAuthState] = useState<AuthState>('loading');
+```
+
+### Security Best Practices
+
+#### Environment Variables
+- `NEXT_PUBLIC_SITE_URL` required for auth redirects
+- Use fallback to `http://localhost:3000` for development only
+- Force HTTPS in production environments
+
+#### Error Handling
+- Never expose raw Supabase errors to users
+- Use generic error messages to prevent information leakage
+- Log detailed errors server-side for debugging
+
+#### Rate Limiting
+- Implement on ALL auth endpoints (signup currently missing)
+- Use Redis for production (in-memory is development only)
+- Standard limit: 3 requests per minute per IP
+
+### Known Issues to Address
+1. **Signup endpoint**: Rate limiting disabled (security vulnerability)
+2. **Login navigation**: Broken link to waitlist instead of signup
+3. **Error messages**: Some endpoints leak internal errors
+4. **In-memory rate limiting**: Not suitable for production scaling
 
 ## Design System Guidelines
 - As we make new pages, components, sections, etc. we should revisit these design systems. The design systems are not static, but rather live and grow with the website.
