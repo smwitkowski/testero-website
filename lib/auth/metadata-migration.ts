@@ -132,13 +132,13 @@ export async function checkUserMetadata(
   earlyAccessValue: boolean | null;
   metadata: Record<string, unknown>;
 }> {
-  const { data: user, error } = await supabaseClient.auth.admin.getUserById(userId);
+  const { data, error } = await supabaseClient.auth.admin.getUserById(userId);
   
-  if (error || !user) {
+  if (error || !data?.user) {
     throw new Error(`Failed to get user ${userId}: ${error?.message || 'User not found'}`);
   }
 
-  const metadata = user.user_metadata || {};
+  const metadata = data.user.user_metadata || {};
   
   return {
     userId,

@@ -253,7 +253,7 @@ describe('Early Access Metadata Migration', () => {
       };
 
       (mockSupabaseClient.auth.admin.getUserById as jest.Mock).mockResolvedValue({
-        data: mockUser,
+        data: { user: mockUser },
         error: null,
       });
 
@@ -275,7 +275,7 @@ describe('Early Access Metadata Migration', () => {
       };
 
       (mockSupabaseClient.auth.admin.getUserById as jest.Mock).mockResolvedValue({
-        data: mockUser,
+        data: { user: mockUser },
         error: null,
       });
 
