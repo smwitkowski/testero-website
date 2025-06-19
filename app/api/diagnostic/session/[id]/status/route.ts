@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getAnonymousSessionIdFromCookie } from '@/lib/auth/anonymous-session';
 
 export async function GET(req: Request) {
   const supabase = createServerSupabaseClient();
@@ -9,7 +10,11 @@ export async function GET(req: Request) {
     const pathParts = new URL(req.url).pathname.split('/');
     const sessionId = pathParts[pathParts.length - 2]; // status is the last part, id is second to last
     const { searchParams } = new URL(req.url);
-    const anonymousSessionId = searchParams.get('anonymousSessionId');
+    const clientAnonymousSessionId = searchParams.get('anonymousSessionId');
+    
+    // Try to get anonymous session ID from cookie as fallback
+    const cookieAnonymousSessionId = await getAnonymousSessionIdFromCookie();
+    const effectiveAnonymousSessionId = clientAnonymousSessionId || cookieAnonymousSessionId;
 
     if (!sessionId || typeof sessionId !== 'string') {
       return NextResponse.json({ error: 'Invalid session ID' }, { status: 400 });
@@ -50,7 +55,7 @@ export async function GET(req: Request) {
       }
     } else {
       // Anonymous session
-      if (dbSession.anonymous_session_id && anonymousSessionId !== dbSession.anonymous_session_id) {
+      if (dbSession.anonymous_session_id && effectiveAnonymousSessionId !== dbSession.anonymous_session_id) {
         return NextResponse.json({ 
           exists: true,
           status: 'unauthorized'
