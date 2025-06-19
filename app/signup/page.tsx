@@ -53,6 +53,9 @@ const SignupPage = () => {
       const { error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
+        options: {
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/verify-email`,
+        },
       });
 
       if (error) {
