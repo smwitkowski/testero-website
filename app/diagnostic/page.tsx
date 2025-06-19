@@ -3,6 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider'; // Assuming this is still relevant for logged-in users
 import { usePostHog } from 'posthog-js/react';
+import { 
+  getAnonymousSessionId, 
+  setAnonymousSessionId, 
+  generateAnonymousSessionId 
+} from '@/lib/auth/anonymous-session';
 
 interface ExamTypeOption {
   name: string; // This will be the value sent to the API (e.g., "Google Professional ML Engineer")
@@ -67,7 +72,7 @@ const DiagnosticStartPage = () => {
         
         // Include anonymous session ID if user is not logged in
         if (!user) {
-          const anonymousSessionId = localStorage.getItem('anonymousSessionId');
+          const anonymousSessionId = getAnonymousSessionId();
           if (anonymousSessionId) {
             statusUrl += `?anonymousSessionId=${anonymousSessionId}`;
           }
@@ -156,10 +161,13 @@ const DiagnosticStartPage = () => {
 
     // For anonymous users, try to send existing anonymousSessionId for potential resume
     if (!user) {
-      const storedAnonId = localStorage.getItem('anonymousSessionId');
-      if (storedAnonId) {
-        requestBody.data.anonymousSessionId = storedAnonId;
+      let anonymousSessionId = getAnonymousSessionId();
+      if (!anonymousSessionId) {
+        // Generate new anonymous session ID if none exists
+        anonymousSessionId = generateAnonymousSessionId();
+        setAnonymousSessionId(anonymousSessionId);
       }
+      requestBody.data.anonymousSessionId = anonymousSessionId;
     }
 
     try {
@@ -184,7 +192,7 @@ const DiagnosticStartPage = () => {
 
       // If API returns a new anonymousSessionId (for new anonymous sessions), store it
       if (responseData.anonymousSessionId && !user) {
-        localStorage.setItem('anonymousSessionId', responseData.anonymousSessionId);
+        setAnonymousSessionId(responseData.anonymousSessionId);
       }
       
       // Store diagnostic session ID in localStorage for session persistence

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getAnonymousSessionIdFromCookie, setAnonymousSessionIdCookie } from '@/lib/auth/anonymous-session-server';
 
 // Types for better type safety
 
@@ -74,6 +75,10 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const sessionId = searchParams.get('sessionId'); // This is diagnostics_sessions.id (UUID)
     const clientAnonymousSessionId = searchParams.get('anonymousSessionId'); // For anonymous resume attempt
+    
+    // Try to get anonymous session ID from cookie as fallback
+    const cookieAnonymousSessionId = await getAnonymousSessionIdFromCookie();
+    const effectiveAnonymousSessionId = clientAnonymousSessionId || cookieAnonymousSessionId;
 
     if (!sessionId || typeof sessionId !== 'string') {
       return NextResponse.json({ error: 'Invalid session ID provided' }, { status: 400 });
@@ -105,7 +110,7 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'Unauthorized to access this session.' }, { status: 403 });
       }
     } else { // Anonymous session
-      if (dbSession.anonymous_session_id && clientAnonymousSessionId !== dbSession.anonymous_session_id) {
+      if (dbSession.anonymous_session_id && effectiveAnonymousSessionId !== dbSession.anonymous_session_id) {
          // If the session has an anonymous ID, the client must provide it to resume
         return NextResponse.json({ error: 'Invalid anonymous session identifier.' }, { status: 403 });
       }
@@ -172,6 +177,10 @@ export async function POST(req: Request) {
         }
         
         const { examType, numQuestions, anonymousSessionId: clientAnonymousSessionId } = validatedData;
+        
+        // Try to get anonymous session ID from cookie as fallback
+        const cookieAnonymousSessionId = await getAnonymousSessionIdFromCookie();
+        const effectiveAnonymousSessionId = clientAnonymousSessionId || cookieAnonymousSessionId;
 
         // 1. Determine exam_id (e.g., "Google ML Engineer" -> 2)
         // This mapping should be robust, perhaps from a config or query `public.exams`
@@ -199,11 +208,11 @@ export async function POST(req: Request) {
 
 
         // 1.b. (Optional) Resume anonymous session
-        if (!user && clientAnonymousSessionId) {
+        if (!user && effectiveAnonymousSessionId) {
           const { data: existingAnonSession, error: anonSessionError } = await supabase
             .from('diagnostics_sessions')
             .select('id, expires_at, completed_at')
-            .eq('anonymous_session_id', clientAnonymousSessionId)
+            .eq('anonymous_session_id', effectiveAnonymousSessionId)
             .is('user_id', null)
             .order('started_at', { ascending: false })
             .limit(1)
@@ -219,12 +228,17 @@ export async function POST(req: Request) {
                 .eq('session_id', existingAnonSession.id);
               
               if (existingQuestions && !existingQuestionsError) {
+                // Ensure the cookie is set if it was missing
+                if (!cookieAnonymousSessionId && effectiveAnonymousSessionId) {
+                  await setAnonymousSessionIdCookie(effectiveAnonymousSessionId);
+                }
+                
                 return NextResponse.json({
                   sessionId: existingAnonSession.id,
                   questions: existingQuestions,
                   totalQuestions: existingQuestions.length,
                   expiresAt: existingAnonSession.expires_at,
-                  anonymousSessionId: clientAnonymousSessionId, // return it back
+                  anonymousSessionId: effectiveAnonymousSessionId, // return it back
                   resumed: true
                 });
               }
@@ -265,7 +279,7 @@ export async function POST(req: Request) {
 
         // 3. Create diagnostics_sessions record
         const newSessionExpiresAt = new Date(Date.now() + SESSION_TIMEOUT_MINUTES * 60 * 1000);
-        const newAnonymousId = user ? null : (clientAnonymousSessionId || crypto.randomUUID());
+        const newAnonymousId = user ? null : (effectiveAnonymousSessionId || crypto.randomUUID());
 
         const { data: newSessionRecord, error: newSessionError } = await supabase
           .from('diagnostics_sessions')
@@ -316,6 +330,11 @@ export async function POST(req: Request) {
         if (finalQuestionsError || !finalSessionQuestions) {
             console.error('Error fetching final session questions for client:', finalQuestionsError);
             return NextResponse.json({ error: 'Failed to load session questions.' }, { status: 500 });
+        }
+        
+        // Set cookie for new anonymous sessions
+        if (!user && newAnonymousId) {
+          await setAnonymousSessionIdCookie(newAnonymousId);
         }
 
         return NextResponse.json({
