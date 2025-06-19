@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from '@/lib/supabase/client';
+import { getAnonymousSessionId } from '@/lib/auth/anonymous-session';
 import { colorSemantic } from "@/lib/design-system";
 
 const signupFormSchema = z.object({
@@ -50,16 +50,33 @@ const SignupPage = () => {
         posthog.capture('signup_attempt');
       }
 
-      const { error } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/verify-email`,
+      // Get anonymous session ID for guest upgrade functionality
+      const anonymousSessionId = getAnonymousSessionId();
+
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          ...(anonymousSessionId && { anonymousSessionId }),
+        }),
       });
 
-      if (error) {
-        throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Something went wrong. Please try again.');
+      }
+
+      // Track successful signup with guest upgrade info
+      if (posthog) {
+        posthog.capture('signup_success', {
+          guestUpgraded: result.guestUpgraded || false,
+          sessionsTransferred: result.sessionsTransferred || 0,
+        });
       }
 
       setIsSubmitted(true);
