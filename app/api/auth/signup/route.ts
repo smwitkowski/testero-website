@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { PostHog } from 'posthog-node';
 import { signupBusinessLogic } from '@/lib/auth/signup-handler';
+import { getAnonymousSessionIdFromCookie, clearAnonymousSessionIdCookie } from '@/lib/auth/anonymous-session-server';
 
 // --- In-memory rate limiter (for dev/demo only) ---
 // This uses a simple Map to track IPs and timestamps.
@@ -31,6 +32,7 @@ const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY || '', {
 interface SignupRequestBody {
   email: string;
   password: string;
+  anonymousSessionId?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -49,7 +51,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request: email and password must be strings' }, { status: 400 });
   }
   const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-  const { email, password } = body;
+  const { email, password, anonymousSessionId: requestAnonymousSessionId } = body;
+  
+  // Get anonymous session ID from cookie as fallback
+  const cookieAnonymousSessionId = await getAnonymousSessionIdFromCookie();
+  const effectiveAnonymousSessionId = requestAnonymousSessionId || cookieAnonymousSessionId || undefined;
   const supabaseClient = createServerSupabaseClient();
   
   // Create analytics wrapper to match expected interface
@@ -63,7 +69,25 @@ export async function POST(req: NextRequest) {
     }
   };
   
-  const result = await signupBusinessLogic({ email, password, ip, supabaseClient, analytics });
+  const result = await signupBusinessLogic({ 
+    email, 
+    password, 
+    ip, 
+    supabaseClient, 
+    analytics,
+    anonymousSessionId: effectiveAnonymousSessionId 
+  });
+  
+  // Clear anonymous session cookie if signup was successful and we had an anonymous session
+  if (result.status === 200 && effectiveAnonymousSessionId) {
+    try {
+      await clearAnonymousSessionIdCookie();
+    } catch (error) {
+      console.warn('Failed to clear anonymous session cookie after signup:', error);
+      // Don't fail the signup if cookie clearing fails
+    }
+  }
+  
   return NextResponse.json(result.body, { status: result.status });
 }
 
