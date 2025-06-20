@@ -324,7 +324,7 @@ describe('Guest Session Upgrade', () => {
 
       expect(result.status).toBe(400);
       expect(result.body).toEqual({
-        error: 'Email already registered',
+        error: 'Request failed. Please try again.',
       });
 
       // Should track signup error

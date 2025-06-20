@@ -48,7 +48,7 @@ describe('signupBusinessLogic', () => {
     supabaseClient.auth.signUp.mockResolvedValueOnce({ error: { message: 'Email already in use' } });
     const res = await signupBusinessLogic({ email: 'dupe@example.com', password: 'password123', supabaseClient, analytics });
     expect(res.status).toBe(400);
-    expect((res.body as SignupErrorResponse).error).toBe('Email already in use');
+    expect((res.body as SignupErrorResponse).error).toBe('Request failed. Please try again.');
     expect(analytics.capture).toHaveBeenCalledWith({ event: 'signup_error', properties: { email: 'dupe@example.com', error: 'Email already in use' } });
   });
 }); 

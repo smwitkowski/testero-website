@@ -89,16 +89,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: 'ok' }, { status: 200 });
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Password reset failed';
+    const detailedError = error instanceof Error ? error.message : 'Password reset failed';
     
-    // Track error
+    // Log detailed error server-side for debugging
+    console.error('Password reset error:', { email, error: detailedError });
+    
+    // Track error with detailed information for analytics
     posthog.capture({
       event: 'password_reset_error',
-      properties: { email, error: errorMessage },
+      properties: { email, error: detailedError },
       distinctId: email
     });
 
-    return NextResponse.json({ error: errorMessage }, { status: 400 });
+    // Return generic error message to prevent information leakage
+    return NextResponse.json({ error: 'Request failed. Please try again.' }, { status: 400 });
   }
 }
 
