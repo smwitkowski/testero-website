@@ -33,13 +33,13 @@ describe('signupBusinessLogic', () => {
   it('returns 400 for invalid email', async () => {
     const res = await signupBusinessLogic({ email: 'bad', password: 'password123', supabaseClient, analytics });
     expect(res.status).toBe(400);
-    expect((res.body as SignupErrorResponse).error).toBe('Invalid input');
+    expect((res.body as SignupErrorResponse).error).toBe('Invalid email or password');
   });
 
   it('returns 400 for short password', async () => {
     const res = await signupBusinessLogic({ email: 'test@example.com', password: 'short', supabaseClient, analytics });
     expect(res.status).toBe(400);
-    expect((res.body as SignupErrorResponse).error).toBe('Invalid input');
+    expect((res.body as SignupErrorResponse).error).toBe('Invalid email or password');
   });
 
   // Rate limiting test removed - now handled at API route level

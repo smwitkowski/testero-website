@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { PostHog } from 'posthog-node';
+import { z } from 'zod';
 import { signupBusinessLogic } from '@/lib/auth/signup-handler';
 import { getAnonymousSessionIdFromCookie, clearAnonymousSessionIdCookie } from '@/lib/auth/anonymous-session-server';
 
@@ -29,6 +30,12 @@ const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY || '', {
   host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com',
 });
 
+const signupSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  anonymousSessionId: z.string().optional(),
+});
+
 interface SignupRequestBody {
   email: string;
   password: string;
@@ -42,16 +49,15 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
-  // Validate body
-  if (
-    !body ||
-    typeof body.email !== 'string' ||
-    typeof body.password !== 'string'
-  ) {
-    return NextResponse.json({ error: 'Invalid request: email and password must be strings' }, { status: 400 });
+
+  // Validate input
+  const parse = signupSchema.safeParse(body);
+  if (!parse.success) {
+    return NextResponse.json({ error: 'Invalid email or password' }, { status: 400 });
   }
+
   const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-  const { email, password, anonymousSessionId: requestAnonymousSessionId } = body;
+  const { email, password, anonymousSessionId: requestAnonymousSessionId } = parse.data;
 
   // Rate limiting
   if (!checkRateLimit(ip)) {
