@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { PostHog } from 'posthog-node';
-import { z } from 'zod';
+import { passwordResetBusinessLogic } from '@/lib/auth/password-reset-handler';
 
 // In-memory rate limiter (should be replaced with Redis in production)
 const rateLimitMap = new Map<string, number[]>();
@@ -25,10 +25,6 @@ const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY || '', {
   host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com',
 });
 
-const passwordResetSchema = z.object({
-  email: z.string().email(),
-});
-
 interface PasswordResetRequestBody {
   email: string;
 }
@@ -41,14 +37,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  // Validate input
-  const parse = passwordResetSchema.safeParse(body);
-  if (!parse.success) {
-    return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
-  }
-
   const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-  const { email } = parse.data;
+  const { email } = body;
 
   // Rate limiting
   if (!checkRateLimit(ip)) {
@@ -62,48 +52,24 @@ export async function POST(req: NextRequest) {
 
   const supabaseClient = createServerSupabaseClient();
 
-  try {
-    // Track attempt
-    posthog.capture({
-      event: 'password_reset_requested',
-      properties: { email },
-      distinctId: email
-    });
-
-    // Request password reset with redirect to our reset password page
-    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/reset-password`,
-    });
-
-    if (error) {
-      throw error;
+  // Create analytics adapter to match business logic interface
+  const analyticsAdapter = {
+    capture: (event: { event: string; properties: Record<string, unknown> }) => {
+      posthog.capture({
+        ...event,
+        distinctId: email // Add distinctId for PostHog
+      });
     }
+  };
 
-    // Track success
-    posthog.capture({
-      event: 'password_reset_email_sent',
-      properties: { email },
-      distinctId: email
-    });
+  // Delegate to business logic handler
+  const result = await passwordResetBusinessLogic({
+    email,
+    supabaseClient,
+    analytics: analyticsAdapter,
+  });
 
-    return NextResponse.json({ status: 'ok' }, { status: 200 });
-
-  } catch (error) {
-    const detailedError = error instanceof Error ? error.message : 'Password reset failed';
-    
-    // Log detailed error server-side for debugging
-    console.error('Password reset error:', { email, error: detailedError });
-    
-    // Track error with detailed information for analytics
-    posthog.capture({
-      event: 'password_reset_error',
-      properties: { email, error: detailedError },
-      distinctId: email
-    });
-
-    // Return generic error message to prevent information leakage
-    return NextResponse.json({ error: 'Request failed. Please try again.' }, { status: 400 });
-  }
+  return NextResponse.json(result.body, { status: result.status });
 }
 
 // Cleanup: flush PostHog events on process exit (for dev/local)

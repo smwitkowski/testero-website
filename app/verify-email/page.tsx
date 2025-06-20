@@ -16,6 +16,7 @@ const VerifyEmailPage = () => {
   const [isResending, setIsResending] = useState(false);
   const [resendEnabled, setResendEnabled] = useState(true);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendMessage, setResendMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const router = useRouter();
   const posthog = usePostHog();
 
@@ -117,6 +118,7 @@ const VerifyEmailPage = () => {
 
     setIsResending(true);
     setResendEnabled(false);
+    setResendMessage(null);
 
     try {
       // Track resend attempt
@@ -146,7 +148,8 @@ const VerifyEmailPage = () => {
         });
       }
 
-      // Start cooldown timer (60 seconds)
+      // Show success message and start cooldown timer (60 seconds)
+      setResendMessage({ type: 'success', text: 'Verification email sent! Please check your inbox.' });
       setResendCooldown(60);
 
     } catch (err) {
@@ -160,7 +163,8 @@ const VerifyEmailPage = () => {
         });
       }
 
-      // Re-enable button immediately on error
+      // Show error message and re-enable button immediately
+      setResendMessage({ type: 'error', text: errorMessage });
       setResendEnabled(true);
       console.error('Resend failed:', errorMessage);
     } finally {
@@ -375,6 +379,28 @@ const VerifyEmailPage = () => {
                             "Send New Verification Email"
                           )}
                         </button>
+
+                        {/* Resend Message */}
+                        {resendMessage && (
+                          <div className={`mt-3 px-4 py-3 rounded-md text-sm font-medium ${
+                            resendMessage.type === 'success' 
+                              ? 'bg-green-50 border border-green-200 text-green-700'
+                              : 'bg-red-50 border border-red-200 text-red-700'
+                          }`}>
+                            <div className="flex items-center">
+                              {resendMessage.type === 'success' ? (
+                                <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                              ) : (
+                                <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              )}
+                              {resendMessage.text}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                     

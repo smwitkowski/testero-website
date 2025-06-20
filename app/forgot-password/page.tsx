@@ -243,7 +243,8 @@ const ForgotPasswordPage = () => {
                       {/* Instructions */}
                       <div className="bg-blue-50 border border-blue-100 rounded-md px-4 py-3">
                         <p className="text-blue-700 text-sm">
-                          We&apos;ll send you an email with a link to reset your password. The link will expire after 24 hours.
+                          {/* eslint-disable-next-line react/no-unescaped-entities */}
+                          We'll send you an email with a link to reset your password. The link will expire after 24 hours.
                         </p>
                       </div>
 
@@ -304,20 +305,23 @@ const ForgotPasswordPage = () => {
                     </div>
                     <h3 className="text-lg font-medium text-slate-900 mb-2">Check your email</h3>
                     <p className="text-slate-600 mb-1">
-                      We&apos;ve sent a password reset link to:
+                      {/* eslint-disable-next-line react/no-unescaped-entities */}
+                      We've sent a password reset link to:
                     </p>
                     <p className="text-slate-900 font-medium mb-4">
                       {submittedEmail}
                     </p>
                     <p className="text-slate-600 text-sm">
-                      If you don&apos;t see it in your inbox, please check your spam folder.
+                      {/* eslint-disable-next-line react/no-unescaped-entities */}
+                      If you don't see it in your inbox, please check your spam folder.
                     </p>
                   </div>
 
                   {/* Resend Email Option */}
                   <div className="border-t border-slate-200 pt-4 text-center">
                     <p className="text-slate-600 text-sm mb-3">
-                      Didn&apos;t receive the email?
+                      {/* eslint-disable-next-line react/no-unescaped-entities */}
+                      Didn't receive the email?
                     </p>
                     <button
                       type="button"
