@@ -12,6 +12,10 @@ const VerifyEmailPage = () => {
   const [verificationState, setVerificationState] = useState<VerificationState>('loading');
   const [error, setError] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>('');
+  const [isResending, setIsResending] = useState(false);
+  const [resendEnabled, setResendEnabled] = useState(true);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const router = useRouter();
   const posthog = usePostHog();
 
@@ -43,6 +47,11 @@ const VerifyEmailPage = () => {
         }
 
         if (data.session && data.user) {
+          // Store user email for potential resend functionality
+          if (data.user.email) {
+            setUserEmail(data.user.email);
+          }
+
           // Track successful email confirmation
           if (posthog) {
             posthog.capture('email_confirmed', {
@@ -67,6 +76,13 @@ const VerifyEmailPage = () => {
         setError(errorMessage);
         setVerificationState('error');
 
+        // Try to extract email from URL params for resend functionality
+        const urlParams = new URLSearchParams(window.location.search);
+        const emailFromUrl = urlParams.get('email');
+        if (emailFromUrl) {
+          setUserEmail(emailFromUrl);
+        }
+
         // Track verification error
         if (posthog) {
           posthog.capture('email_verification_error', {
@@ -78,6 +94,79 @@ const VerifyEmailPage = () => {
 
     handleEmailConfirmation();
   }, [router, posthog]);
+
+  // Cooldown timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (resendCooldown > 0) {
+      interval = setInterval(() => {
+        setResendCooldown(prev => {
+          if (prev <= 1) {
+            setResendEnabled(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendCooldown]);
+
+  const handleResendEmail = async () => {
+    if (!resendEnabled || !userEmail || isResending) return;
+
+    setIsResending(true);
+    setResendEnabled(false);
+
+    try {
+      // Track resend attempt
+      if (posthog) {
+        posthog.capture('email_verification_resend_requested', {
+          email: userEmail,
+        });
+      }
+
+      const response = await fetch('/api/auth/resend-confirmation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: userEmail }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to resend email');
+      }
+
+      // Track success
+      if (posthog) {
+        posthog.capture('email_verification_resend_success', {
+          email: userEmail,
+        });
+      }
+
+      // Start cooldown timer (60 seconds)
+      setResendCooldown(60);
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to resend email';
+      
+      // Track error
+      if (posthog) {
+        posthog.capture('email_verification_resend_error', {
+          email: userEmail,
+          error: errorMessage,
+        });
+      }
+
+      // Re-enable button immediately on error
+      setResendEnabled(true);
+      console.error('Resend failed:', errorMessage);
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const handleManualRedirect = () => {
     setIsRedirecting(true);
@@ -231,10 +320,63 @@ const VerifyEmailPage = () => {
                     </div>
                   )}
                   
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <p className="text-slate-600 text-sm">
-                      The verification link may have expired or been used already. Please try signing up again or contact support if the problem persists.
+                      The verification link may have expired or been used already.
                     </p>
+
+                    {/* Resend Email Section */}
+                    {userEmail && (
+                      <div className="border-t border-slate-200 pt-4">
+                        <p className="text-slate-600 text-sm mb-3">
+                          Didn&apos;t receive the email? We can send you a new verification link.
+                        </p>
+                        <div className="bg-slate-50 border border-slate-200 rounded-md px-3 py-2 mb-3">
+                          <p className="text-slate-700 text-sm font-medium">
+                            {userEmail}
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleResendEmail}
+                          disabled={!resendEnabled || isResending}
+                          className={`w-full px-4 py-3 rounded-md text-sm font-semibold shadow-md transition-all mb-3 ${
+                            resendEnabled && !isResending
+                              ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white"
+                              : "bg-slate-200 text-slate-500 cursor-not-allowed"
+                          }`}
+                        >
+                          {isResending ? (
+                            <div className="flex items-center justify-center">
+                              <svg 
+                                className="animate-spin -ml-1 mr-3 h-4 w-4" 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                fill="none" 
+                                viewBox="0 0 24 24"
+                              >
+                                <circle 
+                                  className="opacity-25" 
+                                  cx="12" 
+                                  cy="12" 
+                                  r="10" 
+                                  stroke="currentColor" 
+                                  strokeWidth="4"
+                                />
+                                <path 
+                                  className="opacity-75" 
+                                  fill="currentColor" 
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                />
+                              </svg>
+                              Sending...
+                            </div>
+                          ) : resendCooldown > 0 ? (
+                            `Resend available in ${resendCooldown}s`
+                          ) : (
+                            "Send New Verification Email"
+                          )}
+                        </button>
+                      </div>
+                    )}
                     
                     <button
                       onClick={handleReturnToLogin}
