@@ -281,7 +281,7 @@ const ForgotPasswordPage = () => {
                           </div>
                         ) : (
                           <div className="flex items-center justify-center">
-                            <span>&#39;Send Reset Link&#39;</span>
+                            <span>Send Reset Link</span>
                           </div>
                         )}
                       </HoverButton>
