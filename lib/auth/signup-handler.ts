@@ -132,7 +132,7 @@ export async function signupBusinessLogic({ email, password, supabaseClient, ana
   // Validate input
   const parse = signupSchema.safeParse({ email, password });
   if (!parse.success) {
-    return { status: 400, body: { error: 'Invalid input' } };
+    return { status: 400, body: { error: 'Invalid email or password' } };
   }
   // Note: Rate limiting is handled at the API route level
   analytics.capture({ event: 'signup_attempt', properties: { 
