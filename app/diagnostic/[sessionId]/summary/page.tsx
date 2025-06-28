@@ -400,8 +400,17 @@ const DiagnosticSummaryPage = () => {
         </button>
         <button
           onClick={() => {
-            // Placeholder for future study plan functionality
-            alert('Study plan feature coming soon!');
+            posthog?.capture('study_plan_initiated', {
+              sessionId: summary.sessionId,
+              examType: summary.examType,
+              score: summary.score
+            });
+            const nextUrl = `/study-plan/setup?fromDiagnostic=${summary.sessionId}`;
+            if (!user) {
+              router.push(`/login?next=${encodeURIComponent(nextUrl)}`);
+            } else {
+              router.push(nextUrl);
+            }
           }}
           style={{
             padding: '12px 32px',
