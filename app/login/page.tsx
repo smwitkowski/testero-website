@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from 'next/link';
 import { usePostHog } from "posthog-js/react";
+import { useSearchParams } from 'next/navigation';
 import { HoverButton } from "@/components/ui/hover-button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
@@ -35,6 +36,8 @@ const LoginPage = () => {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [userEmail, setUserEmail] = useState<string>('');
   const posthog = usePostHog(); // Get PostHog instance
+  const searchParams = useSearchParams();
+  const nextUrl = searchParams.get('next') || '/dashboard';
 
   // Initialize the form
   const form = useForm<LoginFormValues>({
@@ -157,7 +160,7 @@ const LoginPage = () => {
       // Add a manual redirect as a backup
       // Sometimes the auth state change might not trigger immediately
       setTimeout(() => {
-        window.location.href = '/dashboard';
+        window.location.href = nextUrl;
       }, 1500);
 
     } catch (err) {

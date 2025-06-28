@@ -21,7 +21,13 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ### Testing
 
-Run unit tests with Jest:
+Run unit tests with Jest. If this is your first time running the tests, execute the startup script to install dependencies and Playwright browsers:
+
+```bash
+./scripts/test-startup.sh
+```
+
+Then run the tests:
 
 ```bash
 npm test
