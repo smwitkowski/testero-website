@@ -4,7 +4,7 @@ import { AuthProvider } from "@/components/providers/AuthProvider"; // Import Au
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
 import Script from "next/script";
 import { generateMetadata, generateJsonLd, generateViewport } from "@/lib/seo";
-import Navbar from "@/components/ui/navbar"; // Import the Navbar component
+import Navbar from "@/components/marketing/navigation/navbar"; // Import the Navbar component
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

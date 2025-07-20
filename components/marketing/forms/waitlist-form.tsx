@@ -7,7 +7,7 @@ import { z } from "zod";
 import { usePostHog } from "posthog-js/react"; // Import usePostHog
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { HoverButton } from "@/components/ui/hover-button";
+import { HoverButton } from "@/components/marketing/buttons/hover-button";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Define the form schema with zod validation

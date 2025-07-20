@@ -5,18 +5,18 @@ import { useInView } from "react-intersection-observer";
 import { usePostHog } from "posthog-js/react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { StaggeredText } from "@/components/ui/staggered-text";
-import { BenefitsSectionSkeleton } from "@/components/ui/benefits-section";
-import { FinalCtaSection } from "@/components/ui/final-cta-section";
-import { LampContainer } from "@/components/ui/lamp-effect";
-import { EnhancedSocialProof } from "@/components/ui/enhanced-social-proof";
-import { TestimonialCarousel } from "@/components/ui/testimonial-carousel";
+import { StaggeredText } from "@/components/marketing/effects/staggered-text";
+import { BenefitsSectionSkeleton } from "@/components/marketing/sections/benefits-section";
+import { FinalCtaSection } from "@/components/marketing/sections/final-cta-section";
+import { LampContainer } from "@/components/marketing/effects/lamp-effect";
+import { EnhancedSocialProof } from "@/components/marketing/sections/enhanced-social-proof";
+import { TestimonialCarousel } from "@/components/marketing/sections/testimonial-carousel";
 import { Button } from "@/components/ui/button";
 import { JsonLd } from "./page.metadata";
 
 // Dynamically import the BenefitsSection component
 const BenefitsSection = dynamic(
-  () => import("@/components/ui/benefits-section").then((mod) => mod.BenefitsSection),
+  () => import("@/components/marketing/sections/benefits-section").then((mod) => mod.BenefitsSection),
   { 
     loading: () => <BenefitsSectionSkeleton />,
     ssr: false // Disable server-side rendering for this component

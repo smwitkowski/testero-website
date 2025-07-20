@@ -2,8 +2,8 @@
 
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
-import { Marquee } from "./marquee";
-import { Card } from "./card";
+import { Marquee } from "@/components/marketing/effects/marquee";
+import { Card } from "@/components/ui/card";
 import { colorSemantic } from "@/lib/design-system";
 
 interface SocialProofBadge {

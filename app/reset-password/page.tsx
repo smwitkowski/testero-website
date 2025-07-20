@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { usePostHog } from "posthog-js/react";
 import { motion } from "framer-motion";
-import { HoverButton } from "@/components/ui/hover-button";
+import { HoverButton } from "@/components/marketing/buttons/hover-button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { supabase } from '@/lib/supabase/client';
