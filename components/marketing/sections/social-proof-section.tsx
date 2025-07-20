@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { colors, duration, easing } from '@/lib/design-system';
+import { colorSemantic, duration, easing } from '@/lib/design-system';
 
 interface SocialProofCardProps {
   icon: React.ReactNode;
@@ -115,7 +115,7 @@ export function SocialProofSection() {
             }
             title="500+ Active Users"
             subtitle="Already Practicing with Testero"
-            color={colors.primary[400]}
+            color={colorSemantic.primary[400]}
             delay={duration.fast * 2}
           />
           
@@ -128,7 +128,7 @@ export function SocialProofSection() {
             }
             title="Built by Cloud Certification Experts"
             subtitle="Ex-Google Cloud PSO Leadership Team"
-            color={colors.feedback.success.base}
+            color={colorSemantic.success.base}
             delay={duration.fast * 3}
           />
           
@@ -141,7 +141,7 @@ export function SocialProofSection() {
             }
             title="Award-Winning Platform"
             subtitle="Product Hunt Top Launch for Certification Tools"
-            color={colors.accent[400]}
+            color={colorSemantic.accent[400]}
             delay={duration.fast * 4}
           />
           
@@ -154,7 +154,7 @@ export function SocialProofSection() {
             }
             title="Available Now"
             subtitle="Practice Questions & Diagnostics Ready"
-            color={colors.accent[600]}
+            color={colorSemantic.accent[600]}
             delay={duration.fast * 5}
           />
         </div>

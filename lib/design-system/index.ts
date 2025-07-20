@@ -7,10 +7,6 @@
 // Component style configurations
 export * from './components';
 
-// Legacy compatibility exports
-export * from './animations';
-export * from './breakpoints';
-
 // Convenience re-exports for common usage patterns
 export { 
   // Color tokens
@@ -46,9 +42,28 @@ export {
   component as effectsComponent,
   gradients,
   keyframes,
+  // Animation tokens (migrated from animations.ts)
+  duration,
+  easing,
+  delay,
+  stagger,
+  animationPresets,
+  reducedMotion,
   effects as legacyEffects,
   effects // Legacy export for backwards compatibility
 } from './tokens/effects';
+
+export {
+  // Layout tokens
+  primitive as layoutPrimitive,
+  semantic as layoutSemantic,
+  component as layoutComponent,
+  responsive as layoutResponsive,
+  // Legacy compatibility
+  breakpoints,
+  mediaQueries,
+  layout
+} from './tokens/layout';
 
 export {
   // Component variants
@@ -62,6 +77,7 @@ export {
   button as legacyButton,
   card as legacyCard
 } from './components';
+
 
 // Design system metadata
 export const designSystemVersion = '2.0.0';

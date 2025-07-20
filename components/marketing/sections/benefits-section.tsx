@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { colors, duration, easing } from '@/lib/design-system';
+import { colorSemantic, duration, easing } from '@/lib/design-system';
 
 interface BenefitCardProps {
   icon: React.ReactNode;
@@ -21,7 +21,7 @@ const BenefitCard: React.FC<BenefitCardProps> = ({
   title,
   description,
   highlight,
-  highlightColor = colors.accent[500],
+  highlightColor = colorSemantic.accent[500],
   bgColor,
   iconColor,
   delay = 0
@@ -260,8 +260,8 @@ export function BenefitsSection() {
             }
             title="Smart Diagnostic Tests"
             description="Take personalized assessments that identify your knowledge gaps across Google Cloud, AWS, and Azure certification topics. Available now."
-            bgColor={colors.primary[50]}
-            iconColor={colors.primary[500]}
+            bgColor={colorSemantic.primary[50]}
+            iconColor={colorSemantic.primary[500]}
             delay={duration.fast * 3}
           />
           
@@ -274,8 +274,8 @@ export function BenefitsSection() {
             }
             title="Real Exam-Style Practice Questions"
             description="Practice with authentic questions and detailed explanations for Google Cloud, AWS, and Azure certifications. Learn from every answer."
-            bgColor={colors.feedback.success.light}
-            iconColor={colors.feedback.success.base}
+            bgColor={colorSemantic.success.light}
+            iconColor={colorSemantic.success.base}
             delay={duration.fast * 4}
           />
           
@@ -288,8 +288,8 @@ export function BenefitsSection() {
             }
             title="Track Your Certification Progress"
             description="Monitor your readiness across different certification topics with detailed analytics and personalized recommendations."
-            bgColor={colors.primary[100]}
-            iconColor={colors.accent[500]}
+            bgColor={colorSemantic.primary[100]}
+            iconColor={colorSemantic.accent[500]}
             delay={duration.fast * 5}
           />
           
@@ -302,8 +302,8 @@ export function BenefitsSection() {
             }
             title="Multiple Cloud Platforms Supported"
             description="Prepare for Google Cloud Professional ML Engineer, Cloud Digital Leader, and Cloud Architect certifications. More platforms coming soon."
-            bgColor={colors.accent[50]}
-            iconColor={colors.accent[500]}
+            bgColor={colorSemantic.accent[50]}
+            iconColor={colorSemantic.accent[500]}
             delay={duration.fast * 6}
           />
         </div>
