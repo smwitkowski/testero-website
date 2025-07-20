@@ -40,7 +40,7 @@ const SpecificPracticeQuestionPage = () => {
 
     setLoading(true);
     setError(null);
-    fetch(`/api/question/${questionId}`) // Fetch specific question by ID
+    fetch(`/api/questions/${questionId}`) // Fetch specific question by ID
       .then(async (res) => {
         if (!res.ok) {
           const data = await res.json();
@@ -63,7 +63,7 @@ const SpecificPracticeQuestionPage = () => {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch("/api/question/submit", { // Submit API remains the same
+      const res = await fetch("/api/questions/submit", { // Submit API remains the same
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
