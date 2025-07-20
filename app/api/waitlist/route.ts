@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
-import { supabase } from "@/lib/supabase/client"; // Import Supabase client
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createSuccessResponse, createErrorResponse, commonErrors } from "@/lib/api/response-utils";
 
 // Define the schema for validation
 const formSchema = z.object({
@@ -12,20 +13,24 @@ const formSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  let body;
   try {
-    const body = await req.json();
+    body = await req.json();
+  } catch {
+    return commonErrors.invalidJson();
+  }
+
+  try {
     const result = formSchema.safeParse(body);
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error.errors[0]?.message || "Invalid input" },
-        { status: 400 }
-      );
+      return createErrorResponse(result.error.errors[0]?.message || "Invalid input");
     }
 
     const { email, examType } = result.data;
 
     // Insert data into Supabase
+    const supabase = createServerSupabaseClient();
     const { data, error: dbError } = await supabase
       .from("waitlist")
       .insert([{ email: email, exam_type: examType }]) // Map examType to exam_type
@@ -35,15 +40,9 @@ export async function POST(req: NextRequest) {
       console.error("Supabase error:", dbError);
       // Handle potential unique constraint violation (email already exists)
       if (dbError.code === "23505") {
-        return NextResponse.json(
-          { error: "This email is already on the waitlist." },
-          { status: 409 } // Conflict
-        );
+        return createErrorResponse("This email is already on the waitlist.", 409);
       }
-      return NextResponse.json(
-        { error: "Failed to save submission to database" },
-        { status: 500 }
-      );
+      return createErrorResponse("Failed to save submission to database", 500);
     }
 
     console.log("Waitlist submission saved:", data);
@@ -89,15 +88,11 @@ export async function POST(req: NextRequest) {
     }
     // --- Loops Integration End ---
 
-    return NextResponse.json({ success: true });
+    return createSuccessResponse();
 
   } catch (error: Error | unknown) {
     console.error("API route error:", error);
-    // Check if error is an instance of Error to access message property safely
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    return NextResponse.json(
-      { error: `Failed to process submission: ${errorMessage}` },
-      { status: 500 }
-    );
+    return createErrorResponse(`Failed to process submission: ${errorMessage}`, 500);
   }
 }
