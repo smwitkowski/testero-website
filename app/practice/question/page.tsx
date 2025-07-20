@@ -29,7 +29,7 @@ const PracticeQuestionPage = () => {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch("/api/question/current")
+    fetch("/api/questions/current")
       .then(async (res) => {
         if (!res.ok) {
           const data = await res.json();
@@ -55,7 +55,7 @@ const PracticeQuestionPage = () => {
     setSubmitError(null);
     
     try {
-      const res = await fetch("/api/question/current");
+      const res = await fetch("/api/questions/current");
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Failed to fetch question");
@@ -74,7 +74,7 @@ const PracticeQuestionPage = () => {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch("/api/question/submit", {
+      const res = await fetch("/api/questions/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
