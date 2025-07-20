@@ -66,6 +66,49 @@ export const primitive = {
     '3xl': '1.5rem',  // 24px
     full: '9999px',
   },
+
+  // Animation durations (in milliseconds)
+  duration: {
+    fast: 150,        // Quick micro-interactions
+    default: 300,     // Standard animations
+    slow: 500,        // Emphasized animations
+    slower: 700,      // Extended animations
+  },
+
+  // Animation easing curves
+  easing: {
+    // Standard easings
+    linear: 'linear',
+    ease: 'ease',
+    easeIn: 'ease-in',
+    easeOut: 'ease-out',
+    easeInOut: 'ease-in-out',
+    
+    // Custom cubic-bezier easings
+    standard: 'cubic-bezier(0.4, 0.0, 0.2, 1)', // Material standard
+    accelerate: 'cubic-bezier(0.4, 0.0, 1, 1)',  // Material accelerate
+    decelerate: 'cubic-bezier(0.0, 0.0, 0.2, 1)', // Material decelerate
+    
+    // Springy animations
+    spring: 'cubic-bezier(0.5, 0, 0.1, 1.4)',
+    bounce: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+  },
+
+  // Animation delays (in milliseconds)
+  delay: {
+    none: 0,
+    tiny: 50,
+    short: 100,
+    medium: 200,
+    long: 300,
+  },
+
+  // Staggered animation settings
+  stagger: {
+    children: 0.1,    // Delay between child elements (seconds)
+    sibling: 0.05,    // Delay between sibling elements (seconds)
+    list: 0.08,       // Delay for list items (seconds)
+  },
 };
 
 // SEMANTIC TOKENS (Purpose-based effects)
@@ -106,6 +149,99 @@ export const semantic = {
       background: `rgba(0, 0, 0, ${primitive.opacity[20]})`,
       backdropFilter: `blur(${primitive.blur.md})`,
       border: `1px solid rgba(255, 255, 255, ${primitive.opacity[10]})`,
+    },
+  },
+
+  // Animation presets for common patterns
+  animations: {
+    // Fade animations
+    fadeIn: {
+      keyframes: {
+        from: { opacity: 0 },
+        to: { opacity: 1 },
+      },
+      duration: primitive.duration.default,
+      easing: primitive.easing.standard,
+    },
+    fadeOut: {
+      keyframes: {
+        from: { opacity: 1 },
+        to: { opacity: 0 },
+      },
+      duration: primitive.duration.default,
+      easing: primitive.easing.standard,
+    },
+    
+    // Slide animations
+    slideInFromTop: {
+      keyframes: {
+        from: { transform: 'translateY(-20px)', opacity: 0 },
+        to: { transform: 'translateY(0)', opacity: 1 },
+      },
+      duration: primitive.duration.default,
+      easing: primitive.easing.spring,
+    },
+    slideInFromBottom: {
+      keyframes: {
+        from: { transform: 'translateY(20px)', opacity: 0 },
+        to: { transform: 'translateY(0)', opacity: 1 },
+      },
+      duration: primitive.duration.default,
+      easing: primitive.easing.spring,
+    },
+    slideInFromLeft: {
+      keyframes: {
+        from: { transform: 'translateX(-20px)', opacity: 0 },
+        to: { transform: 'translateX(0)', opacity: 1 },
+      },
+      duration: primitive.duration.default,
+      easing: primitive.easing.spring,
+    },
+    slideInFromRight: {
+      keyframes: {
+        from: { transform: 'translateX(20px)', opacity: 0 },
+        to: { transform: 'translateX(0)', opacity: 1 },
+      },
+      duration: primitive.duration.default,
+      easing: primitive.easing.spring,
+    },
+    
+    // Scale animations
+    scaleIn: {
+      keyframes: {
+        from: { transform: 'scale(0.9)', opacity: 0 },
+        to: { transform: 'scale(1)', opacity: 1 },
+      },
+      duration: primitive.duration.default,
+      easing: primitive.easing.spring,
+    },
+    scaleOut: {
+      keyframes: {
+        from: { transform: 'scale(1)', opacity: 1 },
+        to: { transform: 'scale(0.9)', opacity: 0 },
+      },
+      duration: primitive.duration.default,
+      easing: primitive.easing.spring,
+    },
+  },
+
+  // Reduced motion patterns for accessibility
+  reducedMotion: {
+    // Only use opacity changes, no movement
+    entry: {
+      keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
+      duration: primitive.duration.default,
+      easing: primitive.easing.easeInOut,
+    },
+    exit: {
+      keyframes: { from: { opacity: 1 }, to: { opacity: 0 } },
+      duration: primitive.duration.default,
+      easing: primitive.easing.easeInOut,
+    },
+    hover: {
+      transition: 'none',
+      transform: 'none',
+      boxShadow: 'none',
     },
   },
 };
@@ -151,17 +287,37 @@ export const component = {
       shadowHover: semantic.elevation.medium,
       gradient: 'linear-gradient(45deg, #f97316, #ea580c)',
       gradientHover: 'linear-gradient(45deg, #ea580c, #c2410c)',
+      hover: {
+        transform: 'scale(1.05)',
+        transition: `transform ${primitive.duration.fast}ms ${primitive.easing.spring}`,
+      },
+      active: {
+        transform: 'scale(0.97)',
+        transition: `transform ${primitive.duration.fast}ms ${primitive.easing.easeInOut}`,
+      },
+      focus: {
+        boxShadow: '0 0 8px rgba(0, 0, 0, 0.2)',
+        transition: `box-shadow ${primitive.duration.fast}ms ${primitive.easing.easeOut}`,
+      },
     },
     secondary: {
       shadow: semantic.elevation.low,
       shadowHover: semantic.elevation.medium,
       border: `1px solid rgba(255, 255, 255, ${primitive.opacity[40]})`,
+      hover: {
+        transform: 'scale(1.05)',
+        transition: `transform ${primitive.duration.fast}ms ${primitive.easing.spring}`,
+      },
     },
     ghost: {
       shadow: primitive.boxShadow.none,
       shadowHover: semantic.elevation.low,
       background: `rgba(255, 255, 255, ${primitive.opacity[10]})`,
       backgroundHover: `rgba(255, 255, 255, ${primitive.opacity[20]})`,
+      hover: {
+        transform: 'scale(1.05)',
+        transition: `transform ${primitive.duration.fast}ms ${primitive.easing.spring}`,
+      },
     },
   },
 
@@ -172,18 +328,31 @@ export const component = {
       shadowHover: semantic.elevation.medium,
       border: `1px solid rgba(226, 232, 240, ${primitive.opacity[100]})`, // slate-200
       borderRadius: primitive.borderRadius.lg,
+      hover: {
+        transform: 'translateY(-4px)',
+        transition: `transform ${primitive.duration.fast}ms ${primitive.easing.spring}`,
+      },
+      entry: semantic.animations.scaleIn,
     },
     elevated: {
       shadow: semantic.elevation.medium,
       shadowHover: semantic.elevation.high,
       border: `1px solid rgba(241, 245, 249, ${primitive.opacity[100]})`, // slate-100
       borderRadius: primitive.borderRadius.xl,
+      hover: {
+        transform: 'translateY(-4px)',
+        transition: `transform ${primitive.duration.fast}ms ${primitive.easing.spring}`,
+      },
     },
     glass: {
       ...semantic.glass.light,
       shadow: semantic.elevation.low,
       shadowHover: semantic.elevation.medium,
       borderRadius: primitive.borderRadius.lg,
+      hover: {
+        transform: 'translateY(-4px)',
+        transition: `transform ${primitive.duration.fast}ms ${primitive.easing.spring}`,
+      },
     },
   },
 
@@ -343,3 +512,11 @@ export const effects = {
   gradients,
   elevation: semantic.elevation,
 };
+
+// Animation exports for legacy compatibility
+export const duration = primitive.duration;
+export const easing = primitive.easing;
+export const delay = primitive.delay;
+export const stagger = primitive.stagger;
+export const animationPresets = semantic.animations;
+export const reducedMotion = semantic.reducedMotion;
