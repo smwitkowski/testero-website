@@ -13,10 +13,10 @@ jest.mock('../lib/supabase/client', () => ({
 }));
 
 import { POST as waitlistPOST } from '../app/api/waitlist/route';
-import { GET as listGET } from '../app/api/questions/list/route';
-import { GET as currentGET } from '../app/api/question/current/route';
-import { GET as idGET } from '../app/api/question/[id]/route';
-import { POST as submitPOST } from '../app/api/question/submit/route';
+import { GET as listGET } from '../app/api/questions/route';
+import { GET as currentGET } from '../app/api/questions/current/route';
+import { GET as idGET } from '../app/api/questions/[id]/route';
+import { POST as submitPOST } from '../app/api/questions/submit/route';
 import { GET as diagnosticGET, POST as diagnosticPOST } from '../app/api/diagnostic/route';
 
 describe('API routes', () => {
@@ -126,7 +126,7 @@ describe('API routes', () => {
       const selectMockO = jest.fn(() => ({ eq: eqOptMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
 
-      const req = new NextRequest('http://localhost/api/question/9');
+      const req = new NextRequest('http://localhost/api/questions/9');
       const res = await idGET(req);
       const json = await res.json();
       expect(res.status).toBe(200);
@@ -148,7 +148,7 @@ describe('API routes', () => {
       const selectExpMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleExpMock })) }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectExpMock });
 
-      const req = new Request('http://localhost/api/question/submit', {
+      const req = new Request('http://localhost/api/questions/submit', {
         method: 'POST',
         body: JSON.stringify({ questionId: 1, selectedOptionKey: 'B' }),
         headers: { 'Content-Type': 'application/json' },
@@ -161,7 +161,7 @@ describe('API routes', () => {
     });
 
     it('missing fields', async () => {
-      const req = new Request('http://localhost/api/question/submit', {
+      const req = new Request('http://localhost/api/questions/submit', {
         method: 'POST',
         body: JSON.stringify({}),
         headers: { 'Content-Type': 'application/json' },
