@@ -3,7 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { Marquee } from "@/components/ui/marquee";
+import { Marquee } from "@/components/marketing/effects/marquee";
 import { partners, type Partner } from "@/data/partners";
 
 // Component-specific design tokens following the design system

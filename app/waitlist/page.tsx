@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePostHog } from "posthog-js/react";
-import { WaitlistForm } from "@/components/ui/waitlist-form";
+import { WaitlistForm } from "@/components/marketing/forms/waitlist-form";
 import { motion } from "framer-motion";
 
 const WaitlistPage = () => {
