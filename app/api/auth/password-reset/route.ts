@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { PostHog } from 'posthog-node';
 import { z } from 'zod';
+import { createSuccessResponse, createErrorResponse, commonErrors } from '@/lib/api/response-utils';
 
 // In-memory rate limiter (should be replaced with Redis in production)
 const rateLimitMap = new Map<string, number[]>();
@@ -38,13 +39,13 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    return commonErrors.invalidJson();
   }
 
   // Validate input
   const parse = passwordResetSchema.safeParse(body);
   if (!parse.success) {
-    return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
+    return createErrorResponse('Invalid email address');
   }
 
   const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
       properties: { ip, email },
       distinctId: email
     });
-    return NextResponse.json({ error: 'Too many password reset attempts' }, { status: 429 });
+    return commonErrors.tooManyRequests('Too many password reset attempts');
   }
 
   const supabaseClient = createServerSupabaseClient();
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
       distinctId: email
     });
 
-    return NextResponse.json({ status: 'ok' }, { status: 200 });
+    return createSuccessResponse();
 
   } catch (error) {
     const detailedError = error instanceof Error ? error.message : 'Password reset failed';
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Return generic error message to prevent information leakage
-    return NextResponse.json({ error: 'Request failed. Please try again.' }, { status: 400 });
+    return createErrorResponse('Request failed. Please try again.');
   }
 }
 
