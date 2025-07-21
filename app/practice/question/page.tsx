@@ -1,17 +1,12 @@
 "use client";
 import React, { useEffect, useState } from "react";
-
-interface Option {
-  id: string;
-  label: string;
-  text: string;
-}
-
-interface QuestionData {
-  id: string;
-  question_text: string;
-  options: Option[];
-}
+import { 
+  QuestionDisplay, 
+  QuestionFeedback, 
+  SubmitButton, 
+  QuestionData, 
+  FeedbackType 
+} from "@/components/practice";
 
 const PracticeQuestionPage = () => {
   const [question, setQuestion] = useState<QuestionData | null>(null);
@@ -19,11 +14,7 @@ const PracticeQuestionPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedOptionKey, setSelectedOptionKey] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [feedback, setFeedback] = useState<{
-    isCorrect: boolean;
-    correctOptionKey: string;
-    explanationText: string;
-  } | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackType | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -101,83 +92,26 @@ const PracticeQuestionPage = () => {
         {error && <div className="text-red-600 text-center">Error: {error}</div>}
         {!loading && !error && question && (
           <>
-            <div className="text-xl font-medium mb-6">
-              {question.question_text}
-            </div>
-            <div className="flex flex-col gap-3 mb-8 max-w-[90%] mx-auto">
-              {question.options.map((option) => {
-                const isSelected = selectedOptionKey === option.label;
-                const isCorrect = feedback?.correctOptionKey === option.label;
-                const isIncorrect = feedback && isSelected && !feedback.isCorrect;
-                const isDisabled = !!feedback;
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => !isDisabled && setSelectedOptionKey(option.label)}
-                    disabled={isDisabled}
-                    className={`
-                      p-3 rounded-md text-left transition-all duration-150 w-full
-                      ${isSelected ? 'border-2 border-blue-500' : 'border border-gray-300'}
-                      ${isCorrect 
-                        ? 'bg-green-100 text-green-700 border-green-500' 
-                        : isIncorrect 
-                        ? 'bg-red-100 text-red-700 border-red-500'
-                        : isSelected 
-                        ? 'bg-blue-50 text-blue-600' 
-                        : 'bg-gray-50 text-gray-900 hover:bg-gray-100'
-                      }
-                      ${isSelected ? 'font-semibold' : 'font-normal'}
-                      ${isDisabled && !isSelected && !isCorrect ? 'opacity-70' : 'opacity-100'}
-                      ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}
-                    `}
-                  >
-                    {option.text}
-                    {isCorrect && feedback && (
-                      <span className="ml-2 font-bold">✓</span>
-                    )}
-                    {isIncorrect && feedback && (
-                      <span className="ml-2 font-bold">✗</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+            <QuestionDisplay
+              question={question}
+              selectedOptionKey={selectedOptionKey}
+              feedback={feedback}
+              onOptionSelect={setSelectedOptionKey}
+            />
             {!feedback ? (
-              <button
-                onClick={handleSubmit}
+              <SubmitButton
+                onSubmit={handleSubmit}
                 disabled={!selectedOptionKey || submitting}
-                className={`
-                  px-8 py-3 rounded-md font-semibold text-white transition-colors
-                  ${!selectedOptionKey || submitting 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
-                  }
-                `}
-              >
-                {submitting ? "Submitting..." : "Submit"}
-              </button>
+                submitting={submitting}
+              />
             ) : null}
             {submitError && <div className="text-red-600 mt-4">{submitError}</div>}
             {feedback && (
-              <div className="mt-8">
-                <div className={`
-                  text-lg font-semibold mb-3
-                  ${feedback.isCorrect ? 'text-green-600' : 'text-red-600'}
-                `}>
-                  {feedback.isCorrect ? "Correct!" : "Incorrect."}
-                </div>
-                <div className="mb-3">
-                  <strong className="font-semibold">Explanation:</strong>
-                  <div className="mt-1">{feedback.explanationText || "No explanation provided."}</div>
-                </div>
-                <button
-                  onClick={fetchNewQuestion}
-                  className="mt-4 px-7 py-2.5 rounded-md bg-gray-100 text-gray-800 border border-gray-300 font-semibold hover:bg-gray-200 transition-colors cursor-pointer"
-                >
-                  Next Question
-                </button>
-              </div>
+              <QuestionFeedback
+                feedback={feedback}
+                onNextAction={fetchNewQuestion}
+                nextActionLabel="Next Question"
+              />
             )}
           </>
         )}
