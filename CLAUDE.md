@@ -106,7 +106,10 @@ lib/                   # Business logic and utilities
 components/            # React components
 ├── ui/               # shadcn/ui base components
 ├── providers/        # Context providers (Auth, PostHog)
-└── content/          # Content-specific components
+├── content/          # Content-specific components
+├── marketing/        # Marketing and landing page components
+├── practice/         # Practice question components (shared)
+└── auth/             # Authentication form components
 
 e2e/                   # End-to-end testing with Playwright
 ├── helpers/          # Test utilities, page objects, and mock data
@@ -153,6 +156,55 @@ export interface ApiResponse {
   body: ResponseBody;
 }
 ```
+
+### Component Architecture & Shared Patterns
+
+#### Component Organization Strategy
+- **Feature-based grouping**: Components organized by domain (auth, practice, marketing, content)
+- **Shared component extraction**: Extract reusable UI logic when 2+ pages share similar functionality
+- **Type safety**: Always export and reuse TypeScript interfaces across components
+- **Consistent props patterns**: Use standardized prop naming and callback conventions
+
+#### Practice Component Example (Shared Components)
+Located in `/components/practice/` - demonstrates proper component extraction:
+```typescript
+// Shared types exported from single source
+export interface QuestionData {
+  id: string;
+  question_text: string;
+  options: Option[];
+}
+
+// Reusable display component with clear props interface
+export const QuestionDisplay: React.FC<{
+  question: QuestionData;
+  selectedOptionKey: string | null;
+  feedback: FeedbackType | null;
+  onOptionSelect: (optionKey: string) => void;
+}> = ({ question, selectedOptionKey, feedback, onOptionSelect }) => {
+  // Consistent Tailwind styling patterns
+  // Clear state management with visual feedback
+};
+```
+
+#### Component Extraction Guidelines
+**Extract shared components when:**
+- 2+ pages/components share identical UI logic (50+ lines)
+- Similar state management patterns are duplicated
+- Styling patterns are repeated with minor variations
+- Type interfaces are duplicated across files
+
+**Component structure:**
+- Single responsibility per component
+- Props interface clearly defined with TypeScript
+- Consistent Tailwind styling patterns
+- Export types and components from index.ts barrel files
+
+#### Marketing Component Organization
+- Located in `/components/marketing/` with sub-folders by type
+- `buttons/`, `effects/`, `forms/`, `navigation/`, `sections/`
+- Prevents mixing of marketing UI with core application components
+- Maintains clear separation between landing page and app functionality
 
 ### Styling Guidelines
 
@@ -327,6 +379,15 @@ public.user_sessions (
 - `lib/supabase/client.ts` - Browser Supabase client factory
 - `lib/supabase/server.ts` - Server-side Supabase client
 - `components/providers/AuthProvider.tsx` - Authentication context with public route support
+
+### Shared Component System
+- `components/practice/` - Reusable practice question components
+  - `QuestionDisplay.tsx` - Question text and option rendering with state management
+  - `QuestionFeedback.tsx` - Feedback display with configurable next actions
+  - `SubmitButton.tsx` - Standardized submit button with loading states
+  - `types.ts` - Shared TypeScript interfaces for practice functionality
+- `components/marketing/` - Marketing and landing page component library
+- `components/auth/` - Authentication form components with consistent styling
 
 ### Testing Infrastructure
 - `jest.config.ts` - Jest configuration with jsdom and module mapping
@@ -717,5 +778,78 @@ const [authState, setAuthState] = useState<AuthState>('loading');
 3. **Error messages**: Some endpoints leak internal errors
 4. **In-memory rate limiting**: Not suitable for production scaling
 
+## Component Development Workflow
+
+### Before Creating New Components
+1. **Search existing patterns** - Check `/components/` subdirectories for similar functionality
+2. **Review shared types** - Look for existing TypeScript interfaces that can be reused
+3. **Identify duplication** - If implementing similar UI to existing components, extract shared logic instead
+
+### Component Creation Guidelines
+
+#### Directory Structure Rules
+- **Feature-based organization**: Group by domain (`/auth/`, `/practice/`, `/marketing/`, `/content/`)
+- **Functional sub-directories**: Within marketing, organize by type (`buttons/`, `forms/`, `sections/`)
+- **Shared components**: Extract to domain-specific folders when used by 2+ pages
+- **Barrel exports**: Create `index.ts` files for clean imports
+
+#### When to Extract Shared Components
+Extract components when you encounter:
+- **Duplicate UI logic**: 50+ lines of similar code across 2+ files
+- **Repeated styling patterns**: Same Tailwind class combinations used multiple times
+- **Shared state management**: Similar state logic and handlers
+- **Type interface duplication**: Same TypeScript interfaces declared in multiple files
+
+#### Component Structure Standards
+```typescript
+// 1. Import shared types from dedicated files
+import { QuestionData, FeedbackType } from "./types";
+
+// 2. Define clear props interface
+interface ComponentProps {
+  data: QuestionData;
+  onAction: (value: string) => void;
+  isLoading?: boolean;
+}
+
+// 3. Export component with typed props
+export const ComponentName: React.FC<ComponentProps> = ({ 
+  data, 
+  onAction, 
+  isLoading = false 
+}) => {
+  // 4. Use consistent Tailwind patterns
+  return (
+    <div className="max-w-3xl mx-auto my-8 p-6 border border-gray-200 rounded-lg">
+      {/* Component content */}
+    </div>
+  );
+};
+```
+
+### Progressive Enhancement Strategy
+Follow this development progression:
+1. **Prototype**: Start with inline styles for rapid iteration
+2. **Stabilize**: Convert to Tailwind CSS classes once design is settled
+3. **Extract**: Move to shared components when patterns emerge across multiple files
+4. **Optimize**: Refine props interface and add TypeScript types
+
 ## Design System Guidelines
-- As we make new pages, components, sections, etc. we should revisit these design systems. The design systems are not static, but rather live and grow with the website.
+
+### Component Architecture Principles
+- **Single responsibility**: Each component should have one clear purpose
+- **Composition over inheritance**: Build complex UIs by combining simple components
+- **Consistent props patterns**: Use standard naming (onAction, isLoading, data, etc.)
+- **Type safety first**: Always define TypeScript interfaces before implementation
+
+### Styling Standards
+- **Tailwind-first approach**: All styling should use Tailwind CSS utility classes
+- **No inline styles**: Convert any inline styles to Tailwind classes immediately
+- **Responsive by default**: Include responsive breakpoints (sm:, md:, lg:) in component design
+- **Design token usage**: Prefer design system tokens over arbitrary values
+
+### File Organization Requirements
+- **Barrel exports**: Every component directory must have an `index.ts` file
+- **Type collocation**: Keep TypeScript interfaces in same directory as components
+- **Clear imports**: Use absolute imports with `@/` prefix for components
+- **Naming consistency**: Use PascalCase for components, camelCase for utilities
