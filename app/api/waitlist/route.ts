@@ -26,10 +26,9 @@ export async function POST(req: NextRequest) {
     const { email, examType } = result.data;
 
     // Insert data into Supabase
-    const { data, error: dbError } = await supabase
+    const { error: dbError } = await supabase
       .from("waitlist")
-      .insert([{ email: email, exam_type: examType }]) // Map examType to exam_type
-      .select();
+      .insert([{ email: email, exam_type: examType }]); // Map examType to exam_type
 
     if (dbError) {
       console.error("Supabase error:", dbError);
@@ -45,8 +44,6 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
-
-    console.log("Waitlist submission saved:", data);
 
     // --- Loops Integration Start ---
     const loopsApiKey = process.env.LOOPS_API_KEY;
@@ -77,9 +74,6 @@ export async function POST(req: NextRequest) {
           const errorBody = await loopsResponse.text();
           console.error(`Loops API Error (${loopsResponse.status}): ${errorBody}`);
           // Log the error but don't fail the overall request
-        } else {
-          const loopsData = await loopsResponse.json();
-          console.log("Loops contact created/updated successfully:", loopsData);
         }
       } catch (loopsError: Error | unknown) {
         const errorMessage = loopsError instanceof Error ? loopsError.message : "An unknown error occurred during Loops API call";
