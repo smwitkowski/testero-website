@@ -1,0 +1,829 @@
+{
+  "config": {
+    "configFile": "/Users/switkowski/Projects/Testero/frontend/playwright.config.ts",
+    "rootDir": "/Users/switkowski/Projects/Testero/frontend/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 5
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "playwright-report/results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/Users/switkowski/Projects/Testero/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 5
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/switkowski/Projects/Testero/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/switkowski/Projects/Testero/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 5
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/Users/switkowski/Projects/Testero/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/switkowski/Projects/Testero/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 5
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/Users/switkowski/Projects/Testero/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/switkowski/Projects/Testero/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 5
+        },
+        "id": "Mobile Chrome",
+        "name": "Mobile Chrome",
+        "testDir": "/Users/switkowski/Projects/Testero/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/switkowski/Projects/Testero/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 5
+        },
+        "id": "Mobile Safari",
+        "name": "Mobile Safari",
+        "testDir": "/Users/switkowski/Projects/Testero/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.53.0",
+    "workers": 5,
+    "webServer": {
+      "command": "npm run dev",
+      "url": "http://localhost:3000",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "auth-flows.spec.ts",
+      "file": "auth-flows.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Comprehensive Authentication Flows",
+          "file": "auth-flows.spec.ts",
+          "line": 13,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Complete User Journey - Happy Path",
+              "file": "auth-flows.spec.ts",
+              "line": 22,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should complete full user journey: signup → verification → login → dashboard access",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "failed",
+                          "duration": 8783,
+                          "error": {
+                            "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n",
+                            "stack": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55",
+                            "location": {
+                              "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                              "column": 55,
+                              "line": 35
+                            },
+                            "snippet": "  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                                "column": 55,
+                                "line": 35
+                              },
+                              "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n\n  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-06-21T00:35:38.987Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-chromium/test-failed-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-chromium/video.webm"
+                            },
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-chromium/error-context.md"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                            "column": 55,
+                            "line": 35
+                          }
+                        },
+                        {
+                          "workerIndex": 5,
+                          "parallelIndex": 0,
+                          "status": "failed",
+                          "duration": 8706,
+                          "error": {
+                            "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n",
+                            "stack": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55",
+                            "location": {
+                              "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                              "column": 55,
+                              "line": 35
+                            },
+                            "snippet": "  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                                "column": 55,
+                                "line": 35
+                              },
+                              "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n\n  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 1,
+                          "startTime": "2025-06-21T00:35:49.007Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-chromium-retry1/test-failed-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-chromium-retry1/video.webm"
+                            },
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-chromium-retry1/error-context.md"
+                            },
+                            {
+                              "name": "trace",
+                              "contentType": "application/zip",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-chromium-retry1/trace.zip"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                            "column": 55,
+                            "line": 35
+                          }
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "0c6c160bbdde4ceadf0a-158c5d4650646a8411c4",
+                  "file": "auth-flows.spec.ts",
+                  "line": 23,
+                  "column": 9
+                },
+                {
+                  "title": "should complete full user journey: signup → verification → login → dashboard access",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "firefox",
+                      "projectName": "firefox",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "failed",
+                          "duration": 10558,
+                          "error": {
+                            "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n",
+                            "stack": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55",
+                            "location": {
+                              "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                              "column": 55,
+                              "line": 35
+                            },
+                            "snippet": "  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                                "column": 55,
+                                "line": 35
+                              },
+                              "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n\n  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-06-21T00:35:39.000Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-firefox/test-failed-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-firefox/video.webm"
+                            },
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-firefox/error-context.md"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                            "column": 55,
+                            "line": 35
+                          }
+                        },
+                        {
+                          "workerIndex": 9,
+                          "parallelIndex": 1,
+                          "status": "failed",
+                          "duration": 8868,
+                          "error": {
+                            "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n",
+                            "stack": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55",
+                            "location": {
+                              "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                              "column": 55,
+                              "line": 35
+                            },
+                            "snippet": "  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                                "column": 55,
+                                "line": 35
+                              },
+                              "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n\n  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 1,
+                          "startTime": "2025-06-21T00:35:52.035Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-firefox-retry1/test-failed-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-firefox-retry1/video.webm"
+                            },
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-firefox-retry1/error-context.md"
+                            },
+                            {
+                              "name": "trace",
+                              "contentType": "application/zip",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-firefox-retry1/trace.zip"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                            "column": 55,
+                            "line": 35
+                          }
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "0c6c160bbdde4ceadf0a-7407747d8e8c68b7f8d7",
+                  "file": "auth-flows.spec.ts",
+                  "line": 23,
+                  "column": 9
+                },
+                {
+                  "title": "should complete full user journey: signup → verification → login → dashboard access",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "webkit",
+                      "projectName": "webkit",
+                      "results": [
+                        {
+                          "workerIndex": 2,
+                          "parallelIndex": 2,
+                          "status": "failed",
+                          "duration": 8649,
+                          "error": {
+                            "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n",
+                            "stack": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55",
+                            "location": {
+                              "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                              "column": 55,
+                              "line": 35
+                            },
+                            "snippet": "  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                                "column": 55,
+                                "line": 35
+                              },
+                              "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n\n  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-06-21T00:35:38.993Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-webkit/test-failed-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-webkit/video.webm"
+                            },
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-webkit/error-context.md"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                            "column": 55,
+                            "line": 35
+                          }
+                        },
+                        {
+                          "workerIndex": 8,
+                          "parallelIndex": 2,
+                          "status": "failed",
+                          "duration": 9004,
+                          "error": {
+                            "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n",
+                            "stack": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55",
+                            "location": {
+                              "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                              "column": 55,
+                              "line": 35
+                            },
+                            "snippet": "  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                                "column": 55,
+                                "line": 35
+                              },
+                              "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n\n  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 1,
+                          "startTime": "2025-06-21T00:35:49.414Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-webkit-retry1/test-failed-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-webkit-retry1/video.webm"
+                            },
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-webkit-retry1/error-context.md"
+                            },
+                            {
+                              "name": "trace",
+                              "contentType": "application/zip",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-webkit-retry1/trace.zip"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                            "column": 55,
+                            "line": 35
+                          }
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "0c6c160bbdde4ceadf0a-a8a145667d9853d46d8d",
+                  "file": "auth-flows.spec.ts",
+                  "line": 23,
+                  "column": 9
+                },
+                {
+                  "title": "should complete full user journey: signup → verification → login → dashboard access",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Mobile Chrome",
+                      "projectName": "Mobile Chrome",
+                      "results": [
+                        {
+                          "workerIndex": 3,
+                          "parallelIndex": 3,
+                          "status": "failed",
+                          "duration": 8773,
+                          "error": {
+                            "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n",
+                            "stack": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55",
+                            "location": {
+                              "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                              "column": 55,
+                              "line": 35
+                            },
+                            "snippet": "  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                                "column": 55,
+                                "line": 35
+                              },
+                              "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n\n  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-06-21T00:35:38.998Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-Mobile-Chrome/test-failed-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-Mobile-Chrome/video.webm"
+                            },
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-Mobile-Chrome/error-context.md"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                            "column": 55,
+                            "line": 35
+                          }
+                        },
+                        {
+                          "workerIndex": 6,
+                          "parallelIndex": 3,
+                          "status": "failed",
+                          "duration": 8782,
+                          "error": {
+                            "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n",
+                            "stack": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55",
+                            "location": {
+                              "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                              "column": 55,
+                              "line": 35
+                            },
+                            "snippet": "  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                                "column": 55,
+                                "line": 35
+                              },
+                              "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n\n  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 1,
+                          "startTime": "2025-06-21T00:35:49.008Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-Mobile-Chrome-retry1/test-failed-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-Mobile-Chrome-retry1/video.webm"
+                            },
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-Mobile-Chrome-retry1/error-context.md"
+                            },
+                            {
+                              "name": "trace",
+                              "contentType": "application/zip",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-Mobile-Chrome-retry1/trace.zip"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                            "column": 55,
+                            "line": 35
+                          }
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "0c6c160bbdde4ceadf0a-c165b5ac0aec51167d2a",
+                  "file": "auth-flows.spec.ts",
+                  "line": 23,
+                  "column": 9
+                },
+                {
+                  "title": "should complete full user journey: signup → verification → login → dashboard access",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "Mobile Safari",
+                      "projectName": "Mobile Safari",
+                      "results": [
+                        {
+                          "workerIndex": 4,
+                          "parallelIndex": 4,
+                          "status": "failed",
+                          "duration": 8675,
+                          "error": {
+                            "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n",
+                            "stack": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55",
+                            "location": {
+                              "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                              "column": 55,
+                              "line": 35
+                            },
+                            "snippet": "  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                                "column": 55,
+                                "line": 35
+                              },
+                              "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n\n  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2025-06-21T00:35:38.996Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-Mobile-Safari/test-failed-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-Mobile-Safari/video.webm"
+                            },
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-Mobile-Safari/error-context.md"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                            "column": 55,
+                            "line": 35
+                          }
+                        },
+                        {
+                          "workerIndex": 7,
+                          "parallelIndex": 4,
+                          "status": "failed",
+                          "duration": 8808,
+                          "error": {
+                            "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n",
+                            "stack": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55",
+                            "location": {
+                              "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                              "column": 55,
+                              "line": 35
+                            },
+                            "snippet": "  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });"
+                          },
+                          "errors": [
+                            {
+                              "location": {
+                                "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                                "column": 55,
+                                "line": 35
+                              },
+                              "message": "Error: \u001b[31mTimed out 5000ms waiting for \u001b[39m\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m\n\nLocator: getByText(/email verified/i)\nExpected: visible\nReceived: <element(s) not found>\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/email verified/i)\u001b[22m\n\n\n  33 |       const verificationToken = AuthTestData.generateToken();\n  34 |       await authHelpers.verifyEmail(verificationToken);\n> 35 |       await expect(page.getByText(/email verified/i)).toBeVisible();\n     |                                                       ^\n  36 |\n  37 |       // Step 3: User is automatically logged in and redirected to dashboard\n  38 |       await page.waitForURL('/dashboard', { timeout: 10000 });\n    at /Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts:35:55"
+                            }
+                          ],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 1,
+                          "startTime": "2025-06-21T00:35:49.411Z",
+                          "annotations": [],
+                          "attachments": [
+                            {
+                              "name": "screenshot",
+                              "contentType": "image/png",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-Mobile-Safari-retry1/test-failed-1.png"
+                            },
+                            {
+                              "name": "video",
+                              "contentType": "video/webm",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-Mobile-Safari-retry1/video.webm"
+                            },
+                            {
+                              "name": "error-context",
+                              "contentType": "text/markdown",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-Mobile-Safari-retry1/error-context.md"
+                            },
+                            {
+                              "name": "trace",
+                              "contentType": "application/zip",
+                              "path": "/Users/switkowski/Projects/Testero/frontend/test-results/auth-flows-Comprehensive-A-1236b--→-login-→-dashboard-access-Mobile-Safari-retry1/trace.zip"
+                            }
+                          ],
+                          "errorLocation": {
+                            "file": "/Users/switkowski/Projects/Testero/frontend/e2e/auth-flows.spec.ts",
+                            "column": 55,
+                            "line": 35
+                          }
+                        }
+                      ],
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "0c6c160bbdde4ceadf0a-ad398d16f5a8b23a417a",
+                  "file": "auth-flows.spec.ts",
+                  "line": 23,
+                  "column": 9
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-06-21T00:35:38.184Z",
+    "duration": 24009.304,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 5,
+    "flaky": 0
+  }
+}
