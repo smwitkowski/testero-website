@@ -1,6 +1,6 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import type { SerializeOptions } from 'cookie';
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import type { SerializeOptions } from "cookie";
 
 export function createServerSupabaseClient() {
   return createServerClient(
@@ -11,30 +11,25 @@ export function createServerSupabaseClient() {
         async get(name: string) {
           const cookieStore = await cookies();
           const cookie = cookieStore.get(name);
-          console.log(`[Server Supabase] Cookie ${name}: ${cookie ? 'Present' : 'Missing'}`);
           return cookie?.value;
         },
         async set(name: string, value: string, options: SerializeOptions) {
           try {
             const cookieStore = await cookies();
             cookieStore.set(name, value, options);
-            console.log(`[Server Supabase] Cookie ${name}: Set successfully`);
-          } catch (error) {
+          } catch {
             // The set method can fail in server components where cookies are read-only
             // This is expected behavior for API routes during authentication
-            console.error(
-              `[Server Supabase] Cookie ${name}: Set failed (expected in server components)`,
-              error
-            );
+            // The set method can fail in server components where cookies are read-only
+            // This is expected behavior for API routes during authentication
           }
         },
         async remove(name: string, options: SerializeOptions) {
           try {
             const cookieStore = await cookies();
-            cookieStore.set(name, '', { ...options, maxAge: 0 });
-            console.log(`[Server Supabase] Cookie ${name}: Removed successfully`);
-          } catch (error) {
-            console.error(`[Server Supabase] Cookie ${name}: Remove failed`, error);
+            cookieStore.set(name, "", { ...options, maxAge: 0 });
+          } catch {
+            // Cookie removal can fail in server components where cookies are read-only
           }
         },
       },
