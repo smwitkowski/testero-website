@@ -10,6 +10,7 @@ import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import rehypeStringify from "rehype-stringify";
 import { cache } from "react";
+import { contentCache } from "./cache";
 
 export interface ContentMeta {
   title: string;
@@ -53,6 +54,13 @@ const parseContentFile = async (
   slug: string,
   type: "hub" | "spoke"
 ): Promise<Content> => {
+  // Check cache first
+  const cacheKey = `${type}-${slug}`;
+  const cached = await contentCache.get<Content>(cacheKey, filePath);
+  if (cached) {
+    return cached;
+  }
+
   const fileContents = await fsPromises.readFile(filePath, "utf8");
   const { data, content } = matter(fileContents);
 
@@ -96,11 +104,16 @@ const parseContentFile = async (
     readingTime,
   };
 
-  return {
+  const result = {
     slug,
     content: htmlContent,
     meta,
   };
+
+  // Cache the parsed content
+  await contentCache.set(cacheKey, result, filePath);
+
+  return result;
 };
 
 // Get a single hub content by slug

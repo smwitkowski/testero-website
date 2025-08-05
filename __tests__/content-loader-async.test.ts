@@ -112,7 +112,9 @@ description: Testing caching
 
 # Cache Test`;
 
-      fs.writeFileSync(path.join(hubDir, "cache-test.md"), testContent);
+      const originalHubDir = path.join(process.cwd(), "app/content/hub");
+      fs.mkdirSync(originalHubDir, { recursive: true });
+      fs.writeFileSync(path.join(originalHubDir, "cache-test.md"), testContent);
 
       // First read
       const content1 = await contentLoader.getHubContent("cache-test");
@@ -121,6 +123,9 @@ description: Testing caching
       const content2 = await contentLoader.getHubContent("cache-test");
 
       expect(content1).toEqual(content2);
+
+      // Clean up
+      fs.rmSync(path.join(originalHubDir, "cache-test.md"), { force: true });
     });
 
     it("should invalidate cache when file is modified", async () => {
@@ -136,14 +141,15 @@ title: Updated Title
 
 Updated content`;
 
-      const filePath = path.join(hubDir, "cache-invalidation.md");
+      const originalHubDir = path.join(process.cwd(), "app/content/hub");
+      const filePath = path.join(originalHubDir, "cache-invalidation.md");
 
       // Write original content
       fs.writeFileSync(filePath, originalContent);
       const content1 = await contentLoader.getHubContent("cache-invalidation");
 
       // Update file after a delay to ensure different mtime
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       fs.writeFileSync(filePath, updatedContent);
 
       // Read again - should get updated content
@@ -151,6 +157,9 @@ Updated content`;
 
       expect(content1?.meta.title).toBe("Original Title");
       expect(content2?.meta.title).toBe("Updated Title");
+
+      // Clean up
+      fs.rmSync(filePath, { force: true });
     });
 
     it("should handle cache misses gracefully", async () => {
