@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Return generic error message to prevent information leakage
-    return NextResponse.json({ error: "Request failed. Please try again." }, { status: 400 });
+    return NextResponse.json({ error: "Request failed. Please try again." }, { status: 500 });
   }
 }
 

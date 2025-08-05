@@ -61,22 +61,24 @@ export async function checkRateLimit(ip: string): Promise<boolean> {
   }
 
   const key = `${RATE_LIMIT_CONFIG.KEY_PREFIX}:${ip}`;
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_CONFIG.WINDOW_SECONDS * 1000;
 
   try {
-    // Get current count of requests for this IP
-    const currentCount = await redisClient.llen(key);
+    // Remove expired entries (older than the time window)
+    await redisClient.zremrangebyscore(key, 0, windowStart);
+
+    // Count current requests in the window
+    const currentCount = await redisClient.zcard(key);
 
     // If at or over limit, reject the request
     if (currentCount >= RATE_LIMIT_CONFIG.MAX_REQUESTS) {
       return false;
     }
 
-    // Add current timestamp to the list
-    const now = Date.now();
-    await redisClient.lpush(key, now);
-
-    // Keep only the most recent MAX_REQUESTS items
-    await redisClient.ltrim(key, 0, RATE_LIMIT_CONFIG.MAX_REQUESTS - 1);
+    // Add new request with current timestamp as score
+    // Use timestamp + random number to ensure uniqueness
+    await redisClient.zadd(key, { score: now, member: `${now}-${Math.random()}` });
 
     // Set expiration for the key (cleanup)
     await redisClient.expire(key, RATE_LIMIT_CONFIG.WINDOW_SECONDS);

@@ -3,9 +3,9 @@ import { checkRateLimit, clearRateLimit } from "../lib/auth/rate-limiter";
 // Mock Upstash Redis
 jest.mock("@upstash/redis", () => {
   const mockRedis = {
-    lpush: jest.fn(),
-    ltrim: jest.fn(),
-    llen: jest.fn(),
+    zremrangebyscore: jest.fn(),
+    zcard: jest.fn(),
+    zadd: jest.fn(),
     expire: jest.fn(),
     del: jest.fn(),
   };
@@ -29,44 +29,69 @@ describe("Redis Rate Limiter", () => {
   describe("checkRateLimit", () => {
     it("should allow requests within rate limit", async () => {
       // Mock Redis to return 2 requests (under limit of 3)
-      mockRedis.llen.mockResolvedValue(2);
+      mockRedis.zremrangebyscore.mockResolvedValue(0);
+      mockRedis.zcard.mockResolvedValue(2);
+      mockRedis.zadd.mockResolvedValue(1);
+      mockRedis.expire.mockResolvedValue(1);
 
       const result = await checkRateLimit("192.168.1.1");
 
       expect(result).toBe(true);
-      expect(mockRedis.lpush).toHaveBeenCalledWith("rate_limit:192.168.1.1", expect.any(Number));
-      expect(mockRedis.ltrim).toHaveBeenCalledWith("rate_limit:192.168.1.1", 0, 2);
+      expect(mockRedis.zremrangebyscore).toHaveBeenCalledWith(
+        "rate_limit:192.168.1.1",
+        0,
+        expect.any(Number)
+      );
+      expect(mockRedis.zadd).toHaveBeenCalledWith(
+        "rate_limit:192.168.1.1",
+        expect.objectContaining({
+          score: expect.any(Number),
+          member: expect.stringMatching(/^\d+-0\.\d+$/),
+        })
+      );
       expect(mockRedis.expire).toHaveBeenCalledWith("rate_limit:192.168.1.1", 60);
     });
 
     it("should block requests exceeding rate limit", async () => {
       // Mock Redis to return 3 requests (at limit)
-      mockRedis.llen.mockResolvedValue(3);
+      mockRedis.zremrangebyscore.mockResolvedValue(0);
+      mockRedis.zcard.mockResolvedValue(3);
 
       const result = await checkRateLimit("192.168.1.1");
 
       expect(result).toBe(false);
-      expect(mockRedis.lpush).not.toHaveBeenCalled();
+      expect(mockRedis.zadd).not.toHaveBeenCalled();
     });
 
     it("should handle multiple IPs independently", async () => {
       // Mock different request counts for different IPs
-      mockRedis.llen
+      mockRedis.zremrangebyscore.mockResolvedValue(0);
+      mockRedis.zcard
         .mockResolvedValueOnce(1) // IP1 has 1 request
         .mockResolvedValueOnce(3); // IP2 has 3 requests (at limit)
+      mockRedis.zadd.mockResolvedValue(1);
+      mockRedis.expire.mockResolvedValue(1);
 
       const result1 = await checkRateLimit("192.168.1.1");
       const result2 = await checkRateLimit("192.168.1.2");
 
       expect(result1).toBe(true);
       expect(result2).toBe(false);
-      expect(mockRedis.llen).toHaveBeenCalledWith("rate_limit:192.168.1.1");
-      expect(mockRedis.llen).toHaveBeenCalledWith("rate_limit:192.168.1.2");
+      expect(mockRedis.zremrangebyscore).toHaveBeenCalledWith(
+        "rate_limit:192.168.1.1",
+        0,
+        expect.any(Number)
+      );
+      expect(mockRedis.zremrangebyscore).toHaveBeenCalledWith(
+        "rate_limit:192.168.1.2",
+        0,
+        expect.any(Number)
+      );
     });
 
     it("should gracefully fallback when Redis fails", async () => {
       // Mock Redis to throw an error
-      mockRedis.llen.mockRejectedValue(new Error("Redis connection failed"));
+      mockRedis.zremrangebyscore.mockRejectedValue(new Error("Redis connection failed"));
 
       // Mock console.error to verify error logging
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
@@ -83,27 +108,59 @@ describe("Redis Rate Limiter", () => {
     });
 
     it("should use correct Redis key format", async () => {
-      mockRedis.llen.mockResolvedValue(1);
+      mockRedis.zremrangebyscore.mockResolvedValue(0);
+      mockRedis.zcard.mockResolvedValue(1);
+      mockRedis.zadd.mockResolvedValue(1);
+      mockRedis.expire.mockResolvedValue(1);
 
       await checkRateLimit("10.0.0.1");
 
-      expect(mockRedis.llen).toHaveBeenCalledWith("rate_limit:10.0.0.1");
+      expect(mockRedis.zremrangebyscore).toHaveBeenCalledWith(
+        "rate_limit:10.0.0.1",
+        0,
+        expect.any(Number)
+      );
     });
 
     it("should maintain rate limit window of 60 seconds", async () => {
-      mockRedis.llen.mockResolvedValue(1);
+      // Mock successful rate limit check
+      mockRedis.zremrangebyscore.mockResolvedValue(0);
+      mockRedis.zcard.mockResolvedValue(1);
+      mockRedis.zadd.mockResolvedValue(1);
+      mockRedis.expire.mockResolvedValue(1);
 
       await checkRateLimit("192.168.1.1");
 
       expect(mockRedis.expire).toHaveBeenCalledWith("rate_limit:192.168.1.1", 60);
     });
 
-    it("should maintain rate limit max of 3 requests", async () => {
-      mockRedis.llen.mockResolvedValue(2);
+    it("should properly handle sliding window with timestamps", async () => {
+      const now = Date.now();
+      const oldTimestamp = now - 70000; // 70 seconds ago (outside window)
+
+      // Mock successful rate limit check
+      mockRedis.zremrangebyscore.mockResolvedValue(1); // Removed 1 old entry
+      mockRedis.zcard.mockResolvedValue(2);
+      mockRedis.zadd.mockResolvedValue(1);
+      mockRedis.expire.mockResolvedValue(1);
 
       await checkRateLimit("192.168.1.1");
 
-      expect(mockRedis.ltrim).toHaveBeenCalledWith("rate_limit:192.168.1.1", 0, 2); // Keep only 3 items (0-2)
+      // Should remove old entries outside the 60-second window
+      expect(mockRedis.zremrangebyscore).toHaveBeenCalledWith(
+        "rate_limit:192.168.1.1",
+        0,
+        expect.any(Number)
+      );
+
+      // Should add new entry with current timestamp
+      expect(mockRedis.zadd).toHaveBeenCalledWith(
+        "rate_limit:192.168.1.1",
+        expect.objectContaining({
+          score: expect.any(Number),
+          member: expect.stringMatching(/^\d+-0\.\d+$/),
+        })
+      );
     });
   });
 
