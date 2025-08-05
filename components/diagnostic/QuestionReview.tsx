@@ -181,9 +181,7 @@ export const QuestionReview: React.FC<QuestionReviewProps> = ({
             )}
             {domainQuestions.map((question) => {
               // Calculate proper index for grouped questions
-              const questionIndex = groupByDomain
-                ? filteredQuestions.findIndex((q) => q.id === question.id)
-                : filteredQuestions.findIndex((q) => q.id === question.id);
+              const questionIndex = filteredQuestions.findIndex((q) => q.id === question.id);
               return renderQuestion(question, questionIndex + 1);
             })}
           </div>
