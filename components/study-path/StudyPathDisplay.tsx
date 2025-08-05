@@ -37,6 +37,21 @@ export function StudyPathDisplay({ diagnosticData }: StudyPathDisplayProps) {
   const [recommendations, setRecommendations] = useState<StudyRecommendation[]>([]);
   const [completedTopics, setCompletedTopics] = useState<Set<string>>(new Set());
 
+  // Load completed topics from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("studyPathProgress");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setCompletedTopics(new Set(parsed));
+        }
+      }
+    } catch (error) {
+      console.error("[StudyPath] Failed to load progress from localStorage:", error);
+    }
+  }, []);
+
   const fetchRecommendations = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -80,6 +95,14 @@ export function StudyPathDisplay({ diagnosticData }: StudyPathDisplayProps) {
       } else {
         newSet.add(topicId);
       }
+
+      // Save to localStorage for persistence
+      try {
+        localStorage.setItem("studyPathProgress", JSON.stringify(Array.from(newSet)));
+      } catch (error) {
+        console.error("[StudyPath] Failed to save progress to localStorage:", error);
+      }
+
       return newSet;
     });
   };
@@ -134,9 +157,9 @@ export function StudyPathDisplay({ diagnosticData }: StudyPathDisplayProps) {
 
       {/* Recommendations */}
       <div className="space-y-4">
-        {recommendations.map((recommendation, index) => {
-          const domainTopicsCompleted = recommendation.topics.filter((topic) =>
-            completedTopics.has(`${recommendation.domain}-${topic}`)
+        {recommendations.map((recommendation, domainIndex) => {
+          const domainTopicsCompleted = recommendation.topics.filter((topic, topicIndex) =>
+            completedTopics.has(`${recommendation.domain}-${domainIndex}-${topicIndex}`)
           ).length;
           const domainProgress =
             recommendation.topics.length > 0
@@ -145,7 +168,9 @@ export function StudyPathDisplay({ diagnosticData }: StudyPathDisplayProps) {
 
           return (
             <Card
-              key={index}
+              key={domainIndex}
+              role="region"
+              aria-label={`Study recommendations for ${recommendation.domain}`}
               className={cn(
                 "recommendation-card transition-all",
                 recommendation.priority === "high" && "priority-high border-red-200",
@@ -184,7 +209,7 @@ export function StudyPathDisplay({ diagnosticData }: StudyPathDisplayProps) {
               <CardContent>
                 <div className="space-y-3">
                   {recommendation.topics.map((topic, topicIndex) => {
-                    const topicId = `${recommendation.domain}-${topic}`;
+                    const topicId = `${recommendation.domain}-${domainIndex}-${topicIndex}`;
                     const isCompleted = completedTopics.has(topicId);
 
                     return (

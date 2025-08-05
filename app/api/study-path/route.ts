@@ -6,14 +6,16 @@ import { checkRateLimit } from "@/lib/auth/rate-limiter";
 // Input validation schema
 const studyPathRequestSchema = z.object({
   score: z.number().min(0).max(100),
-  domains: z.array(
-    z.object({
-      domain: z.string(),
-      correct: z.number(),
-      total: z.number(),
-      percentage: z.number(),
-    })
-  ),
+  domains: z
+    .array(
+      z.object({
+        domain: z.string(),
+        correct: z.number(),
+        total: z.number(),
+        percentage: z.number(),
+      })
+    )
+    .min(1, "At least one domain is required"),
 });
 
 // Types
