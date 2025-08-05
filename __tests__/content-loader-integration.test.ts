@@ -4,9 +4,13 @@ import fs from "fs";
 import path from "path";
 
 describe("Content Loader Integration Tests", () => {
-  const testContentDir = path.join(process.cwd(), "__tests__", "test-content-integration");
+  const testContentDir = path.join(process.cwd(), "app/content");
   const hubDir = path.join(testContentDir, "hub");
   const spokesDir = path.join(testContentDir, "spokes");
+
+  // Store original content for restoration
+  let originalHubContent: string[] = [];
+  let originalSpokeContent: string[] = [];
 
   // Sample content for testing
   const hubContent = {
@@ -57,9 +61,17 @@ describe("Content Loader Integration Tests", () => {
   };
 
   beforeAll(() => {
-    // Create test directories and files
+    // Ensure directories exist
     fs.mkdirSync(hubDir, { recursive: true });
     fs.mkdirSync(spokesDir, { recursive: true });
+
+    // Save existing content
+    if (fs.existsSync(hubDir)) {
+      originalHubContent = fs.readdirSync(hubDir);
+    }
+    if (fs.existsSync(spokesDir)) {
+      originalSpokeContent = fs.readdirSync(spokesDir);
+    }
 
     // Create hub content files
     Object.entries(hubContent).forEach(([slug, data]) => {
@@ -71,7 +83,7 @@ type: ${data.type}
 ---
 
 ${data.content}`;
-      fs.writeFileSync(path.join(hubDir, `${slug}.md`), frontmatter);
+      fs.writeFileSync(path.join(hubDir, `test-${slug}.md`), frontmatter);
     });
 
     // Create spoke content files
@@ -86,18 +98,30 @@ spokeOrder: ${data.spokeOrder}
 ---
 
 ${data.content}`;
-      fs.writeFileSync(path.join(spokesDir, `${slug}.md`), frontmatter);
+      fs.writeFileSync(path.join(spokesDir, `test-${slug}.md`), frontmatter);
     });
   });
 
   afterAll(() => {
-    // Clean up test files
-    fs.rmSync(testContentDir, { recursive: true, force: true });
+    // Clean up only test files
+    Object.keys(hubContent).forEach((slug) => {
+      const testFile = path.join(hubDir, `test-${slug}.md`);
+      if (fs.existsSync(testFile)) {
+        fs.unlinkSync(testFile);
+      }
+    });
+
+    Object.keys(spokeContent).forEach((slug) => {
+      const testFile = path.join(spokesDir, `test-${slug}.md`);
+      if (fs.existsSync(testFile)) {
+        fs.unlinkSync(testFile);
+      }
+    });
   });
 
   describe("Content Loading Integration", () => {
     it("should load single hub content correctly", async () => {
-      const content = await contentLoader.getHubContent("certification-guide");
+      const content = await contentLoader.getHubContent("test-certification-guide");
 
       expect(content).not.toBeNull();
       expect(content?.meta.title).toBe("Google ML Certification Guide");

@@ -1,14 +1,15 @@
-import fs from 'fs';
-import path from 'path';
-import matter from 'gray-matter';
-import { remark } from 'remark';
+import fs from "fs";
+import { promises as fsPromises } from "fs";
+import path from "path";
+import matter from "gray-matter";
+import { remark } from "remark";
 // html is not used since we're using the rehype pipeline
 // import html from 'remark-html';
-import remarkGfm from 'remark-gfm';
-import remarkRehype from 'remark-rehype';
-import rehypeRaw from 'rehype-raw';
-import rehypeStringify from 'rehype-stringify';
-import { cache } from 'react';
+import remarkGfm from "remark-gfm";
+import remarkRehype from "remark-rehype";
+import rehypeRaw from "rehype-raw";
+import rehypeStringify from "rehype-stringify";
+import { cache } from "react";
 
 export interface ContentMeta {
   title: string;
@@ -19,7 +20,7 @@ export interface ContentMeta {
   category?: string;
   tags?: string[];
   slug: string;
-  type: 'hub' | 'spoke';
+  type: "hub" | "spoke";
   hubSlug?: string; // For spoke content to reference its hub
   spokeOrder?: number; // For ordering spokes within a hub
   coverImage?: string;
@@ -33,23 +34,37 @@ export interface Content {
 }
 
 // Root directories for content
-const HUB_CONTENT_DIR = path.join(process.cwd(), 'app/content/hub');
-const SPOKE_CONTENT_DIR = path.join(process.cwd(), 'app/content/spokes');
+const HUB_CONTENT_DIR = path.join(process.cwd(), "app/content/hub");
+const SPOKE_CONTENT_DIR = path.join(process.cwd(), "app/content/spokes");
+
+// Helper function to check if directory exists
+async function directoryExists(dirPath: string): Promise<boolean> {
+  try {
+    await fsPromises.access(dirPath, fs.constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // Helper function to parse content file
-const parseContentFile = async (filePath: string, slug: string, type: 'hub' | 'spoke'): Promise<Content> => {
-  const fileContents = fs.readFileSync(filePath, 'utf8');
+const parseContentFile = async (
+  filePath: string,
+  slug: string,
+  type: "hub" | "spoke"
+): Promise<Content> => {
+  const fileContents = await fsPromises.readFile(filePath, "utf8");
   const { data, content } = matter(fileContents);
-  
+
   // Normalize special characters before processing
   const normalizedContent = content
     // Replace non-breaking hyphens with regular hyphens
-    .replace(/‑/g, '-')
+    .replace(/‑/g, "-")
     // Make sure HTML anchors are formatted correctly
     .replace(/<a id="([^"]+)"><\/a>/g, '<a id="$1" class="anchor-link"></a>')
     // Ensure proper spacing around anchor links
     .replace(/<a id="([^"]+)"><\/a>\s*##/g, '<a id="$1" class="anchor-link"></a>\n\n##');
-  
+
   // Process markdown to HTML with improved rendering
   // Using a full rehype pipeline for better HTML output
   const processedContent = await remark()
@@ -58,16 +73,16 @@ const parseContentFile = async (filePath: string, slug: string, type: 'hub' | 's
     .use(rehypeRaw) // Parse HTML in the markdown
     .use(rehypeStringify)
     .process(normalizedContent);
-  
+
   const htmlContent = processedContent.toString();
-  
+
   // Calculate reading time (approx. 200 words per minute)
   const wordCount = content.split(/\s+/).length;
   const readingTime = Math.ceil(wordCount / 200);
-  
+
   const meta: ContentMeta = {
     title: data.title,
-    description: data.description || '',
+    description: data.description || "",
     date: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
     lastModified: data.lastModified ? new Date(data.lastModified).toISOString() : undefined,
     author: data.author,
@@ -78,13 +93,13 @@ const parseContentFile = async (filePath: string, slug: string, type: 'hub' | 's
     hubSlug: data.hubSlug,
     spokeOrder: data.spokeOrder,
     coverImage: data.coverImage,
-    readingTime
+    readingTime,
   };
-  
+
   return {
     slug,
     content: htmlContent,
-    meta
+    meta,
   };
 };
 
@@ -92,7 +107,7 @@ const parseContentFile = async (filePath: string, slug: string, type: 'hub' | 's
 export const getHubContent = cache(async (slug: string): Promise<Content | null> => {
   try {
     const filePath = path.join(HUB_CONTENT_DIR, `${slug}.md`);
-    return await parseContentFile(filePath, slug, 'hub');
+    return await parseContentFile(filePath, slug, "hub");
   } catch (error) {
     console.error(`Error fetching hub content for slug ${slug}:`, error);
     return null;
@@ -103,7 +118,7 @@ export const getHubContent = cache(async (slug: string): Promise<Content | null>
 export const getSpokeContent = cache(async (slug: string): Promise<Content | null> => {
   try {
     const filePath = path.join(SPOKE_CONTENT_DIR, `${slug}.md`);
-    return await parseContentFile(filePath, slug, 'spoke');
+    return await parseContentFile(filePath, slug, "spoke");
   } catch (error) {
     console.error(`Error fetching spoke content for slug ${slug}:`, error);
     return null;
@@ -113,27 +128,27 @@ export const getSpokeContent = cache(async (slug: string): Promise<Content | nul
 // Get all hub content
 export const getAllHubContent = cache(async (): Promise<Content[]> => {
   try {
-    if (!fs.existsSync(HUB_CONTENT_DIR)) {
+    if (!(await directoryExists(HUB_CONTENT_DIR))) {
       return [];
     }
-    
-    const fileNames = fs.readdirSync(HUB_CONTENT_DIR);
+
+    const fileNames = await fsPromises.readdir(HUB_CONTENT_DIR);
     const allContent = await Promise.all(
       fileNames
-        .filter(fileName => fileName.endsWith('.md'))
-        .map(async fileName => {
-          const slug = fileName.replace(/\.md$/, '');
+        .filter((fileName) => fileName.endsWith(".md"))
+        .map(async (fileName) => {
+          const slug = fileName.replace(/\.md$/, "");
           const filePath = path.join(HUB_CONTENT_DIR, fileName);
-          return await parseContentFile(filePath, slug, 'hub');
+          return await parseContentFile(filePath, slug, "hub");
         })
     );
-    
+
     // Sort by date, newest first
     return allContent.sort((a, b) => {
       return new Date(b.meta.date).getTime() - new Date(a.meta.date).getTime();
     });
   } catch (error) {
-    console.error('Error fetching all hub content:', error);
+    console.error("Error fetching all hub content:", error);
     return [];
   }
 });
@@ -141,27 +156,27 @@ export const getAllHubContent = cache(async (): Promise<Content[]> => {
 // Get all spoke content
 export const getAllSpokeContent = cache(async (): Promise<Content[]> => {
   try {
-    if (!fs.existsSync(SPOKE_CONTENT_DIR)) {
+    if (!(await directoryExists(SPOKE_CONTENT_DIR))) {
       return [];
     }
-    
-    const fileNames = fs.readdirSync(SPOKE_CONTENT_DIR);
+
+    const fileNames = await fsPromises.readdir(SPOKE_CONTENT_DIR);
     const allContent = await Promise.all(
       fileNames
-        .filter(fileName => fileName.endsWith('.md'))
-        .map(async fileName => {
-          const slug = fileName.replace(/\.md$/, '');
+        .filter((fileName) => fileName.endsWith(".md"))
+        .map(async (fileName) => {
+          const slug = fileName.replace(/\.md$/, "");
           const filePath = path.join(SPOKE_CONTENT_DIR, fileName);
-          return await parseContentFile(filePath, slug, 'spoke');
+          return await parseContentFile(filePath, slug, "spoke");
         })
     );
-    
+
     // Sort by date, newest first
     return allContent.sort((a, b) => {
       return new Date(b.meta.date).getTime() - new Date(a.meta.date).getTime();
     });
   } catch (error) {
-    console.error('Error fetching all spoke content:', error);
+    console.error("Error fetching all spoke content:", error);
     return [];
   }
 });
@@ -170,8 +185,8 @@ export const getAllSpokeContent = cache(async (): Promise<Content[]> => {
 export const getSpokesForHub = cache(async (hubSlug: string): Promise<Content[]> => {
   try {
     const allSpokes = await getAllSpokeContent();
-    const hubSpokes = allSpokes.filter(spoke => spoke.meta.hubSlug === hubSlug);
-    
+    const hubSpokes = allSpokes.filter((spoke) => spoke.meta.hubSlug === hubSlug);
+
     // Sort by spokeOrder if available, otherwise by date
     return hubSpokes.sort((a, b) => {
       if (a.meta.spokeOrder !== undefined && b.meta.spokeOrder !== undefined) {
@@ -189,9 +204,9 @@ export const getSpokesForHub = cache(async (hubSlug: string): Promise<Content[]>
 export const getAllContentSlugs = cache(async () => {
   const hubContent = await getAllHubContent();
   const spokeContent = await getAllSpokeContent();
-  
+
   return {
-    hubSlugs: hubContent.map(content => content.slug),
-    spokeSlugs: spokeContent.map(content => content.slug)
+    hubSlugs: hubContent.map((content) => content.slug),
+    spokeSlugs: spokeContent.map((content) => content.slug),
   };
 });

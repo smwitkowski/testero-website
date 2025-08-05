@@ -3,16 +3,6 @@ import * as contentLoader from "@/lib/content/loader";
 import fs from "fs";
 import path from "path";
 
-// Mock the content cache (to be implemented)
-jest.mock("@/lib/content/cache", () => ({
-  ContentCache: jest.fn().mockImplementation(() => ({
-    get: jest.fn().mockResolvedValue(null),
-    set: jest.fn().mockResolvedValue(undefined),
-    invalidate: jest.fn().mockResolvedValue(undefined),
-    clear: jest.fn().mockResolvedValue(undefined),
-  })),
-}));
-
 describe("Content Loader Async Operations Tests", () => {
   const testContentDir = path.join(process.cwd(), "__tests__", "test-content-async");
   const hubDir = path.join(testContentDir, "hub");
@@ -41,7 +31,10 @@ date: 2024-01-01
 
 # Async Test Content`;
 
-      fs.writeFileSync(path.join(hubDir, "async-test.md"), testContent);
+      // First, we need to mock the actual content directories to point to our test directories
+      const originalHubDir = path.join(process.cwd(), "app/content/hub");
+      fs.mkdirSync(originalHubDir, { recursive: true });
+      fs.writeFileSync(path.join(originalHubDir, "async-test.md"), testContent);
 
       // Spy on fs operations to ensure async methods are used
       const readFileSpy = jest.spyOn(fs.promises, "readFile");
@@ -52,6 +45,9 @@ date: 2024-01-01
       // Should use async readFile, not sync
       expect(readFileSpy).toHaveBeenCalled();
       expect(readFileSyncSpy).not.toHaveBeenCalled();
+
+      // Clean up
+      fs.rmSync(path.join(originalHubDir, "async-test.md"), { force: true });
 
       readFileSpy.mockRestore();
       readFileSyncSpy.mockRestore();
@@ -209,10 +205,13 @@ Updated content`;
 
   describe("Async Directory Operations", () => {
     it("should use async methods for directory operations", async () => {
-      // Create some test files
+      // Create test files in actual content directory
+      const originalHubDir = path.join(process.cwd(), "app/content/hub");
+      fs.mkdirSync(originalHubDir, { recursive: true });
+
       for (let i = 0; i < 5; i++) {
         fs.writeFileSync(
-          path.join(hubDir, `dir-test-${i}.md`),
+          path.join(originalHubDir, `test-dir-${i}.md`),
           `---\ntitle: Dir Test ${i}\n---\n\nContent`
         );
       }
@@ -232,6 +231,11 @@ Updated content`;
       // Should not use sync methods
       expect(readdirSyncSpy).not.toHaveBeenCalled();
       expect(existsSyncSpy).not.toHaveBeenCalled();
+
+      // Clean up
+      for (let i = 0; i < 5; i++) {
+        fs.rmSync(path.join(originalHubDir, `test-dir-${i}.md`), { force: true });
+      }
 
       readdirSpy.mockRestore();
       readdirSyncSpy.mockRestore();
