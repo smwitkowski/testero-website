@@ -154,7 +154,6 @@ const LoginPage = () => {
 
       // If successful, Supabase's onAuthStateChange listener in AuthProvider
       // will handle the session update and redirection.
-      console.log('Login successful - waiting for redirection');
       
       // Add a manual redirect as a backup
       // Sometimes the auth state change might not trigger immediately

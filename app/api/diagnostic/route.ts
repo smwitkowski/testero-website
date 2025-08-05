@@ -24,8 +24,6 @@ async function cleanExpiredSessions(supabase: SupabaseClient) {
 
   if (error) {
     console.error('Error cleaning expired sessions:', error);
-  } else {
-    console.log('Expired sessions cleaned up.');
   }
 }
 
