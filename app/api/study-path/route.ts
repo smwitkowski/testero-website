@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { checkRateLimit } from "@/lib/auth/rate-limiter";
 
 // Input validation schema
 const studyPathRequestSchema = z.object({
@@ -30,16 +31,32 @@ interface StudyRecommendation {
   estimatedTime: string;
 }
 
-// Priority calculation based on score
+// Priority thresholds for domain performance categorization
+const PRIORITY_THRESHOLD_HIGH = 40;
+const PRIORITY_THRESHOLD_MEDIUM = 70;
+
+// Threshold for determining weak performance in topic generation
+const WEAK_PERFORMANCE_THRESHOLD = 50;
+
+/**
+ * Calculates the priority level for a domain based on performance percentage
+ * @param percentage - The percentage score (0-100) for the domain
+ * @returns Priority level: "high" (< 40%), "medium" (40-70%), or "low" (> 70%)
+ */
 function calculatePriority(percentage: number): "high" | "medium" | "low" {
-  if (percentage < 40) return "high";
-  if (percentage < 70) return "medium";
+  if (percentage < PRIORITY_THRESHOLD_HIGH) return "high";
+  if (percentage < PRIORITY_THRESHOLD_MEDIUM) return "medium";
   return "low";
 }
 
-// Generate topics based on domain and performance
+/**
+ * Generates personalized topic recommendations based on domain and performance
+ * @param domain - The knowledge domain (e.g., "Neural Networks", "Machine Learning Basics")
+ * @param percentage - The percentage score in this domain
+ * @returns Array of topic recommendations tailored to the user's performance level
+ */
 function generateTopics(domain: string, percentage: number): string[] {
-  const isWeak = percentage < 50;
+  const isWeak = percentage < WEAK_PERFORMANCE_THRESHOLD;
 
   // Domain-specific topic recommendations
   const topicMap: Record<string, { weak: string[]; strong: string[] }> = {
@@ -86,7 +103,11 @@ function generateTopics(domain: string, percentage: number): string[] {
   return isWeak ? topics.weak : topics.strong;
 }
 
-// Estimate study time based on priority
+/**
+ * Estimates the study time required based on priority level
+ * @param priority - The priority level of the domain
+ * @returns Estimated time range as a human-readable string
+ */
 function estimateTime(priority: "high" | "medium" | "low"): string {
   switch (priority) {
     case "high":
@@ -98,7 +119,11 @@ function estimateTime(priority: "high" | "medium" | "low"): string {
   }
 }
 
-// Generate study path recommendations
+/**
+ * Generates comprehensive study path recommendations from diagnostic results
+ * @param domains - Array of domain scores from diagnostic test
+ * @returns Array of study recommendations sorted by priority (weakest domains first)
+ */
 function generateRecommendations(domains: DomainScore[]): StudyRecommendation[] {
   // Sort domains by percentage (lowest first - highest priority)
   const sortedDomains = [...domains].sort((a, b) => a.percentage - b.percentage);
@@ -116,6 +141,15 @@ function generateRecommendations(domains: DomainScore[]): StudyRecommendation[] 
 
 export async function POST(request: NextRequest) {
   try {
+    // Extract IP for rate limiting
+    const ip =
+      request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+
+    // Check rate limit
+    if (!(await checkRateLimit(ip))) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     // Parse request body
     let body;
     try {
@@ -162,10 +196,24 @@ export async function POST(request: NextRequest) {
 
       if (!dbError && studyPath) {
         studyPathId = studyPath.id;
+      } else if (dbError) {
+        // Structured logging for database errors
+        console.error("[StudyPath API] Database error:", {
+          error: dbError.message,
+          userId: user.id,
+          timestamp: new Date().toISOString(),
+          context: "saving study path",
+          recommendationCount: recommendations.length,
+        });
       }
     } catch (error) {
-      // Log error but don't fail the request
-      console.error("Failed to save study path:", error);
+      // Structured logging for unexpected errors
+      console.error("[StudyPath API] Unexpected error saving study path:", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        userId: user.id,
+        timestamp: new Date().toISOString(),
+        context: "database operation",
+      });
     }
 
     // Return recommendations
@@ -184,7 +232,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    console.error("Study path generation error:", error);
+    // Structured logging for API-level errors
+    console.error("[StudyPath API] Request processing error:", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+      context: "request processing",
+      ip,
+    });
     return NextResponse.json({ error: "Failed to generate study path" }, { status: 500 });
   }
 }

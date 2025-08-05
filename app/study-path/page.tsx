@@ -29,24 +29,37 @@ const StudyPathPage = () => {
       try {
         setDiagnosticData(JSON.parse(storedData));
       } catch (error) {
-        console.error("Error parsing diagnostic data:", error);
+        // Structured logging for JSON parse errors
+        console.error("[StudyPath Page] Failed to parse diagnostic data:", {
+          error: error instanceof Error ? error.message : "Unknown error",
+          timestamp: new Date().toISOString(),
+          dataLength: storedData.length,
+          preview: storedData.substring(0, 100) + "...",
+        });
+        // Clear corrupted data from storage
+        sessionStorage.removeItem("diagnosticData");
       }
     }
   }, []);
 
+  // Score threshold constants for clear performance tiers
+  const SCORE_THRESHOLD_FOUNDATION = 40;
+  const SCORE_THRESHOLD_GOOD = 60;
+  const SCORE_THRESHOLD_STRONG = 80;
+
   // Determine message based on score
   const getScoreMessage = (score: number) => {
-    if (score < 40) {
+    if (score < SCORE_THRESHOLD_FOUNDATION) {
       return {
         title: "Foundation Building",
         message: "Let's focus on building strong fundamentals in key areas.",
       };
-    } else if (score < 60) {
+    } else if (score < SCORE_THRESHOLD_GOOD) {
       return {
         title: "Good Progress",
         message: "You're making solid progress. Let's strengthen weak areas.",
       };
-    } else if (score < 80) {
+    } else if (score < SCORE_THRESHOLD_STRONG) {
       return {
         title: "Strong Performance",
         message: "Great job! Let's fine-tune your knowledge for exam readiness.",

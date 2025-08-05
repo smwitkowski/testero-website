@@ -21,13 +21,13 @@ test.describe("Study Path Basic - TDD GREEN Phase", () => {
     // Navigate directly to study path page
     await page.goto("/study-path");
 
-    // Check that the page loads and displays the expected heading
+    // Check that the page loads and displays the expected heading (be more specific to avoid multiple matches)
     await expect(
-      page.getByRole("heading", { name: /your personalized study path/i })
+      page.getByRole("heading", { name: "Your Personalized Study Path", exact: true })
     ).toBeVisible();
 
-    // Check that the basic content is displayed
-    await expect(page.getByText(/complete a diagnostic test/i)).toBeVisible();
+    // Check that the sign-in prompt is displayed for anonymous users
+    await expect(page.getByText(/sign in to access your personalized study path/i)).toBeVisible();
   });
 
   test("should display diagnostic data when available in sessionStorage", async ({ page }) => {
@@ -49,9 +49,11 @@ test.describe("Study Path Basic - TDD GREEN Phase", () => {
     // Reload page to pick up sessionStorage data
     await page.reload();
 
-    // Check that diagnostic data is displayed
+    // Check that diagnostic data is displayed (score and score message are shown for anonymous users)
     await expect(page.getByText("40%")).toBeVisible();
-    await expect(page.getByText("Neural Networks")).toBeVisible();
-    await expect(page.getByText("Foundation Building")).toBeVisible(); // Score-based messaging
+    await expect(page.getByText("Good Progress")).toBeVisible(); // Score-based messaging (40% falls in 40-60 range)
+
+    // For anonymous users, domain details are not shown but the sign-in prompt is still there
+    await expect(page.getByText(/sign in to access your personalized study path/i)).toBeVisible();
   });
 });

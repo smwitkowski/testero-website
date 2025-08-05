@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -37,13 +37,7 @@ export function StudyPathDisplay({ diagnosticData }: StudyPathDisplayProps) {
   const [recommendations, setRecommendations] = useState<StudyRecommendation[]>([]);
   const [completedTopics, setCompletedTopics] = useState<Set<string>>(new Set());
 
-  // Fetch recommendations on mount
-  useEffect(() => {
-    fetchRecommendations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [diagnosticData]);
-
-  const fetchRecommendations = async () => {
+  const fetchRecommendations = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -71,7 +65,12 @@ export function StudyPathDisplay({ diagnosticData }: StudyPathDisplayProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [diagnosticData]);
+
+  // Fetch recommendations on mount
+  useEffect(() => {
+    fetchRecommendations();
+  }, [fetchRecommendations]);
 
   const toggleTopicCompletion = (topicId: string) => {
     setCompletedTopics((prev) => {
