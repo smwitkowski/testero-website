@@ -44,3 +44,6 @@ next-env.d.ts
 github-actions-key.json
 *-key.json
 *-credentials.json
+
+# Claude Code settings
+.claude/settings.local.json

@@ -1,0 +1,49 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd $CLAUDE_PROJECT_DIR && jq -r '.tool_input.file_path // .tool_input.edits[0].file_path // \"\"' | { read file_path; if [[ \"$file_path\" =~ \\.(ts|tsx|js|jsx)$ ]]; then echo \"🔍 Running ESLint on $file_path...\"; npx eslint \"$file_path\" || echo \"⚠️  ESLint found issues in $file_path\"; fi; }",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "cd $CLAUDE_PROJECT_DIR && jq -r '.tool_input.file_path // .tool_input.edits[0].file_path // \"\"' | { read file_path; if [[ \"$file_path\" =~ \\.(ts|tsx)$ ]]; then echo \"🔍 Checking TypeScript types...\"; npx tsc --noEmit || echo \"⚠️  TypeScript found type errors\"; fi; }",
+            "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "cd $CLAUDE_PROJECT_DIR && jq -r '.tool_input.file_path // .tool_input.edits[0].file_path // \"\"' | { read file_path; if [[ \"$file_path\" =~ \\.(ts|tsx|js|jsx|json|md)$ ]]; then echo \"✨ Formatting $file_path with Prettier...\"; npx prettier --write \"$file_path\" && echo \"✅ Formatted $file_path\"; fi; }",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | { read cmd; if [[ \"$cmd\" =~ ^git\\ commit ]]; then echo \"💡 Reminder: Consider running 'npm run lint' and 'npx tsc --noEmit' before committing\"; fi; }",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"🚀 Session active - Code quality hooks enabled (ESLint, TypeScript)\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
