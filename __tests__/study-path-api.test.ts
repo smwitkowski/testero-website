@@ -44,7 +44,7 @@ describe("/api/study-path", () => {
         },
         body: JSON.stringify({
           score: 40,
-          domains: [],
+          domains: [{ domain: "Test Domain", correct: 2, total: 5, percentage: 40 }],
         }),
       });
 

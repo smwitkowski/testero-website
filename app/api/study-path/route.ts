@@ -142,11 +142,11 @@ function generateRecommendations(domains: DomainScore[]): StudyRecommendation[] 
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    // Extract IP for rate limiting
-    const ip =
-      request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+  // Extract IP for rate limiting (moved outside try block to be accessible in catch)
+  const ip =
+    request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
 
+  try {
     // Check rate limit
     if (!(await checkRateLimit(ip))) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });

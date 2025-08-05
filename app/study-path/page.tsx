@@ -23,22 +23,31 @@ const StudyPathPage = () => {
   const [diagnosticData, setDiagnosticData] = useState<DiagnosticData | null>(null);
 
   useEffect(() => {
-    // For now, get data from sessionStorage (minimal implementation)
-    const storedData = sessionStorage.getItem("diagnosticData");
-    if (storedData) {
-      try {
-        setDiagnosticData(JSON.parse(storedData));
-      } catch (error) {
-        // Structured logging for JSON parse errors
-        console.error("[StudyPath Page] Failed to parse diagnostic data:", {
-          error: error instanceof Error ? error.message : "Unknown error",
-          timestamp: new Date().toISOString(),
-          dataLength: storedData.length,
-          preview: storedData.substring(0, 100) + "...",
-        });
-        // Clear corrupted data from storage
-        sessionStorage.removeItem("diagnosticData");
+    try {
+      // For now, get data from sessionStorage (minimal implementation)
+      const storedData = sessionStorage.getItem("diagnosticData");
+      if (storedData) {
+        try {
+          setDiagnosticData(JSON.parse(storedData));
+        } catch (error) {
+          // Structured logging for JSON parse errors
+          console.error("[StudyPath Page] Failed to parse diagnostic data:", {
+            error: error instanceof Error ? error.message : "Unknown error",
+            timestamp: new Date().toISOString(),
+            dataLength: storedData.length,
+            preview: storedData.substring(0, 100) + "...",
+          });
+          // Clear corrupted data from storage
+          sessionStorage.removeItem("diagnosticData");
+        }
       }
+    } catch (error) {
+      // Handle sessionStorage access errors (e.g., in private browsing mode)
+      console.error("[StudyPath Page] Failed to access sessionStorage:", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString(),
+        context: "private browsing or storage disabled",
+      });
     }
   }, []);
 

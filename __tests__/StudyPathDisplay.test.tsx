@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StudyPathDisplay } from "@/components/study-path/StudyPathDisplay";
 
@@ -217,9 +217,20 @@ describe("StudyPathDisplay - TDD RED Phase", () => {
 
       render(<StudyPathDisplay diagnosticData={{ score: 40, domains: [] }} />);
 
+      // Wait for recommendations to load first
       await waitFor(() => {
-        expect(screen.getByText(/0% complete/i)).toBeInTheDocument();
+        expect(screen.getByText("Domain 1")).toBeInTheDocument();
       });
+
+      // Debug to see what's rendered
+      // screen.debug();
+
+      // The progress card might be in a specific container, let's be more specific
+      const progressCard = screen.getByText("Your Progress").closest("div[data-slot='card']");
+      expect(progressCard).toBeInTheDocument();
+
+      // Check within the progress card
+      expect(within(progressCard as HTMLElement).getByText(/0% complete/i)).toBeInTheDocument();
 
       // Mark one topic as complete
       const firstCheckbox = screen.getAllByRole("checkbox")[0];

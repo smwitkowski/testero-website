@@ -317,7 +317,7 @@ export const QuestionDisplay: React.FC<{
 
 #### The Testing Pyramid
 
-```
+```text
          /\
         /E2E\        ← Few tests, slow, run before deployment
        /------\
@@ -397,7 +397,7 @@ export const QuestionDisplay: React.FC<{
 
 #### Test File Organization
 
-```
+```text
 __tests__/
 ├── unit/                    # Fast, isolated tests
 │   ├── components/         # React component tests

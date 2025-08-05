@@ -8,26 +8,26 @@ import { Progress } from "@/components/ui/progress";
 import { AlertCircle, Clock, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface DomainScore {
+export interface DomainScore {
   domain: string;
   correct: number;
   total: number;
   percentage: number;
 }
 
-interface DiagnosticData {
+export interface DiagnosticData {
   score: number;
   domains: DomainScore[];
 }
 
-interface StudyRecommendation {
+export interface StudyRecommendation {
   domain: string;
   priority: "high" | "medium" | "low";
   topics: string[];
   estimatedTime: string;
 }
 
-interface StudyPathDisplayProps {
+export interface StudyPathDisplayProps {
   diagnosticData: DiagnosticData;
 }
 
