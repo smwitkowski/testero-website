@@ -313,6 +313,112 @@ export const QuestionDisplay: React.FC<{
 - **PR preparation**: Full test suite (`npm test && npm run e2e`)
 - **Debugging**: Use headed mode (`npm run e2e:headed`) and debug mode (`npm run e2e:debug`)
 
+### TDD (Test-Driven Development) Strategy
+
+#### The Testing Pyramid
+
+```
+         /\
+        /E2E\        ← Few tests, slow, run before deployment
+       /------\
+      /Integr. \     ← Some tests, medium speed, run on commit
+     /----------\
+    /   Unit     \   ← Many tests, fast, run continuously
+   /--------------\
+```
+
+#### When to Use Each Test Type
+
+**Unit Tests (Bottom of Pyramid - Fast Feedback)**
+
+- **Purpose**: Test individual functions, components, utilities in isolation
+- **Speed**: < 1 second per test
+- **When to write**: FIRST - during Red-Green-Refactor cycles
+- **When to run**: On every file save (watch mode)
+- **Examples**: Component rendering, utility functions, business logic
+
+**Integration Tests (Middle Layer - Component Integration)**
+
+- **Purpose**: Test API endpoints, database operations, component interactions
+- **Speed**: 1-10 seconds per test
+- **When to write**: After unit tests pass, before E2E
+- **When to run**: Before commits, on CI/CD
+- **Examples**: API route handlers, database queries, auth flows
+
+**E2E Tests (Top of Pyramid - User Journeys)**
+
+- **Purpose**: Validate complete user workflows across the entire system
+- **Speed**: 10-60 seconds per test
+- **When to write**: After feature is complete
+- **When to run**: Before PR merge, before deployment
+- **Examples**: Complete signup flow, diagnostic test completion
+
+#### TDD Workflow for New Features
+
+1. **Start with Unit Tests** 🔴 → 🟢 → 🔵
+
+   ```bash
+   # Write failing unit test
+   npm test -- --watch MyComponent.test.tsx
+   # Make it pass with minimal code
+   # Refactor while keeping tests green
+   ```
+
+2. **Add Integration Tests** 🔴 → 🟢 → 🔵
+
+   ```bash
+   # Test API endpoints
+   npm test -- --watch api.study-path.test.ts
+   # Test with real database connections
+   # Verify error handling
+   ```
+
+3. **Finish with E2E Tests** 🔴 → 🟢 → 🔵
+   ```bash
+   # Test complete user journey
+   npm run e2e -- study-path.spec.ts --headed
+   # Verify across browsers
+   # Check accessibility
+   ```
+
+#### Common TDD Mistakes to Avoid
+
+1. **Starting with E2E tests** - Too slow for rapid iteration
+2. **Testing implementation details** - Test behavior, not internals
+3. **Not refactoring after green** - Clean code is part of TDD
+4. **Writing too many E2E tests** - They're expensive to maintain
+5. **Mocking too much** - Can hide integration issues
+
+#### Recommended Test Distribution
+
+- **70% Unit Tests**: Fast feedback, easy to maintain
+- **20% Integration Tests**: Verify components work together
+- **10% E2E Tests**: Critical user journeys only
+
+#### Test File Organization
+
+```
+__tests__/
+├── unit/                    # Fast, isolated tests
+│   ├── components/         # React component tests
+│   ├── lib/               # Utility function tests
+│   └── hooks/             # Custom hook tests
+├── integration/           # API and database tests
+│   ├── api/              # API route tests
+│   └── db/               # Database operation tests
+└── e2e/                  # Full user journey tests
+    ├── auth-flows.spec.ts
+    └── diagnostic-flow.spec.ts
+```
+
+#### Speed Optimization Tips
+
+- Use `--watch` mode for unit tests during development
+- Run only affected tests: `npm test -- --findRelatedTests`
+- Use `--parallel` flag for E2E tests when possible
+- Mock external services in unit/integration tests
+- Use test fixtures to avoid repeated setup
+
 ### Content Management
 
 - Content stored in `app/content/` as Markdown with gray-matter frontmatter

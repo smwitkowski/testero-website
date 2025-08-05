@@ -244,14 +244,23 @@ const DiagnosticSummaryPage = () => {
         </Button>
         <Button
           onClick={() => {
-            // Placeholder for future study plan functionality
-            alert("Study plan feature coming soon!");
+            // Store diagnostic data for study path page
+            if (summary && domainBreakdown) {
+              const diagnosticData = {
+                score: summary.score,
+                domains: domainBreakdown,
+              };
+              sessionStorage.setItem("diagnosticData", JSON.stringify(diagnosticData));
+            }
+
+            // Navigate to study path page
+            router.push("/study-path");
           }}
           size="lg"
           variant="default"
           className="bg-green-600 hover:bg-green-700"
         >
-          Start My Study Plan
+          Start My Study Path
         </Button>
       </div>
     </main>
