@@ -90,9 +90,13 @@ supabase db push
 
 ```sql
 -- Insert subscription plans
+-- Replace the price IDs below with your actual Stripe price IDs from environment variables:
+-- STRIPE_PRICE_ID_MONTHLY and STRIPE_PRICE_ID_YEARLY
 INSERT INTO subscription_plans (name, price_monthly, price_yearly, stripe_price_id_monthly, stripe_price_id_yearly, features)
 VALUES
-  ('Pro', 2900, 29000, 'price_monthly_id', 'price_yearly_id',
+  ('Pro', 2900, 29000,
+   'YOUR_STRIPE_PRICE_ID_MONTHLY', -- Replace with actual price ID from Stripe Dashboard
+   'YOUR_STRIPE_PRICE_ID_YEARLY',  -- Replace with actual price ID from Stripe Dashboard
    '["Unlimited practice questions", "Full diagnostic assessments", "Personalized study plans", "Performance analytics", "Email support"]'::jsonb);
 ```
 

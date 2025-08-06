@@ -1,9 +1,12 @@
+-- Enable UUID generation extension (required for uuid_generate_v4)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Create subscription_plans table
 CREATE TABLE IF NOT EXISTS subscription_plans (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
-    price_monthly INTEGER NOT NULL,
-    price_yearly INTEGER NOT NULL,
+    price_monthly INTEGER NOT NULL CHECK (price_monthly > 0),
+    price_yearly INTEGER NOT NULL CHECK (price_yearly > 0),
     stripe_price_id_monthly TEXT UNIQUE,
     stripe_price_id_yearly TEXT UNIQUE,
     features JSONB NOT NULL,
@@ -19,7 +22,17 @@ CREATE TABLE IF NOT EXISTS user_subscriptions (
     stripe_customer_id TEXT UNIQUE NOT NULL,
     stripe_subscription_id TEXT UNIQUE,
     plan_id UUID REFERENCES subscription_plans(id),
-    status TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (
+        status IN (
+            'trialing',
+            'active',
+            'past_due',
+            'canceled',
+            'unpaid',
+            'incomplete',
+            'incomplete_expired'
+        )
+    ),
     current_period_start TIMESTAMP WITH TIME ZONE,
     current_period_end TIMESTAMP WITH TIME ZONE,
     cancel_at_period_end BOOLEAN DEFAULT false,

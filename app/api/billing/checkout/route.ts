@@ -4,11 +4,21 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
 import { z } from "zod";
 
+interface CheckoutSessionResponse {
+  url: string;
+}
+
+interface ErrorResponse {
+  error: string;
+}
+
 const checkoutSchema = z.object({
   priceId: z.string().min(1),
 });
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest
+): Promise<NextResponse<CheckoutSessionResponse | ErrorResponse>> {
   try {
     // Rate limiting
     const ip =

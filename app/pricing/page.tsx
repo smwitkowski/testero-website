@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { CheckCircleIcon } from "@heroicons/react/24/solid";
+import { CheckCircle } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 
 interface PricingPlan {
@@ -28,8 +28,8 @@ const plans: PricingPlan[] = [
       yearly: 290,
     },
     priceId: {
-      monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || "price_monthly",
-      yearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_YEARLY || "price_yearly",
+      monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY!,
+      yearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_YEARLY!,
     },
     features: [
       "Unlimited practice questions",
@@ -46,8 +46,8 @@ const plans: PricingPlan[] = [
       yearly: 290,
     },
     priceId: {
-      monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || "price_monthly",
-      yearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_YEARLY || "price_yearly",
+      monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_YEARLY!,
+      yearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_YEARLY!,
     },
     features: [
       "Everything in Monthly",
@@ -63,6 +63,7 @@ const plans: PricingPlan[] = [
 export default function PricingPage() {
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("yearly");
   const [loading, setLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const posthog = usePostHog();
@@ -119,7 +120,8 @@ export default function PricingPage() {
         error: error instanceof Error ? error.message : "Unknown error",
         plan_name: planName,
       });
-      alert("Failed to start checkout. Please try again.");
+      setError("Failed to start checkout. Please try again.");
+      setTimeout(() => setError(null), 5000);
     } finally {
       setLoading(null);
     }
@@ -128,6 +130,17 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
+        {/* Error Alert */}
+        {error && (
+          <div className="mb-6 rounded-md bg-red-50 p-4 max-w-2xl mx-auto">
+            <div className="flex">
+              <div className="ml-3">
+                <p className="text-sm font-medium text-red-800">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Simple, Transparent Pricing</h1>
@@ -209,7 +222,7 @@ export default function PricingPage() {
                 <ul className="mb-8 space-y-4">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start">
-                      <CheckCircleIcon className="h-6 w-6 flex-shrink-0 text-green-500" />
+                      <CheckCircle className="h-6 w-6 flex-shrink-0 text-green-500" />
                       <span className="ml-3 text-gray-600">{feature}</span>
                     </li>
                   ))}

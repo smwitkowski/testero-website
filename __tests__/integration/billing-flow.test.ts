@@ -352,8 +352,21 @@ describe("Billing Flow Integration", () => {
       const invalidPriceId = "price_invalid";
       const validPriceIds = ["price_monthly", "price_yearly"];
 
-      // This would be handled in the API route
-      expect(validPriceIds.includes(invalidPriceId)).toBe(false);
+      // Mock environment variables for valid price IDs
+      process.env.STRIPE_PRICE_ID_MONTHLY = "price_monthly";
+      process.env.STRIPE_PRICE_ID_YEARLY = "price_yearly";
+
+      // Test that invalid price ID would be rejected
+      const isValidPrice = (priceId: string) => {
+        return (
+          priceId === process.env.STRIPE_PRICE_ID_MONTHLY ||
+          priceId === process.env.STRIPE_PRICE_ID_YEARLY
+        );
+      };
+
+      expect(isValidPrice(invalidPriceId)).toBe(false);
+      expect(isValidPrice("price_monthly")).toBe(true);
+      expect(isValidPrice("price_yearly")).toBe(true);
     });
   });
 

@@ -17,8 +17,10 @@ export class StripeService {
   async createOrRetrieveCustomer(userId: string, email: string): Promise<Stripe.Customer> {
     try {
       // Search for existing customer with this Supabase user ID
+      // Escape special characters in userId to prevent query issues
+      const escapedUserId = userId.replace(/["\\]/g, "\\$&");
       const existingCustomers = await this.stripe.customers.search({
-        query: `metadata["supabase_user_id"]:"${userId}"`,
+        query: `metadata["supabase_user_id"]:"${escapedUserId}"`,
       });
 
       if (existingCustomers.data.length > 0) {
@@ -36,7 +38,9 @@ export class StripeService {
       return customer;
     } catch (error) {
       console.error("Error creating/retrieving customer:", error);
-      throw new Error("Failed to create or retrieve customer");
+      throw new Error(
+        `Failed to create or retrieve customer: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   }
 
@@ -80,7 +84,9 @@ export class StripeService {
       return session;
     } catch (error) {
       console.error("Error creating checkout session:", error);
-      throw new Error("Failed to create checkout session");
+      throw new Error(
+        `Failed to create checkout session: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   }
 
@@ -97,7 +103,9 @@ export class StripeService {
       return session;
     } catch (error) {
       console.error("Error creating portal session:", error);
-      throw new Error("Failed to create portal session");
+      throw new Error(
+        `Failed to create portal session: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   }
 
@@ -119,7 +127,9 @@ export class StripeService {
       return subscription;
     } catch (error) {
       console.error("Error retrieving subscription:", error);
-      throw new Error("Failed to retrieve subscription");
+      throw new Error(
+        `Failed to retrieve subscription: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   }
 
@@ -132,7 +142,9 @@ export class StripeService {
       return subscription;
     } catch (error) {
       console.error("Error cancelling subscription:", error);
-      throw new Error("Failed to cancel subscription");
+      throw new Error(
+        `Failed to cancel subscription: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   }
 
@@ -145,7 +157,9 @@ export class StripeService {
       return session;
     } catch (error) {
       console.error("Error retrieving checkout session:", error);
-      throw new Error("Failed to retrieve checkout session");
+      throw new Error(
+        `Failed to retrieve checkout session: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   }
 

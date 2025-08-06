@@ -3,7 +3,17 @@ import { StripeService } from "@/lib/stripe/stripe-service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
 
-export async function POST(request: NextRequest) {
+interface PortalSessionResponse {
+  url: string;
+}
+
+interface ErrorResponse {
+  error: string;
+}
+
+export async function POST(
+  request: NextRequest
+): Promise<NextResponse<PortalSessionResponse | ErrorResponse>> {
   try {
     // Rate limiting
     const ip =

@@ -38,6 +38,7 @@ export default function BillingDashboard() {
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -57,7 +58,7 @@ export default function BillingDashboard() {
     } else if (!user && !loading) {
       router.push("/login?redirect=/dashboard/billing");
     }
-  }, [user]);
+  }, [user, loading, router, posthog, searchParams]);
 
   const fetchSubscriptionData = async () => {
     try {
@@ -126,7 +127,8 @@ export default function BillingDashboard() {
       }
     } catch (error) {
       console.error("Portal session error:", error);
-      alert("Failed to open billing portal. Please try again.");
+      setError("Failed to open billing portal. Please try again.");
+      setTimeout(() => setError(null), 5000);
     } finally {
       setPortalLoading(false);
     }
@@ -201,6 +203,17 @@ export default function BillingDashboard() {
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Billing & Subscription</h1>
+
+        {/* Error Alert */}
+        {error && (
+          <div className="mb-6 rounded-md bg-red-50 p-4">
+            <div className="flex">
+              <div className="ml-3">
+                <p className="text-sm font-medium text-red-800">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Success Alert */}
         {searchParams.get("success") === "true" && (
