@@ -44,14 +44,14 @@ export function FinalCtaSection() {
           id="final-cta-heading"
           className="text-2xl sm:text-3xl md:text-5xl font-bold leading-tight text-slate-800 drop-shadow-sm"
         >
-          Ready to <span className="text-orange-500">Ace</span> Your Cloud Certification?
+          Google Cloud Updated Their Blueprint <span className="text-orange-500">3 Days Ago</span>.
           <br />
-          Start Practicing Today
+          We&apos;ve Already Updated.
         </h2>
         
         {/* Value proposition with enhanced highlight */}
         <p className="text-base sm:text-lg md:text-xl text-slate-700 max-w-2xl mx-auto leading-relaxed">
-          Join hundreds of cloud professionals already using Testero to master Google Cloud, AWS, and Azure certifications. No credit card required.
+          Don&apos;t waste months studying outdated materials. Get your exact readiness score in 15 minutes and start practicing with content that&apos;s always current.
         </p>
         
         {/* Feature bullets with icons */}
