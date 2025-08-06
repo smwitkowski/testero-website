@@ -14,7 +14,7 @@ describe("StripeService", () => {
 
     jest.clearAllMocks();
     mockStripe = new Stripe("sk_test_mock", {
-      apiVersion: "2024-12-18.acacia",
+      apiVersion: "2025-07-30.basil",
     }) as jest.Mocked<Stripe>;
     (Stripe as jest.MockedClass<typeof Stripe>).mockImplementation(() => mockStripe);
     stripeService = new StripeService();
@@ -32,7 +32,7 @@ describe("StripeService", () => {
         id: "cus_test123",
         email,
         metadata: { supabase_user_id: userId },
-      } as Stripe.Customer;
+      } as unknown as Stripe.Customer;
 
       // Mock customer search returns empty
       mockStripe.customers = {
@@ -60,7 +60,7 @@ describe("StripeService", () => {
         id: "cus_existing",
         email,
         metadata: { supabase_user_id: userId },
-      } as Stripe.Customer;
+      } as unknown as Stripe.Customer;
 
       // Mock customer search returns existing customer
       mockStripe.customers = {
@@ -301,7 +301,7 @@ describe("StripeService", () => {
             },
           ],
         },
-      } as Stripe.Subscription;
+      } as unknown as Stripe.Subscription;
 
       mockStripe.subscriptions = {
         retrieve: jest.fn().mockResolvedValue(mockSubscription),
@@ -335,7 +335,7 @@ describe("StripeService", () => {
         id: subscriptionId,
         status: "active",
         cancel_at_period_end: true,
-      } as Stripe.Subscription;
+      } as unknown as Stripe.Subscription;
 
       mockStripe.subscriptions = {
         update: jest.fn().mockResolvedValue(mockCancelledSubscription),

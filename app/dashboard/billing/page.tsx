@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
-import { CheckCircleIcon, XCircleIcon, ClockIcon } from "@heroicons/react/24/solid";
+import { createClient } from "@/lib/supabase/client";
+import { CheckCircleIcon, XCircleIcon, ClockIcon } from "@heroicons/react/24/outline";
 import { usePostHog } from "posthog-js/react";
 
 interface Subscription {
@@ -43,7 +43,7 @@ export default function BillingDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const posthog = usePostHog();
-  const supabase = createBrowserSupabaseClient();
+  const supabase = createClient();
 
   useEffect(() => {
     const fetchSubscriptionData = async () => {

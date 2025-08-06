@@ -77,7 +77,7 @@ describe("Billing Flow Integration", () => {
       const priceId = "price_monthly";
 
       // Step 1: Create or retrieve customer
-      mockStripe.customers.search.mockResolvedValue({
+      (mockStripe.customers.search as jest.Mock).mockResolvedValue({
         data: [],
         has_more: false,
         url: "",
@@ -88,9 +88,9 @@ describe("Billing Flow Integration", () => {
         id: "cus_new_123",
         email,
         metadata: { supabase_user_id: userId },
-      } as Stripe.Customer;
+      } as unknown as Stripe.Customer;
 
-      mockStripe.customers.create.mockResolvedValue(mockCustomer);
+      (mockStripe.customers.create as jest.Mock).mockResolvedValue(mockCustomer);
 
       const customer = await stripeService.createOrRetrieveCustomer(userId, email);
       expect(customer.id).toBe("cus_new_123");
@@ -101,9 +101,9 @@ describe("Billing Flow Integration", () => {
         url: "https://checkout.stripe.com/pay/cs_test_123",
         customer: customer.id,
         metadata: { user_id: userId },
-      } as Stripe.Checkout.Session;
+      } as unknown as Stripe.Checkout.Session;
 
-      mockStripe.checkout.sessions.create.mockResolvedValue(mockSession);
+      (mockStripe.checkout.sessions.create as jest.Mock).mockResolvedValue(mockSession);
 
       const session = await stripeService.createCheckoutSession({
         customerId: customer.id,
@@ -129,7 +129,7 @@ describe("Billing Flow Integration", () => {
             payment_status: "paid",
           },
         },
-      } as Stripe.Event;
+      } as unknown as Stripe.Event;
 
       const mockSubscription = {
         id: "sub_new_123",
@@ -145,12 +145,12 @@ describe("Billing Flow Integration", () => {
             },
           ],
         },
-      } as Stripe.Subscription;
+      } as unknown as Stripe.Subscription;
 
-      mockStripe.checkout.sessions.retrieve.mockResolvedValue(
+      (mockStripe.checkout.sessions.retrieve as jest.Mock).mockResolvedValue(
         webhookEvent.data.object as Stripe.Checkout.Session
       );
-      mockStripe.subscriptions.retrieve.mockResolvedValue(mockSubscription);
+      (mockStripe.subscriptions.retrieve as jest.Mock).mockResolvedValue(mockSubscription);
 
       // Verify all steps were called correctly
       expect(mockStripe.customers.create).toHaveBeenCalledWith({
@@ -182,9 +182,9 @@ describe("Billing Flow Integration", () => {
         id: "cus_existing_123",
         email,
         metadata: { supabase_user_id: userId },
-      } as Stripe.Customer;
+      } as unknown as Stripe.Customer;
 
-      mockStripe.customers.search.mockResolvedValue({
+      (mockStripe.customers.search as jest.Mock).mockResolvedValue({
         data: [mockCustomer],
         has_more: false,
         url: "",
@@ -207,7 +207,7 @@ describe("Billing Flow Integration", () => {
         current_period_start: Math.floor(Date.now() / 1000),
         current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
         cancel_at_period_end: false,
-      } as Stripe.Subscription;
+      } as unknown as Stripe.Subscription;
 
       const webhookEvent = {
         id: "evt_sub_update",
@@ -215,7 +215,7 @@ describe("Billing Flow Integration", () => {
         data: {
           object: updatedSubscription,
         },
-      } as Stripe.Event;
+      } as unknown as Stripe.Event;
 
       // Database operations
       mockSupabase.single
@@ -235,9 +235,9 @@ describe("Billing Flow Integration", () => {
         id: subscriptionId,
         status: "canceled",
         canceled_at: Math.floor(Date.now() / 1000),
-      } as Stripe.Subscription;
+      } as unknown as Stripe.Subscription;
 
-      mockStripe.subscriptions.update.mockResolvedValue(canceledSubscription);
+      (mockStripe.subscriptions.update as jest.Mock).mockResolvedValue(canceledSubscription);
 
       const result = await stripeService.cancelSubscription(subscriptionId);
 
@@ -258,7 +258,7 @@ describe("Billing Flow Integration", () => {
         return_url: returnUrl,
       } as Stripe.BillingPortal.Session;
 
-      mockStripe.billingPortal.sessions.create.mockResolvedValue(mockPortalSession);
+      (mockStripe.billingPortal.sessions.create as jest.Mock).mockResolvedValue(mockPortalSession);
 
       const session = await stripeService.createPortalSession(customerId, returnUrl);
 
@@ -303,9 +303,9 @@ describe("Billing Flow Integration", () => {
         id: "cs_expired_123",
         status: "expired",
         payment_status: "unpaid",
-      } as Stripe.Checkout.Session;
+      } as unknown as Stripe.Checkout.Session;
 
-      mockStripe.checkout.sessions.retrieve.mockResolvedValue(expiredSession);
+      (mockStripe.checkout.sessions.retrieve as jest.Mock).mockResolvedValue(expiredSession);
 
       const session = await stripeService.retrieveCheckoutSession("cs_expired_123");
 
@@ -324,9 +324,9 @@ describe("Billing Flow Integration", () => {
         id: "evt_test",
         type: "test.event",
         data: { object: {} },
-      } as Stripe.Event;
+      } as unknown as Stripe.Event;
 
-      mockStripe.webhooks.constructEvent.mockReturnValue(mockEvent);
+      (mockStripe.webhooks.constructEvent as jest.Mock).mockReturnValue(mockEvent);
 
       const event = stripeService.constructWebhookEvent(payload, signature, secret);
 
@@ -339,7 +339,7 @@ describe("Billing Flow Integration", () => {
       const signature = "invalid_signature";
       const secret = "whsec_test_secret";
 
-      mockStripe.webhooks.constructEvent.mockImplementation(() => {
+      (mockStripe.webhooks.constructEvent as jest.Mock).mockImplementation(() => {
         throw new Error("Invalid signature");
       });
 

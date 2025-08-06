@@ -1,4 +1,51 @@
 // Comprehensive pricing configuration based on revenue model
+
+// Runtime validation for required environment variables
+const validatePriceIds = () => {
+  const requiredPriceIds = [
+    {
+      key: "NEXT_PUBLIC_STRIPE_BASIC_MONTHLY",
+      value: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY,
+    },
+    { key: "NEXT_PUBLIC_STRIPE_BASIC_ANNUAL", value: process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL },
+    { key: "NEXT_PUBLIC_STRIPE_PRO_MONTHLY", value: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY },
+    { key: "NEXT_PUBLIC_STRIPE_PRO_ANNUAL", value: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL },
+    {
+      key: "NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY",
+      value: process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY,
+    },
+    {
+      key: "NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL",
+      value: process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL,
+    },
+  ];
+
+  const missingIds = requiredPriceIds.filter(({ value }) => !value);
+
+  if (missingIds.length > 0 && process.env.NODE_ENV === "production") {
+    console.error(
+      "Missing required Stripe price IDs:",
+      missingIds.map(({ key }) => key)
+    );
+    // In production, we should fail fast to avoid runtime errors
+    throw new Error(
+      `Missing required Stripe price IDs: ${missingIds.map(({ key }) => key).join(", ")}`
+    );
+  } else if (missingIds.length > 0) {
+    // In development, log a warning but continue
+    console.warn(
+      "Missing Stripe price IDs (using placeholders):",
+      missingIds.map(({ key }) => key)
+    );
+  }
+};
+
+// Validate on module load
+if (typeof window === "undefined") {
+  // Only validate on server-side to avoid client-side errors
+  validatePriceIds();
+}
+
 export interface PricingTier {
   id: string;
   name: string;

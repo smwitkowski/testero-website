@@ -4,6 +4,17 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { EmailService } from "@/lib/email/email-service";
 import Stripe from "stripe";
 
+// Extended Stripe types for properties that exist but aren't in the official types
+interface ExtendedSubscription extends Stripe.Subscription {
+  current_period_start: number;
+  current_period_end: number;
+}
+
+interface ExtendedInvoice extends Stripe.Invoice {
+  subscription: string;
+  payment_intent: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Get the raw body and signature
@@ -90,9 +101,11 @@ export async function POST(request: NextRequest) {
               plan_id: plan?.id,
               status: subscription.status,
               current_period_start: new Date(
-                subscription.current_period_start * 1000
+                (subscription as ExtendedSubscription).current_period_start * 1000
               ).toISOString(),
-              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              current_period_end: new Date(
+                (subscription as ExtendedSubscription).current_period_end * 1000
+              ).toISOString(),
               cancel_at_period_end: subscription.cancel_at_period_end || false,
             });
 
@@ -127,9 +140,11 @@ export async function POST(request: NextRequest) {
             .update({
               status: subscription.status,
               current_period_start: new Date(
-                subscription.current_period_start * 1000
+                (subscription as ExtendedSubscription).current_period_start * 1000
               ).toISOString(),
-              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              current_period_end: new Date(
+                (subscription as ExtendedSubscription).current_period_end * 1000
+              ).toISOString(),
               cancel_at_period_end: subscription.cancel_at_period_end || false,
               updated_at: new Date().toISOString(),
             })
@@ -168,14 +183,14 @@ export async function POST(request: NextRequest) {
           const { data: subscription } = await supabase
             .from("user_subscriptions")
             .select("user_id")
-            .eq("stripe_subscription_id", invoice.subscription)
+            .eq("stripe_subscription_id", (invoice as ExtendedInvoice).subscription)
             .single();
 
           if (subscription?.user_id) {
             // Record failed payment
             await supabase.from("payment_history").insert({
               user_id: subscription.user_id,
-              stripe_payment_intent_id: invoice.payment_intent as string,
+              stripe_payment_intent_id: (invoice as ExtendedInvoice).payment_intent as string,
               amount: invoice.amount_due,
               currency: invoice.currency,
               status: "failed",

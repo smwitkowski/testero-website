@@ -26,6 +26,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@google-cloud/storage": "^7.16.0",
+    "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.0.1",
     "@mui/material": "^7.0.2",
     "@openrouter/ai-sdk-provider": "^0.7.0",
