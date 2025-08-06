@@ -1,3 +1,4 @@
-export default function remarkRehype(options) {
-  return (tree, file) => tree;
-}
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+module.exports = function remarkRehype(_options) {
+  return (_tree, _file) => _tree;
+};

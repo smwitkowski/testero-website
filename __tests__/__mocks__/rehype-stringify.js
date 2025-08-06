@@ -1,3 +1,4 @@
-export default function rehypeStringify() {
-  return (tree, file) => tree;
-}
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+module.exports = function rehypeStringify() {
+  return (_tree, _file) => _tree;
+};
