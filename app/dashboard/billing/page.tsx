@@ -46,6 +46,46 @@ export default function BillingDashboard() {
   const supabase = createBrowserSupabaseClient();
 
   useEffect(() => {
+    const fetchSubscriptionData = async () => {
+      try {
+        // Fetch subscription with plan details
+        const { data: subData, error: subError } = await supabase
+          .from("user_subscriptions")
+          .select(
+            `
+            *,
+            plan:subscription_plans(*)
+          `
+          )
+          .eq("user_id", user?.id)
+          .single();
+
+        if (subError && subError.code !== "PGRST116") {
+          console.error("Error fetching subscription:", subError);
+        } else if (subData) {
+          setSubscription(subData);
+        }
+
+        // Fetch payment history
+        const { data: paymentData, error: paymentError } = await supabase
+          .from("payment_history")
+          .select("*")
+          .eq("user_id", user?.id)
+          .order("created_at", { ascending: false })
+          .limit(10);
+
+        if (paymentError) {
+          console.error("Error fetching payment history:", paymentError);
+        } else if (paymentData) {
+          setPaymentHistory(paymentData);
+        }
+      } catch (error) {
+        console.error("Error fetching billing data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (user) {
       fetchSubscriptionData();
 
@@ -58,47 +98,7 @@ export default function BillingDashboard() {
     } else if (!user && !loading) {
       router.push("/login?redirect=/dashboard/billing");
     }
-  }, [user, loading, router, posthog, searchParams]);
-
-  const fetchSubscriptionData = async () => {
-    try {
-      // Fetch subscription with plan details
-      const { data: subData, error: subError } = await supabase
-        .from("user_subscriptions")
-        .select(
-          `
-          *,
-          plan:subscription_plans(*)
-        `
-        )
-        .eq("user_id", user?.id)
-        .single();
-
-      if (subError && subError.code !== "PGRST116") {
-        console.error("Error fetching subscription:", subError);
-      } else if (subData) {
-        setSubscription(subData);
-      }
-
-      // Fetch payment history
-      const { data: paymentData, error: paymentError } = await supabase
-        .from("payment_history")
-        .select("*")
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (paymentError) {
-        console.error("Error fetching payment history:", paymentError);
-      } else if (paymentData) {
-        setPaymentHistory(paymentData);
-      }
-    } catch (error) {
-      console.error("Error fetching billing data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [user, loading, router, posthog, searchParams, supabase]);
 
   const handleManageSubscription = async () => {
     try {
@@ -313,7 +313,7 @@ export default function BillingDashboard() {
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">You don't have an active subscription.</p>
+              <p className="text-gray-600 mb-4">You don&apos;t have an active subscription.</p>
               <button
                 onClick={() => router.push("/pricing")}
                 className="px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors"

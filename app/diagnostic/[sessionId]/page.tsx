@@ -119,7 +119,7 @@ const DiagnosticSessionPage = () => {
     };
 
     fetchSession();
-  }, [sessionId, user, isAuthLoading]); // Add user and isAuthLoading to dependency array
+  }, [sessionId, user, isAuthLoading, posthog]); // Add user and isAuthLoading to dependency array
 
   const currentQuestion = sessionData?.questions[currentQuestionIndex];
 

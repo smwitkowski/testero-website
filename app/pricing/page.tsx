@@ -214,7 +214,7 @@ export default function PricingPage() {
                   </div>
                   {billingInterval === "yearly" && plan.name === "Yearly" && (
                     <p className="mt-2 text-sm text-gray-600">
-                      That's only ${Math.round(price / 12)}/month
+                      That&apos;s only ${Math.round(price / 12)}/month
                     </p>
                   )}
                 </div>
@@ -281,15 +281,15 @@ export default function PricingPage() {
                 Can I cancel my subscription anytime?
               </h3>
               <p className="text-gray-600">
-                Yes, you can cancel your subscription at any time. You'll continue to have access
-                until the end of your current billing period.
+                Yes, you can cancel your subscription at any time. You&apos;ll continue to have
+                access until the end of your current billing period.
               </p>
             </div>
             <div className="mb-6">
               <h3 className="font-semibold text-gray-900 mb-2">Do you offer refunds?</h3>
               <p className="text-gray-600">
-                We offer a 7-day money-back guarantee. If you're not satisfied, contact us within 7
-                days of your purchase for a full refund.
+                We offer a 7-day money-back guarantee. If you&apos;re not satisfied, contact us
+                within 7 days of your purchase for a full refund.
               </p>
             </div>
             <div className="mb-6">
