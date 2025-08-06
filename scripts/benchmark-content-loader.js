@@ -43,7 +43,7 @@ function cleanupTestData() {
 }
 
 // Benchmark sync operations (simulated old implementation)
-async function benchmarkSyncOperations(numFiles) {
+function benchmarkSyncOperations(numFiles) {
   const start = Date.now();
 
   // Simulate sync directory read
@@ -136,7 +136,7 @@ async function runBenchmarks() {
     setupTestData(size);
 
     // Run sync benchmark
-    const syncTime = await benchmarkSyncOperations(size);
+    const syncTime = benchmarkSyncOperations(size);
     console.log(`Sync operations:     ${syncTime}ms`);
 
     // Run async benchmark

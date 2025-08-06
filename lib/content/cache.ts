@@ -58,7 +58,7 @@ export class ContentCache {
     // Update access order for LRU
     this.updateAccessOrder(key);
 
-    return entry.data;
+    return entry.data as T;
   }
 
   /**
@@ -95,7 +95,7 @@ export class ContentCache {
   /**
    * Invalidate a specific cache entry
    */
-  async invalidate(key: string): Promise<void> {
+  invalidate(key: string): void {
     this.cache.delete(key);
     this.removeFromAccessOrder(key);
   }
@@ -103,7 +103,7 @@ export class ContentCache {
   /**
    * Clear all cache entries
    */
-  async clear(): Promise<void> {
+  clear(): void {
     this.cache.clear();
     this.accessOrder = [];
   }

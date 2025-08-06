@@ -1,4 +1,4 @@
-export const remark = () => ({
+module.exports.remark = () => ({
   use: function () {
     return this;
   },

@@ -4,7 +4,7 @@ import "@testing-library/jest-dom";
 // Mock React's cache function for Jest tests
 jest.mock("react", () => ({
   ...jest.requireActual("react"),
-  cache: (fn: any) => fn,
+  cache: <T extends (...args: any[]) => any>(fn: T): T => fn,
 }));
 
 // Mock Next.js cookies module to avoid request context errors in tests
