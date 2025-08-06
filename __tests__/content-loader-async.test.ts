@@ -8,21 +8,43 @@ describe("Content Loader Async Operations Tests", () => {
   const hubDir = path.join(testContentDir, "hub");
   const spokesDir = path.join(testContentDir, "spokes");
 
+  // Mock the path.join function to redirect content paths to test directories
+  let originalPathJoin: typeof path.join;
+  
   beforeEach(() => {
     // Create test directories
     fs.mkdirSync(testContentDir, { recursive: true });
     fs.mkdirSync(hubDir, { recursive: true });
     fs.mkdirSync(spokesDir, { recursive: true });
+
+    // Mock path.join to redirect content directory paths to test directories
+    originalPathJoin = path.join;
+    jest.spyOn(path, 'join').mockImplementation((...args: string[]) => {
+      const joined = originalPathJoin(...args);
+      
+      // If the path contains the production content directories, redirect to test directories
+      if (joined.includes('app/content/hub')) {
+        return joined.replace(/.*app\/content\/hub/, hubDir);
+      }
+      if (joined.includes('app/content/spokes')) {
+        return joined.replace(/.*app\/content\/spokes/, spokesDir);
+      }
+      
+      return joined;
+    });
   });
 
   afterEach(() => {
     // Clean up test files
     fs.rmSync(testContentDir, { recursive: true, force: true });
+    
+    // Restore path.join mock
+    jest.restoreAllMocks();
   });
 
   describe("Async File Operations", () => {
     it("should use async file reading instead of sync operations", async () => {
-      // Create a test file
+      // Create a test file in the test directory (path.join will be mocked to redirect)
       const testContent = `---
 title: Async Test
 description: Testing async operations
@@ -31,10 +53,8 @@ date: 2024-01-01
 
 # Async Test Content`;
 
-      // First, we need to mock the actual content directories to point to our test directories
-      const originalHubDir = path.join(process.cwd(), "app/content/hub");
-      fs.mkdirSync(originalHubDir, { recursive: true });
-      fs.writeFileSync(path.join(originalHubDir, "async-test.md"), testContent);
+      // Write to test directory (the path mock will handle redirection)
+      fs.writeFileSync(path.join(hubDir, "async-test.md"), testContent);
 
       // Spy on fs operations to ensure async methods are used
       const readFileSpy = jest.spyOn(fs.promises, "readFile");
@@ -45,9 +65,6 @@ date: 2024-01-01
       // Should use async readFile, not sync
       expect(readFileSpy).toHaveBeenCalled();
       expect(readFileSyncSpy).not.toHaveBeenCalled();
-
-      // Clean up
-      fs.rmSync(path.join(originalHubDir, "async-test.md"), { force: true });
 
       readFileSpy.mockRestore();
       readFileSyncSpy.mockRestore();
@@ -112,9 +129,8 @@ description: Testing caching
 
 # Cache Test`;
 
-      const originalHubDir = path.join(process.cwd(), "app/content/hub");
-      fs.mkdirSync(originalHubDir, { recursive: true });
-      fs.writeFileSync(path.join(originalHubDir, "cache-test.md"), testContent);
+      // Write to test directory (path mock will handle redirection)
+      fs.writeFileSync(path.join(hubDir, "cache-test.md"), testContent);
 
       // First read
       const content1 = await contentLoader.getHubContent("cache-test");
@@ -123,9 +139,6 @@ description: Testing caching
       const content2 = await contentLoader.getHubContent("cache-test");
 
       expect(content1).toEqual(content2);
-
-      // Clean up
-      fs.rmSync(path.join(originalHubDir, "cache-test.md"), { force: true });
     });
 
     it("should invalidate cache when file is modified", async () => {
@@ -141,25 +154,25 @@ title: Updated Title
 
 Updated content`;
 
-      const originalHubDir = path.join(process.cwd(), "app/content/hub");
-      const filePath = path.join(originalHubDir, "cache-invalidation.md");
+      const filePath = path.join(hubDir, "cache-invalidation.md");
 
       // Write original content
       fs.writeFileSync(filePath, originalContent);
       const content1 = await contentLoader.getHubContent("cache-invalidation");
 
       // Update file after a delay to ensure different mtime
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 1100)); // Ensure >1 second difference
       fs.writeFileSync(filePath, updatedContent);
+      
+      // Explicitly modify the file timestamp to ensure cache invalidation
+      const futureTime = new Date(Date.now() + 2000);
+      fs.utimesSync(filePath, futureTime, futureTime);
 
       // Read again - should get updated content
       const content2 = await contentLoader.getHubContent("cache-invalidation");
 
       expect(content1?.meta.title).toBe("Original Title");
       expect(content2?.meta.title).toBe("Updated Title");
-
-      // Clean up
-      fs.rmSync(filePath, { force: true });
     });
 
     it("should handle cache misses gracefully", async () => {
@@ -214,13 +227,10 @@ Updated content`;
 
   describe("Async Directory Operations", () => {
     it("should use async methods for directory operations", async () => {
-      // Create test files in actual content directory
-      const originalHubDir = path.join(process.cwd(), "app/content/hub");
-      fs.mkdirSync(originalHubDir, { recursive: true });
-
+      // Create test files in test directory (path mock will handle redirection)
       for (let i = 0; i < 5; i++) {
         fs.writeFileSync(
-          path.join(originalHubDir, `test-dir-${i}.md`),
+          path.join(hubDir, `test-dir-${i}.md`),
           `---\ntitle: Dir Test ${i}\n---\n\nContent`
         );
       }
@@ -240,11 +250,6 @@ Updated content`;
       // Should not use sync methods
       expect(readdirSyncSpy).not.toHaveBeenCalled();
       expect(existsSyncSpy).not.toHaveBeenCalled();
-
-      // Clean up
-      for (let i = 0; i < 5; i++) {
-        fs.rmSync(path.join(originalHubDir, `test-dir-${i}.md`), { force: true });
-      }
 
       readdirSpy.mockRestore();
       readdirSyncSpy.mockRestore();
