@@ -46,12 +46,12 @@ export function FinalCtaSection() {
         >
           Google Cloud Updated Their Blueprint <span className="text-orange-500">3 Days Ago</span>.
           <br />
-          We've Already Updated.
+          We&apos;ve Already Updated.
         </h2>
         
         {/* Value proposition with enhanced highlight */}
         <p className="text-base sm:text-lg md:text-xl text-slate-700 max-w-2xl mx-auto leading-relaxed">
-          Don't waste months studying outdated materials. Get your exact readiness score in 15 minutes and start practicing with content that's always current.
+          Don&apos;t waste months studying outdated materials. Get your exact readiness score in 15 minutes and start practicing with content that&apos;s always current.
         </p>
         
         {/* Feature bullets with icons */}
