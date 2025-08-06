@@ -1,0 +1,67 @@
+# Page snapshot
+
+```yaml
+- link "Skip to content":
+  - /url: "#main-content"
+- banner:
+  - link "Testero Home":
+    - /url: /
+    - text: Testero
+  - navigation "Primary navigation":
+    - link "Home":
+      - /url: /
+    - link "Content Hub":
+      - /url: /content
+    - link "FAQ":
+      - /url: /faq
+  - link "Join Waitlist":
+    - /url: /waitlist
+  - link "Login":
+    - /url: /login
+- main:
+  - main:
+    - heading "Diagnostic Results" [level=1]
+    - img "Score chart showing 40% - Needs Work":
+      - img
+      - text: 40%
+    - text: Needs Improvement
+    - heading "Overview" [level=2]
+    - text: 4/10 Correct Answers Google ML Engineer Exam Type 8/5/2025 Completed 0 min Duration
+    - region "Domain breakdown":
+      - text: Score by Domain
+      - img: Neural Networks Model Optimization Machine Learning Basics 0 25 50 75 100
+      - list:
+        - listitem:
+          - img
+          - text: Score %
+      - text: Neural Networks 1/3 33% Weak area Model Optimization 1/3 33% Weak area Machine Learning Basics 2/4 50%
+    - text: Study Recommendations
+    - heading "Focus Needed" [level=3]
+    - paragraph: Strengthen your foundation in key areas. Consistent practice will improve your readiness.
+    - heading "Performance by Domain" [level=4]
+    - text: Neural Networks 1/3 33% Weak area Machine Learning Basics 2/4 50% Model Optimization 1/3 33% Weak area
+    - heading "Action Items" [level=4]
+    - heading "Focus on Neural Networks - Currently at 33%" [level=5]
+    - text: HIGH
+    - list:
+      - listitem: • Complete practice problems in this domain
+      - listitem: • Review documentation and key concepts
+      - listitem: • Work through hands-on labs
+    - heading "Focus on Model Optimization - Currently at 33%" [level=5]
+    - text: HIGH
+    - list:
+      - listitem: • Complete practice problems in this domain
+      - listitem: • Review documentation and key concepts
+      - listitem: • Work through hands-on labs
+    - heading "Improve Machine Learning Basics - Currently at 50%" [level=5]
+    - text: MEDIUM
+    - list:
+      - listitem: • Practice advanced topics
+      - listitem: • Review edge cases and best practices
+    - paragraph: No questions to review
+    - button "Take Another Diagnostic"
+    - button "Start My Study Path"
+- alert
+- button "Open Next.js Dev Tools":
+  - img
+```

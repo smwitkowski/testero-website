@@ -1,4 +1,3 @@
-import fs from "fs";
 import { promises as fsPromises } from "fs";
 
 interface CacheEntry<T> {
@@ -8,7 +7,7 @@ interface CacheEntry<T> {
 }
 
 export class ContentCache {
-  private cache: Map<string, CacheEntry<any>>;
+  private cache: Map<string, CacheEntry<unknown>>;
   private ttl: number;
   private maxSize: number;
   private accessOrder: string[];
@@ -49,7 +48,7 @@ export class ContentCache {
         this.removeFromAccessOrder(key);
         return null;
       }
-    } catch (error) {
+    } catch {
       // If we can't stat the file, invalidate the cache entry
       this.cache.delete(key);
       this.removeFromAccessOrder(key);

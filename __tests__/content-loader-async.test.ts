@@ -198,13 +198,13 @@ Updated content`;
     });
 
     it("should log errors appropriately", async () => {
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
+      const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 
       // Try to read a non-existent file
       await contentLoader.getHubContent("error-test");
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Error fetching hub content"),
+        expect.stringContaining("Error fetching hub content for slug error-test:"),
         expect.any(Error)
       );
 
