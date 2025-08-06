@@ -1,6 +1,12 @@
 import "@testing-library/jest-dom";
 // All undici and Web API polyfills removed for pure business logic test compatibility.
 
+// Mock React's cache function for Jest tests
+jest.mock("react", () => ({
+  ...jest.requireActual("react"),
+  cache: <T extends (...args: any[]) => any>(fn: T): T => fn,
+}));
+
 // Mock Next.js cookies module to avoid request context errors in tests
 jest.mock("next/headers", () => ({
   cookies: jest.fn(() => ({

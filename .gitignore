@@ -47,3 +47,10 @@ github-actions-key.json
 
 # Claude Code settings
 .claude/settings.local.json
+
+# Playwright test artifacts
+playwright-report/
+test-results/
+
+# Implementation tracking
+implement/
