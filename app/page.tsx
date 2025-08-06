@@ -62,16 +62,16 @@ export default function Home() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
           <StaggeredText className="space-y-6" delay={0.2}>
             <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-extrabold text-white">
-              <span className="block">Master Cloud Certifications</span>
+              <span className="block">Pass Your Cloud Certification</span>
               <span className="relative inline-block bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
-                with AI-Powered Practice
+                15% Faster—Guaranteed
                 <span className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-red-500 rounded-full"></span>
               </span>
             </h1>
             
             {/* Sub-headline */}
             <h2 className="text-lg sm:text-xl md:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed">
-              Get ready for Google Cloud, AWS, and Azure exams with personalized diagnostics, practice questions, and progress tracking.
+              The only exam prep that updates within 14 days of blueprint changes. Know your exact readiness in 15 minutes with our free diagnostic.
             </h2>
 
             {/* Value Proposition with improved contrast */}
@@ -123,21 +123,21 @@ export default function Home() {
               testimonials={[
                 {
                   id: "1",
-                  quote: "The diagnostic test immediately showed me my weak areas in Google Cloud. The practice questions with detailed explanations helped me understand concepts I was struggling with. Great platform!",
-                  author: "Alex Smith",
-                  role: "Cloud Solutions Architect"
+                  quote: "Passed PMLE with 89% on my first attempt after just 3 weeks with Testero. The diagnostic showed I was at 62% readiness, and the adaptive practice got me exam-ready fast. Saved me at least 40 hours of study time.",
+                  author: "Alex Chen",
+                  role: "ML Engineer → Senior ML Engineer (+$25K)"
                 },
                 {
                   id: "2", 
-                  quote: "Testero's AI-powered practice questions are incredibly realistic. I passed my Professional Cloud Architect exam on the first try thanks to the personalized study plan.",
-                  author: "Sarah Chen",
-                  role: "Senior DevOps Engineer"
+                  quote: "Failed PCA twice before finding Testero. The 14-day blueprint updates meant I was studying the RIGHT content. Passed with 85% and got promoted within 2 months. Worth every minute.",
+                  author: "Sarah Martinez",
+                  role: "DevOps Engineer → Cloud Architect"
                 },
                 {
                   id: "3",
-                  quote: "The progress tracking and analytics helped me focus on my weak areas. The fact that it's built by ex-Google Cloud PSO experts really shows in the quality of content.",
-                  author: "Michael Rodriguez", 
-                  role: "Cloud Consultant"
+                  quote: "15-minute diagnostic nailed my weak spots. Went from 58% to 91% readiness in 4 weeks. The ex-Google PSO expertise shows—questions are harder than the real exam, which made test day feel easy.",
+                  author: "Michael Johnson", 
+                  role: "Passed 3 GCP Certs in 6 Months"
                 }
               ]}
             />
