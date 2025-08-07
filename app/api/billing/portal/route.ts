@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { StripeService } from "@/lib/stripe/stripe-service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
-import { getServerPostHog, ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics/analytics";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics/analytics";
+import { getServerPostHog } from "@/lib/analytics/server-analytics";
 
 interface PortalSessionResponse {
   url: string;

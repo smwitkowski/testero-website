@@ -1,17 +1,27 @@
-import { usePostHog } from "posthog-js/react";
-import { PostHog } from "posthog-node";
+// Type for PostHog client (both client-side and server-side)
+export type PostHogClient =
+  | {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      capture: (event: string, properties?: Record<string, any>) => void;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      identify: (userId: string, properties?: Record<string, any>) => void;
+    }
+  | {
+      capture: (params: {
+        distinctId: string;
+        event: string;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        properties?: Record<string, any>;
+      }) => void;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      identify: (params: { distinctId: string; properties?: Record<string, any> }) => void;
+      shutdown?: () => void;
+    }
+  | null;
 
-// Server-side PostHog instance for API routes
-let serverPostHog: PostHog | null = null;
-
-export function getServerPostHog(): PostHog {
-  if (!serverPostHog) {
-    serverPostHog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY || "", {
-      host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
-    });
-  }
-  return serverPostHog;
-}
+// For typing purposes in client-side code
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type PostHog = any;
 
 // Event names as constants to prevent typos and ensure consistency
 export const ANALYTICS_EVENTS = {
@@ -94,6 +104,9 @@ export const USER_PROPERTIES = {
   READINESS_SCORE: "readiness_score",
   TOTAL_PRACTICE_QUESTIONS: "total_practice_questions",
   ACCURACY_PERCENTAGE: "accuracy_percentage",
+  PLAN_TIER: "plan_tier",
+  IS_EARLY_ACCESS: "is_early_access",
+  EMAIL_VERIFIED: "email_verified",
 } as const;
 
 // Helper types
@@ -102,7 +115,7 @@ export type UserProperty = (typeof USER_PROPERTIES)[keyof typeof USER_PROPERTIES
 
 // Helper function to track events with proper typing
 export function trackEvent(
-  posthog: ReturnType<typeof usePostHog> | PostHog | null,
+  posthog: PostHogClient | PostHog,
   event: AnalyticsEvent,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   properties?: Record<string, any>,
@@ -129,16 +142,24 @@ export function trackEvent(
 
 // Helper function to identify users with proper typing
 export function identifyUser(
-  posthog: ReturnType<typeof usePostHog> | PostHog | null,
+  posthog: PostHogClient | PostHog,
   userId: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   properties?: Partial<Record<UserProperty, any>>
 ) {
   if (!posthog) return;
 
+  // Check if it's server-side PostHog (has shutdown method)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if (posthog && typeof (posthog as any).identify === "function") {
-    // Both client and server PostHog have identify
+  if ((posthog as any)?.shutdown) {
+    // Server-side PostHog
+    (posthog as PostHog).identify({
+      distinctId: userId,
+      properties: properties || {},
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } else if (posthog && typeof (posthog as any).identify === "function") {
+    // Client-side PostHog
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (posthog as any).identify(userId, properties);
   }
@@ -146,25 +167,25 @@ export function identifyUser(
 
 // Helper function to track conversion events
 export function trackConversion(
-  posthog: ReturnType<typeof usePostHog> | PostHog | null,
-  conversionType: "trial_start" | "trial_to_paid" | "signup" | "activation",
+  posthog: PostHogClient | PostHog,
+  conversionType: string,
+  value: number,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   properties?: Record<string, any>,
   userId?: string
 ) {
-  const eventMap = {
-    trial_start: ANALYTICS_EVENTS.TRIAL_STARTED,
-    trial_to_paid: ANALYTICS_EVENTS.TRIAL_TO_PAID_CONVERSION,
-    signup: ANALYTICS_EVENTS.SIGNUP_SUCCESS,
-    activation: ANALYTICS_EVENTS.DIAGNOSTIC_COMPLETED,
+  const conversionData = {
+    conversion_type: conversionType,
+    conversion_value: value,
+    ...properties,
   };
 
-  trackEvent(posthog, eventMap[conversionType], properties, userId);
+  trackEvent(posthog, ANALYTICS_EVENTS.TRIAL_TO_PAID_CONVERSION, conversionData, userId);
 }
 
 // Helper function to track errors consistently
 export function trackError(
-  posthog: ReturnType<typeof usePostHog> | PostHog | null,
+  posthog: PostHogClient | PostHog,
   error: Error | string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   context?: Record<string, any>,
@@ -182,7 +203,7 @@ export function trackError(
 
 // Helper function to calculate and track engagement metrics
 export function trackEngagement(
-  posthog: ReturnType<typeof usePostHog> | PostHog | null,
+  posthog: PostHogClient | PostHog,
   engagementType: "session_duration" | "page_depth" | "feature_interaction",
   value: number,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

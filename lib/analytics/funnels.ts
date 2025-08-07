@@ -1,5 +1,4 @@
-import { trackEvent, ANALYTICS_EVENTS } from "./analytics";
-import { usePostHog } from "posthog-js/react";
+import { trackEvent, ANALYTICS_EVENTS, PostHogClient } from "./analytics";
 
 // Funnel step definitions
 export const FUNNEL_STEPS = {
@@ -76,7 +75,7 @@ function saveFunnelState(state: FunnelState) {
 
 // Track funnel step progression
 export function trackFunnelStep<T extends FunnelName>(
-  posthog: ReturnType<typeof usePostHog> | null,
+  posthog: PostHogClient,
   funnelName: T,
   step: FunnelStep<T>,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -102,6 +101,7 @@ export function trackFunnelStep<T extends FunnelName>(
     const lastStepTime = Math.max(...Object.values(state[funnelName].stepTimes));
     const timeSinceLastStep = now - lastStepTime;
     const totalFunnelTime = now - state[funnelName].startTime;
+    const previousStep = state[funnelName].currentStep;
 
     // Update state
     state[funnelName].currentStep = stepStr;
@@ -114,7 +114,7 @@ export function trackFunnelStep<T extends FunnelName>(
       {
         funnel_name: funnelName,
         funnel_step: stepStr,
-        previous_step: state[funnelName].currentStep,
+        previous_step: previousStep,
         time_since_last_step: timeSinceLastStep,
         total_funnel_time: totalFunnelTime,
         step_number: Object.keys(state[funnelName].stepTimes).length,
@@ -144,7 +144,7 @@ export function trackFunnelStep<T extends FunnelName>(
 
 // Track funnel completion
 export function trackFunnelComplete<T extends FunnelName>(
-  posthog: ReturnType<typeof usePostHog> | null,
+  posthog: PostHogClient,
   funnelName: T,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   properties?: Record<string, any>,
@@ -197,7 +197,7 @@ export function trackFunnelComplete<T extends FunnelName>(
 
 // Track funnel abandonment
 export function trackFunnelAbandonment<T extends FunnelName>(
-  posthog: ReturnType<typeof usePostHog> | null,
+  posthog: PostHogClient,
   funnelName: T,
   reason?: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -240,7 +240,7 @@ export function trackFunnelAbandonment<T extends FunnelName>(
 
 // Helper to track exit intent
 export function trackExitIntent(
-  posthog: ReturnType<typeof usePostHog> | null,
+  posthog: PostHogClient,
   currentPage: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   properties?: Record<string, any>,
@@ -268,7 +268,7 @@ export function trackExitIntent(
 
 // Specialized funnel tracking functions
 export function trackActivationFunnel(
-  posthog: ReturnType<typeof usePostHog> | null,
+  posthog: PostHogClient,
   step: keyof typeof FUNNEL_STEPS.ACTIVATION,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   properties?: Record<string, any>,
@@ -278,7 +278,7 @@ export function trackActivationFunnel(
 }
 
 export function trackPurchaseFunnel(
-  posthog: ReturnType<typeof usePostHog> | null,
+  posthog: PostHogClient,
   step: keyof typeof FUNNEL_STEPS.PURCHASE,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   properties?: Record<string, any>,
@@ -288,7 +288,7 @@ export function trackPurchaseFunnel(
 }
 
 export function trackRetentionFunnel(
-  posthog: ReturnType<typeof usePostHog> | null,
+  posthog: PostHogClient,
   step: keyof typeof FUNNEL_STEPS.RETENTION,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   properties?: Record<string, any>,
@@ -298,10 +298,7 @@ export function trackRetentionFunnel(
 }
 
 // Funnel optimization helpers
-export function calculateFunnelDropoff(
-  posthog: ReturnType<typeof usePostHog> | null,
-  funnelName: FunnelName
-): number {
+export function calculateFunnelDropoff(posthog: PostHogClient, funnelName: FunnelName): number {
   const state = getFunnelState();
   const funnelData = state[funnelName];
 
