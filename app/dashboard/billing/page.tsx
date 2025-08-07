@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
@@ -33,7 +33,7 @@ interface PaymentHistory {
   stripe_payment_intent_id: string;
 }
 
-export default function BillingDashboard() {
+function BillingDashboardContent() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -375,5 +375,19 @@ export default function BillingDashboard() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function BillingDashboard() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      }
+    >
+      <BillingDashboardContent />
+    </Suspense>
   );
 }
