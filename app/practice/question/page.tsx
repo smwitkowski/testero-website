@@ -1,12 +1,14 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { 
-  QuestionDisplay, 
-  QuestionFeedback, 
-  SubmitButton, 
-  QuestionData, 
-  FeedbackType 
+import {
+  QuestionDisplay,
+  QuestionFeedback,
+  SubmitButton,
+  QuestionData,
+  FeedbackType,
 } from "@/components/practice";
+import { usePostHog } from "posthog-js/react";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 const PracticeQuestionPage = () => {
   const [question, setQuestion] = useState<QuestionData | null>(null);
@@ -16,6 +18,16 @@ const PracticeQuestionPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackType | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
+  const posthog = usePostHog();
+  const { user } = useAuth();
+
+  // Track page view
+  useEffect(() => {
+    posthog?.capture("practice_page_viewed", {
+      user_id: user?.id,
+    });
+  }, [user, posthog]);
 
   useEffect(() => {
     setLoading(true);
@@ -30,13 +42,27 @@ const PracticeQuestionPage = () => {
       })
       .then((data) => {
         setQuestion(data);
+        setQuestionStartTime(new Date());
         setLoading(false);
+
+        // Track question loaded
+        posthog?.capture("practice_question_loaded", {
+          user_id: user?.id,
+          question_id: data.id,
+        });
       })
       .catch((err) => {
         setError(err.message || "Unknown error");
         setLoading(false);
+
+        // Track error
+        posthog?.capture("practice_question_error", {
+          user_id: user?.id,
+          error: err.message || "Unknown error",
+          error_type: "load_error",
+        });
       });
-  }, []);
+  }, [user, posthog]);
 
   const fetchNewQuestion = async () => {
     setLoading(true);
@@ -44,7 +70,7 @@ const PracticeQuestionPage = () => {
     setFeedback(null);
     setSelectedOptionKey(null);
     setSubmitError(null);
-    
+
     try {
       const res = await fetch("/api/questions/current");
       if (!res.ok) {
@@ -53,8 +79,23 @@ const PracticeQuestionPage = () => {
       }
       const data = await res.json();
       setQuestion(data);
+      setQuestionStartTime(new Date());
+
+      // Track new question loaded
+      posthog?.capture("practice_question_loaded", {
+        user_id: user?.id,
+        question_id: data.id,
+        is_next_question: true,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
+
+      // Track error
+      posthog?.capture("practice_question_error", {
+        user_id: user?.id,
+        error: err instanceof Error ? err.message : "Unknown error",
+        error_type: "load_error",
+      });
     } finally {
       setLoading(false);
     }
@@ -64,6 +105,12 @@ const PracticeQuestionPage = () => {
     if (!question || !selectedOptionKey) return;
     setSubmitting(true);
     setSubmitError(null);
+
+    // Calculate time spent on question
+    const timeSpent = questionStartTime
+      ? Math.round((new Date().getTime() - questionStartTime.getTime()) / 1000)
+      : null;
+
     try {
       const res = await fetch("/api/questions/submit", {
         method: "POST",
@@ -76,9 +123,26 @@ const PracticeQuestionPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Submission failed");
       setFeedback(data);
+
+      // Track question answered
+      posthog?.capture("practice_question_answered", {
+        user_id: user?.id,
+        question_id: question.id,
+        is_correct: data.isCorrect,
+        time_spent_seconds: timeSpent,
+        selected_option: selectedOptionKey,
+      });
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setSubmitError(errorMessage);
+
+      // Track submission error
+      posthog?.capture("practice_question_error", {
+        user_id: user?.id,
+        question_id: question?.id,
+        error: errorMessage,
+        error_type: "submit_error",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -120,4 +184,4 @@ const PracticeQuestionPage = () => {
   );
 };
 
-export default PracticeQuestionPage; 
+export default PracticeQuestionPage;

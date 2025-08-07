@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider"; // Import useAuth
 import { usePostHog } from "posthog-js/react";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 
 interface Option {
   label: string;
@@ -93,7 +94,7 @@ const DiagnosticSessionPage = () => {
         setSessionData(data.session);
 
         // Track diagnostic session loaded
-        posthog?.capture("diagnostic_session_loaded", {
+        trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_STARTED, {
           sessionId: sessionId,
           examType: data.session.examType,
           questionCount: data.session.questions?.length || 0,
@@ -186,7 +187,7 @@ const DiagnosticSessionPage = () => {
       setFeedback(data);
 
       // Track question answered
-      posthog?.capture("diagnostic_question_answered", {
+      trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_QUESTION_ANSWERED, {
         sessionId: sessionId,
         questionNumber: currentQuestionIndex + 1,
         totalQuestions: sessionData?.questions.length || 0,
@@ -227,7 +228,7 @@ const DiagnosticSessionPage = () => {
         }
 
         // Track diagnostic completion
-        posthog?.capture("diagnostic_completed", {
+        trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_COMPLETED, {
           sessionId: sessionId,
           examType: sessionData?.examType,
           totalQuestions: sessionData?.questions.length || 0,

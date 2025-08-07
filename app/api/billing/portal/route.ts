@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { StripeService } from "@/lib/stripe/stripe-service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics/analytics";
+import { getServerPostHog } from "@/lib/analytics/server-analytics";
 
 interface PortalSessionResponse {
   url: string;
@@ -50,6 +52,18 @@ export async function POST(
     const session = await stripeService.createPortalSession(
       subscription.stripe_customer_id,
       `${siteUrl}/dashboard/billing`
+    );
+
+    // Track billing portal access
+    const posthog = getServerPostHog();
+    trackEvent(
+      posthog,
+      ANALYTICS_EVENTS.BILLING_PORTAL_ACCESSED,
+      {
+        stripe_customer_id: subscription.stripe_customer_id,
+        return_url: `${siteUrl}/dashboard/billing`,
+      },
+      user.id
     );
 
     return NextResponse.json({ url: session.url }, { status: 200 });

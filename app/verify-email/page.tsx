@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
+import { trackEvent, identifyUser, trackError, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
+import { trackActivationFunnel } from "@/lib/analytics/funnels";
 
 type VerificationState = "loading" | "success" | "error";
 
@@ -23,9 +25,7 @@ const VerifyEmailPage = () => {
     const handleEmailConfirmation = async () => {
       try {
         // Track page view
-        if (posthog) {
-          posthog.capture("email_verification_page_viewed");
-        }
+        trackEvent(posthog, ANALYTICS_EVENTS.EMAIL_VERIFICATION_PAGE_VIEWED);
 
         // Check if there's a hash in the URL containing the access token
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -53,12 +53,22 @@ const VerifyEmailPage = () => {
           }
 
           // Track successful email confirmation
-          if (posthog) {
-            posthog.capture("email_confirmed", {
-              user_id: data.user.id,
-              email: data.user.email,
-            });
-          }
+          trackEvent(posthog, ANALYTICS_EVENTS.EMAIL_CONFIRMED, {
+            user_id: data.user.id,
+            email: data.user.email,
+          });
+
+          // Track activation funnel progression
+          trackActivationFunnel(posthog, "EMAIL_VERIFY", {
+            user_id: data.user.id,
+            email: data.user.email,
+          });
+
+          // Identify user for future tracking
+          identifyUser(posthog, data.user.id, {
+            email: data.user.email,
+            email_verified: true,
+          });
 
           setVerificationState("success");
 
@@ -83,15 +93,18 @@ const VerifyEmailPage = () => {
         }
 
         // Track verification error
-        if (posthog) {
-          posthog.capture("email_verification_error", {
-            error_message: errorMessage,
-          });
-        }
+        trackEvent(posthog, ANALYTICS_EVENTS.EMAIL_VERIFICATION_ERROR, {
+          error_message: errorMessage,
+        });
+        trackError(posthog, err instanceof Error ? err : new Error(errorMessage), {
+          context: "email_verification",
+          email: userEmail,
+        });
       }
     };
 
     handleEmailConfirmation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, posthog]);
 
   // Cooldown timer effect
@@ -119,11 +132,10 @@ const VerifyEmailPage = () => {
 
     try {
       // Track resend attempt
-      if (posthog) {
-        posthog.capture("email_verification_resend_requested", {
-          email: userEmail,
-        });
-      }
+      trackEvent(posthog, ANALYTICS_EVENTS.EMAIL_VERIFICATION_PAGE_VIEWED, {
+        action: "resend_requested",
+        email: userEmail,
+      });
 
       const response = await fetch("/api/auth/resend-confirmation", {
         method: "POST",
@@ -139,11 +151,10 @@ const VerifyEmailPage = () => {
       }
 
       // Track success
-      if (posthog) {
-        posthog.capture("email_verification_resend_success", {
-          email: userEmail,
-        });
-      }
+      trackEvent(posthog, ANALYTICS_EVENTS.EMAIL_VERIFICATION_PAGE_VIEWED, {
+        action: "resend_success",
+        email: userEmail,
+      });
 
       // Start cooldown timer (60 seconds)
       setResendCooldown(60);
@@ -151,12 +162,11 @@ const VerifyEmailPage = () => {
       const errorMessage = err instanceof Error ? err.message : "Failed to resend email";
 
       // Track error
-      if (posthog) {
-        posthog.capture("email_verification_resend_error", {
-          email: userEmail,
-          error: errorMessage,
-        });
-      }
+      trackEvent(posthog, ANALYTICS_EVENTS.EMAIL_VERIFICATION_ERROR, {
+        action: "resend_error",
+        email: userEmail,
+        error_message: errorMessage,
+      });
 
       // Re-enable button immediately on error
       setResendEnabled(true);
@@ -166,11 +176,22 @@ const VerifyEmailPage = () => {
   };
 
   const handleManualRedirect = () => {
+    // Track manual redirect action
+    trackEvent(posthog, ANALYTICS_EVENTS.EMAIL_CONFIRMED, {
+      action: "manual_redirect",
+      email: userEmail,
+    });
     setIsRedirecting(true);
     router.push("/dashboard");
   };
 
   const handleReturnToLogin = () => {
+    // Track return to login action
+    trackEvent(posthog, ANALYTICS_EVENTS.EMAIL_VERIFICATION_PAGE_VIEWED, {
+      action: "return_to_login",
+      email: userEmail,
+      from_state: verificationState,
+    });
     router.push("/login");
   };
 
