@@ -6,6 +6,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StudyPathDisplay } from "@/components/study-path";
+import { usePostHog } from "posthog-js/react";
 
 interface DiagnosticData {
   score: number;
@@ -21,6 +22,15 @@ const StudyPathPage = () => {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
   const [diagnosticData, setDiagnosticData] = useState<DiagnosticData | null>(null);
+  const posthog = usePostHog();
+
+  // Track page view
+  useEffect(() => {
+    posthog?.capture("study_path_viewed", {
+      user_id: user?.id,
+      is_authenticated: !!user,
+    });
+  }, [user, posthog]);
 
   useEffect(() => {
     try {
@@ -28,7 +38,31 @@ const StudyPathPage = () => {
       const storedData = sessionStorage.getItem("diagnosticData");
       if (storedData) {
         try {
-          setDiagnosticData(JSON.parse(storedData));
+          const parsedData = JSON.parse(storedData);
+          setDiagnosticData(parsedData);
+
+          // Track study path generated from diagnostic data
+          posthog?.capture("study_path_generated", {
+            user_id: user?.id,
+            diagnostic_score: parsedData.score,
+            domains_count: parsedData.domains?.length || 0,
+            weak_areas:
+              parsedData.domains
+                ?.filter((d: { percentage: number; domain: string }) => d.percentage < 60)
+                .map((d: { percentage: number; domain: string }) => d.domain) || [],
+            strong_areas:
+              parsedData.domains
+                ?.filter((d: { percentage: number; domain: string }) => d.percentage >= 80)
+                .map((d: { percentage: number; domain: string }) => d.domain) || [],
+            performance_tier:
+              parsedData.score < 40
+                ? "foundation"
+                : parsedData.score < 60
+                  ? "good"
+                  : parsedData.score < 80
+                    ? "strong"
+                    : "excellent",
+          });
         } catch (error) {
           // Structured logging for JSON parse errors
           console.error("[StudyPath Page] Failed to parse diagnostic data:", {
@@ -39,6 +73,13 @@ const StudyPathPage = () => {
           });
           // Clear corrupted data from storage
           sessionStorage.removeItem("diagnosticData");
+
+          // Track error
+          posthog?.capture("study_path_error", {
+            user_id: user?.id,
+            error_type: "parse_error",
+            error_message: error instanceof Error ? error.message : "Unknown error",
+          });
         }
       }
     } catch (error) {
@@ -48,8 +89,15 @@ const StudyPathPage = () => {
         timestamp: new Date().toISOString(),
         context: "private browsing or storage disabled",
       });
+
+      // Track storage error
+      posthog?.capture("study_path_error", {
+        user_id: user?.id,
+        error_type: "storage_access_error",
+        error_message: error instanceof Error ? error.message : "Unknown error",
+      });
     }
-  }, []);
+  }, [user, posthog]);
 
   // Score threshold constants for clear performance tiers
   const SCORE_THRESHOLD_FOUNDATION = 40;
@@ -130,7 +178,16 @@ const StudyPathPage = () => {
             <p className="text-gray-600 mb-6">
               Create an account or sign in to save your progress and get tailored recommendations.
             </p>
-            <Button onClick={() => router.push("/login?redirect=/study-path")} size="lg">
+            <Button
+              onClick={() => {
+                posthog?.capture("study_path_signin_clicked", {
+                  has_diagnostic_data: !!diagnosticData,
+                  diagnostic_score: diagnosticData?.score,
+                });
+                router.push("/login?redirect=/study-path");
+              }}
+              size="lg"
+            >
               Sign In
             </Button>
           </CardContent>

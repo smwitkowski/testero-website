@@ -3,6 +3,7 @@ import { StripeService } from "@/lib/stripe/stripe-service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { EmailService } from "@/lib/email/email-service";
 import Stripe from "stripe";
+import { PostHog } from "posthog-node";
 
 // Extended Stripe types for properties that exist but aren't in the official types
 interface ExtendedSubscription extends Stripe.Subscription {
@@ -14,6 +15,11 @@ interface ExtendedInvoice extends Stripe.Invoice {
   subscription: string;
   payment_intent: string;
 }
+
+// Initialize PostHog
+const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY || "", {
+  host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -127,12 +133,47 @@ export async function POST(request: NextRequest) {
                 fullSession.currency || "usd"
               );
             }
+
+            // Track subscription created in PostHog
+            posthog.capture({
+              distinctId: userId,
+              event: "subscription_created",
+              properties: {
+                plan_name: plan?.name,
+                plan_tier: plan?.tier,
+                price_id: priceId,
+                amount: fullSession.amount_total || 0,
+                currency: fullSession.currency || "usd",
+                billing_interval: priceId === plan?.stripe_price_id_monthly ? "monthly" : "yearly",
+                stripe_customer_id: fullSession.customer as string,
+                stripe_subscription_id: subscription.id,
+                subscription_status: subscription.status,
+              },
+            });
+
+            // Update user properties in PostHog
+            posthog.identify({
+              distinctId: userId,
+              properties: {
+                subscription_tier: plan?.tier,
+                subscription_status: subscription.status,
+                is_paying_customer: true,
+                customer_since: new Date().toISOString(),
+              },
+            });
           }
           break;
         }
 
         case "customer.subscription.updated": {
           const subscription = event.data.object as Stripe.Subscription;
+
+          // Get user info for tracking
+          const { data: userSub } = await supabase
+            .from("user_subscriptions")
+            .select("user_id, plan_id")
+            .eq("stripe_subscription_id", subscription.id)
+            .single();
 
           // Update subscription status
           await supabase
@@ -149,6 +190,31 @@ export async function POST(request: NextRequest) {
               updated_at: new Date().toISOString(),
             })
             .eq("stripe_subscription_id", subscription.id);
+
+          // Track subscription update in PostHog
+          if (userSub?.user_id) {
+            posthog.capture({
+              distinctId: userSub.user_id,
+              event: "subscription_updated",
+              properties: {
+                subscription_status: subscription.status,
+                cancel_at_period_end: subscription.cancel_at_period_end || false,
+                stripe_subscription_id: subscription.id,
+                update_type: subscription.cancel_at_period_end
+                  ? "scheduled_cancellation"
+                  : "reactivation",
+              },
+            });
+
+            // Update user properties
+            posthog.identify({
+              distinctId: userSub.user_id,
+              properties: {
+                subscription_status: subscription.status,
+                subscription_will_cancel: subscription.cancel_at_period_end || false,
+              },
+            });
+          }
           break;
         }
 
@@ -172,6 +238,26 @@ export async function POST(request: NextRequest) {
             if (user?.user?.email) {
               await emailService.sendSubscriptionCancelled(user.user.email);
             }
+
+            // Track subscription cancellation in PostHog
+            posthog.capture({
+              distinctId: subData.user_id,
+              event: "subscription_cancelled",
+              properties: {
+                stripe_subscription_id: subscription.id,
+                cancellation_reason: subscription.cancellation_details?.reason || "unknown",
+              },
+            });
+
+            // Update user properties
+            posthog.identify({
+              distinctId: subData.user_id,
+              properties: {
+                subscription_status: "cancelled",
+                is_paying_customer: false,
+                churned_at: new Date().toISOString(),
+              },
+            });
           }
           break;
         }
@@ -201,6 +287,20 @@ export async function POST(request: NextRequest) {
             if (user?.user?.email) {
               await emailService.sendPaymentFailed(user.user.email);
             }
+
+            // Track payment failure in PostHog
+            posthog.capture({
+              distinctId: subscription.user_id,
+              event: "payment_failed",
+              properties: {
+                amount: invoice.amount_due,
+                currency: invoice.currency,
+                stripe_payment_intent_id: (invoice as ExtendedInvoice).payment_intent,
+                failure_reason: invoice.status_transitions?.finalized_at
+                  ? "card_declined"
+                  : "unknown",
+              },
+            });
           }
           break;
         }

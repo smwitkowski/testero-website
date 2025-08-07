@@ -15,6 +15,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import { PricingCard } from "@/components/pricing/PricingCard";
 import { ComparisonTable } from "@/components/pricing/ComparisonTable";
 import {
@@ -41,7 +42,7 @@ export default function PricingPage() {
 
   // Track page view
   useEffect(() => {
-    posthog?.capture("pricing_page_viewed", {
+    trackEvent(posthog, ANALYTICS_EVENTS.PRICING_PAGE_VIEWED, {
       user_id: user?.id,
       billing_interval: billingInterval,
     });
@@ -50,16 +51,18 @@ export default function PricingPage() {
   const handleCheckout = async (priceId: string, planName: string) => {
     try {
       // Track checkout intent
-      posthog?.capture("checkout_initiated", {
+      trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_INITIATED, {
         plan_name: planName,
         billing_interval: billingInterval,
         price_id: priceId,
+        user_id: user?.id,
       });
 
       // Require authentication
       if (!user) {
-        posthog?.capture("checkout_redirect_to_signup", {
+        trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_ATTEMPT, {
           plan_name: planName,
+          source: "pricing_checkout_redirect",
         });
         router.push("/signup?redirect=/pricing");
         return;
@@ -84,9 +87,10 @@ export default function PricingPage() {
       }
 
       // Track successful checkout session creation
-      posthog?.capture("checkout_session_created", {
+      trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_SESSION_CREATED, {
         plan_name: planName,
         billing_interval: billingInterval,
+        user_id: user?.id,
       });
 
       // Redirect to Stripe Checkout
@@ -95,9 +99,10 @@ export default function PricingPage() {
       }
     } catch (error) {
       console.error("Checkout error:", error);
-      posthog?.capture("checkout_error", {
+      trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_ERROR, {
         error: error instanceof Error ? error.message : "Unknown error",
         plan_name: planName,
+        user_id: user?.id,
       });
       setError("Failed to start checkout. Please try again.");
       setTimeout(() => setError(null), 5000);
@@ -109,9 +114,10 @@ export default function PricingPage() {
   const toggleBillingInterval = () => {
     const newInterval = billingInterval === "monthly" ? "annual" : "monthly";
     setBillingInterval(newInterval);
-    posthog?.capture("billing_interval_toggled", {
-      from: billingInterval,
-      to: newInterval,
+    trackEvent(posthog, ANALYTICS_EVENTS.PRICING_PLAN_SELECTED, {
+      from_interval: billingInterval,
+      to_interval: newInterval,
+      action: "toggle_billing",
     });
   };
 

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider"; // Assuming this is still relevant for logged-in users
 import { usePostHog } from "posthog-js/react";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import {
   getAnonymousSessionId,
   setAnonymousSessionId,
@@ -94,7 +95,7 @@ const DiagnosticStartPage = () => {
           });
 
           // Track resume opportunity shown
-          posthog?.capture("diagnostic_resume_shown", {
+          trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_RESUMED, {
             sessionId: storedSessionId,
             examType: data.examType,
             startedAt: data.startedAt,
@@ -127,7 +128,7 @@ const DiagnosticStartPage = () => {
   const handleResumeSession = () => {
     if (resumeSession) {
       // Track resume action
-      posthog?.capture("diagnostic_resumed", {
+      trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_RESUMED, {
         sessionId: resumeSession.sessionId,
         examType: resumeSession.examType,
         startedAt: resumeSession.startedAt,
@@ -209,7 +210,7 @@ const DiagnosticStartPage = () => {
       localStorage.setItem("testero_diagnostic_session_id", responseData.sessionId);
 
       // Track diagnostic started
-      posthog?.capture("diagnostic_started", {
+      trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_STARTED, {
         sessionId: responseData.sessionId,
         examType: selectedExamName,
         questionCount: numQuestions,

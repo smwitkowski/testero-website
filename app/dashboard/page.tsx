@@ -7,6 +7,7 @@ import { DiagnosticSummary } from "@/components/dashboard/DiagnosticSummary";
 import { PracticeSummary } from "@/components/dashboard/PracticeSummary";
 import { Button } from "@/components/ui/button";
 import { colorSemantic } from "@/lib/design-system";
+import { usePostHog } from "posthog-js/react";
 
 // Import types from the API route
 import type { DashboardData, SuccessResponse, ErrorResponse } from "@/app/api/dashboard/route";
@@ -16,6 +17,16 @@ const DashboardPage = () => {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const posthog = usePostHog();
+
+  // Track dashboard page view
+  useEffect(() => {
+    if (user && !authLoading) {
+      posthog?.capture("dashboard_viewed", {
+        user_id: user.id,
+      });
+    }
+  }, [user, authLoading, posthog]);
 
   useEffect(() => {
     // Wait for auth to load
@@ -37,15 +48,34 @@ const DashboardPage = () => {
         }
 
         setDashboardData((data as SuccessResponse).data);
+
+        // Track successful dashboard load with metrics
+        posthog?.capture("dashboard_loaded", {
+          user_id: user.id,
+          readiness_score: (data as SuccessResponse).data.readinessScore,
+          total_diagnostic_sessions: (data as SuccessResponse).data.diagnostic.totalSessions,
+          total_practice_questions: (data as SuccessResponse).data.practice.totalQuestionsAnswered,
+          correct_answers: (data as SuccessResponse).data.practice.correctAnswers,
+          accuracy_percentage: (data as SuccessResponse).data.practice.accuracyPercentage,
+          has_diagnostic_data: (data as SuccessResponse).data.diagnostic.totalSessions > 0,
+          has_practice_data: (data as SuccessResponse).data.practice.totalQuestionsAnswered > 0,
+        });
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error occurred");
+        const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+        setError(errorMessage);
+
+        // Track dashboard load error
+        posthog?.capture("dashboard_error", {
+          user_id: user?.id,
+          error: errorMessage,
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, [user, authLoading]);
+  }, [user, authLoading, posthog]);
 
   // Show loading state
   if (authLoading || loading) {

@@ -166,11 +166,24 @@ const VerifyEmailPage = () => {
   };
 
   const handleManualRedirect = () => {
+    // Track manual redirect action
+    if (posthog) {
+      posthog.capture("email_verification_manual_redirect", {
+        email: userEmail,
+      });
+    }
     setIsRedirecting(true);
     router.push("/dashboard");
   };
 
   const handleReturnToLogin = () => {
+    // Track return to login action
+    if (posthog) {
+      posthog.capture("email_verification_return_to_login", {
+        email: userEmail,
+        from_state: verificationState,
+      });
+    }
     router.push("/login");
   };
 

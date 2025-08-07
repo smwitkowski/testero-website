@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
+import { usePostHog } from "posthog-js/react";
 
 type AuthContextType = {
   session: Session | null;
@@ -38,6 +39,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const posthog = usePostHog();
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -70,6 +72,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle routing based on authentication status
@@ -127,6 +130,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const handleSessionChange = (newSession: Session | null) => {
     setSession(newSession);
     setUser(newSession?.user || null);
+
+    // Identify user in PostHog when session changes
+    if (newSession?.user && posthog) {
+      // Identify the user with their ID
+      posthog.identify(newSession.user.id, {
+        email: newSession.user.email,
+        created_at: newSession.user.created_at,
+        is_early_access: newSession.user.user_metadata?.is_early_access === true,
+        email_confirmed: !!newSession.user.email_confirmed_at,
+        // Add any other user metadata that might be useful
+        provider: newSession.user.app_metadata?.provider || "email",
+      });
+
+      // Track successful login/session restoration
+      posthog.capture("user_session_started", {
+        session_type: "authenticated",
+        user_id: newSession.user.id,
+      });
+    } else if (!newSession && posthog) {
+      // Reset PostHog when user logs out
+      posthog.reset();
+
+      // Track logout
+      posthog.capture("user_session_ended", {
+        session_type: "logged_out",
+      });
+    }
   };
 
   const signOut = async () => {

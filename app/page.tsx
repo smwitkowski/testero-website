@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { usePostHog } from "posthog-js/react";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { StaggeredText } from "@/components/marketing/effects/staggered-text";
@@ -49,7 +50,10 @@ function useTrackSectionView(sectionName: string, loadThreshold = 0.1) {
   useEffect(() => {
     if (inView) {
       if (posthog) {
-        posthog.capture("section_viewed", { section_name: sectionName });
+        trackEvent(posthog, ANALYTICS_EVENTS.FEATURE_DISCOVERED, {
+          feature_name: sectionName,
+          discovery_type: "scroll_view",
+        });
       }
       setShouldLoad(true);
     }
@@ -67,7 +71,10 @@ export default function Home() {
   const posthog = usePostHog();
 
   const handlePricingClick = (source: string) => {
-    posthog?.capture("homepage_pricing_click", { source });
+    trackEvent(posthog, ANALYTICS_EVENTS.PRICING_PAGE_VIEWED, {
+      source: `homepage_${source}`,
+      referrer: "homepage",
+    });
   };
 
   return (

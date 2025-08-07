@@ -2,6 +2,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider"; // Import AuthProvider
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
+import { ErrorBoundary } from "@/components/providers/ErrorBoundary";
+import { SessionTrackingProvider } from "@/components/providers/SessionTrackingProvider";
 import Script from "next/script";
 import { generateMetadata, generateJsonLd, generateViewport } from "@/lib/seo";
 import Navbar from "@/components/marketing/navigation/navbar"; // Import the Navbar component
@@ -34,7 +36,7 @@ export default function RootLayout({
           id="json-ld"
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: generateJsonLd()
+            __html: generateJsonLd(),
           }}
         />
       </head>
@@ -49,12 +51,17 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        <AuthProvider>
-          <Navbar />
-          <main id="main-content" className="pt-[72px]"> {/* Add padding to main content */}
-            <PostHogProvider>{children}</PostHogProvider>
-          </main>
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <Navbar />
+            <main id="main-content" className="pt-[72px]">
+              {/* Add padding to main content */}
+              <PostHogProvider>
+                <SessionTrackingProvider>{children}</SessionTrackingProvider>
+              </PostHogProvider>
+            </main>
+          </AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
