@@ -13,6 +13,7 @@ import {
 } from "@/components/diagnostic";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { TrialConversionModal } from "@/components/billing/TrialConversionModal";
 
 const DiagnosticSummaryPage = () => {
   const params = useParams();
@@ -25,6 +26,7 @@ const DiagnosticSummaryPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [domainBreakdown, setDomainBreakdown] = useState<DomainBreakdownType[]>([]);
+  const [showTrialModal, setShowTrialModal] = useState(false);
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -88,6 +90,18 @@ const DiagnosticSummaryPage = () => {
 
         // Clean up localStorage since session is completed
         localStorage.removeItem("testero_diagnostic_session_id");
+
+        // Show trial modal after 5 seconds if user isn't subscribed
+        if (!user?.user_metadata?.has_subscription) {
+          setTimeout(() => {
+            setShowTrialModal(true);
+            posthog?.capture("trial_modal_shown", {
+              source: "diagnostic_summary",
+              delay_seconds: 5,
+              diagnostic_score: data.summary?.score,
+            });
+          }, 5000);
+        }
       } catch (err) {
         console.error("Error fetching summary:", err);
         setError("Failed to load diagnostic summary");
@@ -246,31 +260,67 @@ const DiagnosticSummaryPage = () => {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-center gap-4">
-        <Button onClick={() => router.push("/diagnostic")} size="lg">
-          Take Another Diagnostic
-        </Button>
-        <Button
-          onClick={() => {
-            // Store diagnostic data for study path page
-            if (summary && domainBreakdown) {
-              const diagnosticData = {
-                score: summary.score,
-                domains: domainBreakdown,
-              };
-              sessionStorage.setItem("diagnosticData", JSON.stringify(diagnosticData));
-            }
+      <div className="flex flex-col items-center gap-6">
+        {/* Trial CTA for non-subscribed users */}
+        {!user?.user_metadata?.has_subscription && (
+          <Card className="w-full max-w-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+            <CardContent className="p-6 text-center">
+              <h3 className="text-xl font-bold mb-2">Ready to Pass Your Exam?</h3>
+              <p className="text-gray-600 mb-4">
+                Get your personalized study plan and unlimited practice questions
+              </p>
+              <Button
+                onClick={() => {
+                  setShowTrialModal(true);
+                  posthog?.capture("trial_cta_clicked", {
+                    source: "diagnostic_summary_inline",
+                    diagnostic_score: summary?.score,
+                  });
+                }}
+                size="lg"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Start 14-Day Free Trial
+              </Button>
+              <p className="text-sm text-gray-500 mt-2">No credit card required</p>
+            </CardContent>
+          </Card>
+        )}
 
-            // Navigate to study path page
-            router.push("/study-path");
-          }}
-          size="lg"
-          variant="default"
-          className="bg-green-600 hover:bg-green-700"
-        >
-          Start My Study Path
-        </Button>
+        <div className="flex justify-center gap-4">
+          <Button onClick={() => router.push("/diagnostic")} size="lg">
+            Take Another Diagnostic
+          </Button>
+          <Button
+            onClick={() => {
+              // Store diagnostic data for study path page
+              if (summary && domainBreakdown) {
+                const diagnosticData = {
+                  score: summary.score,
+                  domains: domainBreakdown,
+                };
+                sessionStorage.setItem("diagnosticData", JSON.stringify(diagnosticData));
+              }
+
+              // Navigate to study path page
+              router.push("/study-path");
+            }}
+            size="lg"
+            variant="default"
+            className="bg-green-600 hover:bg-green-700"
+          >
+            Start My Study Path
+          </Button>
+        </div>
       </div>
+
+      {/* Trial Conversion Modal */}
+      <TrialConversionModal
+        open={showTrialModal}
+        onClose={() => setShowTrialModal(false)}
+        diagnosticScore={summary?.score}
+        weakAreas={domainBreakdown.filter((d) => d.percentage < 60).map((d) => d.domain)}
+      />
     </main>
   );
 };
