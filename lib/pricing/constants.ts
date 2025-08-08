@@ -22,27 +22,17 @@ const validatePriceIds = () => {
 
   const missingIds = requiredPriceIds.filter(({ value }) => !value);
 
-  if (missingIds.length > 0 && process.env.NODE_ENV === "production") {
-    console.error(
-      "Missing required Stripe price IDs:",
-      missingIds.map(({ key }) => key)
-    );
-    // In production, we should fail fast to avoid runtime errors
-    throw new Error(
-      `Missing required Stripe price IDs: ${missingIds.map(({ key }) => key).join(", ")}`
-    );
-  } else if (missingIds.length > 0) {
-    // In development, log a warning but continue
+  if (missingIds.length > 0) {
+    // Only log warning, never throw during module initialization
     console.warn(
-      "Missing Stripe price IDs (using placeholders):",
+      `Missing Stripe price IDs:`,
       missingIds.map(({ key }) => key)
     );
   }
 };
 
-// Validate on module load
-if (typeof window === "undefined") {
-  // Only validate on server-side to avoid client-side errors
+// Only validate in browser context, not during build or SSR
+if (typeof window !== "undefined") {
   validatePriceIds();
 }
 
