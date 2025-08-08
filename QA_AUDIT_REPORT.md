@@ -302,4 +302,3 @@ _This report was generated through automated and manual testing procedures. All 
 ## **Time Budget:**
 - **Investigation**: 3 hours max
 - **Implementation**: 3 hours max  
-- **Documentation**: 1 hour
