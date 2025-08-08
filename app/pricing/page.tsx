@@ -80,7 +80,7 @@ export default function PricingPage() {
         }),
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as { error?: string; url?: string };
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to create checkout session");

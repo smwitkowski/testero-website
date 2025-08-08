@@ -50,7 +50,11 @@ const DiagnosticSummaryPage = () => {
         }
 
         const response = await fetch(apiUrl);
-        const data = await response.json();
+        const data = (await response.json()) as {
+          error?: string;
+          summary?: SessionSummary;
+          domainBreakdown?: DomainBreakdownType[];
+        };
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -65,18 +69,22 @@ const DiagnosticSummaryPage = () => {
           return;
         }
 
-        setSummary(data.summary);
+        if (data.summary) {
+          setSummary(data.summary);
+        }
         setDomainBreakdown(data.domainBreakdown || []);
 
         // Track summary view
-        posthog?.capture("diagnostic_summary_viewed", {
-          sessionId: data.summary.sessionId,
-          examType: data.summary.examType,
-          score: data.summary.score,
-          totalQuestions: data.summary.totalQuestions,
-          correctAnswers: data.summary.correctAnswers,
-          domainCount: data.domainBreakdown?.length || 0,
-        });
+        if (data.summary) {
+          posthog?.capture("diagnostic_summary_viewed", {
+            sessionId: data.summary.sessionId,
+            examType: data.summary.examType,
+            score: data.summary.score,
+            totalQuestions: data.summary.totalQuestions,
+            correctAnswers: data.summary.correctAnswers,
+            domainCount: data.domainBreakdown?.length || 0,
+          });
+        }
 
         // Clean up localStorage since session is completed
         localStorage.removeItem("testero_diagnostic_session_id");

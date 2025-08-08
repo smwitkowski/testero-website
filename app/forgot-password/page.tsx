@@ -79,7 +79,7 @@ const ForgotPasswordPage = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = (await response.json()) as { error?: string };
         throw new Error(errorData.error || "Password reset failed");
       }
 

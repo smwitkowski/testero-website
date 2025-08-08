@@ -31,11 +31,11 @@ interface WaitlistFormProps {
   onSuccess?: (data: FormValues) => void;
 }
 
-export function WaitlistForm({ 
-  className = "", 
+export function WaitlistForm({
+  className = "",
   buttonText = "Join the Waitlist & Get 30% Off",
   includeExamDropdown = false,
-  ctaLocation = 'unknown', // Default location if not provided
+  ctaLocation = "unknown", // Default location if not provided
   onSuccess,
   ...props
 }: WaitlistFormProps) {
@@ -58,18 +58,18 @@ export function WaitlistForm({
   async function onSubmit(data: FormValues) {
     setIsSubmitting(true);
     setError(null);
-    
+
     try {
       // Submit to API endpoint
-      const response = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit');
+        const errorData = (await response.json()) as { error?: string };
+        throw new Error(errorData.error || "Failed to submit");
       }
 
       // Handle success
@@ -77,9 +77,9 @@ export function WaitlistForm({
 
       // Capture PostHog event
       if (posthog) {
-        posthog.capture('waitlist_joined', {
+        posthog.capture("waitlist_joined", {
           email: data.email,
-          examType: data.examType || 'not_selected', // Include exam type if present
+          examType: data.examType || "not_selected", // Include exam type if present
         });
       }
 
@@ -88,12 +88,13 @@ export function WaitlistForm({
         onSuccess(data);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      const errorMessage =
+        err instanceof Error ? err.message : "Something went wrong. Please try again.";
       // Handle error
       setError(errorMessage);
       // Capture PostHog error event
       if (posthog) {
-        posthog.capture('waitlist_form_submission_error', {
+        posthog.capture("waitlist_form_submission_error", {
           error_message: errorMessage,
         });
       }
@@ -129,42 +130,61 @@ export function WaitlistForm({
                   name="email"
                   render={({ field, fieldState }) => (
                     <FormItem>
-              <div className="relative">
-                <FormControl>
-                  <Input
-                    type="email"
-                    placeholder="Enter your email address"
-                    className={`px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg rounded-md transition-all duration-300 border-2 ${
-                      fieldState.error 
-                        ? "border-red-400 bg-red-50" 
-                        : fieldState.isDirty && !fieldState.error
-                          ? "border-green-400 bg-green-50" 
-                          : "border-slate-300 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
-                    }`}
-                    disabled={isSubmitting}
-                    autoComplete="email"
-                    autoFocus
-                    aria-required="true"
-                    aria-invalid={fieldState.error ? "true" : "false"}
-                    {...field}
-                    onFocus={() => { // Track form interaction start
-                      if (posthog) {
-                        posthog.capture('waitlist_form_interaction_start');
-                      }
-                    }}
-                  />
-                </FormControl>
-                        
+                      <div className="relative">
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="Enter your email address"
+                            className={`px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg rounded-md transition-all duration-300 border-2 ${
+                              fieldState.error
+                                ? "border-red-400 bg-red-50"
+                                : fieldState.isDirty && !fieldState.error
+                                  ? "border-green-400 bg-green-50"
+                                  : "border-slate-300 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+                            }`}
+                            disabled={isSubmitting}
+                            autoComplete="email"
+                            autoFocus
+                            aria-required="true"
+                            aria-invalid={fieldState.error ? "true" : "false"}
+                            {...field}
+                            onFocus={() => {
+                              // Track form interaction start
+                              if (posthog) {
+                                posthog.capture("waitlist_form_interaction_start");
+                              }
+                            }}
+                          />
+                        </FormControl>
+
                         {/* Validation icon */}
                         {fieldState.isDirty && (
                           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                             {fieldState.error ? (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5 text-red-500"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                  clipRule="evenodd"
+                                />
                               </svg>
                             ) : (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5 text-green-500"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                  clipRule="evenodd"
+                                />
                               </svg>
                             )}
                           </div>
@@ -185,8 +205,8 @@ export function WaitlistForm({
                           <FormControl>
                             <select
                               className={`px-3 sm:px-4 py-2 sm:py-3 rounded-md w-full text-base sm:text-lg text-slate-600 bg-white appearance-none transition-all duration-300 border-2 ${
-                                fieldState.error 
-                                  ? "border-red-400 bg-red-50" 
+                                fieldState.error
+                                  ? "border-red-400 bg-red-50"
                                   : "border-slate-300 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
                               }`}
                               disabled={isSubmitting}
@@ -201,9 +221,21 @@ export function WaitlistForm({
                             </select>
                           </FormControl>
                           {/* Custom dropdown arrow */}
-                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500" aria-hidden="true">
-                            <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                          <div
+                            className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500"
+                            aria-hidden="true"
+                          >
+                            <svg
+                              className="h-5 w-5"
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                clipRule="evenodd"
+                              />
                             </svg>
                           </div>
                         </div>
@@ -218,32 +250,33 @@ export function WaitlistForm({
                   type="submit"
                   disabled={isSubmitting}
                   aria-busy={isSubmitting ? "true" : "false"}
-                  onClick={() => { // Track CTA click intent using the location prop
+                  onClick={() => {
+                    // Track CTA click intent using the location prop
                     if (posthog) {
-                      posthog.capture('cta_click', { cta_location: ctaLocation });
+                      posthog.capture("cta_click", { cta_location: ctaLocation });
                     }
                   }}
                 >
                   {isSubmitting ? (
                     <div className="flex items-center justify-center">
-                      <svg 
-                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        fill="none" 
+                      <svg
+                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
                         viewBox="0 0 24 24"
                         aria-hidden="true"
                       >
-                        <circle 
-                          className="opacity-25" 
-                          cx="12" 
-                          cy="12" 
-                          r="10" 
-                          stroke="currentColor" 
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
                           strokeWidth="4"
                         ></circle>
-                        <path 
-                          className="opacity-75" 
-                          fill="currentColor" 
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         ></path>
                       </svg>
@@ -252,8 +285,20 @@ export function WaitlistForm({
                   ) : (
                     <div className="flex items-center justify-center gap-2">
                       <span>{buttonText}</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                        stroke="currentColor"
+                        className="w-5 h-5"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                        />
                       </svg>
                     </div>
                   )}
@@ -268,8 +313,20 @@ export function WaitlistForm({
                     aria-live="assertive"
                   >
                     <p className="text-red-600 font-medium flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="w-5 h-5 mr-2"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                        />
                       </svg>
                       {error}
                     </p>
@@ -290,24 +347,25 @@ export function WaitlistForm({
           >
             <div className="flex flex-col items-center space-y-4">
               <div className="bg-green-100 p-3 rounded-full" aria-hidden="true">
-                <svg 
-                  className="h-8 w-8 text-green-600" 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
+                <svg
+                  className="h-8 w-8 text-green-600"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
                   stroke="currentColor"
                 >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M5 13l4 4L19 7" 
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
                   />
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-slate-800">You&apos;re on the list!</h3>
               <p className="text-slate-600">
-                Thanks for joining the Testero waitlist. We&apos;ll notify you when beta access is available in July 2025.
+                Thanks for joining the Testero waitlist. We&apos;ll notify you when beta access is
+                available in July 2025.
               </p>
               <p className="text-green-600 font-medium">
                 Your 30% lifetime discount has been reserved.

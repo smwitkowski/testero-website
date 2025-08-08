@@ -35,10 +35,10 @@ const PracticeQuestionPage = () => {
     fetch("/api/questions/current")
       .then(async (res) => {
         if (!res.ok) {
-          const data = await res.json();
+          const data = (await res.json()) as { error?: string };
           throw new Error(data.error || "Failed to fetch question");
         }
-        return res.json();
+        return res.json() as Promise<QuestionData>;
       })
       .then((data) => {
         setQuestion(data);
@@ -74,10 +74,10 @@ const PracticeQuestionPage = () => {
     try {
       const res = await fetch("/api/questions/current");
       if (!res.ok) {
-        const data = await res.json();
+        const data = (await res.json()) as { error?: string };
         throw new Error(data.error || "Failed to fetch question");
       }
-      const data = await res.json();
+      const data = (await res.json()) as QuestionData;
       setQuestion(data);
       setQuestionStartTime(new Date());
 
@@ -120,9 +120,9 @@ const PracticeQuestionPage = () => {
           selectedOptionKey,
         }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as { error?: string } & FeedbackType;
       if (!res.ok) throw new Error(data.error || "Submission failed");
-      setFeedback(data);
+      setFeedback(data as FeedbackType);
 
       // Track question answered
       posthog?.capture("practice_question_answered", {

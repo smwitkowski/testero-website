@@ -85,9 +85,14 @@ const DiagnosticStartPage = () => {
         }
 
         const response = await fetch(statusUrl);
-        const data = await response.json();
+        const data = (await response.json()) as {
+          exists?: boolean;
+          status?: string;
+          examType?: string;
+          startedAt?: string;
+        };
 
-        if (data.exists && data.status === "active") {
+        if (data.exists && data.status === "active" && data.examType && data.startedAt) {
           setResumeSession({
             sessionId: storedSessionId,
             examType: data.examType,
@@ -187,7 +192,11 @@ const DiagnosticStartPage = () => {
         body: JSON.stringify(requestBody),
       });
 
-      const responseData = await res.json();
+      const responseData = (await res.json()) as {
+        error?: string;
+        sessionId?: string;
+        anonymousSessionId?: string;
+      };
       if (!res.ok) {
         // Error handling remains similar, but 429 (too many sessions) is removed
         // 401 might still occur if a logged-in user's token expires, but not for anonymous
@@ -207,7 +216,9 @@ const DiagnosticStartPage = () => {
       }
 
       // Store diagnostic session ID in localStorage for session persistence
-      localStorage.setItem("testero_diagnostic_session_id", responseData.sessionId);
+      if (responseData.sessionId) {
+        localStorage.setItem("testero_diagnostic_session_id", responseData.sessionId);
+      }
 
       // Track diagnostic started
       trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_STARTED, {
@@ -219,7 +230,11 @@ const DiagnosticStartPage = () => {
       });
 
       // If it was a resumed session, the API might indicate it. For now, just redirect.
-      router.push(`/diagnostic/${responseData.sessionId}`);
+      if (responseData.sessionId) {
+        router.push(`/diagnostic/${responseData.sessionId}`);
+      } else {
+        setError("Failed to start diagnostic session");
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
