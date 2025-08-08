@@ -5,7 +5,10 @@ export class StripeService {
 
   constructor() {
     if (!process.env.STRIPE_SECRET_KEY) {
-      throw new Error("STRIPE_SECRET_KEY is not defined");
+      console.error("STRIPE_SECRET_KEY is not defined in environment variables");
+      throw new Error(
+        "STRIPE_SECRET_KEY is not defined. Please configure Stripe in your environment variables."
+      );
     }
 
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -177,6 +180,69 @@ export class StripeService {
     } catch (error) {
       console.error("Error listing customer subscriptions:", error);
       throw new Error("Failed to list customer subscriptions");
+    }
+  }
+
+  async createTrialSubscription({
+    customerId,
+    priceId,
+    trialDays = 14,
+    userId,
+  }: {
+    customerId: string;
+    priceId: string;
+    trialDays?: number;
+    userId: string;
+    promotionCode?: string; // Reserved for future use with checkout sessions
+  }): Promise<Stripe.Subscription> {
+    try {
+      const subscriptionData: Stripe.SubscriptionCreateParams = {
+        customer: customerId,
+        items: [{ price: priceId }],
+        trial_period_days: trialDays,
+        metadata: {
+          user_id: userId,
+        },
+        payment_settings: {
+          save_default_payment_method: "on_subscription",
+        },
+        trial_settings: {
+          end_behavior: {
+            missing_payment_method: "cancel",
+          },
+        },
+      };
+
+      // Note: Promotion codes can be applied via checkout session or customer portal
+      // but not directly on subscription creation. For trials, we'll skip this for now.
+
+      const subscription = await this.stripe.subscriptions.create(subscriptionData);
+
+      return subscription;
+    } catch (error) {
+      console.error("Error creating trial subscription:", error);
+      throw new Error(
+        `Failed to create trial subscription: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+  }
+
+  async convertTrialToPaid(
+    subscriptionId: string,
+    paymentMethodId: string
+  ): Promise<Stripe.Subscription> {
+    try {
+      const subscription = await this.stripe.subscriptions.update(subscriptionId, {
+        default_payment_method: paymentMethodId,
+        trial_end: "now",
+      });
+
+      return subscription;
+    } catch (error) {
+      console.error("Error converting trial to paid:", error);
+      throw new Error(
+        `Failed to convert trial to paid: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   }
 }
