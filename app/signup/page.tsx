@@ -67,7 +67,11 @@ const SignupPage = () => {
         }),
       });
 
-      const result = await response.json();
+      const result = (await response.json()) as {
+        error?: string;
+        guestUpgraded?: boolean;
+        sessionsTransferred?: number;
+      };
 
       if (!response.ok) {
         throw new Error(result.error || "Something went wrong. Please try again.");

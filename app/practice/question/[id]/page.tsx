@@ -1,12 +1,12 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useParams } from 'next/navigation'; // To get ID from URL
-import { 
-  QuestionDisplay, 
-  QuestionFeedback, 
-  SubmitButton, 
-  QuestionData, 
-  FeedbackType 
+import { useParams } from "next/navigation"; // To get ID from URL
+import {
+  QuestionDisplay,
+  QuestionFeedback,
+  SubmitButton,
+  QuestionData,
+  FeedbackType,
 } from "@/components/practice";
 
 const SpecificPracticeQuestionPage = () => {
@@ -33,10 +33,10 @@ const SpecificPracticeQuestionPage = () => {
     fetch(`/api/questions/${questionId}`) // Fetch specific question by ID
       .then(async (res) => {
         if (!res.ok) {
-          const data = await res.json();
+          const data = (await res.json()) as { error?: string };
           throw new Error(data.error || `Failed to fetch question ${questionId}`);
         }
-        return res.json();
+        return res.json() as Promise<QuestionData>;
       })
       .then((data) => {
         setQuestion(data);
@@ -53,7 +53,8 @@ const SpecificPracticeQuestionPage = () => {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch("/api/questions/submit", { // Submit API remains the same
+      const res = await fetch("/api/questions/submit", {
+        // Submit API remains the same
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -61,9 +62,9 @@ const SpecificPracticeQuestionPage = () => {
           selectedOptionKey,
         }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as { error?: string } & FeedbackType;
       if (!res.ok) throw new Error(data.error || "Submission failed");
-      setFeedback(data);
+      setFeedback(data as FeedbackType);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setSubmitError(errorMessage);
@@ -76,9 +77,24 @@ const SpecificPracticeQuestionPage = () => {
   // For brevity, I'm including a simplified version here.
   // In a real scenario, you'd likely refactor the common UI into a shared component.
 
-  if (loading) return <main className="p-6"><div className="text-center">Loading question...</div></main>;
-  if (error) return <main className="p-6"><div className="text-red-600 text-center">Error: {error}</div></main>;
-  if (!question) return <main className="p-6"><div className="text-center">Question not found.</div></main>;
+  if (loading)
+    return (
+      <main className="p-6">
+        <div className="text-center">Loading question...</div>
+      </main>
+    );
+  if (error)
+    return (
+      <main className="p-6">
+        <div className="text-red-600 text-center">Error: {error}</div>
+      </main>
+    );
+  if (!question)
+    return (
+      <main className="p-6">
+        <div className="text-center">Question not found.</div>
+      </main>
+    );
 
   return (
     <main className="max-w-3xl mx-auto my-8 p-6 border border-gray-200 rounded-lg">

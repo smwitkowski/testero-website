@@ -66,14 +66,14 @@ export function StudyPathDisplay({ diagnosticData }: StudyPathDisplayProps) {
       });
 
       if (!response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as { error?: string };
         if (response.status === 401) {
           throw new Error("Authentication required");
         }
         throw new Error(data.error || "Failed to generate study path");
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as { recommendations?: StudyRecommendation[] };
       setRecommendations(data.recommendations || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate study path");
