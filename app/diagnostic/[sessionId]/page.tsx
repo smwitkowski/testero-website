@@ -72,7 +72,7 @@ const DiagnosticSessionPage = () => {
 
       try {
         const res = await fetch(apiUrl);
-        const data = await res.json();
+        const data = (await res.json()) as { error?: string; session?: DiagnosticSessionData };
         if (!res.ok) {
           if (res.status === 404) {
             setError("session_not_found");
@@ -91,13 +91,15 @@ const DiagnosticSessionPage = () => {
           }
           return;
         }
-        setSessionData(data.session);
+        if (data.session) {
+          setSessionData(data.session);
+        }
 
         // Track diagnostic session loaded
         trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_STARTED, {
           sessionId: sessionId,
-          examType: data.session.examType,
-          questionCount: data.session.questions?.length || 0,
+          examType: data.session?.examType || "unknown",
+          questionCount: data.session?.questions?.length || 0,
           userId: user?.id || null,
           isAnonymous: !user,
         });
@@ -180,11 +182,22 @@ const DiagnosticSessionPage = () => {
         }),
       });
 
-      const data = await res.json();
+      const data = (await res.json()) as {
+        error?: string;
+        isCorrect: boolean;
+        correctAnswer: string;
+        explanation: string;
+      };
       if (!res.ok) {
         throw new Error(data.error || "Failed to submit answer.");
       }
-      setFeedback(data);
+      if (data.isCorrect !== undefined) {
+        setFeedback({
+          isCorrect: data.isCorrect,
+          correctAnswer: data.correctAnswer,
+          explanation: data.explanation,
+        });
+      }
 
       // Track question answered
       trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_QUESTION_ANSWERED, {
@@ -222,7 +235,7 @@ const DiagnosticSessionPage = () => {
             sessionId,
           }),
         });
-        const data = await res.json();
+        const data = (await res.json()) as { error?: string };
         if (!res.ok) {
           throw new Error(data.error || "Failed to fetch results.");
         }
