@@ -1,0 +1,20 @@
+﻿2025-08-10T22:58:29.5798675Z ##[group]Run npm run lint
+2025-08-10T22:58:29.5799006Z [36;1mnpm run lint[0m
+2025-08-10T22:58:29.5841627Z shell: /usr/bin/bash -e {0}
+2025-08-10T22:58:29.5841898Z env:
+2025-08-10T22:58:29.5842248Z   PROJECT_ID: ***
+2025-08-10T22:58:29.5842503Z   REGION: ***
+2025-08-10T22:58:29.5842728Z   SERVICE_NAME: ***
+2025-08-10T22:58:29.5842942Z   REPOSITORY: ***
+2025-08-10T22:58:29.5843138Z   NODE_VERSION: 20
+2025-08-10T22:58:29.5843335Z ##[endgroup]
+2025-08-10T22:58:29.7036361Z 
+2025-08-10T22:58:29.7037057Z > frontend@0.1.0 lint
+2025-08-10T22:58:29.7037479Z > next lint
+2025-08-10T22:58:29.7038265Z 
+2025-08-10T22:58:33.8946248Z Attention: Next.js now collects completely anonymous telemetry regarding usage.
+2025-08-10T22:58:33.8950185Z This information is used to shape Next.js' roadmap and prioritize features.
+2025-08-10T22:58:33.8951904Z You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2025-08-10T22:58:33.8952907Z https://nextjs.org/telemetry
+2025-08-10T22:58:33.8953287Z 
+2025-08-10T22:58:34.0996367Z ✔ No ESLint warnings or errors

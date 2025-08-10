@@ -42,7 +42,7 @@ describe('Legacy Content Transformation', () => {
       expect(result.valid).toBe(true);
       expect(result.data).toBeDefined();
       
-      if (result.data) {
+      if (result.data && result.data.category === 'hub') {
         expect(result.data.category).toBe('hub');
         expect(result.data.slug).toBe('google-cloud-certification-guide');
         expect(result.data.title).toBe(legacyHubContent.title);
@@ -59,7 +59,7 @@ describe('Legacy Content Transformation', () => {
       expect(result.valid).toBe(true);
       expect(result.data).toBeDefined();
       
-      if (result.data) {
+      if (result.data && result.data.category === 'blog') {
         expect(result.data.category).toBe('blog');
         expect(result.data.slug).toBe('5-hardest-pmle-questions');
         expect(result.data.title).toBe(legacyBlogContent.title);

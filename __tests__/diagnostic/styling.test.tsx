@@ -20,7 +20,7 @@ jest.mock("next/navigation", () => ({
 jest.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
     auth: {
-      getUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }),
+      getUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null } as any),
     },
   }),
 }));
@@ -227,8 +227,8 @@ describe("Diagnostic Page Styling", () => {
 describe("Diagnostic Component Token Validation", () => {
   test("diagnostic tokens should reference semantic tokens", () => {
     // Diagnostic tokens should not introduce new hardcoded values
-    expect(colorComponent.diagnostic.background).toBe(colorComponent.surface?.default || "#ffffff");
-    expect(colorComponent.diagnostic.border).toBe(colorComponent.border?.default || "#e2e8f0");
+    expect(colorComponent.diagnostic.background).toBe((colorComponent as any).surface?.default || "#ffffff");
+    expect(colorComponent.diagnostic.border).toBe((colorComponent as any).border?.default || "#e2e8f0");
   });
 
   test("diagnostic page specific tokens should be complete", () => {
@@ -243,7 +243,7 @@ describe("Diagnostic Component Token Validation", () => {
     ];
 
     requiredTokens.forEach((token) => {
-      expect(colorComponent.diagnostic[token]).toBeDefined();
+      expect((colorComponent.diagnostic as any)[token]).toBeDefined();
     });
   });
 });

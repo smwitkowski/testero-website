@@ -199,17 +199,17 @@ describe("Diagnostic Style Utilities", () => {
     test("returns style objects when useTailwind is false", () => {
       const styles = getDiagnosticStyles(false);
       expect(styles.container).toEqual(diagnosticContainerStyles);
-      expect(styles.button).toEqual(diagnosticButtonStyles);
+      expect((styles as any).button).toEqual(diagnosticButtonStyles);
       expect(styles.input).toEqual(diagnosticInputStyles);
-      expect(styles.text).toEqual(diagnosticTextStyles);
+      expect((styles as any).text).toEqual(diagnosticTextStyles);
     });
 
     test("defaults to style objects when no parameter", () => {
       const styles = getDiagnosticStyles();
       expect(styles.container).toBeDefined();
-      expect(styles.button).toBeDefined();
+      expect((styles as any).button).toBeDefined();
       expect(styles.input).toBeDefined();
-      expect(styles.text).toBeDefined();
+      expect((styles as any).text).toBeDefined();
     });
   });
 
