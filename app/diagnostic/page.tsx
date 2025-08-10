@@ -280,7 +280,7 @@ const DiagnosticStartPage = () => {
           PMLE Diagnostic Assessment
         </h1>
         <p style={{ fontSize: 18, color: "#6b7280", marginBottom: 16 }}>
-          Find your exam readiness in 10 minutes • 70% of candidates fail—don't be one of them
+          Find your exam readiness in 10 minutes • 70% of candidates fail—don&apos;t be one of them
         </p>
         <div style={{ display: "flex", gap: 16, fontSize: 14, color: "#4b5563" }}>
           <div>✓ Covers all 6 domains</div>
