@@ -20,11 +20,17 @@ import {
   ProcessedContentSchema,
   ContentNavigationSchema,
   ContentStatsSchema,
+  LegacyFrontmatterSchema,
+  ContentTransformOptionsSchema,
+  ContentProcessingResultSchema,
   type ContentType,
   type AnyContent,
   type ContentValidationError,
   type ContentValidationResult,
   type ContentFrontmatter,
+  type LegacyFrontmatter,
+  type ContentTransformOptions,
+  type ContentProcessingResult,
 } from './schemas';
 
 /**
@@ -527,6 +533,192 @@ export const JSON_SCHEMAS = {
 } as const;
 
 /**
+ * Transform legacy content to new schema format
+ */
+export function transformLegacyContent(
+  legacyData: unknown,
+  contentType: ContentType,
+  slug: string
+): ContentValidationResult {
+  try {
+    // First validate it's valid legacy frontmatter
+    const legacy = LegacyFrontmatterSchema.parse(legacyData);
+    
+    // Transform to new format
+    const transformed: any = {
+      category: contentType,
+      slug,
+      title: legacy.title,
+      description: legacy.description,
+      publishedAt: new Date(legacy.publishedAt || legacy.date || new Date().toISOString()),
+      tags: legacy.tags || [],
+      author: legacy.author || 'Unknown Author',
+      readingTime: calculateReadingTime(legacy.description),
+    };
+    
+    // Add optional fields if present
+    if (legacy.lastModified) {
+      transformed.updatedAt = new Date(legacy.lastModified);
+    }
+    if (legacy.coverImage) {
+      transformed.coverImage = legacy.coverImage;
+    }
+    if (legacy.featured !== undefined) {
+      transformed.featured = legacy.featured;
+    }
+    if (legacy.excerpt) {
+      transformed.excerpt = legacy.excerpt;
+    }
+    
+    // Add type-specific fields for hub/spoke content
+    if (contentType === 'hub' || contentType === 'spoke') {
+      transformed.type = contentType;
+      transformed.date = legacy.date || new Date().toISOString();
+      if (legacy.lastModified) {
+        transformed.lastModified = legacy.lastModified;
+      }
+    }
+    
+    // Validate transformed content
+    return validateContentByType(transformed, contentType);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        valid: false,
+        errors: formatZodError(error, legacyData),
+      };
+    }
+    
+    return {
+      valid: false,
+      errors: [{
+        field: 'root',
+        message: 'Failed to transform legacy content',
+        code: 'transformation_error',
+        value: legacyData,
+      }],
+    };
+  }
+}
+
+/**
+ * Calculate reading time from text content
+ */
+function calculateReadingTime(text: string): string {
+  const wordsPerMinute = 200;
+  const wordCount = text.split(/\s+/).length;
+  const minutes = Math.ceil(wordCount / wordsPerMinute);
+  return `${minutes} min read`;
+}
+
+/**
+ * Validate and transform content with processing options
+ */
+export function processContent(
+  data: unknown,
+  contentType: ContentType,
+  slug: string,
+  options: ContentTransformOptions = {}
+): ContentProcessingResult {
+  const startTime = Date.now();
+  const warnings: Array<{ field: string; message: string; severity: 'low' | 'medium' | 'high' }> = [];
+  
+  // Apply default options
+  const opts = ContentTransformOptionsSchema.parse(options);
+  
+  // Try modern schema first, then legacy transformation
+  let validationResult = validateContentByType(data, contentType);
+  
+  if (!validationResult.valid) {
+    // Try legacy transformation
+    validationResult = transformLegacyContent(data, contentType, slug);
+    
+    if (validationResult.valid) {
+      warnings.push({
+        field: 'schema',
+        message: 'Content was transformed from legacy format',
+        severity: 'medium',
+      });
+    }
+  }
+  
+  const processingTime = Date.now() - startTime;
+  
+  if (validationResult.valid && validationResult.data) {
+    // Calculate metadata
+    const content = validationResult.data;
+    const wordCount = content.description.split(/\s+/).length;
+    const readingTimeMinutes = Math.ceil(wordCount / 200);
+    
+    // Create processed content
+    const processedContent = {
+      slug,
+      content: '', // Would be populated with actual HTML content
+      meta: content,
+      type: contentType,
+    };
+    
+    return {
+      success: true,
+      content: processedContent,
+      errors: [],
+      warnings,
+      metadata: {
+        processingTime,
+        wordCount,
+        readingTimeMinutes,
+        imageCount: 0, // Would be calculated from actual content
+        linkCount: 0, // Would be calculated from actual content
+      },
+    };
+  }
+  
+  return {
+    success: false,
+    errors: validationResult.errors,
+    warnings,
+    metadata: {
+      processingTime,
+      wordCount: 0,
+      readingTimeMinutes: 0,
+      imageCount: 0,
+      linkCount: 0,
+    },
+  };
+}
+
+/**
+ * Validate content transformation options
+ */
+export function validateTransformOptions(options: unknown) {
+  try {
+    const validOptions = ContentTransformOptionsSchema.parse(options);
+    return {
+      valid: true,
+      errors: [],
+      data: validOptions,
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        valid: false,
+        errors: formatZodError(error, options),
+      };
+    }
+    
+    return {
+      valid: false,
+      errors: [{
+        field: 'root',
+        message: 'Invalid transform options',
+        code: 'invalid_type',
+        value: options,
+      }],
+    };
+  }
+}
+
+/**
  * Export commonly used schemas for external validation
  */
 export {
@@ -543,4 +735,7 @@ export {
   ProcessedContentSchema,
   ContentNavigationSchema,
   ContentStatsSchema,
+  LegacyFrontmatterSchema,
+  ContentTransformOptionsSchema,
+  ContentProcessingResultSchema,
 };

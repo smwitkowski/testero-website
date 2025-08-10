@@ -100,7 +100,10 @@ export const HubContentSchema = BaseContentSchema.extend({
     .max(100, "Slug must be less than 100 characters")
     .regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens"),
   
-  coverImage: z.string().url("Cover image must be a valid URL").optional(),
+  coverImage: z.string().optional().refine(
+    (url) => !url || url.startsWith('http') || url.startsWith('/'),
+    "Cover image must be a valid URL or absolute path"
+  ),
   lastModified: z.string().optional(), // Legacy support
   date: z.string(), // Legacy support
 });
@@ -125,7 +128,10 @@ export const SpokeContentSchema = BaseContentSchema.extend({
     .min(0, "Spoke order must be 0 or greater")
     .optional(),
   
-  coverImage: z.string().url("Cover image must be a valid URL").optional(),
+  coverImage: z.string().optional().refine(
+    (url) => !url || url.startsWith('http') || url.startsWith('/'),
+    "Cover image must be a valid URL or absolute path"
+  ),
   lastModified: z.string().optional(), // Legacy support
   date: z.string(), // Legacy support
 });
@@ -219,6 +225,25 @@ export const AnyContentSchema = z.discriminatedUnion('category', [
 ]);
 
 /**
+ * Legacy frontmatter schema for backward compatibility
+ * Handles existing content with different field names
+ */
+export const LegacyFrontmatterSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  date: z.string().optional(), // Legacy field name
+  publishedAt: z.string().optional(),
+  lastModified: z.string().optional(),
+  author: z.string().optional(),
+  category: z.string().optional(), // Can be different from content type
+  tags: z.array(z.string()).optional(),
+  coverImage: z.string().optional(),
+  featured: z.boolean().optional(),
+  excerpt: z.string().optional(),
+  // Allow any additional fields for flexibility
+}).passthrough();
+
+/**
  * Content frontmatter schema for parsing raw markdown files
  */
 export const ContentFrontmatterSchema = z.record(z.unknown());
@@ -268,7 +293,10 @@ export const ContentListItemSchema = z.object({
   tags: z.array(z.string()),
   author: z.string(),
   readingTime: z.string(),
-  coverImage: z.string().url().optional(),
+  coverImage: z.string().optional().refine(
+    (url) => !url || url.startsWith('http') || url.startsWith('/'),
+    "Cover image must be a valid URL or absolute path"
+  ),
   featured: z.boolean().optional(),
 });
 
@@ -326,6 +354,48 @@ export const ContentStatsSchema = z.object({
 });
 
 /**
+ * Content transformation utilities schema
+ */
+export const ContentTransformOptionsSchema = z.object({
+  // Markdown processing options
+  enableGFM: z.boolean().default(true),
+  enableRawHTML: z.boolean().default(true),
+  generateTOC: z.boolean().default(false),
+  enableSyntaxHighlighting: z.boolean().default(true),
+  
+  // SEO and metadata options
+  generateReadingTime: z.boolean().default(true),
+  generateWordCount: z.boolean().default(true),
+  optimizeImages: z.boolean().default(true),
+  
+  // Content validation options
+  strictValidation: z.boolean().default(false),
+  validateLinks: z.boolean().default(false),
+  validateImages: z.boolean().default(false),
+});
+
+/**
+ * Content processing pipeline result
+ */
+export const ContentProcessingResultSchema = z.object({
+  success: z.boolean(),
+  content: ProcessedContentSchema.optional(),
+  errors: z.array(ContentValidationErrorSchema),
+  warnings: z.array(z.object({
+    field: z.string(),
+    message: z.string(),
+    severity: z.enum(['low', 'medium', 'high']),
+  })),
+  metadata: z.object({
+    processingTime: z.number(),
+    wordCount: z.number(),
+    readingTimeMinutes: z.number(),
+    imageCount: z.number(),
+    linkCount: z.number(),
+  }),
+});
+
+/**
  * Export schema types for TypeScript inference
  */
 export type TwitterCardType = z.infer<typeof TwitterCardTypeSchema>;
@@ -347,3 +417,6 @@ export type ContentListItem = z.infer<typeof ContentListItemSchema>;
 export type ProcessedContent = z.infer<typeof ProcessedContentSchema>;
 export type ContentNavigation = z.infer<typeof ContentNavigationSchema>;
 export type ContentStats = z.infer<typeof ContentStatsSchema>;
+export type LegacyFrontmatter = z.infer<typeof LegacyFrontmatterSchema>;
+export type ContentTransformOptions = z.infer<typeof ContentTransformOptionsSchema>;
+export type ContentProcessingResult = z.infer<typeof ContentProcessingResultSchema>;

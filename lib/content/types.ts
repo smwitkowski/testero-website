@@ -176,6 +176,93 @@ export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
 export type TwitterCardType = 'summary' | 'summary_large_image' | 'app' | 'player';
 
 /**
+ * Content processing stages
+ */
+export type ContentProcessingStage = 
+  | 'raw' 
+  | 'parsed' 
+  | 'validated' 
+  | 'transformed' 
+  | 'rendered' 
+  | 'optimized' 
+  | 'published';
+
+/**
+ * Content visibility levels
+ */
+export type ContentVisibility = 'public' | 'private' | 'draft' | 'archived';
+
+/**
+ * Content quality scores
+ */
+export interface ContentQuality {
+  /** Overall quality score (0-100) */
+  overall: number;
+  /** Content completeness score */
+  completeness: number;
+  /** SEO optimization score */
+  seo: number;
+  /** Readability score */
+  readability: number;
+  /** Technical accuracy score */
+  technical: number;
+  /** User engagement potential */
+  engagement: number;
+}
+
+/**
+ * Content transformation and processing utilities
+ */
+export interface ContentTransformOptions {
+  /** Enable GitHub Flavored Markdown */
+  enableGFM: boolean;
+  /** Enable raw HTML processing */
+  enableRawHTML: boolean;
+  /** Generate table of contents */
+  generateTOC: boolean;
+  /** Enable syntax highlighting */
+  enableSyntaxHighlighting: boolean;
+  /** Generate reading time automatically */
+  generateReadingTime: boolean;
+  /** Generate word count automatically */
+  generateWordCount: boolean;
+  /** Optimize images during processing */
+  optimizeImages: boolean;
+  /** Strict validation mode */
+  strictValidation: boolean;
+  /** Validate external links */
+  validateLinks: boolean;
+  /** Validate image references */
+  validateImages: boolean;
+}
+
+/**
+ * Content processing pipeline result
+ */
+export interface ContentProcessingResult {
+  /** Processing success status */
+  success: boolean;
+  /** Processed content (if successful) */
+  content?: ProcessedContent;
+  /** Validation errors */
+  errors: ContentValidationError[];
+  /** Processing warnings */
+  warnings: Array<{
+    field: string;
+    message: string;
+    severity: 'low' | 'medium' | 'high';
+  }>;
+  /** Processing metadata */
+  metadata: {
+    processingTime: number;
+    wordCount: number;
+    readingTimeMinutes: number;
+    imageCount: number;
+    linkCount: number;
+  };
+}
+
+/**
  * Content processing result with HTML output
  */
 export interface ProcessedContent<T extends AnyContent = AnyContent> {
@@ -223,6 +310,17 @@ export interface ContentSearchResult extends ContentListItem {
   score: number;
   /** Highlighted excerpt showing search matches */
   highlight: string;
+  /** Search result context */
+  context?: {
+    /** Search query that produced this result */
+    query: string;
+    /** Matching fields */
+    matchedFields: string[];
+    /** Search result rank */
+    rank: number;
+    /** Related suggestions */
+    suggestions: string[];
+  };
 }
 
 /**
@@ -273,6 +371,19 @@ export interface ContentStats {
   externalLinks: number;
   /** Content freshness score (0-1) */
   freshnessScore: number;
+  /** Additional metrics */
+  metrics?: {
+    /** Number of internal links */
+    internalLinks: number;
+    /** Number of headings */
+    headings: number;
+    /** Complexity score based on readability */
+    complexityScore: number;
+    /** SEO keyword density */
+    keywordDensity: number;
+    /** Language level (reading grade) */
+    readingLevel: number;
+  };
 }
 
 /**
@@ -306,6 +417,143 @@ export interface ContentValidationResult {
  */
 export interface ContentFrontmatter {
   [key: string]: unknown;
+}
+
+/**
+ * Legacy content metadata for backward compatibility
+ * Matches the existing loader interface
+ */
+export interface LegacyContentMeta {
+  title: string;
+  description: string;
+  date: string;
+  lastModified?: string;
+  author?: string;
+  category?: string;
+  tags?: string[];
+  slug: string;
+  type: 'hub' | 'spoke';
+  hubSlug?: string;
+  spokeOrder?: number;
+  coverImage?: string;
+  readingTime?: number;
+}
+
+/**
+ * Legacy content structure for backward compatibility
+ */
+export interface LegacyContent {
+  slug: string;
+  content: string;
+  meta: LegacyContentMeta;
+}
+
+/**
+ * Content migration status and information
+ */
+export interface ContentMigrationInfo {
+  /** Whether content has been migrated to new schema */
+  migrated: boolean;
+  /** Schema version used */
+  schemaVersion: string;
+  /** Migration timestamp */
+  migratedAt?: Date;
+  /** Original format detected */
+  originalFormat: 'legacy' | 'modern';
+  /** Migration warnings or issues */
+  migrationWarnings: string[];
+}
+
+/**
+ * Extended content with migration information
+ */
+export interface MigratableContent<T extends AnyContent = AnyContent> extends ProcessedContent<T> {
+  migration: ContentMigrationInfo;
+}
+
+/**
+ * Content indexing and search metadata
+ */
+export interface ContentIndex {
+  /** Content ID for indexing */
+  id: string;
+  /** Full text search content */
+  searchableText: string;
+  /** Search keywords extracted from content */
+  keywords: string[];
+  /** Content categories for faceted search */
+  categories: string[];
+  /** Indexed date */
+  indexedAt: Date;
+  /** Search ranking score */
+  rankingScore: number;
+}
+
+/**
+ * Content relationship mapping
+ */
+export interface ContentRelationship {
+  /** Source content ID */
+  fromId: string;
+  /** Target content ID */
+  toId: string;
+  /** Relationship type */
+  type: 'related' | 'parent' | 'child' | 'prerequisite' | 'follows' | 'references';
+  /** Relationship strength (0-1) */
+  strength: number;
+  /** Relationship context or reason */
+  context?: string;
+}
+
+/**
+ * Content analytics and performance data
+ */
+export interface ContentAnalytics {
+  /** Unique page views */
+  views: number;
+  /** Average time on page (seconds) */
+  averageTimeOnPage: number;
+  /** Bounce rate (0-1) */
+  bounceRate: number;
+  /** Social shares count */
+  shares: number;
+  /** Comments count */
+  comments: number;
+  /** User engagement score (0-100) */
+  engagementScore: number;
+  /** SEO performance score (0-100) */
+  seoScore: number;
+  /** Last analytics update */
+  lastUpdated: Date;
+}
+
+/**
+ * Content system configuration
+ */
+export interface ContentSystemConfig {
+  /** Content directories */
+  directories: {
+    blog: string;
+    hub: string;
+    spoke: string;
+    guide: string;
+    documentation: string;
+    faq: string;
+  };
+  /** Default processing options */
+  defaultOptions: ContentTransformOptions;
+  /** Cache configuration */
+  cache: {
+    enabled: boolean;
+    ttl: number;
+    maxSize: number;
+  };
+  /** Validation settings */
+  validation: {
+    strict: boolean;
+    allowLegacyFormat: boolean;
+    autoMigrate: boolean;
+  };
 }
 
 /**
