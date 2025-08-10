@@ -9,7 +9,11 @@ interface NavigationItem {
   href: string;
 }
 
-export default function ContentNavigation() {
+interface ContentNavigationProps {
+  currentSlug?: string;
+}
+
+export default function ContentNavigation({ currentSlug }: ContentNavigationProps = {}) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
