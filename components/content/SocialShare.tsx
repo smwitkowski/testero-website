@@ -2,21 +2,15 @@
 
 import React, { useState } from 'react';
 import { Share2, Twitter, Linkedin, Facebook, Link as LinkIcon, Check } from 'lucide-react';
-
-interface SocialShareProps {
-  title: string;
-  url: string;
-  description?: string;
-  className?: string;
-  variant?: 'compact' | 'detailed';
-}
+import { SocialShareProps } from './types';
 
 function SocialShare({ 
   title, 
   url, 
   description = '', 
   className = '',
-  variant = 'compact'
+  variant = 'compact',
+  platforms = ['twitter', 'linkedin', 'copy']
 }: SocialShareProps) {
   const [copied, setCopied] = useState(false);
   
@@ -69,65 +63,79 @@ function SocialShare({
     window.open(shareUrls[platform], '_blank', 'noopener,noreferrer,width=550,height=420');
   };
 
-  if (variant === 'compact') {
+  const renderPlatformButton = (platform: string, compactMode: boolean = false) => {
+    const platformConfig = {
+      twitter: { 
+        icon: Twitter, 
+        label: 'Share on Twitter', 
+        action: () => handleShare('twitter'),
+        color: compactMode ? 'hover:text-blue-500' : 'bg-blue-500 hover:bg-blue-600'
+      },
+      linkedin: { 
+        icon: Linkedin, 
+        label: 'Share on LinkedIn', 
+        action: () => handleShare('linkedin'),
+        color: compactMode ? 'hover:text-blue-700' : 'bg-blue-700 hover:bg-blue-800'
+      },
+      facebook: { 
+        icon: Facebook, 
+        label: 'Share on Facebook', 
+        action: () => handleShare('facebook'),
+        color: compactMode ? 'hover:text-blue-600' : 'bg-blue-600 hover:bg-blue-700'
+      },
+      copy: { 
+        icon: copied ? Check : LinkIcon, 
+        label: 'Copy link', 
+        action: copyToClipboard,
+        color: compactMode 
+          ? (copied ? 'text-green-600' : 'hover:text-green-600')
+          : (copied ? 'bg-green-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')
+      }
+    };
+
+    if (!platformConfig[platform as keyof typeof platformConfig]) return null;
+    
+    const config = platformConfig[platform as keyof typeof platformConfig];
+    const IconComponent = config.icon;
+
+    if (compactMode) {
+      return (
+        <button
+          key={platform}
+          onClick={config.action}
+          className={`text-gray-600 transition-colors ${config.color}`}
+          aria-label={config.label}
+        >
+          <IconComponent className="w-4 h-4" />
+        </button>
+      );
+    }
+
+    return (
+      <button
+        key={platform}
+        onClick={config.action}
+        className={`flex items-center space-x-2 px-4 py-2 text-white rounded-lg transition-colors ${config.color}`}
+        aria-label={config.label}
+      >
+        <IconComponent className="w-4 h-4" />
+        <span>{platform === 'copy' ? (copied ? 'Copied!' : 'Copy Link') : platform.charAt(0).toUpperCase() + platform.slice(1)}</span>
+      </button>
+    );
+  };
+
+  if (variant === 'compact' || variant === 'minimal') {
     return (
       <div className={`flex items-center space-x-2 ${className}`}>
-        <Share2 className="w-4 h-4 text-gray-500" />
-        <button
-          onClick={() => handleShare('twitter')}
-          className="text-gray-600 hover:text-blue-500 transition-colors"
-          aria-label="Share on Twitter"
-        >
-          <Twitter className="w-4 h-4" />
-        </button>
-        <button
-          onClick={() => handleShare('linkedin')}
-          className="text-gray-600 hover:text-blue-700 transition-colors"
-          aria-label="Share on LinkedIn"
-        >
-          <Linkedin className="w-4 h-4" />
-        </button>
-        <button
-          onClick={copyToClipboard}
-          className="text-gray-600 hover:text-green-600 transition-colors"
-          aria-label="Copy link"
-        >
-          {copied ? <Check className="w-4 h-4 text-green-600" /> : <LinkIcon className="w-4 h-4" />}
-        </button>
+        {variant === 'compact' && <Share2 className="w-4 h-4 text-gray-500" />}
+        {platforms.map(platform => renderPlatformButton(platform, true))}
       </div>
     );
   }
 
   return (
     <div className={`flex items-center space-x-4 ${className}`}>
-      <button
-        onClick={() => handleShare('twitter')}
-        className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-        aria-label="Share on Twitter"
-      >
-        <Twitter className="w-4 h-4" />
-        <span>Twitter</span>
-      </button>
-      <button
-        onClick={() => handleShare('linkedin')}
-        className="flex items-center space-x-2 px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors"
-        aria-label="Share on LinkedIn"
-      >
-        <Linkedin className="w-4 h-4" />
-        <span>LinkedIn</span>
-      </button>
-      <button
-        onClick={copyToClipboard}
-        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-          copied 
-            ? 'bg-green-600 text-white' 
-            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-        }`}
-        aria-label="Copy link"
-      >
-        {copied ? <Check className="w-4 h-4" /> : <LinkIcon className="w-4 h-4" />}
-        <span>{copied ? 'Copied!' : 'Copy Link'}</span>
-      </button>
+      {platforms.map(platform => renderPlatformButton(platform, false))}
     </div>
   );
 }

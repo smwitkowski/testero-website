@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
-import { Calendar, Clock, User, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { 
   getContentByTypeAndSlug, 
   parseRouteSegments, 
@@ -12,10 +12,13 @@ import {
   getAllContentPaths,
   type UnifiedContent 
 } from '@/lib/content/config';
-import ContentNavigation from '@/components/content/ContentNavigation';
-import TableOfContents from '@/components/content/TableOfContents';
-import SocialShare from '@/components/content/SocialShare';
-import RecommendedContent from '@/components/content/RecommendedContent';
+import { 
+  ContentNavigation, 
+  TableOfContents, 
+  SocialShare, 
+  RecommendedContent,
+  ContentMetadata
+} from '@/components/content';
 
 interface ContentPageProps {
   params: {
@@ -97,24 +100,6 @@ export async function generateMetadata({ params }: ContentPageProps): Promise<Me
   };
 }
 
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
-
-function formatReadingTime(readingTime: number | string | undefined): string {
-  if (!readingTime) return '';
-  
-  if (typeof readingTime === 'string') {
-    return readingTime;
-  }
-  
-  return `${readingTime} min read`;
-}
-
 function getBackLink(type: string): { href: string; label: string } {
   switch (type) {
     case 'blog':
@@ -130,7 +115,6 @@ function getBackLink(type: string): { href: string; label: string } {
 
 function renderContentLayout(content: UnifiedContent) {
   const backLink = getBackLink(content.type);
-  const readingTime = formatReadingTime(content.meta.readingTime);
 
   const config = CONTENT_CONFIG[content.type];
   switch (config.layout) {
@@ -178,21 +162,23 @@ function renderContentLayout(content: UnifiedContent) {
                 {content.meta.description}
               </p>
 
-              <div className="flex flex-wrap items-center gap-6 text-sm text-gray-500 pt-4 border-t">
-                <div className="flex items-center space-x-2">
-                  <User className="w-4 h-4" />
-                  <span>{content.meta.author}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>{formatDate(content.meta.date)}</span>
-                </div>
-                {readingTime && (
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4" />
-                    <span>{readingTime}</span>
-                  </div>
-                )}
+              <div className="pt-4 border-t">
+                <ContentMetadata
+                  author={content.meta.author}
+                  publishedAt={content.meta.date}
+                  updatedAt={content.meta.lastModified}
+                  readingTime={content.meta.readingTime}
+                  category={content.meta.category}
+                  tags={content.meta.tags}
+                  variant="minimal"
+                  show={{
+                    author: true,
+                    date: true,
+                    readingTime: true,
+                    category: false,
+                    tags: false
+                  }}
+                />
               </div>
             </div>
           </header>
@@ -271,13 +257,21 @@ function renderContentLayout(content: UnifiedContent) {
                     {content.meta.description}
                   </p>
 
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <span>{formatDate(content.meta.date)}</span>
-                    {readingTime && <span>• {readingTime}</span>}
-                    {content.meta.lastModified && (
-                      <span>• Updated {formatDate(content.meta.lastModified)}</span>
-                    )}
-                  </div>
+                  <ContentMetadata
+                    publishedAt={content.meta.date}
+                    updatedAt={content.meta.lastModified}
+                    readingTime={content.meta.readingTime}
+                    variant="compact"
+                    show={{
+                      author: false,
+                      date: true,
+                      readingTime: true,
+                      lastModified: true,
+                      category: false,
+                      tags: false
+                    }}
+                    className="text-sm text-gray-500"
+                  />
                 </header>
 
                 {/* Hub content */}
@@ -324,9 +318,20 @@ function renderContentLayout(content: UnifiedContent) {
               {content.meta.description}
             </p>
 
-            <div className="flex items-center gap-4 text-sm text-gray-500 pb-4 border-b">
-              <span>{formatDate(content.meta.date)}</span>
-              {readingTime && <span>• {readingTime}</span>}
+            <div className="pb-4 border-b">
+              <ContentMetadata
+                publishedAt={content.meta.date}
+                readingTime={content.meta.readingTime}
+                variant="compact"
+                show={{
+                  author: false,
+                  date: true,
+                  readingTime: true,
+                  category: false,
+                  tags: false
+                }}
+                className="text-sm text-gray-500"
+              />
             </div>
           </header>
 

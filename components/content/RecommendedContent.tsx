@@ -2,14 +2,7 @@ import React, { Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getAllContentByType, CONTENT_CONFIG, type UnifiedContent } from '@/lib/content/config';
-
-interface RecommendedContentProps {
-  currentSlug: string;
-  contentType: string;
-  category?: string;
-  title?: string;
-  limit?: number;
-}
+import { RelatedContentProps } from './types';
 
 // Server component to fetch and filter recommended content
 async function getRecommendedContent({
@@ -84,8 +77,11 @@ async function RecommendedContentInner({
   contentType,
   category,
   title = 'Recommended Resources',
-  limit = 3
-}: RecommendedContentProps) {
+  limit = 3,
+  layout = 'grid',
+  showImages = true,
+  showMetadata = true
+}: RelatedContentProps) {
   const content = await getRecommendedContent({
     currentSlug,
     contentType,
@@ -94,14 +90,20 @@ async function RecommendedContentInner({
   });
 
   if (content.length === 0) return null;
+
+  const containerClass = layout === 'list' 
+    ? 'space-y-4' 
+    : layout === 'carousel'
+    ? 'flex overflow-x-auto space-x-6 pb-4'
+    : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
   
   return (
     <section className="mt-12 bg-gray-50 rounded-xl p-8">
       <h2 className="text-2xl font-bold mb-6">{title}</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className={containerClass}>
         {content.map((item) => (
-          <div key={item.slug} className="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col">
-            {item.meta.coverImage && (
+          <div key={item.slug} className={`bg-white rounded-lg shadow-sm overflow-hidden ${layout === 'list' ? 'flex flex-row' : layout === 'carousel' ? 'flex-shrink-0 w-80' : ''} ${layout === 'grid' ? 'flex flex-col' : ''}`}>
+            {showImages && item.meta.coverImage && (
               <div className="relative h-40 w-full">
                 <Image
                   src={item.meta.coverImage}
@@ -126,23 +128,25 @@ async function RecommendedContentInner({
                   ? `${item.meta.description.substring(0, 100)}...`
                   : item.meta.description}
               </p>
-              <div className="mt-auto flex justify-between items-center text-xs text-gray-500">
-                <span>
-                  {new Date(item.meta.date).toLocaleDateString('en-US', {
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric'
-                  })}
-                </span>
-                {item.meta.readingTime && (
+              {showMetadata && (
+                <div className="mt-auto flex justify-between items-center text-xs text-gray-500">
                   <span>
-                    {typeof item.meta.readingTime === 'string' 
-                      ? item.meta.readingTime 
-                      : `${item.meta.readingTime} min read`
-                    }
+                    {new Date(item.meta.date).toLocaleDateString('en-US', {
+                      year: 'numeric', 
+                      month: 'short', 
+                      day: 'numeric'
+                    })}
                   </span>
-                )}
-              </div>
+                  {item.meta.readingTime && (
+                    <span>
+                      {typeof item.meta.readingTime === 'string' 
+                        ? item.meta.readingTime 
+                        : `${item.meta.readingTime} min read`
+                      }
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -152,10 +156,13 @@ async function RecommendedContentInner({
 }
 
 // Main component with Suspense wrapper
-export default function RecommendedContent(props: RecommendedContentProps) {
+export default function RecommendedContent(props: RelatedContentProps) {
   return (
     <Suspense fallback={<LoadingSkeleton limit={props.limit || 3} title={props.title || 'Recommended Resources'} />}>
       <RecommendedContentInner {...props} />
     </Suspense>
   );
 }
+
+// Alias for RelatedContent (better naming)
+export { RecommendedContent as RelatedContent };

@@ -9,8 +9,7 @@ import {
   getSpokesForHub
 } from '@/lib/content/loader';
 import { generateContentMetadata, generateStructuredData } from '@/lib/content/meta';
-import SocialShare from '@/components/content/SocialShare';
-import RecommendedContent from '@/components/content/RecommendedContent';
+import { SocialShare, RecommendedContent, ContentMetadata } from '@/components/content';
 
 // Generate static params for all hub content
 export async function generateStaticParams() {
@@ -61,17 +60,20 @@ const SpokeCard = ({ title, description, slug, date, readingTime, coverImage }: 
             ? `${description.substring(0, 120)}...` 
             : description}
         </p>
-        <div className="flex justify-between items-center text-sm text-gray-500 mt-auto">
-          <span>
-            {new Date(date).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric',
-            })}
-          </span>
-          {readingTime && (
-            <span>{readingTime} min read</span>
-          )}
+        <div className="mt-auto">
+          <ContentMetadata
+            publishedAt={date}
+            readingTime={readingTime}
+            variant="compact"
+            show={{
+              author: false,
+              date: true,
+              readingTime: true,
+              category: false,
+              tags: false
+            }}
+            className="text-sm text-gray-500"
+          />
         </div>
       </div>
     </div>
@@ -105,19 +107,21 @@ export default async function HubPage({ params }: { params: Promise<{ slug: stri
             description={content.meta.description}
             className="mb-5"
           />
-          {content.meta.author && (
-            <div className="text-gray-600 mb-5 font-medium">
-              By {content.meta.author} • 
-              {new Date(content.meta.date).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-              {content.meta.readingTime && (
-                <span className="ml-1">• {content.meta.readingTime} min read</span>
-              )}
-            </div>
-          )}
+          <ContentMetadata
+            author={content.meta.author}
+            publishedAt={content.meta.date}
+            updatedAt={content.meta.lastModified}
+            readingTime={content.meta.readingTime}
+            variant="minimal"
+            className="mb-5"
+            show={{
+              author: true,
+              date: true,
+              readingTime: true,
+              category: false,
+              tags: false
+            }}
+          />
           {content.meta.tags && content.meta.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-8">
               {content.meta.tags.map(tag => (
@@ -184,8 +188,9 @@ export default async function HubPage({ params }: { params: Promise<{ slug: stri
         
         {/* Recommended Content Section */}
         <RecommendedContent
-          content={recommendedContent}
           currentSlug={content.slug}
+          contentType="hub"
+          category={content.meta.category}
           title="More Certification Resources"
         />
       </div>

@@ -3,9 +3,12 @@ import Link from 'next/link';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getAllBlogPosts, getBlogPost } from '@/lib/content/blog-loader';
-import { Clock, Calendar, User, ArrowLeft, Share2 } from 'lucide-react';
-import { SocialShare } from '@/components/content/SocialShare';
-import { TableOfContents } from '@/components/content/TableOfContents';
+import { ArrowLeft } from 'lucide-react';
+import { 
+  SocialShare, 
+  TableOfContents, 
+  ContentMetadata 
+} from '@/components/content';
 
 type BlogPostPageProps = {
   params: { slug: string };
@@ -116,28 +119,21 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               </p>
               
               <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center space-x-6 text-gray-600">
-                  <div className="flex items-center space-x-2">
-                    <User className="w-4 h-4" />
-                    <span className="font-medium">{meta.author}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4" />
-                    <time dateTime={meta.publishedAt}>
-                      {new Date(meta.publishedAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </time>
-                  </div>
-                  {meta.readingTime && (
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4" />
-                      <span>{meta.readingTime}</span>
-                    </div>
-                  )}
-                </div>
+                <ContentMetadata
+                  author={meta.author}
+                  publishedAt={meta.publishedAt}
+                  updatedAt={meta.updatedAt}
+                  readingTime={meta.readingTime}
+                  category={meta.category}
+                  variant="minimal"
+                  show={{
+                    author: true,
+                    date: true,
+                    readingTime: true,
+                    category: false,
+                    tags: false
+                  }}
+                />
                 
                 <SocialShare 
                   url={`https://testero.ai/blog/${params.slug}`}
@@ -236,17 +232,20 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 {relatedPosts.map((relatedPost) => (
                   <article key={relatedPost.slug} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                     <div className="p-6">
-                      <div className="flex items-center space-x-2 text-sm text-gray-500 mb-3">
-                        <Calendar className="w-4 h-4" />
-                        <time dateTime={relatedPost.meta.publishedAt}>
-                          {new Date(relatedPost.meta.publishedAt).toLocaleDateString()}
-                        </time>
-                        {relatedPost.meta.readingTime && (
-                          <>
-                            <span>•</span>
-                            <span>{relatedPost.meta.readingTime}</span>
-                          </>
-                        )}
+                      <div className="mb-3">
+                        <ContentMetadata
+                          publishedAt={relatedPost.meta.publishedAt}
+                          readingTime={relatedPost.meta.readingTime}
+                          variant="compact"
+                          show={{
+                            author: false,
+                            date: true,
+                            readingTime: true,
+                            category: false,
+                            tags: false
+                          }}
+                          className="text-sm text-gray-500"
+                        />
                       </div>
                       <Link href={`/blog/${relatedPost.slug}`} className="block hover:no-underline group">
                         <h3 className="text-xl font-semibold mb-2 text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">

@@ -9,8 +9,7 @@ import {
   getSpokesForHub 
 } from '@/lib/content/loader';
 import { generateContentMetadata, generateStructuredData } from '@/lib/content/meta';
-import SocialShare from '@/components/content/SocialShare';
-import RecommendedContent from '@/components/content/RecommendedContent';
+import { SocialShare, RecommendedContent, ContentMetadata } from '@/components/content';
 
 // Generate static params for all spoke content
 export async function generateStaticParams() {
@@ -82,19 +81,21 @@ export default async function SpokePage({ params }: { params: Promise<{ slug: st
             description={content.meta.description}
             className="mb-4"
           />
-          {content.meta.author && (
-            <div className="text-gray-600 mb-4">
-              By {content.meta.author} • 
-              {new Date(content.meta.date).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-              {content.meta.readingTime && (
-                <span> • {content.meta.readingTime} min read</span>
-              )}
-            </div>
-          )}
+          <ContentMetadata
+            author={content.meta.author}
+            publishedAt={content.meta.date}
+            updatedAt={content.meta.lastModified}
+            readingTime={content.meta.readingTime}
+            variant="minimal"
+            className="mb-4"
+            show={{
+              author: true,
+              date: true,
+              readingTime: true,
+              category: false,
+              tags: false
+            }}
+          />
           {content.meta.tags && content.meta.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-6">
               {content.meta.tags.map(tag => (
@@ -145,13 +146,12 @@ export default async function SpokePage({ params }: { params: Promise<{ slug: st
         </div>
         
         {/* Related Content from same hub */}
-        {relatedContent.length > 1 && (
-          <RecommendedContent
-            content={relatedContent}
-            currentSlug={content.slug}
-            title={`More About ${hubContent?.meta.title || 'Google Cloud Certifications'}`}
-          />
-        )}
+        <RecommendedContent
+          currentSlug={content.slug}
+          contentType="spokes"
+          category={content.meta.category}
+          title={`More About ${hubContent?.meta.title || 'Google Cloud Certifications'}`}
+        />
         
         {/* CTAs */}
         <div className="mt-16 p-8 bg-gray-50 rounded-xl">
