@@ -47,6 +47,17 @@ const nextConfig = {
         destination: '/content/spoke/:slug*',
         permanent: true,
       },
+      // Redirect spoke content to blog (from TES-330: hub/spoke content migration)
+      {
+        source: '/content/spoke/accelerated-google-ml-certification-30-day-success-story-2025',
+        destination: '/blog/accelerated-google-ml-certification-30-day-success-story-2025',
+        permanent: true,
+      },
+      {
+        source: '/content/spoke/google-cloud-digital-leader-certification',
+        destination: '/blog/google-cloud-digital-leader-certification',
+        permanent: true,
+      },
       // Keep existing blog routes for backward compatibility
       {
         source: '/blog/:slug*',
