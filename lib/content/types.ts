@@ -3,6 +3,9 @@
  * 
  * This file provides comprehensive type-safe interfaces for all content types
  * in the system, supporting the unified content routing established in TES-326.
+ * 
+ * These types are validated at runtime using the Zod schemas in schemas.ts
+ * and validation utilities in validators.ts.
  */
 
 /**
