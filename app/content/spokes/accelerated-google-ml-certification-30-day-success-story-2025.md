@@ -16,7 +16,7 @@ tags:
   - accelerated learning
   - certification preparation
   - ml certification tips
-hubSlug: "google-professional-machine-learning-engineer-certification-roadmap-2025"
+hubSlug: "pmle-certification-roadmap-2025"
 spokeOrder: 1
 ---
 

@@ -1,4 +1,4 @@
-import { getAllHubContent, getAllSpokeContent, getHubContent, getSpokeContent } from './loader';
+import { getAllHubContent, getAllSpokeContent, getHubContent, getSpokeContent, getContent, getAllContent } from './loader';
 import { getAllBlogPosts, getBlogPost } from './blog-loader';
 import type { Content } from './loader';
 import type { BlogPost } from './blog-loader';
@@ -39,6 +39,17 @@ export const CONTENT_CONFIG: Record<string, ContentTypeConfig> = {
       titleTemplate: '%s | Google Certification Guide | Testero',
       defaultTitle: 'Google Certification Guides | Comprehensive Resources',
       description: 'Comprehensive guides for Google certifications to accelerate your career in cloud, data analytics, machine learning, and more.'
+    }
+  },
+  guides: {
+    path: 'guides',
+    urlPrefix: '/content/guides',
+    layout: 'guide',
+    allowNested: false,
+    seoConfig: {
+      titleTemplate: '%s | Complete Guide | Testero',
+      defaultTitle: 'Complete Certification Guides | Step-by-Step Resources',
+      description: 'Comprehensive step-by-step guides for Google Cloud and ML certifications with practical study plans and expert insights.'
     }
   },
   spokes: {
@@ -100,7 +111,7 @@ function blogPostToUnified(post: BlogPost): UnifiedContent {
 /**
  * Convert content to unified content format
  */
-function contentToUnified(content: Content, type: 'hub' | 'spokes'): UnifiedContent {
+function contentToUnified(content: Content, type: 'hub' | 'spokes' | 'guides'): UnifiedContent {
   return {
     slug: content.slug,
     content: content.content,
@@ -115,7 +126,9 @@ function contentToUnified(content: Content, type: 'hub' | 'spokes'): UnifiedCont
       tags: content.meta.tags,
       readingTime: content.meta.readingTime,
       coverImage: content.meta.coverImage,
-      canonicalUrl: type === 'hub' ? `/content/hub/${content.slug}` : `/content/spoke/${content.slug}`
+      canonicalUrl: type === 'hub' ? `/content/hub/${content.slug}` : 
+                   type === 'guides' ? `/content/guides/${content.slug}` : 
+                   `/content/spoke/${content.slug}`
     }
   };
 }
@@ -136,6 +149,10 @@ export async function getContentByTypeAndSlug(
       case 'hub': {
         const content = await getHubContent(slug);
         return content ? contentToUnified(content, 'hub') : null;
+      }
+      case 'guides': {
+        const content = await getGuideContent(slug);
+        return content ? contentToUnified(content, 'guides') : null;
       }
       case 'spokes': {
         const content = await getSpokeContent(slug);
@@ -163,6 +180,10 @@ export async function getAllContentByType(type: keyof typeof CONTENT_CONFIG): Pr
       case 'hub': {
         const content = await getAllHubContent();
         return content.map(c => contentToUnified(c, 'hub'));
+      }
+      case 'guides': {
+        const content = await getAllGuideContent();
+        return content.map(c => contentToUnified(c, 'guides'));
       }
       case 'spokes': {
         const content = await getAllSpokeContent();
@@ -237,6 +258,12 @@ export async function getAllContentPaths(): Promise<Array<{ params: { slug: stri
     paths.push({ params: { slug: ['hub', content.slug] } });
   });
 
+  // Add guide paths
+  const guideContent = await getAllGuideContent();
+  guideContent.forEach(content => {
+    paths.push({ params: { slug: ['guides', content.slug] } });
+  });
+
   // Add spoke paths
   const spokeContent = await getAllSpokeContent();
   spokeContent.forEach(content => {
@@ -286,6 +313,17 @@ export async function generateContentSitemapEntries(): Promise<Array<{
     });
   });
 
+  // Guide entries
+  const guideContent = await getAllGuideContent();
+  guideContent.forEach(content => {
+    entries.push({
+      url: `${baseUrl}/content/guides/${content.slug}`,
+      lastModified: content.meta.lastModified || content.meta.date,
+      changeFrequency: 'monthly',
+      priority: 0.9
+    });
+  });
+
   // Spoke entries
   const spokeContent = await getAllSpokeContent();
   spokeContent.forEach(content => {
@@ -299,3 +337,62 @@ export async function generateContentSitemapEntries(): Promise<Array<{
 
   return entries;
 }
+
+/**
+ * Legacy guide helper functions
+ */
+
+// Get a single guide content by slug (legacy compatibility)
+export const getGuideContent = async (slug: string): Promise<Content | null> => {
+  const content = await getContent('guide', slug);
+  if (!content) return null;
+
+  // Transform to legacy format
+  const meta = content.meta as any;
+  return {
+    slug: content.slug,
+    content: content.content,
+    meta: {
+      title: meta.title,
+      description: meta.description,
+      date: meta.date || new Date(meta.publishedAt).toISOString(),
+      lastModified: meta.lastModified || (meta.updatedAt ? new Date(meta.updatedAt).toISOString() : undefined),
+      author: meta.author,
+      category: meta.category,
+      tags: meta.tags,
+      slug: content.slug,
+      type: 'hub' as const, // Use hub type for compatibility
+      hubSlug: undefined,
+      spokeOrder: undefined,
+      coverImage: meta.coverImage,
+      readingTime: parseInt(meta.readingTime?.split(' ')[0] || '5'),
+    }
+  };
+};
+
+// Get all guide content (legacy compatibility)
+export const getAllGuideContent = async (): Promise<Content[]> => {
+  const content = await getAllContent('guide');
+  return content.map(item => {
+    const meta = item.meta as any;
+    return {
+      slug: item.slug,
+      content: item.content,
+      meta: {
+        title: meta.title,
+        description: meta.description,
+        date: meta.date || new Date(meta.publishedAt).toISOString(),
+        lastModified: meta.lastModified || (meta.updatedAt ? new Date(meta.updatedAt).toISOString() : undefined),
+        author: meta.author,
+        category: meta.category,
+        tags: meta.tags,
+        slug: item.slug,
+        type: 'hub' as const, // Use hub type for compatibility
+        hubSlug: undefined,
+        spokeOrder: undefined,
+        coverImage: meta.coverImage,
+        readingTime: parseInt(meta.readingTime?.split(' ')[0] || '5'),
+      }
+    };
+  });
+};
