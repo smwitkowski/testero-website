@@ -17,9 +17,13 @@
 import * as fs from "fs";
 import { promises as fsPromises } from "fs";
 import * as path from "path";
-import * as matter from "gray-matter";
-import { cache } from "next/cache";
+import matter from "gray-matter";
 import { z } from "zod";
+
+// Simple cache implementation for compatibility
+const cache = <T extends (...args: any[]) => any>(fn: T): T => {
+  return fn; // In React 19/Next.js 15+, this would be the actual cache function
+};
 
 // Import content system components
 import { contentCache } from "./cache";
