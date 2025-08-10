@@ -2,24 +2,24 @@ import { generateMetadata as baseGenerateMetadata, generateJsonLd } from "@/lib/
 
 // Generate metadata for the home page
 export const generateMetadata = () => baseGenerateMetadata({
-  title: "Testero | Ace Your Google Cloud, AWS, and Azure Certification Exams Confidently",
-  description: "Testero is an AI-powered learning platform that generates always-current practice questions, builds personalized adaptive study plans, and accurately predicts exam readiness for Google Cloud, AWS, and Azure cloud certifications.",
+  title: "PMLE Exam Prep | Pass Google ML Certification - Testero",
+  description: "Pass the PMLE exam with confidence. Updated for October 2024 changes. AI-powered practice questions, personalized study plans. Start free diagnostic.",
   keywords: [
-    "cloud certification exam", 
-    "cloud certification preparation", 
-    "Google Cloud certification", 
-    "AWS certification", 
-    "Azure certification", 
-    "AI learning platform", 
-    "cloud exam preparation", 
-    "certification practice questions", 
-    "adaptive cloud certification study plan",
-    "exam readiness prediction",
-    "GCP Professional Cloud Architect",
-    "AWS Solutions Architect",
-    "Azure Administrator",
-    "cloud certification practice tests",
-    "cloud certification study guide"
+    "PMLE exam", 
+    "Professional Machine Learning Engineer", 
+    "Google ML certification", 
+    "PMLE practice questions", 
+    "PMLE study guide", 
+    "PMLE exam prep", 
+    "Google cloud ML certification", 
+    "Vertex AI exam questions", 
+    "TensorFlow certification",
+    "BigQuery ML exam",
+    "MLOps certification",
+    "PMLE October 2024",
+    "PMLE pass rate",
+    "PMLE exam cost",
+    "machine learning engineer certification"
   ],
   canonical: "/",
 });
@@ -31,24 +31,24 @@ export const getJsonLd = () => generateJsonLd({
       "@type": "WebPage",
       "@id": "https://testero.ai/#webpage",
       "url": "https://testero.ai",
-      "name": "Testero | Ace Your Google Cloud, AWS, and Azure Certification Exams Confidently",
-      "description": "Testero is an AI-powered learning platform that generates always-current practice questions, builds personalized adaptive study plans, and accurately predicts exam readiness for Google Cloud, AWS, and Azure cloud certifications.",
+      "name": "PMLE Exam Prep | Pass Google ML Certification - Testero",
+      "description": "Pass the PMLE exam with confidence. Updated for October 2024 changes. AI-powered practice questions, personalized study plans. Start free diagnostic.",
       "speakable": {
         "@type": "SpeakableSpecification",
         "cssSelector": ["h1", "h2", ".hero-text"]
       },
       "mainEntity": {
         "@type": "Product",
-        "name": "Testero AI Cloud Certification Platform",
-        "description": "AI-powered cloud certification exam preparation platform for Google Cloud, AWS, and Azure",
+        "name": "Testero PMLE Exam Preparation Platform",
+        "description": "AI-powered PMLE (Professional Machine Learning Engineer) certification exam preparation with October 2024 updates",
         "brand": {
           "@type": "Brand",
           "name": "Testero"
         },
         "offers": {
           "@type": "Offer",
-          "availability": "https://schema.org/PreOrder",
-          "price": "0",
+          "availability": "https://schema.org/InStock",
+          "price": "39",
           "priceCurrency": "USD"
         }
       }
@@ -58,34 +58,34 @@ export const getJsonLd = () => generateJsonLd({
       "mainEntity": [
         {
           "@type": "Question",
-          "name": "What is Testero?",
+          "name": "What is Testero's PMLE exam prep?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Testero is an AI-powered learning platform that helps professionals prepare for Google Cloud, AWS, and Azure certification exams with always-current practice questions, personalized adaptive study plans, and accurate exam readiness predictions."
+            "text": "Testero is an AI-powered PMLE exam preparation platform with 500+ practice questions updated for October 2024 exam changes. We offer a 30-day pass guarantee - pass your PMLE on the first attempt or get your money back."
           }
         },
         {
           "@type": "Question",
-          "name": "Which cloud certification exams does Testero support?",
+          "name": "Why is the PMLE exam so difficult?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Testero supports all major Google Cloud certifications (including Professional Cloud Architect, Associate Cloud Engineer), AWS certifications (including Solutions Architect, Developer), and Azure certifications (including Administrator, Developer), with plans to expand to additional technical certifications in the future."
+            "text": "The PMLE exam has a 70% fail rate because it tests deep ML knowledge across TensorFlow, Vertex AI, BigQuery ML, and MLOps. Google updated 30% of topics in October 2024, making outdated study materials dangerous. Most people waste $200 on failed attempts."
           }
         },
         {
           "@type": "Question",
-          "name": "How does Testero improve cloud certification exam preparation?",
+          "name": "How does Testero guarantee PMLE success?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Testero uses AI to generate always-current practice questions that reflect the latest exam content, creates personalized study plans that focus on your weak areas, and accurately predicts when you'll be ready to pass your certification exam."
+            "text": "Our AI-powered system provides 500+ PMLE-specific questions updated for October 2024 changes. Take our free diagnostic to see your exact readiness level, follow our 30-day study plan, and pass on your first attempt - or get your money back."
           }
         },
         {
           "@type": "Question",
-          "name": "When will Testero be available for cloud certification preparation?",
+          "name": "What's included in Testero's PMLE prep?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Testero is launching in private beta in July 2025. Join the waitlist today for priority access and a 30% lifetime discount on all cloud certification preparation materials."
+            "text": "All plans include: 500+ PMLE practice questions, AI-powered explanations, free diagnostic test, personalized 30-day study plan, October 2024 exam updates, progress tracking, and our money-back guarantee. Plans start at $39/month."
           }
         }
       ]

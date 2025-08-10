@@ -9,6 +9,7 @@ import { useAuth } from '@/components/providers/AuthProvider';
 const navigationItems = [
   { name: 'Home', href: '/' },
   { name: 'Content Hub', href: '/content' },
+  { name: 'Blog', href: '/blog' },
   { name: 'FAQ', href: '/faq' },
   // Design System link removed
   // Resources dropdown temporarily removed until pages are created

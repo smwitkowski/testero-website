@@ -32,6 +32,7 @@ const APP_DIR = path.join(__dirname, '../app');
 // const fetch = require('node-fetch'); // No longer needed
 const HUB_CONTENT_DIR = path.join(__dirname, '../app/content/hub');
 const SPOKE_CONTENT_DIR = path.join(__dirname, '../app/content/spokes');
+const BLOG_CONTENT_DIR = path.join(__dirname, '../app/content/blog');
 
 // Get current date in YYYY-MM-DD format
 const getCurrentDate = () => {
@@ -227,6 +228,13 @@ async function main() {
     // Add Spoke content routes
     const spokeRoutes = getMarkdownSlugs(SPOKE_CONTENT_DIR, '/content/spoke');
     pageRoutes = [...pageRoutes, ...spokeRoutes];
+
+    // Add Blog content routes
+    let blogRoutes = [];
+    if (fs.existsSync(BLOG_CONTENT_DIR)) {
+      blogRoutes = getMarkdownSlugs(BLOG_CONTENT_DIR, '/blog');
+      pageRoutes = [...pageRoutes, ...blogRoutes];
+    }
 
     // Remove duplicate routes if any
     pageRoutes = [...new Set(pageRoutes)];

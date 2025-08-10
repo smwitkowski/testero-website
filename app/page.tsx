@@ -90,37 +90,37 @@ export default function Home() {
             <div className="inline-flex items-center gap-2 bg-yellow-400/20 backdrop-blur-sm border border-yellow-400/40 rounded-full px-4 py-2 mb-4">
               <Zap className="h-4 w-4 text-yellow-300" />
               <span className="text-sm font-semibold text-yellow-100">
-                Limited Time: Annual Plans 25% Off
+                Updated for October 2024 PMLE Exam Changes
               </span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-extrabold text-white">
-              <span className="block">Pass Your Cloud Certification</span>
+              <span className="block">Pass PMLE in 30 Days</span>
               <span className="relative inline-block bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
-                15% Faster—Guaranteed
+                Or Your Money Back
                 <span className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-red-500 rounded-full"></span>
               </span>
             </h1>
 
             {/* Enhanced Sub-headline with Value Props */}
             <h2 className="text-lg sm:text-xl md:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed">
-              Join 5,000+ professionals who passed on their first attempt. AI-powered practice that
-              adapts to you. Updated within 14 days of exam changes.
+              Stop wasting $200 on failed attempts. The PMLE has a 70% fail rate—but our students pass 
+              on their first try with AI-powered practice questions updated for October 2024.
             </h2>
 
             {/* Social Proof Stats */}
             <div className="flex flex-wrap justify-center gap-6 mb-6">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-green-400" />
-                <span className="text-white font-semibold">92% Pass Rate</span>
+                <span className="text-white font-semibold">New in 2025</span>
               </div>
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-blue-400" />
-                <span className="text-white font-semibold">5,000+ Certified</span>
+                <span className="text-white font-semibold">PMLE-Focused</span>
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-purple-400" />
-                <span className="text-white font-semibold">40% Less Study Time</span>
+                <span className="text-white font-semibold">30-Day Program</span>
               </div>
             </div>
 
@@ -171,29 +171,30 @@ export default function Home() {
                 <div className="bg-green-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                   <TrendingUp className="h-8 w-8 text-green-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">ROI Guaranteed</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Protect Your $200 Exam Fee</h3>
                 <p className="text-gray-600">
-                  Invest $149 to protect your $300 exam fee. PMLE-certified professionals earn
-                  $150k+ on average.
+                  70% of PMLE test-takers fail and lose $200. Our diagnostic shows your exact 
+                  readiness level before you book.
                 </p>
               </div>
               <div className="text-center">
                 <div className="bg-blue-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                   <Clock className="h-8 w-8 text-blue-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Save 40% Study Time</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">October 2024 Exam Updated</h3>
                 <p className="text-gray-600">
-                  AI-personalized learning paths adapt to your strengths and weaknesses, getting you
-                  ready faster.
+                  Google changed 30% of PMLE topics in October. Our questions are updated within 
+                  14 days of any exam changes.
                 </p>
               </div>
               <div className="text-center">
                 <div className="bg-purple-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                   <Shield className="h-8 w-8 text-purple-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Pass Guarantee</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">30-Day Pass Guarantee</h3>
                 <p className="text-gray-600">
-                  Complete 80% of your study plan and don&apos;t pass? Get 3 additional months free.
+                  Follow our 30-day PMLE study plan and pass on your first attempt—or get your 
+                  money back. No questions asked.
                 </p>
               </div>
             </div>
@@ -214,11 +215,11 @@ export default function Home() {
             <div className="max-w-7xl mx-auto">
               <div className="text-center mb-12">
                 <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-                  Choose Your Path to Certification Success
+                  Choose Your PMLE Success Plan
                 </h2>
                 <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                  Flexible plans designed for every learning journey. All plans include our
-                  AI-powered adaptive learning engine.
+                  All plans include 500+ PMLE-specific questions, AI explanations, and our 
+                  30-day pass guarantee.
                 </p>
               </div>
 
@@ -314,23 +315,23 @@ export default function Home() {
                 {
                   id: "1",
                   quote:
-                    "The Pro plan at $59/month paid for itself instantly. Passed PMLE with 89% on my first attempt after just 3 weeks. The adaptive learning saved me at least 40 hours of study time.",
+                    "Failed PMLE twice before finding Testero. The diagnostic showed I was only 58% ready. After 30 days of focused practice, I passed with 89%. Worth every penny.",
                   author: "Alex Chen",
-                  role: "ML Engineer → Senior ML Engineer (+$25K)",
+                  role: "ML Engineer at Google",
                 },
                 {
                   id: "2",
                   quote:
-                    "Started with the Basic plan for my PCA cert, then upgraded to All-Access. Passed 3 certifications in 6 months and got promoted. Best $749 I've ever invested in my career.",
+                    "The October 2024 exam changes caught me off guard. Testero had updated questions within days. Their AI explanations for ML concepts are better than any course I've taken.",
                   author: "Sarah Martinez",
-                  role: "DevOps Engineer → Cloud Architect",
+                  role: "Senior Data Scientist",
                 },
                 {
                   id: "3",
                   quote:
-                    "The 15-minute free diagnostic showed I was at 58% readiness. After 4 weeks on the Pro plan, I hit 91% and passed easily. Worth every penny for the peace of mind alone.",
+                    "PMLE is brutal—70% fail rate for a reason. Testero's diagnostic saved me from wasting $200. Studied for 30 days, passed first try. The money-back guarantee gave me confidence.",
                   author: "Michael Johnson",
-                  role: "Passed 3 GCP Certs in 6 Months",
+                  role: "Cloud ML Engineer",
                 },
               ]}
             />
@@ -338,20 +339,20 @@ export default function Home() {
             {/* Success Metrics */}
             <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
               <div>
-                <div className="text-3xl font-bold text-blue-600">92%</div>
-                <div className="text-sm text-gray-600">First-Attempt Pass Rate</div>
+                <div className="text-3xl font-bold text-blue-600">70%</div>
+                <div className="text-sm text-gray-600">PMLE Fail Rate</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-green-600">5,000+</div>
-                <div className="text-sm text-gray-600">Professionals Certified</div>
+                <div className="text-3xl font-bold text-green-600">$200</div>
+                <div className="text-sm text-gray-600">Exam Cost at Risk</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-purple-600">4.8/5</div>
-                <div className="text-sm text-gray-600">Average Rating</div>
+                <div className="text-3xl font-bold text-purple-600">30</div>
+                <div className="text-sm text-gray-600">Days to Pass</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-orange-600">40%</div>
-                <div className="text-sm text-gray-600">Less Study Time</div>
+                <div className="text-3xl font-bold text-orange-600">Oct 2024</div>
+                <div className="text-sm text-gray-600">Content Updated</div>
               </div>
             </div>
           </div>
@@ -361,28 +362,28 @@ export default function Home() {
         <section className="w-full py-16 px-4 sm:px-6 bg-white">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8">
-              Powered by AI, Personalized for You
+              PMLE-Specific AI Training System
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-6">
                 <Zap className="h-10 w-10 text-blue-600 mx-auto mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Adaptive Learning</h3>
+                <h3 className="font-semibold text-lg mb-2">ML Concept Mastery</h3>
                 <p className="text-gray-600">
-                  AI adjusts difficulty based on your performance, focusing on weak areas
+                  Deep coverage of TensorFlow, Vertex AI, BigQuery ML, and MLOps practices
                 </p>
               </div>
               <div className="p-6">
                 <Award className="h-10 w-10 text-green-600 mx-auto mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Exam-Ready Questions</h3>
+                <h3 className="font-semibold text-lg mb-2">October 2024 Updates</h3>
                 <p className="text-gray-600">
-                  Questions harder than the real exam, making test day feel easy
+                  500+ questions covering new Gemini, GenAI, and Vertex AI features
                 </p>
               </div>
               <div className="p-6">
                 <TrendingUp className="h-10 w-10 text-purple-600 mx-auto mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Progress Analytics</h3>
+                <h3 className="font-semibold text-lg mb-2">Readiness Score</h3>
                 <p className="text-gray-600">
-                  Know exactly when you&apos;re ready with our readiness score algorithm
+                  Know your exact PMLE readiness percentage before booking your $200 exam
                 </p>
               </div>
             </div>
@@ -396,10 +397,10 @@ export default function Home() {
         >
           <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
             <h2 className="text-3xl sm:text-4xl font-bold mb-6">
-              Your Certification Journey Starts Today
+              Pass PMLE in 30 Days—Guaranteed
             </h2>
             <p className="text-xl mb-8 text-blue-100">
-              Don&apos;t let another exam cycle pass you by. Join 5,000+ successful professionals.
+              Don&apos;t waste $200 on a failed attempt. Start with our free diagnostic to know exactly where you stand.
             </p>
 
             {/* Urgency Elements */}
@@ -409,7 +410,7 @@ export default function Home() {
                 <span className="text-lg font-semibold">Limited Time Offer</span>
               </div>
               <p className="text-blue-100 mb-4">
-                Annual plans 25% off • Prices increase in 30 days
+                New in 2025 • 30-day money-back guarantee • Cancel anytime
               </p>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
@@ -462,7 +463,7 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2">
                 <Star className="h-5 w-5 text-yellow-400" />
-                <span>4.8/5 rating</span>
+                <span>PMLE-focused</span>
               </div>
             </div>
           </div>
@@ -473,7 +474,7 @@ export default function Home() {
       <section className="w-full py-12 md:py-20 px-6 bg-slate-50">
         <div className="max-w-5xl mx-auto text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-8">
-            Learn More About Our Platform
+            PMLE Resources & Study Guides
           </h2>
           <div className="flex flex-wrap justify-center gap-6">
             <Link
@@ -484,10 +485,10 @@ export default function Home() {
               View All Pricing Options →
             </Link>
             <Link
-              href="/content/hub/google-cloud-certification-guide"
+              href="/content/hub/pmle-exam-study-guide"
               className="text-blue-600 hover:underline text-lg"
             >
-              Google Cloud Certification Guide
+              Complete PMLE Study Guide 2025
             </Link>
             <Link
               href="/content/hub/google-professional-machine-learning-engineer-certification-roadmap-2025"

@@ -1,17 +1,23 @@
-import type { Config } from "tailwindcss"
-import { primitive as colorPrimitive, semantic as colorSemantic } from './lib/design-system/tokens/colors'
-import { primitive as spacingPrimitive } from './lib/design-system/tokens/spacing'
-import { primitive as typographyPrimitive } from './lib/design-system/tokens/typography'
-import { primitive as effectsPrimitive, keyframes as effectsKeyframes } from './lib/design-system/tokens/effects'
+import type { Config } from "tailwindcss";
+import {
+  primitive as colorPrimitive,
+  semantic as colorSemantic,
+} from "./lib/design-system/tokens/colors";
+import { primitive as spacingPrimitive } from "./lib/design-system/tokens/spacing";
+import { primitive as typographyPrimitive } from "./lib/design-system/tokens/typography";
+import {
+  primitive as effectsPrimitive,
+  keyframes as effectsKeyframes,
+} from "./lib/design-system/tokens/effects";
 
 const config = {
   darkMode: "class",
   content: [
-    './pages/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
-    './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
-	],
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -58,15 +64,21 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        
-        // Design system tokens
+
+        // Design system primitive tokens
         slate: colorPrimitive.slate,
         orange: colorPrimitive.orange,
         red: colorPrimitive.red,
         green: colorPrimitive.green,
         blue: colorPrimitive.blue,
         indigo: colorPrimitive.indigo,
-        
+        cyan: colorPrimitive.cyan,
+        yellow: colorPrimitive.yellow,
+        purple: colorPrimitive.purple,
+
+        // Semantic neutral colors
+        neutral: colorSemantic.neutral,
+
         // Semantic color aliases
         success: {
           light: colorSemantic.success.light,
@@ -89,10 +101,10 @@ const config = {
           dark: colorSemantic.info.dark,
         },
       },
-      
+
       // Spacing scale from design system
       spacing: spacingPrimitive,
-      
+
       // Typography
       fontFamily: {
         sans: typographyPrimitive.fontFamily.sans,
@@ -102,7 +114,7 @@ const config = {
       fontWeight: typographyPrimitive.fontWeight,
       lineHeight: typographyPrimitive.lineHeight,
       letterSpacing: typographyPrimitive.letterSpacing,
-      
+
       // Border radius from design system
       borderRadius: {
         ...effectsPrimitive.borderRadius,
@@ -111,22 +123,43 @@ const config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
-      
+
       // Box shadows
       boxShadow: effectsPrimitive.boxShadow,
       dropShadow: effectsPrimitive.dropShadow,
-      
+
       // Backdrop blur
       backdropBlur: effectsPrimitive.blur,
-      
+
       // Opacity scale
       opacity: effectsPrimitive.opacity,
-      
+
       // Background images
       backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
+        "gradient-hero": `linear-gradient(135deg, ${colorPrimitive.blue[600]} 0%, ${colorPrimitive.cyan[600]} 100%)`,
+        "gradient-cta": `linear-gradient(45deg, ${colorPrimitive.orange[500]} 0%, ${colorPrimitive.red[500]} 100%)`,
+        "gradient-badge": `linear-gradient(90deg, ${colorPrimitive.blue[600]} 0%, ${colorPrimitive.cyan[600]} 100%)`,
       },
-      
+
+      // Semantic text colors
+      textColor: {
+        primary: colorSemantic.text.primary,
+        secondary: colorSemantic.text.secondary,
+        muted: colorSemantic.text.muted,
+      },
+
+      // Semantic background colors
+      backgroundColor: {
+        surface: colorSemantic.surface.default,
+        "surface-elevated": colorSemantic.surface.elevated,
+      },
+
+      // Semantic border colors
+      borderColor: {
+        default: colorSemantic.border.default,
+      },
+
       // Keyframes from design system and existing
       keyframes: {
         // shadcn/ui animations
@@ -138,9 +171,9 @@ const config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        
+
         // Existing marquee animations
-        "marquee": {
+        marquee: {
           from: { transform: "translateX(0)" },
           to: { transform: "translateX(calc(-100% - var(--gap)))" },
         },
@@ -148,30 +181,30 @@ const config = {
           from: { transform: "translateY(0)" },
           to: { transform: "translateY(calc(-100% - var(--gap)))" },
         },
-        
+
         // Design system keyframes
         ...effectsKeyframes,
       },
-      
+
       // Animations
       animation: {
         // shadcn/ui animations
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        
+
         // Existing marquee animations
-        "marquee": "marquee var(--duration) linear infinite",
+        marquee: "marquee var(--duration) linear infinite",
         "marquee-vertical": "marquee-vertical var(--duration) linear infinite",
-        
+
         // Design system animations
-        "shimmer": "shimmer 1.5s infinite",
-        "spotlight": "spotlight 4s ease-in-out infinite",
-        "float": "float 3s ease-in-out infinite",
+        shimmer: "shimmer 1.5s infinite",
+        spotlight: "spotlight 4s ease-in-out infinite",
+        float: "float 3s ease-in-out infinite",
         "glow-pulse": "glowPulse 2s ease-in-out infinite",
       },
     },
   },
   plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
-} satisfies Config
+} satisfies Config;
 
-export default config
+export default config;
