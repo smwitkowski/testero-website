@@ -3,8 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { 
-  getAllContentSlugs, 
-  getAllHubContent,
+  getAllContentSlugs,
   getHubContent,
   getSpokesForHub
 } from '@/lib/content/loader';
@@ -86,7 +85,7 @@ export default async function HubPage({ params }: { params: Promise<{ slug: stri
   if (!content) notFound();
   
   const spokes = await getSpokesForHub(slug);
-  const recommendedContent = await getAllHubContent();
+  // const recommendedContent = await getAllHubContent(); // Available for future recommendations
   
   // JSON-LD structured data
   const structuredData = generateStructuredData(content);

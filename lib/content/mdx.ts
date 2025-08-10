@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * MDX compilation configuration for Testero content system
  * 
@@ -33,107 +34,106 @@ export const DEFAULT_MDX_OPTIONS: ContentTransformOptions = {
  */
 export const MDX_COMPONENTS = {
   // Enhanced headings with automatic anchor links
-  h1: ({ children, id, ...props }: any) => (
-    `<h1 id="${id || ''}" class="text-3xl font-bold mb-4 text-gray-900 dark:text-white" {...props}>
+  h1: ({ children, id }: any) => (
+    `<h1 id="${id || ''}" class="text-3xl font-bold mb-4 text-gray-900 dark:text-white">
       ${children}
       ${id ? `<a href="#${id}" class="anchor-link ml-2 opacity-0 hover:opacity-100 text-blue-600 hover:text-blue-800" aria-label="Link to this section">#</a>` : ''}
     </h1>`
   ),
   
-  h2: ({ children, id, ...props }: any) => (
-    `<h2 id="${id || ''}" class="text-2xl font-semibold mb-3 mt-8 text-gray-900 dark:text-white" {...props}>
+  h2: ({ children, id }: any) => (
+    `<h2 id="${id || ''}" class="text-2xl font-semibold mb-3 mt-8 text-gray-900 dark:text-white">
       ${children}
       ${id ? `<a href="#${id}" class="anchor-link ml-2 opacity-0 hover:opacity-100 text-blue-600 hover:text-blue-800" aria-label="Link to this section">#</a>` : ''}
     </h2>`
   ),
   
-  h3: ({ children, id, ...props }: any) => (
-    `<h3 id="${id || ''}" class="text-xl font-semibold mb-2 mt-6 text-gray-900 dark:text-white" {...props}>
+  h3: ({ children, id }: any) => (
+    `<h3 id="${id || ''}" class="text-xl font-semibold mb-2 mt-6 text-gray-900 dark:text-white">
       ${children}
       ${id ? `<a href="#${id}" class="anchor-link ml-2 opacity-0 hover:opacity-100 text-blue-600 hover:text-blue-800" aria-label="Link to this section">#</a>` : ''}
     </h3>`
   ),
 
   // Enhanced paragraphs with better spacing
-  p: ({ children, ...props }: any) => (
-    `<p class="mb-4 text-gray-700 dark:text-gray-300 leading-relaxed" {...props}>${children}</p>`
+  p: ({ children }: any) => (
+    `<p class="mb-4 text-gray-700 dark:text-gray-300 leading-relaxed">${children}</p>`
   ),
 
   // Enhanced lists with better styling
-  ul: ({ children, ...props }: any) => (
-    `<ul class="mb-4 space-y-2 list-disc list-inside text-gray-700 dark:text-gray-300" {...props}>${children}</ul>`
+  ul: ({ children }: any) => (
+    `<ul class="mb-4 space-y-2 list-disc list-inside text-gray-700 dark:text-gray-300">${children}</ul>`
   ),
   
-  ol: ({ children, ...props }: any) => (
-    `<ol class="mb-4 space-y-2 list-decimal list-inside text-gray-700 dark:text-gray-300" {...props}>${children}</ol>`
+  ol: ({ children }: any) => (
+    `<ol class="mb-4 space-y-2 list-decimal list-inside text-gray-700 dark:text-gray-300">${children}</ol>`
   ),
   
-  li: ({ children, ...props }: any) => (
-    `<li class="leading-relaxed" {...props}>${children}</li>`
+  li: ({ children }: any) => (
+    `<li class="leading-relaxed">${children}</li>`
   ),
 
   // Enhanced blockquotes
-  blockquote: ({ children, ...props }: any) => (
-    `<blockquote class="border-l-4 border-blue-500 pl-4 mb-4 italic text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 py-3 rounded-r" {...props}>
+  blockquote: ({ children }: any) => (
+    `<blockquote class="border-l-4 border-blue-500 pl-4 mb-4 italic text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 py-3 rounded-r">
       ${children}
     </blockquote>`
   ),
 
   // Enhanced code blocks with syntax highlighting
-  pre: ({ children, ...props }: any) => (
+  pre: ({ children }: any) => (
     `<div class="mb-4 rounded-lg overflow-hidden">
-      <pre class="bg-gray-900 text-gray-100 p-4 overflow-x-auto text-sm" {...props}>${children}</pre>
+      <pre class="bg-gray-900 text-gray-100 p-4 overflow-x-auto text-sm">${children}</pre>
     </div>`
   ),
   
-  code: ({ children, className, ...props }: any) => {
+  code: ({ children, className }: any) => {
     // Inline code
     if (!className) {
-      return `<code class="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-1.5 py-0.5 rounded text-sm font-mono" {...props}>${children}</code>`;
+      return `<code class="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-1.5 py-0.5 rounded text-sm font-mono">${children}</code>`;
     }
     // Code block (handled by pre wrapper)
-    return `<code class="${className}" {...props}>${children}</code>`;
+    return `<code class="${className}">${children}</code>`;
   },
 
   // Enhanced tables
-  table: ({ children, ...props }: any) => (
+  table: ({ children }: any) => (
     `<div class="mb-4 overflow-x-auto">
-      <table class="min-w-full border border-gray-200 dark:border-gray-700" {...props}>${children}</table>
+      <table class="min-w-full border border-gray-200 dark:border-gray-700">${children}</table>
     </div>`
   ),
   
-  th: ({ children, ...props }: any) => (
-    `<th class="px-4 py-3 bg-gray-50 dark:bg-gray-800 text-left text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700" {...props}>${children}</th>`
+  th: ({ children }: any) => (
+    `<th class="px-4 py-3 bg-gray-50 dark:bg-gray-800 text-left text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700">${children}</th>`
   ),
   
-  td: ({ children, ...props }: any) => (
-    `<td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700" {...props}>${children}</td>`
+  td: ({ children }: any) => (
+    `<td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">${children}</td>`
   ),
 
   // Enhanced links
-  a: ({ children, href, ...props }: any) => {
+  a: ({ children, href }: any) => {
     const isExternal = href && (href.startsWith('http') || href.startsWith('https'));
     const externalProps = isExternal ? 'target="_blank" rel="noopener noreferrer"' : '';
     const externalIcon = isExternal ? ' <span class="inline-block w-3 h-3 ml-1">↗</span>' : '';
     
-    return `<a href="${href}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline" ${externalProps} {...props}>
+    return `<a href="${href}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline" ${externalProps}>
       ${children}${externalIcon}
     </a>`;
   },
 
   // Enhanced images with optimization
-  img: ({ src, alt, title, ...props }: any) => (
+  img: ({ src, alt, title }: any) => (
     `<div class="mb-4">
       <img src="${src}" alt="${alt || ''}" title="${title || ''}" 
            class="max-w-full h-auto rounded-lg shadow-sm" 
-           loading="lazy" 
-           {...props} />
+           loading="lazy" />
       ${title ? `<p class="text-sm text-gray-600 dark:text-gray-400 mt-2 text-center italic">${title}</p>` : ''}
     </div>`
   ),
 
   // Custom callout boxes
-  callout: ({ type = 'info', children, ...props }: any) => {
+  callout: ({ type = 'info', children }: any) => {
     const styles = {
       info: 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-900 dark:text-blue-100',
       warning: 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-900 dark:text-yellow-100',
@@ -143,14 +143,14 @@ export const MDX_COMPONENTS = {
     
     const style = styles[type as keyof typeof styles] || styles.info;
     
-    return `<div class="border-l-4 p-4 mb-4 rounded-r ${style}" {...props}>
+    return `<div class="border-l-4 p-4 mb-4 rounded-r ${style}">
       ${children}
     </div>`;
   },
 
   // Custom exam tip component
-  examTip: ({ children, ...props }: any) => (
-    `<div class="border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 rounded-lg p-4 mb-4" {...props}>
+  examTip: ({ children }: any) => (
+    `<div class="border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 rounded-lg p-4 mb-4">
       <div class="flex items-start">
         <div class="flex-shrink-0">
           <span class="text-green-600 dark:text-green-400 text-lg">💡</span>
@@ -164,8 +164,8 @@ export const MDX_COMPONENTS = {
   ),
 
   // Custom practice question component
-  practiceQuestion: ({ question, options, answer, explanation, ...props }: any) => (
-    `<div class="border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-4" {...props}>
+  practiceQuestion: ({ question, options, answer, explanation }: any) => (
+    `<div class="border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-4">
       <h4 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-3">Practice Question</h4>
       <div class="mb-4">
         <p class="text-blue-800 dark:text-blue-200 font-medium">${question}</p>

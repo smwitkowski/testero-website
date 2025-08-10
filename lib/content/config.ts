@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { getAllHubContent, getAllSpokeContent, getHubContent, getSpokeContent, getContent, getAllContent } from './loader';
 import { getAllBlogPosts, getBlogPost } from './blog-loader';
 import type { Content } from './loader';

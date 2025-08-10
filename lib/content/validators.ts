@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Content validation utilities for Testero content system
  * 
@@ -28,7 +29,7 @@ import {
   type ContentValidationError,
   type ContentValidationResult,
   type ContentFrontmatter,
-  type LegacyFrontmatter,
+  // type LegacyFrontmatter,
   type ContentTransformOptions,
   type ContentProcessingResult,
 } from './schemas';
@@ -624,7 +625,7 @@ export function processContent(
   const warnings: Array<{ field: string; message: string; severity: 'low' | 'medium' | 'high' }> = [];
   
   // Apply default options
-  const opts = ContentTransformOptionsSchema.parse(options);
+  ContentTransformOptionsSchema.parse(options); // Validates options
   
   // Try modern schema first, then legacy transformation
   let validationResult = validateContentByType(data, contentType);

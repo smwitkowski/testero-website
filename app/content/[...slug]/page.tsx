@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: ContentPageProps): Promise<Me
     };
   }
 
-  const config = CONTENT_CONFIG[type];
+  // const config = CONTENT_CONFIG[type]; // Currently unused but available for future use
   const canonicalUrl = getCanonicalUrl(type, slug);
 
   return {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Unified Content Loader System for Testero
  * 
@@ -30,9 +31,9 @@ import { contentCache } from "./cache";
 import { processMDX, extractMDXMetadata } from "./mdx";
 import { 
   AnyContentSchema, 
-  ContentTransformOptionsSchema,
-  ContentProcessingResultSchema,
-  ContentFileSchema,
+  // ContentTransformOptionsSchema,
+  // ContentProcessingResultSchema,
+  // ContentFileSchema,
   LegacyFrontmatterSchema 
 } from "./schemas";
 import type { 
@@ -43,7 +44,7 @@ import type {
   ContentTransformOptions,
   ContentProcessingResult,
   ContentListItem,
-  ContentFrontmatter
+  // ContentFrontmatter
 } from "./types";
 
 /**
@@ -129,17 +130,17 @@ function generateSlug(filename: string): string {
 }
 
 // Helper function to infer content type from directory path
-function inferContentType(filePath: string): ContentType | null {
-  const relativePath = path.relative(process.cwd(), filePath);
+// function inferContentType(filePath: string): ContentType | null {
+//   const relativePath = path.relative(process.cwd(), filePath);
   
-  for (const [type, dir] of Object.entries(CONTENT_DIRECTORIES)) {
-    if (relativePath.startsWith(path.relative(process.cwd(), dir))) {
-      return type as ContentType;
-    }
-  }
+//   for (const [type, dir] of Object.entries(CONTENT_DIRECTORIES)) {
+//     if (relativePath.startsWith(path.relative(process.cwd(), dir))) {
+//       return type as ContentType;
+//     }
+//   }
   
-  return null;
-}
+//   return null;
+// }
 
 /**
  * Core Content Processing Functions

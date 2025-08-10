@@ -5,8 +5,7 @@ import { notFound } from 'next/navigation';
 import { 
   getAllContentSlugs, 
   getSpokeContent, 
-  getHubContent, 
-  getSpokesForHub 
+  getHubContent
 } from '@/lib/content/loader';
 import { generateContentMetadata, generateStructuredData } from '@/lib/content/meta';
 import { SocialShare, RecommendedContent, ContentMetadata } from '@/components/content';
@@ -40,9 +39,9 @@ export default async function SpokePage({ params }: { params: Promise<{ slug: st
     : null;
   
   // Get related content if we have a hub
-  const relatedContent = hubContent && content.meta.hubSlug
-    ? await getSpokesForHub(content.meta.hubSlug)
-    : [];
+  // const relatedContent = hubContent && content.meta.hubSlug
+  //   ? await getSpokesForHub(content.meta.hubSlug)
+  //   : []; // Available for future related content feature
   
   // JSON-LD structured data
   const structuredData = generateStructuredData(content);

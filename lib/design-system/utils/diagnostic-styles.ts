@@ -199,7 +199,7 @@ export function getDiagnosticStyles(useTailwind: boolean = false) {
 /**
  * Converts old inline styles to use design tokens
  */
-export function migrateInlineStyles(oldStyle: Record<string, any>): Record<string, any> {
+export function migrateInlineStyles(oldStyle: Record<string, unknown>): Record<string, unknown> {
   const newStyle = { ...oldStyle };
 
   // Replace hardcoded colors with tokens

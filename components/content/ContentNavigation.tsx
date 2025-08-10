@@ -13,7 +13,7 @@ interface ContentNavigationProps {
   currentSlug?: string;
 }
 
-export default function ContentNavigation({ currentSlug }: ContentNavigationProps = {}) {
+export default function ContentNavigation({ }: ContentNavigationProps = {}) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 

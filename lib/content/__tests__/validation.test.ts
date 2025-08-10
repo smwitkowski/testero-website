@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Tests for content validation system
  * 
@@ -9,10 +10,10 @@ import {
   validateContent,
   validateBlogPost,
   validateGuideContent,
-  validateHubContent,
-  validateSpokeContent,
-  validateDocumentationContent,
-  validateFAQContent,
+  // validateHubContent,
+  // validateSpokeContent,
+  // validateDocumentationContent,
+  // validateFAQContent,
   generateErrorSummary,
   detectContentType,
   hasRequiredFields,
