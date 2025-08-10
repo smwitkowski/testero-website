@@ -185,7 +185,7 @@ function renderContentLayout(content: UnifiedContent) {
 
           {/* Article content */}
           <div 
-            className="prose prose-lg prose-gray max-w-none prose-headings:text-gray-900 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900 prose-code:text-blue-600 prose-code:bg-blue-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-900 prose-pre:text-gray-100"
+            className="prose prose-lg max-w-none dark:prose-invert"
             dangerouslySetInnerHTML={{ __html: content.content }}
           />
 
@@ -276,7 +276,7 @@ function renderContentLayout(content: UnifiedContent) {
 
                 {/* Hub content */}
                 <div 
-                  className="prose prose-lg prose-gray max-w-none prose-headings:text-gray-900 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline"
+                  className="prose prose-lg max-w-none dark:prose-invert"
                   dangerouslySetInnerHTML={{ __html: content.content }}
                 />
               </article>
@@ -337,7 +337,7 @@ function renderContentLayout(content: UnifiedContent) {
 
           {/* Guide content */}
           <div 
-            className="prose prose-lg prose-gray max-w-none prose-headings:text-gray-900 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline"
+            className="prose prose-lg max-w-none dark:prose-invert"
             dangerouslySetInnerHTML={{ __html: content.content }}
           />
         </article>

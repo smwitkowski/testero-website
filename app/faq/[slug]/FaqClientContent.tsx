@@ -114,7 +114,7 @@ export default function FaqClientContent({ faq }: FaqClientContentProps) {
           >
             <Card className="overflow-hidden border-0 shadow-xl bg-white dark:bg-slate-800/80 backdrop-blur-sm">
               <CardContent className="p-8 md:p-10">
-                <div className="prose prose-lg max-w-none dark:prose-invert prose-headings:text-slate-900 dark:prose-headings:text-white prose-p:text-slate-700 dark:prose-p:text-slate-300">
+                <div className="prose prose-lg max-w-none dark:prose-invert">
                   {renderAnswer(faq.answer)}
                 </div>
                 

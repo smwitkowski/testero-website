@@ -159,10 +159,9 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
             {/* Main Content */}
             <div className="lg:col-span-3">
-              <article className="prose prose-lg prose-blue max-w-none">
+              <article className="prose prose-lg prose-blue max-w-none dark:prose-invert">
                 <div 
                   dangerouslySetInnerHTML={{ __html: content }}
-                  className="blog-content"
                 />
               </article>
 

@@ -120,10 +120,9 @@ export default async function SpokePage({ params }: { params: Promise<{ slug: st
           )}
         </header>
         
-        <article className="prose prose-lg prose-gray max-w-3xl mx-auto mb-12" id="article-content">
+        <article className="prose prose-lg max-w-3xl mx-auto mb-12 dark:prose-invert" id="article-content">
           <div 
             dangerouslySetInnerHTML={{ __html: content.content }} 
-            className="certification-content"
           />
         </article>
         

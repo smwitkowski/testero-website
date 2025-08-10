@@ -202,9 +202,392 @@ const config = {
         float: "float 3s ease-in-out infinite",
         "glow-pulse": "glowPulse 2s ease-in-out infinite",
       },
+
+      // Unified prose styling configuration
+      typography: (theme: any) => ({
+        DEFAULT: {
+          css: {
+            // Base typography
+            maxWidth: 'none',
+            lineHeight: '1.7',
+            fontSize: '1.125rem',
+            color: theme('colors.gray.700'),
+            
+            // Headings
+            'h1, h2, h3, h4, h5, h6': {
+              color: theme('colors.gray.900'),
+              fontWeight: '700',
+              lineHeight: '1.3',
+              scrollMarginTop: '5rem',
+            },
+            h1: {
+              fontSize: '2.5rem',
+              marginTop: '0',
+              marginBottom: '2rem',
+              borderBottom: `3px solid ${theme('colors.blue.500')}`,
+              paddingBottom: '0.75rem',
+              '@screen md': {
+                fontSize: '3rem',
+              },
+            },
+            h2: {
+              fontSize: '2rem',
+              marginTop: '3rem',
+              marginBottom: '1.5rem',
+              borderBottom: `2px solid ${theme('colors.gray.200')}`,
+              paddingBottom: '0.5rem',
+              '@screen md': {
+                fontSize: '2.25rem',
+              },
+            },
+            h3: {
+              fontSize: '1.5rem',
+              marginTop: '2.5rem',
+              marginBottom: '1rem',
+              color: theme('colors.blue.600'),
+              '@screen md': {
+                fontSize: '1.75rem',
+              },
+            },
+            h4: {
+              fontSize: '1.25rem',
+              marginTop: '2rem',
+              marginBottom: '1rem',
+              fontWeight: '600',
+              color: theme('colors.gray.800'),
+              '@screen md': {
+                fontSize: '1.375rem',
+              },
+            },
+            
+            // Paragraphs
+            p: {
+              marginTop: '1.5rem',
+              marginBottom: '1.5rem',
+              lineHeight: '1.7',
+            },
+            
+            // Links
+            a: {
+              color: theme('colors.blue.600'),
+              textDecoration: 'none',
+              borderBottom: `1px solid ${theme('colors.blue.200')}`,
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                color: theme('colors.blue.800'),
+                borderBottomColor: theme('colors.blue.500'),
+                borderBottomWidth: '2px',
+              },
+            },
+            
+            // Strong text
+            strong: {
+              color: theme('colors.gray.900'),
+              fontWeight: '700',
+            },
+            
+            // Emphasis
+            em: {
+              fontStyle: 'italic',
+              color: theme('colors.gray.600'),
+            },
+            
+            // Lists
+            'ul, ol': {
+              marginTop: '1.5rem',
+              marginBottom: '1.5rem',
+              paddingLeft: '2rem',
+            },
+            ul: {
+              listStyleType: 'disc',
+            },
+            ol: {
+              listStyleType: 'decimal',
+            },
+            li: {
+              marginTop: '0.75rem',
+              marginBottom: '0.75rem',
+              lineHeight: '1.6',
+              '&::marker': {
+                color: theme('colors.blue.500'),
+                fontWeight: '600',
+              },
+            },
+            'li > ul, li > ol': {
+              marginTop: '0.5rem',
+              marginBottom: '0.5rem',
+              paddingLeft: '1.5rem',
+            },
+            
+            // Blockquotes
+            blockquote: {
+              backgroundColor: theme('colors.blue.50'),
+              borderLeft: `4px solid ${theme('colors.blue.400')}`,
+              borderRadius: theme('borderRadius.lg'),
+              padding: '1.5rem',
+              margin: '2rem 0',
+              fontStyle: 'italic',
+              boxShadow: theme('boxShadow.sm'),
+              '& p': {
+                marginTop: '0',
+                marginBottom: '1rem',
+                color: theme('colors.gray.700'),
+                '&:last-child': {
+                  marginBottom: '0',
+                },
+              },
+              '& strong': {
+                color: theme('colors.blue.800'),
+              },
+            },
+            
+            // Code
+            code: {
+              backgroundColor: theme('colors.gray.100'),
+              color: theme('colors.pink.600'),
+              padding: '0.25rem 0.5rem',
+              borderRadius: theme('borderRadius.md'),
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              border: `1px solid ${theme('colors.gray.200')}`,
+              fontFamily: theme('fontFamily.mono').join(', '),
+            },
+            
+            // Code blocks
+            pre: {
+              backgroundColor: theme('colors.gray.900'),
+              color: theme('colors.gray.100'),
+              padding: '1.5rem',
+              borderRadius: theme('borderRadius.lg'),
+              overflowX: 'auto',
+              margin: '2rem 0',
+              boxShadow: theme('boxShadow.lg'),
+              '& code': {
+                backgroundColor: 'transparent',
+                color: 'inherit',
+                padding: '0',
+                border: 'none',
+                fontSize: '0.875rem',
+                lineHeight: '1.6',
+              },
+            },
+            
+            // Tables
+            table: {
+              width: '100%',
+              borderCollapse: 'separate',
+              borderSpacing: '0',
+              margin: '2rem 0',
+              borderRadius: theme('borderRadius.lg'),
+              overflow: 'hidden',
+              boxShadow: theme('boxShadow.sm'),
+              border: `1px solid ${theme('colors.gray.200')}`,
+            },
+            th: {
+              backgroundColor: theme('colors.gray.50'),
+              color: theme('colors.gray.900'),
+              fontWeight: '600',
+              padding: '1rem 1.5rem',
+              textAlign: 'left',
+              borderBottom: `2px solid ${theme('colors.blue.500')}`,
+              fontSize: '0.875rem',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            },
+            td: {
+              padding: '1rem 1.5rem',
+              borderBottom: `1px solid ${theme('colors.gray.100')}`,
+              color: theme('colors.gray.700'),
+            },
+            'tr:nth-child(even)': {
+              backgroundColor: theme('colors.gray.50'),
+            },
+            'tr:hover': {
+              backgroundColor: theme('colors.blue.50'),
+            },
+            
+            // Images
+            img: {
+              maxWidth: '100%',
+              height: 'auto',
+              borderRadius: theme('borderRadius.lg'),
+              margin: '2rem 0',
+              boxShadow: theme('boxShadow.md'),
+            },
+            
+            // Horizontal rules
+            hr: {
+              border: '0',
+              height: '2px',
+              background: `linear-gradient(90deg, transparent, ${theme('colors.gray.300')}, transparent)`,
+              margin: '3rem 0',
+            },
+            
+            // Responsive adjustments
+            '@screen sm': {
+              fontSize: '1rem',
+            },
+            '@screen md': {
+              fontSize: '1.125rem',
+              lineHeight: '1.75',
+            },
+          },
+        },
+        
+        // Size variants
+        sm: {
+          css: {
+            fontSize: '0.875rem',
+            lineHeight: '1.6',
+            p: {
+              marginTop: '1rem',
+              marginBottom: '1rem',
+            },
+            h1: {
+              fontSize: '2rem',
+            },
+            h2: {
+              fontSize: '1.5rem',
+            },
+            h3: {
+              fontSize: '1.25rem',
+            },
+          },
+        },
+        lg: {
+          css: {
+            fontSize: '1.25rem',
+            lineHeight: '1.8',
+            p: {
+              marginTop: '2rem',
+              marginBottom: '2rem',
+            },
+            h1: {
+              fontSize: '3rem',
+            },
+            h2: {
+              fontSize: '2.5rem',
+            },
+            h3: {
+              fontSize: '2rem',
+            },
+          },
+        },
+        xl: {
+          css: {
+            fontSize: '1.375rem',
+            lineHeight: '1.8',
+            p: {
+              marginTop: '2rem',
+              marginBottom: '2rem',
+            },
+            h1: {
+              fontSize: '3.5rem',
+            },
+            h2: {
+              fontSize: '2.75rem',
+            },
+            h3: {
+              fontSize: '2.25rem',
+            },
+          },
+        },
+        
+        // Color variants
+        blue: {
+          css: {
+            '--tw-prose-links': theme('colors.blue.600'),
+            '--tw-prose-invert-links': theme('colors.blue.400'),
+            a: {
+              color: theme('colors.blue.600'),
+              borderBottomColor: theme('colors.blue.200'),
+            },
+            'a:hover': {
+              color: theme('colors.blue.800'),
+              borderBottomColor: theme('colors.blue.500'),
+            },
+            blockquote: {
+              backgroundColor: theme('colors.blue.50'),
+              borderLeftColor: theme('colors.blue.400'),
+            },
+            'blockquote strong': {
+              color: theme('colors.blue.800'),
+            },
+          },
+        },
+        
+        // Dark mode variant
+        invert: {
+          css: {
+            color: theme('colors.gray.300'),
+            'h1, h2, h3, h4, h5, h6': {
+              color: theme('colors.gray.100'),
+            },
+            h1: {
+              borderBottomColor: theme('colors.blue.400'),
+            },
+            h2: {
+              borderBottomColor: theme('colors.gray.600'),
+            },
+            h3: {
+              color: theme('colors.blue.400'),
+            },
+            a: {
+              color: theme('colors.blue.400'),
+              borderBottomColor: theme('colors.blue.700'),
+            },
+            'a:hover': {
+              color: theme('colors.blue.300'),
+              borderBottomColor: theme('colors.blue.400'),
+            },
+            strong: {
+              color: theme('colors.gray.100'),
+            },
+            blockquote: {
+              backgroundColor: theme('colors.gray.800'),
+              borderLeftColor: theme('colors.blue.500'),
+              '& p': {
+                color: theme('colors.gray.300'),
+              },
+              '& strong': {
+                color: theme('colors.blue.300'),
+              },
+            },
+            code: {
+              backgroundColor: theme('colors.gray.800'),
+              color: theme('colors.pink.400'),
+              borderColor: theme('colors.gray.700'),
+            },
+            pre: {
+              backgroundColor: theme('colors.gray.900'),
+            },
+            table: {
+              borderColor: theme('colors.gray.700'),
+            },
+            th: {
+              backgroundColor: theme('colors.gray.800'),
+              color: theme('colors.gray.100'),
+              borderBottomColor: theme('colors.blue.500'),
+            },
+            td: {
+              borderBottomColor: theme('colors.gray.700'),
+              color: theme('colors.gray.300'),
+            },
+            'tr:nth-child(even)': {
+              backgroundColor: theme('colors.gray.800'),
+            },
+            'tr:hover': {
+              backgroundColor: theme('colors.gray.700'),
+            },
+          },
+        },
+      }),
     },
   },
-  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+  plugins: [
+    require("tailwindcss-animate"), 
+    require("@tailwindcss/typography"),
+  ],
 } satisfies Config;
 
 export default config;
