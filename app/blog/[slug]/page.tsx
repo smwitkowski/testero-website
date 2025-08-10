@@ -11,7 +11,7 @@ import {
 } from '@/components/content';
 
 type BlogPostPageProps = {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 };
 
 export async function generateStaticParams() {
@@ -22,7 +22,8 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
-  const post = await getBlogPost(params.slug);
+  const { slug } = await params;
+  const post = await getBlogPost(slug);
   
   if (!post) {
     return {
@@ -42,7 +43,7 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
     openGraph: {
       title: meta.title,
       description: meta.description,
-      url: `https://testero.ai/blog/${params.slug}`,
+      url: `https://testero.ai/blog/${slug}`,
       siteName: 'Testero',
       locale: 'en_US',
       type: 'article',
@@ -58,7 +59,7 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
       creator: '@testero_ai',
     },
     alternates: {
-      canonical: `/blog/${params.slug}`,
+      canonical: `/blog/${slug}`,
     },
     other: {
       'article:published_time': publishedTime,
@@ -71,7 +72,8 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
-  const post = await getBlogPost(params.slug);
+  const { slug } = await params;
+  const post = await getBlogPost(slug);
   
   if (!post) {
     notFound();
@@ -82,7 +84,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   
   // Get related posts (same category or tags)
   const relatedPosts = allPosts
-    .filter((p) => p.slug !== params.slug)
+    .filter((p) => p.slug !== slug)
     .filter((p) => 
       p.meta.category === meta.category || 
       (meta.tags && p.meta.tags && p.meta.tags.some(tag => meta.tags?.includes(tag)))
@@ -136,7 +138,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 />
                 
                 <SocialShare 
-                  url={`https://testero.ai/blog/${params.slug}`}
+                  url={`https://testero.ai/blog/${slug}`}
                   title={meta.title}
                   description={meta.description}
                 />
@@ -187,7 +189,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">Share this article</h3>
                   <SocialShare 
-                    url={`https://testero.ai/blog/${params.slug}`}
+                    url={`https://testero.ai/blog/${slug}`}
                     title={meta.title}
                     description={meta.description}
                     variant="detailed"
@@ -288,7 +290,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             dateModified: meta.updatedAt || meta.publishedAt,
             mainEntityOfPage: {
               '@type': 'WebPage',
-              '@id': `https://testero.ai/blog/${params.slug}`,
+              '@id': `https://testero.ai/blog/${slug}`,
             },
             ...(meta.category && {
               articleSection: meta.category,

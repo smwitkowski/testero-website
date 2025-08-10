@@ -201,7 +201,7 @@ export const MDX_COMPONENTS = {
 export function createMDXProcessor(options: Partial<ContentTransformOptions> = {}) {
   const config = { ...DEFAULT_MDX_OPTIONS, ...options };
   
-  let processor = remark();
+  let processor: any = remark();
   
   // Add GitHub Flavored Markdown support
   if (config.enableGFM) {

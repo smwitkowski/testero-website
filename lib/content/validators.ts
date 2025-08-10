@@ -618,7 +618,7 @@ export function processContent(
   data: unknown,
   contentType: ContentType,
   slug: string,
-  options: ContentTransformOptions = {}
+  options: Partial<ContentTransformOptions> = {}
 ): ContentProcessingResult {
   const startTime = Date.now();
   const warnings: Array<{ field: string; message: string; severity: 'low' | 'medium' | 'high' }> = [];

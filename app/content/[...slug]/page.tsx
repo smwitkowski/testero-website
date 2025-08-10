@@ -21,9 +21,9 @@ import {
 } from '@/components/content';
 
 interface ContentPageProps {
-  params: {
+  params: Promise<{
     slug: string[];
-  };
+  }>;
 }
 
 // Generate static params for all content
@@ -34,7 +34,8 @@ export async function generateStaticParams() {
 
 // Generate metadata for the page
 export async function generateMetadata({ params }: ContentPageProps): Promise<Metadata> {
-  const { type, slug } = parseRouteSegments(params.slug);
+  const resolvedParams = await params;
+  const { type, slug } = parseRouteSegments(resolvedParams.slug);
   
   if (!type || !slug) {
     return {
@@ -346,7 +347,8 @@ function renderContentLayout(content: UnifiedContent) {
 }
 
 export default async function ContentPage({ params }: ContentPageProps) {
-  const { type, slug } = parseRouteSegments(params.slug);
+  const resolvedParams = await params;
+  const { type, slug } = parseRouteSegments(resolvedParams.slug);
 
   if (!type || !slug) {
     notFound();

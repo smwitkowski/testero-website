@@ -202,7 +202,7 @@ export async function migrateContentWithValidation(
 
     // Convert date strings to Date objects
     if (migratedContent.date && !migratedContent.publishedAt) {
-      migratedContent.publishedAt = new Date(migratedContent.date);
+      migratedContent.publishedAt = new Date(String(migratedContent.date));
       migrationNotes.push('Migrated date to publishedAt');
     }
 
