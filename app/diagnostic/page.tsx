@@ -85,6 +85,9 @@ const DiagnosticStartPage = () => {
         }
 
         const response = await fetch(statusUrl);
+        if (!response.ok) {
+          throw new Error(`Status check failed: ${response.status}`);
+        }
         const data = (await response.json()) as {
           exists?: boolean;
           status?: string;

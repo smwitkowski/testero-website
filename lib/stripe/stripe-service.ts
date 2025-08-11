@@ -12,7 +12,9 @@ export class StripeService {
     }
 
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2025-07-30.basil",
+      // Use the default API version from the Stripe dashboard
+      // or specify a valid version via environment variable
+      apiVersion: process.env.STRIPE_API_VERSION as Stripe.LatestApiVersion | undefined,
       typescript: true,
     });
   }
