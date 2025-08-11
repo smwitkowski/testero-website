@@ -62,12 +62,6 @@ const nextConfig = {
         destination: '/blog/google-cloud-digital-leader-certification',
         permanent: true,
       },
-      // Keep existing blog routes for backward compatibility
-      {
-        source: '/blog/:slug*',
-        destination: '/blog/:slug*',
-        permanent: false,
-      },
     ];
 
     const productionOnlyRedirects = process.env.NODE_ENV === 'production'
