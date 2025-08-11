@@ -5,12 +5,10 @@ import { notFound } from 'next/navigation';
 import { 
   getAllContentSlugs, 
   getSpokeContent, 
-  getHubContent, 
-  getSpokesForHub 
+  getHubContent
 } from '@/lib/content/loader';
 import { generateContentMetadata, generateStructuredData } from '@/lib/content/meta';
-import SocialShare from '@/components/content/SocialShare';
-import RecommendedContent from '@/components/content/RecommendedContent';
+import { SocialShare, RecommendedContent, ContentMetadata } from '@/components/content';
 
 // Generate static params for all spoke content
 export async function generateStaticParams() {
@@ -20,18 +18,14 @@ export async function generateStaticParams() {
 
 // Generate metadata for the spoke page
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  const unwrappedParams = await params;
-  const { slug } = unwrappedParams;
+  const { slug } = await params;
   const content = await getSpokeContent(slug);
   if (!content) return {};
   return generateContentMetadata(content);
 }
 
-// For now, we'll just use our default spoke content directly
-// This is a workaround for Next.js params issues in SSR
 export default async function SpokePage({ params }: { params: Promise<{ slug: string }> }) {
-  const unwrappedParams = await params;
-  const { slug } = unwrappedParams;
+  const { slug } = await params;
   const content = await getSpokeContent(slug);
   if (!content) notFound();
   
@@ -41,9 +35,9 @@ export default async function SpokePage({ params }: { params: Promise<{ slug: st
     : null;
   
   // Get related content if we have a hub
-  const relatedContent = hubContent && content.meta.hubSlug
-    ? await getSpokesForHub(content.meta.hubSlug)
-    : [];
+  // const relatedContent = hubContent && content.meta.hubSlug
+  //   ? await getSpokesForHub(content.meta.hubSlug)
+  //   : []; // Available for future related content feature
   
   // JSON-LD structured data
   const structuredData = generateStructuredData(content);
@@ -82,19 +76,21 @@ export default async function SpokePage({ params }: { params: Promise<{ slug: st
             description={content.meta.description}
             className="mb-4"
           />
-          {content.meta.author && (
-            <div className="text-gray-600 mb-4">
-              By {content.meta.author} • 
-              {new Date(content.meta.date).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-              {content.meta.readingTime && (
-                <span> • {content.meta.readingTime} min read</span>
-              )}
-            </div>
-          )}
+          <ContentMetadata
+            author={content.meta.author}
+            publishedAt={content.meta.date}
+            updatedAt={content.meta.lastModified}
+            readingTime={content.meta.readingTime}
+            variant="minimal"
+            className="mb-4"
+            show={{
+              author: true,
+              date: true,
+              readingTime: true,
+              category: false,
+              tags: false
+            }}
+          />
           {content.meta.tags && content.meta.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-6">
               {content.meta.tags.map(tag => (
@@ -119,10 +115,9 @@ export default async function SpokePage({ params }: { params: Promise<{ slug: st
           )}
         </header>
         
-        <article className="prose prose-lg prose-gray max-w-3xl mx-auto mb-12" id="article-content">
+        <article className="prose prose-lg max-w-3xl mx-auto mb-12 dark:prose-invert" id="article-content">
           <div 
             dangerouslySetInnerHTML={{ __html: content.content }} 
-            className="certification-content"
           />
         </article>
         
@@ -145,13 +140,12 @@ export default async function SpokePage({ params }: { params: Promise<{ slug: st
         </div>
         
         {/* Related Content from same hub */}
-        {relatedContent.length > 1 && (
-          <RecommendedContent
-            content={relatedContent}
-            currentSlug={content.slug}
-            title={`More About ${hubContent?.meta.title || 'Google Cloud Certifications'}`}
-          />
-        )}
+        <RecommendedContent
+          currentSlug={content.slug}
+          contentType="spokes"
+          category={content.meta.category}
+          title={`More About ${hubContent?.meta.title || 'Google Cloud Certifications'}`}
+        />
         
         {/* CTAs */}
         <div className="mt-16 p-8 bg-gray-50 rounded-xl">

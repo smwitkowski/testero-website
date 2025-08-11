@@ -18,7 +18,7 @@ interface ExamTypeOption {
 const DiagnosticStartPage = () => {
   const [examTypes, setExamTypes] = useState<ExamTypeOption[]>([]);
   const [selectedExamName, setSelectedExamName] = useState<string>(""); // Store the 'name' field for API
-  const [numQuestions, setNumQuestions] = useState(5);
+  const [numQuestions, setNumQuestions] = useState(20); // Default to full diagnostic
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resumeSession, setResumeSession] = useState<{
@@ -39,7 +39,7 @@ const DiagnosticStartPage = () => {
         // Or, for MVP, we can hardcode them if an API endpoint is too much scope now
         // Based on previous DB query, we have:
         const fetchedExams: ExamTypeOption[] = [
-          { name: "Google Professional ML Engineer", displayName: "Google ML Engineer" },
+          { name: "Google Professional Machine Learning Engineer", displayName: "PMLE - Professional ML Engineer (October 2024)" },
           { name: "Google Cloud Digital Leader", displayName: "Google Cloud Digital Leader" },
           {
             name: "Google Cloud Professional Cloud Architect",
@@ -56,7 +56,7 @@ const DiagnosticStartPage = () => {
         setError("Could not load exam types.");
         // Fallback to a default if fetch fails
         const fallbackExams: ExamTypeOption[] = [
-          { name: "Google Professional ML Engineer", displayName: "Google ML Engineer" },
+          { name: "Google Professional Machine Learning Engineer", displayName: "PMLE - Professional ML Engineer (October 2024)" },
         ];
         setExamTypes(fallbackExams);
         setSelectedExamName(fallbackExams[0].name);
@@ -85,6 +85,9 @@ const DiagnosticStartPage = () => {
         }
 
         const response = await fetch(statusUrl);
+        if (!response.ok) {
+          throw new Error(`Status check failed: ${response.status}`);
+        }
         const data = (await response.json()) as {
           exists?: boolean;
           status?: string;
@@ -251,14 +254,43 @@ const DiagnosticStartPage = () => {
   return (
     <main
       style={{
-        maxWidth: 600,
+        maxWidth: 700,
         margin: "2rem auto",
-        padding: 24,
-        border: "1px solid #eee",
-        borderRadius: 8,
+        padding: 32,
+        border: "1px solid #e5e7eb",
+        borderRadius: 12,
+        background: "white",
+        boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
       }}
     >
-      <h1>Start Diagnostic</h1>
+      <div style={{ marginBottom: 24 }}>
+        <div style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          background: "#fef3c7",
+          border: "1px solid #fbbf24",
+          borderRadius: 20,
+          padding: "4px 12px",
+          marginBottom: 16,
+          fontSize: 13,
+          fontWeight: 600,
+          color: "#92400e"
+        }}>
+          🔥 Updated for October 2024 Exam Changes
+        </div>
+        <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, color: "#111827" }}>
+          PMLE Diagnostic Assessment
+        </h1>
+        <p style={{ fontSize: 18, color: "#6b7280", marginBottom: 16 }}>
+          Find your exam readiness in 10 minutes • 70% of candidates fail—don&apos;t be one of them
+        </p>
+        <div style={{ display: "flex", gap: 16, fontSize: 14, color: "#4b5563" }}>
+          <div>✓ Covers all 6 domains</div>
+          <div>✓ Vertex AI Model Garden</div>
+          <div>✓ GenAI & RAG topics</div>
+        </div>
+      </div>
 
       {resumeSession && (
         <section
@@ -309,10 +341,25 @@ const DiagnosticStartPage = () => {
         </section>
       )}
 
+      {!user && (
+        <div style={{
+          background: "#eff6ff",
+          border: "1px solid #3b82f6",
+          borderRadius: 8,
+          padding: 16,
+          marginBottom: 24,
+        }}>
+          <p style={{ margin: 0, fontSize: 14, color: "#1e40af" }}>
+            💡 <strong>No signup required!</strong> Take the diagnostic anonymously and get instant results.
+            Create an account later to save your progress and access personalized study plans.
+          </p>
+        </div>
+      )}
+
       <section style={{ margin: "2rem 0" }}>
         <div style={{ marginBottom: 16 }}>
-          <label htmlFor="examType" style={{ display: "block", marginBottom: 8 }}>
-            Exam Type:
+          <label htmlFor="examType" style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151" }}>
+            Select Certification Exam:
           </label>
           <select
             id="examType"
@@ -330,8 +377,8 @@ const DiagnosticStartPage = () => {
           </select>
         </div>
         <div style={{ marginBottom: 16 }}>
-          <label htmlFor="numQuestions" style={{ display: "block", marginBottom: 8 }}>
-            Number of Questions:
+          <label htmlFor="numQuestions" style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151" }}>
+            Diagnostic Length:
           </label>
           <input
             type="number"
@@ -349,27 +396,46 @@ const DiagnosticStartPage = () => {
             step="1"
             style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #ccc" }}
           />
-          <small style={{ color: "#666", fontSize: 12 }}>
-            Choose between {MIN_QUESTIONS} and {MAX_QUESTIONS} questions
+          <small style={{ color: "#6b7280", fontSize: 13 }}>
+            <strong>Recommended: 20 questions</strong> for comprehensive assessment (10 minutes)
           </small>
         </div>
         <button
           onClick={handleStartDiagnostic}
           disabled={isButtonDisabled}
           style={{
-            padding: "12px 32px",
-            borderRadius: 6,
-            background: isButtonDisabled ? "#ccc" : "#0070f3",
+            padding: "14px 40px",
+            borderRadius: 8,
+            background: isButtonDisabled ? "#9ca3af" : "linear-gradient(to right, #3b82f6, #06b6d4)",
             color: "white",
             border: "none",
             fontWeight: 600,
+            fontSize: 16,
             cursor: isButtonDisabled ? "not-allowed" : "pointer",
+            width: "100%",
+            marginTop: 8,
           }}
         >
-          {user && isAuthLoading ? "Loading user..." : loading ? "Starting..." : "Start Diagnostic"}
+          {user && isAuthLoading ? "Loading user..." : loading ? "Starting..." : "Start Free PMLE Diagnostic →"}
         </button>
-        {error && <div style={{ color: "red", marginTop: 16 }}>Error: {error}</div>}
+        {error && <div style={{ color: "#dc2626", marginTop: 16, fontSize: 14 }}>⚠️ {error}</div>}
       </section>
+
+      <div style={{
+        borderTop: "1px solid #e5e7eb",
+        marginTop: 32,
+        paddingTop: 24,
+        textAlign: "center",
+      }}>
+        <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
+          <strong>Why take this diagnostic?</strong>
+        </p>
+        <div style={{ display: "flex", justifyContent: "space-around", fontSize: 13, color: "#4b5563" }}>
+          <div>📊 Instant readiness score</div>
+          <div>🎯 Identify weak areas</div>
+          <div>📚 Get study plan</div>
+        </div>
+      </div>
     </main>
   );
 };

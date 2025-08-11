@@ -2,28 +2,37 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { TableOfContentsProps, Heading } from './types';
 
-interface Heading {
-  id: string;
-  text: string;
-  level: number;
-}
-
-interface TableOfContentsProps {
-  contentId: string;
-  className?: string;
-}
-
-export default function TableOfContents({ contentId, className = '' }: TableOfContentsProps) {
+function TableOfContents({ 
+  contentId, 
+  content, 
+  className = '',
+  headingLevels = [2, 3, 4],
+  showNumbers = false,
+  sticky = false,
+  observerOptions = {}
+}: TableOfContentsProps) {
   const [headings, setHeadings] = useState<Heading[]>([]);
   const [activeId, setActiveId] = useState<string>('');
 
   useEffect(() => {
-    const contentElement = document.getElementById(contentId);
+    let contentElement: Element | null = null;
+    
+    if (contentId) {
+      contentElement = document.getElementById(contentId);
+    } else if (content) {
+      // Find the main content area or article element
+      contentElement = document.querySelector('article') || document.querySelector('.blog-content') || document.querySelector('main');
+    } else {
+      contentElement = document.querySelector('article') || document.querySelector('.blog-content') || document.querySelector('main');
+    }
+    
     if (!contentElement) return;
 
-    // Extract all headings from h2 to h4
-    const elements = Array.from(contentElement.querySelectorAll('h2, h3, h4'));
+    // Extract headings based on configured levels
+    const headingSelector = headingLevels.map(level => `h${level}`).join(', ');
+    const elements = Array.from(contentElement.querySelectorAll(headingSelector));
     
     const headingsData = elements.map((element) => {
       // Make sure all headings have IDs for scrolling
@@ -55,20 +64,25 @@ export default function TableOfContents({ contentId, className = '' }: TableOfCo
     
     const observer = new IntersectionObserver(callback, {
       rootMargin: '0px 0px -80% 0px',
+      ...observerOptions
     });
     
     elements.forEach(element => observer.observe(element));
     
     return () => observer.disconnect();
-  }, [contentId]);
+  }, [contentId, content, headingLevels, observerOptions]);
   
   if (headings.length === 0) return null;
   
+  const navClassName = sticky 
+    ? `sticky top-8 ${className}` 
+    : className;
+
   return (
-    <nav className={`${className}`}>
+    <nav className={`table-of-contents ${navClassName}`} aria-label="Table of Contents">
       <h3 className="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Table of Contents</h3>
       <ul className="space-y-1">
-        {headings.map((heading) => (
+        {headings.map((heading, index) => (
           <li
             key={heading.id}
             className={`${
@@ -98,7 +112,7 @@ export default function TableOfContents({ contentId, className = '' }: TableOfCo
               }}
             >
               <span className={`${heading.level > 2 ? 'text-sm' : ''}`}>
-                {heading.text}
+                {showNumbers && `${index + 1}. `}{heading.text}
               </span>
             </Link>
           </li>
@@ -107,3 +121,7 @@ export default function TableOfContents({ contentId, className = '' }: TableOfCo
     </nav>
   );
 }
+
+// Export both default and named
+export default TableOfContents;
+export { TableOfContents };
