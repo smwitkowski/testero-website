@@ -29,9 +29,10 @@ export interface StudyRecommendation {
 
 export interface StudyPathDisplayProps {
   diagnosticData: DiagnosticData;
+  isPreview?: boolean;
 }
 
-export function StudyPathDisplay({ diagnosticData }: StudyPathDisplayProps) {
+export function StudyPathDisplay({ diagnosticData, isPreview = false }: StudyPathDisplayProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<StudyRecommendation[]>([]);
@@ -239,6 +240,19 @@ export function StudyPathDisplay({ diagnosticData }: StudyPathDisplayProps) {
                 {domainTopicsCompleted > 0 && (
                   <div className="mt-4">
                     <Progress value={domainProgress} className="h-1" />
+                  </div>
+                )}
+                {!isPreview && (
+                  <div className="mt-4">
+                    <Button
+                      className="w-full"
+                      onClick={() => {
+                        // Navigate to practice or learning module
+                        console.log(`Start learning: ${recommendation.domain}`);
+                      }}
+                    >
+                      Start Learning
+                    </Button>
                   </div>
                 )}
               </CardContent>

@@ -28,7 +28,9 @@ const publicRoutes = [
   "/content",
   "/faq",
   "/diagnostic",
-  "/study-path",
+  "/study-path", // Keep public for preview mode
+  "/pricing",
+  "/blog",
 ];
 // List of routes that should redirect to dashboard if already authenticated
 const authRoutes = ["/login", "/signup", "/forgot-password", "/reset-password", "/verify-email"];

@@ -24,13 +24,23 @@ const StudyPathPage = () => {
   const [diagnosticData, setDiagnosticData] = useState<DiagnosticData | null>(null);
   const posthog = usePostHog();
 
-  // Track page view
+  // Track page view and preview events
   useEffect(() => {
-    posthog?.capture("study_path_viewed", {
-      user_id: user?.id,
-      is_authenticated: !!user,
-    });
-  }, [user, posthog]);
+    if (isAuthLoading) return;
+
+    if (!user) {
+      // Track preview view for unauthenticated users
+      posthog?.capture("study_path_preview_shown", {
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      // Track full view for authenticated users
+      posthog?.capture("study_path_viewed", {
+        user_id: user.id,
+        is_authenticated: true,
+      });
+    }
+  }, [user, isAuthLoading, posthog]);
 
   useEffect(() => {
     try {
@@ -140,7 +150,7 @@ const StudyPathPage = () => {
     );
   }
 
-  // If user is not authenticated, show login prompt but still display data
+  // If user is not authenticated, show preview with signup CTA
   if (!user) {
     return (
       <main className="max-w-4xl mx-auto px-6 py-8">
@@ -166,30 +176,88 @@ const StudyPathPage = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Preview of study recommendations with blur */}
+            <Card className="mb-6 relative overflow-hidden">
+              <CardHeader>
+                <CardTitle>Recommended Study Areas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* Blurred/locked content preview */}
+                <div className="relative">
+                  <div className="blur-sm pointer-events-none">
+                    <StudyPathDisplay diagnosticData={diagnosticData} isPreview={true} />
+                  </div>
+                  {/* Overlay with lock icon */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/70">
+                    <div className="text-center p-6">
+                      <div className="mb-4">
+                        <svg
+                          className="w-12 h-12 mx-auto text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                          />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">Unlock Your Full Study Path</h3>
+                      <p className="text-gray-600 mb-4">
+                        Sign up to see detailed recommendations and track your progress
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </>
         )}
 
-        {/* Login prompt */}
+        {/* Signup CTA */}
         <Card className="mb-6">
           <CardContent className="text-center py-8">
-            <h2 className="text-xl font-semibold mb-4">
-              Sign in to access your personalized study path
-            </h2>
+            <h2 className="text-xl font-semibold mb-4">Sign Up to See Full Path</h2>
             <p className="text-gray-600 mb-6">
-              Create an account or sign in to save your progress and get tailored recommendations.
+              Create a free account to access your personalized study recommendations and start
+              learning.
             </p>
-            <Button
-              onClick={() => {
-                posthog?.capture("study_path_signin_clicked", {
-                  has_diagnostic_data: !!diagnosticData,
-                  diagnostic_score: diagnosticData?.score,
-                });
-                router.push("/login?redirect=/study-path");
-              }}
-              size="lg"
-            >
-              Sign In
-            </Button>
+            <div className="space-x-4">
+              <Button
+                onClick={() => {
+                  posthog?.capture("study_path_signup_clicked", {
+                    source: "preview_cta",
+                    has_diagnostic_data: !!diagnosticData,
+                    diagnostic_score: diagnosticData?.score,
+                  });
+                  posthog?.capture("auth_required_conversion", {
+                    source: "study_path",
+                    action: "signup_clicked",
+                  });
+                  router.push("/signup?redirect=/study-path");
+                }}
+                size="lg"
+              >
+                Sign Up to See Full Path
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  posthog?.capture("study_path_login_clicked", {
+                    has_diagnostic_data: !!diagnosticData,
+                    diagnostic_score: diagnosticData?.score,
+                  });
+                  router.push("/login?redirect=/study-path");
+                }}
+                size="lg"
+              >
+                Already have an account? Sign In
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </main>

@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   QuestionDisplay,
   QuestionFeedback,
@@ -20,16 +21,36 @@ const PracticeQuestionPage = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
   const posthog = usePostHog();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
 
-  // Track page view
+  // Check authentication and redirect if needed
   useEffect(() => {
+    if (authLoading) return;
+
+    if (!user) {
+      // Track blocked access
+      posthog?.capture("practice_access_blocked", {
+        source: "practice_question_page",
+        timestamp: new Date().toISOString(),
+      });
+
+      // Redirect to login with return URL
+      const returnUrl = `/practice/question`;
+      router.push(`/login?redirect=${encodeURIComponent(returnUrl)}`);
+      return;
+    }
+
+    // Track page view for authenticated users
     posthog?.capture("practice_page_viewed", {
-      user_id: user?.id,
+      user_id: user.id,
     });
-  }, [user, posthog]);
+  }, [user, authLoading, router, posthog]);
 
   useEffect(() => {
+    // Don't fetch questions until auth is confirmed
+    if (authLoading || !user) return;
+
     setLoading(true);
     setError(null);
     fetch("/api/questions/current")
@@ -62,7 +83,7 @@ const PracticeQuestionPage = () => {
           error_type: "load_error",
         });
       });
-  }, [user, posthog]);
+  }, [user, posthog, authLoading]);
 
   const fetchNewQuestion = async () => {
     setLoading(true);
@@ -147,6 +168,15 @@ const PracticeQuestionPage = () => {
       setSubmitting(false);
     }
   };
+
+  // Show loading while auth is being checked
+  if (authLoading || !user) {
+    return (
+      <main className="p-6">
+        <div className="text-center">Loading...</div>
+      </main>
+    );
+  }
 
   return (
     <main className="max-w-3xl mx-auto my-8 p-6 border border-gray-200 rounded-lg">
