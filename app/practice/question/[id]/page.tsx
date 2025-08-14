@@ -46,32 +46,35 @@ const SpecificPracticeQuestionPage = () => {
       return;
     }
 
-    setLoading(true);
-    setError(null);
-    fetch(`/api/questions/${questionId}`) // Fetch specific question by ID
-      .then(async (res) => {
+    const controller = new AbortController();
+    const run = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/questions/${questionId}`, { signal: controller.signal });
         if (!res.ok) {
           const errorMessage = await getApiErrorMessage(res);
           throw new Error(errorMessage);
         }
-        return res.json() as Promise<QuestionData>;
-      })
-      .then((data) => {
+        const data = (await res.json()) as QuestionData;
         setQuestion(data);
-        setLoading(false);
-      })
-      .catch((error) => {
-        const errorMessage = getErrorMessage(error, `Failed to load question ${questionId}`);
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        const errorMessage = getErrorMessage(err, `Failed to load question ${questionId}`);
         setError(errorMessage);
-        setLoading(false);
 
         // Track error
-        trackError(posthog, error, "practice_question_error", {
+        trackError(posthog, err, "practice_question_error", {
           userId: user?.id,
           errorType: "load_error",
           context: { question_id: questionId },
         });
-      });
+      } finally {
+        setLoading(false);
+      }
+    };
+    run();
+    return () => controller.abort();
   }, [questionId, user?.id, posthog]);
 
   const handleSubmit = async () => {

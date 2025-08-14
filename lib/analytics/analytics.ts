@@ -42,6 +42,7 @@ export const ANALYTICS_EVENTS = {
 
   // Diagnostic
   DIAGNOSTIC_STARTED: "diagnostic_started",
+  DIAGNOSTIC_RESUME_SHOWN: "diagnostic_resume_shown",
   DIAGNOSTIC_RESUMED: "diagnostic_resumed",
   DIAGNOSTIC_QUESTION_ANSWERED: "diagnostic_question_answered",
   DIAGNOSTIC_COMPLETED: "diagnostic_completed",

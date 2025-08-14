@@ -108,7 +108,7 @@ const DiagnosticStartPage = () => {
           });
 
           // Track resume opportunity shown
-          trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_RESUMED, {
+          trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_RESUME_SHOWN, {
             sessionId: storedSessionId,
             examType: data.examType,
             startedAt: data.startedAt,
@@ -163,8 +163,8 @@ const DiagnosticStartPage = () => {
       return;
     }
 
-    if (!numQuestions || numQuestions < 1 || numQuestions > 20) {
-      setError("Please select between 1 and 20 questions.");
+    if (!numQuestions || numQuestions < 1 || numQuestions > 30) {
+      setError("Please select between 1 and 30 questions.");
       return;
     }
 
@@ -211,7 +211,7 @@ const DiagnosticStartPage = () => {
         if (res.status === 401 && user) {
           // Only redirect to login if it was an auth issue for a logged-in user
           setError("Authentication issue. Please log in again.");
-          router.push("/login");
+          router.replace("/login");
         } else {
           setError(responseData.error || "Failed to start diagnostic.");
         }
@@ -261,7 +261,7 @@ const DiagnosticStartPage = () => {
       <Card className="border-slate-200 shadow-sm p-6 md:p-7">
         <CardHeader className="p-0 mb-6">
           <div className="flex justify-end mb-4">
-            <Badge variant="info" size="sm" className="bg-blue-50 text-blue-700 border-blue-200">
+            <Badge className="bg-blue-50 text-blue-700 border border-blue-200">
               Updated Oct 2024 exam changes
             </Badge>
           </div>

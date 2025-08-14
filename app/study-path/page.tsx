@@ -25,7 +25,10 @@ const StudyPathPage = () => {
   const posthog = usePostHog();
 
   // Track page view and preview events
+  const hasTrackedRef = React.useRef(false);
   useEffect(() => {
+    if (hasTrackedRef.current) return;
+    
     if (!user) {
       // Track preview view for unauthenticated users  
       posthog?.capture("study_path_preview_shown", {
@@ -38,6 +41,7 @@ const StudyPathPage = () => {
         is_authenticated: true,
       });
     }
+    hasTrackedRef.current = true;
   }, [user, posthog]);
 
   useEffect(() => {
@@ -228,7 +232,7 @@ const StudyPathPage = () => {
                     source: "study_path",
                     action: "signup_clicked",
                   });
-                  router.push("/signup?redirect=/study-path");
+                  router.push(`/signup?redirect=${encodeURIComponent("/study-path")}`);
                 }}
                 size="lg"
               >
@@ -241,7 +245,7 @@ const StudyPathPage = () => {
                     has_diagnostic_data: !!diagnosticData,
                     diagnostic_score: diagnosticData?.score,
                   });
-                  router.push("/login?redirect=/study-path");
+                  router.push(`/login?redirect=${encodeURIComponent("/study-path")}`);
                 }}
                 size="lg"
               >

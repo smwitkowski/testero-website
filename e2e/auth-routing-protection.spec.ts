@@ -267,8 +267,8 @@ test.describe("Authentication Routing Protection", () => {
     await authHelpers.logIn(email, password);
 
     // Should redirect to originally intended destination
-    await page.waitForURL("/dashboard");
-    expect(page.url()).toContain("/dashboard");
+    await page.waitForURL(/\/dashboard\/settings(\?.*)?$/);
+    expect(page.url()).toContain("/dashboard/settings");
   });
 
   test("should handle concurrent navigation and authentication checks", async ({ page }) => {
