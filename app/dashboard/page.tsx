@@ -13,26 +13,23 @@ import { usePostHog } from "posthog-js/react";
 import type { DashboardData, SuccessResponse, ErrorResponse } from "@/app/api/dashboard/route";
 
 const DashboardPage = () => {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const posthog = usePostHog();
 
-  // Track dashboard page view
+  // Track dashboard page view (middleware ensures auth)
   useEffect(() => {
-    if (user && !authLoading) {
+    if (user) {
       posthog?.capture("dashboard_viewed", {
         user_id: user.id,
       });
     }
-  }, [user, authLoading, posthog]);
+  }, [user, posthog]);
 
   useEffect(() => {
-    // Wait for auth to load
-    if (authLoading) return;
-
-    // If no user after auth loading completes, they'll be redirected by AuthProvider
+    // Middleware ensures user is authenticated
     if (!user) return;
 
     const fetchDashboardData = async () => {
@@ -75,15 +72,17 @@ const DashboardPage = () => {
     };
 
     fetchDashboardData();
-  }, [user, authLoading, posthog]);
+  }, [user, posthog]);
 
   // Show loading state
-  if (authLoading || loading) {
+  if (!user || loading) {
     return (
       <div className="min-h-screen" style={{ backgroundColor: colorSemantic.background.default }}>
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
-            <div style={{ color: colorSemantic.text.muted }}>Loading dashboard...</div>
+            <div style={{ color: colorSemantic.text.muted }}>
+              {!user ? "Loading..." : "Loading dashboard..."}
+            </div>
           </div>
         </div>
       </div>

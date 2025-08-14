@@ -35,28 +35,41 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/signup") &&
-    !request.nextUrl.pathname.startsWith("/forgot-password") &&
-    !request.nextUrl.pathname.startsWith("/reset-password") &&
-    !request.nextUrl.pathname.startsWith("/verify-email") &&
-    !request.nextUrl.pathname.startsWith("/waitlist") &&
-    !request.nextUrl.pathname.startsWith("/content") &&
-    !request.nextUrl.pathname.startsWith("/faq") &&
-    !request.nextUrl.pathname.startsWith("/diagnostic") &&
-    !request.nextUrl.pathname.startsWith("/study-path") &&
-    !request.nextUrl.pathname.startsWith("/api/diagnostic") &&
-    !request.nextUrl.pathname.startsWith("/api/auth") &&
-    !request.nextUrl.pathname.startsWith("/_next") &&
-    !request.nextUrl.pathname.startsWith("/favicon.ico") &&
-    request.nextUrl.pathname !== "/"
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
+  // Use shared public route configuration
+  const { isPublicRouteForMiddleware, isAuthRoute } = await import("@/lib/config/routes");
+  const isPublicRoute = isPublicRouteForMiddleware(request.nextUrl.pathname);
+  const isAuth = isAuthRoute(request.nextUrl.pathname);
+
+  // If user is authenticated
+  if (user) {
+    // If on an auth route, redirect to dashboard
+    if (isAuth) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
+    
+    // If on a protected route, check early access
+    if (!isPublicRoute) {
+      const isEarlyAccess = user.user_metadata?.is_early_access === true;
+      if (!isEarlyAccess) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/early-access-coming-soon";
+        return NextResponse.redirect(url);
+      }
+    }
+  } else {
+    // If user is not authenticated and trying to access a protected route
+    if (!isPublicRoute) {
+      // Redirect to login with return URL
+      const url = request.nextUrl.clone();
+      const returnUrl = request.nextUrl.pathname + request.nextUrl.search;
+      url.pathname = "/login";
+      if (returnUrl && returnUrl !== "/") {
+        url.searchParams.set("redirect", returnUrl);
+      }
+      return NextResponse.redirect(url);
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
