@@ -1,7 +1,7 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAuth } from "@/components/providers/AuthProvider"; // Import useAuth
+import { useAuth } from "@/components/providers/AuthProvider";
 import { usePostHog } from "posthog-js/react";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 
@@ -29,21 +29,16 @@ interface DiagnosticSessionData {
 const DiagnosticSessionPage = () => {
   const params = useParams();
   const router = useRouter();
-  const { user, isLoading: isAuthLoading } = useAuth(); // Get user and auth loading state
+  const { user, isLoading: isAuthLoading } = useAuth();
   const posthog = usePostHog();
   const sessionId = params?.sessionId as string;
 
   const [sessionData, setSessionData] = useState<DiagnosticSessionData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOptionLabel, setSelectedOptionLabel] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{
-    isCorrect: boolean;
-    correctAnswer: string;
-    explanation: string;
-  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [isFlagged, setIsFlagged] = useState(false);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -53,17 +48,15 @@ const DiagnosticSessionPage = () => {
         return;
       }
       if (isAuthLoading) {
-        // Don't fetch if auth state is still loading
-        setLoading(true); // Or a different loading state like "Verifying user..."
+        setLoading(true);
         return;
       }
 
-      setLoading(true); // Set loading true before fetch
+      setLoading(true);
       setError(null);
 
       let apiUrl = `/api/diagnostic?sessionId=${sessionId}`;
       if (!user) {
-        // If no logged-in user, try to append anonymousSessionId
         const storedAnonId = localStorage.getItem("anonymousSessionId");
         if (storedAnonId) {
           apiUrl += `&anonymousSessionId=${storedAnonId}`;
@@ -79,14 +72,10 @@ const DiagnosticSessionPage = () => {
           } else if (res.status === 410) {
             setError("session_expired");
           } else if (res.status === 401) {
-            // Authentication required (e.g. token expired for logged-in user)
             setError("authentication_required");
           } else if (res.status === 403) {
-            // Forbidden (e.g. wrong user or bad anonymous ID)
             setError("access_denied_to_session");
-          }
-          // Removed 429 as session limits are removed for now
-          else {
+          } else {
             setError(data.error || "Failed to fetch diagnostic session.");
           }
           return;
@@ -95,7 +84,6 @@ const DiagnosticSessionPage = () => {
           setSessionData(data.session);
         }
 
-        // Track diagnostic session loaded
         trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_STARTED, {
           sessionId: sessionId,
           examType: data.session?.examType || "unknown",
@@ -104,16 +92,7 @@ const DiagnosticSessionPage = () => {
           isAnonymous: !user,
         });
 
-        // Resuming logic: API should ideally provide currentQuestionIndex or completed answers
-        // For now, if data.session.answers exists and is an object, we can derive it.
-        // The API currently doesn't send back answers in the GET session response for simplicity.
-        // Client-side might need to track progress or API needs to provide it.
-        // Let's assume currentQuestionIndex is managed by API or starts at 0 for now.
-        // If API sends back answers or currentQuestion, use that.
-        // setCurrentQuestionIndex(data.session.currentQuestion || Object.keys(data.session.answers || {}).length);
-        setCurrentQuestionIndex(0); // Start at 0, API will handle actual progress if resumed.
-        // Or, if API sends `resumed: true` and `currentQuestion` index, use that.
-        // The current GET /api/diagnostic returns currentQuestion: 0
+        setCurrentQuestionIndex(0);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "An error occurred while fetching session.");
       } finally {
@@ -122,109 +101,17 @@ const DiagnosticSessionPage = () => {
     };
 
     fetchSession();
-  }, [sessionId, user, isAuthLoading, posthog]); // Add user and isAuthLoading to dependency array
+  }, [sessionId, user, isAuthLoading, posthog]);
 
   const currentQuestion = sessionData?.questions[currentQuestionIndex];
 
-  // ... (rest of the error handling for specific error codes)
-  // Add a case for 'access_denied_to_session'
-  if (error === "access_denied_to_session") {
-    return (
-      <main
-        style={{
-          maxWidth: 600,
-          margin: "2rem auto",
-          padding: 24,
-          border: "1px solid #eee",
-          borderRadius: 8,
-        }}
-      >
-        <h1>Access Denied</h1>
-        <div style={{ marginBottom: 24 }}>
-          <p style={{ color: "#d32f2f", marginBottom: 16 }}>
-            You do not have permission to access this diagnostic session, or the session identifier
-            is invalid.
-          </p>
-        </div>
-        <button
-          onClick={() => router.push("/diagnostic")}
-          style={{
-            padding: "12px 32px",
-            borderRadius: 6,
-            background: "#0070f3",
-            color: "white",
-            border: "none",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          Start New Diagnostic
-        </button>
-      </main>
-    );
-  }
-
-  const handleSubmitAnswer = async () => {
-    if (!currentQuestion || selectedOptionLabel === null) return;
-
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/diagnostic", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "answer",
-          sessionId,
-          data: {
-            questionId: currentQuestion.id,
-            selectedLabel: selectedOptionLabel,
-          },
-        }),
-      });
-
-      const data = (await res.json()) as {
-        error?: string;
-        isCorrect: boolean;
-        correctAnswer: string;
-        explanation: string;
-      };
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to submit answer.");
-      }
-      if (data.isCorrect !== undefined) {
-        setFeedback({
-          isCorrect: data.isCorrect,
-          correctAnswer: data.correctAnswer,
-          explanation: data.explanation,
-        });
-      }
-
-      // Track question answered
-      trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_QUESTION_ANSWERED, {
-        sessionId: sessionId,
-        questionNumber: currentQuestionIndex + 1,
-        totalQuestions: sessionData?.questions.length || 0,
-        questionId: currentQuestion.id,
-        selectedAnswer: selectedOptionLabel,
-        isCorrect: data.isCorrect,
-        examType: sessionData?.examType,
-        userId: user?.id || null,
-        isAnonymous: !user,
-      });
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleNextQuestion = async () => {
-    setFeedback(null);
+  const handleNextQuestion = useCallback(async () => {
     setSelectedOptionLabel(null);
+    setIsFlagged(false);
     if (sessionData && currentQuestionIndex < sessionData.questions.length - 1) {
       setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
     } else {
-      // All questions answered, fetch results
+      // All questions answered, complete the session
       setLoading(true);
       try {
         const res = await fetch("/api/diagnostic", {
@@ -240,7 +127,6 @@ const DiagnosticSessionPage = () => {
           throw new Error(data.error || "Failed to fetch results.");
         }
 
-        // Track diagnostic completion
         trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_COMPLETED, {
           sessionId: sessionId,
           examType: sessionData?.examType,
@@ -249,10 +135,7 @@ const DiagnosticSessionPage = () => {
           isAnonymous: !user,
         });
 
-        // Clean up localStorage when session completes
         localStorage.removeItem("testero_diagnostic_session_id");
-
-        // Redirect to summary page instead of showing inline results
         router.push(`/diagnostic/${sessionId}/summary`);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "An error occurred");
@@ -260,50 +143,111 @@ const DiagnosticSessionPage = () => {
         setLoading(false);
       }
     }
-  };
+  }, [sessionData, currentQuestionIndex, sessionId, posthog, user, router]);
+
+  const handleSubmitAnswer = useCallback(async () => {
+    if (!currentQuestion || selectedOptionLabel === null) return;
+
+    // Track the question answered event immediately
+    trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_QUESTION_ANSWERED, {
+      sessionId: sessionId,
+      questionNumber: currentQuestionIndex + 1,
+      totalQuestions: sessionData?.questions.length || 0,
+      questionId: currentQuestion.id,
+      selectedAnswer: selectedOptionLabel,
+      examType: sessionData?.examType,
+      userId: user?.id || null,
+      isAnonymous: !user,
+    });
+
+    // Submit answer in background - don't await this
+    fetch("/api/diagnostic", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "answer",
+        sessionId,
+        data: {
+          questionId: currentQuestion.id,
+          selectedLabel: selectedOptionLabel,
+        },
+      }),
+    }).catch((err) => {
+      // Log error but don't block the UI
+      console.error("Failed to submit answer:", err);
+    });
+
+    // Immediately advance to next question
+    handleNextQuestion();
+  }, [currentQuestion, selectedOptionLabel, sessionId, currentQuestionIndex, sessionData, posthog, user, handleNextQuestion]);
+
+  // Keyboard navigation
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (!sessionData) return;
+
+    const currentQuestion = sessionData.questions[currentQuestionIndex];
+    if (!currentQuestion) return;
+
+    const options = currentQuestion.options;
+    const currentIndex = selectedOptionLabel ? 
+      options.findIndex(opt => opt.label === selectedOptionLabel) : -1;
+
+    switch (event.key) {
+      case 'ArrowDown':
+      case 'j':
+        event.preventDefault();
+        const nextIndex = currentIndex < options.length - 1 ? currentIndex + 1 : 0;
+        setSelectedOptionLabel(options[nextIndex].label);
+        break;
+      case 'ArrowUp':
+      case 'k':
+        event.preventDefault();
+        const prevIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1;
+        setSelectedOptionLabel(options[prevIndex].label);
+        break;
+      case 'Enter':
+        event.preventDefault();
+        if (selectedOptionLabel) {
+          handleSubmitAnswer();
+        }
+        break;
+    }
+  }, [sessionData, currentQuestionIndex, selectedOptionLabel, handleSubmitAnswer]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+
+  const handleSkip = useCallback(() => {
+    // Simply advance to next question without submitting answer
+    handleNextQuestion();
+  }, [handleNextQuestion]);
 
   if (loading)
     return (
-      <main style={{ padding: 24 }}>
-        <div>Loading diagnostic...</div>
-      </main>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg text-slate-600">Loading diagnostic...</div>
+      </div>
     );
 
+  // Other error cases (keeping existing structure but with updated styles)
   if (error) {
-    if (error === "session_not_found") {
+    // Access denied
+    if (error === "access_denied_to_session") {
       return (
-        <main
-          style={{
-            maxWidth: 600,
-            margin: "2rem auto",
-            padding: 24,
-            border: "1px solid #eee",
-            borderRadius: 8,
-          }}
-        >
-          <h1>Session Not Found</h1>
-          <div style={{ marginBottom: 24 }}>
-            <p style={{ color: "#d32f2f", marginBottom: 16 }}>
-              Your diagnostic session has expired or could not be found. This can happen if:
+        <main className="max-w-2xl mx-auto my-8 p-6 border border-slate-200 rounded-lg">
+          <h1 className="text-xl font-semibold mb-4">Access Denied</h1>
+          <div className="mb-6">
+            <p className="text-red-600 mb-4">
+              You do not have permission to access this diagnostic session, or the session identifier
+              is invalid.
             </p>
-            <ul style={{ color: "#666", marginBottom: 24 }}>
-              <li>The session expired due to inactivity</li>
-              <li>The server was restarted during development</li>
-              <li>The session ID is invalid</li>
-            </ul>
-            <p>Please start a new diagnostic test to continue.</p>
           </div>
           <button
             onClick={() => router.push("/diagnostic")}
-            style={{
-              padding: "12px 32px",
-              borderRadius: 6,
-              background: "#0070f3",
-              color: "white",
-              border: "none",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
+            className="h-10 px-8 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors"
           >
             Start New Diagnostic
           </button>
@@ -311,20 +255,39 @@ const DiagnosticSessionPage = () => {
       );
     }
 
+    // Session not found
+    if (error === "session_not_found") {
+      return (
+        <main className="max-w-2xl mx-auto my-8 p-6 border border-slate-200 rounded-lg">
+          <h1 className="text-xl font-semibold mb-4">Session Not Found</h1>
+          <div className="mb-6">
+            <p className="text-red-600 mb-4">
+              Your diagnostic session has expired or could not be found. This can happen if:
+            </p>
+            <ul className="text-slate-600 mb-6 space-y-1">
+              <li>• The session expired due to inactivity</li>
+              <li>• The server was restarted during development</li>
+              <li>• The session ID is invalid</li>
+            </ul>
+            <p>Please start a new diagnostic test to continue.</p>
+          </div>
+          <button
+            onClick={() => router.push("/diagnostic")}
+            className="h-10 px-8 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors"
+          >
+            Start New Diagnostic
+          </button>
+        </main>
+      );
+    }
+
+    // Session expired
     if (error === "session_expired") {
       return (
-        <main
-          style={{
-            maxWidth: 600,
-            margin: "2rem auto",
-            padding: 24,
-            border: "1px solid #eee",
-            borderRadius: 8,
-          }}
-        >
-          <h1>Session Expired</h1>
-          <div style={{ marginBottom: 24 }}>
-            <p style={{ color: "#d32f2f", marginBottom: 16 }}>
+        <main className="max-w-2xl mx-auto my-8 p-6 border border-slate-200 rounded-lg">
+          <h1 className="text-xl font-semibold mb-4">Session Expired</h1>
+          <div className="mb-6">
+            <p className="text-red-600 mb-4">
               Your diagnostic session has expired after 30 minutes of inactivity for security
               reasons.
             </p>
@@ -332,15 +295,7 @@ const DiagnosticSessionPage = () => {
           </div>
           <button
             onClick={() => router.push("/diagnostic")}
-            style={{
-              padding: "12px 32px",
-              borderRadius: 6,
-              background: "#0070f3",
-              color: "white",
-              border: "none",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
+            className="h-10 px-8 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors"
           >
             Start New Diagnostic
           </button>
@@ -348,73 +303,19 @@ const DiagnosticSessionPage = () => {
       );
     }
 
-    if (error === "too_many_sessions") {
-      return (
-        <main
-          style={{
-            maxWidth: 600,
-            margin: "2rem auto",
-            padding: 24,
-            border: "1px solid #eee",
-            borderRadius: 8,
-          }}
-        >
-          <h1>Too Many Active Sessions</h1>
-          <div style={{ marginBottom: 24 }}>
-            <p style={{ color: "#d32f2f", marginBottom: 16 }}>
-              You have reached the maximum number of active diagnostic sessions (3).
-            </p>
-            <p>
-              Please complete your existing tests before starting a new one, or wait for them to
-              expire.
-            </p>
-          </div>
-          <button
-            onClick={() => router.push("/diagnostic")}
-            style={{
-              padding: "12px 32px",
-              borderRadius: 6,
-              background: "#0070f3",
-              color: "white",
-              border: "none",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Go to Diagnostic
-          </button>
-        </main>
-      );
-    }
-
+    // Authentication required
     if (error === "authentication_required") {
       return (
-        <main
-          style={{
-            maxWidth: 600,
-            margin: "2rem auto",
-            padding: 24,
-            border: "1px solid #eee",
-            borderRadius: 8,
-          }}
-        >
-          <h1>Authentication Required</h1>
-          <div style={{ marginBottom: 24 }}>
-            <p style={{ color: "#d32f2f", marginBottom: 16 }}>
+        <main className="max-w-2xl mx-auto my-8 p-6 border border-slate-200 rounded-lg">
+          <h1 className="text-xl font-semibold mb-4">Authentication Required</h1>
+          <div className="mb-6">
+            <p className="text-red-600 mb-4">
               You need to be logged in to access this diagnostic session.
             </p>
           </div>
           <button
             onClick={() => router.push("/login")}
-            style={{
-              padding: "12px 32px",
-              borderRadius: 6,
-              background: "#0070f3",
-              color: "white",
-              border: "none",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
+            className="h-10 px-8 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors"
           >
             Go to Login
           </button>
@@ -424,30 +325,14 @@ const DiagnosticSessionPage = () => {
 
     // Generic error fallback
     return (
-      <main
-        style={{
-          maxWidth: 600,
-          margin: "2rem auto",
-          padding: 24,
-          border: "1px solid #eee",
-          borderRadius: 8,
-        }}
-      >
-        <h1>Error</h1>
-        <div style={{ marginBottom: 24 }}>
-          <p style={{ color: "#d32f2f", marginBottom: 16 }}>Error: {error}</p>
+      <main className="max-w-2xl mx-auto my-8 p-6 border border-slate-200 rounded-lg">
+        <h1 className="text-xl font-semibold mb-4">Error</h1>
+        <div className="mb-6">
+          <p className="text-red-600 mb-4">Error: {error}</p>
         </div>
         <button
           onClick={() => router.push("/diagnostic")}
-          style={{
-            padding: "12px 32px",
-            borderRadius: 6,
-            background: "#0070f3",
-            color: "white",
-            border: "none",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
+          className="h-10 px-8 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors"
         >
           Start New Diagnostic
         </button>
@@ -457,265 +342,162 @@ const DiagnosticSessionPage = () => {
 
   if (!currentQuestion)
     return (
-      <main style={{ padding: 24 }}>
-        <div>No questions found for this session.</div>
-      </main>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg text-slate-600">No questions found for this session.</div>
+      </div>
     );
 
   return (
-    <main
-      style={{
-        maxWidth: 900, // Increased from 600 to give more breathing room
-        margin: "2rem auto",
-        padding: "32px 48px", // Increased padding for more spacious feel
-        border: "1px solid #eee",
-        borderRadius: 12, // Slightly larger border radius
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "3rem", // More space before question
-          paddingBottom: "1rem",
-          borderBottom: "1px solid #f0f0f0",
-        }}
-      >
-        <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 600 }}>Diagnostic Assessment</h1>
-        <div
-          style={{
-            background: "#f8f9fa",
-            padding: "8px 16px",
-            borderRadius: 20,
-            fontSize: "0.9rem",
-            fontWeight: 500,
-            color: "#6c757d",
-          }}
-        >
-          Question {currentQuestionIndex + 1} of {sessionData?.questions.length}
-        </div>
-      </div>
-
-      <section style={{ margin: 0 }}>
-        {/* Question stem - clean minimal approach */}
-        {/* Other style options to try:
-            
-            Option 1 - Minimal (current):
-            Just typography hierarchy with generous spacing
-            
-            Option 2 - Accent line:
-            Add: paddingBottom: '1.5rem', borderBottom: '3px solid #0070f3'
-            
-            Option 3 - Left accent bar:  
-            Add: paddingLeft: '1.5rem', borderLeft: '4px solid #0070f3'
-            
-            Option 4 - Question icon:
-            Add small Q icon or question mark before text
-            
-            Option 5 - Typography emphasis:
-            Make it larger: fontSize: '1.75rem', fontWeight: 700
-        */}
-        <div
-          style={{
-            fontSize: "1.5rem",
-            fontWeight: 400, // Reduced from 600 to be less bold
-            lineHeight: 1.5,
-            marginBottom: "3rem",
-            color: "#4a5568", // Lighter color, less dark than #1a202c
-            letterSpacing: "-0.01em",
-          }}
-        >
-          {currentQuestion.stem}
-        </div>
-
-        {/* Answer options with more spacious layout */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 16, // Increased gap between options
-            marginBottom: "3rem", // More space before submit button
-          }}
-        >
-          {currentQuestion.options.map((option) => {
-            const isSelected = selectedOptionLabel === option.label;
-            const isCorrectOption = feedback?.correctAnswer === option.label;
-            const isIncorrectSelected = feedback && isSelected && !feedback.isCorrect;
-            const isDisabled = !!feedback;
-
-            return (
-              <button
-                key={option.label}
-                type="button"
-                onClick={() => !isDisabled && setSelectedOptionLabel(option.label)}
-                disabled={isDisabled}
-                style={{
-                  padding: "1.25rem 1.5rem", // More generous padding
-                  borderRadius: 8,
-                  border: isSelected ? "2px solid #0070f3" : "2px solid #dee2e6", // Keep border thickness consistent
-                  background: isCorrectOption
-                    ? "#d1fadf"
-                    : isIncorrectSelected
-                      ? "#ffe0e0"
-                      : isSelected
-                        ? "#e6f0fd"
-                        : "#ffffff",
-                  fontWeight: 400, // Keep font weight consistent - no bold on selection
-                  fontSize: "1.1rem", // Slightly larger text for options
-                  lineHeight: 1.5,
-                  color: isCorrectOption
-                    ? "#219653"
-                    : isIncorrectSelected
-                      ? "#d32f2f"
-                      : isSelected
-                        ? "#0070f3"
-                        : "#343a40",
-                  transition: "all 0.2s ease", // Smoother transition
-                  opacity: isDisabled && !isSelected && !isCorrectOption ? 0.7 : 1,
-                  cursor: isDisabled ? "not-allowed" : "pointer",
-                  textAlign: "left", // Left align for better readability
-                  boxSizing: "border-box", // Ensure borders don't affect internal spacing
-                  boxShadow: isSelected
-                    ? "0 2px 8px rgba(0,112,243,0.15)"
-                    : "0 1px 3px rgba(0,0,0,0.05)",
-                  transform: isSelected && !isDisabled ? "translateY(-1px)" : "none", // Subtle lift effect
-                }}
-              >
-                <div
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-                >
-                  <span>{option.text}</span>
-                  <div>
-                    {isCorrectOption && feedback && (
-                      <span
-                        style={{
-                          marginLeft: 12,
-                          fontWeight: 700,
-                          fontSize: "1.2rem",
-                          color: "#219653",
-                        }}
-                      >
-                        ✓
-                      </span>
-                    )}
-                    {isIncorrectSelected && feedback && (
-                      <span
-                        style={{
-                          marginLeft: 12,
-                          fontWeight: 700,
-                          fontSize: "1.2rem",
-                          color: "#d32f2f",
-                        }}
-                      >
-                        ✗
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {!feedback ? (
-          <div style={{ textAlign: "center" }}>
-            <button
-              onClick={handleSubmitAnswer}
-              disabled={selectedOptionLabel === null || submitting}
-              style={{
-                padding: "16px 48px", // Larger button
-                borderRadius: 8,
-                background: selectedOptionLabel === null || submitting ? "#ccc" : "#0070f3",
-                color: "white",
-                border: "none",
-                fontWeight: 600,
-                fontSize: "1.1rem",
-                cursor: selectedOptionLabel === null || submitting ? "not-allowed" : "pointer",
-                transition: "all 0.2s ease",
-                boxShadow:
-                  selectedOptionLabel !== null && !submitting
-                    ? "0 4px 12px rgba(0,112,243,0.3)"
-                    : "none",
-                transform:
-                  selectedOptionLabel !== null && !submitting ? "translateY(-1px)" : "none",
-              }}
-            >
-              {submitting ? "Submitting..." : "Submit Answer"}
-            </button>
+    <div className="min-h-screen bg-white">
+      {/* Top app bar with progress */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-slate-900">Diagnostic</h1>
+          <div className="text-sm font-medium text-slate-600">
+            Question {currentQuestionIndex + 1} of {sessionData?.questions.length}
           </div>
-        ) : (
-          <>
-            <div
-              style={{
-                marginTop: "2rem",
-                padding: "2rem",
-                background: feedback.isCorrect ? "#f0f9f4" : "#fef2f2",
-                borderRadius: 12,
-                border: `1px solid ${feedback.isCorrect ? "#d1fae5" : "#fecaca"}`,
-                marginBottom: "2rem",
-              }}
-            >
-              <div
-                style={{
-                  color: feedback.isCorrect ? "#219653" : "#d32f2f",
-                  fontWeight: 700,
-                  fontSize: "1.25rem",
-                  marginBottom: "1rem",
-                }}
-              >
-                {feedback.isCorrect ? "🎉 Correct!" : "❌ Incorrect."}
-              </div>
-              <div style={{ marginBottom: 12 }}>
-                <strong style={{ fontSize: "1.1rem", color: "#374151" }}>Explanation:</strong>
-                <div
-                  style={{
-                    marginTop: "0.75rem",
-                    fontSize: "1rem",
-                    lineHeight: 1.6,
-                    color: "#4b5563",
-                  }}
-                >
-                  {feedback.explanation || "No explanation provided."}
+        </div>
+        {/* Progress bar */}
+        <div className="h-1 bg-slate-100">
+          <div 
+            className="h-1 bg-indigo-600 transition-all duration-300 ease-out"
+            style={{ 
+              width: `${((currentQuestionIndex + 1) / (sessionData?.questions.length || 1)) * 100}%` 
+            }}
+          />
+        </div>
+      </header>
+
+      {/* Main content */}
+      <main className="max-w-5xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-12 gap-6">
+          {/* Left rail - Desktop only */}
+          <aside className="hidden lg:block lg:col-span-3 space-y-4 sticky top-20">
+            {/* Exam meta card */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h3 className="text-sm font-semibold text-slate-900 mb-2">Progress</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Completed</span>
+                  <span className="font-medium text-slate-900">
+                    {currentQuestionIndex} / {sessionData?.questions.length || 0}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div 
+                    className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                    style={{ 
+                      width: `${(currentQuestionIndex / (sessionData?.questions.length || 1)) * 100}%` 
+                    }}
+                  />
                 </div>
               </div>
             </div>
-            <div style={{ textAlign: "center" }}>
+
+            {/* Flag for review card */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h3 className="text-sm font-semibold text-slate-900 mb-2">Review</h3>
               <button
-                onClick={handleNextQuestion}
-                style={{
-                  marginTop: 16,
-                  padding: "16px 48px", // Larger button to match submit button
-                  borderRadius: 8,
-                  background: "#f8f9fa",
-                  color: "#495057",
-                  border: "1px solid #dee2e6",
-                  fontWeight: 600,
-                  fontSize: "1.1rem",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#e9ecef";
-                  e.currentTarget.style.transform = "translateY(-1px)";
-                  e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.1)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#f8f9fa";
-                  e.currentTarget.style.transform = "none";
-                  e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)";
-                }}
+                onClick={() => setIsFlagged(!isFlagged)}
+                className={`w-full h-8 px-3 rounded-lg text-sm font-medium transition-colors ${
+                  isFlagged
+                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : 'bg-white text-slate-600 border border-slate-300 hover:border-slate-400'
+                }`}
               >
-                {currentQuestionIndex < (sessionData?.questions.length || 0) - 1
-                  ? "Next Question →"
-                  : "View Results →"}
+                {isFlagged ? '🚩 Flagged' : 'Flag for review'}
               </button>
+              <p className="text-xs text-slate-500 mt-2">
+                Review all flagged questions before final submission.
+              </p>
             </div>
-          </>
-        )}
-      </section>
-    </main>
+          </aside>
+
+          {/* Main column */}
+          <div className="col-span-12 lg:col-span-9">
+            {/* Question card */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-6">
+                Diagnostic Assessment
+              </h2>
+              
+              {/* Question stem */}
+              <div className="max-w-3xl mb-8">
+                <div className="text-lg leading-relaxed text-slate-700">
+                  {currentQuestion.stem}
+                </div>
+              </div>
+
+              {/* Answer options - Radio group */}
+              <div role="radiogroup" aria-label="Answer choices" className="space-y-3 mb-8">
+                {currentQuestion.options.map((option, index) => {
+                  const isSelected = selectedOptionLabel === option.label;
+                  const labels = ['A', 'B', 'C', 'D'];
+
+                  return (
+                    <label
+                      key={option.label}
+                      className={`relative flex gap-3 rounded-xl border p-4 cursor-pointer transition shadow-sm ${
+                        isSelected
+                          ? 'border-indigo-600 ring-4 ring-indigo-600/10 bg-indigo-50'
+                          : 'border-slate-200 hover:border-slate-400'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="answer"
+                        value={option.label}
+                        checked={isSelected}
+                        onChange={() => setSelectedOptionLabel(option.label)}
+                        className="sr-only"
+                      />
+                      
+                      {/* A/B/C/D bubble */}
+                      <div className={`w-8 h-8 rounded-full grid place-content-center text-sm font-medium flex-shrink-0 ${
+                        isSelected
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        {labels[index]}
+                      </div>
+                      
+                      {/* Option text */}
+                      <div className="flex-1 text-slate-700 leading-relaxed">
+                        {option.text}
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Sticky bottom action bar */}
+      <footer className="sticky bottom-0 z-40 border-t border-slate-200 bg-white/90 backdrop-blur">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3 justify-end">
+          <button
+            onClick={handleSkip}
+            className="h-10 px-4 rounded-lg border border-slate-300 text-slate-700 hover:border-slate-400 transition-colors"
+          >
+            Skip
+          </button>
+          <button
+            onClick={handleSubmitAnswer}
+            disabled={selectedOptionLabel === null}
+            className={`h-10 px-5 rounded-lg font-medium shadow-sm transition-all ${
+              selectedOptionLabel === null
+                ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-500/30'
+            }`}
+          >
+            Submit answer
+          </button>
+        </div>
+      </footer>
+    </div>
   );
 };
 
