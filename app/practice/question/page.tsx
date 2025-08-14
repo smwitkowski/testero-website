@@ -21,32 +21,21 @@ const PracticeQuestionPage = () => {
   const [feedback, setFeedback] = useState<FeedbackType | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
-  const [authTimeout, setAuthTimeout] = useState(false);
   const posthog = usePostHog();
-  const { user, isLoading: authLoading } = useAuth();
-
-  // Add auth timeout to prevent infinite loading
-  useEffect(() => {
-    if (authLoading) {
-      const timeout = setTimeout(() => {
-        setAuthTimeout(true);
-      }, 10000); // 10 second timeout
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [authLoading]);
+  const { user } = useAuth();
 
   // Track page view for authenticated users (middleware ensures auth)
   useEffect(() => {
-    if (!user || authLoading) return;
+    if (!user) return;
     
     captureWithDeduplication(posthog, "practice_page_viewed", {
       user_id: user.id,
     });
-  }, [user, authLoading, posthog]);
+  }, [user, posthog]);
 
   useEffect(() => {
-    // Fetch questions (middleware ensures user is authenticated)
+    // Middleware ensures user is authenticated, so we can fetch directly
+    if (!user) return; // Wait for user session to load
 
     setLoading(true);
     setError(null);
@@ -169,22 +158,11 @@ const PracticeQuestionPage = () => {
     }
   };
 
-  // Show loading while auth is being resolved (should be brief since middleware ensures auth)
-  if (authLoading && !authTimeout) {
+  // Show loading while user session loads (middleware already ensured auth)
+  if (!user) {
     return (
       <main className="p-6">
         <div className="text-center">Loading...</div>
-      </main>
-    );
-  }
-
-  // Show error if auth takes too long to resolve
-  if (authTimeout) {
-    return (
-      <main className="p-6">
-        <div className="text-center text-red-600">
-          Authentication timeout. Please refresh the page or try again.
-        </div>
       </main>
     );
   }

@@ -16,7 +16,7 @@ import { captureWithDeduplication } from "@/lib/utils/analytics-deduplication";
 const SpecificPracticeQuestionPage = () => {
   const params = useParams();
   const questionId = params?.id as string;
-  const { user, isLoading: authLoading } = useAuth();
+  const { user } = useAuth();
   const posthog = usePostHog();
 
   const [question, setQuestion] = useState<QuestionData | null>(null);
@@ -26,28 +26,16 @@ const SpecificPracticeQuestionPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackType | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [authTimeout, setAuthTimeout] = useState(false);
-
-  // Add auth timeout to prevent infinite loading
-  useEffect(() => {
-    if (authLoading) {
-      const timeout = setTimeout(() => {
-        setAuthTimeout(true);
-      }, 10000); // 10 second timeout
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [authLoading]);
 
   // Track page view for authenticated users (middleware ensures auth)
   useEffect(() => {
-    if (!user || authLoading) return;
+    if (!user) return;
     
     captureWithDeduplication(posthog, "practice_page_viewed", {
       user_id: user.id,
       question_id: questionId,
     });
-  }, [user, authLoading, questionId, posthog]);
+  }, [user, questionId, posthog]);
 
   useEffect(() => {
     // Fetch specific question (middleware ensures user is authenticated)
@@ -122,22 +110,11 @@ const SpecificPracticeQuestionPage = () => {
     }
   };
 
-  // Show loading while auth is being resolved (should be brief since middleware ensures auth)
-  if (authLoading && !authTimeout) {
+  // Show loading while user session loads (middleware already ensured auth)
+  if (!user) {
     return (
       <main className="p-6">
         <div className="text-center">Loading...</div>
-      </main>
-    );
-  }
-
-  // Show error if auth takes too long to resolve
-  if (authTimeout) {
-    return (
-      <main className="p-6">
-        <div className="text-center text-red-600">
-          Authentication timeout. Please refresh the page or try again.
-        </div>
       </main>
     );
   }
