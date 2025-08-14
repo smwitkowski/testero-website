@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   QuestionDisplay,
   QuestionFeedback,
@@ -10,6 +9,8 @@ import {
 } from "@/components/practice";
 import { usePostHog } from "posthog-js/react";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { getErrorMessage, getApiErrorMessage, trackError } from "@/lib/utils/error-handling";
+import { captureWithDeduplication } from "@/lib/utils/analytics-deduplication";
 
 const PracticeQuestionPage = () => {
   const [question, setQuestion] = useState<QuestionData | null>(null);
@@ -20,44 +21,40 @@ const PracticeQuestionPage = () => {
   const [feedback, setFeedback] = useState<FeedbackType | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
+  const [authTimeout, setAuthTimeout] = useState(false);
   const posthog = usePostHog();
   const { user, isLoading: authLoading } = useAuth();
-  const router = useRouter();
 
-  // Check authentication and redirect if needed
+  // Add auth timeout to prevent infinite loading
   useEffect(() => {
-    if (authLoading) return;
-
-    if (!user) {
-      // Track blocked access
-      posthog?.capture("practice_access_blocked", {
-        source: "practice_question_page",
-        timestamp: new Date().toISOString(),
-      });
-
-      // Redirect to login with return URL
-      const returnUrl = `/practice/question`;
-      router.push(`/login?redirect=${encodeURIComponent(returnUrl)}`);
-      return;
+    if (authLoading) {
+      const timeout = setTimeout(() => {
+        setAuthTimeout(true);
+      }, 10000); // 10 second timeout
+      
+      return () => clearTimeout(timeout);
     }
+  }, [authLoading]);
 
-    // Track page view for authenticated users
-    posthog?.capture("practice_page_viewed", {
+  // Track page view for authenticated users (middleware ensures auth)
+  useEffect(() => {
+    if (!user || authLoading) return;
+    
+    captureWithDeduplication(posthog, "practice_page_viewed", {
       user_id: user.id,
     });
-  }, [user, authLoading, router, posthog]);
+  }, [user, authLoading, posthog]);
 
   useEffect(() => {
-    // Don't fetch questions until auth is confirmed
-    if (authLoading || !user) return;
+    // Fetch questions (middleware ensures user is authenticated)
 
     setLoading(true);
     setError(null);
     fetch("/api/questions/current")
       .then(async (res) => {
         if (!res.ok) {
-          const data = (await res.json()) as { error?: string };
-          throw new Error(data.error || "Failed to fetch question");
+          const errorMessage = await getApiErrorMessage(res);
+          throw new Error(errorMessage);
         }
         return res.json() as Promise<QuestionData>;
       })
@@ -67,23 +64,23 @@ const PracticeQuestionPage = () => {
         setLoading(false);
 
         // Track question loaded
-        posthog?.capture("practice_question_loaded", {
+        captureWithDeduplication(posthog, "practice_question_loaded", {
           user_id: user?.id,
           question_id: data.id,
         });
       })
-      .catch((err) => {
-        setError(err.message || "Unknown error");
+      .catch((error) => {
+        const errorMessage = getErrorMessage(error, "Failed to load question");
+        setError(errorMessage);
         setLoading(false);
 
         // Track error
-        posthog?.capture("practice_question_error", {
-          user_id: user?.id,
-          error: err.message || "Unknown error",
-          error_type: "load_error",
+        trackError(posthog, error, "practice_question_error", {
+          userId: user?.id,
+          errorType: "load_error",
         });
       });
-  }, [user, posthog, authLoading]);
+  }, [user, posthog]);
 
   const fetchNewQuestion = async () => {
     setLoading(true);
@@ -95,27 +92,27 @@ const PracticeQuestionPage = () => {
     try {
       const res = await fetch("/api/questions/current");
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error || "Failed to fetch question");
+        const errorMessage = await getApiErrorMessage(res);
+        throw new Error(errorMessage);
       }
       const data = (await res.json()) as QuestionData;
       setQuestion(data);
       setQuestionStartTime(new Date());
 
       // Track new question loaded
-      posthog?.capture("practice_question_loaded", {
+      captureWithDeduplication(posthog, "practice_question_loaded", {
         user_id: user?.id,
         question_id: data.id,
         is_next_question: true,
       });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+    } catch (error) {
+      const errorMessage = getErrorMessage(error, "Failed to load next question");
+      setError(errorMessage);
 
       // Track error
-      posthog?.capture("practice_question_error", {
-        user_id: user?.id,
-        error: err instanceof Error ? err.message : "Unknown error",
-        error_type: "load_error",
+      trackError(posthog, error, "practice_question_error", {
+        userId: user?.id,
+        errorType: "load_error",
       });
     } finally {
       setLoading(false);
@@ -141,39 +138,53 @@ const PracticeQuestionPage = () => {
           selectedOptionKey,
         }),
       });
-      const data = (await res.json()) as { error?: string } & FeedbackType;
-      if (!res.ok) throw new Error(data.error || "Submission failed");
-      setFeedback(data as FeedbackType);
+      if (!res.ok) {
+        const errorMessage = await getApiErrorMessage(res);
+        throw new Error(errorMessage);
+      }
+      
+      const data = (await res.json()) as FeedbackType;
+      setFeedback(data);
 
-      // Track question answered
-      posthog?.capture("practice_question_answered", {
+      // Track question answered (force track for critical business metric)
+      captureWithDeduplication(posthog, "practice_question_answered", {
         user_id: user?.id,
         question_id: question.id,
         is_correct: data.isCorrect,
         time_spent_seconds: timeSpent,
         selected_option: selectedOptionKey,
-      });
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      }, { forceTrack: true });
+    } catch (error) {
+      const errorMessage = getErrorMessage(error, "Failed to submit answer");
       setSubmitError(errorMessage);
 
       // Track submission error
-      posthog?.capture("practice_question_error", {
-        user_id: user?.id,
-        question_id: question?.id,
-        error: errorMessage,
-        error_type: "submit_error",
+      trackError(posthog, error, "practice_question_error", {
+        userId: user?.id,
+        errorType: "submit_error",
+        context: { question_id: question?.id },
       });
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Show loading while auth is being checked
-  if (authLoading || !user) {
+  // Show loading while auth is being resolved (should be brief since middleware ensures auth)
+  if (authLoading && !authTimeout) {
     return (
       <main className="p-6">
         <div className="text-center">Loading...</div>
+      </main>
+    );
+  }
+
+  // Show error if auth takes too long to resolve
+  if (authTimeout) {
+    return (
+      <main className="p-6">
+        <div className="text-center text-red-600">
+          Authentication timeout. Please refresh the page or try again.
+        </div>
       </main>
     );
   }

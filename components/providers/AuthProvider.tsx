@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 import { usePostHog } from "posthog-js/react";
+import { isPublicRoute, isAuthRoute } from "@/lib/config/routes";
 
 type AuthContextType = {
   session: Session | null;
@@ -16,24 +17,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// List of routes that don't require authentication
-const publicRoutes = [
-  "/",
-  "/login",
-  "/signup",
-  "/forgot-password",
-  "/reset-password",
-  "/verify-email",
-  "/waitlist",
-  "/content",
-  "/faq",
-  "/diagnostic",
-  "/study-path", // Keep public for preview mode
-  "/pricing",
-  "/blog",
-];
-// List of routes that should redirect to dashboard if already authenticated
-const authRoutes = ["/login", "/signup", "/forgot-password", "/reset-password", "/verify-email"];
+// Route configurations are now imported from shared config
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
@@ -82,18 +66,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Skip during initial load or when no pathname
     if (isLoading || !pathname) return;
 
-    const isPublicRoute = publicRoutes.some(
-      (route) => pathname === route || pathname.startsWith(`${route}/`)
-    );
-
-    const isAuthRoute = authRoutes.some(
-      (route) => pathname === route || pathname.startsWith(`${route}/`)
-    );
+    const isPublic = isPublicRoute(pathname);
+    const isAuth = isAuthRoute(pathname);
 
     console.log("[Auth Routing]", {
       pathname,
-      isPublicRoute,
-      isAuthRoute,
+      isPublicRoute: isPublic,
+      isAuthRoute: isAuth,
       isAuthenticated: !!session,
       userMetadata: session?.user?.user_metadata,
       isEarlyAccess: session?.user?.user_metadata?.is_early_access === true,
@@ -102,10 +81,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // If user is authenticated
     if (session) {
       // If on an auth route, redirect to the main app page
-      if (isAuthRoute) {
+      if (isAuth) {
         console.log("[Auth Routing] Redirecting from auth route to dashboard");
         router.push("/dashboard");
-      } else if (!isPublicRoute) {
+      } else if (!isPublic) {
         // If on a protected route, check early access flag
         const isEarlyAccess = session.user?.user_metadata?.is_early_access === true;
         if (!isEarlyAccess) {
@@ -121,7 +100,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } else {
       // If user is NOT authenticated
       // If on a protected route, redirect to login
-      if (!isPublicRoute) {
+      if (!isPublic) {
         console.log("[Auth Routing] Unauthenticated user on protected route, redirecting to login");
         router.push("/login");
       }
