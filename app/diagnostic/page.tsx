@@ -9,6 +9,11 @@ import {
   setAnonymousSessionId,
   generateAnonymousSessionId,
 } from "@/lib/auth/anonymous-session";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { ArrowRight, Target, BarChart3, BookOpen } from "lucide-react";
 
 interface ExamTypeOption {
   name: string; // This will be the value sent to the API (e.g., "Google Professional ML Engineer")
@@ -103,7 +108,7 @@ const DiagnosticStartPage = () => {
           });
 
           // Track resume opportunity shown
-          trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_RESUMED, {
+          trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_RESUME_SHOWN, {
             sessionId: storedSessionId,
             examType: data.examType,
             startedAt: data.startedAt,
@@ -158,8 +163,8 @@ const DiagnosticStartPage = () => {
       return;
     }
 
-    if (!numQuestions || numQuestions < 1 || numQuestions > 20) {
-      setError("Please select between 1 and 20 questions.");
+    if (!numQuestions || numQuestions < 1 || numQuestions > 30) {
+      setError("Please select between 1 and 30 questions.");
       return;
     }
 
@@ -206,7 +211,7 @@ const DiagnosticStartPage = () => {
         if (res.status === 401 && user) {
           // Only redirect to login if it was an auth issue for a logged-in user
           setError("Authentication issue. Please log in again.");
-          router.push("/login");
+          router.replace("/login");
         } else {
           setError(responseData.error || "Failed to start diagnostic.");
         }
@@ -252,196 +257,164 @@ const DiagnosticStartPage = () => {
   const isButtonDisabled = loading || (user && isAuthLoading) || examTypes.length === 0;
 
   return (
-    <main
-      style={{
-        maxWidth: 700,
-        margin: "2rem auto",
-        padding: 32,
-        border: "1px solid #e5e7eb",
-        borderRadius: 12,
-        background: "white",
-        boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
-      }}
-    >
-      <div style={{ marginBottom: 24 }}>
-        <div style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          background: "#fef3c7",
-          border: "1px solid #fbbf24",
-          borderRadius: 20,
-          padding: "4px 12px",
-          marginBottom: 16,
-          fontSize: 13,
-          fontWeight: 600,
-          color: "#92400e"
-        }}>
-          🔥 Updated for October 2024 Exam Changes
-        </div>
-        <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8, color: "#111827" }}>
-          PMLE Diagnostic Assessment
-        </h1>
-        <p style={{ fontSize: 18, color: "#6b7280", marginBottom: 16 }}>
-          Find your exam readiness in 10 minutes • 70% of candidates fail—don&apos;t be one of them
-        </p>
-        <div style={{ display: "flex", gap: 16, fontSize: 14, color: "#4b5563" }}>
-          <div>✓ Covers all 6 domains</div>
-          <div>✓ Vertex AI Model Garden</div>
-          <div>✓ GenAI & RAG topics</div>
-        </div>
-      </div>
-
-      {resumeSession && (
-        <section
-          style={{
-            margin: "2rem 0",
-            padding: "1rem",
-            backgroundColor: "#f0f8ff",
-            border: "1px solid #0070f3",
-            borderRadius: 6,
-          }}
-        >
-          <h2 style={{ margin: "0 0 1rem 0", color: "#0070f3" }}>Unfinished Diagnostic Found</h2>
-          <p style={{ margin: "0 0 1rem 0" }}>
-            You have an unfinished <strong>{resumeSession.examType}</strong> diagnostic started on{" "}
-            {new Date(resumeSession.startedAt).toLocaleString()}.
-          </p>
-          <p style={{ margin: "0 0 1rem 0" }}>Would you like to resume or start over?</p>
-          <div style={{ display: "flex", gap: 12 }}>
-            <button
-              onClick={handleResumeSession}
-              style={{
-                padding: "10px 20px",
-                borderRadius: 6,
-                background: "#0070f3",
-                color: "white",
-                border: "none",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              Resume
-            </button>
-            <button
-              onClick={handleStartOver}
-              style={{
-                padding: "10px 20px",
-                borderRadius: 6,
-                background: "#fff",
-                color: "#666",
-                border: "1px solid #ccc",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              Start Over
-            </button>
+    <main className="max-w-2xl mx-auto my-8 px-4">
+      <Card className="border-slate-200 shadow-sm p-6 md:p-7">
+        <CardHeader className="p-0 mb-6">
+          <div className="flex justify-end mb-4">
+            <Badge className="bg-blue-50 text-blue-700 border border-blue-200">
+              Updated Oct 2024 exam changes
+            </Badge>
           </div>
-        </section>
-      )}
-
-      {!user && (
-        <div style={{
-          background: "#eff6ff",
-          border: "1px solid #3b82f6",
-          borderRadius: 8,
-          padding: 16,
-          marginBottom: 24,
-        }}>
-          <p style={{ margin: 0, fontSize: 14, color: "#1e40af" }}>
-            💡 <strong>No signup required!</strong> Take the diagnostic anonymously and get instant results.
-            Create an account later to save your progress and access personalized study plans.
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">
+            PMLE Diagnostic
+          </h1>
+          <p className="text-lg text-slate-600 mb-4">
+            10-minute readiness check. Updated for Oct &apos;24 changes.
           </p>
-        </div>
-      )}
+          <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 text-slate-700 text-sm">
+              <BarChart3 className="w-4 h-4" />
+              6 domains
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 text-slate-700 text-sm">
+              <Target className="w-4 h-4" />
+              Vertex AI Model Garden
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 text-slate-700 text-sm">
+              <BookOpen className="w-4 h-4" />
+              GenAI & RAG
+            </div>
+          </div>
+        </CardHeader>
 
-      <section style={{ margin: "2rem 0" }}>
-        <div style={{ marginBottom: 16 }}>
-          <label htmlFor="examType" style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151" }}>
-            Select Certification Exam:
-          </label>
-          <select
-            id="examType"
-            value={selectedExamName}
-            onChange={(e) => setSelectedExamName(e.target.value)}
-            style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #ccc" }}
-            disabled={examTypes.length === 0}
-          >
-            {examTypes.length === 0 && <option>Loading exams...</option>}
-            {examTypes.map((exam) => (
-              <option key={exam.name} value={exam.name}>
-                {exam.displayName}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <label htmlFor="numQuestions" style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151" }}>
-            Diagnostic Length:
-          </label>
-          <input
-            type="number"
-            id="numQuestions"
-            value={numQuestions}
-            onChange={(e) => {
-              const value = parseInt(e.target.value);
-              if (!isNaN(value) && value >= MIN_QUESTIONS && value <= MAX_QUESTIONS) {
-                // Use constants
-                setNumQuestions(value);
-              }
-            }}
-            min={MIN_QUESTIONS} // Use constants
-            max={MAX_QUESTIONS} // Use constants
-            step="1"
-            style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #ccc" }}
-          />
-          <small style={{ color: "#6b7280", fontSize: 13 }}>
-            <strong>Recommended: 20 questions</strong> for comprehensive assessment (10 minutes)
-          </small>
-        </div>
-        <button
-          onClick={handleStartDiagnostic}
-          disabled={isButtonDisabled}
-          style={{
-            padding: "14px 40px",
-            borderRadius: 8,
-            background: isButtonDisabled ? "#9ca3af" : "linear-gradient(to right, #3b82f6, #06b6d4)",
-            color: "white",
-            border: "none",
-            fontWeight: 600,
-            fontSize: 16,
-            cursor: isButtonDisabled ? "not-allowed" : "pointer",
-            width: "100%",
-            marginTop: 8,
-          }}
-        >
-          {user && isAuthLoading ? "Loading user..." : loading ? "Starting..." : "Start Free PMLE Diagnostic →"}
-        </button>
-        {error && <div style={{ color: "#dc2626", marginTop: 16, fontSize: 14 }}>⚠️ {error}</div>}
-      </section>
+        {resumeSession && (
+          <Card className="mb-6 border-blue-200 bg-blue-50">
+            <CardContent className="p-4">
+              <h2 className="text-lg font-semibold text-blue-700 mb-3">Unfinished Diagnostic Found</h2>
+              <p className="text-sm text-blue-600 mb-2">
+                You have an unfinished <strong>{resumeSession.examType}</strong> diagnostic started on{" "}
+                {new Date(resumeSession.startedAt).toLocaleString()}.
+              </p>
+              <p className="text-sm text-blue-600 mb-4">Would you like to resume or start over?</p>
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleResumeSession}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  size="sm"
+                >
+                  Resume
+                </Button>
+                <Button
+                  onClick={handleStartOver}
+                  variant="outline"
+                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                  size="sm"
+                >
+                  Start Over
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      <div style={{
-        borderTop: "1px solid #e5e7eb",
-        marginTop: 32,
-        paddingTop: 24,
-        textAlign: "center",
-      }}>
-        <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 8 }}>
-          <strong>Why take this diagnostic?</strong>
-        </p>
-        <div style={{ display: "flex", justifyContent: "space-around", fontSize: 13, color: "#4b5563" }}>
-          <div>📊 Instant readiness score</div>
-          <div>🎯 Identify weak areas</div>
-          <div>📚 Get study plan</div>
-        </div>
-      </div>
+        <CardContent className="space-y-6">
+          {!user && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-700 m-0">
+                💡 <strong>No signup required!</strong> Take the diagnostic anonymously and get instant results.
+                Create an account later to save your progress and access personalized study plans.
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="examType" className="text-sm font-medium text-slate-700">
+                Certification Exam
+              </Label>
+              <select
+                id="examType"
+                value={selectedExamName}
+                onChange={(e) => setSelectedExamName(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={examTypes.length === 0}
+                aria-describedby="exam-helper-text"
+              >
+                {examTypes.length === 0 && <option>Loading exams...</option>}
+                {examTypes.map((exam) => (
+                  <option key={exam.name} value={exam.name}>
+                    {exam.displayName}
+                  </option>
+                ))}
+              </select>
+              <p id="exam-helper-text" className="text-xs text-slate-500">Search or pick an exam</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-700">
+                Diagnostic Length
+              </Label>
+              <div className="flex gap-2" role="group" aria-labelledby="question-count-label">
+                {[10, 20, 30].map((count) => (
+                  <button
+                    key={count}
+                    type="button"
+                    onClick={() => setNumQuestions(count)}
+                    aria-pressed={numQuestions === count}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                      numQuestions === count
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500">
+                <strong>Recommended: 20 questions</strong> for comprehensive assessment (10 minutes)
+              </p>
+            </div>
+            <Button
+              onClick={handleStartDiagnostic}
+              disabled={isButtonDisabled}
+              className="w-full h-12 text-base font-medium mt-2 bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              {user && isAuthLoading ? "Loading user..." : loading ? "Starting..." : (
+                <>
+                  Start free diagnostic
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </>
+              )}
+            </Button>
+            {error && (
+              <div className="text-red-600 text-sm mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                ⚠️ {error}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-slate-200 pt-6 mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-slate-50 rounded-lg">
+                <BarChart3 className="w-5 h-5 mx-auto mb-2 text-slate-600" />
+                <p className="text-sm text-slate-700 font-medium">Instant score</p>
+              </div>
+              <div className="text-center p-4 bg-slate-50 rounded-lg">
+                <Target className="w-5 h-5 mx-auto mb-2 text-slate-600" />
+                <p className="text-sm text-slate-700 font-medium">Find weak areas</p>
+              </div>
+              <div className="text-center p-4 bg-slate-50 rounded-lg">
+                <BookOpen className="w-5 h-5 mx-auto mb-2 text-slate-600" />
+                <p className="text-sm text-slate-700 font-medium">Get a study plan</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </main>
   );
 };
 
-// Constants for question limits, could be imported from a shared config
-const MIN_QUESTIONS = 1;
-const MAX_QUESTIONS = 20;
+// Note: Question limits are now handled by the pill selection (10, 20, 30)
 
 export default DiagnosticStartPage;
