@@ -20,16 +20,17 @@ interface DiagnosticData {
 
 const StudyPathPage = () => {
   const router = useRouter();
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const { user } = useAuth();
   const [diagnosticData, setDiagnosticData] = useState<DiagnosticData | null>(null);
   const posthog = usePostHog();
 
   // Track page view and preview events
+  const hasTrackedRef = React.useRef(false);
   useEffect(() => {
-    if (isAuthLoading) return;
-
+    if (hasTrackedRef.current) return;
+    
     if (!user) {
-      // Track preview view for unauthenticated users
+      // Track preview view for unauthenticated users  
       posthog?.capture("study_path_preview_shown", {
         timestamp: new Date().toISOString(),
       });
@@ -40,7 +41,8 @@ const StudyPathPage = () => {
         is_authenticated: true,
       });
     }
-  }, [user, isAuthLoading, posthog]);
+    hasTrackedRef.current = true;
+  }, [user, posthog]);
 
   useEffect(() => {
     try {
@@ -141,14 +143,6 @@ const StudyPathPage = () => {
 
   const scoreMessage = diagnosticData ? getScoreMessage(diagnosticData.score) : null;
 
-  // Handle authentication states
-  if (isAuthLoading) {
-    return (
-      <main className="max-w-4xl mx-auto px-6 py-8">
-        <div className="text-center">Loading...</div>
-      </main>
-    );
-  }
 
   // If user is not authenticated, show preview with signup CTA
   if (!user) {
@@ -238,7 +232,7 @@ const StudyPathPage = () => {
                     source: "study_path",
                     action: "signup_clicked",
                   });
-                  router.push("/signup?redirect=/study-path");
+                  router.push(`/signup?redirect=${encodeURIComponent("/study-path")}`);
                 }}
                 size="lg"
               >
@@ -251,7 +245,7 @@ const StudyPathPage = () => {
                     has_diagnostic_data: !!diagnosticData,
                     diagnostic_score: diagnosticData?.score,
                   });
-                  router.push("/login?redirect=/study-path");
+                  router.push(`/login?redirect=${encodeURIComponent("/study-path")}`);
                 }}
                 size="lg"
               >

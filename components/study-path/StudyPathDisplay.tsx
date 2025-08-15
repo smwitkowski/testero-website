@@ -247,8 +247,9 @@ export function StudyPathDisplay({ diagnosticData, isPreview = false }: StudyPat
                     <Button
                       className="w-full"
                       onClick={() => {
-                        // Navigate to practice or learning module
-                        console.log(`Start learning: ${recommendation.domain}`);
+                        // TODO: Navigate to practice questions for this domain
+                        // For now, navigate to general practice page
+                        window.location.href = "/practice/question";
                       }}
                     >
                       Start Learning
