@@ -1,11 +1,14 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { usePostHog } from "posthog-js/react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TrialConversionModal } from "@/components/billing/TrialConversionModal";
+import { UpsellModal } from "@/components/diagnostic/UpsellModal";
+import { useUpsell } from "@/hooks/useUpsell";
+import { useTriggerDetection } from "@/hooks/useTriggerDetection";
 
 // Types
 interface QuestionSummary {
@@ -334,16 +337,45 @@ const QuestionReview = ({
   activeFilter, 
   onFilterChange,
   selectedDomain,
-  onDomainChange 
+  onDomainChange,
+  onTrackReviewEntry,
+  onTrackReviewExit,
+  onTrackExpansion,
 }: {
   questions: QuestionSummary[];
   activeFilter: 'all' | 'incorrect' | 'flagged' | 'low-confidence';
   onFilterChange: (filter: 'all' | 'incorrect' | 'flagged' | 'low-confidence') => void;
   selectedDomain: string | null;
   onDomainChange: (domain: string | null) => void;
+  onTrackReviewEntry?: () => void;
+  onTrackReviewExit?: () => void;
+  onTrackExpansion?: () => void;
 }) => {
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
+  const reviewSectionRef = useRef<HTMLDivElement>(null);
+
+  // Track review section visibility for engagement trigger
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            onTrackReviewEntry?.();
+          } else {
+            onTrackReviewExit?.();
+          }
+        });
+      },
+      { threshold: 0.3 }
+    );
+
+    if (reviewSectionRef.current) {
+      observer.observe(reviewSectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [onTrackReviewEntry, onTrackReviewExit]);
 
   const toggleExpanded = useCallback((questionId: string) => {
     setExpandedQuestions(prev => {
@@ -352,10 +384,12 @@ const QuestionReview = ({
         newSet.delete(questionId);
       } else {
         newSet.add(questionId);
+        // Track expansion for upsell trigger
+        onTrackExpansion?.();
       }
       return newSet;
     });
-  }, []);
+  }, [onTrackExpansion]);
 
   // Filter questions
   const filteredQuestions = questions.filter(q => {
@@ -376,7 +410,7 @@ const QuestionReview = ({
   const domains = Array.from(new Set(questions.map(q => q.domain).filter(Boolean)));
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mb-8">
+    <div ref={reviewSectionRef} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mb-8">
       <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-6">Question Review</h2>
       
       {/* Controls */}
@@ -589,6 +623,27 @@ const DiagnosticSummaryPage = () => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'incorrect' | 'flagged' | 'low-confidence'>('all');
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
 
+  // Calculate critical domains for upsell triggers
+  const criticalDomainCount = domainBreakdown.filter(d => d.percentage < 40).length;
+  const weakDomains = domainBreakdown.filter(d => d.percentage < 60).map(d => d.domain);
+  
+  // Initialize upsell hook
+  const upsell = useUpsell({
+    score: summary?.score || 0,
+    enableExitIntent: process.env.NODE_ENV !== 'production' || false, // Feature flag
+    enableDeepScroll: process.env.NODE_ENV !== 'production' || false, // Feature flag
+    weakDomains,
+  });
+
+  // Initialize trigger detection
+  const triggers = useTriggerDetection({
+    onTrigger: upsell.maybeOpen,
+    score: summary?.score || 0,
+    criticalDomainCount,
+    enableExitIntent: process.env.NODE_ENV !== 'production' || false,
+    enableDeepScroll: process.env.NODE_ENV !== 'production' || false,
+  });
+
   useEffect(() => {
     const fetchSummary = async () => {
       if (!sessionId) {
@@ -676,12 +731,21 @@ const DiagnosticSummaryPage = () => {
 
   // Event handlers
   const handleStartPractice = useCallback((topics?: string[]) => {
+    // Check if should trigger paywall modal
+    if (!user?.user_metadata?.has_subscription) {
+      const triggered = triggers.checkPaywallTrigger('practice');
+      if (triggered) return; // Modal opened, don't proceed
+    }
+    
     // Implementation for starting practice
     posthog?.capture("practice_started", { 
       source: "diagnostic_summary",
       topics: topics || "weakest"
     });
-  }, [posthog]);
+    
+    // Navigate to practice
+    router.push('/practice');
+  }, [posthog, triggers, user, router]);
 
   const handleRetakeDiagnostic = useCallback(() => {
     router.push("/diagnostic");
@@ -701,6 +765,35 @@ const DiagnosticSummaryPage = () => {
     // Implementation for sharing
     posthog?.capture("summary_shared");
   }, [posthog]);
+
+  // Handle study plan generation with upsell check - currently not used but ready for implementation
+  // const handleGenerateStudyPlan = useCallback(() => {
+  //   // Check if should trigger paywall modal
+  //   if (!user?.user_metadata?.has_subscription) {
+  //     const triggered = triggers.checkPaywallTrigger('study_plan');
+  //     if (triggered) return; // Modal opened, don't proceed
+  //   }
+  //   
+  //   // Implementation for generating study plan
+  //   posthog?.capture("study_plan_generated", { 
+  //     source: "diagnostic_summary",
+  //     score: summary?.score,
+  //   });
+  //   
+  //   // Navigate to study path
+  //   router.push('/study-path');
+  // }, [triggers, user, posthog, summary, router]);
+
+  // Upsell modal handlers
+  const handleUpsellCTA = useCallback(() => {
+    upsell.handleCTAClick();
+    // Navigate to billing/signup
+    router.push('/signup');
+  }, [upsell, router]);
+
+  const handleContinueWithoutTrial = useCallback(() => {
+    upsell.dismiss();
+  }, [upsell]);
 
   // Error states (keeping existing error handling)
   if (loading) {
@@ -826,10 +919,12 @@ const DiagnosticSummaryPage = () => {
             )}
 
             {/* Study Plan */}
-            <StudyPlan 
-              domains={domainBreakdown}
-              onStartPractice={handleStartPractice}
-            />
+            <div ref={triggers.setStudyPlanRef}>
+              <StudyPlan 
+                domains={domainBreakdown}
+                onStartPractice={handleStartPractice}
+              />
+            </div>
 
             {/* Question Review */}
             <QuestionReview 
@@ -838,6 +933,9 @@ const DiagnosticSummaryPage = () => {
               onFilterChange={setActiveFilter}
               selectedDomain={selectedDomain}
               onDomainChange={setSelectedDomain}
+              onTrackReviewEntry={triggers.trackReviewSectionEntry}
+              onTrackReviewExit={triggers.trackReviewSectionExit}
+              onTrackExpansion={triggers.trackExplanationExpansion}
             />
           </div>
 
@@ -875,6 +973,16 @@ const DiagnosticSummaryPage = () => {
           </div>
         </div>
       </main>
+
+      {/* Upsell Modal */}
+      <UpsellModal
+        isOpen={upsell.isOpen}
+        variant={upsell.variant}
+        trigger={upsell.trigger}
+        onClose={upsell.dismiss}
+        onCTAClick={handleUpsellCTA}
+        onContinueWithoutTrial={handleContinueWithoutTrial}
+      />
 
       {/* Trial Conversion Modal */}
       <TrialConversionModal
