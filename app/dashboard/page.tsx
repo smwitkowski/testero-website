@@ -8,15 +8,21 @@ import { PracticeSummary } from "@/components/dashboard/PracticeSummary";
 import { Button } from "@/components/ui/button";
 import { colorSemantic } from "@/lib/design-system";
 import { usePostHog } from "posthog-js/react";
+import { X } from "lucide-react";
 
 // Import types from the API route
 import type { DashboardData, SuccessResponse, ErrorResponse } from "@/app/api/dashboard/route";
+
+// Import beta onboarding constants
+import { FEATURE_FLAGS, getBetaVariantContent } from "@/lib/constants/beta-onboarding";
 
 const DashboardPage = () => {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showBetaBanner, setShowBetaBanner] = useState(false);
+  const [betaVariant, setBetaVariant] = useState<'A' | 'B'>('A');
   const posthog = usePostHog();
 
   // Track dashboard page view (middleware ensures auth)
@@ -27,6 +33,24 @@ const DashboardPage = () => {
       });
     }
   }, [user, posthog]);
+
+  // Check if we should show the beta banner
+  useEffect(() => {
+    if (FEATURE_FLAGS.BETA_ONBOARDING_FLOW) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const fromBetaWelcome = urlParams.get('from') === 'beta_welcome';
+      const variant = urlParams.get('beta_variant') as 'A' | 'B' | null;
+      const dismissed = localStorage.getItem('beta_diagnostic_banner_dismissed');
+      
+      if (variant) {
+        setBetaVariant(variant === 'B' ? 'B' : 'A');
+      }
+      
+      if (fromBetaWelcome && !dismissed) {
+        setShowBetaBanner(true);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     // Middleware ensures user is authenticated
@@ -73,6 +97,33 @@ const DashboardPage = () => {
 
     fetchDashboardData();
   }, [user, posthog]);
+
+  const handleDismissBanner = () => {
+    setShowBetaBanner(false);
+    localStorage.setItem('beta_diagnostic_banner_dismissed', 'true');
+  };
+
+  const handleStartDiagnostic = async () => {
+    try {
+      const response = await fetch('/api/diagnostic/session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          examKey: 'pmle',
+          source: 'dashboard_banner',
+        }),
+      });
+
+      if (response.ok) {
+        const { sessionId } = await response.json();
+        window.location.href = `/diagnostic/${sessionId}`;
+      }
+    } catch (error) {
+      console.error('Error starting diagnostic:', error);
+    }
+  };
 
   // Show loading state
   if (!user || loading) {
@@ -134,10 +185,52 @@ const DashboardPage = () => {
     );
   }
 
+  // Get variant-specific content for banner
+  const variantContent = getBetaVariantContent(betaVariant);
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: colorSemantic.background.default }}>
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
+          {/* Beta Diagnostic Banner */}
+          {showBetaBanner && (
+            <div className="mb-6">
+              <div
+                className="rounded-lg p-4 border flex items-center justify-between"
+                style={{
+                  backgroundColor: colorSemantic.info.light,
+                  borderColor: colorSemantic.info.base + "40",
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="text-2xl">{betaVariant === 'B' ? '🎁' : '🎯'}</div>
+                  <div>
+                    <p className="font-medium" style={{ color: colorSemantic.info.dark }}>
+                      {variantContent.skipBanner.message}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleStartDiagnostic}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {variantContent.skipBanner.cta}
+                  </Button>
+                  <Button
+                    onClick={handleDismissBanner}
+                    variant="ghost"
+                    size="sm"
+                    className="p-1 h-8 w-8"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2" style={{ color: colorSemantic.text.primary }}>

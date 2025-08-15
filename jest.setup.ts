@@ -27,3 +27,10 @@ jest.mock("next/headers", () => ({
     forEach: jest.fn(),
   })),
 }));
+
+// Mock IntersectionObserver for Framer Motion animations
+global.IntersectionObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}));

@@ -12,6 +12,7 @@ export const PUBLIC_ROUTES = [
   "/reset-password",
   "/verify-email",
   "/waitlist",
+  "/beta",
   "/content",
   "/faq",
   "/diagnostic",

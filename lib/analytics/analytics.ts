@@ -89,6 +89,12 @@ export const ANALYTICS_EVENTS = {
   // Feature Discovery
   FEATURE_DISCOVERED: "feature_discovered",
   FEATURE_USED: "feature_used",
+
+  // Beta Onboarding Flow
+  BETA_STARTED: "beta_started",
+  START_DIAGNOSTIC_CLICKED: "start_diagnostic_clicked", 
+  DIAGNOSTIC_SESSION_CREATED: "diagnostic_session_created",
+  SKIP_DIAGNOSTIC_CLICKED: "skip_diagnostic_clicked",
 } as const;
 
 // User property keys for consistency
