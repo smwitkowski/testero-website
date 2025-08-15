@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider"; // Assuming this is still relevant for logged-in users
 import { usePostHog } from "posthog-js/react";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
+import { getBetaVariantForAnalytics } from "@/lib/analytics/beta-variant-helpers";
 import {
   getAnonymousSessionId,
   setAnonymousSessionId,
@@ -44,7 +45,10 @@ const DiagnosticStartPage = () => {
         // Or, for MVP, we can hardcode them if an API endpoint is too much scope now
         // Based on previous DB query, we have:
         const fetchedExams: ExamTypeOption[] = [
-          { name: "Google Professional Machine Learning Engineer", displayName: "PMLE - Professional ML Engineer (October 2024)" },
+          {
+            name: "Google Professional Machine Learning Engineer",
+            displayName: "PMLE - Professional ML Engineer (October 2024)",
+          },
           { name: "Google Cloud Digital Leader", displayName: "Google Cloud Digital Leader" },
           {
             name: "Google Cloud Professional Cloud Architect",
@@ -61,7 +65,10 @@ const DiagnosticStartPage = () => {
         setError("Could not load exam types.");
         // Fallback to a default if fetch fails
         const fallbackExams: ExamTypeOption[] = [
-          { name: "Google Professional Machine Learning Engineer", displayName: "PMLE - Professional ML Engineer (October 2024)" },
+          {
+            name: "Google Professional Machine Learning Engineer",
+            displayName: "PMLE - Professional ML Engineer (October 2024)",
+          },
         ];
         setExamTypes(fallbackExams);
         setSelectedExamName(fallbackExams[0].name);
@@ -235,6 +242,7 @@ const DiagnosticStartPage = () => {
         questionCount: numQuestions,
         userId: user?.id || null,
         isAnonymous: !user,
+        beta_variant: getBetaVariantForAnalytics(user),
       });
 
       // If it was a resumed session, the API might indicate it. For now, just redirect.
@@ -265,16 +273,13 @@ const DiagnosticStartPage = () => {
               Updated Oct 2024 exam changes
             </Badge>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            PMLE Diagnostic
-          </h1>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">PMLE Diagnostic</h1>
           <p className="text-lg text-slate-600 mb-4">
             10-minute readiness check. Updated for Oct &apos;24 changes.
           </p>
           <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 text-slate-700 text-sm">
-              <BarChart3 className="w-4 h-4" />
-              6 domains
+              <BarChart3 className="w-4 h-4" />6 domains
             </div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 text-slate-700 text-sm">
               <Target className="w-4 h-4" />
@@ -290,10 +295,12 @@ const DiagnosticStartPage = () => {
         {resumeSession && (
           <Card className="mb-6 border-blue-200 bg-blue-50">
             <CardContent className="p-4">
-              <h2 className="text-lg font-semibold text-blue-700 mb-3">Unfinished Diagnostic Found</h2>
+              <h2 className="text-lg font-semibold text-blue-700 mb-3">
+                Unfinished Diagnostic Found
+              </h2>
               <p className="text-sm text-blue-600 mb-2">
-                You have an unfinished <strong>{resumeSession.examType}</strong> diagnostic started on{" "}
-                {new Date(resumeSession.startedAt).toLocaleString()}.
+                You have an unfinished <strong>{resumeSession.examType}</strong> diagnostic started
+                on {new Date(resumeSession.startedAt).toLocaleString()}.
               </p>
               <p className="text-sm text-blue-600 mb-4">Would you like to resume or start over?</p>
               <div className="flex gap-3">
@@ -321,8 +328,9 @@ const DiagnosticStartPage = () => {
           {!user && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-700 m-0">
-                💡 <strong>No signup required!</strong> Take the diagnostic anonymously and get instant results.
-                Create an account later to save your progress and access personalized study plans.
+                💡 <strong>No signup required!</strong> Take the diagnostic anonymously and get
+                instant results. Create an account later to save your progress and access
+                personalized study plans.
               </p>
             </div>
           )}
@@ -347,12 +355,12 @@ const DiagnosticStartPage = () => {
                   </option>
                 ))}
               </select>
-              <p id="exam-helper-text" className="text-xs text-slate-500">Search or pick an exam</p>
+              <p id="exam-helper-text" className="text-xs text-slate-500">
+                Search or pick an exam
+              </p>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-700">
-                Diagnostic Length
-              </Label>
+              <Label className="text-sm font-medium text-slate-700">Diagnostic Length</Label>
               <div className="flex gap-2" role="group" aria-labelledby="question-count-label">
                 {[10, 20, 30].map((count) => (
                   <button
@@ -362,8 +370,8 @@ const DiagnosticStartPage = () => {
                     aria-pressed={numQuestions === count}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                       numQuestions === count
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        ? "bg-blue-600 text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                     }`}
                   >
                     {count}
@@ -379,7 +387,11 @@ const DiagnosticStartPage = () => {
               disabled={isButtonDisabled}
               className="w-full h-12 text-base font-medium mt-2 bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
-              {user && isAuthLoading ? "Loading user..." : loading ? "Starting..." : (
+              {user && isAuthLoading ? (
+                "Loading user..."
+              ) : loading ? (
+                "Starting..."
+              ) : (
                 <>
                   Start free diagnostic
                   <ArrowRight className="w-4 h-4 ml-2" />

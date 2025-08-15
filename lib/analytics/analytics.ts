@@ -92,11 +92,12 @@ export const ANALYTICS_EVENTS = {
 
   // Beta Onboarding Flow
   BETA_STARTED: "beta_started",
-  START_DIAGNOSTIC_CLICKED: "start_diagnostic_clicked", 
+  START_DIAGNOSTIC_CLICKED: "start_diagnostic_clicked",
   DIAGNOSTIC_SESSION_CREATED: "diagnostic_session_created",
   SKIP_DIAGNOSTIC_CLICKED: "skip_diagnostic_clicked",
   BETA_BANNER_VIEWED: "beta_banner_viewed",
   BETA_BANNER_DISMISSED: "beta_banner_dismissed",
+  INVITE_CLICKED: "invite_clicked",
 } as const;
 
 // User property keys for consistency

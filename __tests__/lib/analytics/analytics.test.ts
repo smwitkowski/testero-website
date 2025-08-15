@@ -249,6 +249,9 @@ describe("Analytics Utilities", () => {
       expect(ANALYTICS_EVENTS.DIAGNOSTIC_STARTED).toBeDefined();
       expect(ANALYTICS_EVENTS.DIAGNOSTIC_COMPLETED).toBeDefined();
 
+      // Beta onboarding events
+      expect(ANALYTICS_EVENTS.INVITE_CLICKED).toBeDefined();
+
       // Billing events
       expect(ANALYTICS_EVENTS.SUBSCRIPTION_CREATED).toBeDefined();
       expect(ANALYTICS_EVENTS.PAYMENT_FAILED).toBeDefined();
@@ -259,6 +262,70 @@ describe("Analytics Utilities", () => {
       expect(USER_PROPERTIES.EMAIL).toBe("email");
       expect(USER_PROPERTIES.PLAN_TIER).toBe("plan_tier");
       expect(USER_PROPERTIES.IS_EARLY_ACCESS).toBe("is_early_access");
+    });
+  });
+
+  describe("Beta Variant Analytics", () => {
+    it("should track INVITE_CLICKED event with beta_variant property", () => {
+      const properties = {
+        beta_variant: "A",
+        source: "beta_welcome",
+        cta_type: "start_diagnostic",
+      };
+
+      trackEvent(mockClientPostHog, ANALYTICS_EVENTS.INVITE_CLICKED, properties);
+
+      expect(mockClientPostHog.capture).toHaveBeenCalledWith(
+        ANALYTICS_EVENTS.INVITE_CLICKED,
+        properties
+      );
+    });
+
+    it("should track DIAGNOSTIC_STARTED with beta_variant property", () => {
+      const properties = {
+        beta_variant: "B",
+        exam_type: "PMLE",
+        num_questions: 20,
+      };
+
+      trackEvent(mockClientPostHog, ANALYTICS_EVENTS.DIAGNOSTIC_STARTED, properties);
+
+      expect(mockClientPostHog.capture).toHaveBeenCalledWith(
+        ANALYTICS_EVENTS.DIAGNOSTIC_STARTED,
+        properties
+      );
+    });
+
+    it("should track DIAGNOSTIC_COMPLETED with beta_variant property", () => {
+      const properties = {
+        beta_variant: "A",
+        exam_type: "PMLE",
+        score: 75,
+        duration_minutes: 15,
+      };
+
+      trackEvent(mockClientPostHog, ANALYTICS_EVENTS.DIAGNOSTIC_COMPLETED, properties);
+
+      expect(mockClientPostHog.capture).toHaveBeenCalledWith(
+        ANALYTICS_EVENTS.DIAGNOSTIC_COMPLETED,
+        properties
+      );
+    });
+
+    it("should handle beta_variant property with server-side PostHog", () => {
+      const properties = {
+        beta_variant: "B",
+        source: "beta_welcome",
+      };
+      const distinctId = "user-123";
+
+      trackEvent(mockServerPostHog, ANALYTICS_EVENTS.INVITE_CLICKED, properties, distinctId);
+
+      expect(mockServerPostHog.capture).toHaveBeenCalledWith({
+        distinctId,
+        event: ANALYTICS_EVENTS.INVITE_CLICKED,
+        properties,
+      });
     });
   });
 

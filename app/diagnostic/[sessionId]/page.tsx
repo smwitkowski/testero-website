@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider"; // Import useAuth
 import { usePostHog } from "posthog-js/react";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
+import { getBetaVariantForAnalytics } from "@/lib/analytics/beta-variant-helpers";
 
 interface Option {
   label: string;
@@ -102,6 +103,7 @@ const DiagnosticSessionPage = () => {
           questionCount: data.session?.questions?.length || 0,
           userId: user?.id || null,
           isAnonymous: !user,
+          beta_variant: getBetaVariantForAnalytics(user),
         });
 
         // Resuming logic: API should ideally provide currentQuestionIndex or completed answers
@@ -247,6 +249,7 @@ const DiagnosticSessionPage = () => {
           totalQuestions: sessionData?.questions.length || 0,
           userId: user?.id || null,
           isAnonymous: !user,
+          beta_variant: getBetaVariantForAnalytics(user),
         });
 
         // Clean up localStorage when session completes
