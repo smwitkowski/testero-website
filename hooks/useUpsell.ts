@@ -136,8 +136,14 @@ export const useUpsell = (options: UpsellOptions) => {
     setState(prev => ({ ...prev, isOpen: false, trigger: null }));
     
     // Set snooze period
-    const storageKey = user?.id ? `upsell_snooze_${user.id}` : 'upsell_snooze_anon';
-    localStorage.setItem(storageKey, Date.now().toString());
+    try {
+      if (typeof window !== 'undefined') {
+        const storageKey = user?.id ? `upsell_snooze_${user.id}` : 'upsell_snooze_anon';
+        window.localStorage.setItem(storageKey, Date.now().toString());
+      }
+    } catch {
+      // no-op
+    }
     
     // Fire analytics
     posthog?.capture('upsell_dismiss', {
