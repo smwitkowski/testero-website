@@ -40,10 +40,20 @@ const DashboardPage = () => {
       const urlParams = new URLSearchParams(window.location.search);
       const fromBetaWelcome = urlParams.get('from') === 'beta_welcome';
       const variant = urlParams.get('beta_variant') as 'A' | 'B' | null;
-      const dismissed = localStorage.getItem('beta_diagnostic_banner_dismissed');
+      let dismissed = null;
+      try {
+        dismissed = localStorage.getItem('beta_diagnostic_banner_dismissed');
+      } catch {
+        // no-op
+      }
       
       if (variant) {
         setBetaVariant(variant === 'B' ? 'B' : 'A');
+        try {
+          localStorage.setItem('beta_variant', variant === 'B' ? 'B' : 'A');
+        } catch {
+          // no-op
+        }
       }
       
       if (fromBetaWelcome && !dismissed) {
@@ -100,7 +110,11 @@ const DashboardPage = () => {
 
   const handleDismissBanner = () => {
     setShowBetaBanner(false);
-    localStorage.setItem('beta_diagnostic_banner_dismissed', 'true');
+    try {
+      localStorage.setItem('beta_diagnostic_banner_dismissed', 'true');
+    } catch {
+      // no-op
+    }
   };
 
   const handleStartDiagnostic = async () => {
@@ -215,6 +229,7 @@ const DashboardPage = () => {
                     onClick={handleStartDiagnostic}
                     size="sm"
                     className="bg-blue-600 hover:bg-blue-700"
+                    data-testid="dashboard-beta-start-btn"
                   >
                     {variantContent.skipBanner.cta}
                   </Button>
@@ -223,6 +238,7 @@ const DashboardPage = () => {
                     variant="ghost"
                     size="sm"
                     className="p-1 h-8 w-8"
+                    aria-label="Dismiss beta banner"
                   >
                     <X className="h-4 w-4" />
                   </Button>

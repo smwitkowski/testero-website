@@ -22,6 +22,6 @@ export default {
   },
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
   transformIgnorePatterns: [
-    "/node_modules/(?!(\@supabase|posthog-node|remark|remark-.*|unified|unist-.*|mdast-.*|hast-.*|rehype-.*|gray-matter)/)",
+    "/node_modules/(?!(\@supabase|posthog-node|remark|remark-.*|unified|unist-.*|mdast-.*|hast-.*|rehype-.*|gray-matter|uncrypto|@upstash)/)",
   ],
 } satisfies Config;

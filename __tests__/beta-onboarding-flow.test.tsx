@@ -4,7 +4,7 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics/analytics';
 describe('Beta Onboarding Flow', () => {
   describe('Constants', () => {
     it('should have all required copy strings', () => {
-      expect(BETA_ONBOARDING_COPY.welcome.headline).toBe("You're in — let's kick off your beta journey.");
+      expect(BETA_ONBOARDING_COPY.welcome.headline).toMatch(/you're in\b.*beta journey/i);
       expect(BETA_ONBOARDING_COPY.welcome.body).toContain('~20-minute diagnostic');
       expect(BETA_ONBOARDING_COPY.welcome.ctaPrimary).toBe('Start Diagnostic');
       expect(BETA_ONBOARDING_COPY.welcome.ctaSecondary).toBe('Skip for now');

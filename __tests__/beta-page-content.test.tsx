@@ -32,8 +32,8 @@ describe('Beta Page Content', () => {
       render(<BetaPage />);
       
       // Should have subsection headings
-      expect(screen.getByRole('heading', { name: /full access to core features/i })).toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: /beta.*only.*perks/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /^full access to core features$/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /^beta[- ]?only perks$/i })).toBeInTheDocument();
     });
   });
 

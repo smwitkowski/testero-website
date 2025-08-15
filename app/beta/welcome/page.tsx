@@ -99,6 +99,8 @@ export default function BetaWelcomePage() {
       });
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Diagnostic session creation failed:', errorData);
         throw new Error('Failed to create diagnostic session');
       }
 

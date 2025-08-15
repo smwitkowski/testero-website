@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 
 const title = "Testero Beta - What's Included | Early Access Program";
 const description = "Join the Testero Beta and get exclusive early access to our AI-powered PMLE exam preparation platform. See exactly what you'll get, our current limitations, and how to get started.";
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
     description,
     type: "website",
     locale: "en_US",
-    url: "/beta",
+    url: "https://testero.ai/beta",
     siteName: "Testero",
     images: [
       {
@@ -61,10 +62,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default function BetaLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function BetaLayout({ children }: { children: ReactNode }) {
   return children;
 }

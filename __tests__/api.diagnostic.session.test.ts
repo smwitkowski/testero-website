@@ -5,34 +5,7 @@ import { NextRequest } from 'next/server';
 
 // Mock the server-side dependencies
 jest.mock('@/lib/supabase/server', () => ({
-  createServerSupabaseClient: () => ({
-    auth: {
-      getUser: jest.fn().mockResolvedValue({
-        data: { user: { id: 'test-user-id' } }
-      })
-    },
-    from: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    single: jest.fn().mockResolvedValue({
-      data: { id: 1 },
-      error: null
-    }),
-    insert: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockResolvedValue({
-      data: [
-        {
-          id: 'q1',
-          stem: 'Test question',
-          options: [
-            { label: 'A', text: 'Option A', is_correct: true },
-            { label: 'B', text: 'Option B', is_correct: false }
-          ]
-        }
-      ],
-      error: null
-    })
-  })
+  createServerSupabaseClient: jest.fn()
 }));
 
 jest.mock('posthog-node', () => ({
@@ -77,5 +50,37 @@ describe('/api/diagnostic/session', () => {
     });
 
     expect(mockRequest.method).toBe('POST');
+  });
+
+  it('should reject unauthenticated requests with 401', async () => {
+    // Mock getUser to return null (unauthenticated)
+    const mockSupabase = {
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: null },
+          error: null
+        })
+      }
+    };
+
+    const { createServerSupabaseClient } = require('@/lib/supabase/server');
+    (createServerSupabaseClient as jest.Mock).mockReturnValue(mockSupabase);
+
+    const { POST } = require('@/app/api/diagnostic/session/route');
+    
+    const mockRequest = new NextRequest('http://localhost/api/diagnostic/session', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        examKey: 'pmle',
+        blueprintVersion: 'current',
+        source: 'beta_welcome'
+      })
+    });
+
+    const response = await POST(mockRequest);
+    expect(response.status).toBe(401);
+    
+    const responseBody = await response.json();
+    expect(responseBody.error).toBe('Authentication required');
   });
 });

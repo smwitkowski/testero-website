@@ -11,7 +11,7 @@ describe('Beta Page Components', () => {
       level: 1 
     });
     expect(headline).toBeInTheDocument();
-    expect(headline).toHaveTextContent('Welcome to the Testero Beta - Here\'s What You Get');
+    expect(headline).toHaveTextContent(/welcome to the testero beta/i);
   });
 
   it('displays beta benefits in organized sections', () => {

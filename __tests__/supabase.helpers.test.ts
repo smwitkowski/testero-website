@@ -10,6 +10,11 @@ jest.mock("next/headers", () => ({
   cookies: jest.fn(),
 }));
 
+jest.mock("@/lib/config/routes", () => ({
+  isPublicRouteForMiddleware: jest.fn((path: string) => path === "/login"),
+  isAuthRoute: jest.fn((path: string) => path === "/login"),
+}));
+
 let createBrowserClient: jest.Mock;
 let createServerClient: jest.Mock;
 let cookiesFn: jest.Mock;
@@ -118,13 +123,16 @@ describe("supabase middleware updateSession", () => {
     const req = new NextRequest("http://example.com/protected");
     const res = await updateSession(req);
     expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toBe("http://example.com/login");
+    expect(res.headers.get("location")).toBe("http://example.com/login?redirect=%2Fprotected");
     expect(supabase.auth.getUser).toHaveBeenCalled();
   });
 
-  it("returns next response when authenticated", async () => {
+  it("returns next response when authenticated with early access", async () => {
     const supabase = {
-      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 1 } }, error: null }) },
+      auth: { getUser: jest.fn().mockResolvedValue({ 
+        data: { user: { id: 1, user_metadata: { is_early_access: true } } }, 
+        error: null 
+      }) },
     };
     createServerClient.mockReturnValue(supabase);
     const { updateSession } = require("../lib/supabase/middleware");

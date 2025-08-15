@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { CheckCircle, Shield, Star, Clock, Users, Zap, Gift, AlertTriangle, MessageCircle } from 'lucide-react';
@@ -19,6 +20,20 @@ interface BetaHeadingProps {
   children: React.ReactNode;
   className?: string;
 }
+
+// Reusable navigation handler to avoid duplication
+const useNavigateToBeta = () => {
+  const router = useRouter();
+  
+  return () => {
+    const betaOnboardingEnabled = process.env.NEXT_PUBLIC_BETA_ONBOARDING_FLOW === 'true';
+    if (betaOnboardingEnabled) {
+      router.push('/beta/welcome');
+    } else {
+      router.push('/dashboard');
+    }
+  };
+};
 
 // Reusable section component
 const BetaSection: React.FC<BetaSectionProps> = ({ 
@@ -106,76 +121,70 @@ const HeroSection: React.FC = () => (
 );
 
 // CTA section component with enhanced styling and multiple buttons
-const CtaSection: React.FC = () => (
-  <BetaSection className="text-center bg-gradient-to-b from-slate-50 to-white py-16">
-    <div className="max-w-4xl mx-auto">
-      <BetaHeading level={2} className="mb-4">
-        Ready to Start Your Beta Journey?
-      </BetaHeading>
-      <p className="text-slate-600 mb-6 max-w-2xl mx-auto">
-        Join 100+ early testers already using Testero to accelerate their PMLE preparation. Limited beta spots close soon.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
-        <Button
-          data-testid="cta-button"
-          type="button"
-          size="lg"
-          className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-          onClick={() => {
-            // Check feature flag and redirect appropriately
-            const betaOnboardingEnabled = process.env.NEXT_PUBLIC_BETA_ONBOARDING_FLOW === 'true';
-            if (betaOnboardingEnabled) {
-              window.location.href = '/beta/welcome';
-            } else {
-              // Fallback to existing behavior
-              window.location.href = '/dashboard';
-            }
-          }}
-        >
-          Start Your Beta Now
-          <Zap className="ml-2 h-5 w-5" />
-        </Button>
-        <Button variant="secondary" size="lg">
-          Read Details
-          <MessageCircle className="ml-2 h-5 w-5" />
-        </Button>
+const CtaSection: React.FC = () => {
+  const handleCtaClick = useNavigateToBeta();
+  
+  return (
+    <BetaSection className="text-center bg-gradient-to-b from-slate-50 to-white py-16">
+      <div className="max-w-4xl mx-auto">
+        <BetaHeading level={2} className="mb-4">
+          Ready to Start Your Beta Journey?
+        </BetaHeading>
+        <p className="text-slate-600 mb-6 max-w-2xl mx-auto">
+          Join 100+ early testers already using Testero to accelerate their PMLE preparation. Limited beta spots close soon.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
+          <Button
+            data-testid="cta-button"
+            type="button"
+            size="lg"
+            className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+            onClick={handleCtaClick}
+          >
+            Start Your Beta Now
+            <Zap className="ml-2 h-5 w-5" />
+          </Button>
+          <Button variant="secondary" size="lg">
+            Read Details
+            <MessageCircle className="ml-2 h-5 w-5" />
+          </Button>
+        </div>
+        <p className="text-sm text-slate-600">
+          ✓ No credit card required ✓ Full access to beta features ✓ Direct founder support ✓ <span className="font-semibold text-orange-600">Limited time offer</span>
+        </p>
       </div>
-      <p className="text-sm text-slate-600">
-        ✓ No credit card required ✓ Full access to beta features ✓ Direct founder support ✓ <span className="font-semibold text-orange-600">Limited time offer</span>
-      </p>
-    </div>
-  </BetaSection>
-);
+    </BetaSection>
+  );
+};
 
 // Sticky CTA component for mobile
-const StickyMobileCTA: React.FC = () => (
-  <motion.div
-    className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50 md:hidden shadow-lg"
-    initial={{ y: 100 }}
-    animate={{ y: 0 }}
-    transition={{ duration: 0.5, delay: 1 }}
-  >
-    <Button
-      data-testid="sticky-mobile-cta"
-      type="button" 
-      size="lg"
-      className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-      onClick={() => {
-        const betaOnboardingEnabled = process.env.NEXT_PUBLIC_BETA_ONBOARDING_FLOW === 'true';
-        if (betaOnboardingEnabled) {
-          window.location.href = '/beta/welcome';
-        } else {
-          window.location.href = '/dashboard';
-        }
-      }}
+const StickyMobileCTA: React.FC = () => {
+  const handleCtaClick = useNavigateToBeta();
+  
+  return (
+    <motion.div
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50 md:hidden shadow-lg"
+      initial={{ y: 100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.5, delay: 1 }}
     >
-      Start Beta Now
-      <Zap className="ml-2 h-5 w-5" />
-    </Button>
-  </motion.div>
-);
+      <Button
+        data-testid="sticky-mobile-cta"
+        type="button" 
+        size="lg"
+        className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+        onClick={handleCtaClick}
+      >
+        Start Beta Now
+        <Zap className="ml-2 h-5 w-5" />
+      </Button>
+    </motion.div>
+  );
+};
 
 export default function BetaPage(): React.ReactElement {
+  const handleCtaClick = useNavigateToBeta();
+  
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-20 md:pb-0">
       {/* Add JSON-LD structured data */}
@@ -302,14 +311,7 @@ export default function BetaPage(): React.ReactElement {
               type="button"
               size="lg"
               className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-              onClick={() => {
-                const betaOnboardingEnabled = process.env.NEXT_PUBLIC_BETA_ONBOARDING_FLOW === 'true';
-                if (betaOnboardingEnabled) {
-                  window.location.href = '/beta/welcome';
-                } else {
-                  window.location.href = '/dashboard';
-                }
-              }}
+              onClick={handleCtaClick}
             >
               Join Beta Now
               <Zap className="ml-2 h-5 w-5" />

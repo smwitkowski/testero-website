@@ -8,6 +8,7 @@ interface CreateSessionRequest {
   blueprintVersion?: string;
   betaVariant?: "A" | "B";
   source?: string;
+  numQuestions?: number;
 }
 
 interface CreateSessionResponse {
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
 
     // Create diagnostic session using existing logic from main diagnostic endpoint
     const examType = "Google ML Engineer";
-    const numQuestions = 5; // Default for beta onboarding
+    const numQuestions = body.numQuestions || 5; // Default for beta onboarding
     const examIdToUse = 6; // PMLE exam ID
 
     // Get current exam version
