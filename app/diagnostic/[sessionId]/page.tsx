@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { usePostHog } from "posthog-js/react";
@@ -39,6 +39,8 @@ const DiagnosticSessionPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFlagged, setIsFlagged] = useState(false);
+  const [submissionErrors, setSubmissionErrors] = useState<Set<number>>(new Set());
+  const [retryQueue, setRetryQueue] = useState<Array<{questionId: number; selectedLabel: string; attempts: number}>>([]);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -145,6 +147,66 @@ const DiagnosticSessionPage = () => {
     }
   }, [sessionData, currentQuestionIndex, sessionId, posthog, user, router]);
 
+  // Background answer submission with retry logic and error tracking
+  const submitAnswerWithRetry = useCallback(async (questionId: number, selectedLabel: string, attempt: number = 1) => {
+    const maxAttempts = 3;
+    const baseDelay = 1000; // 1 second base delay
+    
+    try {
+      const response = await fetch("/api/diagnostic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "answer",
+          sessionId,
+          data: {
+            questionId,
+            selectedLabel,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Success - remove from error tracking
+      setSubmissionErrors(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(questionId);
+        return newSet;
+      });
+
+      // Remove from retry queue if it was there
+      setRetryQueue(prev => prev.filter(item => item.questionId !== questionId));
+
+    } catch (error) {
+      console.error(`Failed to submit answer for question ${questionId} (attempt ${attempt}):`, error);
+      
+      // Add to error tracking
+      setSubmissionErrors(prev => new Set(prev).add(questionId));
+
+      if (attempt < maxAttempts) {
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        
+        // Add to retry queue
+        setRetryQueue(prev => {
+          const filtered = prev.filter(item => item.questionId !== questionId);
+          return [...filtered, { questionId, selectedLabel, attempts: attempt + 1 }];
+        });
+
+        // Schedule retry
+        setTimeout(() => {
+          submitAnswerWithRetry(questionId, selectedLabel, attempt + 1);
+        }, delay);
+      } else {
+        // Max attempts reached - keep in error state for manual retry
+        console.error(`Failed to submit answer for question ${questionId} after ${maxAttempts} attempts`);
+      }
+    }
+  }, [sessionId]);
+
   const handleSubmitAnswer = useCallback(async () => {
     if (!currentQuestion || selectedOptionLabel === null) return;
 
@@ -160,26 +222,12 @@ const DiagnosticSessionPage = () => {
       isAnonymous: !user,
     });
 
-    // Submit answer in background - don't await this
-    fetch("/api/diagnostic", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "answer",
-        sessionId,
-        data: {
-          questionId: currentQuestion.id,
-          selectedLabel: selectedOptionLabel,
-        },
-      }),
-    }).catch((err) => {
-      // Log error but don't block the UI
-      console.error("Failed to submit answer:", err);
-    });
+    // Submit answer in background with retry logic
+    submitAnswerWithRetry(currentQuestion.id, selectedOptionLabel);
 
     // Immediately advance to next question
     handleNextQuestion();
-  }, [currentQuestion, selectedOptionLabel, sessionId, currentQuestionIndex, sessionData, posthog, user, handleNextQuestion]);
+  }, [currentQuestion, selectedOptionLabel, sessionId, currentQuestionIndex, sessionData, posthog, user, handleNextQuestion, submitAnswerWithRetry]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
@@ -214,10 +262,15 @@ const DiagnosticSessionPage = () => {
     }
   }, [sessionData, currentQuestionIndex, selectedOptionLabel, handleSubmitAnswer]);
 
+  // Use ref pattern to prevent memory leak from frequent event listener re-registration
+  const handleKeyDownRef = useRef(handleKeyDown);
+  handleKeyDownRef.current = handleKeyDown;
+
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+    const handler = (e: KeyboardEvent) => handleKeyDownRef.current(e);
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []); // Empty dependency array prevents unnecessary re-registration
 
 
   const handleSkip = useCallback(() => {
@@ -411,6 +464,30 @@ const DiagnosticSessionPage = () => {
                 Review all flagged questions before final submission.
               </p>
             </div>
+
+            {/* Submission status card - only show if there are errors or retries */}
+            {(submissionErrors.size > 0 || retryQueue.length > 0) && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-amber-800 mb-2">Submission Status</h3>
+                {submissionErrors.size > 0 && (
+                  <div className="mb-2">
+                    <p className="text-xs text-amber-700">
+                      {submissionErrors.size} answer{submissionErrors.size === 1 ? '' : 's'} failed to save
+                    </p>
+                  </div>
+                )}
+                {retryQueue.length > 0 && (
+                  <div className="mb-2">
+                    <p className="text-xs text-amber-700">
+                      Retrying {retryQueue.length} submission{retryQueue.length === 1 ? '' : 's'}...
+                    </p>
+                  </div>
+                )}
+                <p className="text-xs text-amber-600">
+                  Answers will be retried automatically. Continue with the test.
+                </p>
+              </div>
+            )}
           </aside>
 
           {/* Main column */}
