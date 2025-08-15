@@ -41,11 +41,10 @@ export const useTriggerDetection = (options: TriggerDetectionOptions) => {
   const checkPaywallTrigger = useCallback((actionType: 'study_plan' | 'practice') => {
     // Check if there's a free limit reached
     // This would typically check against user's usage limits
-    const hasReachedFreeLimit = false; // TODO: Implement actual limit checking
+    const hasReachedFreeLimit = false; // TODO: Implement actual limit checking from user context/subscription
     
     if (hasReachedFreeLimit) {
       // Check if there's a request in flight to prevent duplicate triggers
-      const requestKey = `${actionType}_${Date.now()}`;
       if (networkRequestsRef.current.has(actionType)) {
         return false; // Debounce - request already in flight
       }
@@ -96,8 +95,9 @@ export const useTriggerDetection = (options: TriggerDetectionOptions) => {
       // Only trigger after 45s dwell time
       if (dwellTime < 45000) return;
       
-      // Check if cursor is leaving from the top
-      if (event.clientY <= 0 && !hasTriggeredExitIntentRef.current) {
+      // Check if cursor is leaving from the top with significant upward movement
+      // This prevents false positives from small cursor movements
+      if (event.clientY <= 0 && event.movementY < -50 && !hasTriggeredExitIntentRef.current) {
         hasTriggeredExitIntentRef.current = true;
         onTrigger('exit-intent');
       }

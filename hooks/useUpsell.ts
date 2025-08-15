@@ -84,33 +84,40 @@ export const useUpsell = (options: UpsellOptions) => {
   const maybeOpen = useCallback((trigger: UpsellTrigger) => {
     if (!canShowModal()) return false;
     
-    setState(prev => ({
-      ...prev,
-      isOpen: true,
-      trigger,
-      hasShownThisSession: true,
-    }));
+    setState(prev => {
+      const newState = {
+        ...prev,
+        isOpen: true,
+        trigger,
+        hasShownThisSession: true,
+      };
 
-    // Fire analytics
-    posthog?.capture('upsell_view', {
-      trigger,
-      score: options.score,
-      dwellMs: getDwellTime(),
-      weakDomains: getWeakDomains(),
-      variant: state.variant,
-      abBucket,
+      // Fire analytics with current variant (after potential score-based updates)
+      const currentVariant = getVariantFromScore(options.score);
+      posthog?.capture('upsell_view', {
+        trigger,
+        score: options.score,
+        dwellMs: getDwellTime(),
+        weakDomains: getWeakDomains(),
+        variant: currentVariant,
+        abBucket,
+      });
+
+      return newState;
     });
 
     return true;
-  }, [canShowModal, posthog, options.score, getDwellTime, getWeakDomains, state.variant, abBucket]);
+  }, [canShowModal, posthog, options.score, getDwellTime, getWeakDomains, abBucket]);
 
   // Force open modal (for testing)
   const openNow = useCallback((variant?: UpsellVariant) => {
+    const finalVariant = variant || getVariantFromScore(options.score);
+    
     setState(prev => ({
       ...prev,
       isOpen: true,
       trigger: 'paywall', // Default trigger for forced opens
-      variant: variant || prev.variant,
+      variant: finalVariant,
       hasShownThisSession: true,
     }));
 
@@ -119,10 +126,10 @@ export const useUpsell = (options: UpsellOptions) => {
       score: options.score,
       dwellMs: getDwellTime(),
       weakDomains: getWeakDomains(),
-      variant: variant || state.variant,
+      variant: finalVariant,
       abBucket,
     });
-  }, [posthog, options.score, getDwellTime, getWeakDomains, state.variant, abBucket]);
+  }, [posthog, options.score, getDwellTime, getWeakDomains, abBucket]);
 
   // Dismiss modal and set snooze
   const dismiss = useCallback(() => {

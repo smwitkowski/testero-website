@@ -53,9 +53,15 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
       previousActiveElement.current = document.activeElement as HTMLElement;
       
       // Focus the close button when modal opens
-      setTimeout(() => {
-        closeButtonRef.current?.focus();
-      }, 100);
+      // Use requestAnimationFrame for more reliable timing
+      const focusCloseButton = () => {
+        requestAnimationFrame(() => {
+          if (closeButtonRef.current && isOpen) {
+            closeButtonRef.current.focus();
+          }
+        });
+      };
+      focusCloseButton();
       
       // Prevent body scroll
       document.body.style.overflow = 'hidden';
@@ -66,7 +72,9 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
     } else {
       // Restore focus when modal closes
       if (previousActiveElement.current) {
-        previousActiveElement.current.focus();
+        requestAnimationFrame(() => {
+          previousActiveElement.current?.focus();
+        });
       }
     }
   }, [isOpen]);
