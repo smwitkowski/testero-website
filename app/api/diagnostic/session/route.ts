@@ -2,14 +2,34 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import { PostHog } from "posthog-node";
+import { z } from "zod";
+import { checkRateLimit } from "@/lib/auth/rate-limiter";
+import { 
+  DIAGNOSTIC_CONFIG, 
+  getSessionTimeoutMs 
+} from "@/lib/constants/diagnostic-config";
 
-interface CreateSessionRequest {
-  examKey: string;
-  blueprintVersion?: string;
-  betaVariant?: "A" | "B";
-  source?: string;
-  numQuestions?: number;
-}
+// Zod schema for input validation
+const CreateSessionRequestSchema = z.object({
+  examKey: z.literal("pmle", {
+    errorMap: () => ({ message: "Only 'pmle' exam key is currently supported" })
+  }),
+  blueprintVersion: z.string().optional().default("current"),
+  betaVariant: z.enum(["A", "B"], {
+    errorMap: () => ({ message: "Beta variant must be either 'A' or 'B'" })
+  }).optional(),
+  source: z.string().min(1, "Source cannot be empty").optional().default("beta_welcome"),
+  numQuestions: z.number()
+    .int("Number of questions must be an integer")
+    .min(DIAGNOSTIC_CONFIG.MIN_QUESTION_COUNT, `Must have at least ${DIAGNOSTIC_CONFIG.MIN_QUESTION_COUNT} question`)
+    .max(DIAGNOSTIC_CONFIG.MAX_QUESTION_COUNT, `Cannot exceed ${DIAGNOSTIC_CONFIG.MAX_QUESTION_COUNT} questions`)
+    .optional()
+    .default(DIAGNOSTIC_CONFIG.BETA_QUESTION_COUNT)
+});
+
+// TypeScript interface for documentation (Zod schema is the source of truth)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type CreateSessionRequest = z.infer<typeof CreateSessionRequestSchema>;
 
 interface CreateSessionResponse {
   sessionId: string;
@@ -27,6 +47,19 @@ export async function POST(req: Request) {
   const supabase = createServerSupabaseClient();
 
   try {
+    // Extract IP address for rate limiting
+    const ip = req.headers.get("x-forwarded-for") || 
+               req.headers.get("x-real-ip") || 
+               "unknown";
+
+    // Check rate limit
+    if (!(await checkRateLimit(ip))) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     // Get authenticated user
     const {
       data: { user },
@@ -36,18 +69,46 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    // Parse request body
-    const body: CreateSessionRequest = await req.json();
-    const { examKey, blueprintVersion, betaVariant, source } = body;
-
-    // Validate exam key
-    if (examKey !== "pmle") {
-      return NextResponse.json({ error: "Invalid exam key" }, { status: 400 });
+    // Check beta access - user must have early access or explicit beta access
+    const hasEarlyAccess = user.user_metadata?.is_early_access === true;
+    const hasBetaFlag = user.user_metadata?.beta_access === true;
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    if (!isDevelopment && !hasEarlyAccess && !hasBetaFlag) {
+      return NextResponse.json(
+        { error: "Beta access required" },
+        { status: 403 }
+      );
     }
+
+    // Parse and validate request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
+
+    // Validate input using Zod schema
+    const validationResult = CreateSessionRequestSchema.safeParse(requestBody);
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors.map(err => 
+        `${err.path.join('.')}: ${err.message}`
+      ).join(', ');
+      
+      return NextResponse.json(
+        { error: `Invalid request data: ${errors}` },
+        { status: 400 }
+      );
+    }
+
+    const { examKey, blueprintVersion, betaVariant, source, numQuestions } = validationResult.data;
 
     // Create diagnostic session using existing logic from main diagnostic endpoint
     const examType = "Google ML Engineer";
-    const numQuestions = body.numQuestions || 5; // Default for beta onboarding
     const examIdToUse = 6; // PMLE exam ID
 
     // Get current exam version
@@ -74,7 +135,7 @@ export async function POST(req: Request) {
       )
       .eq("exam_version_id", currentExamVersion.id)
       .eq("is_diagnostic_eligible", true)
-      .limit(numQuestions * 5);
+      .limit(numQuestions * DIAGNOSTIC_CONFIG.QUESTION_SELECTION_MULTIPLIER);
 
     if (questionsFetchError || !dbQuestions || dbQuestions.length < numQuestions) {
       console.error("Error fetching questions:", questionsFetchError);
@@ -90,7 +151,7 @@ export async function POST(req: Request) {
       .slice(0, numQuestions);
 
     // Create session
-    const sessionExpiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+    const sessionExpiresAt = new Date(Date.now() + getSessionTimeoutMs());
     
     const { data: newSession, error: sessionError } = await supabase
       .from("diagnostics_sessions")

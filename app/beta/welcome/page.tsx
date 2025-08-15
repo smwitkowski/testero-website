@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,69 @@ export default function BetaWelcomePage() {
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [betaVariant, setBetaVariant] = useState<'A' | 'B' | null>('A');
+
+  // Beta access check - uses user metadata to determine access
+  const hasBetaAccess = useCallback(() => {
+    if (!user) return false;
+    
+    // Check if user has early access (which includes beta access)
+    const hasEarlyAccess = user.user_metadata?.is_early_access === true;
+    
+    // Check if user has explicit beta access flag
+    const hasBetaFlag = user.user_metadata?.beta_access === true;
+    
+    // For development/testing, allow any authenticated user
+    if (process.env.NODE_ENV === 'development') {
+      return true;
+    }
+    
+    return hasEarlyAccess || hasBetaFlag;
+  }, [user]);
+
+  // Fetch beta variant from server (secure assignment)
+  const fetchBetaVariant = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const response = await fetch('/api/beta/variant', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const { variant } = await response.json();
+        setBetaVariant(variant);
+        
+        // Track page view with assigned variant
+        const urlParams = new URLSearchParams(window.location.search);
+        trackEvent(posthog, ANALYTICS_EVENTS.BETA_STARTED, {
+          user_id: user.id,
+          beta_variant: variant,
+          utm_source: urlParams.get('utm_source'),
+          utm_campaign: urlParams.get('utm_campaign'),
+          has_gift_card_incentive: shouldShowGiftCardIncentive(variant),
+          variant_source: 'server_assigned'
+        });
+      } else {
+        // Fallback to variant A if server assignment fails
+        console.warn('Failed to fetch beta variant from server, using fallback');
+        setBetaVariant('A');
+        
+        trackEvent(posthog, ANALYTICS_EVENTS.BETA_STARTED, {
+          user_id: user.id,
+          beta_variant: 'A',
+          has_gift_card_incentive: shouldShowGiftCardIncentive('A'),
+          variant_source: 'fallback'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching beta variant:', error);
+      // Fallback to variant A
+      setBetaVariant('A');
+    }
+  }, [user, posthog]);
 
   useEffect(() => {
     // Check feature flag
@@ -47,28 +110,11 @@ export default function BetaWelcomePage() {
       return;
     }
 
-    // Extract beta variant and track page view
+    // Get beta variant from server and track page view
     if (user) {
-      const urlParams = new URLSearchParams(window.location.search);
-      const variant = urlParams.get('beta_variant') as 'A' | 'B' | null;
-      setBetaVariant(variant === 'B' ? 'B' : 'A');
-      
-      trackEvent(posthog, ANALYTICS_EVENTS.BETA_STARTED, {
-        user_id: user.id,
-        beta_variant: variant || 'A',
-        utm_source: urlParams.get('utm_source'),
-        utm_campaign: urlParams.get('utm_campaign'),
-        has_gift_card_incentive: shouldShowGiftCardIncentive(variant),
-      });
+      fetchBetaVariant();
     }
-  }, [user, isLoading, router, posthog]);
-
-  // Placeholder beta access check - implement based on your access logic
-  const hasBetaAccess = () => {
-    // For now, assume all authenticated users have beta access
-    // In production, check user.user_metadata.beta_access or similar
-    return true;
-  };
+  }, [user, isLoading, router, posthog, fetchBetaVariant, hasBetaAccess]);
 
   const handleStartDiagnostic = async () => {
     if (!user) return;
