@@ -1,7 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 import { usePostHog } from "posthog-js/react";
@@ -16,31 +15,12 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// List of routes that don't require authentication
-const publicRoutes = [
-  "/",
-  "/login",
-  "/signup",
-  "/forgot-password",
-  "/reset-password",
-  "/verify-email",
-  "/waitlist",
-  "/content",
-  "/faq",
-  "/diagnostic",
-  "/study-path", // Keep public for preview mode
-  "/pricing",
-  "/blog",
-];
-// List of routes that should redirect to dashboard if already authenticated
-const authRoutes = ["/login", "/signup", "/forgot-password", "/reset-password", "/verify-email"];
+// Route protection is now handled by middleware
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-  const pathname = usePathname();
   const posthog = usePostHog();
 
   useEffect(() => {
@@ -77,57 +57,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle routing based on authentication status
-  useEffect(() => {
-    // Skip during initial load or when no pathname
-    if (isLoading || !pathname) return;
-
-    const isPublicRoute = publicRoutes.some(
-      (route) => pathname === route || pathname.startsWith(`${route}/`)
-    );
-
-    const isAuthRoute = authRoutes.some(
-      (route) => pathname === route || pathname.startsWith(`${route}/`)
-    );
-
-    console.log("[Auth Routing]", {
-      pathname,
-      isPublicRoute,
-      isAuthRoute,
-      isAuthenticated: !!session,
-      userMetadata: session?.user?.user_metadata,
-      isEarlyAccess: session?.user?.user_metadata?.is_early_access === true,
-    });
-
-    // If user is authenticated
-    if (session) {
-      // If on an auth route, redirect to the main app page
-      if (isAuthRoute) {
-        console.log("[Auth Routing] Redirecting from auth route to dashboard");
-        router.push("/dashboard");
-      } else if (!isPublicRoute) {
-        // If on a protected route, check early access flag
-        const isEarlyAccess = session.user?.user_metadata?.is_early_access === true;
-        if (!isEarlyAccess) {
-          // Redirect users who are logged in but not in early access
-          console.log("[Auth Routing] User not in early access, redirecting to coming soon page");
-          router.push("/early-access-coming-soon"); // Redirect to a specific page
-        } else {
-          console.log("[Auth Routing] User has early access, allowing access to protected route");
-        }
-        // If they have early access, they stay on the protected page
-      }
-      // If on a public route and authenticated, they can stay on the public route
-    } else {
-      // If user is NOT authenticated
-      // If on a protected route, redirect to login
-      if (!isPublicRoute) {
-        console.log("[Auth Routing] Unauthenticated user on protected route, redirecting to login");
-        router.push("/login");
-      }
-      // If on a public route and not authenticated, they can stay on the public route
-    }
-  }, [isLoading, session, pathname, router]); // Dependencies remain the same
 
   const handleSessionChange = (newSession: Session | null) => {
     setSession(newSession);
@@ -171,8 +100,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(null);
       setUser(null);
 
-      // Redirect to login
-      router.push("/login");
+      // Redirect will be handled by middleware
+      window.location.href = "/login";
     } catch (error) {
       console.error("Error signing out:", error);
     } finally {
