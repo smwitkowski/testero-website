@@ -32,10 +32,10 @@ export const useUpsell = (options: UpsellOptions) => {
     hasShownThisSession: false,
   });
 
-  // A/B test holdout (10-20% no modal)
-  const abBucket = posthog?.getFeatureFlag('upsell_modal_test') || 'control';
+  // A/B test holdout (10–20% no modal)
+  const rawFlag = posthog?.getFeatureFlag('upsell_modal_test');
+  const abBucket = typeof rawFlag === 'string' ? rawFlag : rawFlag ? 'treatment' : 'control';
   const isInHoldout = abBucket === 'holdout';
-
   // Check if user is in snooze period
   const isInSnooze = useCallback(() => {
     const storageKey = user?.id ? `upsell_snooze_${user.id}` : 'upsell_snooze_anon';
