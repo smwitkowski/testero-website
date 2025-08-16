@@ -92,11 +92,16 @@ export const ANALYTICS_EVENTS = {
 
   // Beta Onboarding Flow
   BETA_STARTED: "beta_started",
-  START_DIAGNOSTIC_CLICKED: "start_diagnostic_clicked", 
+  START_DIAGNOSTIC_CLICKED: "start_diagnostic_clicked",
   DIAGNOSTIC_SESSION_CREATED: "diagnostic_session_created",
   SKIP_DIAGNOSTIC_CLICKED: "skip_diagnostic_clicked",
   BETA_BANNER_VIEWED: "beta_banner_viewed",
   BETA_BANNER_DISMISSED: "beta_banner_dismissed",
+
+  // Email Campaign Events
+  EMAIL_CAMPAIGN_LANDING: "email_campaign_landing",
+  CAMPAIGN_ATTRIBUTION_SET: "campaign_attribution_set",
+  EMAIL_CAMPAIGN_TRACKING_PIXEL_LOADED: "email_campaign_tracking_pixel_loaded",
 } as const;
 
 // User property keys for consistency
