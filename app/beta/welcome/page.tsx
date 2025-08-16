@@ -1,15 +1,25 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/providers/AuthProvider';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { CheckCircle, Zap, Clock, ArrowRight, AlertTriangle } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { usePostHog } from 'posthog-js/react';
-import { BETA_ONBOARDING_COPY, FEATURE_FLAGS, getBetaVariantContent, shouldShowGiftCardIncentive } from '@/lib/constants/beta-onboarding';
-import { trackEvent, ANALYTICS_EVENTS } from '@/lib/analytics/analytics';
+import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { CheckCircle, Zap, Clock, ArrowRight, AlertTriangle } from "lucide-react";
+import { motion } from "framer-motion";
+import { usePostHog } from "posthog-js/react";
+import {
+  BETA_ONBOARDING_COPY,
+  FEATURE_FLAGS,
+  getBetaVariantContent,
+  shouldShowGiftCardIncentive,
+} from "@/lib/constants/beta-onboarding";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
+import {
+  setCampaignAttributionFromURL,
+  trackCampaignLanding,
+  trackDiagnosticStartWithCampaign,
+} from "@/lib/analytics/campaign-analytics-integration";
 
 export default function BetaWelcomePage() {
   const { user, isLoading } = useAuth();
@@ -17,23 +27,23 @@ export default function BetaWelcomePage() {
   const posthog = usePostHog();
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [betaVariant, setBetaVariant] = useState<'A' | 'B' | null>('A');
+  const [betaVariant, setBetaVariant] = useState<"A" | "B" | null>("A");
 
   // Beta access check - uses user metadata to determine access
   const hasBetaAccess = useCallback(() => {
     if (!user) return false;
-    
+
     // Check if user has early access (which includes beta access)
     const hasEarlyAccess = user.user_metadata?.is_early_access === true;
-    
+
     // Check if user has explicit beta access flag
     const hasBetaFlag = user.user_metadata?.beta_access === true;
-    
+
     // For development/testing, allow any authenticated user
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       return true;
     }
-    
+
     return hasEarlyAccess || hasBetaFlag;
   }, [user]);
 
@@ -42,59 +52,67 @@ export default function BetaWelcomePage() {
     if (!user) return;
 
     try {
-      const response = await fetch('/api/beta/variant', {
-        method: 'GET',
+      const response = await fetch("/api/beta/variant", {
+        method: "GET",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
       if (response.ok) {
         const { variant } = await response.json();
         setBetaVariant(variant);
-        
+
         // Track page view with assigned variant
         const urlParams = new URLSearchParams(window.location.search);
         trackEvent(posthog, ANALYTICS_EVENTS.BETA_STARTED, {
           user_id: user.id,
           beta_variant: variant,
-          utm_source: urlParams.get('utm_source'),
-          utm_campaign: urlParams.get('utm_campaign'),
+          utm_source: urlParams.get("utm_source"),
+          utm_campaign: urlParams.get("utm_campaign"),
           has_gift_card_incentive: shouldShowGiftCardIncentive(variant),
-          variant_source: 'server_assigned'
+          variant_source: "server_assigned",
         });
       } else {
         // Fallback to variant A if server assignment fails
-        console.warn('Failed to fetch beta variant from server, using fallback');
-        setBetaVariant('A');
-        
+        console.warn("Failed to fetch beta variant from server, using fallback");
+        setBetaVariant("A");
+
         trackEvent(posthog, ANALYTICS_EVENTS.BETA_STARTED, {
           user_id: user.id,
-          beta_variant: 'A',
-          has_gift_card_incentive: shouldShowGiftCardIncentive('A'),
-          variant_source: 'fallback'
+          beta_variant: "A",
+          has_gift_card_incentive: shouldShowGiftCardIncentive("A"),
+          variant_source: "fallback",
         });
       }
     } catch (error) {
-      console.error('Error fetching beta variant:', error);
+      console.error("Error fetching beta variant:", error);
       // Fallback to variant A
-      setBetaVariant('A');
+      setBetaVariant("A");
     }
   }, [user, posthog]);
 
   useEffect(() => {
     // Check feature flag
     if (!FEATURE_FLAGS.BETA_ONBOARDING_FLOW) {
-      router.push('/beta');
+      router.push("/beta");
       return;
+    }
+
+    // Set up campaign attribution from URL parameters
+    const campaignParams = setCampaignAttributionFromURL(posthog, user?.id);
+
+    // Track campaign landing if parameters were found
+    if (campaignParams && posthog) {
+      trackCampaignLanding(posthog, campaignParams, user?.id);
     }
 
     // Redirect if not authenticated
     if (!isLoading && !user) {
       // Preserve UTM parameters and beta variant
       const searchParams = new URLSearchParams(window.location.search);
-      const loginUrl = `/login?redirect=${encodeURIComponent('/beta/welcome')}`;
-      
+      const loginUrl = `/login?redirect=${encodeURIComponent("/beta/welcome")}`;
+
       // Preserve UTM and beta variant parameters
       if (searchParams.toString()) {
         router.push(`${loginUrl}&${searchParams.toString()}`);
@@ -106,7 +124,7 @@ export default function BetaWelcomePage() {
 
     // Check beta access (placeholder - implement based on your beta access logic)
     if (user && !hasBetaAccess()) {
-      router.push('/beta?error=no_access');
+      router.push("/beta?error=no_access");
       return;
     }
 
@@ -123,31 +141,37 @@ export default function BetaWelcomePage() {
     setError(null);
 
     try {
-      // Track click event
-      trackEvent(posthog, ANALYTICS_EVENTS.START_DIAGNOSTIC_CLICKED, {
-        user_id: user.id,
-        beta_variant: betaVariant,
-        has_gift_card_incentive: shouldShowGiftCardIncentive(betaVariant),
-      });
+      // Track click event with campaign attribution
+      trackDiagnosticStartWithCampaign(
+        posthog,
+        {
+          user_id: user.id,
+          beta_variant: betaVariant,
+          has_gift_card_incentive: shouldShowGiftCardIncentive(betaVariant),
+          source: "beta_welcome",
+          exam_type: "pmle",
+        },
+        user.id
+      );
 
       // Create diagnostic session
-      const response = await fetch('/api/diagnostic/session', {
-        method: 'POST',
+      const response = await fetch("/api/diagnostic/session", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          examKey: 'pmle',
-          blueprintVersion: 'current',
+          examKey: "pmle",
+          blueprintVersion: "current",
           betaVariant: betaVariant,
-          source: 'beta_welcome',
+          source: "beta_welcome",
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Diagnostic session creation failed:', errorData);
-        throw new Error('Failed to create diagnostic session');
+        console.error("Diagnostic session creation failed:", errorData);
+        throw new Error("Failed to create diagnostic session");
       }
 
       const { sessionId } = await response.json();
@@ -155,7 +179,7 @@ export default function BetaWelcomePage() {
       // Redirect to diagnostic session
       router.push(`/diagnostic/${sessionId}`);
     } catch (err) {
-      console.error('Error creating diagnostic session:', err);
+      console.error("Error creating diagnostic session:", err);
       setError(BETA_ONBOARDING_COPY.errors.sessionCreateFailed);
     } finally {
       setIsCreatingSession(false);
@@ -173,7 +197,7 @@ export default function BetaWelcomePage() {
     });
 
     // Redirect to dashboard
-    router.push('/dashboard?from=beta_welcome');
+    router.push("/dashboard?from=beta_welcome");
   };
 
   // Loading state
@@ -207,15 +231,13 @@ export default function BetaWelcomePage() {
           >
             <div className="inline-flex items-center gap-2 bg-green-100 border border-green-200 rounded-full px-4 py-2 mb-6">
               <CheckCircle className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-semibold text-green-700">
-                Beta Access Confirmed
-              </span>
+              <span className="text-sm font-semibold text-green-700">Beta Access Confirmed</span>
             </div>
-            
+
             <h1 className="text-4xl font-bold text-slate-900 mb-4">
               {BETA_ONBOARDING_COPY.welcome.headline}
             </h1>
-            
+
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
               {BETA_ONBOARDING_COPY.welcome.body}
             </p>
@@ -236,15 +258,19 @@ export default function BetaWelcomePage() {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   {BETA_ONBOARDING_COPY.progressSteps.map((step, index) => (
                     <div key={step} className="flex items-center gap-3">
-                      <div className={`
+                      <div
+                        className={`
                         flex items-center justify-center w-8 h-8 rounded-full font-semibold text-sm
-                        ${index === 0 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'}
-                      `}>
+                        ${index === 0 ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-600"}
+                      `}
+                      >
                         {index + 1}
                       </div>
-                      <span className={`
-                        ${index === 0 ? 'text-blue-600 font-semibold' : 'text-slate-600'}
-                      `}>
+                      <span
+                        className={`
+                        ${index === 0 ? "text-blue-600 font-semibold" : "text-slate-600"}
+                      `}
+                      >
                         {step}
                       </span>
                       {index < BETA_ONBOARDING_COPY.progressSteps.length - 1 && (
@@ -292,15 +318,11 @@ export default function BetaWelcomePage() {
                       {BETA_ONBOARDING_COPY.welcome.timeEstimate}
                     </span>
                   </div>
-                  
-                  <h3 className="text-2xl font-semibold text-slate-900 mb-4">
-                    Ready to start?
-                  </h3>
-                  
-                  <p className="text-slate-600 mb-8">
-                    {variantContent.progressDescription}
-                  </p>
-                  
+
+                  <h3 className="text-2xl font-semibold text-slate-900 mb-4">Ready to start?</h3>
+
+                  <p className="text-slate-600 mb-8">{variantContent.progressDescription}</p>
+
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <Button
                       onClick={handleStartDiagnostic}
@@ -320,7 +342,7 @@ export default function BetaWelcomePage() {
                         </>
                       )}
                     </Button>
-                    
+
                     <Button
                       onClick={handleSkipDiagnostic}
                       variant="outline"
@@ -330,7 +352,7 @@ export default function BetaWelcomePage() {
                       {BETA_ONBOARDING_COPY.welcome.ctaSecondary}
                     </Button>
                   </div>
-                  
+
                   {showGiftCard && variantContent.incentiveText && (
                     <div className="mt-6 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg">
                       <div className="flex items-center gap-2">
