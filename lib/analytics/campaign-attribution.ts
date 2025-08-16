@@ -86,3 +86,88 @@ export function parseCampaignParams(url: string): CampaignParams {
     };
   }
 }
+
+/**
+ * Storage key for campaign attribution in sessionStorage
+ */
+const CAMPAIGN_ATTRIBUTION_KEY = "testero_campaign_attribution";
+
+/**
+ * Stores campaign attribution parameters in sessionStorage
+ *
+ * @param attribution - Campaign parameters to store
+ * @param merge - If true, merge with existing attribution instead of replacing
+ */
+export function storeCampaignAttribution(attribution: CampaignParams, merge = false): void {
+  if (typeof window === "undefined") return; // SSR safety
+
+  try {
+    let dataToStore = attribution;
+
+    if (merge) {
+      const existing = getCampaignAttribution();
+      if (existing) {
+        dataToStore = { ...existing, ...attribution };
+      }
+    }
+
+    window.sessionStorage.setItem(CAMPAIGN_ATTRIBUTION_KEY, JSON.stringify(dataToStore));
+  } catch (error) {
+    console.warn("Failed to store campaign attribution:", error);
+  }
+}
+
+/**
+ * Retrieves campaign attribution parameters from sessionStorage
+ *
+ * @returns Campaign parameters or null if none stored/error
+ */
+export function getCampaignAttribution(): CampaignParams | null {
+  if (typeof window === "undefined") return null; // SSR safety
+
+  try {
+    const stored = window.sessionStorage.getItem(CAMPAIGN_ATTRIBUTION_KEY);
+    if (!stored) return null;
+
+    return JSON.parse(stored) as CampaignParams;
+  } catch (error) {
+    console.warn("Failed to retrieve campaign attribution:", error);
+    return null;
+  }
+}
+
+/**
+ * Clears campaign attribution from sessionStorage
+ */
+export function clearCampaignAttribution(): void {
+  if (typeof window === "undefined") return; // SSR safety
+
+  try {
+    window.sessionStorage.removeItem(CAMPAIGN_ATTRIBUTION_KEY);
+  } catch (error) {
+    console.warn("Failed to clear campaign attribution:", error);
+  }
+}
+
+/**
+ * Adds campaign attribution to an analytics event object
+ * Only adds values that don't already exist in the event
+ *
+ * @param event - The analytics event object
+ * @returns Enhanced event with campaign attribution
+ */
+export function addCampaignAttributionToEvent<T extends Record<string, any>>(event: T): T {
+  const attribution = getCampaignAttribution();
+  if (!attribution) return event;
+
+  const enhanced = { ...event };
+
+  // Only add attribution values that aren't already in the event and aren't undefined
+  Object.entries(attribution).forEach(([key, value]) => {
+    if (value !== undefined && !(key in enhanced)) {
+      enhanced[key] = value;
+    }
+  });
+
+  return enhanced;
+}
