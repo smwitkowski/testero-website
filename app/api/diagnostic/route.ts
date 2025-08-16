@@ -4,6 +4,8 @@ import {
   getAnonymousSessionIdFromCookie,
   setAnonymousSessionIdCookie,
 } from "@/lib/auth/anonymous-session-server";
+import { trackDiagnosticCompleteWithCampaign } from "@/lib/analytics/campaign-analytics-integration";
+import { PostHog } from "posthog-node";
 
 // Types for better type safety
 
@@ -13,6 +15,11 @@ import {
 const SESSION_TIMEOUT_MINUTES = 30; // Can be adjusted, e.g., 24 * 60 for anonymous
 const MAX_QUESTIONS = 20;
 const MIN_QUESTIONS = 1;
+
+// Initialize PostHog for server-side analytics
+const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY || "", {
+  host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
+});
 
 // Utility functions
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -552,6 +559,21 @@ export async function POST(req: Request) {
           console.error("Error marking session complete:", updateSessionError);
           // Continue to return results even if update fails, but log it
         }
+
+        // Track diagnostic completion with campaign attribution
+        trackDiagnosticCompleteWithCampaign(
+          posthog,
+          {
+            session_id: sessionId,
+            exam_type: completeDbSession.exam_type,
+            total_questions: totalQuestionsInSession,
+            correct_answers: correctAnswers,
+            score: Math.round(score),
+            completion_time_ms: Date.now(), // Could calculate based on session start
+            user_id: completeDbSession.user_id,
+          },
+          completeDbSession.user_id || undefined
+        );
 
         // Simplified recommendations
         const recommendations = ["Focus on areas where you were unsure."];

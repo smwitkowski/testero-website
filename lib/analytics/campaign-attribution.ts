@@ -160,12 +160,12 @@ export function addCampaignAttributionToEvent<T extends Record<string, any>>(eve
   const attribution = getCampaignAttribution();
   if (!attribution) return event;
 
-  const enhanced = { ...event };
+  const enhanced = { ...event } as T;
 
   // Only add attribution values that aren't already in the event and aren't undefined
   Object.entries(attribution).forEach(([key, value]) => {
     if (value !== undefined && !(key in enhanced)) {
-      enhanced[key] = value;
+      (enhanced as any)[key] = value;
     }
   });
 

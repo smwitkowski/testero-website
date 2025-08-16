@@ -1,30 +1,37 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
+import { trackDiagnosticStartWithCampaign } from "@/lib/analytics/campaign-analytics-integration";
 import { PostHog } from "posthog-node";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
-import { 
-  DIAGNOSTIC_CONFIG, 
-  getSessionTimeoutMs 
-} from "@/lib/constants/diagnostic-config";
+import { DIAGNOSTIC_CONFIG, getSessionTimeoutMs } from "@/lib/constants/diagnostic-config";
 
 // Zod schema for input validation
 const CreateSessionRequestSchema = z.object({
   examKey: z.literal("pmle", {
-    errorMap: () => ({ message: "Only 'pmle' exam key is currently supported" })
+    errorMap: () => ({ message: "Only 'pmle' exam key is currently supported" }),
   }),
   blueprintVersion: z.string().optional().default("current"),
-  betaVariant: z.enum(["A", "B"], {
-    errorMap: () => ({ message: "Beta variant must be either 'A' or 'B'" })
-  }).optional(),
+  betaVariant: z
+    .enum(["A", "B"], {
+      errorMap: () => ({ message: "Beta variant must be either 'A' or 'B'" }),
+    })
+    .optional(),
   source: z.string().min(1, "Source cannot be empty").optional().default("beta_welcome"),
-  numQuestions: z.number()
+  numQuestions: z
+    .number()
     .int("Number of questions must be an integer")
-    .min(DIAGNOSTIC_CONFIG.MIN_QUESTION_COUNT, `Must have at least ${DIAGNOSTIC_CONFIG.MIN_QUESTION_COUNT} question`)
-    .max(DIAGNOSTIC_CONFIG.MAX_QUESTION_COUNT, `Cannot exceed ${DIAGNOSTIC_CONFIG.MAX_QUESTION_COUNT} questions`)
+    .min(
+      DIAGNOSTIC_CONFIG.MIN_QUESTION_COUNT,
+      `Must have at least ${DIAGNOSTIC_CONFIG.MIN_QUESTION_COUNT} question`
+    )
+    .max(
+      DIAGNOSTIC_CONFIG.MAX_QUESTION_COUNT,
+      `Cannot exceed ${DIAGNOSTIC_CONFIG.MAX_QUESTION_COUNT} questions`
+    )
     .optional()
-    .default(DIAGNOSTIC_CONFIG.BETA_QUESTION_COUNT)
+    .default(DIAGNOSTIC_CONFIG.BETA_QUESTION_COUNT),
 });
 
 // TypeScript interface for documentation (Zod schema is the source of truth)
@@ -36,21 +43,16 @@ interface CreateSessionResponse {
 }
 
 // Initialize PostHog for server-side analytics
-const posthog = new PostHog(
-  process.env.NEXT_PUBLIC_POSTHOG_KEY || "",
-  {
-    host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
-  }
-);
+const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY || "", {
+  host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
+});
 
 export async function POST(req: Request) {
   const supabase = createServerSupabaseClient();
 
   try {
     // Extract IP address for rate limiting
-    const ip = req.headers.get("x-forwarded-for") || 
-               req.headers.get("x-real-ip") || 
-               "unknown";
+    const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
 
     // Check rate limit
     if (!(await checkRateLimit(ip))) {
@@ -72,13 +74,10 @@ export async function POST(req: Request) {
     // Check beta access - user must have early access or explicit beta access
     const hasEarlyAccess = user.user_metadata?.is_early_access === true;
     const hasBetaFlag = user.user_metadata?.beta_access === true;
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    
+    const isDevelopment = process.env.NODE_ENV === "development";
+
     if (!isDevelopment && !hasEarlyAccess && !hasBetaFlag) {
-      return NextResponse.json(
-        { error: "Beta access required" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Beta access required" }, { status: 403 });
     }
 
     // Parse and validate request body
@@ -86,23 +85,17 @@ export async function POST(req: Request) {
     try {
       requestBody = await req.json();
     } catch {
-      return NextResponse.json(
-        { error: "Invalid JSON in request body" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
     }
 
     // Validate input using Zod schema
     const validationResult = CreateSessionRequestSchema.safeParse(requestBody);
     if (!validationResult.success) {
-      const errors = validationResult.error.errors.map(err => 
-        `${err.path.join('.')}: ${err.message}`
-      ).join(', ');
-      
-      return NextResponse.json(
-        { error: `Invalid request data: ${errors}` },
-        { status: 400 }
-      );
+      const errors = validationResult.error.errors
+        .map((err) => `${err.path.join(".")}: ${err.message}`)
+        .join(", ");
+
+      return NextResponse.json({ error: `Invalid request data: ${errors}` }, { status: 400 });
     }
 
     const { examKey, blueprintVersion, betaVariant, source, numQuestions } = validationResult.data;
@@ -130,9 +123,7 @@ export async function POST(req: Request) {
     // Fetch diagnostic questions
     const { data: dbQuestions, error: questionsFetchError } = await supabase
       .from("questions")
-      .select(
-        "id, stem, topic, difficulty, options(label, text, is_correct), explanations(text)"
-      )
+      .select("id, stem, topic, difficulty, options(label, text, is_correct), explanations(text)")
       .eq("exam_version_id", currentExamVersion.id)
       .eq("is_diagnostic_eligible", true)
       .limit(numQuestions * DIAGNOSTIC_CONFIG.QUESTION_SELECTION_MULTIPLIER);
@@ -146,13 +137,11 @@ export async function POST(req: Request) {
     }
 
     // Randomize and select questions
-    const selectedQuestions = dbQuestions
-      .sort(() => 0.5 - Math.random())
-      .slice(0, numQuestions);
+    const selectedQuestions = dbQuestions.sort(() => 0.5 - Math.random()).slice(0, numQuestions);
 
     // Create session
     const sessionExpiresAt = new Date(Date.now() + getSessionTimeoutMs());
-    
+
     const { data: newSession, error: sessionError } = await supabase
       .from("diagnostics_sessions")
       .insert({
@@ -169,10 +158,7 @@ export async function POST(req: Request) {
 
     if (sessionError || !newSession) {
       console.error("Error creating session:", sessionError);
-      return NextResponse.json(
-        { error: "Failed to start diagnostic session." },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to start diagnostic session." }, { status: 500 });
     }
 
     // Create question snapshots
@@ -196,16 +182,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // Track analytics event
-    trackEvent(
+    // Track analytics event with campaign attribution
+    trackDiagnosticStartWithCampaign(
       posthog,
-      ANALYTICS_EVENTS.DIAGNOSTIC_SESSION_CREATED,
       {
         session_id: newSession.id,
         exam_key: examKey,
+        exam_type: examType,
         blueprint_version: blueprintVersion || "current",
         source: source || "beta_welcome",
         beta_variant: betaVariant,
+        question_count: selectedQuestions.length,
         user_id: user.id,
       },
       user.id
@@ -214,9 +201,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ sessionId: newSession.id } as CreateSessionResponse);
   } catch (error) {
     console.error("Error creating diagnostic session:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
