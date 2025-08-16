@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
+// Analytics imports for future use
 import { trackDiagnosticStartWithCampaign } from "@/lib/analytics/campaign-analytics-integration";
 import { PostHog } from "posthog-node";
 import { z } from "zod";

@@ -156,7 +156,7 @@ export function clearCampaignAttribution(): void {
  * @param event - The analytics event object
  * @returns Enhanced event with campaign attribution
  */
-export function addCampaignAttributionToEvent<T extends Record<string, any>>(event: T): T {
+export function addCampaignAttributionToEvent<T extends Record<string, unknown>>(event: T): T {
   const attribution = getCampaignAttribution();
   if (!attribution) return event;
 
@@ -165,7 +165,7 @@ export function addCampaignAttributionToEvent<T extends Record<string, any>>(eve
   // Only add attribution values that aren't already in the event and aren't undefined
   Object.entries(attribution).forEach(([key, value]) => {
     if (value !== undefined && !(key in enhanced)) {
-      (enhanced as any)[key] = value;
+      (enhanced as Record<string, unknown>)[key] = value;
     }
   });
 

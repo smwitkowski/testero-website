@@ -55,7 +55,7 @@ export interface CampaignInsightResult {
  */
 export interface CampaignInsightsResult {
   query: string;
-  results: Array<Record<string, any>>;
+  results: Array<Record<string, unknown>>;
 }
 
 /**
@@ -71,11 +71,11 @@ export interface CampaignDashboardUpdateResult {
  * PostHog MCP interface for type safety
  */
 export interface PostHogMCP {
-  "insight-create-from-query": (params: any) => Promise<any>;
-  "dashboard-create": (params: any) => Promise<any>;
-  "dashboard-get": (params: any) => Promise<any>;
-  "add-insight-to-dashboard": (params: any) => Promise<any>;
-  "get-sql-insight": (params: any) => Promise<any>;
+  "insight-create-from-query": (params: unknown) => Promise<unknown>;
+  "dashboard-create": (params: unknown) => Promise<unknown>;
+  "dashboard-get": (params: unknown) => Promise<unknown>;
+  "add-insight-to-dashboard": (params: unknown) => Promise<unknown>;
+  "get-sql-insight": (params: unknown) => Promise<unknown>;
 }
 
 /**
@@ -95,8 +95,10 @@ export async function createCampaignDashboard(
     },
   });
 
-  const dashboardId = dashboardResponse.id;
-  const dashboardUrl = dashboardResponse.url || `https://app.posthog.com/dashboard/${dashboardId}`;
+  const dashboardId = (dashboardResponse as { id: string }).id;
+  const dashboardUrl =
+    (dashboardResponse as { url?: string }).url ||
+    `https://app.posthog.com/dashboard/${dashboardId}`;
 
   // Create all insights and add them to the dashboard
   const insights: Array<{ id: string; name: string; url: string }> = [];
@@ -159,9 +161,9 @@ export async function createCampaignInsights(
   });
 
   return {
-    id: response.id,
-    name: response.name,
-    short_id: response.short_id,
+    id: (response as { id: string }).id,
+    name: (response as { name: string }).name,
+    short_id: (response as { short_id?: string }).short_id,
   };
 }
 
@@ -177,8 +179,8 @@ export async function getCampaignInsights(
   });
 
   return {
-    query: response.query,
-    results: response.results,
+    query: (response as { query?: string }).query || "No query generated",
+    results: (response as { results?: Array<Record<string, unknown>> }).results || [],
   };
 }
 
@@ -209,6 +211,6 @@ export async function updateCampaignDashboard(
   return {
     dashboardId,
     newInsightId: newInsight.id,
-    totalInsights: (dashboardData.insights?.length || 0) + 1,
+    totalInsights: ((dashboardData as { insights?: unknown[] }).insights?.length || 0) + 1,
   };
 }

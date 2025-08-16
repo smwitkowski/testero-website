@@ -1,7 +1,6 @@
 import {
   parseCampaignParams,
   storeCampaignAttribution,
-  getCampaignAttribution,
   addCampaignAttributionToEvent,
   CampaignParams,
 } from "./campaign-attribution";
@@ -39,7 +38,7 @@ export function trackCampaignLanding(
  */
 export function trackDiagnosticStartWithCampaign(
   posthog: PostHogClient,
-  diagnosticData: Record<string, any>,
+  diagnosticData: Record<string, unknown>,
   userId?: string
 ): void {
   if (!posthog) return;
@@ -57,7 +56,7 @@ export function trackDiagnosticStartWithCampaign(
  */
 export function trackDiagnosticCompleteWithCampaign(
   posthog: PostHogClient,
-  completionData: Record<string, any>,
+  completionData: Record<string, unknown>,
   userId?: string
 ): void {
   if (!posthog) return;
@@ -115,7 +114,7 @@ export function setCampaignAttributionFromURL(
 export function createEnhancedTrackEvent(posthog: PostHogClient) {
   return function enhancedTrackEvent(
     event: AnalyticsEvent,
-    properties?: Record<string, any>,
+    properties?: Record<string, unknown>,
     userId?: string
   ): void {
     if (!posthog) return;

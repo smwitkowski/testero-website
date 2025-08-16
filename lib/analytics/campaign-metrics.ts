@@ -66,7 +66,7 @@ export interface EventData {
   event: string;
   properties: {
     campaign_id?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
