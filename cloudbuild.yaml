@@ -1,7 +1,12 @@
 steps:
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/testero/frontend:$COMMIT_SHA', '.']
+    args: [
+      'build',
+      '--build-arg', 'NEXT_PUBLIC_SITE_URL=https://testero.ai',
+      '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/testero/frontend:$COMMIT_SHA',
+      '.'
+    ]
 
   # Push the container image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
@@ -23,7 +28,7 @@ steps:
       - '--min-instances=0'
       - '--max-instances=10'
       - '--port=3000'
-      - '--set-env-vars=NODE_ENV=production,NEXT_PUBLIC_SITE_URL=https://testero.ai'
+      - '--set-env-vars=NODE_ENV=production'
 
 # Store images in Google Artifact Registry
 images:
