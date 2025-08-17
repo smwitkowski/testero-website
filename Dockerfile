@@ -41,6 +41,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Declare build arguments for NEXT_PUBLIC variables
+ARG NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_POSTHOG_KEY
 ARG NEXT_PUBLIC_POSTHOG_HOST
 ARG NEXT_PUBLIC_SUPABASE_URL
@@ -53,7 +54,12 @@ ARG USE_GCP_STORAGE
 ARG GCP_PROJECT_ID
 ARG GCP_SERVICE_ACCOUNT_KEY
 
+# Ensure required public URL is provided at build time
+RUN test -n "$NEXT_PUBLIC_SITE_URL" || (echo "ERROR: NEXT_PUBLIC_SITE_URL build-arg is required" >&2 && exit 1)
+
 # Set environment variables from build arguments for the build stage
+# Normalize by stripping trailing slash to avoid `//path` joins
+ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL%/}
 ENV NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY
 ENV NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
