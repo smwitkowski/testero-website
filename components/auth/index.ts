@@ -7,7 +7,7 @@
 
 // Core template
 export { AuthFlowTemplate } from "./AuthFlowTemplate";
-export type { AuthFlowTemplateProps, AuthState, FooterLink } from "./AuthFlowTemplate";
+export type { AuthFlowTemplateProps, FooterLink } from "./AuthFlowTemplate";
 
 // State components
 export { AuthLoadingState } from "./states/AuthLoadingState";
@@ -22,9 +22,9 @@ export type { AuthErrorStateProps } from "./states/AuthErrorState";
 // Utility components
 export { LoadingSpinner } from "./states/LoadingSpinner";
 
-// Hooks
-export { useAuthState } from "./hooks/useAuthState";
-export type { AuthStateOptions, AuthStateReturn } from "./hooks/useAuthState";
+// Hooks (re-export from unified location)
+export { useAuthState } from "@/hooks";
+export type { AuthState, UseAuthStateOptions, UseAuthStateReturn } from "@/hooks";
 
 export { useRedirect } from "./hooks/useRedirect";
 export type { UseRedirectOptions, UseRedirectReturn } from "./hooks/useRedirect";

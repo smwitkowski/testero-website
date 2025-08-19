@@ -3,8 +3,7 @@
 import React, { useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-
-export type AuthState = "loading" | "form" | "success" | "error";
+import { AuthState } from "@/hooks";
 
 export interface FooterLink {
   text: string;
