@@ -152,6 +152,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
+    // Check authentication before processing the body so that unauthorized
+    // requests return 401 even if they send invalid payloads.
+    const supabase = await createServerSupabaseClient();
+    const authResponse = await supabase.auth.getUser();
+    const user = authResponse?.data?.user ?? null;
+    const authError = authResponse?.error ?? null;
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     // Parse request body
     let body;
     try {
@@ -164,17 +175,6 @@ export async function POST(request: NextRequest) {
     const validationResult = studyPathRequestSchema.safeParse(body);
     if (!validationResult.success) {
       return NextResponse.json({ error: "Invalid request data" }, { status: 400 });
-    }
-
-    // Check authentication
-    const supabase = await createServerSupabaseClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const { score, domains } = validationResult.data;

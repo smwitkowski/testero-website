@@ -274,6 +274,11 @@ describe("/api/study-path - TDD RED Phase", () => {
     });
 
     it("should handle malformed JSON", async () => {
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: { id: "test-user-id" } },
+        error: null,
+      });
+
       const request = new NextRequest("http://localhost:3000/api/study-path", {
         method: "POST",
         body: "invalid json",
