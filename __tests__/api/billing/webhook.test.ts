@@ -16,6 +16,7 @@ jest.mock("next/server", () => ({
 
 import { POST } from "@/app/api/billing/webhook/route";
 import { StripeService } from "@/lib/stripe/stripe-service";
+import { EmailService } from "@/lib/email/email-service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import Stripe from "stripe";
@@ -28,6 +29,7 @@ jest.mock("@/lib/email/email-service");
 describe("Stripe Webhook Handler", () => {
   let mockStripeService: jest.Mocked<StripeService>;
   let mockSupabase: any;
+  let mockEmailService: any;
   let mockRequest: NextRequest;
 
   beforeEach(() => {
@@ -49,10 +51,23 @@ describe("Stripe Webhook Handler", () => {
       insert: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      single: jest.fn(),
+      single: jest.fn().mockResolvedValue({ data: null, error: null }),
       upsert: jest.fn().mockReturnThis(),
+      or: jest.fn().mockReturnThis(),
+      auth: {
+        admin: {
+          getUserById: jest.fn().mockResolvedValue({ data: null }),
+        },
+      },
     };
     (createServerSupabaseClient as jest.Mock).mockReturnValue(mockSupabase);
+
+    mockEmailService = {
+      sendPaymentConfirmation: jest.fn(),
+      sendSubscriptionCancelled: jest.fn(),
+      sendPaymentFailed: jest.fn(),
+    };
+    (EmailService as jest.Mock).mockImplementation(() => mockEmailService);
 
     // Set environment variables
     process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_secret";
@@ -66,7 +81,7 @@ describe("Stripe Webhook Handler", () => {
 
   describe("Webhook Signature Verification", () => {
     test("should verify webhook signature before processing", async () => {
-      const payload = JSON.stringify({ type: "checkout.session.completed" });
+      const payload = JSON.stringify({ type: "payment_intent.succeeded" });
       const signature = "valid_signature";
 
       mockRequest = new NextRequest("http://localhost:3000/api/billing/webhook", {
@@ -82,8 +97,8 @@ describe("Stripe Webhook Handler", () => {
 
       const mockEvent = {
         id: "evt_test_123",
-        type: "checkout.session.completed",
-        data: { object: { id: "cs_test_123" } },
+        type: "payment_intent.succeeded",
+        data: { object: { id: "pi_test_123" } },
       } as Stripe.Event;
 
       mockStripeService.constructWebhookEvent.mockReturnValue(mockEvent);
@@ -100,7 +115,7 @@ describe("Stripe Webhook Handler", () => {
     });
 
     test("should reject invalid webhook signature", async () => {
-      const payload = JSON.stringify({ type: "checkout.session.completed" });
+      const payload = JSON.stringify({ type: "payment_intent.succeeded" });
       const signature = "invalid_signature";
 
       mockRequest = new NextRequest("http://localhost:3000/api/billing/webhook", {
@@ -190,8 +205,8 @@ describe("Stripe Webhook Handler", () => {
 
       const mockEvent = {
         id: "evt_new",
-        type: "checkout.session.completed",
-        data: { object: { id: "cs_test_123" } },
+        type: "payment_intent.succeeded",
+        data: { object: { id: "pi_test_123" } },
       } as Stripe.Event;
 
       mockStripeService.constructWebhookEvent.mockReturnValue(mockEvent);
@@ -206,7 +221,7 @@ describe("Stripe Webhook Handler", () => {
 
       expect(mockSupabase.insert).toHaveBeenCalledWith({
         stripe_event_id: "evt_new",
-        type: "checkout.session.completed",
+        type: mockEvent.type,
         processed: false,
       });
       expect(response.status).toBe(200);
@@ -266,11 +281,9 @@ describe("Stripe Webhook Handler", () => {
       // Mock database operations
       mockSupabase.single
         .mockResolvedValueOnce({ data: null, error: null }) // Check for existing event
-        .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }) // Insert event
         .mockResolvedValueOnce({ data: { id: "plan_123" }, error: null }) // Get plan
         .mockResolvedValueOnce({ data: { id: "sub_record" }, error: null }) // Upsert subscription
-        .mockResolvedValueOnce({ data: { id: "payment_record" }, error: null }) // Insert payment
-        .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }); // Update event as processed
+        .mockResolvedValueOnce({ data: { id: "payment_record" }, error: null }); // Update event as processed
 
       const response = await POST(mockRequest);
 
@@ -462,17 +475,19 @@ describe("Stripe Webhook Handler", () => {
       // Mock getting user from subscription
       mockSupabase.single
         .mockResolvedValueOnce({ data: null, error: null }) // Check for existing event
-        .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }) // Insert event
         .mockResolvedValueOnce({
           data: { user_id: "user_123" },
           error: null,
-        }) // Get subscription
-        .mockResolvedValueOnce({ data: { id: "payment_record" }, error: null }) // Insert payment history
-        .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }); // Update event as processed
+        }); // Get subscription
+
+      mockSupabase.auth.admin.getUserById.mockResolvedValue({
+        data: { user: { email: "user@example.com" } },
+      });
 
       const response = await POST(mockRequest);
 
-      expect(mockSupabase.insert).toHaveBeenCalledWith(
+      expect(mockSupabase.insert).toHaveBeenNthCalledWith(
+        2,
         expect.objectContaining({
           stripe_payment_intent_id: "pi_test_123",
           status: "failed",
@@ -514,7 +529,7 @@ describe("Stripe Webhook Handler", () => {
       const responseData = await response.json();
 
       expect(response.status).toBe(500);
-      expect(responseData.error).toContain("processing");
+      expect(responseData.error).toContain("Internal server error");
     });
   });
 });
