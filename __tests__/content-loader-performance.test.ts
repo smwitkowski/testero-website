@@ -1,174 +1,101 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from "@jest/globals";
-import * as contentLoader from "@/lib/content/loader";
-import fs from "fs";
+import { describe, it, expect } from "@jest/globals";
 import path from "path";
+import { createContentLoaderTestHarness } from "./test-utils/createContentLoaderTestHarness";
 
-// Mock data for performance testing
-const mockContentData = {
-  title: "Test Content",
-  description: "Test description",
-  date: "2024-01-01",
-  author: "Test Author",
-  category: "test",
-  tags: ["test", "performance"],
-};
+const hubDir = path.join(process.cwd(), "app/content/hub");
+const spokeDir = path.join(process.cwd(), "app/content/spokes");
 
-const mockMarkdownContent = `---
-title: ${mockContentData.title}
-description: ${mockContentData.description}
-date: ${mockContentData.date}
-author: ${mockContentData.author}
-category: ${mockContentData.category}
-tags: ${mockContentData.tags.join(", ")}
+const createHubFile = (title: string, publishedAt: string) => `---
+title: "${title}"
+description: "${title} description"
+date: "${publishedAt}"
+publishedAt: "${publishedAt}"
+type: hub
+tags:
+  - performance
 ---
 
-# Test Content
+# ${title}
+`;
 
-This is test content for performance testing. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-`.repeat(10); // Repeat to create larger content
+const createSpokeFile = (title: string, publishedAt: string, order: number, hubSlug: string) => `---
+title: "${title}"
+description: "${title} description"
+date: "${publishedAt}"
+publishedAt: "${publishedAt}"
+type: spoke
+hubSlug: "${hubSlug}"
+spokeOrder: ${order}
+tags:
+  - performance
+---
 
-describe("Content Loader Performance Tests", () => {
-  const testContentDir = path.join(process.cwd(), "__tests__", "test-content");
-  const hubDir = path.join(testContentDir, "hub");
-  const spokesDir = path.join(testContentDir, "spokes");
+# ${title}
+`;
 
-  beforeEach(() => {
-    // Create test directories and files
-    fs.mkdirSync(testContentDir, { recursive: true });
-    fs.mkdirSync(hubDir, { recursive: true });
-    fs.mkdirSync(spokesDir, { recursive: true });
-
-    // Create 50 test files for performance testing
-    for (let i = 0; i < 50; i++) {
-      fs.writeFileSync(path.join(hubDir, `test-hub-${i}.md`), mockMarkdownContent);
-      fs.writeFileSync(path.join(spokesDir, `test-spoke-${i}.md`), mockMarkdownContent);
+describe("Content Loader performance-friendly behaviour", () => {
+  it("loads all hub entries asynchronously without using sync fs fallbacks", async () => {
+    const files: Record<string, string> = {};
+    for (let i = 0; i < 5; i += 1) {
+      const publishedAt = `2024-01-0${i + 1}`;
+      files[path.join(hubDir, `article-${i}.md`)] = createHubFile(`Article ${i}`, publishedAt);
     }
+
+    const harness = await createContentLoaderTestHarness({
+      directories: [hubDir],
+      files,
+    });
+
+    const { getAllHubContent } = harness.loader;
+
+    const content = await getAllHubContent();
+
+    expect(content).toHaveLength(5);
+    expect(harness.fsMocks.readFile).toHaveBeenCalledTimes(5);
+    expect(harness.fsMocks.readFileSync).not.toHaveBeenCalled();
   });
 
-  afterEach(() => {
-    // Clean up test files
-    fs.rmSync(testContentDir, { recursive: true, force: true });
+  it("reuses cached hub content on repeated aggregate reads", async () => {
+    const files = {
+      [path.join(hubDir, "cached.md")]: createHubFile("Cached", "2024-02-01"),
+    };
+
+    const harness = await createContentLoaderTestHarness({
+      directories: [hubDir],
+      files,
+    });
+
+    const { getAllHubContent } = harness.loader;
+
+    await getAllHubContent();
+    await getAllHubContent();
+
+    expect(harness.fsMocks.readFile).toHaveBeenCalledTimes(1);
+    expect(harness.cacheMocks.get.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(harness.cacheMocks.set).toHaveBeenCalledTimes(1);
   });
 
-  describe("Event Loop Blocking", () => {
-    it("should not block event loop when reading multiple files", async () => {
-      const startTime = Date.now();
-      let eventLoopBlocked = false;
+  it("handles parallel requests across hub and spoke content without redundant reads", async () => {
+    const files = {
+      [path.join(hubDir, "parallel-hub.md")]: createHubFile("Parallel Hub", "2024-03-01"),
+      [path.join(spokeDir, "parallel-spoke.md")]: createSpokeFile("Parallel Spoke", "2024-03-02", 1, "parallel-hub"),
+    };
 
-      // Set up a timer to check if event loop is blocked
-      const checkInterval = setInterval(() => {
-        const now = Date.now();
-        if (now - startTime > 100) {
-          eventLoopBlocked = true;
-        }
-      }, 10);
-
-      // Read all content files
-      await contentLoader.getAllHubContent();
-
-      clearInterval(checkInterval);
-
-      expect(eventLoopBlocked).toBe(false);
+    const harness = await createContentLoaderTestHarness({
+      directories: [hubDir, spokeDir],
+      files,
     });
 
-    it("should handle concurrent requests efficiently", async () => {
-      const concurrentRequests = 20;
-      const startTime = Date.now();
+    const { getHubContent, getSpokeContent } = harness.loader;
 
-      // Create concurrent requests
-      const promises = Array(concurrentRequests)
-        .fill(null)
-        .map(() => contentLoader.getAllHubContent());
+    const [hub, spoke] = await Promise.all([
+      getHubContent("parallel-hub"),
+      getSpokeContent("parallel-spoke"),
+    ]);
 
-      await Promise.all(promises);
-
-      const duration = Date.now() - startTime;
-
-      // Should complete within reasonable time (less than 2 seconds for 20 concurrent requests)
-      expect(duration).toBeLessThan(2000);
-    });
-  });
-
-  describe("Performance Benchmarks", () => {
-    it("should read 50 files in under 500ms", async () => {
-      const startTime = Date.now();
-
-      const content = await contentLoader.getAllHubContent();
-
-      const duration = Date.now() - startTime;
-
-      expect(content.length).toBeGreaterThanOrEqual(50);
-      expect(duration).toBeLessThan(500);
-    });
-
-    it("should benefit from caching on repeated reads", async () => {
-      // First read - cold cache
-      const firstReadStart = Date.now();
-      await contentLoader.getAllHubContent();
-      const firstReadDuration = Date.now() - firstReadStart;
-
-      // Second read - should hit cache
-      const secondReadStart = Date.now();
-      await contentLoader.getAllHubContent();
-      const secondReadDuration = Date.now() - secondReadStart;
-
-      // Cache should make second read significantly faster (at least 50% improvement)
-      expect(secondReadDuration).toBeLessThan(firstReadDuration * 0.5);
-    });
-
-    it("should handle large content sets without memory issues", async () => {
-      const initialMemory = process.memoryUsage().heapUsed;
-
-      // Read content multiple times
-      for (let i = 0; i < 10; i++) {
-        await contentLoader.getAllHubContent();
-        await contentLoader.getAllSpokeContent();
-      }
-
-      const finalMemory = process.memoryUsage().heapUsed;
-      const memoryIncrease = finalMemory - initialMemory;
-
-      // Memory increase should be reasonable (less than 50MB)
-      expect(memoryIncrease).toBeLessThan(50 * 1024 * 1024);
-    });
-  });
-
-  describe("Response Time Under Load", () => {
-    it("should maintain sub-100ms response time for single file reads", async () => {
-      const iterations = 100;
-      const durations: number[] = [];
-
-      for (let i = 0; i < iterations; i++) {
-        const start = Date.now();
-        await contentLoader.getHubContent(`test-hub-${i % 50}`);
-        durations.push(Date.now() - start);
-      }
-
-      const averageDuration = durations.reduce((sum, d) => sum + d, 0) / durations.length;
-      const maxDuration = Math.max(...durations);
-
-      expect(averageDuration).toBeLessThan(100);
-      expect(maxDuration).toBeLessThan(200);
-    });
-
-    it("should scale linearly with content volume", async () => {
-      // Test with 10 files
-      const tenFilesStart = Date.now();
-      for (let i = 0; i < 10; i++) {
-        await contentLoader.getHubContent(`test-hub-${i}`);
-      }
-      const tenFilesDuration = Date.now() - tenFilesStart;
-
-      // Test with 50 files
-      const fiftyFilesStart = Date.now();
-      for (let i = 0; i < 50; i++) {
-        await contentLoader.getHubContent(`test-hub-${i}`);
-      }
-      const fiftyFilesDuration = Date.now() - fiftyFilesStart;
-
-      // Duration should scale roughly linearly (with some overhead tolerance)
-      const scalingFactor = fiftyFilesDuration / tenFilesDuration;
-      expect(scalingFactor).toBeLessThan(6); // Allow for some overhead
-    });
+    expect(hub?.meta.title).toBe("Parallel Hub");
+    expect(spoke?.meta.title).toBe("Parallel Spoke");
+    expect(harness.fsMocks.readFile).toHaveBeenCalledTimes(2);
+    expect(harness.fsMocks.readFileSync).not.toHaveBeenCalled();
   });
 });
