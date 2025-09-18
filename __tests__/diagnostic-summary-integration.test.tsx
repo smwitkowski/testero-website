@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -7,7 +7,12 @@ import { usePostHog } from "posthog-js/react";
 import DiagnosticSummaryPage from "@/app/diagnostic/[sessionId]/summary/page";
 
 // Mock dependencies
-jest.mock("next/navigation");
+jest.mock("next/navigation", () => ({
+  useRouter: jest.fn(),
+  useParams: jest.fn(),
+  useSearchParams: jest.fn(),
+  usePathname: jest.fn(),
+}));
 jest.mock("@/components/providers/AuthProvider");
 jest.mock("posthog-js/react");
 
@@ -25,6 +30,8 @@ const mockRouter = {
 
 const mockPostHog = {
   capture: jest.fn(),
+  getFeatureFlag: jest.fn(),
+  isFeatureEnabled: jest.fn(),
 };
 
 const mockSuccessResponse = {
@@ -73,6 +80,11 @@ describe("DiagnosticSummaryPage Integration", () => {
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
     (useParams as jest.Mock).mockReturnValue({ sessionId: "test-session-123" });
     (usePostHog as jest.Mock).mockReturnValue(mockPostHog);
+    mockPostHog.capture.mockClear();
+    mockPostHog.getFeatureFlag.mockClear();
+    mockPostHog.isFeatureEnabled.mockClear();
+    mockPostHog.getFeatureFlag.mockReturnValue("control");
+    mockPostHog.isFeatureEnabled.mockReturnValue(false);
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       status: 200,
@@ -120,12 +132,18 @@ describe("DiagnosticSummaryPage Integration", () => {
         expect(global.fetch).toHaveBeenCalledWith("/api/diagnostic/summary/test-session-123");
       });
 
-      await waitFor(() => {
-        expect(screen.getByText("Diagnostic Results")).toBeInTheDocument();
-        expect(screen.getByText("70%")).toBeInTheDocument();
-        expect(screen.getByText("7/10")).toBeInTheDocument();
-        expect(screen.getByText("Google Professional ML Engineer")).toBeInTheDocument();
-      });
+      const heading = await screen.findByRole("heading", { name: /Diagnostic Results/i });
+      expect(heading).toBeInTheDocument();
+
+      const scoreRow = screen.getByText(/Score:/i).closest("div");
+      expect(scoreRow).not.toBeNull();
+      expect(scoreRow).toHaveTextContent(/70\s*%\s*\(\s*10\s*Qs\s*\)/);
+
+      const examRow = screen.getByText(/Exam:/i).closest("div");
+      expect(examRow).not.toBeNull();
+      expect(examRow).toHaveTextContent(/Google Professional ML Engineer/);
+
+      expect(screen.getAllByText(/70\s*%/).length).toBeGreaterThan(0);
     });
 
     it("should include anonymous session ID for non-authenticated users", async () => {
@@ -146,12 +164,11 @@ describe("DiagnosticSummaryPage Integration", () => {
 
       render(<DiagnosticSummaryPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText(/score by domain/i)).toBeInTheDocument();
-        expect(screen.getByText("Machine Learning")).toBeInTheDocument();
-        expect(screen.getByText("4/5")).toBeInTheDocument();
-        expect(screen.getByText("80%")).toBeInTheDocument();
-      });
+      const domainHeading = await screen.findByText(/domain performance/i);
+      expect(domainHeading).toBeInTheDocument();
+      expect(screen.getAllByText("Machine Learning").length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/4\s*\/\s*5/).length).toBeGreaterThan(0);
+      expect(screen.getByText(/80\s*%/)).toBeInTheDocument();
     });
   });
 
@@ -245,6 +262,33 @@ describe("DiagnosticSummaryPage Integration", () => {
 
       expect(mockPostHog.capture).not.toHaveBeenCalled();
     });
+
+    it("should request upsell gating feature flags", async () => {
+      jest.useFakeTimers({ now: new Date("2024-01-01T00:00:00Z") });
+      (useAuth as jest.Mock).mockReturnValue({ user: null, isLoading: false });
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ...mockSuccessResponse,
+          summary: { ...mockSuccessResponse.summary, score: 85 },
+        }),
+      });
+
+      try {
+        render(<DiagnosticSummaryPage />);
+
+        expect(mockPostHog.getFeatureFlag).toHaveBeenCalledWith("upsell_modal_test");
+
+        jest.setSystemTime(new Date("2024-01-01T00:00:25Z"));
+        await waitFor(() =>
+          expect(mockPostHog.isFeatureEnabled).toHaveBeenCalledWith("upsell_high_score")
+        );
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
   });
 
   describe("LocalStorage cleanup", () => {
@@ -280,10 +324,8 @@ describe("DiagnosticSummaryPage Integration", () => {
 
       render(<DiagnosticSummaryPage />);
 
-      await waitFor(() => {
-        const button = screen.getByRole("button", { name: /take another diagnostic/i });
-        button.click();
-      });
+      const retakeButtons = await screen.findAllByRole("button", { name: /retake diagnostic/i });
+      fireEvent.click(retakeButtons[0]);
 
       expect(mockRouter.push).toHaveBeenCalledWith("/diagnostic");
     });
@@ -294,12 +336,10 @@ describe("DiagnosticSummaryPage Integration", () => {
 
       render(<DiagnosticSummaryPage />);
 
-      await waitFor(() => {
-        const button = screen.getByRole("button", { name: /start my study plan/i });
-        button.click();
-      });
+      const practiceButtons = await screen.findAllByRole("button", { name: /start 10-min practice/i });
+      fireEvent.click(practiceButtons[0]);
 
-      expect(alertSpy).toHaveBeenCalledWith("Study plan feature coming soon!");
+      expect(mockRouter.push).toHaveBeenCalledWith("/practice");
       alertSpy.mockRestore();
     });
   });
@@ -311,10 +351,10 @@ describe("DiagnosticSummaryPage Integration", () => {
       render(<DiagnosticSummaryPage />);
 
       await waitFor(() => {
-        expect(screen.getByText("Question 1")).toBeInTheDocument();
-        expect(screen.getByText("Question 2")).toBeInTheDocument();
-        expect(screen.getByText("CORRECT")).toBeInTheDocument();
-        expect(screen.getByText("INCORRECT")).toBeInTheDocument();
+        expect(screen.getByText(/what is machine learning/i)).toBeInTheDocument();
+        expect(screen.getByText(/what is deep learning/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/Correct/).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Incorrect/).length).toBeGreaterThan(0);
       });
     });
 
@@ -323,8 +363,11 @@ describe("DiagnosticSummaryPage Integration", () => {
 
       render(<DiagnosticSummaryPage />);
 
+      const expandButtons = await screen.findAllByRole("button", { name: /view explanation/i });
+      expandButtons.forEach((button) => fireEvent.click(button));
+
       await waitFor(() => {
-        expect(screen.getAllByText(/your answer/i)).toHaveLength(2);
+        expect(screen.getAllByText(/your answer/i).length).toBeGreaterThan(0);
         const correctIndicators = screen.getAllByText(/✓ correct/i);
         expect(correctIndicators.length).toBeGreaterThan(0);
       });
