@@ -1,6 +1,23 @@
 import "@testing-library/jest-dom";
 // All undici and Web API polyfills removed for pure business logic test compatibility.
 
+import {
+  mockRouter,
+  mockSearchParams,
+  resetMockRouter,
+  resetMockSearchParams,
+} from "./__tests__/test-utils/mockNextNavigation";
+
+// Ensure App Router hooks from next/navigation resolve to stable mocks.
+jest.mock("next/navigation", () => ({
+  useRouter: () => mockRouter,
+  usePathname: () => mockRouter.pathname,
+  useSearchParams: () => mockSearchParams,
+  useParams: () => mockRouter.params ?? {},
+  redirect: jest.fn(),
+  notFound: jest.fn(),
+}));
+
 // Set up test environment variables
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
@@ -37,6 +54,11 @@ jest.mock("next/headers", () => ({
     forEach: jest.fn(),
   })),
 }));
+
+beforeEach(() => {
+  resetMockRouter();
+  resetMockSearchParams();
+});
 
 // Mock IntersectionObserver for Framer Motion animations
 global.IntersectionObserver = jest.fn().mockImplementation(() => ({
