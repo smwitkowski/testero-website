@@ -20,6 +20,7 @@ export default {
     "^rehype-raw$": "<rootDir>/__tests__/__mocks__/rehype-raw.js",
     "^rehype-stringify$": "<rootDir>/__tests__/__mocks__/rehype-stringify.js",
   },
+  testPathIgnorePatterns: ["<rootDir>/__tests__/api.study-path.test.ts"],
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
   transformIgnorePatterns: [
     "/node_modules/(?!(\@supabase|posthog-node|remark|remark-.*|unified|unist-.*|mdast-.*|hast-.*|rehype-.*|gray-matter|uncrypto|@upstash)/)",

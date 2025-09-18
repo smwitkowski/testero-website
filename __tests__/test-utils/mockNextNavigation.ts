@@ -6,13 +6,17 @@ type RouterMethod = jest.Mock<ReturnType<AppRouterInstance['back']>, Parameters<
 
 type PrefetchMethod = jest.Mock<ReturnType<AppRouterInstance['prefetch']>, Parameters<AppRouterInstance['prefetch']>>;
 
-export interface MockAppRouterInstance extends Omit<AppRouterInstance, 'push' | 'replace' | 'prefetch' | 'back' | 'forward' | 'refresh'> {
+export interface MockAppRouterInstance extends Omit<
+  AppRouterInstance,
+  'push' | 'replace' | 'prefetch' | 'back' | 'forward' | 'refresh'
+> {
   push: MockRouterFn;
   replace: MockRouterFn;
   back: RouterMethod;
   forward: RouterMethod;
   refresh: RouterMethod;
   prefetch: PrefetchMethod;
+  pathname: string;
 }
 
 const createRouterState = (overrides: Partial<MockAppRouterInstance> = {}): MockAppRouterInstance => ({
