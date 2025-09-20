@@ -441,7 +441,7 @@ const QuestionReview = ({
         <select
           value={selectedDomain || ''}
           onChange={(e) => onDomainChange(e.target.value || null)}
-          className="px-3 py-1 border border-slate-300 rounded-lg text-sm"
+          className="px-3 py-2.5 min-h-[44px] border border-slate-300 rounded-lg text-base md:text-sm"
         >
           <option value="">All Domains</option>
           {domains.map(domain => (
@@ -455,7 +455,7 @@ const QuestionReview = ({
           placeholder="Search questions..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="px-3 py-1 border border-slate-300 rounded-lg text-sm flex-1 min-w-0"
+          className="px-3 py-2.5 min-h-[44px] border border-slate-300 rounded-lg text-base md:text-sm flex-1 min-w-0"
         />
       </div>
 

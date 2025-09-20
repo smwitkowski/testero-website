@@ -135,7 +135,7 @@ export function WaitlistForm({
                           <Input
                             type="email"
                             placeholder="Enter your email address"
-                            className={`px-3 sm:px-4 py-2 sm:py-3 text-base sm:text-lg rounded-md transition-all duration-300 border-2 ${
+                            className={`px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-base sm:text-lg rounded-md transition-all duration-300 border-2 ${
                               fieldState.error
                                 ? "border-red-400 bg-red-50"
                                 : fieldState.isDirty && !fieldState.error
@@ -204,7 +204,7 @@ export function WaitlistForm({
                         <div className="relative">
                           <FormControl>
                             <select
-                              className={`px-3 sm:px-4 py-2 sm:py-3 rounded-md w-full text-base sm:text-lg text-slate-600 bg-white appearance-none transition-all duration-300 border-2 ${
+                              className={`px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-md w-full text-base sm:text-lg text-slate-600 bg-white appearance-none transition-all duration-300 border-2 ${
                                 fieldState.error
                                   ? "border-red-400 bg-red-50"
                                   : "border-slate-300 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
