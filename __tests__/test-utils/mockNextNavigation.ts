@@ -13,6 +13,9 @@ export interface MockAppRouterInstance extends Omit<AppRouterInstance, 'push' | 
   forward: RouterMethod;
   refresh: RouterMethod;
   prefetch: PrefetchMethod;
+  pathname: string;
+  params?: Record<string, string>;
+  query?: Record<string, unknown>;
 }
 
 const createRouterState = (overrides: Partial<MockAppRouterInstance> = {}): MockAppRouterInstance => ({

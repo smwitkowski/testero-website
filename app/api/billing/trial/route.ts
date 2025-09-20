@@ -120,23 +120,26 @@ export async function POST(
     });
 
     // Track analytics event
-    const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY || "", {
-      host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
-    });
+    const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    if (posthogKey) {
+      const posthog = new PostHog(posthogKey, {
+        host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
+      });
 
-    await posthog.capture({
-      distinctId: user.id,
-      event: "trial_started",
-      properties: {
-        email: user.email,
-        trial_days: 14,
-        price_id: priceId,
-        from_anonymous: !!anonymousSessionId,
-        anonymous_session_id: anonymousSessionId,
-      },
-    });
+      await posthog.capture({
+        distinctId: user.id,
+        event: "trial_started",
+        properties: {
+          email: user.email,
+          trial_days: 14,
+          price_id: priceId,
+          from_anonymous: !!anonymousSessionId,
+          anonymous_session_id: anonymousSessionId,
+        },
+      });
 
-    await posthog.shutdown();
+      await posthog.shutdown();
+    }
 
     return NextResponse.json(
       {

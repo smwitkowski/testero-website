@@ -43,9 +43,16 @@ interface CreateSessionResponse {
 }
 
 // Initialize PostHog for server-side analytics
-const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY || "", {
-  host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
-});
+const posthog = (() => {
+  const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  return new PostHog(apiKey, {
+    host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
+  });
+})();
 
 export async function POST(req: Request) {
   const supabase = createServerSupabaseClient();

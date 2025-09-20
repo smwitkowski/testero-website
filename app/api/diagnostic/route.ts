@@ -17,9 +17,16 @@ const MAX_QUESTIONS = 20;
 const MIN_QUESTIONS = 1;
 
 // Initialize PostHog for server-side analytics
-const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY || "", {
-  host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
-});
+const posthog = (() => {
+  const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  return new PostHog(apiKey, {
+    host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
+  });
+})();
 
 // Utility functions
 import type { SupabaseClient } from "@supabase/supabase-js";

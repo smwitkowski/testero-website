@@ -5,9 +5,16 @@ import { z } from "zod";
 import { createSuccessResponse, createErrorResponse, commonErrors } from "@/lib/api/response-utils";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
 
-const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY || "", {
-  host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
-});
+const posthog = (() => {
+  const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  return new PostHog(apiKey, {
+    host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
+  });
+})();
 
 const passwordResetSchema = z.object({
   email: z.string().email(),
@@ -36,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   // Rate limiting with Redis
   if (!(await checkRateLimit(ip))) {
-    posthog.capture({
+    posthog?.capture({
       event: "password_reset_rate_limited",
       properties: { ip, email },
       distinctId: email,
@@ -48,7 +55,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // Track attempt
-    posthog.capture({
+    posthog?.capture({
       event: "password_reset_requested",
       properties: { email },
       distinctId: email,
@@ -64,7 +71,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Track success
-    posthog.capture({
+    posthog?.capture({
       event: "password_reset_email_sent",
       properties: { email },
       distinctId: email,
@@ -78,7 +85,7 @@ export async function POST(req: NextRequest) {
     console.error("Password reset error:", { email, error: detailedError });
 
     // Track error with detailed information for analytics
-    posthog.capture({
+    posthog?.capture({
       event: "password_reset_error",
       properties: { email, error: detailedError },
       distinctId: email,
@@ -91,5 +98,5 @@ export async function POST(req: NextRequest) {
 
 // Cleanup: flush PostHog events on process exit (for dev/local)
 if (process.env.NODE_ENV !== "production") {
-  process.on("exit", () => posthog.shutdown());
+  process.on("exit", () => posthog?.shutdown());
 }

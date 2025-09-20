@@ -14,7 +14,7 @@ export const LampContainer = ({
   return (
     <div
       className={cn(
-        "relative w-full py-24 md:py-32 overflow-hidden bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900",
+        "relative w-full py-20 sm:py-24 md:py-32 overflow-hidden bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900",
         className
       )}
     >
