@@ -39,17 +39,19 @@ export function PricingCard({
 
   return (
     <div
+      data-recommended={tier.recommended ? "true" : undefined}
       className={cn(
-        "relative rounded-2xl p-8 transition-all duration-200",
-        "border-2 bg-white shadow-lg hover:shadow-xl",
+        "relative box-border w-full max-w-full rounded-2xl border-2 bg-white p-8 shadow-lg transition-all duration-200",
+        "motion-reduce:transition-none motion-reduce:transform-none",
         tier.recommended
-          ? "border-blue-500 scale-105 shadow-xl"
-          : "border-gray-200 hover:border-gray-300"
+          ? "border-blue-500 bg-gradient-to-b from-blue-50 via-white to-white pt-12 ring-2 ring-blue-500/20 shadow-xl md:shadow-2xl md:hover:shadow-2xl md:motion-safe:scale-105"
+          : "border-gray-200 md:hover:border-gray-300 md:hover:shadow-xl",
+        billingInterval === "annual" && tier.savingsPercentage ? "pt-12" : null
       )}
     >
       {/* Recommended Badge */}
       {tier.recommended && (
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+        <div className="absolute left-1/2 top-6 -translate-x-1/2">
           <div className="flex items-center gap-1 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 px-4 py-1.5 text-sm font-semibold text-white shadow-lg">
             <Sparkles className="h-4 w-4" />
             MOST POPULAR
@@ -59,7 +61,7 @@ export function PricingCard({
 
       {/* Savings Badge */}
       {billingInterval === "annual" && tier.savingsPercentage && (
-        <div className="absolute -top-4 right-6">
+        <div className="absolute right-6 top-6">
           <div className="rounded-full bg-green-500 px-3 py-1 text-xs font-bold text-white shadow-md">
             SAVE {tier.savingsPercentage}%
           </div>
