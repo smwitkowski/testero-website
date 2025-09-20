@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { usePostHog } from "posthog-js/react"; // Import usePostHog
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { HoverButton } from "@/components/marketing/buttons/hover-button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -130,6 +130,9 @@ export function WaitlistForm({
                   name="email"
                   render={({ field, fieldState }) => (
                     <FormItem>
+                      <FormLabel className="text-sm font-semibold text-slate-700">
+                        Email address
+                      </FormLabel>
                       <div className="relative">
                         <FormControl>
                           <Input
@@ -201,6 +204,9 @@ export function WaitlistForm({
                     name="examType"
                     render={({ field, fieldState }) => (
                       <FormItem>
+                        <FormLabel className="text-sm font-semibold text-slate-700">
+                          Certification focus (optional)
+                        </FormLabel>
                         <div className="relative">
                           <FormControl>
                             <select

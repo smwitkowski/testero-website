@@ -94,7 +94,7 @@ export default function Home() {
               </span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-extrabold text-white">
+            <h1 className="text-balance text-[clamp(2.25rem,5vw+1rem,4rem)] lg:text-7xl font-extrabold text-white">
               <span className="block">Pass PMLE in 30 Days</span>
               <span className="relative inline-block bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
                 Or Your Money Back
@@ -103,8 +103,8 @@ export default function Home() {
             </h1>
 
             {/* Enhanced Sub-headline with Value Props */}
-            <h2 className="text-lg sm:text-xl md:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed">
-              Stop wasting $200 on failed attempts. The PMLE has a 70% fail rate—but our students pass 
+            <h2 className="text-balance text-[clamp(1.0625rem,3vw+0.5rem,1.75rem)] lg:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed">
+              Stop wasting $200 on failed attempts. The PMLE has a 70% fail rate—but our students pass
               on their first try with AI-powered practice questions updated for October 2024.
             </h2>
 
