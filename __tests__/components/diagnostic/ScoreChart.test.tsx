@@ -35,28 +35,43 @@ describe("ScoreChart", () => {
   });
 
   describe("Color coding", () => {
-    it("should use green color for scores >= 70%", () => {
-      render(<ScoreChart score={85} />);
+    it("should use success tone for scores >= 70%", () => {
+      render(<ScoreChart score={85} showStatus />);
 
       const progressCircle = screen.getByTestId("progress-circle");
-      expect(progressCircle).toHaveAttribute("stroke", expect.stringMatching(/22c55e|green/i));
+      const scoreValue = screen.getByText("85%");
+      const status = screen.getByText(/good progress/i);
+
+      expect(progressCircle).toHaveAttribute("stroke", "currentColor");
+      expect(progressCircle).toHaveClass("text-success");
+      expect(scoreValue).toHaveClass("text-success");
+      expect(status).toHaveClass("text-success");
     });
 
-    it("should use orange color for scores 50-69%", () => {
-      render(<ScoreChart score={60} />);
+    it("should use warning tone for scores 50-69%", () => {
+      render(<ScoreChart score={60} showStatus />);
 
       const progressCircle = screen.getByTestId("progress-circle");
-      expect(progressCircle).toHaveAttribute(
-        "stroke",
-        expect.stringMatching(/f59e0b|orange|amber/i)
-      );
+      const scoreValue = screen.getByText("60%");
+      const status = screen.getByText(/keep practicing/i);
+
+      expect(progressCircle).toHaveAttribute("stroke", "currentColor");
+      expect(progressCircle).toHaveClass("text-warning");
+      expect(scoreValue).toHaveClass("text-warning");
+      expect(status).toHaveClass("text-warning");
     });
 
-    it("should use red color for scores < 50%", () => {
-      render(<ScoreChart score={30} />);
+    it("should use error tone for scores < 50%", () => {
+      render(<ScoreChart score={30} showStatus />);
 
       const progressCircle = screen.getByTestId("progress-circle");
-      expect(progressCircle).toHaveAttribute("stroke", expect.stringMatching(/ef4444|red/i));
+      const scoreValue = screen.getByText("30%");
+      const status = screen.getByText(/needs improvement/i);
+
+      expect(progressCircle).toHaveAttribute("stroke", "currentColor");
+      expect(progressCircle).toHaveClass("text-error");
+      expect(scoreValue).toHaveClass("text-error");
+      expect(status).toHaveClass("text-error");
     });
   });
 
@@ -126,19 +141,23 @@ describe("ScoreChart", () => {
 
   describe("Edge cases", () => {
     it("should handle 0% score", () => {
-      render(<ScoreChart score={0} />);
+      render(<ScoreChart score={0} showStatus />);
 
       expect(screen.getByText("0%")).toBeInTheDocument();
       const progressCircle = screen.getByTestId("progress-circle");
-      expect(progressCircle).toHaveAttribute("stroke", expect.stringMatching(/ef4444|red/i));
+      expect(progressCircle).toHaveAttribute("stroke", "currentColor");
+      expect(progressCircle).toHaveClass("text-error");
+      expect(screen.getByText(/needs improvement/i)).toHaveClass("text-error");
     });
 
     it("should handle 100% score", () => {
-      render(<ScoreChart score={100} />);
+      render(<ScoreChart score={100} showStatus />);
 
       expect(screen.getByText("100%")).toBeInTheDocument();
       const progressCircle = screen.getByTestId("progress-circle");
-      expect(progressCircle).toHaveAttribute("stroke", expect.stringMatching(/22c55e|green/i));
+      expect(progressCircle).toHaveAttribute("stroke", "currentColor");
+      expect(progressCircle).toHaveClass("text-success");
+      expect(screen.getByText(/excellent performance|good progress/i)).toHaveClass("text-success");
     });
 
     it("should handle decimal scores by rounding", () => {
