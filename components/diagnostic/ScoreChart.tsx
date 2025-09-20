@@ -9,10 +9,18 @@ interface ScoreChartProps {
   showStatus?: boolean;
 }
 
-function getScoreColor(score: number): string {
-  if (score >= 70) return "#22c55e"; // green
-  if (score >= 50) return "#f59e0b"; // orange/amber
-  return "#ef4444"; // red
+type ScoreTone = "success" | "warning" | "error";
+
+const toneClassMap: Record<ScoreTone, string> = {
+  success: "text-success",
+  warning: "text-warning",
+  error: "text-error",
+};
+
+function getScoreTone(score: number): ScoreTone {
+  if (score >= 70) return "success";
+  if (score >= 50) return "warning";
+  return "error";
 }
 
 function getScoreStatus(score: number): string {
@@ -51,7 +59,8 @@ export const ScoreChart: React.FC<ScoreChartProps> = ({
   const radius = (config.width - config.strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (displayScore / 100) * circumference;
-  const color = getScoreColor(displayScore);
+  const tone = getScoreTone(displayScore);
+  const toneClass = toneClassMap[tone];
   const performanceLevel = getPerformanceLevel(displayScore);
 
   // Size classes for the container
@@ -81,9 +90,10 @@ export const ScoreChart: React.FC<ScoreChartProps> = ({
             cx={config.width / 2}
             cy={config.height / 2}
             r={radius}
-            stroke="#e5e7eb"
+            stroke="currentColor"
             strokeWidth={config.strokeWidth}
             fill="transparent"
+            className="text-muted"
           />
           {/* Progress circle */}
           <circle
@@ -91,13 +101,16 @@ export const ScoreChart: React.FC<ScoreChartProps> = ({
             cx={config.width / 2}
             cy={config.height / 2}
             r={radius}
-            stroke={color}
+            stroke="currentColor"
             strokeWidth={config.strokeWidth}
             fill="transparent"
             strokeDasharray={circumference}
             strokeDashoffset={animated ? circumference : strokeDashoffset}
             strokeLinecap="round"
-            className={animated ? "transition-all duration-1000 ease-out" : ""}
+            className={cn(
+              animated ? "transition-all duration-1000 ease-out" : "",
+              toneClass,
+            )}
             style={{
               strokeDashoffset: animated ? strokeDashoffset : undefined,
             }}
@@ -106,8 +119,7 @@ export const ScoreChart: React.FC<ScoreChartProps> = ({
         {/* Percentage text in center */}
         <div className="absolute inset-0 flex items-center justify-center">
           <span
-            className={cn(config.fontSize, "font-bold")}
-            style={{ color }}
+            className={cn(config.fontSize, "font-bold", toneClass)}
             aria-live="polite"
             aria-atomic="true"
           >
@@ -117,7 +129,7 @@ export const ScoreChart: React.FC<ScoreChartProps> = ({
       </div>
       {showStatus && (
         <div className="text-center mt-2">
-          <span className="text-sm font-medium" style={{ color }}>
+          <span className={cn("text-sm font-medium", toneClass)}>
             {getScoreStatus(displayScore)}
           </span>
         </div>
