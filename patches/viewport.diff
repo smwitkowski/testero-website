@@ -1,0 +1,14 @@
+diff --git a/lib/seo/seo.ts b/lib/seo/seo.ts
+index 6b4ce0f..1e63fbe 100644
+--- a/lib/seo/seo.ts
++++ b/lib/seo/seo.ts
+@@ -136,7 +136,8 @@ export function generateViewport(): Viewport {
+   return {
+     width: "device-width",
+     initialScale: 1,
+-    maximumScale: 1,
++    minimumScale: 1,
++    userScalable: true,
+   };
+ }
+ 

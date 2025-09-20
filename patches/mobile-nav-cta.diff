@@ -1,0 +1,44 @@
+diff --git a/components/marketing/navigation/navbar.tsx b/components/marketing/navigation/navbar.tsx
+index 7e15bc1..c8de36a 100644
+--- a/components/marketing/navigation/navbar.tsx
++++ b/components/marketing/navigation/navbar.tsx
+@@ -5,6 +5,7 @@ import Link from 'next/link';
+ import { usePathname } from 'next/navigation';
+ import { colorPrimitive, typographyPrimitive } from '@/lib/design-system';
+ import { useAuth } from '@/components/providers/AuthProvider';
++import { Button } from '@/components/ui/button';
+ 
+ const navigationItems = [
+   { name: 'Home', href: '/' },
+@@ -21,6 +22,9 @@ const Navbar = () => {
+   // const [isResourcesDropdownOpen, setIsResourcesDropdownOpen] = useState(false); // Removed
+   const pathname = usePathname();
+   const { session, signOut } = useAuth();
++  const primaryCta = session
++    ? { href: '/dashboard', label: 'Dashboard' }
++    : { href: '/waitlist', label: 'Join Waitlist' };
+ 
+   useEffect(() => {
+     const handleScroll = () => {
+@@ -76,11 +80,18 @@ const Navbar = () => {
+           </Link>
+         </div>
+ 
+-        {/* Mobile Menu Button */}
+-        <div className="md:hidden flex items-center ml-auto">
++        {/* Mobile Menu Button & Primary CTA */}
++        <div className="md:hidden flex items-center gap-3 ml-auto">
++          <Button
++            asChild
++            size="default"
++            className="h-11 px-4 text-sm"
++          >
++            <Link href={primaryCta.href}>{primaryCta.label}</Link>
++          </Button>
+           <button
+             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+-            className="text-ui-text-primary focus:outline-none focus:ring-2 focus:ring-accent-500"
++            className="inline-flex h-11 w-11 items-center justify-center rounded-md text-ui-text-primary focus:outline-none focus:ring-2 focus:ring-accent-500"
+             style={{ color: colorPrimitive.slate[800] }}
+             aria-label="Toggle mobile menu"
+             aria-expanded={isMobileMenuOpen}

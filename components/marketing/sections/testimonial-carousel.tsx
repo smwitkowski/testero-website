@@ -74,7 +74,10 @@ export function TestimonialCarousel({
                   <img
                     src={activeTestimonial.avatar}
                     alt={activeTestimonial.author}
+                    width={48}
+                    height={48}
                     className="w-12 h-12 rounded-full object-cover"
+                    loading="lazy"
                   />
                 ) : (
                   <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center text-slate-700 font-medium">
