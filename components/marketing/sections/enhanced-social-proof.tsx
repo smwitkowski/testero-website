@@ -136,7 +136,7 @@ export function EnhancedSocialProof() {
           animate={inView ? { opacity: 1 } : { opacity: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
         >
-          <Marquee pauseOnHover speed="normal">
+          <Marquee pauseOnHover speed="normal" repeat={2}>
             {socialProofBadges.map((badge, index) => (
               <SocialProofCard key={index} badge={badge} />
             ))}
