@@ -37,7 +37,7 @@ export function AuthFormField<TFieldValues extends FieldValues>({
               <Input
                 type={type}
                 placeholder={placeholder}
-                className={`px-4 py-3 text-base rounded-md transition-all duration-300 border-2 ${
+                className={`px-4 py-3 min-h-[44px] text-base rounded-md transition-all duration-300 border-2 ${
                   fieldState.error 
                     ? "border-red-400 bg-red-50" 
                     : fieldState.isDirty && !fieldState.error
