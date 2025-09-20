@@ -211,11 +211,40 @@ describe("Analytics Utilities", () => {
   });
 
   describe("getServerPostHog", () => {
+    const originalKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    const originalHost = process.env.NEXT_PUBLIC_POSTHOG_HOST;
+
     beforeEach(() => {
       resetServerPostHog();
+      jest.clearAllMocks();
+      delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+      delete process.env.NEXT_PUBLIC_POSTHOG_HOST;
     });
 
-    it("should create and return a singleton PostHog instance", () => {
+    afterAll(() => {
+      if (originalKey === undefined) {
+        delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+      } else {
+        process.env.NEXT_PUBLIC_POSTHOG_KEY = originalKey;
+      }
+
+      if (originalHost === undefined) {
+        delete process.env.NEXT_PUBLIC_POSTHOG_HOST;
+      } else {
+        process.env.NEXT_PUBLIC_POSTHOG_HOST = originalHost;
+      }
+    });
+
+    it("should return null when PostHog key is missing", () => {
+      const instance = getServerPostHog();
+
+      expect(instance).toBeNull();
+      expect(PostHog).not.toHaveBeenCalled();
+    });
+
+    it("should create and return a singleton PostHog instance when key provided", () => {
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = "test-key";
+
       const instance1 = getServerPostHog();
       const instance2 = getServerPostHog();
 

@@ -9,9 +9,16 @@ import {
 } from "@/lib/auth/anonymous-session-server";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
 
-const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY || "", {
-  host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
-});
+const posthog = (() => {
+  const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  return new PostHog(apiKey, {
+    host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
+  });
+})();
 
 const signupSchema = z.object({
   email: z.string().email(),
@@ -44,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   // Rate limiting with Redis
   if (!(await checkRateLimit(ip))) {
-    posthog.capture({
+    posthog?.capture({
       event: "signup_rate_limited",
       properties: { ip, email },
       distinctId: email,
@@ -59,15 +66,21 @@ export async function POST(req: NextRequest) {
   const supabaseClient = createServerSupabaseClient();
 
   // Create analytics wrapper to match expected interface
-  const analytics = {
-    capture: (event: { event: string; properties: Record<string, unknown> }) => {
-      posthog.capture({
-        event: event.event,
-        properties: event.properties,
-        distinctId: email || "anonymous",
-      });
-    },
-  };
+  const analytics = posthog
+    ? {
+        capture: (event: { event: string; properties: Record<string, unknown> }) => {
+          posthog.capture({
+            event: event.event,
+            properties: event.properties,
+            distinctId: email || "anonymous",
+          });
+        },
+      }
+    : {
+        capture: () => {
+          return undefined;
+        },
+      };
 
   const result = await signupBusinessLogic({
     email,
@@ -92,5 +105,5 @@ export async function POST(req: NextRequest) {
 
 // --- Cleanup: flush PostHog events on process exit (for dev/local) ---
 if (process.env.NODE_ENV !== "production") {
-  process.on("exit", () => posthog.shutdown());
+  process.on("exit", () => posthog?.shutdown());
 }

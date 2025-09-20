@@ -17,9 +17,16 @@ interface ExtendedInvoice extends Stripe.Invoice {
 }
 
 // Initialize PostHog
-const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY || "", {
-  host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
-});
+const posthog = (() => {
+  const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  return new PostHog(apiKey, {
+    host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
+  });
+})();
 
 export async function POST(request: NextRequest) {
   try {
@@ -135,7 +142,7 @@ export async function POST(request: NextRequest) {
             }
 
             // Track subscription created in PostHog
-            posthog.capture({
+            posthog?.capture({
               distinctId: userId,
               event: "subscription_created",
               properties: {
@@ -152,7 +159,7 @@ export async function POST(request: NextRequest) {
             });
 
             // Update user properties in PostHog
-            posthog.identify({
+            posthog?.identify({
               distinctId: userId,
               properties: {
                 subscription_tier: plan?.tier,
@@ -193,7 +200,7 @@ export async function POST(request: NextRequest) {
 
           // Track subscription update in PostHog
           if (userSub?.user_id) {
-            posthog.capture({
+            posthog?.capture({
               distinctId: userSub.user_id,
               event: "subscription_updated",
               properties: {
@@ -207,7 +214,7 @@ export async function POST(request: NextRequest) {
             });
 
             // Update user properties
-            posthog.identify({
+            posthog?.identify({
               distinctId: userSub.user_id,
               properties: {
                 subscription_status: subscription.status,
@@ -240,7 +247,7 @@ export async function POST(request: NextRequest) {
             }
 
             // Track subscription cancellation in PostHog
-            posthog.capture({
+            posthog?.capture({
               distinctId: subData.user_id,
               event: "subscription_cancelled",
               properties: {
@@ -250,7 +257,7 @@ export async function POST(request: NextRequest) {
             });
 
             // Update user properties
-            posthog.identify({
+            posthog?.identify({
               distinctId: subData.user_id,
               properties: {
                 subscription_status: "cancelled",
@@ -289,7 +296,7 @@ export async function POST(request: NextRequest) {
             }
 
             // Track payment failure in PostHog
-            posthog.capture({
+            posthog?.capture({
               distinctId: subscription.user_id,
               event: "payment_failed",
               properties: {

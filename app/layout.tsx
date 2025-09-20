@@ -1,4 +1,3 @@
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider"; // Import AuthProvider
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
@@ -7,16 +6,6 @@ import { SessionTrackingProvider } from "@/components/providers/SessionTrackingP
 import Script from "next/script";
 import { generateMetadata, generateJsonLd, generateViewport } from "@/lib/seo";
 import Navbar from "@/components/marketing/navigation/navbar"; // Import the Navbar component
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 // Generate default metadata for the root layout
 export const metadata = generateMetadata();
@@ -40,10 +29,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        suppressHydrationWarning
-      >
+      <body className="antialiased font-sans" suppressHydrationWarning>
         {/* Skip to content link for accessibility */}
         <a
           href="#main-content"
