@@ -78,7 +78,7 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start bg-gradient-to-b from-slate-50 to-white">
+    <main className="flex min-h-screen flex-col items-stretch justify-start bg-gradient-to-b from-slate-50 to-white">
       {/* Add JSON-LD structured data */}
       <JsonLd />
 
@@ -162,7 +162,7 @@ export default function Home() {
       </LampContainer>
 
       {/* Main content sections */}
-      <div role="main" id="main-content">
+      <div role="main" id="main-content" className="w-full overflow-x-hidden">
         {/* Value Anchors Section */}
         <section className="w-full py-16 px-4 sm:px-6 bg-white">
           <div className="max-w-6xl mx-auto">

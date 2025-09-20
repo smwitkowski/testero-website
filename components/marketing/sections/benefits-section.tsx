@@ -142,14 +142,10 @@ export function BenefitsSectionSkeleton() {
   return (
     <section className="w-full py-10 sm:py-16 md:py-24 px-4 sm:px-6 relative">
       {/* Background element */}
-      <div 
-        className="absolute right-0 top-1/4 -translate-y-1/2 w-64 h-64 bg-blue-50 rounded-full opacity-20 blur-3xl"
-        aria-hidden="true"
-      ></div>
-      <div 
-        className="absolute left-0 bottom-1/4 translate-y-1/2 w-64 h-64 bg-orange-50 rounded-full opacity-20 blur-3xl"
-        aria-hidden="true"
-      ></div>
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute right-[6%] top-1/4 -translate-y-1/2 w-52 h-52 bg-blue-50 rounded-full opacity-30 blur-2xl"></div>
+        <div className="absolute left-[6%] bottom-1/4 translate-y-1/2 w-52 h-52 bg-orange-50 rounded-full opacity-30 blur-2xl"></div>
+      </div>
       
       <div className="max-w-4xl mx-auto text-center space-y-8 relative z-10">
         {/* Skeleton heading */}
@@ -208,22 +204,22 @@ export function BenefitsSection() {
     <section className="w-full py-10 sm:py-16 md:py-24 px-4 sm:px-6 relative">
       {/* Add styles to head for animations */}
       <style jsx global>{`${fadeInUp} ${slideInFromSide} ${pulse}`}</style>
-      
+
       {/* Background element */}
-      <div 
-        className="absolute right-0 top-1/4 -translate-y-1/2 w-64 h-64 bg-blue-50 rounded-full opacity-20 blur-3xl"
-        style={{
-          animation: `pulse 15s ease-in-out infinite alternate`,
-        }}
-        aria-hidden="true"
-      ></div>
-      <div 
-        className="absolute left-0 bottom-1/4 translate-y-1/2 w-64 h-64 bg-orange-50 rounded-full opacity-20 blur-3xl"
-        style={{
-          animation: `pulse 18s ease-in-out infinite alternate-reverse`,
-        }}
-        aria-hidden="true"
-      ></div>
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div
+          className="absolute right-[6%] top-1/4 -translate-y-1/2 w-52 h-52 bg-blue-50 rounded-full opacity-30 blur-2xl"
+          style={{
+            animation: `pulse 15s ease-in-out infinite alternate`,
+          }}
+        ></div>
+        <div
+          className="absolute left-[6%] bottom-1/4 translate-y-1/2 w-52 h-52 bg-orange-50 rounded-full opacity-30 blur-2xl"
+          style={{
+            animation: `pulse 18s ease-in-out infinite alternate-reverse`,
+          }}
+        ></div>
+      </div>
       
       <div className="max-w-4xl mx-auto text-center space-y-8 relative z-10">
         <h2 
