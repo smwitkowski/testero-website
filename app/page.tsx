@@ -109,7 +109,7 @@ export default function Home() {
             </h2>
 
             {/* Social Proof Stats */}
-            <div className="flex flex-wrap justify-center gap-6 mb-6">
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm sm:text-base mb-6">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-green-400" />
                 <span className="text-white font-semibold">New in 2025</span>
@@ -125,7 +125,7 @@ export default function Home() {
             </div>
 
             {/* Pricing Teaser */}
-            <div className="bg-gradient-to-r from-blue-600/20 to-cyan-600/20 backdrop-blur-sm border border-blue-400/40 rounded-lg px-6 py-4 max-w-3xl mx-auto">
+            <div className="bg-gradient-to-r from-blue-600/20 to-cyan-600/20 backdrop-blur-sm border border-blue-400/40 rounded-lg px-4 sm:px-6 py-4 max-w-3xl mx-auto">
               <p className="text-lg md:text-xl text-white font-medium mb-2">
                 Start your journey for as low as{" "}
                 <span className="text-2xl font-bold text-yellow-300">$39/month</span>
@@ -141,7 +141,7 @@ export default function Home() {
                 <Button
                   asChild
                   size="lg"
-                  className="text-lg bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+                  className="w-full sm:w-auto text-lg bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
                   onClick={() => handlePricingClick("hero_primary")}
                 >
                   <Link href="/pricing">
@@ -149,7 +149,7 @@ export default function Home() {
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
-                <Button asChild variant="secondary" size="lg" className="text-lg">
+                <Button asChild variant="secondary" size="lg" className="w-full sm:w-auto text-lg">
                   <Link href="/diagnostic">Try Free Diagnostic</Link>
                 </Button>
               </div>
@@ -209,7 +209,7 @@ export default function Home() {
         {/* Pricing Preview Section */}
         <section
           ref={pricingPreviewRef}
-          className="w-full py-20 px-4 sm:px-6 bg-gradient-to-b from-blue-50 to-white"
+          className="w-full py-16 sm:py-20 px-4 sm:px-6 bg-gradient-to-b from-blue-50 to-white"
         >
           {loadPricingPreview && (
             <div className="max-w-7xl mx-auto">
@@ -224,14 +224,14 @@ export default function Home() {
               </div>
 
               {/* Pricing Cards Preview */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 mb-12">
                 {SUBSCRIPTION_TIERS.map((tier) => (
                   <div
                     key={tier.id}
                     className={cn(
-                      "relative rounded-xl p-6 bg-white border-2 transition-all",
+                      "relative rounded-2xl p-5 sm:p-6 bg-white border-2 transition-all",
                       tier.recommended
-                        ? "border-blue-500 shadow-xl scale-105"
+                        ? "border-blue-500 shadow-xl md:scale-105"
                         : "border-gray-200 hover:border-gray-300 hover:shadow-lg"
                     )}
                   >
@@ -243,22 +243,22 @@ export default function Home() {
                       </div>
                     )}
 
-                    <div className="text-center mb-6">
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">{tier.name}</h3>
+                    <div className="text-center mb-6 space-y-2">
+                      <h3 className="text-2xl font-bold text-gray-900">{tier.name}</h3>
                       <div className="flex items-baseline justify-center">
-                        <span className="text-4xl font-bold">${tier.monthlyPrice}</span>
-                        <span className="text-gray-500 ml-2">/month</span>
+                        <span className="text-3xl sm:text-4xl font-bold">${tier.monthlyPrice}</span>
+                        <span className="text-sm text-gray-500 ml-2">/month</span>
                       </div>
-                      <p className="text-sm text-green-600 font-medium mt-2">
+                      <p className="text-sm sm:text-base text-green-600 font-medium">
                         Save {tier.savingsPercentage}% with annual billing
                       </p>
                     </div>
 
-                    <ul className="space-y-3 mb-6">
+                    <ul className="space-y-3 mb-6 text-left">
                       {tier.highlighted?.slice(0, 3).map((feature) => (
-                        <li key={feature} className="flex items-center gap-2">
+                        <li key={feature} className="flex items-start gap-2">
                           <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-                          <span className="text-sm text-gray-700">{feature}</span>
+                          <span className="text-sm sm:text-base text-gray-700">{feature}</span>
                         </li>
                       ))}
                     </ul>
@@ -266,7 +266,7 @@ export default function Home() {
                     <Button
                       asChild
                       className={cn(
-                        "w-full",
+                        "w-full text-base font-semibold h-12",
                         tier.recommended
                           ? "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
                           : ""

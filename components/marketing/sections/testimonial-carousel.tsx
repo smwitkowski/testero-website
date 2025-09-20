@@ -45,9 +45,16 @@ export function TestimonialCarousel({
 
   if (!testimonials.length) return null;
 
+  const activeTestimonial = testimonials[currentIndex];
+  const initials = activeTestimonial.author
+    .split(" ")
+    .filter(Boolean)
+    .map((name) => name[0])
+    .join("");
+
   return (
     <div className={cn("relative max-w-4xl mx-auto", className)}>
-      <div className="relative h-64 overflow-hidden">
+      <div className="relative min-h-[18rem] sm:min-h-[20rem]">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIndex}
@@ -55,28 +62,28 @@ export function TestimonialCarousel({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -50 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
-            className="absolute inset-0 flex items-center justify-center"
+            className="flex w-full items-center justify-center px-4"
           >
-            <figure className="bg-white rounded-xl p-6 sm:p-8 shadow-lg border border-slate-200 text-center max-w-2xl mx-auto">
-              <blockquote className="text-lg sm:text-xl italic text-slate-700 mb-6">
-                &ldquo;{testimonials[currentIndex].quote}&rdquo;
+            <figure className="w-full max-w-2xl mx-auto rounded-2xl bg-white p-6 sm:p-8 shadow-lg border border-slate-200 text-center">
+              <blockquote className="text-lg sm:text-xl leading-relaxed italic text-slate-700 mb-6">
+                &ldquo;{activeTestimonial.quote}&rdquo;
               </blockquote>
-              <figcaption className="flex items-center justify-center gap-4">
-                {testimonials[currentIndex].avatar ? (
+              <figcaption className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4 text-center sm:text-left">
+                {activeTestimonial.avatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img 
-                    src={testimonials[currentIndex].avatar} 
-                    alt={testimonials[currentIndex].author}
+                  <img
+                    src={activeTestimonial.avatar}
+                    alt={activeTestimonial.author}
                     className="w-12 h-12 rounded-full object-cover"
                   />
                 ) : (
                   <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center text-slate-700 font-medium">
-                    {testimonials[currentIndex].author.split(' ').map(n => n[0]).join('')}
+                    {initials}
                   </div>
                 )}
-                <div className="text-left">
-                  <p className="font-semibold text-slate-900">{testimonials[currentIndex].author}</p>
-                  <p className="text-sm text-slate-600">{testimonials[currentIndex].role}</p>
+                <div className="text-center sm:text-left">
+                  <p className="font-semibold text-slate-900">{activeTestimonial.author}</p>
+                  <p className="text-sm text-slate-600">{activeTestimonial.role}</p>
                 </div>
               </figcaption>
             </figure>
