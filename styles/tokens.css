@@ -5,6 +5,24 @@
   --section-lg: 3rem; /* 48px */
   --section-xl: 4rem; /* 64px */
 
+  /* Card spacing tokens */
+  --space-card-x-sm: 0.75rem; /* 12px */
+  --space-card-y-sm: 0.75rem; /* 12px */
+  --gap-card-sm: 0.5rem; /* 8px */
+
+  --space-card-x-md: 1rem; /* 16px */
+  --space-card-y-md: 1rem; /* 16px */
+  --gap-card-md: 0.75rem; /* 12px */
+
+  --space-card-x-lg: 1.5rem; /* 24px */
+  --space-card-y-lg: 1.25rem; /* 20px */
+  --gap-card-lg: 1rem; /* 16px */
+
+  /* Default aliases */
+  --space-card-x: var(--space-card-x-md);
+  --space-card-y: var(--space-card-y-md);
+  --gap-card: var(--gap-card-md);
+
   /* Surface aliases */
   --bg: var(--background);
   --fg: var(--foreground);
@@ -24,4 +42,21 @@
   --surface-elevated: var(--card, var(--background));
   --surface-brand: color-mix(in oklch, var(--accent) 10%, transparent);
   --divider-color: color-mix(in oklch, var(--foreground) 18%, transparent);
+
+  /* Card spacing tokens */
+  --space-card-x-sm: 0.75rem; /* 12px */
+  --space-card-y-sm: 0.75rem; /* 12px */
+  --gap-card-sm: 0.5rem; /* 8px */
+
+  --space-card-x-md: 1rem; /* 16px */
+  --space-card-y-md: 1rem; /* 16px */
+  --gap-card-md: 0.75rem; /* 12px */
+
+  --space-card-x-lg: 1.5rem; /* 24px */
+  --space-card-y-lg: 1.25rem; /* 20px */
+  --gap-card-lg: 1rem; /* 16px */
+
+  --space-card-x: var(--space-card-x-md);
+  --space-card-y: var(--space-card-y-md);
+  --gap-card: var(--gap-card-md);
 }

@@ -1,0 +1,12 @@
+import { Meta } from "@storybook/blocks"
+import * as CardStories from "./Card.stories"
+
+<Meta of={CardStories} title="UI/Card/Guidelines" />
+
+# Card spacing guidelines
+
+## ✅ DO
+- Prefer `<Card size="lg">` or `<Card compact />` props to adjust density.
+
+## 🚫 DON'T
+- Avoid overrides such as `<Card className="p-8">` that bypass spacing tokens.
