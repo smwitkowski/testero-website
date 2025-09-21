@@ -1,5 +1,4 @@
-import type { ComponentProps } from "react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react"
 
 import {
   Card,
@@ -9,8 +8,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 
 const meta = {
   title: "UI/Card",
@@ -18,108 +17,181 @@ const meta = {
   parameters: {
     docs: {
       description: {
-        component: "Layout surface that applies design token spacing and elevation presets.",
+        component: "Surface component that maps internal spacing to semantic design tokens.",
       },
     },
   },
   args: {
-    className: "bg-card text-card-foreground border border-border shadow-sm",
+    variant: "default",
+    size: "md",
+    compact: false,
+    inset: "none",
+  },
+  argTypes: {
+    size: {
+      control: "inline-radio",
+      options: ["sm", "md", "lg"],
+    },
+    compact: {
+      control: "boolean",
+    },
+    inset: {
+      control: "inline-radio",
+      options: ["none", "content", "all"],
+    },
+    variant: {
+      control: "inline-radio",
+      options: ["default", "elevated", "glass"],
+    },
   },
   tags: ["autodocs"],
-} satisfies Meta<typeof Card>;
+} satisfies Meta<typeof Card>
 
-export default meta;
+export default meta
 
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj<typeof meta>
 
-type CardStoryArgs = ComponentProps<typeof Card>;
-
-export const Default: Story = {
-  args: {
-    children: (
-      <CardContent className="space-y-2">
-        <CardTitle className="text-lg font-semibold">Analytics summary</CardTitle>
-        <CardDescription className="text-sm text-muted-foreground">
-          Structure content with token-backed typography and spacing utilities.
-        </CardDescription>
-      </CardContent>
-    ),
-  },
-};
-
-export const WithHeader: Story = {
-  render: (args: CardStoryArgs) => (
-    <Card {...args} className="bg-card text-card-foreground border border-border shadow-sm">
-      <CardHeader className="gap-1">
-        <CardTitle className="text-xl font-semibold">Plan usage</CardTitle>
-        <CardDescription className="text-sm text-muted-foreground">
-          Tokens ensure consistent spacing and typography across surfaces.
+export const Playground: Story = {
+  render: (args) => (
+    <Card {...args}>
+      <CardHeader>
+        <CardTitle>Team velocity</CardTitle>
+        <CardDescription>
+          Token-driven padding keeps analytics summaries visually balanced across breakpoints.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">You have used 68% of your testing minutes this cycle.</p>
-        <div className="rounded-lg bg-secondary p-4 text-secondary-foreground">
-          <p className="text-sm font-medium">Upgrade to increase limits and unlock advanced analytics.</p>
+      <CardContent>
+        <div className="grid gap-card-md sm:grid-cols-2">
+          <div className="rounded-lg border border-dashed border-border/60 px-card-x-sm py-card-y-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Active testers</p>
+            <p className="mt-2 text-2xl font-semibold">128</p>
+          </div>
+          <div className="rounded-lg border border-dashed border-border/60 px-card-x-sm py-card-y-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Pass rate</p>
+            <p className="mt-2 text-2xl font-semibold">92%</p>
+          </div>
         </div>
       </CardContent>
-    </Card>
-  ),
-};
-
-export const WithActions: Story = {
-  render: (args: CardStoryArgs) => (
-    <Card {...args} className="bg-card text-card-foreground border border-border shadow-sm">
-      <CardHeader className="gap-1 pb-0">
-        <CardTitle className="text-xl font-semibold">Invite teammates</CardTitle>
-        <CardDescription className="text-sm text-muted-foreground">
-          Encourage collaboration with shared workspaces.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4 pt-4">
-        <p className="text-sm text-muted-foreground">
-          Teammates inherit workspace permissions and can help triage issues faster.
-        </p>
-      </CardContent>
-      <CardFooter className="flex flex-col gap-3 border-t border-border pt-4 md:flex-row md:items-center md:justify-between">
-        <div className="text-sm text-muted-foreground">5 seats remaining</div>
-        <CardAction className="gap-2 md:justify-end">
-          <Button variant="ghost" tone="neutral">
-            Skip for now
+      <CardFooter>
+        <span className="text-sm text-muted-foreground">Synced 2 minutes ago</span>
+        <CardAction>
+          <Button variant="ghost" tone="neutral" size="sm">
+            View logs
           </Button>
-          <Button tone="accent">Invite</Button>
+          <Button tone="accent" size="sm">
+            Share report
+          </Button>
         </CardAction>
       </CardFooter>
     </Card>
   ),
-};
+}
 
-export const Elevated: Story = {
-  args: {
-    className: "bg-card text-card-foreground border border-border shadow-lg",
-    children: (
-      <>
-        <CardHeader className="gap-1">
-          <CardTitle className="text-xl font-semibold">Research highlights</CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">
-            Elevated variant demonstrates higher emphasis with additional depth.
-          </CardDescription>
+export const SizeVariants: Story = {
+  render: () => (
+    <div className="grid gap-card-lg md:grid-cols-3">
+      {(["sm", "md", "lg"] as const).map((size) => (
+        <Card key={size} size={size}>
+          <CardHeader>
+            <CardTitle className="text-base font-semibold capitalize">{size} surface</CardTitle>
+            <CardDescription>
+              Horizontal padding and gaps respond to the selected size token.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-card-sm">
+              <div className="rounded-lg bg-secondary/40 px-card-x-sm py-card-y-sm text-sm text-secondary-foreground">
+                Primary metric
+              </div>
+              <div className="rounded-lg bg-secondary/20 px-card-x-sm py-card-y-sm text-sm text-secondary-foreground">
+                Secondary insight
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  ),
+}
+
+export const CompactDensity: Story = {
+  render: () => (
+    <div className="grid gap-card-lg md:grid-cols-2">
+      <Card size="lg">
+        <CardHeader>
+          <CardTitle>Standard rhythm</CardTitle>
+          <CardDescription>Default spacing provides breathing room for detailed content.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent>
           <p className="text-sm text-muted-foreground">
-            Use `gap` utilities from the spacing scale (e.g., `gap-3`, `gap-6`) to organize stacked content.
+            Use the default density for marketing or educational narratives where readability is key.
           </p>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="rounded-lg border border-border p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Completion rate</p>
-              <p className="mt-2 text-2xl font-semibold text-foreground">92%</p>
-            </div>
-            <div className="rounded-lg border border-border p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Median duration</p>
-              <p className="mt-2 text-2xl font-semibold text-foreground">4.2 min</p>
-            </div>
-          </div>
         </CardContent>
-      </>
-    ),
+      </Card>
+      <Card size="lg" compact>
+        <CardHeader>
+          <CardTitle>Compact rhythm</CardTitle>
+          <CardDescription>Compact mode trims vertical padding for dense dashboards.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Toggle <code>compact</code> when cards appear in data tables or tight layouts.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  ),
+}
+
+export const InsetContent: Story = {
+  render: () => (
+    <Card size="lg" inset="content">
+      <CardHeader>
+        <CardTitle>Inset content</CardTitle>
+        <CardDescription>Bleed charts or banners to the card edge without manual padding hacks.</CardDescription>
+      </CardHeader>
+      <CardContent className="gap-card-md px-section_md py-section_md">
+        <div className="rounded-xl bg-gradient-to-r from-orange-400 to-red-500 px-card-x-md py-card-y-md text-white shadow-sm">
+          <p className="text-sm uppercase tracking-wide opacity-80">Experiment velocity</p>
+          <p className="mt-2 text-3xl font-semibold">+18%</p>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          When <code>inset="content"</code> is set, internal sections receive token-based negative margins so the
+          content can extend to the card boundary while preserving consistent inner padding.
+        </p>
+      </CardContent>
+    </Card>
+  ),
+}
+
+export const LightAndDark: Story = {
+  parameters: {
+    backgrounds: { disable: true },
   },
-};
+  render: () => (
+    <div className="grid gap-card-lg md:grid-cols-2">
+      <Card size="md">
+        <CardHeader>
+          <CardTitle>Light mode</CardTitle>
+          <CardDescription>Default theme uses foreground/background tokens.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Integrate charts, forms, or status blocks with zero custom padding.</p>
+        </CardContent>
+      </Card>
+      <div className="dark rounded-xl bg-slate-950 px-card-x-lg py-card-y-lg text-white">
+        <Card size="md" variant="elevated" className="bg-card/95">
+          <CardHeader>
+            <CardTitle>Dark mode</CardTitle>
+            <CardDescription>Spacing tokens remain identical, ensuring parity across themes.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              The enclosing container toggles the <code>dark</code> class, demonstrating automatic adaptation.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  ),
+}

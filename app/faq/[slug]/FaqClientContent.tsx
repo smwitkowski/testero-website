@@ -114,8 +114,12 @@ export default function FaqClientContent({ faq }: FaqClientContentProps) {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Card className="overflow-hidden border-0 shadow-xl bg-white dark:bg-slate-800/80 backdrop-blur-sm">
-              <CardContent className="p-8 md:p-10">
+            <Card
+              size="lg"
+              inset="content"
+              className="overflow-hidden border-0 shadow-xl bg-white dark:bg-slate-800/80 backdrop-blur-sm"
+            >
+              <CardContent className="relative gap-0 px-section_md py-section_md md:px-section_md md:py-section_md">
                 <div className="prose prose-lg max-w-none dark:prose-invert">
                   {renderAnswer(faq.answer)}
                 </div>
@@ -157,9 +161,12 @@ export default function FaqClientContent({ faq }: FaqClientContentProps) {
             transition={{ duration: 0.5, delay: 0.3 }}
           >
             <div className="sticky top-10">
-              <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-slate-800 dark:to-slate-700 border-0 shadow-lg overflow-hidden">
+              <Card
+                size="lg"
+                className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-slate-800 dark:to-slate-700 border-0 shadow-lg overflow-hidden"
+              >
                 <div className="absolute top-0 right-0 w-24 h-24 bg-orange-200 dark:bg-orange-800/20 rounded-full -mr-12 -mt-12 opacity-50"></div>
-                <CardContent className="p-6 relative">
+                <CardContent className="relative">
                   <h3 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Quick Facts</h3>
                   
                   <div className="space-y-4">

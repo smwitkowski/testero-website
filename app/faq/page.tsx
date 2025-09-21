@@ -153,13 +153,16 @@ export default function FaqPage() {
             {visibleFaqs.map((faq) => (
               <motion.div key={faq.slug} variants={item}>
                 <Link href={`/faq/${faq.slug}`} className="block h-full">
-                  <Card className={cn(
+                  <Card
+                    size="lg"
+                    className={cn(
                     "h-full overflow-hidden group hover:shadow-md transition-all duration-300 border-slate-200 dark:border-slate-700",
                     "dark:bg-slate-800/60 backdrop-blur-sm hover:scale-[1.02] hover:border-orange-200 dark:hover:border-orange-800",
                     "relative"
-                  )}>
+                  )}
+                  >
                     <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-orange-400 to-orange-600"></div>
-                    <CardContent className="p-6">
+                    <CardContent>
                       <div className="mb-1 text-xs font-medium text-orange-500 dark:text-orange-400 uppercase tracking-wider">
                         {faq.pillar}
                       </div>

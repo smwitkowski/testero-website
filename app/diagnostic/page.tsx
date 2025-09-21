@@ -258,8 +258,8 @@ const DiagnosticStartPage = () => {
 
   return (
     <main className="max-w-2xl mx-auto my-8 px-4">
-      <Card className="border-slate-200 shadow-sm p-6 md:p-7">
-        <CardHeader className="p-0 mb-6">
+      <Card size="lg" className="border-slate-200 shadow-sm">
+        <CardHeader>
           <div className="flex justify-end mb-4">
             <Badge variant="soft" tone="accent" size="sm">
               Updated Oct 2024 exam changes
@@ -288,8 +288,8 @@ const DiagnosticStartPage = () => {
         </CardHeader>
 
         {resumeSession && (
-          <Card className="mb-6 border-blue-200 bg-blue-50">
-            <CardContent className="p-4">
+          <Card size="sm" compact className="mb-6 border-blue-200 bg-blue-50">
+            <CardContent className="gap-0">
               <h2 className="text-lg font-semibold text-blue-700 mb-3">Unfinished Diagnostic Found</h2>
               <p className="text-sm text-blue-600 mb-2">
                 You have an unfinished <strong>{resumeSession.examType}</strong> diagnostic started on{" "}
