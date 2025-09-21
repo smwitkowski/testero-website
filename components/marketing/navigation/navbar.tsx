@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { colorPrimitive, typographyPrimitive } from '@/lib/design-system';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const navigationItems = [
   { name: 'Home', href: '/' },
@@ -62,17 +62,16 @@ const Navbar = () => {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 h-[72px] bg-white md:bg-white/80 md:backdrop-blur-md ${
-        isScrolled ? 'shadow-sm border-b border-ui-border-light' : ''
+      className={`fixed top-0 left-0 right-0 z-50 h-[72px] bg-background md:bg-background/80 md:backdrop-blur-md transition-colors ${
+        isScrolled ? 'shadow-sm border-b border-border/60' : 'border-b border-transparent'
       }`}
-      style={{ borderColor: colorPrimitive.slate[200] }}
     >
       <div className="container mx-auto px-4 h-full flex items-center justify-between md:justify-start">
         {/* Logo Placeholder */}
         <div className="flex-shrink-0 md:mr-6">
           {/* Replace with actual logo component */}
           <Link href="/" aria-label="Testero Home">
-            <span className="text-xl font-bold" style={{ color: colorPrimitive.slate[800] }}>Testero</span> {/* Replace with actual logo */}
+            <span className="text-xl font-bold text-foreground transition-colors">Testero</span> {/* Replace with actual logo */}
           </Link>
         </div>
 
@@ -80,8 +79,7 @@ const Navbar = () => {
         <div className="md:hidden flex items-center ml-auto">
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="text-ui-text-primary focus:outline-none focus:ring-2 focus:ring-accent-500"
-            style={{ color: colorPrimitive.slate[800] }}
+            className="text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             aria-label="Toggle mobile menu"
             aria-expanded={isMobileMenuOpen}
             aria-controls="mobile-menu"
@@ -97,15 +95,15 @@ const Navbar = () => {
             <Link
               key={item.name}
               href={item.href}
-              className={`relative ${pathname === item.href ? 'text-accent-500' : 'text-primary-800'} hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500`}
-              style={{ fontSize: typographyPrimitive.fontSize.base }}
+              className={`relative text-sm font-medium transition-colors duration-200 ${
+                pathname === item.href ? 'text-foreground' : 'text-muted-foreground'
+              } hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`}
               aria-current={pathname === item.href ? 'page' : undefined}
             >
               {item.name}
               {pathname === item.href && (
                 <span
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-500 transform translate-y-3"
-                  style={{ backgroundColor: colorPrimitive.orange[500] }}
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent transform translate-y-3"
                 ></span>
               )}
             </Link>
@@ -114,26 +112,24 @@ const Navbar = () => {
 
         {/* Action Elements (Desktop) */}
         <div className="hidden md:flex items-center space-x-4 flex-shrink-0 ml-auto">
+          <ThemeToggle />
           {session ? (
             <>
               <Link
                 href="/dashboard"
-                className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }}
+                className="text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Dashboard
               </Link>
               <Link
                 href="/practice/question"
-                className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }}
+                className="text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Practice
               </Link>
               <button
                 onClick={signOut}
-                className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }}
+                className="text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Sign Out
               </button>
@@ -142,15 +138,13 @@ const Navbar = () => {
             <>
               <Link
                 href="/waitlist"
-                className="px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-accent-500"
-                style={{ backgroundColor: colorPrimitive.orange[500], color: colorPrimitive.white, fontSize: typographyPrimitive.fontSize.base }}
+                className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Join Waitlist
               </Link>
               <Link
                 href="/login"
-                className="text-ui-text-primary hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }}
+                className="text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Login
               </Link>
@@ -161,14 +155,15 @@ const Navbar = () => {
 
       {/* Mobile Menu (Collapsible) */}
       {isMobileMenuOpen && (
-        <div id="mobile-menu" className="md:hidden fixed inset-0 top-[72px] bg-white shadow-md transition-transform transform ease-in-out duration-300 translate-x-0">
+        <div id="mobile-menu" className="md:hidden fixed inset-0 top-[72px] bg-background text-foreground shadow-md transition-transform transform ease-in-out duration-300 translate-x-0">
           <nav className="flex flex-col space-y-4 px-4 py-6" aria-label="Mobile navigation">
             {navigationItems.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`relative ${pathname === item.href ? 'text-accent-500' : 'text-primary-800'} hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500`}
-                style={{ fontSize: typographyPrimitive.fontSize.base }}
+                className={`relative text-base font-medium transition-colors duration-200 ${
+                  pathname === item.href ? 'text-foreground' : 'text-muted-foreground'
+                } hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`}
                 onClick={() => setIsMobileMenuOpen(false)} // Close menu on link click
                 aria-current={pathname === item.href ? 'page' : undefined}
               >
@@ -176,21 +171,20 @@ const Navbar = () => {
               </Link>
             ))}
             {/* Action elements (Mobile) */}
-            <div className="flex flex-col space-y-4 mt-4 pt-4 border-t border-ui-border-light" style={{ borderColor: colorPrimitive.slate[200] }}>
+            <div className="flex flex-col space-y-4 mt-4 pt-4 border-t border-border/60">
+              <ThemeToggle />
               {session ? (
                 <>
-                  <Link 
-                    href="/dashboard" 
-                    className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500" 
-                    style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }} 
+                  <Link
+                    href="/dashboard"
+                    className="text-base font-medium text-center text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Dashboard
                   </Link>
-                  <Link 
-                    href="/practice/question" 
-                    className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500" 
-                    style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }} 
+                  <Link
+                    href="/practice/question"
+                    className="text-base font-medium text-center text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Practice
@@ -200,26 +194,23 @@ const Navbar = () => {
                       signOut();
                       setIsMobileMenuOpen(false);
                     }}
-                    className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                    style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }}
+                    className="text-base font-medium text-center text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     Sign Out
                   </button>
                 </>
               ) : (
                 <>
-                  <Link 
-                    href="/waitlist" 
-                    className="px-4 py-2 rounded text-center focus:outline-none focus:ring-2 focus:ring-accent-500" 
-                    style={{ backgroundColor: colorPrimitive.orange[500], color: colorPrimitive.white, fontSize: typographyPrimitive.fontSize.base }} 
+                  <Link
+                    href="/waitlist"
+                    className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Join Waitlist
                   </Link>
-                  <Link 
-                    href="/login" 
-                    className="text-ui-text-primary text-center hover:text-accent-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500" 
-                    style={{ color: colorPrimitive.slate[800], fontSize: typographyPrimitive.fontSize.base }} 
+                  <Link
+                    href="/login"
+                    className="text-base font-medium text-center text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Login
