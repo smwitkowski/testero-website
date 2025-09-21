@@ -1,0 +1,55 @@
+import { Controls, Meta, Primary, Props, Stories } from "@storybook/blocks"
+import * as EmptyStateStories from "../EmptyState.stories"
+
+<Meta of={EmptyStateStories} title="Design System/EmptyState/Docs" />
+
+# EmptyState
+
+EmptyState communicates absence, loading, or error scenarios using consistent iconography, copy, and actions.
+
+## When to use
+
+- A collection has no data yet (first-run experience).
+- A filter removes every result and we need to explain next steps.
+- A recoverable error occurs and the user can retry or learn more.
+
+## Usage
+
+```tsx
+import { EmptyState } from "@/components/ui"
+import { Inbox } from "lucide-react"
+
+export function NoSessions() {
+  return (
+    <EmptyState
+      tone="info"
+      icon={<Inbox aria-hidden="true" className="size-6" />}
+      statusLabel="No sessions"
+      title="You're all caught up"
+      description="Start a new diagnostic session or import historic runs to compare trends."
+      primaryAction={{ label: "Start session", onClick: () => console.log("start") }}
+      secondaryAction={{ label: "Import CSV", onClick: () => console.log("import") }}
+    />
+  )
+}
+```
+
+## Component API
+
+<Primary />
+<Controls />
+<Props of={EmptyStateStories.Neutral} />
+
+## Do
+
+- Tailor the headline to be outcome oriented (e.g. "Start your first experiment").
+- Pair status icons with `statusLabel` so color is never the only cue.
+- Keep descriptions short (two sentences max) and actionable.
+
+## Don't
+
+- Use destructive tone for empty results—reserve it for actual failures.
+- Stack more than two call-to-action buttons; link secondary tasks elsewhere.
+- Leave the icon as the only focusable element—actions must be keyboard reachable.
+
+<Stories includePrimary={false} />
