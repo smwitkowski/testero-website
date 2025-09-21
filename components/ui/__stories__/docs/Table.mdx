@@ -1,0 +1,65 @@
+import { Controls, Meta, Primary, Props, Stories } from "@storybook/blocks"
+import * as TableStories from "../Table.stories"
+
+<Meta of={TableStories} title="Design System/Table/Docs" />
+
+# Table
+
+Table renders accessible tabular data with sortable headers, zebra striping, and empty/loading states.
+
+## When to use
+
+- Display structured datasets such as experiments, billing history, or feature flags.
+- Allow operators to sort by key metrics like status or conversion rate.
+- Embed contextual empty states when a dataset has no rows.
+
+## Usage
+
+```tsx
+import { Table } from "@/components/ui"
+
+const columns = [
+  { id: "name", header: "Study", sortable: true },
+  { id: "moderator", header: "Moderator" },
+  { id: "status", header: "Status" },
+  { id: "lastRun", header: "Last run", sortable: true },
+]
+
+const data = [
+  { id: "study-1", name: "GenAI onboarding", moderator: "Priya", status: "Running", lastRun: "Mar 12" },
+  { id: "study-2", name: "Pricing survey", moderator: "Noah", status: "Draft", lastRun: "Mar 4" },
+]
+
+export function StudiesTable() {
+  return (
+    <Table
+      columns={columns}
+      data={data}
+      caption="Current usability studies and moderators"
+      onSortChange={(columnId, direction) => {
+        // Update data ordering upstream when the user sorts.
+      }}
+    />
+  )
+}
+```
+
+## Component API
+
+<Primary />
+<Controls />
+<Props of={TableStories.InteractiveSorting} />
+
+## Do
+
+- Provide a `caption` for screen readers even if you hide it visually.
+- Keep numeric columns right-aligned so magnitudes are easy to compare.
+- Use the `emptyState` prop to show recovery guidance when there are zero rows.
+
+## Don't
+
+- Hide critical context in tooltips; keep key values visible.
+- Overload headers with long sentences—use concise nouns or verbs.
+- Enable sorting on columns that render badges or custom JSX without a clear ordering.
+
+<Stories includePrimary={false} />

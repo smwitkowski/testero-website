@@ -1,0 +1,65 @@
+import { Controls, Meta, Primary, Props, Stories } from "@storybook/blocks"
+import * as PageHeaderStories from "../PageHeader.stories"
+
+<Meta of={PageHeaderStories} title="Design System/PageHeader/Docs" />
+
+# PageHeader
+
+The PageHeader provides a consistent hero block for authenticated layouts. It aligns breadcrumbs, titles, descriptions, and quick actions so that every view opens with a predictable rhythm.
+
+## When to use
+
+- Introduce a new product surface or dashboard route.
+- Provide contextual breadcrumbs and supporting copy above a dense layout.
+- Pair with tabs or filters that live directly beneath the header.
+
+Avoid using PageHeader for inline sections inside a page—prefer stacked `Card` components instead.
+
+## Usage
+
+```tsx
+import { PageHeader, Button } from "@/components/ui"
+
+export function ExperimentsHeader() {
+  return (
+    <PageHeader
+      tone="muted"
+      align="between"
+      breadcrumbs={[
+        { label: "Dashboard", href: "/app" },
+        { label: "Experiments" },
+      ]}
+      title="Experiment overview"
+      description="Compare how each test is trending and notify collaborators when an action is needed."
+      actions={
+        <div className="flex gap-2">
+          <Button variant="ghost" tone="neutral">
+            Share report
+          </Button>
+          <Button tone="accent">New experiment</Button>
+        </div>
+      }
+    />
+  )
+}
+```
+
+## Component API
+
+<Primary />
+<Controls />
+<Props of={PageHeaderStories.Default} />
+
+## Do
+
+- Keep titles concise—one line is ideal and two lines is the maximum.
+- Use `tone="muted"` when the page background needs subtle separation from the canvas.
+- Switch `density="compact"` when the header sits above tables or forms.
+
+## Don't
+
+- Nest PageHeaders inside cards or modals.
+- Combine more than three breadcrumb levels; collapse intermediate destinations instead.
+- Place destructive actions (like delete) in the primary action slot—prefer menus.
+
+<Stories includePrimary={false} />

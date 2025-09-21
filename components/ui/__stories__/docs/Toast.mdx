@@ -1,0 +1,68 @@
+import { Controls, Meta, Primary, Props, Stories } from "@storybook/blocks"
+import * as ToastStories from "../Toast.stories"
+
+<Meta of={ToastStories} title="Design System/Toast/Docs" />
+
+# Toast
+
+Toast surfaces transient notifications without interrupting the current workflow.
+
+## When to use
+
+- Confirm that a background task completed (save, export, sync).
+- Warn users about degraded performance while recovery continues.
+- Offer an undo affordance shortly after an action.
+
+## Usage
+
+```tsx
+import { Toast, useToastQueue } from "@/components/ui"
+
+export function ToastManager() {
+  const { toasts, addToast, dismissToast } = useToastQueue()
+
+  return (
+    <div>
+      <button
+        className="rounded-md bg-primary px-3 py-2 text-primary-foreground"
+        onClick={() =>
+          addToast({
+            tone: "success",
+            title: "Report exported",
+            description: "We emailed the download link to you.",
+            dismissible: true,
+          })
+        }
+      >
+        Trigger toast
+      </button>
+
+      <div className="mt-4 flex flex-col gap-3">
+        {toasts.map(({ id, ...toast }) => (
+          <Toast key={id} {...toast} onClose={() => dismissToast(id)} />
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+## Component API
+
+<Primary />
+<Controls />
+<Props of={ToastStories.Info} />
+
+## Do
+
+- Set `tone` based on semantic meaning: `success` for confirmations, `warning` for recoverable risks, `danger` for critical issues.
+- Provide meaningful button labels (e.g. "View report" instead of "OK").
+- Respect reduced motion preferences—the component removes transitions automatically.
+
+## Don't
+
+- Queue more than three toasts at once; collapse or replace older messages instead.
+- Use toast for blocking confirmations—use a modal or inline banner instead.
+- Leave a toast dismissible without also wiring an `onClose` handler.
+
+<Stories includePrimary={false} />
