@@ -141,10 +141,16 @@ export function TrialConversionModal({
 
           {/* CTAs */}
           <div className="flex flex-col gap-2">
-            <Button onClick={handleStartTrial} disabled={isLoading} size="lg" className="w-full">
+            <Button
+              onClick={handleStartTrial}
+              disabled={isLoading}
+              size="lg"
+              tone="accent"
+              fullWidth
+            >
               {isLoading ? "Starting..." : "Start 14-Day Free Trial"}
             </Button>
-            <Button onClick={onClose} variant="ghost" size="sm" className="w-full">
+            <Button onClick={onClose} variant="ghost" tone="neutral" size="sm" fullWidth>
               Maybe later
             </Button>
           </div>

@@ -64,7 +64,7 @@ export const DiagnosticSummary: React.FC<DiagnosticSummaryProps> = ({
             <div className="text-xs text-gray-400">
               Take a diagnostic to assess your current knowledge level
             </div>
-            <Button asChild size="sm" className="mt-3">
+            <Button asChild size="sm" tone="accent" className="mt-3">
               <Link href="/diagnostic">
                 Start Diagnostic
               </Link>
@@ -93,7 +93,7 @@ export const DiagnosticSummary: React.FC<DiagnosticSummaryProps> = ({
                   <div className={`text-lg font-bold ${getScoreColor(session.score)}`}>
                     {session.score}%
                   </div>
-                  <Button asChild size="sm" variant="outline" className="text-xs h-6 px-2">
+                  <Button asChild size="sm" variant="outline" tone="accent" className="text-xs">
                     <Link href={`/diagnostic/${session.id}/summary`}>
                       View Results
                     </Link>
@@ -105,7 +105,7 @@ export const DiagnosticSummary: React.FC<DiagnosticSummaryProps> = ({
             {/* Show "View All" if there are more sessions */}
             {totalSessions > sessions.length && (
               <div className="pt-2 border-t border-gray-100">
-                <Button asChild variant="outline" size="sm" className="w-full">
+                <Button asChild variant="outline" tone="accent" size="sm" className="w-full">
                   <Link href="/diagnostic">
                     View All Diagnostics
                   </Link>
@@ -115,7 +115,7 @@ export const DiagnosticSummary: React.FC<DiagnosticSummaryProps> = ({
             
             {/* CTA for another diagnostic */}
             <div className="pt-2 border-t border-gray-100">
-              <Button asChild size="sm" className="w-full">
+              <Button asChild size="sm" tone="accent" className="w-full">
                 <Link href="/diagnostic">
                   Take Another Diagnostic
                 </Link>

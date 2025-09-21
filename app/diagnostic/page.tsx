@@ -297,17 +297,13 @@ const DiagnosticStartPage = () => {
               </p>
               <p className="text-sm text-blue-600 mb-4">Would you like to resume or start over?</p>
               <div className="flex gap-3">
-                <Button
-                  onClick={handleResumeSession}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                  size="sm"
-                >
+                <Button onClick={handleResumeSession} tone="accent" size="sm">
                   Resume
                 </Button>
                 <Button
                   onClick={handleStartOver}
                   variant="outline"
-                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                  tone="accent"
                   size="sm"
                 >
                   Start Over
@@ -377,13 +373,14 @@ const DiagnosticStartPage = () => {
             <Button
               onClick={handleStartDiagnostic}
               disabled={isButtonDisabled}
-              className="w-full h-12 text-base font-medium mt-2 bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              fullWidth
+              size="lg"
+              tone="accent"
+              className="mt-2"
+              iconRight={<ArrowRight className="h-4 w-4" />}
             >
               {user && isAuthLoading ? "Loading user..." : loading ? "Starting..." : (
-                <>
-                  Start free diagnostic
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </>
+                <>Start free diagnostic</>
               )}
             </Button>
             {error && (
