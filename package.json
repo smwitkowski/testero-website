@@ -17,6 +17,7 @@
     "validate:content": "NODE_NO_WARNINGS=1 node scripts/validate-content.js",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
+    "storybook:verify": "node -e \"const fs=require('fs'); if(!fs.existsSync('.storybook')){console.error('Storybook not found: bootstrap it before CI (Task 5).'); process.exit(2)} else {console.log('Storybook config found.')}\"",
     "storybook:preview": "http-server storybook-static -p 6007 -c-1",
     "test": "jest",
     "e2e": "playwright test",
