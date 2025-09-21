@@ -22,10 +22,10 @@ export function TrustBar({ logos, title = "Trusted by", className }: TrustBarPro
   });
 
   return (
-    <section 
+    <section
       ref={ref}
       className={cn(
-        "w-full py-8 px-4 sm:px-6 bg-white/50 backdrop-blur-sm border-y border-slate-200/50",
+        "w-full border-y border-[color:var(--divider-color)] bg-[color:color-mix(in oklch, var(--surface-elevated) 70%, transparent)] px-4 py-8 backdrop-blur-sm sm:px-6",
         className
       )}
     >
@@ -35,7 +35,7 @@ export function TrustBar({ logos, title = "Trusted by", className }: TrustBarPro
             initial={{ opacity: 0, y: 20 }}
             animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
             transition={{ duration: 0.6 }}
-            className="text-sm uppercase tracking-wide text-slate-500 text-center mb-6"
+            className="mb-6 text-center text-sm uppercase tracking-wide text-muted-foreground"
           >
             {title}
           </motion.h3>

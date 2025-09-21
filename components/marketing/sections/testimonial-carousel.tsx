@@ -64,8 +64,8 @@ export function TestimonialCarousel({
             transition={{ duration: 0.5, ease: "easeInOut" }}
             className="flex w-full items-center justify-center px-4"
           >
-            <figure className="w-full max-w-2xl mx-auto rounded-2xl bg-white p-6 sm:p-8 shadow-lg border border-slate-200 text-center">
-              <blockquote className="text-lg sm:text-xl leading-relaxed italic text-slate-700 mb-6">
+            <figure className="mx-auto w-full max-w-2xl rounded-2xl border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-6 text-center shadow-lg sm:p-8">
+              <blockquote className="mb-6 text-lg italic leading-relaxed text-muted-foreground sm:text-xl">
                 &ldquo;{activeTestimonial.quote}&rdquo;
               </blockquote>
               <figcaption className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4 text-center sm:text-left">
@@ -77,13 +77,13 @@ export function TestimonialCarousel({
                     className="w-12 h-12 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center text-slate-700 font-medium">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--surface-muted)] font-medium text-foreground">
                     {initials}
                   </div>
                 )}
                 <div className="text-center sm:text-left">
-                  <p className="font-semibold text-slate-900">{activeTestimonial.author}</p>
-                  <p className="text-sm text-slate-600">{activeTestimonial.role}</p>
+                  <p className="font-semibold text-foreground">{activeTestimonial.author}</p>
+                  <p className="text-sm text-muted-foreground">{activeTestimonial.role}</p>
                 </div>
               </figcaption>
             </figure>
@@ -99,10 +99,10 @@ export function TestimonialCarousel({
               key={index}
               onClick={() => goToSlide(index)}
               className={cn(
-                "w-3 h-3 rounded-full transition-all duration-300",
+                "h-3 w-3 rounded-full transition-all duration-300",
                 index === currentIndex
-                  ? "bg-orange-500 scale-125"
-                  : "bg-slate-300 hover:bg-slate-400"
+                  ? "scale-125 bg-[color:var(--tone-accent)]"
+                  : "bg-[color:var(--divider-color)] hover:bg-[color:var(--tone-accent-surface)]"
               )}
               aria-label={`Go to testimonial ${index + 1}`}
             />

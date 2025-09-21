@@ -32,6 +32,19 @@
   --surface-elevated: var(--card, var(--background));
   --surface-brand: color-mix(in oklch, var(--accent) 6%, transparent);
 
+  /* Tone aliases for marketing & diagnostics */
+  --tone-success: var(--chart-2);
+  --tone-warning: var(--chart-4);
+  --tone-danger: var(--chart-5);
+  --tone-info: var(--chart-3);
+  --tone-accent: var(--accent);
+  --tone-success-surface: color-mix(in oklch, var(--tone-success) 22%, transparent);
+  --tone-warning-surface: color-mix(in oklch, var(--tone-warning) 22%, transparent);
+  --tone-danger-surface: color-mix(in oklch, var(--tone-danger) 22%, transparent);
+  --tone-info-surface: color-mix(in oklch, var(--tone-info) 22%, transparent);
+  --tone-accent-surface: color-mix(in oklch, var(--tone-accent) 20%, transparent);
+  --tone-accent-border: color-mix(in oklch, var(--tone-accent) 32%, transparent);
+
   /* Divider */
   --divider-color: color-mix(in oklch, var(--foreground) 12%, transparent);
 }
@@ -59,4 +72,27 @@
   --space-card-x: var(--space-card-x-md);
   --space-card-y: var(--space-card-y-md);
   --gap-card: var(--gap-card-md);
+}
+
+/* Gradient utilities derived from semantic tokens */
+.ds-gradient-accent-surface {
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--surface-brand) 80%, transparent) 0%,
+    color-mix(in oklch, var(--tone-accent) 14%, var(--background)) 50%,
+    color-mix(in oklch, var(--surface-brand) 75%, transparent) 100%
+  );
+}
+
+.ds-gradient-success-pill {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--tone-success) 32%, transparent) 0%,
+    color-mix(in oklch, var(--tone-success) 42%, transparent) 100%
+  );
+  color: var(--foreground);
+}
+
+.dark .ds-gradient-success-pill {
+  color: var(--foreground);
 }

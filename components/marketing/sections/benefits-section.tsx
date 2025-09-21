@@ -3,16 +3,36 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { colorSemantic, duration, easing } from '@/lib/design-system';
+import { duration, easing } from '@/lib/design-system';
+import { Button } from '@/components/ui/button';
+
+type BenefitTone = 'accent' | 'success' | 'info' | 'primary';
+
+const toneStyles: Record<BenefitTone, { icon: string; highlight: string }> = {
+  accent: {
+    icon: 'bg-[color:var(--tone-accent-surface)] text-[color:var(--tone-accent)]',
+    highlight: 'text-[color:var(--tone-accent)]',
+  },
+  success: {
+    icon: 'bg-[color:var(--tone-success-surface)] text-[color:var(--tone-success)]',
+    highlight: 'text-[color:var(--tone-success)]',
+  },
+  info: {
+    icon: 'bg-[color:var(--tone-info-surface)] text-[color:var(--tone-info)]',
+    highlight: 'text-[color:var(--tone-info)]',
+  },
+  primary: {
+    icon: 'bg-[color:var(--surface-muted)] text-foreground',
+    highlight: 'text-foreground',
+  },
+};
 
 interface BenefitCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
   highlight?: string;
-  highlightColor?: string;
-  bgColor: string;
-  iconColor: string;
+  tone: BenefitTone;
   delay?: number;
 }
 
@@ -21,13 +41,12 @@ const BenefitCard: React.FC<BenefitCardProps> = ({
   title,
   description,
   highlight,
-  highlightColor = colorSemantic.accent[500],
-  bgColor,
-  iconColor,
+  tone,
   delay = 0
 }) => {
   const [isHovered, setIsHovered] = useState(false);
-  
+  const toneClass = toneStyles[tone];
+
   // Replace highlight text with styled version if provided
   const processedDescription = highlight ? (
     <>
@@ -35,7 +54,7 @@ const BenefitCard: React.FC<BenefitCardProps> = ({
         <React.Fragment key={index}>
           {part}
           {index < array.length - 1 && (
-            <span className="font-semibold" style={{ color: highlightColor }}>
+            <span className={cn('font-semibold', toneClass.highlight)}>
               {highlight}
             </span>
           )}
@@ -49,9 +68,9 @@ const BenefitCard: React.FC<BenefitCardProps> = ({
   return (
     <article
       className={cn(
-        "bg-white p-4 sm:p-6 rounded-xl shadow-md border border-slate-100",
-        "transform transition-all duration-300",
-        "hover:shadow-lg"
+        'rounded-xl border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 sm:p-6 shadow-md',
+        'transform transition-all duration-300',
+        'hover:-translate-y-1 hover:shadow-lg'
       )}
       style={{
         animationDelay: `${delay}ms`,
@@ -64,29 +83,24 @@ const BenefitCard: React.FC<BenefitCardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="flex items-start space-x-4">
-        <div 
+        <div
           className={cn(
-            "p-3 rounded-lg transition-transform",
-            isHovered ? "scale-110" : "scale-100"
+            'p-3 rounded-lg transition-transform',
+            isHovered ? 'scale-110' : 'scale-100',
+            toneClass.icon
           )}
-          style={{ 
-            backgroundColor: bgColor,
-            transition: `transform ${duration.fast}ms ${easing.spring}`
-          }}
           aria-hidden="true"
         >
-          <div className="transition-all" style={{ color: iconColor }}>
-            {icon}
-          </div>
+          <div className="transition-all">{icon}</div>
         </div>
         <div className="flex-1">
           <h3 className={cn(
-            "text-lg font-semibold text-slate-800 mb-2 transition-all",
-            isHovered && "text-accent-600"
+            'mb-2 text-lg font-semibold text-foreground transition-all',
+            isHovered && toneClass.highlight
           )}>
             {title}
           </h3>
-          <p className="text-slate-600">{processedDescription}</p>
+          <p className="text-muted-foreground">{processedDescription}</p>
         </div>
       </div>
     </article>
@@ -143,27 +157,27 @@ export function BenefitsSectionSkeleton() {
     <section className="w-full py-10 sm:py-16 md:py-24 px-4 sm:px-6 relative">
       {/* Background element */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute right-[6%] top-1/4 -translate-y-1/2 w-52 h-52 bg-blue-50 rounded-full opacity-30 blur-2xl"></div>
-        <div className="absolute left-[6%] bottom-1/4 translate-y-1/2 w-52 h-52 bg-orange-50 rounded-full opacity-30 blur-2xl"></div>
+        <div className="absolute right-[6%] top-1/4 -translate-y-1/2 h-52 w-52 rounded-full bg-[color:var(--tone-info-surface)] opacity-30 blur-2xl"></div>
+        <div className="absolute left-[6%] bottom-1/4 translate-y-1/2 h-52 w-52 rounded-full bg-[color:var(--tone-accent-surface)] opacity-30 blur-2xl"></div>
       </div>
-      
+
       <div className="max-w-4xl mx-auto text-center space-y-8 relative z-10">
         {/* Skeleton heading */}
-        <div className="h-12 bg-slate-200 rounded-lg w-3/4 mx-auto animate-pulse"></div>
-        
+        <div className="mx-auto h-12 w-3/4 animate-pulse rounded-lg bg-[color:var(--surface-muted)]"></div>
+
         {/* Skeleton paragraph */}
-        <div className="h-6 bg-slate-200 rounded-lg w-5/6 mx-auto animate-pulse"></div>
-        
+        <div className="mx-auto h-6 w-5/6 animate-pulse rounded-lg bg-[color:var(--surface-muted)]"></div>
+
         {/* Skeleton cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
           {[...Array(4)].map((_, index) => (
-            <div key={index} className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-slate-100 animate-pulse">
+            <div key={index} className="animate-pulse rounded-xl border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 sm:p-6 shadow-md">
               <div className="flex items-start space-x-4">
-                <div className="p-3 rounded-lg bg-slate-200 h-12 w-12"></div>
+                <div className="h-12 w-12 rounded-lg bg-[color:var(--surface-muted)] p-3"></div>
                 <div className="flex-1">
-                  <div className="h-6 bg-slate-200 rounded w-3/4 mb-3"></div>
-                  <div className="h-4 bg-slate-200 rounded w-full mb-2"></div>
-                  <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+                  <div className="mb-3 h-6 w-3/4 rounded bg-[color:var(--surface-muted)]"></div>
+                  <div className="mb-2 h-4 w-full rounded bg-[color:var(--surface-muted)]"></div>
+                  <div className="h-4 w-5/6 rounded bg-[color:var(--surface-muted)]"></div>
                 </div>
               </div>
             </div>
@@ -171,24 +185,24 @@ export function BenefitsSectionSkeleton() {
         </div>
         
         {/* Skeleton comparison */}
-        <div className="mt-12 sm:mt-16 pt-6 sm:pt-8 border-t border-slate-200">
+        <div className="mt-12 border-t border-[color:var(--divider-color)] pt-6 sm:mt-16 sm:pt-8">
           <div className="flex flex-col md:flex-row justify-center items-center gap-8">
             <div className="flex-1">
-              <div className="h-6 bg-slate-200 rounded w-1/2 mx-auto md:ml-auto md:mr-0 mb-4"></div>
+              <div className="mx-auto mb-4 h-6 w-1/2 rounded bg-[color:var(--surface-muted)] md:ml-auto md:mr-0"></div>
               <div className="space-y-2">
                 {[...Array(3)].map((_, index) => (
-                  <div key={index} className="h-4 bg-slate-200 rounded w-3/4 mx-auto md:ml-auto md:mr-0"></div>
+                  <div key={index} className="mx-auto h-4 w-3/4 rounded bg-[color:var(--surface-muted)] md:ml-auto md:mr-0"></div>
                 ))}
               </div>
             </div>
-            
-            <div className="hidden md:block h-40 border-l border-slate-300" aria-hidden="true"></div>
-            
+
+            <div className="hidden h-40 border-l border-[color:var(--divider-color)] md:block" aria-hidden="true"></div>
+
             <div className="flex-1">
-              <div className="h-6 bg-slate-200 rounded w-1/2 mx-auto md:mr-auto md:ml-0 mb-4"></div>
+              <div className="mx-auto mb-4 h-6 w-1/2 rounded bg-[color:var(--surface-muted)] md:ml-0 md:mr-auto"></div>
               <div className="space-y-2">
                 {[...Array(3)].map((_, index) => (
-                  <div key={index} className="h-4 bg-slate-200 rounded w-3/4 mx-auto md:mr-auto md:ml-0"></div>
+                  <div key={index} className="mx-auto h-4 w-3/4 rounded bg-[color:var(--surface-muted)] md:ml-0 md:mr-auto"></div>
                 ))}
               </div>
             </div>
@@ -208,13 +222,13 @@ export function BenefitsSection() {
       {/* Background element */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div
-          className="absolute right-[6%] top-1/4 -translate-y-1/2 w-52 h-52 bg-blue-50 rounded-full opacity-30 blur-2xl"
+          className="absolute right-[6%] top-1/4 -translate-y-1/2 h-52 w-52 rounded-full bg-[color:var(--tone-info-surface)] opacity-30 blur-2xl"
           style={{
             animation: `pulse 15s ease-in-out infinite alternate`,
           }}
         ></div>
         <div
-          className="absolute left-[6%] bottom-1/4 translate-y-1/2 w-52 h-52 bg-orange-50 rounded-full opacity-30 blur-2xl"
+          className="absolute left-[6%] bottom-1/4 translate-y-1/2 h-52 w-52 rounded-full bg-[color:var(--tone-accent-surface)] opacity-30 blur-2xl"
           style={{
             animation: `pulse 18s ease-in-out infinite alternate-reverse`,
           }}
@@ -224,17 +238,17 @@ export function BenefitsSection() {
       <div className="max-w-4xl mx-auto text-center space-y-8 relative z-10">
         <h2 
           id="benefits-heading"
-          className="text-2xl sm:text-3xl md:text-5xl font-bold text-slate-800 drop-shadow-sm opacity-0"
+          className="text-2xl font-bold text-foreground drop-shadow-sm opacity-0 sm:text-3xl md:text-5xl"
           style={{
             animation: `fadeInUp ${duration.slow}ms ${easing.spring} forwards`,
             animationDelay: `${duration.fast}ms`
           }}
         >
-          Powerful Features to <span className="text-orange-500">Accelerate</span> Your Certification Journey
+          Powerful Features to <span className="text-[color:var(--tone-accent)]">Accelerate</span> Your Certification Journey
         </h2>
         
-        <p 
-          className="text-base sm:text-lg md:text-xl text-slate-600 max-w-3xl mx-auto opacity-0"
+        <p
+          className="mx-auto max-w-3xl text-balance text-base text-muted-foreground opacity-0 sm:text-lg md:text-xl"
           style={{
             animation: `fadeInUp ${duration.slow}ms ${easing.spring} forwards`,
             animationDelay: `${duration.fast * 2}ms`
@@ -256,8 +270,7 @@ export function BenefitsSection() {
             }
             title="Never Study Outdated Content"
             description="Automatically updated within 14 days of official blueprint changes—while competitors take months. Always practice with the latest exam topics."
-            bgColor={colorSemantic.primary[50]}
-            iconColor={colorSemantic.primary[500]}
+            tone="accent"
             delay={duration.fast * 3}
           />
           
@@ -270,8 +283,7 @@ export function BenefitsSection() {
             }
             title="Know Your Exact Readiness"
             description="15-minute diagnostic reveals your percentile score and exact gaps. No more guessing if you're ready—know with data-driven confidence."
-            bgColor={colorSemantic.success.light}
-            iconColor={colorSemantic.success.base}
+            tone="success"
             delay={duration.fast * 4}
           />
           
@@ -284,8 +296,7 @@ export function BenefitsSection() {
             }
             title="Study 40% More Efficiently"
             description="Adaptive engine eliminates redundant practice, focusing only on your weak areas. Save 40+ hours compared to traditional study methods."
-            bgColor={colorSemantic.primary[100]}
-            iconColor={colorSemantic.accent[500]}
+            tone="info"
             delay={duration.fast * 5}
           />
           
@@ -298,34 +309,33 @@ export function BenefitsSection() {
             }
             title="Pass With Confidence"
             description="Join the 85% who pass on their first attempt (industry average: 70%). Built by ex-Google Cloud PSO experts who know what it takes."
-            bgColor={colorSemantic.accent[50]}
-            iconColor={colorSemantic.accent[500]}
+            tone="accent"
             delay={duration.fast * 6}
           />
         </div>
         
         {/* Feature availability and CTA */}
-        <div 
-          className="mt-12 sm:mt-16 pt-6 sm:pt-8 border-t border-slate-200 opacity-0"
+        <div
+          className="mt-12 border-t border-[color:var(--divider-color)] pt-6 opacity-0 sm:mt-16 sm:pt-8"
           style={{
             animation: `fadeInUp ${duration.slow}ms ${easing.spring} forwards`,
             animationDelay: `${duration.fast * 7}ms`
           }}
         >
           <div className="text-center">
-            <h3 className="text-2xl font-bold text-slate-800 mb-4">Ready to Get Started?</h3>
-            <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
+            <h3 className="mb-4 text-2xl font-bold text-foreground">Ready to Get Started?</h3>
+            <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground">
               Join hundreds of cloud professionals already using Testero to accelerate their certification journey.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-lg mx-auto">
-              <Link href="/signup" className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-8 py-4 rounded-lg text-lg font-semibold shadow-md transition-all hover:shadow-lg hover:scale-105 text-center">
-                Start Free Practice
-              </Link>
-              <Link href="/diagnostic" className="bg-white border-2 border-orange-500 text-orange-600 hover:bg-orange-50 px-8 py-4 rounded-lg text-lg font-semibold shadow-md transition-all hover:shadow-lg text-center">
-                Take Diagnostic Test
-              </Link>
+            <div className="mx-auto flex max-w-lg flex-col justify-center gap-4 sm:flex-row">
+              <Button asChild tone="accent" size="lg" className="text-lg">
+                <Link href="/signup">Start Free Practice</Link>
+              </Button>
+              <Button asChild variant="outline" tone="accent" size="lg" className="text-lg">
+                <Link href="/diagnostic">Take Diagnostic Test</Link>
+              </Button>
             </div>
-            <p className="text-sm text-slate-500 mt-4">✓ Free forever tier ✓ No credit card required ✓ Instant access</p>
+            <p className="mt-4 text-sm text-muted-foreground">✓ Free forever tier ✓ No credit card required ✓ Instant access</p>
           </div>
         </div>
       </div>

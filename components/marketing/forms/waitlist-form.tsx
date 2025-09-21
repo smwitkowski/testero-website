@@ -9,6 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { Input } from "@/components/ui/input";
 import { HoverButton } from "@/components/marketing/buttons/hover-button";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 // Define the form schema with zod validation
 const formSchema = z.object({
@@ -135,13 +136,15 @@ export function WaitlistForm({
                           <Input
                             type="email"
                             placeholder="Enter your email address"
-                            className={`px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] text-base sm:text-lg rounded-md transition-all duration-300 border-2 ${
+                            className={cn(
+                              "min-h-[44px] w-full rounded-md border-2 px-3 py-2.5 text-base transition-all duration-300 sm:px-4 sm:py-3 sm:text-lg",
+                              "bg-[color:var(--surface-elevated)] text-foreground placeholder:text-muted-foreground/70",
                               fieldState.error
-                                ? "border-red-400 bg-red-50"
+                                ? "border-[color:var(--tone-danger)] bg-[color:var(--tone-danger-surface)]"
                                 : fieldState.isDirty && !fieldState.error
-                                  ? "border-green-400 bg-green-50"
-                                  : "border-slate-300 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
-                            }`}
+                                  ? "border-[color:var(--tone-success)] bg-[color:var(--tone-success-surface)]"
+                                  : "border-[color:var(--divider-color)] focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-[color:var(--tone-accent)] focus-visible:ring-offset-0"
+                            )}
                             disabled={isSubmitting}
                             autoComplete="email"
                             autoFocus
@@ -159,11 +162,11 @@ export function WaitlistForm({
 
                         {/* Validation icon */}
                         {fieldState.isDirty && (
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 transform">
                             {fieldState.error ? (
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                className="h-5 w-5 text-red-500"
+                                className="h-5 w-5 text-[color:var(--tone-danger)]"
                                 viewBox="0 0 20 20"
                                 fill="currentColor"
                               >
@@ -176,7 +179,7 @@ export function WaitlistForm({
                             ) : (
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                className="h-5 w-5 text-green-500"
+                                className="h-5 w-5 text-[color:var(--tone-success)]"
                                 viewBox="0 0 20 20"
                                 fill="currentColor"
                               >
@@ -204,11 +207,13 @@ export function WaitlistForm({
                         <div className="relative">
                           <FormControl>
                             <select
-                              className={`px-3 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-md w-full text-base sm:text-lg text-slate-600 bg-white appearance-none transition-all duration-300 border-2 ${
+                              className={cn(
+                                "min-h-[44px] w-full appearance-none rounded-md border-2 px-3 py-2.5 text-base transition-all duration-300 sm:px-4 sm:py-3 sm:text-lg",
+                                "bg-[color:var(--surface-elevated)] text-foreground",
                                 fieldState.error
-                                  ? "border-red-400 bg-red-50"
-                                  : "border-slate-300 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
-                              }`}
+                                  ? "border-[color:var(--tone-danger)] bg-[color:var(--tone-danger-surface)]"
+                                  : "border-[color:var(--divider-color)] focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-[color:var(--tone-accent)] focus-visible:ring-offset-0"
+                              )}
                               disabled={isSubmitting}
                               aria-label="Select your main certification interest"
                               {...field}
@@ -222,7 +227,7 @@ export function WaitlistForm({
                           </FormControl>
                           {/* Custom dropdown arrow */}
                           <div
-                            className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500"
+                            className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
                             aria-hidden="true"
                           >
                             <svg
@@ -246,7 +251,10 @@ export function WaitlistForm({
                 )}
 
                 <HoverButton
-                  className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-xl font-semibold shadow-lg w-full transition-all"
+                  tone="accent"
+                  size="lg"
+                  fullWidth
+                  className="rounded-full text-base font-semibold sm:text-xl"
                   type="submit"
                   disabled={isSubmitting}
                   aria-busy={isSubmitting ? "true" : "false"}
@@ -260,7 +268,7 @@ export function WaitlistForm({
                   {isSubmitting ? (
                     <div className="flex items-center justify-center">
                       <svg
-                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                        className="-ml-1 mr-3 h-5 w-5 animate-spin text-current"
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -308,11 +316,11 @@ export function WaitlistForm({
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-red-50 border border-red-200 rounded-md px-4 py-3 text-center"
+                    className="rounded-md border border-[color:var(--tone-danger)] bg-[color:var(--tone-danger-surface)] px-4 py-3 text-center"
                     role="alert"
                     aria-live="assertive"
                   >
-                    <p className="text-red-600 font-medium flex items-center justify-center">
+                    <p className="flex items-center justify-center font-medium text-[color:var(--tone-danger)]">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
@@ -341,14 +349,14 @@ export function WaitlistForm({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
             key="success"
-            className="bg-green-50 p-6 rounded-lg border border-green-200 text-center"
+            className="rounded-lg border border-[color:var(--tone-success)] bg-[color:var(--tone-success-surface)] p-6 text-center"
             role="status"
             aria-live="polite"
           >
             <div className="flex flex-col items-center space-y-4">
-              <div className="bg-green-100 p-3 rounded-full" aria-hidden="true">
+              <div className="rounded-full bg-[color:var(--tone-success-surface)] p-3" aria-hidden="true">
                 <svg
-                  className="h-8 w-8 text-green-600"
+                  className="h-8 w-8 text-[color:var(--tone-success)]"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
@@ -362,12 +370,12 @@ export function WaitlistForm({
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-slate-800">You&apos;re on the list!</h3>
-              <p className="text-slate-600">
+              <h3 className="text-xl font-semibold text-foreground">You&apos;re on the list!</h3>
+              <p className="text-muted-foreground">
                 Thanks for joining the Testero waitlist. We&apos;ll notify you when beta access is
                 available in July 2025.
               </p>
-              <p className="text-green-600 font-medium">
+              <p className="font-medium text-[color:var(--tone-success)]">
                 Your 30% lifetime discount has been reserved.
               </p>
             </div>

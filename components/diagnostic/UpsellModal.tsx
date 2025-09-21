@@ -125,7 +125,7 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 transition-opacity z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[color:color-mix(in oklch, var(--foreground) 72%, transparent)] p-4 transition-opacity"
       onClick={handleBackdropClick}
       aria-hidden="true"
     >
@@ -137,7 +137,7 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
         aria-labelledby="upsell-title"
         aria-describedby="upsell-description"
         data-trigger={trigger}
-        className="relative w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-xl p-6 sm:p-8 transform transition-all duration-200 scale-100 opacity-100"
+        className="relative w-full max-w-lg transform rounded-2xl border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-6 opacity-100 shadow-xl transition-all duration-200 sm:p-8"
         style={{
           animation: isOpen ? 'modalEnter 200ms ease-out' : undefined,
         }}
@@ -146,47 +146,47 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
         <button
           ref={closeButtonRef}
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          className="absolute right-4 top-4 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-[color:var(--surface-muted)] hover:text-foreground focus:outline-none focus:ring-2 focus:ring-[color:var(--tone-info)] focus:ring-offset-2"
           aria-label="Close modal"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Title */}
-        <h2 id="upsell-title" className="text-2xl font-semibold tracking-tight text-slate-900 pr-8">
+        <h2 id="upsell-title" className="pr-8 text-2xl font-semibold tracking-tight text-foreground">
           {config.title}
         </h2>
 
         {/* Value Bullets */}
         <div id="upsell-description" className="mt-4 space-y-3">
           <div className="flex items-start gap-3">
-            <CheckCircle className="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" />
+            <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-[color:var(--tone-info)]" />
             <div>
-              <div className="font-medium text-slate-900">Personalized Study Plan</div>
-              <div className="text-sm text-slate-600">AI-powered path based on results</div>
+              <div className="font-medium text-foreground">Personalized Study Plan</div>
+              <div className="text-sm text-muted-foreground">AI-powered path based on results</div>
             </div>
           </div>
-          
+
           <div className="flex items-start gap-3">
-            <Target className="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" />
+            <Target className="mt-0.5 h-5 w-5 flex-shrink-0 text-[color:var(--tone-info)]" />
             <div>
-              <div className="font-medium text-slate-900">Unlimited Practice Questions</div>
-              <div className="text-sm text-slate-600">2,000+ updated weekly</div>
+              <div className="font-medium text-foreground">Unlimited Practice Questions</div>
+              <div className="text-sm text-muted-foreground">2,000+ updated weekly</div>
             </div>
           </div>
-          
+
           <div className="flex items-start gap-3">
-            <Award className="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" />
+            <Award className="mt-0.5 h-5 w-5 flex-shrink-0 text-[color:var(--tone-info)]" />
             <div>
-              <div className="font-medium text-slate-900">Pass Rate Guarantee</div>
-              <div className="text-sm text-slate-600">92% first-attempt pass rate</div>
+              <div className="font-medium text-foreground">Pass Rate Guarantee</div>
+              <div className="text-sm text-muted-foreground">92% first-attempt pass rate</div>
             </div>
           </div>
         </div>
 
         {/* Promo Box */}
         {config.promo && (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <div className="mt-4 rounded-xl border border-[color:var(--tone-accent)] bg-[color:var(--tone-accent-surface)] px-3 py-2 text-sm text-[color:var(--tone-accent)]">
             {config.promo}
           </div>
         )}
@@ -215,7 +215,7 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
         </Button>
 
         {/* Trust Line */}
-        <p className="mt-2 text-center text-xs text-slate-500">
+        <p className="mt-2 text-center text-xs text-muted-foreground">
           No credit card required • Cancel anytime
         </p>
       </div>

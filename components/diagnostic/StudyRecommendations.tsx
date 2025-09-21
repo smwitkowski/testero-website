@@ -1,5 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { DomainBreakdown, QuestionSummary, StudyRecommendation } from "./types";
 
 interface StudyRecommendationsProps {
@@ -8,35 +9,37 @@ interface StudyRecommendationsProps {
   incorrectQuestions: QuestionSummary[];
 }
 
+type PerformanceTone = "success" | "warning" | "accent" | "danger";
+
 function getPerformanceLevel(score: number): {
   title: string;
   message: string;
-  color: string;
+  tone: PerformanceTone;
 } {
   if (score >= 80) {
     return {
       title: "Excellent Performance!",
       message: "You're ready for the exam. Keep practicing to maintain your edge.",
-      color: "text-green-600",
+      tone: "success",
     };
   } else if (score >= 60) {
     return {
       title: "Good Progress",
       message: "You're making solid progress. Focus on weak areas to reach exam readiness.",
-      color: "text-amber-600",
+      tone: "accent",
     };
   } else if (score >= 40) {
     return {
       title: "Focus Needed",
       message:
         "Strengthen your foundation in key areas. Consistent practice will improve your readiness.",
-      color: "text-orange-600",
+      tone: "warning",
     };
   } else {
     return {
       title: "Foundation Building",
       message: "Start with basics and build up your knowledge systematically.",
-      color: "text-red-600",
+      tone: "danger",
     };
   }
 }
@@ -152,17 +155,30 @@ export const StudyRecommendations: React.FC<StudyRecommendationsProps> = ({
     });
   }
 
-  const priorityColors = {
-    high: "border-red-200 bg-red-50",
-    medium: "border-amber-200 bg-amber-50",
-    low: "border-green-200 bg-green-50",
+  const performanceToneClass: Record<PerformanceTone, string> = {
+    success: "text-[color:var(--tone-success)]",
+    accent: "text-[color:var(--tone-accent)]",
+    warning: "text-[color:var(--tone-warning)]",
+    danger: "text-[color:var(--tone-danger)]",
   };
 
-  const priorityTextColors = {
-    high: "text-red-700",
-    medium: "text-amber-700",
-    low: "text-green-700",
-  };
+  const prioritySurfaces = {
+    high: "border-[color:var(--tone-danger)] bg-[color:var(--tone-danger-surface)]",
+    medium: "border-[color:var(--tone-warning)] bg-[color:var(--tone-warning-surface)]",
+    low: "border-[color:var(--tone-success)] bg-[color:var(--tone-success-surface)]",
+  } as const;
+
+  const priorityText = {
+    high: "text-[color:var(--tone-danger)]",
+    medium: "text-[color:var(--tone-warning)]",
+    low: "text-[color:var(--tone-success)]",
+  } as const;
+
+  const priorityBadge = {
+    high: "bg-[color:var(--tone-danger-surface)] text-[color:var(--tone-danger)]",
+    medium: "bg-[color:var(--tone-warning-surface)] text-[color:var(--tone-warning)]",
+    low: "bg-[color:var(--tone-success-surface)] text-[color:var(--tone-success)]",
+  } as const;
 
   return (
     <Card className="w-full">
@@ -171,9 +187,9 @@ export const StudyRecommendations: React.FC<StudyRecommendationsProps> = ({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Overall Performance */}
-        <div className="text-center p-6 rounded-lg bg-gray-50">
-          <h3 className={`text-2xl font-bold mb-2 ${performance.color}`}>{performance.title}</h3>
-          <p className="text-gray-600">{performance.message}</p>
+        <div className="rounded-lg bg-[color:var(--surface-muted)] p-6 text-center">
+          <h3 className={cn("mb-2 text-2xl font-bold", performanceToneClass[performance.tone])}>{performance.title}</h3>
+          <p className="text-muted-foreground">{performance.message}</p>
         </div>
 
         {/* Domain Breakdown Section */}
@@ -183,24 +199,25 @@ export const StudyRecommendations: React.FC<StudyRecommendationsProps> = ({
             {domainBreakdown.map((domain) => (
               <div
                 key={domain.domain}
-                className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
+                className="flex items-center justify-between rounded-lg bg-[color:var(--surface-muted)] p-3"
                 aria-label={`${domain.domain}: ${domain.correct} out of ${domain.total} correct`}
               >
                 <span className="font-medium">{domain.domain}</span>
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-muted-foreground">
                     {domain.correct}/{domain.total}
                   </span>
-                  <div className="w-32 bg-gray-200 rounded-full h-2">
+                  <div className="h-2 w-32 rounded-full bg-[color:var(--surface-muted)]">
                     <div
                       data-testid="domain-progress-bar"
-                      className={`h-2 rounded-full transition-all ${
+                      className={cn(
+                        "h-2 rounded-full transition-all",
                         domain.percentage >= 70
-                          ? "bg-green-500"
+                          ? "bg-[color:var(--tone-success)]"
                           : domain.percentage >= 50
-                            ? "bg-amber-500"
-                            : "bg-red-500"
-                      }`}
+                            ? "bg-[color:var(--tone-warning)]"
+                            : "bg-[color:var(--tone-danger)]"
+                      )}
                       style={{ width: `${domain.percentage}%` }}
                     />
                   </div>
@@ -223,26 +240,20 @@ export const StudyRecommendations: React.FC<StudyRecommendationsProps> = ({
             <div
               key={index}
               data-testid="recommendation-item"
-              className={`p-4 rounded-lg border ${priorityColors[rec.priority]}`}
+              className={cn("rounded-lg border p-4", prioritySurfaces[rec.priority])}
             >
               <div className="flex items-start justify-between mb-2">
-                <h5 className={`font-semibold ${priorityTextColors[rec.priority]}`}>
+                <h5 className={cn("font-semibold", priorityText[rec.priority])}>
                   {rec.message}
                 </h5>
                 <span
                   data-testid={`${rec.priority}-priority`}
-                  className={`text-xs font-medium px-2 py-1 rounded ${
-                    rec.priority === "high"
-                      ? "bg-red-100 text-red-700"
-                      : rec.priority === "medium"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-green-100 text-green-700"
-                  }`}
+                  className={cn("rounded px-2 py-1 text-xs font-medium", priorityBadge[rec.priority])}
                 >
                   {rec.priority.toUpperCase()}
                 </span>
               </div>
-              <ul className="space-y-1 text-sm text-gray-600">
+              <ul className="space-y-1 text-sm text-muted-foreground">
                 {rec.actionItems.map((item, itemIndex) => (
                   <li key={itemIndex} className="flex items-start">
                     <span className="mr-2">•</span>
