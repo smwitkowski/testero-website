@@ -3,6 +3,7 @@ import { AuthProvider } from "@/components/providers/AuthProvider"; // Import Au
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
 import { ErrorBoundary } from "@/components/providers/ErrorBoundary";
 import { SessionTrackingProvider } from "@/components/providers/SessionTrackingProvider";
+import { Providers } from "@/components/providers/Providers";
 import Script from "next/script";
 import { generateMetadata, generateJsonLd, generateViewport } from "@/lib/seo";
 import Navbar from "@/components/marketing/navigation/navbar"; // Import the Navbar component
@@ -19,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <Script
           id="json-ld"
@@ -29,25 +30,27 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased font-sans" suppressHydrationWarning>
-        {/* Skip to content link for accessibility */}
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white focus:text-black focus:outline-none"
-        >
-          Skip to content
-        </a>
-        <ErrorBoundary>
-          <AuthProvider>
-            <Navbar />
-            <main id="main-content" className="pt-[72px]">
-              {/* Add padding to main content */}
-              <PostHogProvider>
-                <SessionTrackingProvider>{children}</SessionTrackingProvider>
-              </PostHogProvider>
-            </main>
-          </AuthProvider>
-        </ErrorBoundary>
+      <body className="bg-background text-foreground antialiased font-sans">
+        <Providers>
+          {/* Skip to content link for accessibility */}
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white focus:text-black focus:outline-none"
+          >
+            Skip to content
+          </a>
+          <ErrorBoundary>
+            <AuthProvider>
+              <Navbar />
+              <main id="main-content" className="pt-[72px]">
+                {/* Add padding to main content */}
+                <PostHogProvider>
+                  <SessionTrackingProvider>{children}</SessionTrackingProvider>
+                </PostHogProvider>
+              </main>
+            </AuthProvider>
+          </ErrorBoundary>
+        </Providers>
       </body>
     </html>
   );
