@@ -1,0 +1,6 @@
+{
+  "warnLineHeightAndTracking": true,
+  "exemptPaths": ["scripts/**"],
+  "classMergeHelpers": ["clsx", "classnames", "cn"],
+  "allowlistPath": ".lint-rules-allowlist.json"
+}

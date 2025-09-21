@@ -40,6 +40,9 @@ jobs:
       
       - name: Run ESLint
         run: npm run lint
+
+      - name: ESLint rule tests
+        run: npm run test:eslint-rules
         
       - name: Type check
         run: npx tsc --noEmit -p tsconfig.build.json
