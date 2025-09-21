@@ -121,13 +121,10 @@ export default function FaqPage() {
             {categories.map(category => (
               <Button
                 key={category}
-                variant={activeCategory === category ? "default" : "outline"}
-                className={cn(
-                  "rounded-full px-6 py-2",
-                  activeCategory === category 
-                    ? "bg-orange-500 hover:bg-orange-600 text-white" 
-                    : "hover:bg-slate-100 dark:hover:bg-slate-700"
-                )}
+                size="sm"
+                variant={activeCategory === category ? "solid" : "outline"}
+                tone={activeCategory === category ? "accent" : "neutral"}
+                className="rounded-full px-6"
                 onClick={() => setActiveCategory(category)}
               >
                 {category}
@@ -193,7 +190,7 @@ export default function FaqPage() {
             Our team is here to help. If you can&apos;t find the answer you&apos;re looking for, 
             don&apos;t hesitate to reach out to us directly.
           </p>
-          <Button className="bg-orange-500 hover:bg-orange-600 text-white py-2 px-6 rounded-full shadow-sm">
+          <Button tone="accent" size="md" className="rounded-full px-6 shadow-sm">
             Contact Support
           </Button>
         </motion.div>

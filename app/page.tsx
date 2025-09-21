@@ -141,15 +141,14 @@ export default function Home() {
                 <Button
                   asChild
                   size="lg"
-                  className="w-full sm:w-auto text-lg bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+                  tone="accent"
+                  className="w-full sm:w-auto text-lg"
+                  iconRight={<ArrowRight className="h-5 w-5" />}
                   onClick={() => handlePricingClick("hero_primary")}
                 >
-                  <Link href="/pricing">
-                    View Pricing Plans
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
+                  <Link href="/pricing">View Pricing Plans</Link>
                 </Button>
-                <Button asChild variant="secondary" size="lg" className="w-full sm:w-auto text-lg">
+                <Button asChild variant="solid" tone="neutral" size="lg" className="w-full sm:w-auto text-lg">
                   <Link href="/diagnostic">Try Free Diagnostic</Link>
                 </Button>
               </div>
@@ -265,12 +264,11 @@ export default function Home() {
 
                     <Button
                       asChild
-                      className={cn(
-                        "w-full text-base font-semibold h-12",
-                        tier.recommended
-                          ? "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-                          : ""
-                      )}
+                      size="md"
+                      fullWidth
+                      tone={tier.recommended ? "accent" : "neutral"}
+                      variant={tier.recommended ? "solid" : "outline"}
+                      className="text-base font-semibold h-12"
                       onClick={() => handlePricingClick(`preview_${tier.id}`)}
                     >
                       <Link href="/pricing">Get Started</Link>
@@ -433,20 +431,14 @@ export default function Home() {
               <Button
                 asChild
                 size="lg"
-                className="text-lg bg-white text-blue-600 hover:bg-gray-100"
+                tone="accent"
+                className="text-lg"
+                iconRight={<ArrowRight className="h-5 w-5" />}
                 onClick={() => handlePricingClick("final_cta_primary")}
               >
-                <Link href="/pricing">
-                  See Pricing & Start Today
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
+                <Link href="/pricing">See Pricing & Start Today</Link>
               </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="text-lg border-white text-white hover:bg-white/10"
-              >
+              <Button asChild variant="outline" tone="neutral" size="lg" className="text-lg">
                 <Link href="/diagnostic">Take Free Diagnostic First</Link>
               </Button>
             </div>

@@ -3,110 +3,112 @@
 
 import { semantic as colorSemantic, component as colorComponent } from './tokens/colors';
 import { semantic as spacingSemantic, component as spacingComponent } from './tokens/spacing';
-import { primitive as typographyPrimitive, component as typographyComponent } from './tokens/typography';
-import { primitive as effectsPrimitive, semantic as effectsSemantic, component as effectsComponent } from './tokens/effects';
+import { component as typographyComponent } from './tokens/typography';
+import { primitive as effectsPrimitive, component as effectsComponent } from './tokens/effects';
 
 // BUTTON VARIANTS
+// ---------------------------------------------------------------------------
+// The button maps exposed here are consumed by the shared <Button />
+// implementation.  They intentionally only reference Tailwind utilities that
+// resolve to design-system CSS variables so that theming automatically follows
+// token swaps (e.g. light ↔ dark modes).
+
+export const buttonBase = [
+  // Layout
+  'relative inline-flex items-center justify-center gap-2 font-medium',
+  'rounded-lg transition-colors duration-150 ease-out',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+  // Interaction states
+  'disabled:pointer-events-none disabled:opacity-60 data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-60',
+  'data-[loading=true]:cursor-progress',
+  'motion-reduce:transition-none',
+].join(' ');
+
+export const buttonSizeStyles = {
+  sm: 'h-9 min-h-[36px] px-3 text-sm leading-5',
+  md: 'h-11 min-h-[44px] px-4 text-base leading-6',
+  lg: 'h-12 min-h-[48px] px-5 text-lg leading-7',
+} as const;
+
+const toneFocusRing = {
+  default: 'focus-visible:ring-primary',
+  accent: 'focus-visible:ring-accent',
+  success: 'focus-visible:ring-success',
+  warn: 'focus-visible:ring-warning',
+  danger: 'focus-visible:ring-destructive',
+  neutral: 'focus-visible:ring-ring',
+} as const;
+
+export const buttonVariantStyles = {
+  solid: 'shadow-sm ring-1 ring-inset ring-transparent',
+  soft: 'bg-transparent ring-1 ring-inset ring-transparent',
+  outline: 'bg-transparent border ring-1 ring-inset border-transparent shadow-sm',
+  ghost: 'bg-transparent shadow-none ring-0',
+  link: 'bg-transparent shadow-none ring-0 underline-offset-4 hover:underline focus-visible:underline font-medium',
+  tone: {
+    default: [
+      toneFocusRing.default,
+      'data-[variant=solid]:bg-primary data-[variant=solid]:text-primary-foreground data-[variant=solid]:hover:bg-primary/90',
+      'data-[variant=soft]:bg-primary/10 data-[variant=soft]:text-primary data-[variant=soft]:hover:bg-primary/15 data-[variant=soft]:ring-primary/30',
+      'data-[variant=outline]:border-primary data-[variant=outline]:text-primary data-[variant=outline]:hover:bg-primary/10',
+      'data-[variant=ghost]:text-primary data-[variant=ghost]:hover:bg-primary/10',
+      'data-[variant=link]:text-primary data-[variant=link]:hover:text-primary/80',
+    ].join(' '),
+    accent: [
+      toneFocusRing.accent,
+      'data-[variant=solid]:bg-accent data-[variant=solid]:text-accent-foreground data-[variant=solid]:hover:bg-accent/90',
+      'data-[variant=soft]:bg-accent/15 data-[variant=soft]:text-accent data-[variant=soft]:hover:bg-accent/20 data-[variant=soft]:ring-accent/30',
+      'data-[variant=outline]:border-accent data-[variant=outline]:text-accent data-[variant=outline]:hover:bg-accent/10',
+      'data-[variant=ghost]:text-accent data-[variant=ghost]:hover:bg-accent/10',
+      'data-[variant=link]:text-accent data-[variant=link]:hover:text-accent/80',
+    ].join(' '),
+    success: [
+      toneFocusRing.success,
+      'data-[variant=solid]:bg-success data-[variant=solid]:text-neutral-50 data-[variant=solid]:hover:bg-success/90',
+      'data-[variant=soft]:bg-success/15 data-[variant=soft]:text-success data-[variant=soft]:hover:bg-success/20 data-[variant=soft]:ring-success/30',
+      'data-[variant=outline]:border-success data-[variant=outline]:text-success data-[variant=outline]:hover:bg-success/10',
+      'data-[variant=ghost]:text-success data-[variant=ghost]:hover:bg-success/10',
+      'data-[variant=link]:text-success data-[variant=link]:hover:text-success/80',
+    ].join(' '),
+    warn: [
+      toneFocusRing.warn,
+      'data-[variant=solid]:bg-warning data-[variant=solid]:text-neutral-950 data-[variant=solid]:hover:bg-warning/90',
+      'data-[variant=soft]:bg-warning/20 data-[variant=soft]:text-warning data-[variant=soft]:hover:bg-warning/30 data-[variant=soft]:ring-warning/30',
+      'data-[variant=outline]:border-warning data-[variant=outline]:text-warning data-[variant=outline]:hover:bg-warning/20',
+      'data-[variant=ghost]:text-warning data-[variant=ghost]:hover:bg-warning/20',
+      'data-[variant=link]:text-warning data-[variant=link]:hover:text-warning/80',
+    ].join(' '),
+    danger: [
+      toneFocusRing.danger,
+      'data-[variant=solid]:bg-destructive data-[variant=solid]:text-destructive-foreground data-[variant=solid]:hover:bg-destructive/90',
+      'data-[variant=soft]:bg-destructive/15 data-[variant=soft]:text-destructive data-[variant=soft]:hover:bg-destructive/25 data-[variant=soft]:ring-destructive/30',
+      'data-[variant=outline]:border-destructive data-[variant=outline]:text-destructive data-[variant=outline]:hover:bg-destructive/10',
+      'data-[variant=ghost]:text-destructive data-[variant=ghost]:hover:bg-destructive/10',
+      'data-[variant=link]:text-destructive data-[variant=link]:hover:text-destructive/80',
+    ].join(' '),
+    neutral: [
+      toneFocusRing.neutral,
+      'data-[variant=solid]:bg-muted data-[variant=solid]:text-foreground data-[variant=solid]:hover:bg-muted/80',
+      'data-[variant=soft]:bg-muted/70 data-[variant=soft]:text-foreground data-[variant=soft]:hover:bg-muted/60 data-[variant=soft]:ring-border',
+      'data-[variant=outline]:border-border data-[variant=outline]:text-foreground data-[variant=outline]:hover:bg-muted/70',
+      'data-[variant=ghost]:text-foreground data-[variant=ghost]:hover:bg-muted/70',
+      'data-[variant=link]:text-foreground data-[variant=link]:hover:text-foreground/80',
+    ].join(' '),
+  },
+} as const;
+
 export const buttonVariants = {
-  // Base button styles
-  base: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: effectsPrimitive.borderRadius.lg,
-    fontFamily: typographyPrimitive.fontFamily.sans.join(', '),
-    fontWeight: typographyPrimitive.fontWeight.semibold,
-    textDecoration: 'none',
-    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-    cursor: 'pointer',
-    border: 'none',
-    outline: 'none',
-    userSelect: 'none',
-    '&:focus-visible': {
-      outline: '2px solid transparent',
-      outlineOffset: '2px',
-      boxShadow: effectsSemantic.focus.ring,
-    },
-    '&:disabled': {
-      opacity: effectsPrimitive.opacity[50],
-      cursor: 'not-allowed',
-    },
-  },
-
-  // Size variants
-  sizes: {
-    sm: {
-      height: '2.25rem', // 36px
-      padding: spacingComponent.button.padding.sm,
-      fontSize: typographyComponent.button.sm.fontSize,
-      lineHeight: typographyComponent.button.sm.lineHeight,
-      gap: spacingSemantic.element.sm,
-    },
-    md: {
-      height: '2.75rem', // 44px
-      padding: spacingComponent.button.padding.md,
-      fontSize: typographyComponent.button.md.fontSize,
-      lineHeight: typographyComponent.button.md.lineHeight,
-      gap: spacingSemantic.element.md,
-    },
-    lg: {
-      height: '3.25rem', // 52px
-      padding: `${spacingSemantic.element.lg} ${spacingSemantic.component.sm}`,
-      fontSize: typographyComponent.button.lg.fontSize,
-      lineHeight: typographyComponent.button.lg.lineHeight,
-      gap: spacingSemantic.element.md,
-    },
-  },
-
-  // Style variants
+  base: buttonBase,
+  sizes: buttonSizeStyles,
   variants: {
-    primary: {
-      background: colorComponent.button.primary.background,
-      color: colorComponent.button.primary.text,
-      boxShadow: effectsComponent.button.primary.shadow,
-      '&:hover': {
-        background: colorComponent.button.primary.backgroundHover,
-        boxShadow: effectsComponent.button.primary.shadowHover,
-        transform: 'scale(1.02)',
-      },
-      '&:active': {
-        transform: 'scale(0.98)',
-      },
-    },
-    secondary: {
-      background: colorComponent.button.secondary.background,
-      color: colorComponent.button.secondary.text,
-      border: `1px solid ${colorComponent.button.secondary.border}`,
-      boxShadow: effectsComponent.button.secondary.shadow,
-      '&:hover': {
-        background: colorComponent.button.secondary.backgroundHover,
-        boxShadow: effectsComponent.button.secondary.shadowHover,
-        transform: 'translateY(-2px)',
-      },
-      '&:active': {
-        transform: 'translateY(0)',
-      },
-    },
-    ghost: {
-      background: colorComponent.button.ghost.background,
-      color: colorComponent.button.ghost.text,
-      border: `1px solid ${colorComponent.button.ghost.border}`,
-      boxShadow: effectsComponent.button.ghost.shadow,
-      '&:hover': {
-        background: colorComponent.button.ghost.backgroundHover,
-        boxShadow: effectsComponent.button.ghost.shadowHover,
-      },
-    },
-    outline: {
-      background: colorComponent.button.outline.background,
-      color: colorComponent.button.outline.text,
-      border: `1px solid ${colorComponent.button.outline.border}`,
-      '&:hover': {
-        background: colorComponent.button.outline.backgroundHover,
-      },
-    },
+    solid: buttonVariantStyles.solid,
+    soft: buttonVariantStyles.soft,
+    outline: buttonVariantStyles.outline,
+    ghost: buttonVariantStyles.ghost,
+    link: buttonVariantStyles.link,
   },
-};
+  tone: buttonVariantStyles.tone,
+} as const;
 
 // CARD VARIANTS
 export const cardVariants = {

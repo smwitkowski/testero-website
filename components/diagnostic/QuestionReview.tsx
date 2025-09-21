@@ -149,9 +149,9 @@ export const QuestionReview: React.FC<QuestionReviewProps> = ({
           <div className="mt-4 text-center">
             <Button
               variant="ghost"
+              tone="neutral"
               size="sm"
               onClick={() => toggleExpand(question.id)}
-              className="text-gray-600"
             >
               {isExpanded ? "Show less" : "Show more"}
             </Button>

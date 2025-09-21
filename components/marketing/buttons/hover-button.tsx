@@ -4,13 +4,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
-interface HoverButtonProps extends React.ComponentProps<"button"> {
-  children: React.ReactNode;
-  className?: string;
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
-  size?: "default" | "sm" | "lg" | "icon";
-  asChild?: boolean;
-}
+type HoverButtonProps = React.ComponentProps<typeof Button>
 
 export const HoverButton: React.FC<HoverButtonProps> = ({ 
   children, 

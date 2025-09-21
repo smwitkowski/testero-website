@@ -194,7 +194,10 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
         {/* Primary CTA */}
         <Button
           onClick={onCTAClick}
-          className="mt-5 w-full h-12 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/30 transition-colors"
+          tone="accent"
+          size="lg"
+          fullWidth
+          className="mt-5 rounded-xl"
         >
           Start 14-Day Free Trial
         </Button>
@@ -203,7 +206,10 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
         <Button
           onClick={onContinueWithoutTrial}
           variant="outline"
-          className="mt-3 w-full h-10 rounded-lg border border-slate-200 text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          tone="neutral"
+          size="md"
+          fullWidth
+          className="mt-3 rounded-lg"
         >
           Continue without trial
         </Button>
