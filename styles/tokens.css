@@ -1,0 +1,27 @@
+:root {
+  /* Section vertical rhythm */
+  --section-sm: 1.5rem; /* 24px */
+  --section-md: 2rem; /* 32px */
+  --section-lg: 3rem; /* 48px */
+  --section-xl: 4rem; /* 64px */
+
+  /* Surface aliases */
+  --bg: var(--background);
+  --fg: var(--foreground);
+  --surface-default: var(--background);
+  --surface-subtle: color-mix(in oklch, var(--background) 92%, var(--foreground) 8%);
+  --surface-muted: color-mix(in oklch, var(--muted) 85%, var(--background) 15%);
+  --surface-elevated: var(--card, var(--background));
+  --surface-brand: color-mix(in oklch, var(--accent) 6%, transparent);
+
+  /* Divider */
+  --divider-color: color-mix(in oklch, var(--foreground) 12%, transparent);
+}
+
+.dark {
+  --surface-subtle: color-mix(in oklch, var(--background) 88%, var(--foreground) 12%);
+  --surface-muted: color-mix(in oklch, var(--muted) 60%, var(--background) 40%);
+  --surface-elevated: var(--card, var(--background));
+  --surface-brand: color-mix(in oklch, var(--accent) 10%, transparent);
+  --divider-color: color-mix(in oklch, var(--foreground) 18%, transparent);
+}

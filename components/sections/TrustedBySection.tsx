@@ -4,15 +4,13 @@ import React from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Marquee } from "@/components/marketing/effects/marquee";
-import { Container } from "@/components/patterns";
+import { Section } from "@/components/patterns";
 import { partners, type Partner } from "@/data/partners";
 
 // Component-specific design tokens following the design system
 const designTokens = {
   colors: {
     // Using design system color tokens
-    background: "bg-white dark:bg-slate-950",
-    surface: "bg-white dark:bg-slate-900",
     text: {
       primary: "text-slate-800 dark:text-white",
       secondary: "text-slate-600 dark:text-slate-400",
@@ -30,7 +28,6 @@ const designTokens = {
     logoTitle: "text-sm font-semibold",
   },
   spacing: {
-    section: "py-16 md:py-20",
     logo: "h-12 md:h-16",
     logoContainer: "h-20 md:h-24",
   },
@@ -127,16 +124,13 @@ export function TrustedBySection({
   const marqueeSpeed = prefersReducedMotion ? "slow" : speed;
 
   return (
-    <section
-      className={cn(
-        designTokens.colors.background,
-        isCompact ? "py-8 md:py-12" : designTokens.spacing.section,
-        className
-      )}
+    <Section
       role="region"
       aria-label="Our trusted partners"
+      size={isCompact ? "md" : "xl"}
+      surface="default"
+      className={className}
     >
-      <Container>
         {/* Header */}
         <div className="text-center mb-8 md:mb-12">
           <h2
@@ -230,8 +224,7 @@ export function TrustedBySection({
             </p>
           </div>
         )}
-      </Container>
-    </section>
+    </Section>
   );
 }
 

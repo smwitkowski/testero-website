@@ -1,4 +1,5 @@
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+import type { ReadonlyURLSearchParams } from 'next/navigation';
 
 type MockRouterFn = jest.Mock<ReturnType<AppRouterInstance['push']>, Parameters<AppRouterInstance['push']>>;
 
