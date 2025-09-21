@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import { useInView } from "react-intersection-observer"
 
 import { Marquee } from "@/components/marketing/effects/marquee"
+import { Container } from "@/components/patterns"
 import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 
@@ -162,7 +163,7 @@ export function EnhancedSocialProof() {
 
   return (
     <section ref={ref} className="w-full py-12 md:py-16 overflow-hidden bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <Container>
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
@@ -183,7 +184,7 @@ export function EnhancedSocialProof() {
             ))}
           </Marquee>
         </motion.div>
-      </div>
+      </Container>
     </section>
   );
 }

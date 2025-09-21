@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "@storybook/test";
 
@@ -50,6 +51,9 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+type ButtonStoryArgs = ComponentProps<typeof Button>;
+type ButtonPlayContext = Parameters<NonNullable<Story["play"]>>[0];
+
 export const Default: Story = {
   args: {
     children: "Primary action",
@@ -81,7 +85,7 @@ export const Tones: Story = {
   args: {
     variant: "solid",
   },
-  render: (args) => (
+  render: (args: ButtonStoryArgs) => (
     <div className="flex flex-wrap items-start gap-3">
       {toneOptions.map((tone) => (
         <Button key={tone} {...args} tone={tone}>
@@ -96,7 +100,7 @@ export const Sizes: Story = {
   args: {
     tone: "accent",
   },
-  render: (args) => (
+  render: (args: ButtonStoryArgs) => (
     <div className="flex items-end gap-3">
       {sizeOptions.map((size) => (
         <div key={size} className="flex flex-col items-center gap-2">
@@ -121,13 +125,13 @@ export const FocusVisible: Story = {
   args: {
     children: "Focus me with Tab",
   },
-  render: (args) => (
+  render: (args: ButtonStoryArgs) => (
     <div className="space-y-3 text-sm text-muted-foreground">
       <p>Use the keyboard (Tab) to verify the focus ring draws from the tokenized outline styles.</p>
       <Button {...args} />
     </div>
   ),
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement }: ButtonPlayContext) => {
     const canvas = within(canvasElement);
     await userEvent.tab();
     const focusTarget = await canvas.findByRole("button", { name: /focus me/i });
