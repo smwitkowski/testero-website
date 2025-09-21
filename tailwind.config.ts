@@ -104,10 +104,25 @@ const config = {
           DEFAULT: colorSemantic.info.base,
           dark: colorSemantic.info.dark,
         },
+
+        surface: {
+          DEFAULT: "var(--surface-default)",
+          subtle: "var(--surface-subtle)",
+          muted: "var(--surface-muted)",
+          elevated: "var(--surface-elevated)",
+          brand: "var(--surface-brand)",
+        },
+        divider: "var(--divider-color)",
       },
 
       // Spacing scale from design system
-      spacing: spacingPrimitive,
+      spacing: {
+        ...spacingPrimitive,
+        section_sm: "var(--section-sm)",
+        section_md: "var(--section-md)",
+        section_lg: "var(--section-lg)",
+        section_xl: "var(--section-xl)",
+      },
 
       // Typography
       fontFamily: {

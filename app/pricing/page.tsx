@@ -18,7 +18,7 @@ import { usePostHog } from "posthog-js/react";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import { PricingCard } from "@/components/pricing/PricingCard";
 import { ComparisonTable } from "@/components/pricing/ComparisonTable";
-import { Container } from "@/components/patterns";
+import { Container, Section } from "@/components/patterns";
 import {
   SUBSCRIPTION_TIERS,
   EXAM_PACKAGES,
@@ -125,7 +125,12 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section with Value Proposition */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-cyan-600 text-white py-16 sm:py-24">
+      <Section
+        contained={false}
+        size="xl"
+        surface="brand"
+        className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-cyan-600 text-white"
+      >
         <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,transparent,rgba(255,255,255,0.1))]" />
         <Container className="relative">
           <div className="text-center">
@@ -160,7 +165,7 @@ export default function PricingPage() {
             </div>
           </div>
         </Container>
-      </div>
+      </Section>
 
       {/* Error Alert */}
       {error && (
@@ -211,7 +216,12 @@ export default function PricingPage() {
       </Container>
 
       {/* Main Pricing Cards */}
-      <Container className="py-16">
+      <Section
+        id="pricing-cards"
+        size="xl"
+        surface="subtle"
+        divider="both"
+      >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-10">
           {SUBSCRIPTION_TIERS.map((tier) => (
             <PricingCard
@@ -269,11 +279,11 @@ export default function PricingPage() {
             ))}
           </div>
         )}
-      </Container>
+      </Section>
 
       {/* AI Credits Explanation */}
-      <div className="bg-blue-50 py-12">
-        <Container className="max-w-4xl">
+      <Section size="lg" surface="subtle" divider="bottom">
+        <div className="mx-auto max-w-4xl">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">How AI Credits Work</h2>
             <p className="text-gray-600">
@@ -309,12 +319,11 @@ export default function PricingPage() {
             Need more credits? Purchase additional at ${AI_CREDIT_USAGE.additionalCreditPrice}
             /credit or upgrade your plan
           </p>
-        </Container>
-      </div>
+        </div>
+      </Section>
 
       {/* Social Proof Section */}
-      <div className="py-16 bg-white">
-        <Container>
+      <Section size="lg" surface="default">
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
             Trusted by Cloud Professionals Worldwide
           </h2>
@@ -337,12 +346,10 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
-        </Container>
-      </div>
+      </Section>
 
       {/* Feature Comparison */}
-      <div className="py-16 bg-gray-50">
-        <Container>
+      <Section size="lg" surface="subtle" divider="bottom">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Compare Plans in Detail</h2>
             <button
@@ -374,12 +381,11 @@ export default function PricingPage() {
               }}
             />
           )}
-        </Container>
-      </div>
+      </Section>
 
       {/* FAQ Section */}
-      <div className="py-16 bg-white">
-        <Container className="max-w-3xl">
+      <Section size="lg" surface="default" divider="bottom">
+        <div className="mx-auto max-w-3xl">
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
             Frequently Asked Questions
           </h2>
@@ -405,12 +411,18 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
-        </Container>
-      </div>
+        </div>
+      </Section>
 
       {/* Final CTA */}
-      <div className="bg-gradient-to-r from-blue-600 to-cyan-600 py-16">
-        <Container className="max-w-4xl text-center">
+      <Section
+        contained={false}
+        size="xl"
+        surface="brand"
+        divider="top"
+        className="bg-gradient-to-r from-blue-600 to-cyan-600"
+      >
+        <Container className="max-w-4xl text-center text-white">
           <h2 className="text-3xl font-bold text-white mb-4">Ready to Pass Your Certification?</h2>
           <p className="text-xl text-blue-100 mb-8">
             Join thousands of professionals who achieved their certification goals with Testero
@@ -437,10 +449,9 @@ export default function PricingPage() {
             <span>30-day money-back guarantee on all plans</span>
           </div>
         </Container>
-      </div>
+      </Section>
 
-      {/* Pricing Cards Anchor */}
-      <div id="pricing-cards" className="absolute -top-20"></div>
+      {/* Pricing Cards Anchor handled via Section id */}
     </div>
   );
 }
