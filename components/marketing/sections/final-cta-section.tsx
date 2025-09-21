@@ -104,12 +104,12 @@ export function FinalCtaSection() {
             <h3 className="text-xl font-semibold text-slate-800 mb-6" id="final-cta-form-heading">Start Your Certification Journey Today</h3>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild size="lg" className="text-lg">
+              <Button asChild size="lg" tone="accent" className="text-lg">
                 <Link href="/signup">
                   Start Free Practice
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="text-lg">
+              <Button asChild variant="outline" tone="accent" size="lg" className="text-lg">
                 <Link href="/diagnostic">
                   Take Diagnostic Test
                 </Link>
