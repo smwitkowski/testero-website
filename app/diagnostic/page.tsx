@@ -261,7 +261,7 @@ const DiagnosticStartPage = () => {
       <Card className="border-slate-200 shadow-sm p-6 md:p-7">
         <CardHeader className="p-0 mb-6">
           <div className="flex justify-end mb-4">
-            <Badge variant="info" size="sm" className="bg-blue-50 text-blue-700 border-blue-200">
+            <Badge variant="soft" tone="accent" size="sm">
               Updated Oct 2024 exam changes
             </Badge>
           </div>

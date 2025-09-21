@@ -1,54 +1,181 @@
-"use client";
+import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
+import { cva, type VariantProps } from "class-variance-authority"
 
-import * as React from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: "default" | "success" | "error" | "warning" | "info";
-  size?: "sm" | "md" | "lg";
-  as?: React.ElementType;
-}
+const badgeVariants = cva(
+  "inline-flex items-center justify-center rounded-full font-medium leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background whitespace-nowrap select-none",
+  {
+    variants: {
+      variant: {
+        solid: "shadow-sm",
+        soft: "ring-1 ring-inset",
+        outline: "bg-background ring-1 ring-inset",
+        ghost: "bg-transparent",
+      },
+      tone: {
+        default: "text-foreground",
+        accent: "text-accent",
+        success: "text-success",
+        warning: "text-warning",
+        danger: "text-error",
+      },
+      size: {
+        sm: "h-6 px-2 text-xs gap-1",
+        md: "h-7 px-2.5 text-sm gap-1.5",
+      },
+    },
+    compoundVariants: [
+      {
+        variant: "solid",
+        tone: "default",
+        class: "bg-foreground text-background",
+      },
+      {
+        variant: "solid",
+        tone: "accent",
+        class: "bg-accent text-accent-foreground",
+      },
+      {
+        variant: "solid",
+        tone: "success",
+        class: "bg-success text-background",
+      },
+      {
+        variant: "solid",
+        tone: "warning",
+        class: "bg-warning text-background",
+      },
+      {
+        variant: "solid",
+        tone: "danger",
+        class: "bg-error text-background",
+      },
+      {
+        variant: "soft",
+        tone: "default",
+        class: "bg-muted text-foreground ring-border/60",
+      },
+      {
+        variant: "soft",
+        tone: "accent",
+        class: "bg-accent/10 text-accent ring-accent/20",
+      },
+      {
+        variant: "soft",
+        tone: "success",
+        class: "bg-success/10 text-success ring-success/20",
+      },
+      {
+        variant: "soft",
+        tone: "warning",
+        class: "bg-warning/15 text-warning-dark ring-warning/30",
+      },
+      {
+        variant: "soft",
+        tone: "danger",
+        class: "bg-error/10 text-error ring-error/20",
+      },
+      {
+        variant: "outline",
+        tone: "default",
+        class: "text-foreground ring-border/70",
+      },
+      {
+        variant: "outline",
+        tone: "accent",
+        class: "text-accent ring-accent/40",
+      },
+      {
+        variant: "outline",
+        tone: "success",
+        class: "text-success ring-success/35",
+      },
+      {
+        variant: "outline",
+        tone: "warning",
+        class: "text-warning-dark ring-warning/40",
+      },
+      {
+        variant: "outline",
+        tone: "danger",
+        class: "text-error ring-error/40",
+      },
+      {
+        variant: "ghost",
+        tone: "default",
+        class: "hover:bg-muted/70",
+      },
+      {
+        variant: "ghost",
+        tone: "accent",
+        class: "text-accent hover:bg-accent/10",
+      },
+      {
+        variant: "ghost",
+        tone: "success",
+        class: "text-success hover:bg-success/10",
+      },
+      {
+        variant: "ghost",
+        tone: "warning",
+        class: "text-warning-dark hover:bg-warning/10",
+      },
+      {
+        variant: "ghost",
+        tone: "danger",
+        class: "text-error hover:bg-error/10",
+      },
+    ],
+    defaultVariants: {
+      variant: "soft",
+      tone: "default",
+      size: "md",
+    },
+  }
+)
 
-export const Badge = React.forwardRef<HTMLDivElement, BadgeProps>(
-  ({ className, variant = "default", size = "md", as: Component = "div", ...props }, ref) => {
-    // Variant styles using design system tokens via Tailwind classes
-    const variantStyles = {
-      default: "bg-neutral-100 text-neutral-700 border-neutral-200",
-      success: "bg-success-light text-success-dark border-success/40",
-      error: "bg-error-light text-error-dark border-error/40",
-      warning: "bg-warning-light text-warning-dark border-warning/40",
-      info: "bg-info-light text-info-dark border-info/40",
-    };
+const badgeIconVariants = cva("flex items-center justify-center shrink-0", {
+  variants: {
+    size: {
+      sm: "h-3.5 w-3.5",
+      md: "h-4 w-4",
+    },
+  },
+  defaultVariants: {
+    size: "md",
+  },
+})
 
-    // Size styles
-    const sizeStyles = {
-      sm: "text-xs px-2 py-0.5",
-      md: "text-sm px-3 py-1",
-      lg: "text-base px-4 py-1.5",
-    };
+export type BadgeProps = React.HTMLAttributes<HTMLSpanElement> &
+  VariantProps<typeof badgeVariants> & {
+    icon?: React.ReactNode
+    asChild?: boolean
+  }
+
+const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
+  ({ className, variant, tone, size, icon, asChild, children, ...props }, ref) => {
+    const Comp = asChild ? Slot : "span"
 
     return (
-      <Component
+      <Comp
         ref={ref}
-        className={cn(
-          // Base styles
-          "inline-flex items-center justify-center",
-          "rounded-md border font-medium",
-          "transition-colors",
-
-          // Apply variant styles
-          variantStyles[variant],
-
-          // Apply size styles
-          sizeStyles[size],
-
-          // Custom className
-          className
-        )}
+        data-slot="badge"
+        className={cn(badgeVariants({ variant, tone, size }), className)}
         {...props}
-      />
-    );
+      >
+        {icon ? (
+          <span aria-hidden className={badgeIconVariants({ size })}>
+            {icon}
+          </span>
+        ) : null}
+        <span className="truncate">{children}</span>
+      </Comp>
+    )
   }
-);
+)
+Badge.displayName = "Badge"
 
-Badge.displayName = "Badge";
+export { Badge, badgeVariants }
+export default Badge
