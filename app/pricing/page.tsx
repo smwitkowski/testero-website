@@ -18,6 +18,7 @@ import { usePostHog } from "posthog-js/react";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import { PricingCard } from "@/components/pricing/PricingCard";
 import { ComparisonTable } from "@/components/pricing/ComparisonTable";
+import { Container } from "@/components/patterns";
 import {
   SUBSCRIPTION_TIERS,
   EXAM_PACKAGES,
@@ -124,9 +125,9 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section with Value Proposition */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-cyan-600 text-white">
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-cyan-600 text-white py-16 sm:py-24">
         <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,transparent,rgba(255,255,255,0.1))]" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+        <Container className="relative">
           <div className="text-center">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
               {VALUE_PROPS.mainHeadline}
@@ -158,12 +159,12 @@ export default function PricingPage() {
               ))}
             </div>
           </div>
-        </div>
+        </Container>
       </div>
 
       {/* Error Alert */}
       {error && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        <Container className="mt-6">
           <div className="rounded-md bg-red-50 p-4">
             <div className="flex">
               <div className="ml-3">
@@ -171,11 +172,11 @@ export default function PricingPage() {
               </div>
             </div>
           </div>
-        </div>
+        </Container>
       )}
 
       {/* Billing Toggle */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
+      <Container className="-mt-8 relative z-10">
         <div className="flex justify-center">
           <div className="inline-flex items-center bg-white rounded-full shadow-lg p-1">
             <button
@@ -207,10 +208,10 @@ export default function PricingPage() {
             </button>
           </div>
         </div>
-      </div>
+      </Container>
 
       {/* Main Pricing Cards */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <Container className="py-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-10">
           {SUBSCRIPTION_TIERS.map((tier) => (
             <PricingCard
@@ -268,11 +269,11 @@ export default function PricingPage() {
             ))}
           </div>
         )}
-      </div>
+      </Container>
 
       {/* AI Credits Explanation */}
       <div className="bg-blue-50 py-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Container className="max-w-4xl">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">How AI Credits Work</h2>
             <p className="text-gray-600">
@@ -308,12 +309,12 @@ export default function PricingPage() {
             Need more credits? Purchase additional at ${AI_CREDIT_USAGE.additionalCreditPrice}
             /credit or upgrade your plan
           </p>
-        </div>
+        </Container>
       </div>
 
       {/* Social Proof Section */}
       <div className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Container>
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
             Trusted by Cloud Professionals Worldwide
           </h2>
@@ -336,12 +337,12 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
-        </div>
+        </Container>
       </div>
 
       {/* Feature Comparison */}
       <div className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Container>
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Compare Plans in Detail</h2>
             <button
@@ -373,12 +374,12 @@ export default function PricingPage() {
               }}
             />
           )}
-        </div>
+        </Container>
       </div>
 
       {/* FAQ Section */}
       <div className="py-16 bg-white">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Container className="max-w-3xl">
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
             Frequently Asked Questions
           </h2>
@@ -404,12 +405,12 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
-        </div>
+        </Container>
       </div>
 
       {/* Final CTA */}
       <div className="bg-gradient-to-r from-blue-600 to-cyan-600 py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <Container className="max-w-4xl text-center">
           <h2 className="text-3xl font-bold text-white mb-4">Ready to Pass Your Certification?</h2>
           <p className="text-xl text-blue-100 mb-8">
             Join thousands of professionals who achieved their certification goals with Testero
@@ -435,7 +436,7 @@ export default function PricingPage() {
             <RefreshCw className="h-5 w-5" />
             <span>30-day money-back guarantee on all plans</span>
           </div>
-        </div>
+        </Container>
       </div>
 
       {/* Pricing Cards Anchor */}
