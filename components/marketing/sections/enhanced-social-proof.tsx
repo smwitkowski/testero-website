@@ -4,7 +4,7 @@ import { motion } from "framer-motion"
 import { useInView } from "react-intersection-observer"
 
 import { Marquee } from "@/components/marketing/effects/marquee"
-import { Container } from "@/components/patterns"
+import { Section } from "@/components/patterns"
 import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 
@@ -162,29 +162,27 @@ export function EnhancedSocialProof() {
   });
 
   return (
-    <section ref={ref} className="w-full py-12 md:py-16 overflow-hidden bg-background">
-      <Container>
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          transition={{ duration: 0.6 }}
-          className="text-xl sm:text-2xl md:text-3xl font-semibold text-center mb-12 text-secondary"
-        >
-          Trusted by Hundreds of Cloud Professionals Worldwide
-        </motion.h2>
-        
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : { opacity: 0 }}
-          transition={{ duration: 0.8, delay: 0.3 }}
-        >
-          <Marquee pauseOnHover speed="normal" repeat={2}>
-            {socialProofBadges.map((badge, index) => (
-              <SocialProofCard key={index} badge={badge} />
-            ))}
-          </Marquee>
-        </motion.div>
-      </Container>
-    </section>
+    <Section ref={ref} size="lg" surface="default" className="overflow-hidden">
+      <motion.h2
+        initial={{ opacity: 0, y: 20 }}
+        animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+        transition={{ duration: 0.6 }}
+        className="text-xl sm:text-2xl md:text-3xl font-semibold text-center mb-12 text-secondary"
+      >
+        Trusted by Hundreds of Cloud Professionals Worldwide
+      </motion.h2>
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={inView ? { opacity: 1 } : { opacity: 0 }}
+        transition={{ duration: 0.8, delay: 0.3 }}
+      >
+        <Marquee pauseOnHover speed="normal" repeat={2}>
+          {socialProofBadges.map((badge, index) => (
+            <SocialProofCard key={index} badge={badge} />
+          ))}
+        </Marquee>
+      </motion.div>
+    </Section>
   );
 }
