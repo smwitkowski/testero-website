@@ -1,0 +1,23 @@
+{
+  "_note": "Temporary allowlist for legacy utility escape hatches. Review entries before adding new ones.",
+  "paths": [
+    "components/charts/**",
+    "lib/design-system/tokens/**",
+    "lib/design-system/utils/diagnostic-styles.ts",
+    "app/diagnostic/**",
+    "app/layout.tsx",
+    "components/auth/auth-form-field.tsx",
+    "components/marketing/effects/lamp-effect.tsx",
+    "components/marketing/forms/waitlist-form.tsx",
+    "components/marketing/navigation/navbar.tsx",
+    "components/marketing/sections/benefits-section.tsx",
+    "components/marketing/sections/enhanced-social-proof.tsx",
+    "components/marketing/sections/testimonial-carousel.tsx",
+    "components/practice/QuestionDisplay.tsx",
+    "components/ui/**"
+  ],
+  "classPatterns": [
+    "^(?:[\\w:-]+:)*grid-cols-\\[[^\\]]+\\]$",
+    "^(?:[\\w:-]+:)*aspect-\\[[^\\]]+\\]$"
+  ]
+}
