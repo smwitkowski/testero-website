@@ -1,10 +1,10 @@
 // Design System: Component Style Configurations
 // This file defines reusable component variants and style configurations
 
-import { semantic as colorSemantic, component as colorComponent } from './tokens/colors';
-import { semantic as spacingSemantic, component as spacingComponent } from './tokens/spacing';
-import { component as typographyComponent } from './tokens/typography';
-import { primitive as effectsPrimitive, component as effectsComponent } from './tokens/effects';
+import { semantic as colorSemantic, component as colorComponent } from '../tokens/colors';
+import { semantic as spacingSemantic, component as spacingComponent } from '../tokens/spacing';
+import { component as typographyComponent } from '../tokens/typography';
+import { primitive as effectsPrimitive, component as effectsComponent } from '../tokens/effects';
 
 // BUTTON VARIANTS
 // ---------------------------------------------------------------------------
@@ -399,3 +399,8 @@ export const components = {
 // Legacy compatibility
 export const button = buttonVariants;
 export const card = cardVariants;
+
+export * from "./page-header"
+export * from "./empty-state"
+export * from "./table"
+export * from "./toast"
