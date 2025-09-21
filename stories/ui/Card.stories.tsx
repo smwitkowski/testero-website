@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 
 import {
@@ -31,6 +32,8 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+type CardStoryArgs = ComponentProps<typeof Card>;
+
 export const Default: Story = {
   args: {
     children: (
@@ -45,7 +48,7 @@ export const Default: Story = {
 };
 
 export const WithHeader: Story = {
-  render: (args) => (
+  render: (args: CardStoryArgs) => (
     <Card {...args} className="bg-card text-card-foreground border border-border shadow-sm">
       <CardHeader className="gap-1">
         <CardTitle className="text-xl font-semibold">Plan usage</CardTitle>
@@ -64,7 +67,7 @@ export const WithHeader: Story = {
 };
 
 export const WithActions: Story = {
-  render: (args) => (
+  render: (args: CardStoryArgs) => (
     <Card {...args} className="bg-card text-card-foreground border border-border shadow-sm">
       <CardHeader className="gap-1 pb-0">
         <CardTitle className="text-xl font-semibold">Invite teammates</CardTitle>
