@@ -176,16 +176,14 @@ const VerdictBlock = ({
 
       {/* CTAs */}
       <div className="flex flex-col sm:flex-row gap-3 mt-6">
-        <Button 
-          onClick={onStartPractice}
-          className="h-10 px-5 bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-500/30"
-        >
+        <Button onClick={onStartPractice} tone="accent" size="md">
           Start 10-min practice on your weakest topics
         </Button>
-        <Button 
+        <Button
           onClick={onRetakeDiagnostic}
           variant="outline"
-          className="h-10 px-4 border border-slate-300 text-slate-700 hover:border-slate-400"
+          tone="accent"
+          size="md"
         >
           Retake diagnostic (20 Q)
         </Button>
@@ -277,11 +275,12 @@ const StudyPlan = ({
                 {domain.percentage < 40 ? 'Critical' : domain.percentage < 70 ? 'Moderate' : 'Strong'}
               </span>
             </div>
-            <Button 
+            <Button
               onClick={() => onStartPractice([domain.domain])}
               size="sm"
               variant="outline"
-              className="h-8 px-3 text-xs"
+              tone="accent"
+              className="text-xs"
             >
               Start practice (10)
             </Button>
@@ -581,26 +580,60 @@ const QuickActions = ({
   <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
     <h3 className="font-semibold text-slate-900 mb-4">Quick Actions</h3>
     <div className="space-y-3">
-      <Button onClick={onRetake} variant="outline" className="w-full justify-start h-9 text-sm">
+      <Button
+        onClick={onRetake}
+        variant="outline"
+        tone="accent"
+        size="sm"
+        fullWidth
+        className="justify-start text-sm"
+      >
         🔄 Retake diagnostic
       </Button>
-      <Button onClick={onPractice} variant="outline" className="w-full justify-start h-9 text-sm">
+      <Button
+        onClick={onPractice}
+        variant="outline"
+        tone="accent"
+        size="sm"
+        fullWidth
+        className="justify-start text-sm"
+      >
         📚 Start 10-min practice
       </Button>
-      <Button onClick={onExport} variant="outline" className="w-full justify-start h-9 text-sm">
+      <Button
+        onClick={onExport}
+        variant="outline"
+        tone="accent"
+        size="sm"
+        fullWidth
+        className="justify-start text-sm"
+      >
         📄 Export PDF
       </Button>
-      <Button onClick={onShare} variant="outline" className="w-full justify-start h-9 text-sm">
+      <Button
+        onClick={onShare}
+        variant="outline"
+        tone="accent"
+        size="sm"
+        fullWidth
+        className="justify-start text-sm"
+      >
         🔗 Share results
       </Button>
     </div>
-    
+
     <div className="mt-4 pt-4 border-t border-slate-200">
       <h4 className="text-sm font-medium text-slate-900 mb-2">Schedule Study</h4>
       <div className="flex gap-2">
-        <Button size="sm" variant="outline" className="flex-1 text-xs">15m</Button>
-        <Button size="sm" variant="outline" className="flex-1 text-xs">30m</Button>
-        <Button size="sm" variant="outline" className="flex-1 text-xs">45m</Button>
+        <Button size="sm" variant="outline" tone="accent" className="flex-1 text-xs">
+          15m
+        </Button>
+        <Button size="sm" variant="outline" tone="accent" className="flex-1 text-xs">
+          30m
+        </Button>
+        <Button size="sm" variant="outline" tone="accent" className="flex-1 text-xs">
+          45m
+        </Button>
       </div>
     </div>
   </div>
@@ -887,10 +920,10 @@ const DiagnosticSummaryPage = () => {
               {new Date(summary.completedAt).toLocaleDateString()} • {summary.examType}
             </span>
             <div className="flex items-center gap-2">
-              <Button onClick={handleExport} size="sm" variant="ghost">
+              <Button onClick={handleExport} size="sm" variant="ghost" tone="neutral">
                 📄 Export
               </Button>
-              <Button onClick={handleShare} size="sm" variant="ghost">
+              <Button onClick={handleShare} size="sm" variant="ghost" tone="neutral">
                 🔗 Share
               </Button>
             </div>
@@ -963,7 +996,9 @@ const DiagnosticSummaryPage = () => {
                       diagnostic_score: summary?.score,
                     });
                   }}
-                  className="w-full h-9 bg-blue-600 hover:bg-blue-700"
+                  tone="accent"
+                  size="sm"
+                  fullWidth
                 >
                   Start Free Trial
                 </Button>

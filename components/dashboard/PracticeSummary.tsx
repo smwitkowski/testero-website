@@ -66,7 +66,7 @@ export const PracticeSummary: React.FC<PracticeSummaryProps> = ({
             <div className="text-xs text-gray-400">
               Start practicing to improve your exam readiness
             </div>
-            <Button asChild size="sm" className="mt-3">
+            <Button asChild size="sm" tone="accent" className="mt-3">
               <Link href="/practice/question">
                 Start Practicing
               </Link>
@@ -131,7 +131,7 @@ export const PracticeSummary: React.FC<PracticeSummaryProps> = ({
 
             {/* Action Button */}
             <div className="pt-2 border-t border-gray-100">
-              <Button asChild size="sm" className="w-full">
+              <Button asChild size="sm" tone="accent" className="w-full">
                 <Link href="/practice/question">
                   Continue Practicing
                 </Link>

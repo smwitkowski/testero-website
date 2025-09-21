@@ -1,69 +1,208 @@
 import * as React from "react"
-import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-// Note: Design system button variants available for future use
 
 import { cn } from "@/lib/utils"
+import {
+  buttonBase,
+  buttonSizeStyles,
+  buttonVariantStyles,
+} from "@/lib/design-system/components"
 
-// Convert design system button variants to CVA format
-const buttonVariants = cva(
-  // Base styles from design system
-  "inline-flex items-center justify-center rounded-lg font-semibold text-decoration-none transition-all cursor-pointer border-none outline-none select-none disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-transparent focus-visible:outline-offset-2",
-  {
-    variants: {
-      variant: {
-        // Primary variant using design system tokens
-        default:
-          "bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 hover:scale-105 active:scale-98 shadow-lg hover:shadow-xl",
-        // Secondary variant
-        secondary:
-          "bg-white text-slate-800 border border-white hover:bg-slate-50 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0",
-        // Ghost variant for transparent buttons
-        ghost:
-          "bg-transparent text-white border border-white/40 hover:bg-white/20 shadow-sm hover:shadow-md",
-        // Outline variant
-        outline:
-          "bg-transparent text-slate-800 border border-slate-300 hover:bg-slate-50",
-        // Destructive variant
-        destructive:
-          "bg-red-500 text-white hover:bg-red-600 shadow-lg hover:shadow-xl",
-        // Link variant  
-        link: "text-orange-500 underline-offset-4 hover:underline bg-transparent border-none shadow-none",
-      },
-      size: {
-        // Size variants using design system spacing
-        sm: "h-9 px-3 py-2 text-sm gap-1.5",
-        default: "h-11 px-4 py-3 text-base gap-2", 
-        lg: "h-13 px-6 py-4 text-lg gap-2",
-        icon: "size-9 p-0",
-      },
+const button = cva(buttonBase, {
+  variants: {
+    variant: {
+      solid: buttonVariantStyles.solid,
+      soft: buttonVariantStyles.soft,
+      outline: buttonVariantStyles.outline,
+      ghost: buttonVariantStyles.ghost,
+      link: buttonVariantStyles.link,
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
+    tone: {
+      default: buttonVariantStyles.tone.default,
+      accent: buttonVariantStyles.tone.accent,
+      success: buttonVariantStyles.tone.success,
+      warn: buttonVariantStyles.tone.warn,
+      danger: buttonVariantStyles.tone.danger,
+      neutral: buttonVariantStyles.tone.neutral,
     },
+    size: {
+      sm: buttonSizeStyles.sm,
+      md: buttonSizeStyles.md,
+      lg: buttonSizeStyles.lg,
+    },
+    fullWidth: {
+      true: "w-full",
+    },
+  },
+  defaultVariants: {
+    variant: "solid",
+    tone: "accent",
+    size: "md",
+  },
+})
+
+function mergeRefs<T>(...refs: (React.Ref<T> | undefined)[]) {
+  return (value: T) => {
+    for (const ref of refs) {
+      if (typeof ref === "function") {
+        ref(value)
+      } else if (ref) {
+        ;(ref as React.MutableRefObject<T | null>).current = value
+      }
+    }
+  }
+}
+
+/**
+ * The canonical button component for the Testero design system.
+ *
+ * @remarks
+ * - `variant` controls the structural treatment (`solid`, `soft`, `outline`, `ghost`, `link`).
+ * - `tone` applies semantic color intent mapped to tokens (`default`, `accent`, `success`, `warn`, `danger`, `neutral`).
+ * - `size` ensures token-backed spacing with md/lg meeting a ≥44px hit area.
+ * - `loading` shows a spinner, disables pointer interaction, and marks the control as busy.
+ * - `icon`/`iconRight` render leading and trailing affordances while preserving accessible labels.
+ * - `fullWidth` stretches the button to the available width while retaining variant styling.
+ */
+export type ButtonProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "type"> &
+  VariantProps<typeof button> & {
+    /** Visually replaces the content with a spinner and prevents user interaction. */
+    loading?: boolean
+    /** Optional leading icon, rendered before the children. */
+    icon?: React.ReactNode
+    /** Optional trailing icon, rendered after the children. */
+    iconRight?: React.ReactNode
+    /** Render the button as a different element while preserving styling. */
+    asChild?: boolean
+    /** Override the intrinsic button type (defaults to `button`). */
+    type?: "button" | "submit" | "reset"
+  }
+
+const Spinner = ({ className }: { className?: string }) => (
+  <svg
+    aria-hidden="true"
+    className={cn("size-4 animate-spin text-current", className)}
+    viewBox="0 0 24 24"
+    fill="none"
+  >
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+    />
+    <path
+      className="opacity-75"
+      d="M4 12a8 8 0 018-8V2a10 10 0 100 20v-2a8 8 0 01-8-8z"
+      fill="currentColor"
+    />
+  </svg>
+)
+
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  (
+    {
+      asChild = false,
+      className,
+      variant,
+      tone,
+      size,
+      fullWidth,
+      loading = false,
+      icon,
+      iconRight,
+      disabled,
+      type = "button",
+      children,
+      ...props
+    },
+    ref
+  ) => {
+    const isDisabled = disabled || loading
+    const buttonClassName = cn(
+      button({ variant, tone, size, fullWidth }),
+      loading && "cursor-progress",
+      className
+    )
+
+    const childContent =
+      asChild && React.isValidElement(children)
+        ? (children.props as { children?: React.ReactNode }).children
+        : children
+
+    const content = (
+      <>
+        {loading ? (
+          <Spinner className="mr-2" />
+        ) : icon ? (
+          <span className="-ml-0.5 mr-2 flex shrink-0 items-center">{icon}</span>
+        ) : null}
+        <span className="inline-flex min-w-0 items-center justify-center">{childContent}</span>
+        {iconRight && !loading ? (
+          <span className="ml-2 -mr-0.5 flex shrink-0 items-center">{iconRight}</span>
+        ) : null}
+      </>
+    )
+
+    const { onClick, ...restProps } = props
+
+    if (asChild && React.isValidElement(children)) {
+      const child = children as React.ReactElement
+      const childOnClick = child.props?.onClick as React.MouseEventHandler<unknown> | undefined
+
+      return React.cloneElement(child, {
+        ...restProps,
+        className: cn(buttonClassName, child.props.className),
+        "data-variant": variant ?? "solid",
+        "data-tone": tone ?? "accent",
+        "data-loading": loading ? "true" : undefined,
+        "data-disabled": isDisabled ? "true" : undefined,
+        "aria-disabled": isDisabled || undefined,
+        "aria-busy": loading || undefined,
+        ref: mergeRefs(child.ref as React.Ref<unknown>, ref as React.Ref<unknown>),
+        onClick: (event: React.MouseEvent<unknown>) => {
+          if (isDisabled) {
+            event.preventDefault()
+            event.stopPropagation()
+            return
+          }
+          childOnClick?.(event)
+          ;(onClick as React.MouseEventHandler<unknown> | undefined)?.(event)
+        },
+        children: content,
+      })
+    }
+
+    return (
+      <button
+        ref={ref}
+        type={type}
+        data-variant={variant ?? "solid"}
+        data-tone={tone ?? "accent"}
+        data-loading={loading ? "true" : undefined}
+        data-disabled={isDisabled ? "true" : undefined}
+        aria-disabled={isDisabled || undefined}
+        aria-busy={loading || undefined}
+        disabled={isDisabled}
+        className={buttonClassName}
+        onClick={(event) => {
+          if (isDisabled) {
+            event.preventDefault()
+            event.stopPropagation()
+            return
+          }
+          ;(onClick as React.MouseEventHandler<HTMLButtonElement> | undefined)?.(event)
+        }}
+        {...restProps}
+      >
+        {content}
+      </button>
+    )
   }
 )
 
-function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
-  const Comp = asChild ? Slot : "button"
+Button.displayName = "Button"
 
-  return (
-    <Comp
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
-  )
-}
-
-export { Button, buttonVariants }
+export { button as buttonVariants }

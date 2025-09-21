@@ -327,26 +327,19 @@ export default function BetaWelcomePage() {
                     <Button
                       onClick={handleStartDiagnostic}
                       disabled={isCreatingSession}
+                      loading={isCreatingSession}
                       size="lg"
-                      className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+                      tone="accent"
+                      iconRight={!isCreatingSession ? <Zap className="h-5 w-5" /> : undefined}
                     >
-                      {isCreatingSession ? (
-                        <>
-                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                          Creating session...
-                        </>
-                      ) : (
-                        <>
-                          {variantContent.ctaPrimary}
-                          <Zap className="ml-2 h-5 w-5" />
-                        </>
-                      )}
+                      {variantContent.ctaPrimary}
                     </Button>
 
                     <Button
                       onClick={handleSkipDiagnostic}
                       variant="outline"
                       size="lg"
+                      tone="neutral"
                       disabled={isCreatingSession}
                     >
                       {BETA_ONBOARDING_COPY.welcome.ctaSecondary}

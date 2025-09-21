@@ -176,7 +176,7 @@ const DashboardPage = () => {
               <p className="mb-4" style={{ color: colorSemantic.error.base }}>
                 {error}
               </p>
-              <Button onClick={() => window.location.reload()} variant="destructive">
+              <Button onClick={() => window.location.reload()} tone="danger">
                 Try Again
               </Button>
             </div>
@@ -228,7 +228,7 @@ const DashboardPage = () => {
                   <Button
                     onClick={handleStartDiagnostic}
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700"
+                    tone="accent"
                     data-testid="dashboard-beta-start-btn"
                   >
                     {variantContent.skipBanner.cta}
@@ -237,7 +237,8 @@ const DashboardPage = () => {
                     onClick={handleDismissBanner}
                     variant="ghost"
                     size="sm"
-                    className="p-1 h-8 w-8"
+                    tone="neutral"
+                    className="size-8 p-1"
                     aria-label="Dismiss beta banner"
                   >
                     <X className="h-4 w-4" />

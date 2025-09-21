@@ -127,7 +127,7 @@ export function StudyPathDisplay({ diagnosticData, isPreview = false }: StudyPat
         <CardContent className="text-center py-8">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={fetchRecommendations} variant="outline">
+          <Button onClick={fetchRecommendations} variant="outline" tone="accent">
             Try Again
           </Button>
         </CardContent>
@@ -245,7 +245,8 @@ export function StudyPathDisplay({ diagnosticData, isPreview = false }: StudyPat
                 {!isPreview && (
                   <div className="mt-4">
                     <Button
-                      className="w-full"
+                      tone="accent"
+                      fullWidth
                       onClick={() => {
                         // TODO: Navigate to practice questions for this domain
                         // For now, navigate to general practice page

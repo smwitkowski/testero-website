@@ -67,6 +67,9 @@ export {
 
 export {
   // Component variants
+  buttonBase,
+  buttonVariantStyles,
+  buttonSizeStyles,
   buttonVariants,
   cardVariants,
   heroVariants,

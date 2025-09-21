@@ -235,11 +235,13 @@ const StudyPathPage = () => {
                   router.push(`/signup?redirect=${encodeURIComponent("/study-path")}`);
                 }}
                 size="lg"
+                tone="accent"
               >
                 Sign Up to See Full Path
               </Button>
               <Button
                 variant="outline"
+                tone="accent"
                 onClick={() => {
                   posthog?.capture("study_path_login_clicked", {
                     has_diagnostic_data: !!diagnosticData,

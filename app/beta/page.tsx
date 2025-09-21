@@ -138,15 +138,14 @@ const CtaSection: React.FC = () => {
             data-testid="cta-button"
             type="button"
             size="lg"
-            className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+            tone="accent"
+            iconRight={<Zap className="h-5 w-5" />}
             onClick={handleCtaClick}
           >
             Start Your Beta Now
-            <Zap className="ml-2 h-5 w-5" />
           </Button>
-          <Button variant="secondary" size="lg">
+          <Button variant="solid" tone="neutral" size="lg" iconRight={<MessageCircle className="h-5 w-5" />}> 
             Read Details
-            <MessageCircle className="ml-2 h-5 w-5" />
           </Button>
         </div>
         <p className="text-sm text-slate-600">
@@ -170,13 +169,14 @@ const StickyMobileCTA: React.FC = () => {
     >
       <Button
         data-testid="sticky-mobile-cta"
-        type="button" 
+        type="button"
         size="lg"
-        className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+        tone="accent"
+        fullWidth
+        iconRight={<Zap className="h-5 w-5" />}
         onClick={handleCtaClick}
       >
         Start Beta Now
-        <Zap className="ml-2 h-5 w-5" />
       </Button>
     </motion.div>
   );
@@ -310,11 +310,11 @@ export default function BetaPage(): React.ReactElement {
               data-testid="mid-cta-button"
               type="button"
               size="lg"
-              className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+              tone="accent"
+              iconRight={<Zap className="h-5 w-5" />}
               onClick={handleCtaClick}
             >
               Join Beta Now
-              <Zap className="ml-2 h-5 w-5" />
             </Button>
           </motion.div>
         </div>
