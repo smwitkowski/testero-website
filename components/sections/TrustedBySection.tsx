@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Marquee } from "@/components/marketing/effects/marquee";
+import { Container } from "@/components/patterns";
 import { partners, type Partner } from "@/data/partners";
 
 // Component-specific design tokens following the design system
@@ -30,7 +31,6 @@ const designTokens = {
   },
   spacing: {
     section: "py-16 md:py-20",
-    container: "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
     logo: "h-12 md:h-16",
     logoContainer: "h-20 md:h-24",
   },
@@ -136,7 +136,7 @@ export function TrustedBySection({
       role="region"
       aria-label="Our trusted partners"
     >
-      <div className={designTokens.spacing.container}>
+      <Container>
         {/* Header */}
         <div className="text-center mb-8 md:mb-12">
           <h2
@@ -230,7 +230,7 @@ export function TrustedBySection({
             </p>
           </div>
         )}
-      </div>
+      </Container>
     </section>
   );
 }
