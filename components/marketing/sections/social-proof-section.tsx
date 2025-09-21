@@ -2,31 +2,54 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { colorSemantic, duration, easing } from '@/lib/design-system';
+import { duration, easing } from '@/lib/design-system';
+
+type ProofTone = 'accent' | 'success' | 'info' | 'primary';
+
+const toneStyles: Record<ProofTone, { icon: string; highlight: string }> = {
+  accent: {
+    icon: 'bg-[color:var(--tone-accent-surface)] text-[color:var(--tone-accent)]',
+    highlight: 'text-[color:var(--tone-accent)]',
+  },
+  success: {
+    icon: 'bg-[color:var(--tone-success-surface)] text-[color:var(--tone-success)]',
+    highlight: 'text-[color:var(--tone-success)]',
+  },
+  info: {
+    icon: 'bg-[color:var(--tone-info-surface)] text-[color:var(--tone-info)]',
+    highlight: 'text-[color:var(--tone-info)]',
+  },
+  primary: {
+    icon: 'bg-[color:var(--surface-muted)] text-foreground',
+    highlight: 'text-foreground',
+  },
+};
 
 interface SocialProofCardProps {
   icon: React.ReactNode;
   title: string;
   subtitle: string;
-  color: string;
+  tone: ProofTone;
   delay?: number;
 }
 
-const SocialProofCard: React.FC<SocialProofCardProps> = ({ 
-  icon, 
-  title, 
+const SocialProofCard: React.FC<SocialProofCardProps> = ({
+  icon,
+  title,
   subtitle,
-  color,
+  tone,
   delay = 0
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const toneClass = toneStyles[tone];
+  const sizeClass = title.length > 10 ? 'text-lg' : 'text-xl';
 
   return (
-    <article 
+    <article
       className={cn(
-        "bg-white p-4 sm:p-6 rounded-lg shadow-md border border-slate-100",
-        "transform transition-all duration-300",
-        "hover:shadow-lg hover:-translate-y-1"
+        'rounded-lg border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 sm:p-6 shadow-md',
+        'transform transition-all duration-300',
+        'hover:-translate-y-1 hover:shadow-lg'
       )}
       style={{
         animationDelay: `${delay}ms`,
@@ -39,31 +62,28 @@ const SocialProofCard: React.FC<SocialProofCardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="flex flex-col items-center">
-        <div 
+        <div
           className={cn(
-            "w-12 h-12 mb-4 rounded-full flex items-center justify-center transition-transform",
-            isHovered ? "scale-110" : "scale-100"
+            'mb-4 flex h-12 w-12 items-center justify-center rounded-full transition-transform',
+            isHovered ? 'scale-110' : 'scale-100',
+            toneClass.icon
           )}
-          style={{ 
-            backgroundColor: `${color}50`, // Lightened version of the color
-            transition: `transform ${duration.fast}ms ${easing.spring}`
-          }}
           aria-hidden="true"
         >
-          <div className="text-[color] transition-all" style={{ color }}>
-            {icon}
-          </div>
+          <div className="transition-all">{icon}</div>
         </div>
-        
-        <h3 className={cn(
-          "text-center transition-all duration-300",
-          isHovered ? "text-3xl font-bold" : "text-2xl font-semibold", 
-          title.length > 10 ? "text-lg" : "text-xl"
-        )}>
+
+        <h3
+          className={cn(
+            'text-center font-semibold text-foreground transition-all duration-300',
+            sizeClass,
+            isHovered && cn('text-3xl font-bold', toneClass.highlight)
+          )}
+        >
           {title}
         </h3>
-        
-        <p className="text-slate-600 text-center">{subtitle}</p>
+
+        <p className="text-center text-muted-foreground">{subtitle}</p>
       </div>
     </article>
   );
@@ -85,16 +105,16 @@ const fadeInUp = `
 
 export function SocialProofSection() {
   return (
-    <section className="w-full bg-slate-100 py-8 sm:py-12 md:py-20 px-4 sm:px-6 relative">
+    <section className="relative w-full bg-[color:var(--surface-subtle)] px-4 py-8 sm:px-6 sm:py-12 md:py-20">
       {/* Add styles to head for animations */}
       <style jsx global>{fadeInUp}</style>
-      
-      
+
+
       <div className="max-w-5xl mx-auto text-center space-y-8 relative z-10">
-        <h2 
+        <h2
           id="social-proof-heading"
           className={cn(
-            "text-xl sm:text-2xl md:text-3xl font-semibold text-slate-700",
+            "text-xl font-semibold text-muted-foreground sm:text-2xl md:text-3xl",
             "opacity-0"
           )}
           style={{
@@ -105,7 +125,7 @@ export function SocialProofSection() {
           Trusted by Hundreds of Cloud Professionals Worldwide
         </h2>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pt-4" role="list">
+        <div className="grid grid-cols-1 gap-4 pt-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4" role="list">
           {/* Card 1: User Count */}
           <SocialProofCard
             icon={
@@ -115,7 +135,7 @@ export function SocialProofSection() {
             }
             title="500+ Active Users"
             subtitle="Already Practicing with Testero"
-            color={colorSemantic.primary[400]}
+            tone="info"
             delay={duration.fast * 2}
           />
           
@@ -128,7 +148,7 @@ export function SocialProofSection() {
             }
             title="Built by Cloud Certification Experts"
             subtitle="Ex-Google Cloud PSO Leadership Team"
-            color={colorSemantic.success.base}
+            tone="success"
             delay={duration.fast * 3}
           />
           
@@ -141,7 +161,7 @@ export function SocialProofSection() {
             }
             title="Award-Winning Platform"
             subtitle="Product Hunt Top Launch for Certification Tools"
-            color={colorSemantic.accent[400]}
+            tone="accent"
             delay={duration.fast * 4}
           />
           
@@ -154,45 +174,47 @@ export function SocialProofSection() {
             }
             title="Available Now"
             subtitle="Practice Questions & Diagnostics Ready"
-            color={colorSemantic.accent[600]}
+            tone="accent"
             delay={duration.fast * 5}
           />
         </div>
         
         {/* Additional Testimonial Row (Optional) */}
-        <figure 
-          className="mt-8 sm:mt-12 bg-white rounded-xl p-4 sm:p-6 shadow-md border border-slate-200 max-w-2xl mx-auto opacity-0"
+        <figure
+          className="mt-8 max-w-2xl opacity-0 sm:mt-12"
           style={{
             animation: `fadeInUp ${duration.slow}ms ${easing.spring} forwards`,
             animationDelay: `${duration.fast * 6}ms`
           }}
         >
+          <div className="rounded-xl border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 shadow-md sm:p-6">
           <h3 className="sr-only">Customer Testimonial</h3>
-          <blockquote className="text-base sm:text-lg italic text-slate-700">
+          <blockquote className="text-base italic text-muted-foreground sm:text-lg">
             &quot;The diagnostic test immediately showed me my weak areas in Google Cloud. The practice questions with detailed explanations helped me understand concepts I was struggling with. Great platform!&quot;
           </blockquote>
           <figcaption className="mt-4 flex items-center justify-center">
-            <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center text-slate-700 font-medium" aria-hidden="true">AS</div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--surface-muted)] font-medium text-foreground" aria-hidden="true">AS</div>
             <div className="ml-3 text-left">
               <p className="font-medium">Alex Smith</p>
-              <p className="text-sm text-slate-500">Cloud Solutions Architect</p>
+              <p className="text-sm text-muted-foreground">Cloud Solutions Architect</p>
             </div>
           </figcaption>
+          </div>
         </figure>
-        
+
         {/* Logos Section (Placeholder - Replace with actual partner logos when available) */}
-        <div 
+        <div
           className="mt-16 opacity-0"
           style={{
             animation: `fadeInUp ${duration.slow}ms ${easing.spring} forwards`,
             animationDelay: `${duration.fast * 7}ms`
           }}
         >
-          <h3 className="text-sm uppercase tracking-wide text-slate-500 mb-6" id="certification-providers">Supporting Major Cloud Certification Programs</h3>
-          <ul className="flex flex-wrap justify-center gap-4 sm:gap-8 opacity-60" aria-labelledby="certification-providers">
-            <li className="w-32 h-12 bg-gradient-to-r from-blue-100 to-blue-200 rounded flex items-center justify-center text-blue-600 font-medium text-sm">Google Cloud</li>
-            <li className="w-32 h-12 bg-gradient-to-r from-orange-100 to-orange-200 rounded flex items-center justify-center text-orange-600 font-medium text-sm">AWS</li>
-            <li className="w-32 h-12 bg-gradient-to-r from-blue-100 to-indigo-200 rounded flex items-center justify-center text-indigo-600 font-medium text-sm">Microsoft Azure</li>
+          <h3 className="mb-6 text-sm uppercase tracking-wide text-muted-foreground" id="certification-providers">Supporting Major Cloud Certification Programs</h3>
+          <ul className="flex flex-wrap justify-center gap-4 opacity-80 sm:gap-8" aria-labelledby="certification-providers">
+            <li className="flex h-12 w-32 items-center justify-center rounded bg-[color:var(--tone-info-surface)] text-[color:var(--tone-info)] font-medium text-sm">Google Cloud</li>
+            <li className="flex h-12 w-32 items-center justify-center rounded bg-[color:var(--tone-accent-surface)] text-[color:var(--tone-accent)] font-medium text-sm">AWS</li>
+            <li className="flex h-12 w-32 items-center justify-center rounded bg-[color:var(--tone-info-surface)] text-[color:var(--tone-info)] font-medium text-sm">Microsoft Azure</li>
           </ul>
         </div>
       </div>

@@ -4,6 +4,38 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { DomainBreakdown as DomainBreakdownType } from "./types";
 
+type Tone = "success" | "warning" | "danger";
+
+const percentageTone = (percentage: number): Tone => {
+  if (percentage >= 70) return "success";
+  if (percentage >= 50) return "warning";
+  return "danger";
+};
+
+const toneTextClass: Record<Tone, string> = {
+  success: "text-[color:var(--tone-success)]",
+  warning: "text-[color:var(--tone-warning)]",
+  danger: "text-[color:var(--tone-danger)]",
+};
+
+const toneBadgeClass: Record<Tone, string> = {
+  success: "bg-[color:var(--tone-success-surface)] text-[color:var(--tone-success)]",
+  warning: "bg-[color:var(--tone-warning-surface)] text-[color:var(--tone-warning)]",
+  danger: "bg-[color:var(--tone-danger-surface)] text-[color:var(--tone-danger)]",
+};
+
+const toneBarClass: Record<Tone, string> = {
+  success: "bg-[color:var(--tone-success)]",
+  warning: "bg-[color:var(--tone-warning)]",
+  danger: "bg-[color:var(--tone-danger)]",
+};
+
+const toneBarFill: Record<Tone, string> = {
+  success: "var(--tone-success)",
+  warning: "var(--tone-warning)",
+  danger: "var(--tone-danger)",
+};
+
 interface DomainBreakdownProps {
   domains: DomainBreakdownType[];
   onDomainClick?: (domain: string) => void;
@@ -11,12 +43,6 @@ interface DomainBreakdownProps {
   compact?: boolean;
   showSuggestions?: boolean;
   showBadges?: boolean;
-}
-
-function getBarColor(percentage: number): string {
-  if (percentage >= 70) return "#22c55e"; // green
-  if (percentage >= 50) return "#f59e0b"; // amber
-  return "#ef4444"; // red
 }
 
 export const DomainBreakdown: React.FC<DomainBreakdownProps> = ({
@@ -33,8 +59,8 @@ export const DomainBreakdown: React.FC<DomainBreakdownProps> = ({
   if (domains.length === 0) {
     return (
       <Card className="w-full">
-        <CardContent className="text-center py-8">
-          <p className="text-gray-500">No domain data available</p>
+        <CardContent className="py-8 text-center">
+          <p className="text-muted-foreground">No domain data available</p>
         </CardContent>
       </Card>
     );
@@ -61,7 +87,8 @@ export const DomainBreakdown: React.FC<DomainBreakdownProps> = ({
           }}
           tabIndex={onDomainClick ? 0 : -1}
           className={cn(
-            "p-4 rounded-lg bg-gray-50 hover:bg-gray-50 transition-colors",
+            "rounded-lg border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 transition-colors",
+            "hover:bg-[color:var(--surface-subtle)]",
             onDomainClick && "cursor-pointer"
           )}
           aria-label={`${domain.domain}: ${domain.correct} out of ${domain.total} correct`}
@@ -69,17 +96,10 @@ export const DomainBreakdown: React.FC<DomainBreakdownProps> = ({
           <div className="flex items-center justify-between mb-2">
             <span className="font-medium">{domain.domain}</span>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-muted-foreground">
                 {domain.correct}/{domain.total}
               </span>
-              <span
-                className={cn(
-                  "font-semibold",
-                  domain.percentage >= 70 && "text-green-600",
-                  domain.percentage >= 50 && domain.percentage < 70 && "text-amber-600",
-                  domain.percentage < 50 && "text-red-600"
-                )}
-              >
+              <span className={cn("font-semibold", toneTextClass[percentageTone(domain.percentage)])}>
                 {domain.percentage}%
               </span>
               {domain.percentage < 50 && (
@@ -90,20 +110,21 @@ export const DomainBreakdown: React.FC<DomainBreakdownProps> = ({
               {showBadges && domain.percentage >= 70 && (
                 <span
                   data-testid={`badge-${domain.domain}`}
-                  className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded"
+                  className={cn(
+                    "rounded px-2 py-1 text-xs font-medium",
+                    toneBadgeClass[percentageTone(domain.percentage)]
+                  )}
                 >
                   Strong
                 </span>
               )}
             </div>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="h-2 w-full rounded-full bg-[color:var(--surface-muted)]">
             <div
               className={cn(
                 "h-2 rounded-full transition-all",
-                domain.percentage >= 70 && "bg-green-500",
-                domain.percentage >= 50 && domain.percentage < 70 && "bg-amber-500",
-                domain.percentage < 50 && "bg-red-500"
+                toneBarClass[percentageTone(domain.percentage)]
               )}
               style={{ width: `${domain.percentage}%` }}
             />
@@ -121,12 +142,12 @@ export const DomainBreakdown: React.FC<DomainBreakdownProps> = ({
           <YAxis domain={[0, 100]} />
           <Tooltip
             formatter={(value: number) => `${value}%`}
-            cursor={{ fill: "rgba(0, 0, 0, 0.05)" }}
+            cursor={{ fill: "var(--surface-muted)" }}
           />
           <Legend />
           <Bar dataKey="percentage" name="Score %" radius={[8, 8, 0, 0]}>
             {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={getBarColor(entry.percentage)} />
+              <Cell key={`cell-${index}`} fill={toneBarFill[percentageTone(entry.percentage)]} />
             ))}
           </Bar>
         </BarChart>
@@ -144,14 +165,15 @@ export const DomainBreakdown: React.FC<DomainBreakdownProps> = ({
             }}
             tabIndex={onDomainClick ? 0 : -1}
             className={cn(
-              "flex items-center justify-between p-2 rounded hover:bg-gray-50",
+              "flex items-center justify-between rounded border border-[color:var(--divider-color)] p-2",
+              "hover:bg-[color:var(--surface-subtle)]",
               onDomainClick && "cursor-pointer"
             )}
             aria-label={`${domain.domain}: ${domain.correct} out of ${domain.total} correct`}
           >
             <span className="text-sm">{domain.domain}</span>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-muted-foreground">
                 {domain.correct}/{domain.total}
               </span>
               <span className="text-sm font-medium">{domain.percentage}%</span>
@@ -163,7 +185,10 @@ export const DomainBreakdown: React.FC<DomainBreakdownProps> = ({
               {showBadges && domain.percentage >= 70 && (
                 <span
                   data-testid={`badge-${domain.domain}`}
-                  className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded"
+                  className={cn(
+                    "rounded px-2 py-1 text-xs font-medium",
+                    toneBadgeClass[percentageTone(domain.percentage)]
+                  )}
                 >
                   Strong
                 </span>
@@ -193,7 +218,7 @@ export const DomainBreakdown: React.FC<DomainBreakdownProps> = ({
             {sortedDomains
               .filter((d) => d.percentage < 50)
               .map((domain) => (
-                <p key={domain.domain} className="text-sm text-gray-600">
+                <p key={domain.domain} className="text-sm text-muted-foreground">
                   Focus on {domain.domain} - needs improvement
                 </p>
               ))}

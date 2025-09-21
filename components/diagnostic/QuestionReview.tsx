@@ -68,7 +68,7 @@ export const QuestionReview: React.FC<QuestionReviewProps> = ({
     return (
       <Card className="w-full">
         <CardContent className="text-center py-8">
-          <p className="text-gray-500">No questions to review</p>
+          <p className="text-muted-foreground">No questions to review</p>
         </CardContent>
       </Card>
     );
@@ -84,8 +84,10 @@ export const QuestionReview: React.FC<QuestionReviewProps> = ({
         key={question.id}
         data-testid={`question-${question.id}`}
         className={cn(
-          "mb-4 p-6 rounded-lg border",
-          question.isCorrect ? "border-green-200 bg-green-50/50" : "border-red-200 bg-red-50/50",
+          "mb-4 rounded-lg border p-6 transition-colors",
+          question.isCorrect
+            ? "border-[color:var(--tone-success)] bg-[color:var(--tone-success-surface)]"
+            : "border-[color:var(--tone-danger)] bg-[color:var(--tone-danger-surface)]",
           isCollapsed && "max-h-96 overflow-hidden relative"
         )}
         aria-label={`Question ${index} - ${question.isCorrect ? "correct" : "incorrect"}`}
@@ -94,18 +96,20 @@ export const QuestionReview: React.FC<QuestionReviewProps> = ({
           <h3 className="text-lg font-semibold">Question {index}</h3>
           <span
             className={cn(
-              "px-3 py-1 rounded-full text-sm font-medium text-white",
-              question.isCorrect ? "bg-green-500" : "bg-red-500"
+              "rounded-full px-3 py-1 text-sm font-medium",
+              question.isCorrect
+                ? "bg-[color:var(--tone-success-surface)] text-[color:var(--tone-success)]"
+                : "bg-[color:var(--tone-danger-surface)] text-[color:var(--tone-danger)]"
             )}
           >
             {question.isCorrect ? "CORRECT" : "INCORRECT"}
           </span>
         </div>
 
-        <p className="mb-4 text-gray-700">{question.stem}</p>
+        <p className="mb-4 text-foreground">{question.stem}</p>
 
         {question.options.length === 0 ? (
-          <p className="text-gray-500 italic">No options available</p>
+          <p className="italic text-muted-foreground">No options available</p>
         ) : (
           <div className="space-y-2">
             {question.options.map((option) => {
@@ -120,23 +124,23 @@ export const QuestionReview: React.FC<QuestionReviewProps> = ({
                   data-testid={`option-${option.label}`}
                   className={cn(
                     "p-3 rounded-lg border transition-all hover:shadow-sm break-words",
-                    isCorrectAnswer && question.isCorrect && "bg-green-50 border-green-300",
-                    showAsCorrect && "bg-green-50 border-green-300",
-                    showAsUserAnswer && "border-blue-500 border-2",
-                    !isUserAnswer && !isCorrectAnswer && "bg-white border-gray-200"
+                    isCorrectAnswer && question.isCorrect && "border-[color:var(--tone-success)] bg-[color:var(--tone-success-surface)]",
+                    showAsCorrect && "border-[color:var(--tone-success)] bg-[color:var(--tone-success-surface)]",
+                    showAsUserAnswer && "border-2 border-[color:var(--tone-info)] bg-[color:var(--tone-info-surface)]",
+                    !isUserAnswer && !isCorrectAnswer && "border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)]"
                   )}
                 >
                   <div className="flex items-start gap-3">
-                    <span className="font-medium text-gray-600">{option.label}.</span>
+                    <span className="font-medium text-muted-foreground">{option.label}.</span>
                     <span className="flex-1">{option.text}</span>
                     {isCorrectAnswer && question.isCorrect && (
-                      <span className="text-xs text-green-600 font-medium">✓ Your answer</span>
+                      <span className="text-xs font-medium text-[color:var(--tone-success)]">✓ Your answer</span>
                     )}
                     {showAsCorrect && (
-                      <span className="text-xs text-green-600 font-medium">✓ Correct</span>
+                      <span className="text-xs font-medium text-[color:var(--tone-success)]">✓ Correct</span>
                     )}
                     {showAsUserAnswer && (
-                      <span className="text-xs text-blue-600 font-medium">Your answer</span>
+                      <span className="text-xs font-medium text-[color:var(--tone-info)]">Your answer</span>
                     )}
                   </div>
                 </div>
