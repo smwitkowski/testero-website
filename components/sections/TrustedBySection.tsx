@@ -2,41 +2,13 @@
 
 import React from "react";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
+
 import { Marquee } from "@/components/marketing/effects/marquee";
 import { Section } from "@/components/patterns";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { partners, type Partner } from "@/data/partners";
-
-// Component-specific design tokens following the design system
-const designTokens = {
-  colors: {
-    // Using design system color tokens
-    text: {
-      primary: "text-slate-800 dark:text-white",
-      secondary: "text-slate-600 dark:text-slate-400",
-      muted: "text-slate-400 dark:text-slate-600",
-    },
-    logo: {
-      container: "bg-slate-50 dark:bg-slate-800/50",
-      border: "border-slate-200 dark:border-slate-700",
-    },
-  },
-  typography: {
-    // Using design system typography tokens
-    sectionTitle: "text-2xl sm:text-3xl md:text-4xl font-semibold",
-    subtitle: "text-base md:text-lg",
-    logoTitle: "text-sm font-semibold",
-  },
-  spacing: {
-    logo: "h-12 md:h-16",
-    logoContainer: "h-20 md:h-24",
-  },
-  effects: {
-    logoHover: "hover:scale-105 transition-all duration-300",
-    logoFilter: "grayscale hover:grayscale-0 opacity-70 hover:opacity-100",
-    gradientMask: "bg-gradient-to-r from-white via-transparent to-white dark:from-slate-950 dark:via-transparent dark:to-slate-950",
-  },
-};
+import { cn } from "@/lib/utils";
 
 interface LogoCardProps {
   partner: Partner;
@@ -51,44 +23,36 @@ function LogoCard({ partner, className }: LogoCardProps) {
   };
 
   return (
-    <div
+    <Card
+      aria-label={`Visit ${partner.name} website`}
       className={cn(
-        // Base container styles
-        "flex items-center justify-center p-4 rounded-lg border cursor-pointer",
-        // Design system colors
-        designTokens.colors.logo.container,
-        designTokens.colors.logo.border,
-        // Effects
-        designTokens.effects.logoHover,
+        "group relative flex h-20 w-40 cursor-pointer items-center justify-center overflow-hidden",
+        "bg-surface-muted/70 text-muted-foreground transition-transform duration-200 hover:-translate-y-0.5 hover:bg-surface-elevated",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "dark:bg-surface-muted/50",
         className
       )}
+      compact
+      allowInternalSpacingOverride
       onClick={handleClick}
-      role="button"
-      tabIndex={0}
-      aria-label={`Visit ${partner.name} website`}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
           handleClick();
         }
       }}
+      role="button"
+      tabIndex={0}
     >
-      <div className="relative w-full h-full flex items-center justify-center">
-        <Image
-          src={partner.logo}
-          alt={partner.logoAlt}
-          width={120}
-          height={48}
-          className={cn(
-            "object-contain transition-all duration-300",
-            designTokens.spacing.logo,
-            designTokens.effects.logoFilter
-          )}
-          priority={false}
-          loading="lazy"
-        />
-      </div>
-    </div>
+      <Image
+        src={partner.logo}
+        alt={partner.logoAlt}
+        width={120}
+        height={48}
+        loading="lazy"
+        className="h-12 w-auto object-contain opacity-80 transition duration-300 ease-out grayscale group-hover:opacity-100 group-hover:grayscale-0"
+      />
+    </Card>
   );
 }
 
@@ -131,99 +95,60 @@ export function TrustedBySection({
       surface="default"
       className={className}
     >
-        {/* Header */}
-        <div className="text-center mb-8 md:mb-12">
-          <h2
-            className={cn(
-              designTokens.typography.sectionTitle,
-              designTokens.colors.text.primary
-            )}
-          >
+      <div className="flex flex-col gap-10">
+        <div className="flex flex-col items-center text-center gap-4">
+          <Badge tone="accent" variant="soft" size={isCompact ? "sm" : "md"} className="w-fit">
+            Trusted by teams
+          </Badge>
+          <h2 className="text-balance text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             {title}
           </h2>
-          {subtitle && (
-            <p
-              className={cn(
-                designTokens.typography.subtitle,
-                designTokens.colors.text.secondary,
-                "mt-4"
-              )}
-            >
+          {subtitle ? (
+            <p className="max-w-2xl text-base text-muted-foreground sm:text-lg">
               {subtitle}
             </p>
-          )}
+          ) : null}
         </div>
 
-        {/* Logo Carousel */}
         <div className="relative">
-          {/* Gradient masks for fade effect */}
-          {showGradientMask && (
+          {showGradientMask ? (
             <>
-              <div className="absolute left-0 top-0 bottom-0 w-20 z-10 pointer-events-none">
-                <div className={cn(
-                  "w-full h-full",
-                  designTokens.effects.gradientMask
-                )} />
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-24">
+                <div className="h-full w-full bg-gradient-to-r from-background via-transparent to-background" />
               </div>
-              <div className="absolute right-0 top-0 bottom-0 w-20 z-10 pointer-events-none">
-                <div className={cn(
-                  "w-full h-full rotate-180",
-                  designTokens.effects.gradientMask
-                )} />
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-24">
+                <div className="h-full w-full rotate-180 bg-gradient-to-r from-background via-transparent to-background" />
               </div>
             </>
-          )}
+          ) : null}
 
-          {/* Marquee Container */}
-          <div 
-            className={cn(
-              "overflow-hidden w-full",
-              designTokens.spacing.logoContainer
-            )}
+          <div
+            className="relative h-24 w-full overflow-hidden"
             aria-live="polite"
             aria-label="Partner logos carousel"
           >
             {prefersReducedMotion ? (
-              // Static grid for reduced motion
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 items-center">
+              <div className="grid h-full grid-cols-2 items-center gap-4 sm:grid-cols-4 lg:grid-cols-6">
                 {partnerList.slice(0, 8).map((partner) => (
-                  <LogoCard
-                    key={partner.id}
-                    partner={partner}
-                    className="w-full"
-                  />
+                  <LogoCard key={partner.id} partner={partner} className="h-full w-full" />
                 ))}
               </div>
             ) : (
-              // Animated marquee
-              <Marquee
-                speed={marqueeSpeed}
-                pauseOnHover={pauseOnHover}
-                reverse={direction === "right"}
-              >
+              <Marquee speed={marqueeSpeed} pauseOnHover={pauseOnHover} reverse={direction === "right"}>
                 {partnerList.map((partner) => (
-                  <LogoCard
-                    key={partner.id}
-                    partner={partner}
-                    className="w-36 md:w-44 flex-shrink-0 mx-2"
-                  />
+                  <LogoCard key={partner.id} partner={partner} className="mx-3 flex-shrink-0" />
                 ))}
               </Marquee>
             )}
           </div>
         </div>
 
-        {/* Optional CTA */}
-        {!isCompact && (
-          <div className="text-center mt-8 md:mt-12">
-            <p className={cn(
-              "text-sm",
-              designTokens.colors.text.muted
-            )}>
-              Join 100+ companies that trust our platform
-            </p>
-          </div>
-        )}
+        {!isCompact ? (
+          <p className="text-center text-sm text-muted-foreground">
+            Join 100+ companies that trust our platform
+          </p>
+        ) : null}
+      </div>
     </Section>
   );
 }

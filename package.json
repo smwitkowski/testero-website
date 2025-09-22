@@ -26,7 +26,11 @@
     "e2e:ui": "playwright test --ui",
     "e2e:debug": "playwright test --debug",
     "e2e:headed": "playwright test --headed",
-    "e2e:report": "playwright show-report"
+    "e2e:report": "playwright show-report",
+    "codemod:ds:run": "tsx scripts/codemods/ds/run-all.ts",
+    "codemod:ds:dry": "tsx scripts/codemods/ds/run-all.ts --dry",
+    "lint:design": "node scripts/guards/design-lints.js",
+    "prepare": "node scripts/setup-tailwindcss-eslint-shim.js && simple-git-hooks"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.22",
@@ -107,18 +111,31 @@
     "cross-env": "^7.0.3",
     "dotenv": "^16.5.0",
     "eslint": "^9",
+    "eslint-plugin-tailwindcss": "^4.0.0-beta.0",
     "eslint-config-next": "15.3.1",
     "fast-xml-parser": "^5.2.3",
     "http-server": "^14.1.1",
     "jest": "^29.7.0",
+    "jscodeshift": "^0.15.2",
     "jest-environment-jsdom": "^29.7.0",
     "minimatch": "^9.0.5",
     "prettier": "^3.5.3",
     "sharp": "^0.34.1",
+    "simple-git-hooks": "^2.9.0",
     "storybook": "^8.6.14",
     "tailwindcss": "^4",
+    "lint-staged": "^15.2.10",
+    "ts-morph": "^22.0.0",
     "ts-jest": "^29.3.4",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.2",
     "typescript": "^5.8.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": ["next lint --fix --file"],
+    "*.{css,scss,mdx}": ["next lint --fix --file"]
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged"
   }
 }

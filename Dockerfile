@@ -18,6 +18,8 @@ RUN apk add --no-cache \
 
 # Copy package.json and package-lock.json
 COPY package.json package-lock.json ./
+# Ensure scripts needed during npm prepare are available
+COPY scripts/setup-tailwindcss-eslint-shim.js ./scripts/setup-tailwindcss-eslint-shim.js
 
 # Install dependencies
 RUN npm ci
