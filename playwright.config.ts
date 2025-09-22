@@ -1,83 +1,53 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from "@playwright/test"
 
-/**
- * @see https://playwright.dev/docs/test-configuration
- */
+const PORT = Number(process.env.PORT ?? 3000)
+
 export default defineConfig({
-  testDir: './e2e',
-  /* Run tests in files in parallel */
+  testDir: "./e2e",
   fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 1,
-  /* Opt out of parallel tests on CI. */
+  retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
-    ['html'],
-    ['json', { outputFile: 'playwright-report/results.json' }],
-    ['list']
+    ["list"],
+    ["html", { outputFolder: "playwright-report", open: "never" }],
   ],
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
-  use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3000',
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
-
-    /* Take screenshots on failure */
-    screenshot: 'only-on-failure',
-
-    /* Record video on first retry */
-    video: 'retain-on-failure',
-
-    /* Global timeout for each action */
-    actionTimeout: 10000,
-  },
-
-  /* Configure projects for major browsers */
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-
-    /* Test against mobile viewports. */
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
-  ],
-
-  /* Global timeout for each test */
   timeout: 30000,
-
-  /* Global timeout for each expect assertion */
   expect: {
     timeout: 5000,
   },
-
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
+  use: {
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${PORT}`,
+    trace: "on-first-retry",
+    screenshot: "only-on-failure",
+    video: "retain-on-failure",
+    actionTimeout: 10000,
   },
-});
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+    },
+  ],
+  webServer: process.env.PLAYWRIGHT_SKIP_WEB_SERVER
+    ? undefined
+    : {
+        command: "npm run build && npm run start",
+        url: `http://localhost:${PORT}`,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120000,
+        env: {
+          NEXT_PUBLIC_STRIPE_BASIC_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY ?? "price_test_basic_monthly",
+          NEXT_PUBLIC_STRIPE_BASIC_ANNUAL: process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL ?? "price_test_basic_annual",
+          NEXT_PUBLIC_STRIPE_PRO_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY ?? "price_test_pro_monthly",
+          NEXT_PUBLIC_STRIPE_PRO_ANNUAL: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL ?? "price_test_pro_annual",
+          NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY:
+            process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY ?? "price_test_all_access_monthly",
+          NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL:
+            process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL ?? "price_test_all_access_annual",
+          NEXT_PUBLIC_STRIPE_EXAM_3MONTH: process.env.NEXT_PUBLIC_STRIPE_EXAM_3MONTH ?? "price_test_exam_3m",
+          NEXT_PUBLIC_STRIPE_EXAM_6MONTH: process.env.NEXT_PUBLIC_STRIPE_EXAM_6MONTH ?? "price_test_exam_6m",
+          NEXT_PUBLIC_STRIPE_EXAM_12MONTH: process.env.NEXT_PUBLIC_STRIPE_EXAM_12MONTH ?? "price_test_exam_12m",
+        },
+      },
+})

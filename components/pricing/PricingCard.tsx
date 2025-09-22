@@ -45,6 +45,8 @@ export function PricingCard({
 }: PricingCardProps) {
   const price = billingInterval === "monthly" ? tier.monthlyPrice : tier.annualPrice;
   const priceId = billingInterval === "monthly" ? tier.monthlyPriceId : tier.annualPriceId;
+  const checkoutPriceId = priceId ?? `${tier.id}-${billingInterval}`;
+  const isCheckoutConfigured = Boolean(priceId);
   const isLoading = loading && loadingId === priceId;
   const monthlyEquivalent = billingInterval === "annual" ? Math.round(tier.annualPrice / 12) : null;
 
@@ -76,7 +78,12 @@ export function PricingCard({
 
       {billingInterval === "annual" && tier.savingsPercentage ? (
         <div className="absolute right-6 top-6">
-          <Badge tone="success" variant="solid" size="sm" className="shadow-sm">
+          <Badge
+            tone="success"
+            variant="soft"
+            size="sm"
+            className="shadow-sm bg-emerald-700 text-white"
+          >
             Save {tier.savingsPercentage}%
           </Badge>
         </div>
@@ -104,7 +111,7 @@ export function PricingCard({
               That&apos;s only ${monthlyEquivalent}/month
             </p>
           ) : null}
-          <div className="flex items-center gap-2 text-sm font-medium text-accent">
+          <div className="flex items-center gap-2 text-sm font-medium text-accent-foreground">
             <TrendingUp className="h-4 w-4" aria-hidden="true" />
             {tier.aiCredits} AI credits included monthly
           </div>
@@ -138,8 +145,9 @@ export function PricingCard({
           variant="solid"
           size="lg"
           loading={isLoading}
-          disabled={!priceId}
-          onClick={() => priceId && onCheckout(priceId, tier.name)}
+          disabled={isLoading}
+          data-checkout-configured={isCheckoutConfigured ? "true" : "false"}
+          onClick={() => onCheckout(checkoutPriceId, tier.name)}
         >
           Get started
         </Button>

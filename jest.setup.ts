@@ -1,4 +1,7 @@
 import "@testing-library/jest-dom";
+import { toHaveNoViolations } from "jest-axe";
+
+expect.extend(toHaveNoViolations);
 // All undici and Web API polyfills removed for pure business logic test compatibility.
 
 import {
@@ -31,7 +34,7 @@ process.env.UPSTASH_REDIS_REST_TOKEN = "test-token";
 // Mock React's cache function for Jest tests
 jest.mock("react", () => ({
   ...jest.requireActual("react"),
-  cache: <T extends (...args: any[]) => any>(fn: T): T => fn,
+  cache: <T extends (...args: unknown[]) => unknown>(fn: T): T => fn,
 }));
 
 // Mock Next.js cookies module to avoid request context errors in tests
