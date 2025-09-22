@@ -3,7 +3,7 @@ import type { Config } from "jest";
 export default {
   preset: "ts-jest",
   testEnvironment: "jsdom",
-  testMatch: ["**/__tests__/**/*.test.ts?(x)"],
+  testMatch: ["**/__tests__/**/*.{test,spec}.ts?(x)"],
   transform: {
     "^.+\\.(t|j)sx?$": [
       "ts-jest",

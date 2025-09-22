@@ -19,6 +19,7 @@ import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import { PricingCard } from "@/components/pricing/PricingCard";
 import { ComparisonTable } from "@/components/pricing/ComparisonTable";
 import { Container, Section } from "@/components/patterns";
+import { Badge } from "@/components/ui/badge";
 import {
   SUBSCRIPTION_TIERS,
   EXAM_PACKAGES,
@@ -206,9 +207,9 @@ export default function PricingPage() {
             >
               Annual
               {billingInterval === "annual" && (
-                <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
+                <Badge tone="success" variant="soft" size="sm" className="bg-emerald-700 text-white">
                   SAVE 25%
-                </span>
+                </Badge>
               )}
             </button>
           </div>
@@ -285,37 +286,43 @@ export default function PricingPage() {
       <Section size="lg" surface="subtle" divider="bottom">
         <div className="mx-auto max-w-4xl">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">How AI Credits Work</h2>
-            <p className="text-gray-600">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-4">How AI Credits Work</h2>
+            <p className="text-gray-600 dark:text-slate-300">
               AI credits power our adaptive learning engine. Use them for personalized practice
               exams and detailed explanations.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-lg p-6 text-center">
-              <Zap className="h-10 w-10 text-blue-600 mx-auto mb-3" />
-              <h3 className="font-semibold mb-2">Full Practice Exam</h3>
-              <p className="text-2xl font-bold text-blue-600">{AI_CREDIT_USAGE.fullExam} Credit</p>
-              <p className="text-sm text-gray-600 mt-2">Complete 60-question adaptive exam</p>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            <div
+              className="rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            >
+              <Zap className="mx-auto mb-3 h-10 w-10 text-blue-600 dark:text-sky-200" />
+              <h3 className="mb-2 font-semibold text-gray-900 dark:text-slate-100">Full Practice Exam</h3>
+              <p className="text-2xl font-bold text-blue-600 dark:text-sky-200">{AI_CREDIT_USAGE.fullExam} Credit</p>
+              <p className="mt-2 text-sm text-gray-600 dark:text-slate-300">Complete 60-question adaptive exam</p>
             </div>
-            <div className="bg-white rounded-lg p-6 text-center">
-              <TrendingUp className="h-10 w-10 text-blue-600 mx-auto mb-3" />
-              <h3 className="font-semibold mb-2">Domain Quiz</h3>
-              <p className="text-2xl font-bold text-blue-600">
+            <div
+              className="rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            >
+              <TrendingUp className="mx-auto mb-3 h-10 w-10 text-blue-600 dark:text-sky-200" />
+              <h3 className="mb-2 font-semibold text-gray-900 dark:text-slate-100">Domain Quiz</h3>
+              <p className="text-2xl font-bold text-blue-600 dark:text-sky-200">
                 {AI_CREDIT_USAGE.domainQuiz} Credit
               </p>
-              <p className="text-sm text-gray-600 mt-2">25-question focused practice</p>
+              <p className="mt-2 text-sm text-gray-600 dark:text-slate-300">25-question focused practice</p>
             </div>
-            <div className="bg-white rounded-lg p-6 text-center">
-              <Award className="h-10 w-10 text-blue-600 mx-auto mb-3" />
-              <h3 className="font-semibold mb-2">AI Explanation</h3>
-              <p className="text-2xl font-bold text-blue-600">
+            <div
+              className="rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            >
+              <Award className="mx-auto mb-3 h-10 w-10 text-blue-600 dark:text-sky-200" />
+              <h3 className="mb-2 font-semibold text-gray-900 dark:text-slate-100">AI Explanation</h3>
+              <p className="text-2xl font-bold text-blue-600 dark:text-sky-200">
                 {AI_CREDIT_USAGE.explanation} Credit
               </p>
-              <p className="text-sm text-gray-600 mt-2">Detailed answer explanation</p>
+              <p className="mt-2 text-sm text-gray-600 dark:text-slate-300">Detailed answer explanation</p>
             </div>
           </div>
-          <p className="text-center text-sm text-gray-600 mt-6">
+          <p className="text-center text-sm text-gray-600 dark:text-slate-300 mt-6">
             Need more credits? Purchase additional at ${AI_CREDIT_USAGE.additionalCreditPrice}
             /credit or upgrade your plan
           </p>
