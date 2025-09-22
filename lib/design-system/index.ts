@@ -81,6 +81,8 @@ export {
   card as legacyCard
 } from './components';
 
+export * from './component-registry';
+
 
 // Design system metadata
 export const designSystemVersion = '2.0.0';

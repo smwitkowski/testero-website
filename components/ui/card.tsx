@@ -116,7 +116,7 @@ const horizontalInsetSpacing: Record<CardSize, { negative: string; padding: stri
 
 const disallowedSpacingPattern = /\b(p[trblxy]?|px|py|gap|space-[xy])(-|\[)/
 
-type CardProps = React.ComponentPropsWithoutRef<"div"> &
+export type CardProps = React.ComponentPropsWithoutRef<"div"> &
   VariantProps<typeof cardVariants> & {
     allowInternalSpacingOverride?: boolean
   }

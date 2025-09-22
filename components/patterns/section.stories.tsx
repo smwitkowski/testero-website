@@ -79,12 +79,12 @@ export const FullBleed: Story = {
   },
   render: (args) => (
     <Section {...args} className="overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-700 to-cyan-600 opacity-90" />
+      <div className="absolute inset-0 bg-gradient-to-br from-accent via-info to-info/90 opacity-90" />
       <div className="relative">
         <div className="py-section_lg">
-          <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center text-white">
+          <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center text-accent-foreground">
             <h2 className="text-4xl font-bold tracking-tight">Full-bleed hero</h2>
-            <p className="mt-4 text-lg text-blue-100">
+            <p className="mt-4 text-lg text-foreground/90">
               Combine the Section primitive with your own layout primitives for wide experiences while preserving rhythm and
               divider tokens.
             </p>

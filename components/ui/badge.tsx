@@ -20,6 +20,8 @@ const badgeVariants = cva(
         success: "text-success",
         warning: "text-warning",
         danger: "text-error",
+        neutral: "text-muted-foreground",
+        info: "text-info",
       },
       size: {
         sm: "h-6 px-2 text-xs gap-1",
@@ -53,6 +55,16 @@ const badgeVariants = cva(
         class: "bg-error text-background",
       },
       {
+        variant: "solid",
+        tone: "neutral",
+        class: "bg-muted text-foreground",
+      },
+      {
+        variant: "solid",
+        tone: "info",
+        class: "bg-info text-background",
+      },
+      {
         variant: "soft",
         tone: "default",
         class: "bg-muted text-foreground ring-border/60",
@@ -76,6 +88,16 @@ const badgeVariants = cva(
         variant: "soft",
         tone: "danger",
         class: "bg-error/10 text-error ring-error/20",
+      },
+      {
+        variant: "soft",
+        tone: "neutral",
+        class: "bg-muted/70 text-muted-foreground ring-border/40",
+      },
+      {
+        variant: "soft",
+        tone: "info",
+        class: "bg-info/10 text-info ring-info/20",
       },
       {
         variant: "outline",
@@ -103,6 +125,16 @@ const badgeVariants = cva(
         class: "text-error ring-error/40",
       },
       {
+        variant: "outline",
+        tone: "neutral",
+        class: "text-muted-foreground ring-border/50",
+      },
+      {
+        variant: "outline",
+        tone: "info",
+        class: "text-info ring-info/35",
+      },
+      {
         variant: "ghost",
         tone: "default",
         class: "hover:bg-muted/70",
@@ -126,6 +158,16 @@ const badgeVariants = cva(
         variant: "ghost",
         tone: "danger",
         class: "text-error hover:bg-error/10",
+      },
+      {
+        variant: "ghost",
+        tone: "neutral",
+        class: "text-muted-foreground hover:bg-muted/60",
+      },
+      {
+        variant: "ghost",
+        tone: "info",
+        class: "text-info hover:bg-info/10",
       },
     ],
     defaultVariants: {
