@@ -1,4 +1,6 @@
 export * from "./button"
+export * from "./badge"
+export * from "./card"
 export * from "./page-header"
 export * from "./empty-state"
 export * from "./table"

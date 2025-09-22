@@ -20,8 +20,11 @@ type PolymorphicProps<T extends keyof JSX.IntrinsicElements> = {
   children?: React.ReactNode
 } & Omit<JSX.IntrinsicElements[T], "className" | "children">
 
+export type ContainerProps<T extends keyof JSX.IntrinsicElements = "div"> =
+  PolymorphicProps<T>
+
 export function Container<T extends keyof JSX.IntrinsicElements = "div">(
-  props: PolymorphicProps<T>,
+  props: ContainerProps<T>,
 ) {
   const { as, size = "xl", className, children, ...rest } = props
   const Comp = (as ?? "div") as React.ElementType

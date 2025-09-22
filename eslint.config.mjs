@@ -55,6 +55,8 @@ const eslintConfig = [
     rules: {
       "design/no-tailwind-arbitrary-values": "off",
       "design/no-raw-colors": "off",
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-var-requires": "off",
     },
   },
 ];

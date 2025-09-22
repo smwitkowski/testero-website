@@ -125,19 +125,16 @@ const socialProofBadges: SocialProofBadge[] = [
 const SocialProofCard = ({ badge }: { badge: SocialProofBadge }) => {
   return (
     <motion.div
-      className="flex-shrink-0 mx-2 min-w-[200px]"
-      whileHover={{ 
-        y: -4, 
+      className="mx-2 w-56 flex-shrink-0"
+      whileHover={{
+        y: -4,
         scale: 1.02,
         transition: { duration: 0.2 }
       }}
       initial={{ opacity: 0.8 }}
       whileInView={{ opacity: 1 }}
     >
-      <Card
-        size="sm"
-        className="hover:shadow-lg transition-all duration-200 bg-card text-card-foreground border border-border/60"
-      >
+      <Card size="sm" className="border border-border/60 bg-card text-card-foreground transition-all duration-200 hover:shadow-lg">
         <div className="flex flex-col gap-3">
           <Badge
             size="sm"
@@ -167,7 +164,7 @@ export function EnhancedSocialProof() {
         initial={{ opacity: 0, y: 20 }}
         animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
         transition={{ duration: 0.6 }}
-        className="text-xl sm:text-2xl md:text-3xl font-semibold text-center mb-12 text-secondary"
+        className="mb-12 text-balance text-center text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
       >
         Trusted by Hundreds of Cloud Professionals Worldwide
       </motion.h2>

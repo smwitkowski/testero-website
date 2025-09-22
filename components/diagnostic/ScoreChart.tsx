@@ -1,4 +1,5 @@
 import React from "react";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface ScoreChartProps {
@@ -9,18 +10,18 @@ interface ScoreChartProps {
   showStatus?: boolean;
 }
 
-type ScoreTone = "success" | "warning" | "error";
+type ScoreTone = "success" | "warning" | "danger";
 
 const toneClassMap: Record<ScoreTone, string> = {
   success: "text-success",
   warning: "text-warning",
-  error: "text-error",
+  danger: "text-error",
 };
 
 function getScoreTone(score: number): ScoreTone {
   if (score >= 70) return "success";
   if (score >= 50) return "warning";
-  return "error";
+  return "danger";
 }
 
 function getScoreStatus(score: number): string {
@@ -127,13 +128,13 @@ export const ScoreChart: React.FC<ScoreChartProps> = ({
           </span>
         </div>
       </div>
-      {showStatus && (
-        <div className="text-center mt-2">
-          <span className={cn("text-sm font-medium", toneClass)}>
+      {showStatus ? (
+        <div className="mt-3 flex justify-center">
+          <Badge tone={tone} variant="soft" size="sm">
             {getScoreStatus(displayScore)}
-          </span>
+          </Badge>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };
