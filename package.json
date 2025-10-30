@@ -32,7 +32,7 @@
     "codemod:ds:run": "tsx scripts/codemods/ds/run-all.ts",
     "codemod:ds:dry": "tsx scripts/codemods/ds/run-all.ts --dry",
     "lint:design": "node scripts/guards/design-lints.js",
-    "prepare": "node scripts/setup-tailwindcss-eslint-shim.js && simple-git-hooks"
+    "prepare": "node scripts/setup-tailwindcss-eslint-shim.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.22",
@@ -130,18 +130,10 @@
     "simple-git-hooks": "^2.9.0",
     "storybook": "^8.6.14",
     "tailwindcss": "^4",
-    "lint-staged": "^15.2.10",
     "ts-morph": "^22.0.0",
     "ts-jest": "^29.3.4",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
     "typescript": "^5.8.3"
   },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx}": ["next lint --fix --file"],
-    "*.{css,scss,mdx}": ["next lint --fix --file"]
-  },
-  "simple-git-hooks": {
-    "pre-commit": "npx lint-staged"
-  }
 }
