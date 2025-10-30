@@ -79,6 +79,9 @@ export async function POST(request: NextRequest) {
     try {
       const emailService = new EmailService();
 
+      // Log event received
+      console.log(`[Webhook] Processing event: ${event.type} (id: ${event.id})`);
+
       switch (event.type) {
         case "checkout.session.completed": {
           const session = event.data.object as Stripe.Checkout.Session;
@@ -86,6 +89,7 @@ export async function POST(request: NextRequest) {
           // Get user_id from metadata
           const userId = session.metadata?.user_id;
           if (!userId) {
+            console.error(`[Webhook] Missing user_id in session metadata for event ${event.id}`);
             throw new Error("Missing user_id in session metadata");
           }
 
@@ -93,8 +97,13 @@ export async function POST(request: NextRequest) {
           const fullSession = await stripeService.retrieveCheckoutSession(session.id);
 
           if (fullSession.payment_status === "paid") {
-            if (fullSession.subscription) {
+            // Check session mode to determine payment type
+            if (fullSession.mode === "subscription" && fullSession.subscription) {
               // Subscription payment
+              console.log(
+                `[Webhook] Processing subscription checkout for user ${userId}, subscription ${fullSession.subscription}`
+              );
+
               // Get subscription details
               const subscription = await stripeService.retrieveSubscription(
                 fullSession.subscription as string
@@ -109,7 +118,7 @@ export async function POST(request: NextRequest) {
                 .single();
 
               // Create or update user subscription
-              await supabase.from("user_subscriptions").upsert({
+              const { error: subError } = await supabase.from("user_subscriptions").upsert({
                 user_id: userId,
                 stripe_customer_id: fullSession.customer as string,
                 stripe_subscription_id: subscription.id,
@@ -124,14 +133,41 @@ export async function POST(request: NextRequest) {
                 cancel_at_period_end: subscription.cancel_at_period_end || false,
               });
 
-              // Record payment
-              await supabase.from("payment_history").insert({
-                user_id: userId,
-                stripe_payment_intent_id: fullSession.payment_intent as string,
-                amount: fullSession.amount_total || 0,
-                currency: fullSession.currency || "usd",
-                status: "succeeded",
-              });
+              if (subError) {
+                console.error(
+                  `[Webhook] Error upserting subscription for user ${userId}:`,
+                  subError
+                );
+                throw subError;
+              }
+
+              // Record payment with idempotency
+              if (fullSession.payment_intent) {
+                const { error: paymentError } = await supabase
+                  .from("payment_history")
+                  .upsert(
+                    {
+                      user_id: userId,
+                      stripe_payment_intent_id: fullSession.payment_intent as string,
+                      amount: fullSession.amount_total || 0,
+                      currency: fullSession.currency || "usd",
+                      status: "succeeded",
+                      receipt_url: null, // Will be populated by payment_intent.succeeded if available
+                    },
+                    { onConflict: "stripe_payment_intent_id" }
+                  );
+
+                if (paymentError) {
+                  console.error(
+                    `[Webhook] Error upserting payment history for payment intent ${fullSession.payment_intent}:`,
+                    paymentError
+                  );
+                } else {
+                  console.log(
+                    `[Webhook] Successfully recorded subscription payment for user ${userId}, payment intent ${fullSession.payment_intent}`
+                  );
+                }
+              }
 
               // Send confirmation email
               const { data: user } = await supabase.auth.admin.getUserById(userId);
@@ -170,16 +206,37 @@ export async function POST(request: NextRequest) {
                   customer_since: new Date().toISOString(),
                 },
               });
-            } else {
+            } else if (fullSession.mode === "payment" && fullSession.payment_intent) {
               // One-time payment
-              // Record payment in payment_history
-              await supabase.from("payment_history").insert({
-                user_id: userId,
-                stripe_payment_intent_id: fullSession.payment_intent as string,
-                amount: fullSession.amount_total || 0,
-                currency: fullSession.currency || "usd",
-                status: "succeeded",
-              });
+              console.log(
+                `[Webhook] Processing one-time payment checkout for user ${userId}, payment intent ${fullSession.payment_intent}`
+              );
+
+              // Record payment in payment_history with idempotency
+              const { error: paymentError } = await supabase
+                .from("payment_history")
+                .upsert(
+                  {
+                    user_id: userId,
+                    stripe_payment_intent_id: fullSession.payment_intent as string,
+                    amount: fullSession.amount_total || 0,
+                    currency: fullSession.currency || "usd",
+                    status: "succeeded",
+                    receipt_url: null, // Will be populated by payment_intent.succeeded if available
+                  },
+                  { onConflict: "stripe_payment_intent_id" }
+                );
+
+              if (paymentError) {
+                console.error(
+                  `[Webhook] Error upserting payment history for payment intent ${fullSession.payment_intent}:`,
+                  paymentError
+                );
+              } else {
+                console.log(
+                  `[Webhook] Successfully recorded one-time payment for user ${userId}, payment intent ${fullSession.payment_intent}`
+                );
+              }
 
               // Send confirmation email
               const { data: user } = await supabase.auth.admin.getUserById(userId);
@@ -202,8 +259,91 @@ export async function POST(request: NextRequest) {
                   stripe_checkout_session_id: fullSession.id,
                 },
               });
+            } else {
+              console.warn(
+                `[Webhook] Unhandled checkout session mode: ${fullSession.mode} for event ${event.id}`
+              );
             }
           }
+          break;
+        }
+
+        case "payment_intent.succeeded": {
+          const paymentIntent = event.data.object as Stripe.PaymentIntent;
+
+          // Get user_id from metadata
+          const userId = paymentIntent.metadata?.user_id;
+          if (!userId) {
+            console.log(
+              `[Webhook] Skipping payment_intent.succeeded - no user_id in metadata for payment intent ${paymentIntent.id}`
+            );
+            break;
+          }
+
+          console.log(
+            `[Webhook] Processing payment_intent.succeeded for user ${userId}, payment intent ${paymentIntent.id}`
+          );
+
+          // Retrieve payment intent with expanded charges to get receipt URL
+          let receiptUrl: string | null = null;
+          try {
+            const expandedPaymentIntent = await stripeService.retrievePaymentIntent(
+              paymentIntent.id,
+              ["charges"]
+            );
+            // Type assertion for expanded charges - Stripe expands charges as an array
+            interface ExpandedPaymentIntent extends Stripe.PaymentIntent {
+              charges?: Stripe.ApiList<Stripe.Charge>;
+            }
+            const expanded = expandedPaymentIntent as ExpandedPaymentIntent;
+            if (expanded.charges?.data && expanded.charges.data.length > 0) {
+              receiptUrl = expanded.charges.data[0]?.receipt_url || null;
+            }
+          } catch (error) {
+            console.warn(
+              `[Webhook] Could not retrieve expanded payment intent for receipt URL: ${error}`
+            );
+            // Continue without receipt URL
+          }
+
+          // Upsert payment history with idempotency
+          const { error: paymentError } = await supabase
+            .from("payment_history")
+            .upsert(
+              {
+                user_id: userId,
+                stripe_payment_intent_id: paymentIntent.id,
+                amount: paymentIntent.amount,
+                currency: paymentIntent.currency,
+                status: "succeeded",
+                receipt_url: receiptUrl,
+              },
+              { onConflict: "stripe_payment_intent_id" }
+            );
+
+          if (paymentError) {
+            console.error(
+              `[Webhook] Error upserting payment history for payment intent ${paymentIntent.id}:`,
+              paymentError
+            );
+          } else {
+            console.log(
+              `[Webhook] Successfully recorded payment intent ${paymentIntent.id} for user ${userId}`
+            );
+          }
+
+          // Track payment intent succeeded in PostHog
+          posthog?.capture({
+            distinctId: userId,
+            event: "payment_intent_succeeded",
+            properties: {
+              amount: paymentIntent.amount,
+              currency: paymentIntent.currency,
+              stripe_payment_intent_id: paymentIntent.id,
+              receipt_url: receiptUrl,
+            },
+          });
+
           break;
         }
 
@@ -371,9 +511,13 @@ export async function POST(request: NextRequest) {
 
           // Only process if this is a subscription invoice (has subscription field)
           if (!invoice.subscription) {
-            console.log("Skipping non-subscription invoice:", invoice.id);
+            console.log(`[Webhook] Skipping non-subscription invoice: ${invoice.id}`);
             break;
           }
+
+          console.log(
+            `[Webhook] Processing invoice payment succeeded for subscription ${invoice.subscription}, invoice ${invoice.id}`
+          );
 
           // Get user from subscription
           const { data: subscription } = await supabase
@@ -382,15 +526,32 @@ export async function POST(request: NextRequest) {
             .eq("stripe_subscription_id", invoice.subscription)
             .single();
 
-          if (subscription?.user_id) {
-            // Record recurring payment in payment_history
-            await supabase.from("payment_history").insert({
-              user_id: subscription.user_id,
-              stripe_payment_intent_id: invoice.payment_intent,
-              amount: invoice.amount_paid ?? invoice.amount_due,
-              currency: invoice.currency,
-              status: "succeeded",
-            });
+          if (subscription?.user_id && invoice.payment_intent) {
+            // Record recurring payment in payment_history with idempotency
+            const { error: paymentError } = await supabase
+              .from("payment_history")
+              .upsert(
+                {
+                  user_id: subscription.user_id,
+                  stripe_payment_intent_id: invoice.payment_intent,
+                  amount: invoice.amount_paid ?? invoice.amount_due,
+                  currency: invoice.currency,
+                  status: "succeeded",
+                  receipt_url: null, // Receipt URL not available from invoice
+                },
+                { onConflict: "stripe_payment_intent_id" }
+              );
+
+            if (paymentError) {
+              console.error(
+                `[Webhook] Error upserting recurring payment for payment intent ${invoice.payment_intent}:`,
+                paymentError
+              );
+            } else {
+              console.log(
+                `[Webhook] Successfully recorded recurring payment for user ${subscription.user_id}, payment intent ${invoice.payment_intent}`
+              );
+            }
 
             // Send confirmation email
             const { data: user } = await supabase.auth.admin.getUserById(subscription.user_id);
@@ -422,9 +583,13 @@ export async function POST(request: NextRequest) {
           const invoice = event.data.object as ExtendedInvoice;
 
           if (!invoice.subscription) {
-            console.log("Skipping non-subscription invoice:", invoice.id);
+            console.log(`[Webhook] Skipping non-subscription invoice: ${invoice.id}`);
             break;
           }
+
+          console.log(
+            `[Webhook] Processing invoice payment failed for subscription ${invoice.subscription}, invoice ${invoice.id}`
+          );
 
           // Get user from subscription
           const { data: subscription } = await supabase
@@ -433,15 +598,32 @@ export async function POST(request: NextRequest) {
             .eq("stripe_subscription_id", invoice.subscription)
             .single();
 
-          if (subscription?.user_id) {
-            // Record failed payment
-            await supabase.from("payment_history").insert({
-              user_id: subscription.user_id,
-              stripe_payment_intent_id: invoice.payment_intent,
-              amount: invoice.amount_due,
-              currency: invoice.currency,
-              status: "failed",
-            });
+          if (subscription?.user_id && invoice.payment_intent) {
+            // Record failed payment with idempotency
+            const { error: paymentError } = await supabase
+              .from("payment_history")
+              .upsert(
+                {
+                  user_id: subscription.user_id,
+                  stripe_payment_intent_id: invoice.payment_intent,
+                  amount: invoice.amount_due,
+                  currency: invoice.currency,
+                  status: "failed",
+                  receipt_url: null,
+                },
+                { onConflict: "stripe_payment_intent_id" }
+              );
+
+            if (paymentError) {
+              console.error(
+                `[Webhook] Error upserting failed payment for payment intent ${invoice.payment_intent}:`,
+                paymentError
+              );
+            } else {
+              console.log(
+                `[Webhook] Successfully recorded failed payment for user ${subscription.user_id}, payment intent ${invoice.payment_intent}`
+              );
+            }
 
             // Send failure notification
             const { data: user } = await supabase.auth.admin.getUserById(subscription.user_id);
@@ -467,7 +649,7 @@ export async function POST(request: NextRequest) {
         }
 
         default:
-          console.log(`Unhandled event type: ${event.type}`);
+          console.log(`[Webhook] Unhandled event type: ${event.type} (id: ${event.id})`);
       }
 
       // Mark event as processed

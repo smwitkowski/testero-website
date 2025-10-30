@@ -42,6 +42,7 @@ describe("Stripe Webhook Handler", () => {
       constructWebhookEvent: jest.fn(),
       retrieveCheckoutSession: jest.fn(),
       retrieveSubscription: jest.fn(),
+      retrievePaymentIntent: jest.fn(),
     } as any;
     (StripeService as jest.Mock).mockImplementation(() => mockStripeService);
 
@@ -247,9 +248,12 @@ describe("Stripe Webhook Handler", () => {
       const mockSession = {
         id: "cs_test_123",
         customer: "cus_test_123",
+        mode: "subscription",
         subscription: "sub_test_123",
+        payment_intent: "pi_test_123",
         metadata: { user_id: "user_123" },
         amount_total: 2900,
+        currency: "usd",
         payment_status: "paid",
       };
 
@@ -283,8 +287,15 @@ describe("Stripe Webhook Handler", () => {
       mockSupabase.single
         .mockResolvedValueOnce({ data: null, error: null }) // Check for existing event
         .mockResolvedValueOnce({ data: { id: "plan_123" }, error: null }) // Get plan
-        .mockResolvedValueOnce({ data: { id: "sub_record" }, error: null }) // Upsert subscription
-        .mockResolvedValueOnce({ data: { id: "payment_record" }, error: null }); // Update event as processed
+        .mockResolvedValueOnce({
+          data: { user: { email: "user@example.com" } },
+          error: null,
+        }) // Get user
+        .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }); // Update event as processed
+
+      mockSupabase.auth.admin.getUserById.mockResolvedValue({
+        data: { user: { email: "user@example.com" } },
+      });
 
       const response = await POST(mockRequest);
 
@@ -296,6 +307,15 @@ describe("Stripe Webhook Handler", () => {
           stripe_subscription_id: "sub_test_123",
           status: "active",
         })
+      );
+
+      // Verify payment_history was also upserted
+      expect(mockSupabase.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stripe_payment_intent_id: "pi_test_123",
+          amount: 2900,
+        }),
+        { onConflict: "stripe_payment_intent_id" }
       );
 
       expect(response.status).toBe(200);
@@ -343,6 +363,393 @@ describe("Stripe Webhook Handler", () => {
 
       expect(response.status).toBe(400);
       expect(responseData.error).toContain("user_id");
+    });
+
+    test("should handle one-time payment checkout (mode=payment)", async () => {
+      const payload = JSON.stringify({ type: "checkout.session.completed" });
+      const signature = "valid_signature";
+
+      mockRequest = new NextRequest("http://localhost:3000/api/billing/webhook", {
+        method: "POST",
+        headers: {
+          "stripe-signature": signature,
+        },
+        body: payload,
+      });
+
+      mockRequest.text = jest.fn().mockResolvedValue(payload);
+
+      const mockSession = {
+        id: "cs_test_payment",
+        customer: "cus_test_123",
+        mode: "payment",
+        payment_intent: "pi_test_123",
+        metadata: { user_id: "user_123" },
+        amount_total: 5000,
+        currency: "usd",
+        payment_status: "paid",
+      };
+
+      const mockEvent = {
+        id: "evt_checkout_payment",
+        type: "checkout.session.completed",
+        data: { object: mockSession },
+      } as any;
+
+      mockStripeService.constructWebhookEvent.mockReturnValue(mockEvent);
+      mockStripeService.retrieveCheckoutSession.mockResolvedValue(mockSession as any);
+
+      // Mock database operations
+      mockSupabase.single
+        .mockResolvedValueOnce({ data: null, error: null }) // Check for existing event
+        .mockResolvedValueOnce({
+          data: { user: { email: "user@example.com" } },
+          error: null,
+        }) // Get user
+        .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }); // Update event as processed
+
+      mockSupabase.auth.admin.getUserById.mockResolvedValue({
+        data: { user: { email: "user@example.com" } },
+      });
+
+      const response = await POST(mockRequest);
+
+      // Verify payment_history was upserted
+      expect(mockSupabase.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: "user_123",
+          stripe_payment_intent_id: "pi_test_123",
+          amount: 5000,
+          currency: "usd",
+          status: "succeeded",
+        }),
+        { onConflict: "stripe_payment_intent_id" }
+      );
+
+      expect(response.status).toBe(200);
+    });
+
+    test("should handle subscription checkout (mode=subscription)", async () => {
+      const payload = JSON.stringify({ type: "checkout.session.completed" });
+      const signature = "valid_signature";
+
+      mockRequest = new NextRequest("http://localhost:3000/api/billing/webhook", {
+        method: "POST",
+        headers: {
+          "stripe-signature": signature,
+        },
+        body: payload,
+      });
+
+      mockRequest.text = jest.fn().mockResolvedValue(payload);
+
+      const mockSession = {
+        id: "cs_test_subscription",
+        customer: "cus_test_123",
+        mode: "subscription",
+        subscription: "sub_test_123",
+        payment_intent: "pi_test_123",
+        metadata: { user_id: "user_123" },
+        amount_total: 2900,
+        currency: "usd",
+        payment_status: "paid",
+      };
+
+      const mockSubscription = {
+        id: "sub_test_123",
+        status: "active",
+        current_period_start: 1234567890,
+        current_period_end: 1234567890,
+        cancel_at_period_end: false,
+        items: {
+          data: [
+            {
+              price: {
+                id: "price_123",
+              },
+            },
+          ],
+        },
+      };
+
+      const mockEvent = {
+        id: "evt_checkout_sub",
+        type: "checkout.session.completed",
+        data: { object: mockSession },
+      } as any;
+
+      mockStripeService.constructWebhookEvent.mockReturnValue(mockEvent);
+      mockStripeService.retrieveCheckoutSession.mockResolvedValue(mockSession as any);
+      mockStripeService.retrieveSubscription.mockResolvedValue(mockSubscription as any);
+
+      // Mock database operations
+      mockSupabase.single
+        .mockResolvedValueOnce({ data: null, error: null }) // Check for existing event
+        .mockResolvedValueOnce({ data: { id: "plan_123" }, error: null }) // Get plan
+        .mockResolvedValueOnce({
+          data: { user: { email: "user@example.com" } },
+          error: null,
+        }) // Get user
+        .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }); // Update event as processed
+
+      mockSupabase.auth.admin.getUserById.mockResolvedValue({
+        data: { user: { email: "user@example.com" } },
+      });
+
+      const response = await POST(mockRequest);
+
+      // Verify subscription was created
+      expect(mockSupabase.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: "user_123",
+          stripe_subscription_id: "sub_test_123",
+          status: "active",
+        })
+      );
+
+      // Verify payment_history was also upserted
+      expect(mockSupabase.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stripe_payment_intent_id: "pi_test_123",
+          amount: 2900,
+        }),
+        { onConflict: "stripe_payment_intent_id" }
+      );
+
+      expect(response.status).toBe(200);
+    });
+  });
+
+  describe("payment_intent.succeeded Event", () => {
+    test("should create payment_history record", async () => {
+      const payload = JSON.stringify({ type: "payment_intent.succeeded" });
+      const signature = "valid_signature";
+
+      mockRequest = new NextRequest("http://localhost:3000/api/billing/webhook", {
+        method: "POST",
+        headers: {
+          "stripe-signature": signature,
+        },
+        body: payload,
+      });
+
+      mockRequest.text = jest.fn().mockResolvedValue(payload);
+
+      const mockPaymentIntent = {
+        id: "pi_test_123",
+        amount: 5000,
+        currency: "usd",
+        metadata: { user_id: "user_123" },
+      };
+
+      const mockExpandedPaymentIntent = {
+        ...mockPaymentIntent,
+        charges: {
+          data: [
+            {
+              receipt_url: "https://pay.stripe.com/receipts/test",
+            },
+          ],
+        },
+      };
+
+      const mockEvent = {
+        id: "evt_pi_succeeded",
+        type: "payment_intent.succeeded",
+        data: { object: mockPaymentIntent },
+      } as any;
+
+      mockStripeService.constructWebhookEvent.mockReturnValue(mockEvent);
+      mockStripeService.retrievePaymentIntent.mockResolvedValue(mockExpandedPaymentIntent as any);
+
+      // Mock database operations
+      mockSupabase.single
+        .mockResolvedValueOnce({ data: null, error: null }) // Check for existing event
+        .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }); // Update event as processed
+
+      const response = await POST(mockRequest);
+
+      // Verify payment_history was upserted with receipt URL
+      expect(mockSupabase.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: "user_123",
+          stripe_payment_intent_id: "pi_test_123",
+          amount: 5000,
+          currency: "usd",
+          status: "succeeded",
+          receipt_url: "https://pay.stripe.com/receipts/test",
+        }),
+        { onConflict: "stripe_payment_intent_id" }
+      );
+
+      expect(mockStripeService.retrievePaymentIntent).toHaveBeenCalledWith("pi_test_123", [
+        "charges",
+      ]);
+
+      expect(response.status).toBe(200);
+    });
+
+    test("should skip if user_id missing in metadata", async () => {
+      const payload = JSON.stringify({ type: "payment_intent.succeeded" });
+      const signature = "valid_signature";
+
+      mockRequest = new NextRequest("http://localhost:3000/api/billing/webhook", {
+        method: "POST",
+        headers: {
+          "stripe-signature": signature,
+        },
+        body: payload,
+      });
+
+      mockRequest.text = jest.fn().mockResolvedValue(payload);
+
+      const mockPaymentIntent = {
+        id: "pi_test_123",
+        amount: 5000,
+        currency: "usd",
+        metadata: {}, // Missing user_id
+      };
+
+      const mockEvent = {
+        id: "evt_pi_no_user",
+        type: "payment_intent.succeeded",
+        data: { object: mockPaymentIntent },
+      } as any;
+
+      mockStripeService.constructWebhookEvent.mockReturnValue(mockEvent);
+
+      // Mock database operations
+      mockSupabase.single
+        .mockResolvedValueOnce({ data: null, error: null }) // Check for existing event
+        .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }); // Update event as processed
+
+      const response = await POST(mockRequest);
+
+      // Should not call upsert when user_id is missing
+      expect(mockSupabase.upsert).not.toHaveBeenCalled();
+      expect(response.status).toBe(200);
+    });
+  });
+
+  describe("Idempotency", () => {
+    test("should prevent duplicate payment_history records", async () => {
+      const payload = JSON.stringify({ type: "payment_intent.succeeded" });
+      const signature = "valid_signature";
+
+      mockRequest = new NextRequest("http://localhost:3000/api/billing/webhook", {
+        method: "POST",
+        headers: {
+          "stripe-signature": signature,
+        },
+        body: payload,
+      });
+
+      mockRequest.text = jest.fn().mockResolvedValue(payload);
+
+      const mockPaymentIntent = {
+        id: "pi_test_duplicate",
+        amount: 5000,
+        currency: "usd",
+        metadata: { user_id: "user_123" },
+      };
+
+      const mockExpandedPaymentIntent = {
+        ...mockPaymentIntent,
+        charges: {
+          data: [],
+        },
+      };
+
+      const mockEvent = {
+        id: "evt_pi_duplicate",
+        type: "payment_intent.succeeded",
+        data: { object: mockPaymentIntent },
+      } as any;
+
+      mockStripeService.constructWebhookEvent.mockReturnValue(mockEvent);
+      mockStripeService.retrievePaymentIntent.mockResolvedValue(mockExpandedPaymentIntent as any);
+
+      // Mock database operations - simulate same event processed twice
+      mockSupabase.single
+        .mockResolvedValueOnce({ data: null, error: null }) // Check for existing event (first time)
+        .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }) // Update event as processed
+        .mockResolvedValueOnce({ data: { id: "evt_id", processed: true }, error: null }) // Check for existing event (second time - already processed)
+        .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }); // Return success
+
+      // First call
+      const response1 = await POST(mockRequest);
+      expect(response1.status).toBe(200);
+
+      // Second call with same event
+      const response2 = await POST(mockRequest);
+      const responseData2 = await response2.json();
+
+      // Should return 200 with "already processed" message
+      expect(response2.status).toBe(200);
+      expect(responseData2.message).toContain("already processed");
+
+      // Verify upsert was only called once (from first request)
+      const upsertCalls = mockSupabase.upsert.mock.calls.filter(
+        (call) => call[0]?.stripe_payment_intent_id === "pi_test_duplicate"
+      );
+      expect(upsertCalls.length).toBe(1);
+    });
+
+    test("should use upsert with onConflict for payment_history", async () => {
+      const payload = JSON.stringify({ type: "checkout.session.completed" });
+      const signature = "valid_signature";
+
+      mockRequest = new NextRequest("http://localhost:3000/api/billing/webhook", {
+        method: "POST",
+        headers: {
+          "stripe-signature": signature,
+        },
+        body: payload,
+      });
+
+      mockRequest.text = jest.fn().mockResolvedValue(payload);
+
+      const mockSession = {
+        id: "cs_test_idempotency",
+        customer: "cus_test_123",
+        mode: "payment",
+        payment_intent: "pi_test_idempotency",
+        metadata: { user_id: "user_123" },
+        amount_total: 5000,
+        currency: "usd",
+        payment_status: "paid",
+      };
+
+      const mockEvent = {
+        id: "evt_idempotency",
+        type: "checkout.session.completed",
+        data: { object: mockSession },
+      } as any;
+
+      mockStripeService.constructWebhookEvent.mockReturnValue(mockEvent);
+      mockStripeService.retrieveCheckoutSession.mockResolvedValue(mockSession as any);
+
+      mockSupabase.single
+        .mockResolvedValueOnce({ data: null, error: null }) // Check for existing event
+        .mockResolvedValueOnce({
+          data: { user: { email: "user@example.com" } },
+          error: null,
+        }) // Get user
+        .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }); // Update event as processed
+
+      mockSupabase.auth.admin.getUserById.mockResolvedValue({
+        data: { user: { email: "user@example.com" } },
+      });
+
+      await POST(mockRequest);
+
+      // Verify upsert was called with onConflict option
+      expect(mockSupabase.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stripe_payment_intent_id: "pi_test_idempotency",
+        }),
+        { onConflict: "stripe_payment_intent_id" }
+      );
     });
   });
 

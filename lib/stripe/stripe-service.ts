@@ -194,6 +194,24 @@ export class StripeService {
     }
   }
 
+  async retrievePaymentIntent(
+    paymentIntentId: string,
+    expand?: string[]
+  ): Promise<Stripe.PaymentIntent> {
+    try {
+      const paymentIntent = await this.stripe.paymentIntents.retrieve(paymentIntentId, {
+        expand: expand || [],
+      });
+
+      return paymentIntent;
+    } catch (error) {
+      console.error("Error retrieving payment intent:", error);
+      throw new Error(
+        `Failed to retrieve payment intent: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+  }
+
   async listCustomerSubscriptions(
     customerId: string
   ): Promise<Stripe.ApiList<Stripe.Subscription>> {
