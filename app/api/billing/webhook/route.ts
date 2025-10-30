@@ -92,83 +92,179 @@ export async function POST(request: NextRequest) {
           // Retrieve full session details
           const fullSession = await stripeService.retrieveCheckoutSession(session.id);
 
-          if (fullSession.subscription && fullSession.payment_status === "paid") {
-            // Get subscription details
-            const subscription = await stripeService.retrieveSubscription(
-              fullSession.subscription as string
-            );
-
-            // Get the plan from our database
-            const priceId = subscription.items.data[0]?.price.id;
-            const { data: plan } = await supabase
-              .from("subscription_plans")
-              .select("*")
-              .or(`stripe_price_id_monthly.eq.${priceId},stripe_price_id_yearly.eq.${priceId}`)
-              .single();
-
-            // Create or update user subscription
-            await supabase.from("user_subscriptions").upsert({
-              user_id: userId,
-              stripe_customer_id: fullSession.customer as string,
-              stripe_subscription_id: subscription.id,
-              plan_id: plan?.id,
-              status: subscription.status,
-              current_period_start: new Date(
-                (subscription as ExtendedSubscription).current_period_start * 1000
-              ).toISOString(),
-              current_period_end: new Date(
-                (subscription as ExtendedSubscription).current_period_end * 1000
-              ).toISOString(),
-              cancel_at_period_end: subscription.cancel_at_period_end || false,
-            });
-
-            // Record payment
-            await supabase.from("payment_history").insert({
-              user_id: userId,
-              stripe_payment_intent_id: fullSession.payment_intent as string,
-              amount: fullSession.amount_total || 0,
-              currency: fullSession.currency || "usd",
-              status: "succeeded",
-            });
-
-            // Send confirmation email
-            const { data: user } = await supabase.auth.admin.getUserById(userId);
-            if (user?.user?.email) {
-              await emailService.sendPaymentConfirmation(
-                user.user.email,
-                fullSession.amount_total || 0,
-                fullSession.currency || "usd"
+          if (fullSession.payment_status === "paid") {
+            if (fullSession.subscription) {
+              // Subscription payment
+              // Get subscription details
+              const subscription = await stripeService.retrieveSubscription(
+                fullSession.subscription as string
               );
-            }
 
-            // Track subscription created in PostHog
-            posthog?.capture({
-              distinctId: userId,
-              event: "subscription_created",
-              properties: {
-                plan_name: plan?.name,
-                plan_tier: plan?.tier,
-                price_id: priceId,
-                amount: fullSession.amount_total || 0,
-                currency: fullSession.currency || "usd",
-                billing_interval: priceId === plan?.stripe_price_id_monthly ? "monthly" : "yearly",
+              // Get the plan from our database
+              const priceId = subscription.items.data[0]?.price.id;
+              const { data: plan } = await supabase
+                .from("subscription_plans")
+                .select("*")
+                .or(`stripe_price_id_monthly.eq.${priceId},stripe_price_id_yearly.eq.${priceId}`)
+                .single();
+
+              // Create or update user subscription
+              await supabase.from("user_subscriptions").upsert({
+                user_id: userId,
                 stripe_customer_id: fullSession.customer as string,
                 stripe_subscription_id: subscription.id,
-                subscription_status: subscription.status,
-              },
-            });
+                plan_id: plan?.id,
+                status: subscription.status,
+                current_period_start: new Date(
+                  (subscription as ExtendedSubscription).current_period_start * 1000
+                ).toISOString(),
+                current_period_end: new Date(
+                  (subscription as ExtendedSubscription).current_period_end * 1000
+                ).toISOString(),
+                cancel_at_period_end: subscription.cancel_at_period_end || false,
+              });
 
-            // Update user properties in PostHog
-            posthog?.identify({
-              distinctId: userId,
-              properties: {
-                subscription_tier: plan?.tier,
-                subscription_status: subscription.status,
-                is_paying_customer: true,
-                customer_since: new Date().toISOString(),
-              },
-            });
+              // Record payment
+              await supabase.from("payment_history").insert({
+                user_id: userId,
+                stripe_payment_intent_id: fullSession.payment_intent as string,
+                amount: fullSession.amount_total || 0,
+                currency: fullSession.currency || "usd",
+                status: "succeeded",
+              });
+
+              // Send confirmation email
+              const { data: user } = await supabase.auth.admin.getUserById(userId);
+              if (user?.user?.email) {
+                await emailService.sendPaymentConfirmation(
+                  user.user.email,
+                  fullSession.amount_total || 0,
+                  fullSession.currency || "usd"
+                );
+              }
+
+              // Track subscription created in PostHog
+              posthog?.capture({
+                distinctId: userId,
+                event: "subscription_created",
+                properties: {
+                  plan_name: plan?.name,
+                  plan_tier: plan?.tier,
+                  price_id: priceId,
+                  amount: fullSession.amount_total || 0,
+                  currency: fullSession.currency || "usd",
+                  billing_interval: priceId === plan?.stripe_price_id_monthly ? "monthly" : "yearly",
+                  stripe_customer_id: fullSession.customer as string,
+                  stripe_subscription_id: subscription.id,
+                  subscription_status: subscription.status,
+                },
+              });
+
+              // Update user properties in PostHog
+              posthog?.identify({
+                distinctId: userId,
+                properties: {
+                  subscription_tier: plan?.tier,
+                  subscription_status: subscription.status,
+                  is_paying_customer: true,
+                  customer_since: new Date().toISOString(),
+                },
+              });
+            } else {
+              // One-time payment
+              // Record payment in payment_history
+              await supabase.from("payment_history").insert({
+                user_id: userId,
+                stripe_payment_intent_id: fullSession.payment_intent as string,
+                amount: fullSession.amount_total || 0,
+                currency: fullSession.currency || "usd",
+                status: "succeeded",
+              });
+
+              // Send confirmation email
+              const { data: user } = await supabase.auth.admin.getUserById(userId);
+              if (user?.user?.email) {
+                await emailService.sendPaymentConfirmation(
+                  user.user.email,
+                  fullSession.amount_total || 0,
+                  fullSession.currency || "usd"
+                );
+              }
+
+              // Track one-time payment in PostHog
+              posthog?.capture({
+                distinctId: userId,
+                event: "payment_one_time_succeeded",
+                properties: {
+                  amount: fullSession.amount_total || 0,
+                  currency: fullSession.currency || "usd",
+                  stripe_payment_intent_id: fullSession.payment_intent as string,
+                  stripe_checkout_session_id: fullSession.id,
+                },
+              });
+            }
           }
+          break;
+        }
+
+        case "customer.subscription.created": {
+          const subscription = event.data.object as Stripe.Subscription;
+
+          // Get user_id from metadata
+          const userId = subscription.metadata?.user_id;
+          if (!userId) {
+            console.log("Skipping subscription.created - no user_id in metadata:", subscription.id);
+            break;
+          }
+
+          // Check if subscription already exists (idempotency)
+          const { data: existingSub } = await supabase
+            .from("user_subscriptions")
+            .select("id")
+            .eq("stripe_subscription_id", subscription.id)
+            .single();
+
+          if (existingSub) {
+            console.log("Subscription already exists:", subscription.id);
+            break;
+          }
+
+          // Get the plan from price ID
+          const priceId = subscription.items.data[0]?.price.id;
+          const { data: plan } = await supabase
+            .from("subscription_plans")
+            .select("*")
+            .or(`stripe_price_id_monthly.eq.${priceId},stripe_price_id_yearly.eq.${priceId}`)
+            .single();
+
+          // Create subscription record (but don't mark as active until payment completes)
+          await supabase.from("user_subscriptions").insert({
+            user_id: userId,
+            stripe_customer_id: subscription.customer as string,
+            stripe_subscription_id: subscription.id,
+            plan_id: plan?.id,
+            status: subscription.status,
+            current_period_start: new Date(
+              (subscription as ExtendedSubscription).current_period_start * 1000
+            ).toISOString(),
+            current_period_end: new Date(
+              (subscription as ExtendedSubscription).current_period_end * 1000
+            ).toISOString(),
+            cancel_at_period_end: subscription.cancel_at_period_end || false,
+          });
+
+          // Track subscription creation in PostHog
+          posthog?.capture({
+            distinctId: userId,
+            event: "subscription_created_webhook",
+            properties: {
+              stripe_subscription_id: subscription.id,
+              subscription_status: subscription.status,
+              plan_name: plan?.name,
+              plan_tier: plan?.tier,
+            },
+          });
+
           break;
         }
 
@@ -269,21 +365,79 @@ export async function POST(request: NextRequest) {
           break;
         }
 
-        case "invoice.payment_failed": {
-          const invoice = event.data.object as Stripe.Invoice;
+        case "invoice.paid":
+        case "invoice.payment_succeeded": {
+          const invoice = event.data.object as ExtendedInvoice;
+
+          // Only process if this is a subscription invoice (has subscription field)
+          if (!invoice.subscription) {
+            console.log("Skipping non-subscription invoice:", invoice.id);
+            break;
+          }
 
           // Get user from subscription
           const { data: subscription } = await supabase
             .from("user_subscriptions")
             .select("user_id")
-            .eq("stripe_subscription_id", (invoice as ExtendedInvoice).subscription)
+            .eq("stripe_subscription_id", invoice.subscription)
+            .single();
+
+          if (subscription?.user_id) {
+            // Record recurring payment in payment_history
+            await supabase.from("payment_history").insert({
+              user_id: subscription.user_id,
+              stripe_payment_intent_id: invoice.payment_intent,
+              amount: invoice.amount_paid ?? invoice.amount_due,
+              currency: invoice.currency,
+              status: "succeeded",
+            });
+
+            // Send confirmation email
+            const { data: user } = await supabase.auth.admin.getUserById(subscription.user_id);
+            if (user?.user?.email) {
+              await emailService.sendPaymentConfirmation(
+                user.user.email,
+                invoice.amount_paid ?? invoice.amount_due,
+                invoice.currency
+              );
+            }
+
+            // Track recurring payment in PostHog
+            posthog?.capture({
+              distinctId: subscription.user_id,
+              event: "payment_recurring_succeeded",
+              properties: {
+                amount: invoice.amount_paid ?? invoice.amount_due,
+                currency: invoice.currency,
+                stripe_payment_intent_id: invoice.payment_intent,
+                stripe_invoice_id: invoice.id,
+                stripe_subscription_id: invoice.subscription,
+              },
+            });
+          }
+          break;
+        }
+
+        case "invoice.payment_failed": {
+          const invoice = event.data.object as ExtendedInvoice;
+
+          if (!invoice.subscription) {
+            console.log("Skipping non-subscription invoice:", invoice.id);
+            break;
+          }
+
+          // Get user from subscription
+          const { data: subscription } = await supabase
+            .from("user_subscriptions")
+            .select("user_id")
+            .eq("stripe_subscription_id", invoice.subscription)
             .single();
 
           if (subscription?.user_id) {
             // Record failed payment
             await supabase.from("payment_history").insert({
               user_id: subscription.user_id,
-              stripe_payment_intent_id: (invoice as ExtendedInvoice).payment_intent as string,
+              stripe_payment_intent_id: invoice.payment_intent,
               amount: invoice.amount_due,
               currency: invoice.currency,
               status: "failed",
@@ -302,7 +456,7 @@ export async function POST(request: NextRequest) {
               properties: {
                 amount: invoice.amount_due,
                 currency: invoice.currency,
-                stripe_payment_intent_id: (invoice as ExtendedInvoice).payment_intent,
+                stripe_payment_intent_id: invoice.payment_intent,
                 failure_reason: invoice.status_transitions?.finalized_at
                   ? "card_declined"
                   : "unknown",
