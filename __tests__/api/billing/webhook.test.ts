@@ -669,18 +669,39 @@ describe("Stripe Webhook Handler", () => {
       mockStripeService.constructWebhookEvent.mockReturnValue(mockEvent);
       mockStripeService.retrievePaymentIntent.mockResolvedValue(mockExpandedPaymentIntent as any);
 
-      // Mock database operations - simulate same event processed twice
+      // Mock database operations for first call - event doesn't exist yet
       mockSupabase.single
-        .mockResolvedValueOnce({ data: null, error: null }) // Check for existing event (first time)
-        .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }) // Update event as processed
-        .mockResolvedValueOnce({ data: { id: "evt_id", processed: true }, error: null }) // Check for existing event (second time - already processed)
-        .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }); // Return success
+        .mockResolvedValueOnce({ data: null, error: null }) // Check for existing event (first time - not found)
+        .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }); // Update event as processed
 
-      // First call
+      // First call - processes the event
       const response1 = await POST(mockRequest);
       expect(response1.status).toBe(200);
 
-      // Second call with same event
+      // Verify upsert was called once during first request
+      const upsertCallsAfterFirst = mockSupabase.upsert.mock.calls.filter(
+        (call) => call[0]?.stripe_payment_intent_id === "pi_test_duplicate"
+      );
+      expect(upsertCallsAfterFirst.length).toBe(1);
+
+      // Reset mocks for second call - event is now already processed
+      mockSupabase.single.mockReset();
+      // Don't reset upsert - we want to verify it wasn't called again
+      
+      // Ensure constructWebhookEvent still returns the same event
+      mockStripeService.constructWebhookEvent.mockReturnValue(mockEvent);
+      
+      // Ensure request.text() still works  
+      mockRequest.text = jest.fn().mockResolvedValue(payload);
+
+      // Mock database operations for second call - event already processed
+      // When checking for existing event, return it as already processed
+      mockSupabase.single.mockResolvedValueOnce({
+        data: { id: "evt_id", stripe_event_id: "evt_pi_duplicate", processed: true, processed_at: new Date().toISOString() },
+        error: null,
+      }); // Check for existing event (second time - already processed)
+
+      // Second call with same event - should return early
       const response2 = await POST(mockRequest);
       const responseData2 = await response2.json();
 
@@ -688,11 +709,11 @@ describe("Stripe Webhook Handler", () => {
       expect(response2.status).toBe(200);
       expect(responseData2.message).toContain("already processed");
 
-      // Verify upsert was only called once (from first request)
-      const upsertCalls = mockSupabase.upsert.mock.calls.filter(
+      // Verify upsert was still only called once (not called again on second request)
+      const upsertCallsAfterSecond = mockSupabase.upsert.mock.calls.filter(
         (call) => call[0]?.stripe_payment_intent_id === "pi_test_duplicate"
       );
-      expect(upsertCalls.length).toBe(1);
+      expect(upsertCallsAfterSecond.length).toBe(1);
     });
 
     test("should use upsert with onConflict for payment_history", async () => {
@@ -892,15 +913,21 @@ describe("Stripe Webhook Handler", () => {
         data: { user: { email: "user@example.com" } },
       });
 
+      // Mock upsert to return success (for payment_history)
+      mockSupabase.upsert.mockResolvedValue({ data: null, error: null });
+
       const response = await POST(mockRequest);
 
-      expect(mockSupabase.insert).toHaveBeenNthCalledWith(
-        2,
+      // First insert is for webhook_events table (line 71)
+      // Second operation is upsert for payment_history (line 605)
+      expect(mockSupabase.insert).toHaveBeenCalledTimes(1); // Only webhook_events insert
+      expect(mockSupabase.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           stripe_payment_intent_id: "pi_test_123",
           status: "failed",
           amount: 2900,
-        })
+        }),
+        { onConflict: "stripe_payment_intent_id" }
       );
 
       expect(response.status).toBe(200);

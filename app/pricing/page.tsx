@@ -16,6 +16,11 @@ import {
 } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
+import {
+  getTierNameFromPriceId,
+  getPaymentMode,
+  getPlanType,
+} from "@/lib/pricing/price-utils";
 import { PricingCard } from "@/components/pricing/PricingCard";
 import { ComparisonTable } from "@/components/pricing/ComparisonTable";
 import { Container, Section } from "@/components/patterns";
@@ -52,11 +57,19 @@ export default function PricingPage() {
 
   const handleCheckout = async (priceId: string, planName: string) => {
     try {
+      // Calculate analytics properties
+      const tierName = getTierNameFromPriceId(priceId);
+      const paymentMode = getPaymentMode(priceId);
+      const planType = getPlanType(priceId);
+
       // Track checkout intent
       trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_INITIATED, {
         plan_name: planName,
+        tier_name: tierName,
         billing_interval: billingInterval,
         price_id: priceId,
+        payment_mode: paymentMode,
+        plan_type: planType,
         user_id: user?.id,
       });
 
@@ -91,7 +104,11 @@ export default function PricingPage() {
       // Track successful checkout session creation
       trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_SESSION_CREATED, {
         plan_name: planName,
+        tier_name: tierName,
         billing_interval: billingInterval,
+        price_id: priceId,
+        payment_mode: paymentMode,
+        plan_type: planType,
         user_id: user?.id,
       });
 
@@ -101,9 +118,19 @@ export default function PricingPage() {
       }
     } catch (error) {
       console.error("Checkout error:", error);
+      // Calculate analytics properties for error tracking
+      const tierName = getTierNameFromPriceId(priceId);
+      const paymentMode = getPaymentMode(priceId);
+      const planType = getPlanType(priceId);
+
       trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_ERROR, {
         error: error instanceof Error ? error.message : "Unknown error",
         plan_name: planName,
+        tier_name: tierName,
+        billing_interval: billingInterval,
+        price_id: priceId,
+        payment_mode: paymentMode,
+        plan_type: planType,
         user_id: user?.id,
       });
       setError("Failed to start checkout. Please try again.");

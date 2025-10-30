@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
 import { PostHog } from "posthog-node";
 import { z } from "zod";
+import { getTierNameFromPriceId } from "@/lib/pricing/price-utils";
 
 interface TrialStartResponse {
   status: "ok";
@@ -133,6 +134,7 @@ export async function POST(
           email: user.email,
           trial_days: 14,
           price_id: priceId,
+          tier_name: getTierNameFromPriceId(priceId),
           from_anonymous: !!anonymousSessionId,
           anonymous_session_id: anonymousSessionId,
         },
