@@ -14,6 +14,7 @@ jest.mock("next/server", () => ({
   },
 }));
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { POST } from "@/app/api/billing/checkout/route";
 import { StripeService } from "@/lib/stripe/stripe-service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -38,6 +39,7 @@ describe("Checkout Session API", () => {
     mockStripeService = {
       createOrRetrieveCustomer: jest.fn(),
       createCheckoutSession: jest.fn(),
+      getPriceType: jest.fn().mockResolvedValue("subscription"),
     } as any;
     (StripeService as jest.Mock).mockImplementation(() => mockStripeService);
 
