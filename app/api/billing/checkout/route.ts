@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { StripeService } from "@/lib/stripe/stripe-service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
+import { SUBSCRIPTION_TIERS, EXAM_PACKAGES } from "@/lib/pricing/constants";
 import { z } from "zod";
 
 interface CheckoutSessionResponse {
@@ -53,30 +54,49 @@ export async function POST(
 
     const { priceId } = parse.data;
 
-    // Validate price ID against our configured prices
-    const validPrices = [process.env.STRIPE_PRICE_ID_MONTHLY, process.env.STRIPE_PRICE_ID_YEARLY];
+    // Build list of all valid price IDs from pricing constants
+    const validPrices: string[] = [];
 
+    // Add subscription tier price IDs
+    for (const tier of SUBSCRIPTION_TIERS) {
+      if (tier.monthlyPriceId) validPrices.push(tier.monthlyPriceId);
+      if (tier.annualPriceId) validPrices.push(tier.annualPriceId);
+    }
+
+    // Add exam package price IDs
+    for (const pkg of EXAM_PACKAGES) {
+      if (pkg.priceId) validPrices.push(pkg.priceId);
+    }
+
+    // Validate price ID against our configured prices
     if (!validPrices.includes(priceId)) {
       return NextResponse.json({ error: "Invalid price ID" }, { status: 400 });
     }
 
-    // Check if user already has an active subscription
-    const { data: existingSubscription } = await supabase
-      .from("user_subscriptions")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("status", "active")
-      .single();
+    // Create Stripe service instance
+    const stripeService = new StripeService();
 
-    if (existingSubscription) {
-      return NextResponse.json(
-        { error: "You already have an active subscription" },
-        { status: 400 }
-      );
+    // Check if user already has an active subscription (only for subscription prices)
+    // Allow one-time payments even if user has active subscription
+    const priceType = await stripeService.getPriceType(priceId);
+
+    if (priceType === "subscription") {
+      const { data: existingSubscription } = await supabase
+        .from("user_subscriptions")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .single();
+
+      if (existingSubscription) {
+        return NextResponse.json(
+          { error: "You already have an active subscription" },
+          { status: 400 }
+        );
+      }
     }
 
     // Create or retrieve Stripe customer
-    const stripeService = new StripeService();
     const customer = await stripeService.createOrRetrieveCustomer(user.id, user.email!);
 
     // Create checkout session

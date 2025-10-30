@@ -14,30 +14,34 @@ jest.mock("next/server", () => ({
   },
 }));
 
-import { POST } from "@/app/api/billing/checkout/route";
+// Mock dependencies BEFORE importing route (order matters!)
+jest.mock("@/lib/stripe/stripe-service");
+jest.mock("@/lib/supabase/server");
+jest.mock("@/lib/auth/rate-limiter");
+// Manual mock file will be used automatically by Jest
+jest.mock("@/lib/pricing/constants");
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { StripeService } from "@/lib/stripe/stripe-service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
 import { NextRequest } from "next/server";
 import Stripe from "stripe";
-
-// Mock dependencies
-jest.mock("@/lib/stripe/stripe-service");
-jest.mock("@/lib/supabase/server");
-jest.mock("@/lib/auth/rate-limiter");
+import { POST } from "@/app/api/billing/checkout/route";
 
 describe("Checkout Session API", () => {
   let mockStripeService: jest.Mocked<StripeService>;
   let mockSupabase: any;
   let mockRequest: NextRequest;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
 
     // Mock StripeService
     mockStripeService = {
       createOrRetrieveCustomer: jest.fn(),
       createCheckoutSession: jest.fn(),
+      getPriceType: jest.fn().mockResolvedValue("subscription"),
     } as any;
     (StripeService as jest.Mock).mockImplementation(() => mockStripeService);
 
@@ -59,15 +63,29 @@ describe("Checkout Session API", () => {
     // Set environment variables
     process.env.STRIPE_SECRET_KEY = "sk_test_key";
     process.env.NEXT_PUBLIC_SITE_URL = "https://testero.ai";
-    process.env.STRIPE_PRICE_ID_MONTHLY = "price_monthly";
-    process.env.STRIPE_PRICE_ID_YEARLY = "price_yearly";
+    process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY = "price_monthly";
+    process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL = "price_yearly";
+    process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY = "price_basic_monthly";
+    process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL = "price_basic_yearly";
+    process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY = "price_all_monthly";
+    process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL = "price_all_yearly";
+    process.env.NEXT_PUBLIC_STRIPE_EXAM_3MONTH = "price_exam_3month";
+    process.env.NEXT_PUBLIC_STRIPE_EXAM_6MONTH = "price_exam_6month";
+    process.env.NEXT_PUBLIC_STRIPE_EXAM_12MONTH = "price_exam_12month";
   });
 
   afterEach(() => {
     delete process.env.STRIPE_SECRET_KEY;
     delete process.env.NEXT_PUBLIC_SITE_URL;
-    delete process.env.STRIPE_PRICE_ID_MONTHLY;
-    delete process.env.STRIPE_PRICE_ID_YEARLY;
+    delete process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY;
+    delete process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL;
+    delete process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY;
+    delete process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL;
+    delete process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY;
+    delete process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL;
+    delete process.env.NEXT_PUBLIC_STRIPE_EXAM_3MONTH;
+    delete process.env.NEXT_PUBLIC_STRIPE_EXAM_6MONTH;
+    delete process.env.NEXT_PUBLIC_STRIPE_EXAM_12MONTH;
   });
 
   describe("Authentication", () => {
@@ -112,6 +130,9 @@ describe("Checkout Session API", () => {
 
       mockStripeService.createOrRetrieveCustomer.mockResolvedValue(mockCustomer);
       mockStripeService.createCheckoutSession.mockResolvedValue(mockSession);
+      // Mock getPriceType and no existing subscription
+      mockStripeService.getPriceType.mockResolvedValue("subscription");
+      mockSupabase.single.mockResolvedValue({ data: null, error: null });
 
       mockRequest = new NextRequest("http://localhost:3000/api/billing/checkout", {
         method: "POST",
@@ -138,7 +159,9 @@ describe("Checkout Session API", () => {
         error: null,
       });
 
-      (checkRateLimit as jest.Mock).mockResolvedValue(false);
+      // Re-import rate limiter to get mock and update it
+      const RateLimiterModule = await import("@/lib/auth/rate-limiter");
+      (RateLimiterModule.checkRateLimit as jest.Mock).mockResolvedValue(false);
 
       mockRequest = new NextRequest("http://localhost:3000/api/billing/checkout", {
         method: "POST",
@@ -180,6 +203,9 @@ describe("Checkout Session API", () => {
 
       mockStripeService.createOrRetrieveCustomer.mockResolvedValue(mockCustomer);
       mockStripeService.createCheckoutSession.mockResolvedValue(mockSession);
+      // Mock getPriceType and no existing subscription
+      mockStripeService.getPriceType.mockResolvedValue("subscription");
+      mockSupabase.single.mockResolvedValue({ data: null, error: null });
 
       mockRequest = new NextRequest("http://localhost:3000/api/billing/checkout", {
         method: "POST",
@@ -229,6 +255,9 @@ describe("Checkout Session API", () => {
 
       mockStripeService.createOrRetrieveCustomer.mockResolvedValue(mockCustomer);
       mockStripeService.createCheckoutSession.mockResolvedValue(mockSession);
+      // Mock getPriceType and no existing subscription
+      mockStripeService.getPriceType.mockResolvedValue("subscription");
+      mockSupabase.single.mockResolvedValue({ data: null, error: null });
 
       mockRequest = new NextRequest("http://localhost:3000/api/billing/checkout", {
         method: "POST",
@@ -284,6 +313,9 @@ describe("Checkout Session API", () => {
         error: null,
       });
 
+      // Mock getPriceType to return "subscription" so subscription check runs
+      mockStripeService.getPriceType.mockResolvedValue("subscription");
+
       // Mock existing active subscription
       mockSupabase.single.mockResolvedValue({
         data: {
@@ -318,6 +350,8 @@ describe("Checkout Session API", () => {
         error: null,
       });
 
+      // Mock getPriceType to return "subscription" and no existing subscription
+      mockStripeService.getPriceType.mockResolvedValue("subscription");
       mockSupabase.single.mockResolvedValue({ data: null, error: null });
 
       mockStripeService.createOrRetrieveCustomer.mockRejectedValue(new Error("Stripe API error"));

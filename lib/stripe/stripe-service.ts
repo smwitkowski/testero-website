@@ -49,21 +49,41 @@ export class StripeService {
     }
   }
 
+  /**
+   * Retrieve a price from Stripe and determine if it's a subscription or one-time payment
+   */
+  async getPriceType(priceId: string): Promise<"subscription" | "payment"> {
+    try {
+      const price = await this.stripe.prices.retrieve(priceId);
+      return price.type === "recurring" ? "subscription" : "payment";
+    } catch (error) {
+      console.error("Error retrieving price:", error);
+      throw new Error(
+        `Failed to retrieve price: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+  }
+
   async createCheckoutSession({
     customerId,
     priceId,
     successUrl,
     cancelUrl,
     userId,
+    mode,
   }: {
     customerId: string;
     priceId: string;
     successUrl: string;
     cancelUrl: string;
     userId: string;
+    mode?: "subscription" | "payment";
   }): Promise<Stripe.Checkout.Session> {
     try {
-      const session = await this.stripe.checkout.sessions.create({
+      // Determine mode if not provided
+      const checkoutMode = mode || (await this.getPriceType(priceId));
+
+      const sessionParams: Stripe.Checkout.SessionCreateParams = {
         customer: customerId,
         payment_method_types: ["card"],
         line_items: [
@@ -72,19 +92,25 @@ export class StripeService {
             quantity: 1,
           },
         ],
-        mode: "subscription",
+        mode: checkoutMode,
         success_url: successUrl,
         cancel_url: cancelUrl,
         metadata: {
           user_id: userId,
         },
-        subscription_data: {
+        allow_promotion_codes: true,
+      };
+
+      // Only include subscription_data for subscription mode
+      if (checkoutMode === "subscription") {
+        sessionParams.subscription_data = {
           metadata: {
             user_id: userId,
           },
-        },
-        allow_promotion_codes: true,
-      });
+        };
+      }
+
+      const session = await this.stripe.checkout.sessions.create(sessionParams);
 
       return session;
     } catch (error) {
@@ -164,6 +190,24 @@ export class StripeService {
       console.error("Error retrieving checkout session:", error);
       throw new Error(
         `Failed to retrieve checkout session: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+  }
+
+  async retrievePaymentIntent(
+    paymentIntentId: string,
+    expand?: string[]
+  ): Promise<Stripe.PaymentIntent> {
+    try {
+      const paymentIntent = await this.stripe.paymentIntents.retrieve(paymentIntentId, {
+        expand: expand || [],
+      });
+
+      return paymentIntent;
+    } catch (error) {
+      console.error("Error retrieving payment intent:", error);
+      throw new Error(
+        `Failed to retrieve payment intent: ${error instanceof Error ? error.message : "Unknown error"}`
       );
     }
   }

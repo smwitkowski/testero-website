@@ -145,7 +145,7 @@ export function PricingCard({
           variant="solid"
           size="lg"
           loading={isLoading}
-          disabled={isLoading}
+          disabled={isLoading || !isCheckoutConfigured}
           data-checkout-configured={isCheckoutConfigured ? "true" : "false"}
           onClick={() => onCheckout(checkoutPriceId, tier.name)}
         >

@@ -4,6 +4,7 @@ import Stripe from "stripe";
 // Mock Stripe
 jest.mock("stripe");
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 describe("StripeService", () => {
   let stripeService: StripeService;
   let mockStripe: jest.Mocked<Stripe>;
