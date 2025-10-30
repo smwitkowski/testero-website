@@ -1,71 +1,94 @@
-# Next.js Frontend Project
+# Testero Frontend
 
-A modern frontend application built with:
+AI-powered certification exam preparation platform built with Next.js 15, React, TypeScript, and Tailwind CSS.
 
-- Next.js 15
-- React 18.3
-- shadcn/ui
-- TypeScript
-- Tailwind CSS
-- PostHog
+## Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **UI**: React 18.3, shadcn/ui, Tailwind CSS
+- **Backend**: Supabase (Auth & PostgreSQL)
+- **Analytics**: PostHog
+- **Infrastructure**: Google Cloud Platform (Cloud Run)
+- **Testing**: Jest, Playwright
 
 ## Getting Started
 
-### Development
+### Prerequisites
+
+- Node.js 20+
+- npm or yarn
+- Docker (for local testing)
+
+### Installation
 
 ```bash
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-### Testing
-
-Run unit tests with Jest:
+### Development Commands
 
 ```bash
+# Development server
+npm run dev
+
+# Run unit tests
 npm test
-```
 
-### Build
+# Run E2E tests
+npm run e2e
 
-```bash
+# Build for production
 npm run build
-```
 
-### Start Production Server
-
-```bash
+# Start production server
 npm start
+
+# Run linting
+npm run lint
 ```
 
 ## Project Structure
 
-- `app/` - Next.js App Router
-- `components/` - UI components
-  - `ui/` - shadcn/ui components
-- `lib/` - Utility functions
-- `public/` - Static assets
+```
+app/              # Next.js App Router pages and API routes
+components/       # React components organized by feature
+lib/             # Business logic and utilities
+docs/            # Documentation
+├── strategy/    # Product vision, metrics, revenue model
+├── deployment/  # Deployment and setup guides
+└── development/ # Development guidelines and AI instructions
+```
+
+## Documentation
+
+Comprehensive documentation is available in the `/docs` folder:
+
+- **[Documentation Index](./docs/README.md)** - Complete guide to all documentation
+- **[CLAUDE.md](./CLAUDE.md)** - Development guidelines for AI assistants
+- **[Deployment Guide](./docs/deployment/deployment-guide.md)** - GCP Cloud Run deployment
+- **[Product Vision](./docs/strategy/product-vision.md)** - Product strategy and roadmap
 
 ## Features
 
-- Modern UI components using shadcn/ui
-- Responsive design with Tailwind CSS
-- Type safety with TypeScript
+- 🔐 Authentication with Supabase (email/password, anonymous sessions)
+- 📊 Diagnostic testing with adaptive recommendations
+- 🎯 AI-powered personalized study paths
+- 📱 Responsive design with mobile-first approach
+- ♿ Accessibility built-in with shadcn/ui
+- 🧪 Comprehensive test coverage (unit + E2E)
+- 🚀 Production-ready deployment on GCP Cloud Run
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Contributing
 
-## Learn More
+This project is currently in active development. For contribution guidelines, please refer to the main project documentation in `/docs`.
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Private project - All rights reserved.

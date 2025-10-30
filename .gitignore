@@ -55,3 +55,6 @@ test-results/
 
 # Implementation tracking
 implement/
+
+# Local development files (secrets, keys, etc.)
+.local/

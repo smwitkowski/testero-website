@@ -37,11 +37,11 @@ To generate this key:
    ./scripts/create-github-actions-service-account.sh
    ```
 
-2. The script will generate a file named `github-actions-key.json`
+2. The script will generate a file named `github-actions-key.json` in the `.local/` folder
 3. Copy the entire contents of this file (including all curly braces, quotes, etc.)
 4. Paste this content as the value for the `GCP_SA_KEY` secret
 
-**Security Note**: This key grants access to your GCP resources. Never commit this key to your repository, share it publicly, or include it in logs.
+**Security Note**: This key grants access to your GCP resources. Never commit this key to your repository, share it publicly, or include it in logs. The `.local/` folder is in `.gitignore` to prevent accidental commits.
 
 ### GCP_PROJECT_ID
 
@@ -102,4 +102,4 @@ If you encounter issues with the GitHub Actions deployment:
 
 - [GitHub Actions Deployment](./github-actions-deployment.md)
 - [Artifact Registry Setup](./artifact-registry-setup.md)
-- [Deployment Guide](../DEPLOYMENT.md)
+- [Deployment Guide](./deployment/deployment-guide.md)
