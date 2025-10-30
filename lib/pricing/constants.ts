@@ -18,6 +18,10 @@ const validatePriceIds = () => {
       key: "NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL",
       value: process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL,
     },
+    // Exam package price IDs
+    { key: "NEXT_PUBLIC_STRIPE_EXAM_3MONTH", value: process.env.NEXT_PUBLIC_STRIPE_EXAM_3MONTH },
+    { key: "NEXT_PUBLIC_STRIPE_EXAM_6MONTH", value: process.env.NEXT_PUBLIC_STRIPE_EXAM_6MONTH },
+    { key: "NEXT_PUBLIC_STRIPE_EXAM_12MONTH", value: process.env.NEXT_PUBLIC_STRIPE_EXAM_12MONTH },
   ];
 
   const missingIds = requiredPriceIds.filter(({ value }) => !value);
