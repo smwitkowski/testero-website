@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Pricing Page E2E Tests**: Added comprehensive Playwright tests for pricing page covering button states, billing interval toggle, exam packages section, and checkout redirects for authenticated and unauthenticated users (TES-348)
+- **PricingCard Unit Tests**: Added unit tests for PricingCard component covering button enabled/disabled states based on price ID presence, loading states, and checkout handler invocation (TES-348)
 - **Trial API Tests**: Added comprehensive test suite for trial API endpoint covering default Pro Monthly tier selection, optional tier override, duplicate trial prevention, active subscription checks, database persistence, and user metadata updates (TES-347)
 - **Checkout API Tests**: Added comprehensive test suite for checkout API covering price ID validation, payment mode detection, and subscription check logic (TES-345)
 - **Stripe Webhook Handlers**: Added handlers for recurring subscription renewals (`invoice.paid` / `invoice.payment_succeeded`) to track monthly/yearly subscription payments
@@ -28,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Security**: Created `.local/` folder for secure local development files (secrets, keys, etc.)
 
 ### Fixed
+- **Pricing Button State**: Fixed PricingCard component to disable "Get started" button when Stripe price IDs are missing, ensuring consistent behavior with exam package buttons (TES-348)
 - **Stripe Checkout Validation**: Fixed checkout API to validate all 9 price IDs from pricing constants instead of only Pro tier
 - **One-Time Payments**: Removed subscription-only restriction, allowing users to purchase exam packages even if they have an active subscription
 - **Build Failure**: Fixed ESLint error `react/no-unescaped-entities` in `app/signup/page.tsx` by escaping apostrophe in "We've" text using HTML entity `&#39;`
