@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Stripe Integration**: Added support for all subscription tiers (Basic, Pro, All-Access) and one-time exam packages (3-month, 6-month, 12-month)
+- **Stripe Price IDs Documentation**: Created `docs/deployment/stripe-price-ids.md` with all canonical price IDs for test and production environments
+- **Dynamic Checkout Modes**: StripeService now automatically detects and handles both subscription and one-time payment checkout modes
+- **Price Validation**: Enhanced price ID validation to include all 9 required Stripe price IDs (6 subscription + 3 exam packages)
 - **Documentation**: Created comprehensive documentation index at `/docs/README.md` for easy navigation
 - **Documentation Organization**: Established new folder structure for better documentation organization:
   - `/docs/strategy/` - Product vision, metrics, revenue model, and business strategy documents
@@ -18,11 +22,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Security**: Created `.local/` folder for secure local development files (secrets, keys, etc.)
 
 ### Fixed
+- **Stripe Checkout Validation**: Fixed checkout API to validate all 9 price IDs from pricing constants instead of only Pro tier
+- **One-Time Payments**: Removed subscription-only restriction, allowing users to purchase exam packages even if they have an active subscription
 - **Build Failure**: Fixed ESLint error `react/no-unescaped-entities` in `app/signup/page.tsx` by escaping apostrophe in "We've" text using HTML entity `&#39;`
 - **Build Environment**: Added placeholder Supabase environment variables (`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`) to `.env.local` to allow build completion
 - **Dependencies**: Resolved missing build dependencies (`ts-node`, `prettier`) that were preventing the build process from completing
 
 ### Changed
+- **Stripe Setup Documentation**: Updated `docs/deployment/stripe-setup.md` with all products and required environment variables
+- **StripeService API**: `createCheckoutSession()` now accepts optional `mode` parameter and automatically detects payment type from price
+- **Checkout API**: Updated to use pricing constants for validation instead of hardcoded environment variables
 - Production build now successfully generates optimized static content for all 26 pages
 - Sitemap generation now handles missing Supabase connection gracefully during build process
 
