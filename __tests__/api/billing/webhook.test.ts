@@ -26,6 +26,7 @@ jest.mock("@/lib/stripe/stripe-service");
 jest.mock("@/lib/supabase/server");
 jest.mock("@/lib/email/email-service");
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 describe("Stripe Webhook Handler", () => {
   let mockStripeService: jest.Mocked<StripeService>;
   let mockSupabase: any;
