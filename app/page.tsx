@@ -141,8 +141,9 @@ export default function Home() {
                   size="lg"
                   tone="accent"
                   className="w-full sm:w-auto text-lg"
+                  aria-label="Get started with Testero - Sign up for an account"
                 >
-                  <Link href="/diagnostic">Try Free Diagnostic</Link>
+                  <Link href="/signup">Get Started</Link>
                 </Button>
                 <Button 
                   asChild 
@@ -152,6 +153,7 @@ export default function Home() {
                   className="w-full sm:w-auto text-lg"
                   iconRight={<ArrowRight className="h-5 w-5" />}
                   onClick={() => handlePricingClick("hero_secondary")}
+                  aria-label="View pricing plans for Testero"
                 >
                   <Link href="/pricing">View Pricing Plans</Link>
                 </Button>

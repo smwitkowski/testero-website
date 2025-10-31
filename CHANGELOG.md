@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Navigation CTAs**: Replaced "Join Waitlist" CTAs in navigation (desktop and mobile) with "Get Started" button pointing to `/signup` for standard SaaS sign-up flow
+- **Hero Section CTAs**: Updated homepage hero section primary CTA from "Try Free Diagnostic" to "Get Started" pointing to `/signup` to align with navigation CTAs and SaaS onboarding pattern
+- **Navigation Menu**: Added "Pricing" link to main navigation menu to support purchase decisions as per SaaS best practices
 - **Theme Default**: Changed default theme from "system" to "light" mode for better consistency across all users
 - **CTA Color System**: Unified accent CTA color system to use brand orange (`--tone-accent`) consistently across all button variants. Solid accent buttons now use orange backgrounds with white text (`--tone-accent-foreground`), outline/ghost variants use orange text/borders with orange-tinted hover states, ensuring proper contrast and brand consistency in both light and dark modes
 
