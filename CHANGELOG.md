@@ -51,13 +51,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Build Environment**: Added placeholder Supabase environment variables (`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`) to `.env.local` to allow build completion
 - **Dependencies**: Resolved missing build dependencies (`ts-node`, `prettier`) that were preventing the build process from completing
 
-### Changed
-- **Webhook Event Configuration**: Updated webhook documentation to reflect Checkout-only payment flow (removed `payment_intent.*` events from required list)
-- **Event Naming**: Clarified that `invoice.paid` or `invoice.payment_succeeded` can be used depending on Stripe account configuration
-- **Stripe Setup Documentation**: Updated `docs/deployment/stripe-setup.md` with all products and required environment variables
-- Production build now successfully generates optimized static content for all 26 pages
-- Sitemap generation now handles missing Supabase connection gracefully during build process
-
 ### Removed
 - **Obsolete Files**: Cleaned up root directory by removing:
   - `0_Code Quality.txt` - GitHub Actions log file
