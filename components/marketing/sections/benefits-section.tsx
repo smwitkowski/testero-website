@@ -68,7 +68,7 @@ const BenefitCard: React.FC<BenefitCardProps> = ({
   return (
     <article
       className={cn(
-        'rounded-xl border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 sm:p-6 shadow-md',
+        'rounded-xl border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 md:p-6 shadow-md',
         'transform transition-all duration-300',
         'hover:-translate-y-1 hover:shadow-lg'
       )}
@@ -171,7 +171,7 @@ export function BenefitsSectionSkeleton() {
         {/* Skeleton cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
           {[...Array(4)].map((_, index) => (
-            <div key={index} className="animate-pulse rounded-xl border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 sm:p-6 shadow-md">
+            <div key={index} className="animate-pulse rounded-xl border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 md:p-6 shadow-md">
               <div className="flex items-start space-x-4">
                 <div className="h-12 w-12 rounded-lg bg-[color:var(--surface-muted)] p-3"></div>
                 <div className="flex-1">
@@ -269,7 +269,7 @@ export function BenefitsSection() {
               </svg>
             }
             title="Never Study Outdated Content"
-            description="Automatically updated within 14 days of official blueprint changes—while competitors take months. Always practice with the latest exam topics."
+            description="Automatically updated within 14 days of official blueprint changes?while competitors take months. Always practice with the latest exam topics."
             tone="accent"
             delay={duration.fast * 3}
           />
@@ -282,7 +282,7 @@ export function BenefitsSection() {
               </svg>
             }
             title="Know Your Exact Readiness"
-            description="15-minute diagnostic reveals your percentile score and exact gaps. No more guessing if you're ready—know with data-driven confidence."
+            description="15-minute diagnostic reveals your percentile score and exact gaps. No more guessing if you're ready?know with data-driven confidence."
             tone="success"
             delay={duration.fast * 4}
           />
@@ -335,7 +335,7 @@ export function BenefitsSection() {
                 <Link href="/diagnostic">Take Diagnostic Test</Link>
               </Button>
             </div>
-            <p className="mt-4 text-sm text-muted-foreground">✓ Free forever tier ✓ No credit card required ✓ Instant access</p>
+            <p className="mt-4 text-sm text-muted-foreground">? Free forever tier ? No credit card required ? Instant access</p>
           </div>
         </div>
       </div>

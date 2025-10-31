@@ -64,7 +64,7 @@ export function TestimonialCarousel({
             transition={{ duration: 0.5, ease: "easeInOut" }}
             className="flex w-full items-center justify-center px-4"
           >
-            <figure className="mx-auto w-full max-w-2xl rounded-2xl border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-6 text-center shadow-lg sm:p-8">
+            <figure className="mx-auto w-full max-w-2xl rounded-2xl border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 md:p-6 text-center shadow-lg">
               <blockquote className="mb-6 text-lg italic leading-relaxed text-muted-foreground sm:text-xl">
                 &ldquo;{activeTestimonial.quote}&rdquo;
               </blockquote>

@@ -84,7 +84,7 @@ export const QuestionReview: React.FC<QuestionReviewProps> = ({
         key={question.id}
         data-testid={`question-${question.id}`}
         className={cn(
-          "mb-4 rounded-lg border p-6 transition-colors",
+          "mb-4 rounded-lg border p-4 md:p-6 transition-colors",
           question.isCorrect
             ? "border-[color:var(--tone-success)] bg-[color:var(--tone-success-surface)]"
             : "border-[color:var(--tone-danger)] bg-[color:var(--tone-danger-surface)]",

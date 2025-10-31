@@ -62,13 +62,13 @@ function useCardContext() {
 
 const horizontalPadding: Record<CardSize, string> = {
   sm: "px-card-x-sm",
-  md: "px-card-x-md",
+  md: "px-card-x-md md:px-card-x-lg", // Responsive: 16px mobile, 24px desktop
   lg: "px-card-x-lg",
 }
 
 const verticalPadding: Record<CardSize, string> = {
   sm: "py-card-y-sm",
-  md: "py-card-y-md",
+  md: "py-card-y-md md:py-card-y-lg", // Responsive: 16px mobile, 24px desktop
   lg: "py-card-y-lg",
 }
 

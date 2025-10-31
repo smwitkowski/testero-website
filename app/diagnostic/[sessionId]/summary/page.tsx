@@ -115,7 +115,7 @@ const VerdictBlock = ({
     Math.round((new Date(summary.completedAt).getTime() - new Date(summary.startedAt).getTime()) / 60000) + "m";
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mb-8">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm mb-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Gauge and Readiness */}
         <div className="flex items-center gap-6">
@@ -203,7 +203,7 @@ const DomainPerformance = ({
   const sortedDomains = [...domains].sort((a, b) => a.percentage - b.percentage);
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mb-8">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm mb-8">
       <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-4">Domain Performance</h2>
       <div className="space-y-3">
         {sortedDomains.map((domain) => (
@@ -291,7 +291,7 @@ const StudyPlan = ({
   );
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mb-8">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm mb-8">
       <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-6">Study Plan</h2>
       
       {foundation.length > 0 && (
@@ -577,7 +577,7 @@ const QuickActions = ({
   onExport: () => void;
   onShare: () => void;
 }) => (
-  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+  <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm">
     <h3 className="font-semibold text-slate-900 mb-4">Quick Actions</h3>
     <div className="space-y-3">
       <Button
@@ -983,7 +983,7 @@ const DiagnosticSummaryPage = () => {
 
             {/* Trial CTA for non-subscribed users */}
             {!user?.user_metadata?.has_subscription && (
-              <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 shadow-sm">
+              <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 md:p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">Ready to Pass?</h3>
                 <p className="text-sm text-slate-600 mb-4">
                   Get personalized study plans and unlimited practice

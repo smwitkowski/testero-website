@@ -15,7 +15,7 @@
   --gap-card-md: 0.75rem; /* 12px */
 
   --space-card-x-lg: 1.5rem; /* 24px */
-  --space-card-y-lg: 1.25rem; /* 20px */
+  --space-card-y-lg: 1.5rem; /* 24px - matches p-6 for desktop */
   --gap-card-lg: 1rem; /* 16px */
 
   /* Default aliases */
@@ -71,7 +71,7 @@
   --gap-card-md: 0.75rem; /* 12px */
 
   --space-card-x-lg: 1.5rem; /* 24px */
-  --space-card-y-lg: 1.25rem; /* 20px */
+  --space-card-y-lg: 1.5rem; /* 24px - matches p-6 for desktop */
   --gap-card-lg: 1rem; /* 16px */
 
   --space-card-x: var(--space-card-x-md);

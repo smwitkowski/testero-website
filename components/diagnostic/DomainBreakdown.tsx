@@ -87,7 +87,7 @@ export const DomainBreakdown: React.FC<DomainBreakdownProps> = ({
           }}
           tabIndex={onDomainClick ? 0 : -1}
           className={cn(
-            "rounded-lg border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 transition-colors",
+            "rounded-lg border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 md:p-6 transition-colors",
             "hover:bg-[color:var(--surface-subtle)]",
             onDomainClick && "cursor-pointer"
           )}

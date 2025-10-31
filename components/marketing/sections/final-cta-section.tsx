@@ -96,7 +96,7 @@ export function FinalCtaSection() {
         {/* Enhanced CTA Container */}
         <div className="mx-auto max-w-lg pt-6">
           <motion.div
-            className="rounded-xl border border-[color:var(--tone-accent-border)] bg-[color:var(--surface-elevated)] p-6 shadow-xl md:p-8"
+            className="rounded-xl border border-[color:var(--tone-accent-border)] bg-[color:var(--surface-elevated)] p-4 md:p-6 shadow-xl"
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5 }}

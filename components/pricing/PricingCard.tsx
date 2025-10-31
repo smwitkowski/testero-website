@@ -118,7 +118,7 @@ export function PricingCard({
         </div>
 
         {tier.highlighted && tier.highlighted.length > 0 ? (
-          <div className="space-y-2 rounded-lg border border-accent/30 bg-accent/5 p-4">
+          <div className="space-y-2 rounded-lg border border-accent/30 bg-accent/5 p-4 md:p-6">
             {tier.highlighted.map((feature) => (
               <div key={feature} className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 flex-shrink-0 text-accent" aria-hidden="true" />

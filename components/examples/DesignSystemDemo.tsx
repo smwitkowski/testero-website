@@ -191,14 +191,14 @@ export const DesignSystemDemo: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className={cn(
-            "bg-white p-6 rounded-lg border border-slate-200 shadow"
+            "bg-white p-4 md:p-6 rounded-lg border border-slate-200 shadow"
           )}>
             <h3 className="text-lg font-semibold mb-2">Default Card</h3>
             <p>This is a standard card with default styling.</p>
           </div>
           
           <div className={cn(
-            "bg-white p-6 rounded-lg border border-slate-200",
+            "bg-white p-4 md:p-6 rounded-lg border border-slate-200",
             "shadow-lg"
           )}>
             <h3 className="text-lg font-semibold mb-2">Elevated Card</h3>
@@ -206,7 +206,7 @@ export const DesignSystemDemo: React.FC = () => {
           </div>
           
           <div className={cn(
-            "bg-white p-6 rounded-lg border border-slate-200",
+            "bg-white p-4 md:p-6 rounded-lg border border-slate-200",
             "transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
           )}>
             <h3 className="text-lg font-semibold mb-2">Interactive Card</h3>
