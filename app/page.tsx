@@ -141,6 +141,7 @@ export default function Home() {
                   size="lg"
                   tone="accent"
                   className="w-full sm:w-auto text-lg"
+                  aria-label="Try free diagnostic test to assess your readiness"
                 >
                   <Link href="/diagnostic">Try Free Diagnostic</Link>
                 </Button>
@@ -152,6 +153,7 @@ export default function Home() {
                   className="w-full sm:w-auto text-lg"
                   iconRight={<ArrowRight className="h-5 w-5" />}
                   onClick={() => handlePricingClick("hero_secondary")}
+                  aria-label="View pricing plans for Testero"
                 >
                   <Link href="/pricing">View Pricing Plans</Link>
                 </Button>

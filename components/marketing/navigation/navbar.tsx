@@ -10,6 +10,7 @@ const navigationItems = [
   { name: 'Home', href: '/' },
   { name: 'Content Hub', href: '/content' },
   { name: 'Blog', href: '/blog' },
+  { name: 'Pricing', href: '/pricing' },
   { name: 'FAQ', href: '/faq' },
   // Design System link removed
   // Resources dropdown temporarily removed until pages are created
@@ -137,14 +138,16 @@ const Navbar = () => {
           ) : (
             <>
               <Link
-                href="/waitlist"
+                href="/signup"
                 className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                aria-label="Get started with Testero - Sign up for an account"
               >
-                Join Waitlist
+                Get Started
               </Link>
               <Link
                 href="/login"
                 className="text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                aria-label="Login to your Testero account"
               >
                 Login
               </Link>
@@ -202,16 +205,18 @@ const Navbar = () => {
               ) : (
                 <>
                   <Link
-                    href="/waitlist"
+                    href="/signup"
                     className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    aria-label="Get started with Testero - Sign up for an account"
                   >
-                    Join Waitlist
+                    Get Started
                   </Link>
                   <Link
                     href="/login"
                     className="text-base font-medium text-center text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    aria-label="Login to your Testero account"
                   >
                     Login
                   </Link>
