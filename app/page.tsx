@@ -141,9 +141,9 @@ export default function Home() {
                   size="lg"
                   tone="accent"
                   className="w-full sm:w-auto text-lg"
-                  aria-label="Get started with Testero - Sign up for an account"
+                  aria-label="Try free diagnostic test to assess your readiness"
                 >
-                  <Link href="/signup">Get Started</Link>
+                  <Link href="/diagnostic">Try Free Diagnostic</Link>
                 </Button>
                 <Button 
                   asChild 
