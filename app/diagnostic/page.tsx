@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { ArrowRight, Target, BarChart3, BookOpen } from "lucide-react";
+import { ArrowRight, Target, BarChart3, BookOpen, Info, AlertCircle } from "lucide-react";
 
 interface ExamTypeOption {
   name: string; // This will be the value sent to the API (e.g., "Google Professional ML Engineer")
@@ -317,7 +317,9 @@ const DiagnosticStartPage = () => {
           {!user && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 md:p-6">
               <p className="text-sm text-blue-700 m-0">
-                ?? <strong>No signup required!</strong> Take the diagnostic anonymously and get instant results.
+                <Info className="inline w-4 h-4 mr-1 -mt-0.5" aria-hidden="true" />
+                <span className="sr-only">Information: </span>
+                <strong>No signup required!</strong> Take the diagnostic anonymously and get instant results.
                 Create an account later to save your progress and access personalized study plans.
               </p>
             </div>
@@ -385,7 +387,9 @@ const DiagnosticStartPage = () => {
             </Button>
             {error && (
               <div className="text-red-600 text-sm mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                ?? {error}
+                <AlertCircle className="inline w-4 h-4 mr-1 -mt-0.5" aria-hidden="true" />
+                <span className="sr-only">Error: </span>
+                {error}
               </div>
             )}
           </div>
