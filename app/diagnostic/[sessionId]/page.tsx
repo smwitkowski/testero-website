@@ -318,9 +318,9 @@ const DiagnosticSessionPage = () => {
               Your diagnostic session has expired or could not be found. This can happen if:
             </p>
             <ul className="text-slate-600 mb-6 space-y-1">
-              <li>? The session expired due to inactivity</li>
-              <li>? The server was restarted during development</li>
-              <li>? The session ID is invalid</li>
+              <li>The session expired due to inactivity</li>
+              <li>The server was restarted during development</li>
+              <li>The session ID is invalid</li>
             </ul>
             <p>Please start a new diagnostic test to continue.</p>
           </div>
