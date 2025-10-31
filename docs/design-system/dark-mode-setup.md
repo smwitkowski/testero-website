@@ -204,7 +204,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider
       attribute="class"
-      defaultTheme="system"
+      defaultTheme="light"
       enableSystem
       storageKey="ui-theme"
       disableTransitionOnChange
@@ -357,3 +357,21 @@ export function HeaderActions() {
 3. Remove `<Providers>` from `app/layout.tsx` and revert theme-related class names.
 4. Delete the `<ThemeToggle />` usages from navigation and any other placements.
 5. Restore `darkMode` in `tailwind.config.ts` if it must return to the previous configuration.
+
+## 10. Accent Tone Color System
+
+The design system uses a unified accent color system for CTAs and interactive elements:
+
+### Color Tokens
+
+- `--tone-accent`: Brand orange color (orange-500 in light mode, orange-400 in dark mode)
+- `--tone-accent-foreground`: White text for high contrast on orange backgrounds
+
+### Button Variants with Accent Tone
+
+- **Solid** (`variant="solid" tone="accent"`): Orange background with white text - use for primary CTAs
+- **Outline** (`variant="outline" tone="accent"`): Orange border and text with orange-tinted hover - use for secondary CTAs
+- **Ghost** (`variant="ghost" tone="accent"`): Orange text with orange-tinted hover - use for tertiary actions
+- **Soft** (`variant="soft" tone="accent"`): Light orange background with orange text - use for subtle emphasis
+
+All accent tone variants automatically adapt to light/dark themes for optimal contrast.

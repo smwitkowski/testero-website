@@ -25,6 +25,8 @@ import { PricingCard } from "@/components/pricing/PricingCard";
 import { ComparisonTable } from "@/components/pricing/ComparisonTable";
 import { Container, Section } from "@/components/patterns";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import {
   SUBSCRIPTION_TIERS,
   EXAM_PACKAGES,
@@ -462,21 +464,26 @@ export default function PricingPage() {
             Join thousands of professionals who achieved their certification goals with Testero
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={() => router.push("/signup")}
-              className="px-8 py-4 bg-white text-blue-600 font-bold rounded-lg hover:bg-gray-100 transition-colors"
+            <Button
+              asChild
+              size="lg"
+              tone="accent"
+              className="text-lg"
             >
-              Start Free Diagnostic
-            </button>
-            <button
+              <Link href="/signup">Start Free Diagnostic</Link>
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              tone="accent"
+              className="text-lg"
               onClick={() => {
                 const element = document.getElementById("pricing-cards");
                 element?.scrollIntoView({ behavior: "smooth" });
               }}
-              className="px-8 py-4 bg-blue-700 text-white font-bold rounded-lg hover:bg-blue-800 transition-colors"
             >
               View Pricing Plans
-            </button>
+            </Button>
           </div>
           <div className="mt-8 flex items-center justify-center gap-2 text-white">
             <RefreshCw className="h-5 w-5" />

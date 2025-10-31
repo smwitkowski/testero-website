@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Theme Default**: Changed default theme from "system" to "light" mode for better consistency across all users
+- **CTA Color System**: Unified accent CTA color system to use brand orange (`--tone-accent`) consistently across all button variants. Solid accent buttons now use orange backgrounds with white text (`--tone-accent-foreground`), outline/ghost variants use orange text/borders with orange-tinted hover states, ensuring proper contrast and brand consistency in both light and dark modes
+
 ### Added
 - **Billing Analytics Enhancements**: Added comprehensive analytics tracking properties (`tier_name`, `payment_mode`, `plan_type`) to checkout events (`CHECKOUT_INITIATED`, `CHECKOUT_SESSION_CREATED`, `CHECKOUT_ERROR`) and trial events (`trial_started`) for accurate revenue attribution and conversion tracking (TES-350)
 - **Pricing Analytics Helpers**: Created `lib/pricing/price-utils.ts` with helper functions to extract tier names, payment modes, and plan types from Stripe price IDs

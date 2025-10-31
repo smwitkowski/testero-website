@@ -56,11 +56,11 @@ export const buttonVariantStyles = {
     ].join(' '),
     accent: [
       toneFocusRing.accent,
-      'data-[variant=solid]:bg-accent data-[variant=solid]:text-accent-foreground data-[variant=solid]:hover:bg-accent/90',
-      'data-[variant=soft]:bg-accent/15 data-[variant=soft]:text-accent data-[variant=soft]:hover:bg-accent/20 data-[variant=soft]:ring-accent/30',
-      'data-[variant=outline]:border-accent data-[variant=outline]:text-accent data-[variant=outline]:hover:bg-accent/10',
-      'data-[variant=ghost]:text-accent data-[variant=ghost]:hover:bg-accent/10',
-      'data-[variant=link]:text-accent data-[variant=link]:hover:text-accent/80',
+      'data-[variant=solid]:bg-[color:var(--tone-accent)] data-[variant=solid]:text-[color:var(--tone-accent-foreground)] data-[variant=solid]:hover:bg-[color:var(--tone-accent)]/90',
+      'data-[variant=soft]:bg-accent/15 data-[variant=soft]:text-[color:var(--tone-accent)] data-[variant=soft]:hover:bg-accent/20 data-[variant=soft]:ring-[color:var(--tone-accent)]/30',
+      'data-[variant=outline]:border-[color:var(--tone-accent)] data-[variant=outline]:text-[color:var(--tone-accent)] data-[variant=outline]:hover:bg-[color:var(--tone-accent)]/10',
+      'data-[variant=ghost]:text-[color:var(--tone-accent)] data-[variant=ghost]:hover:bg-[color:var(--tone-accent)]/10',
+      'data-[variant=link]:text-[color:var(--tone-accent)] data-[variant=link]:hover:text-[color:var(--tone-accent)]/80',
     ].join(' '),
     success: [
       toneFocusRing.success,

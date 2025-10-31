@@ -12,20 +12,10 @@ test("theme toggle switches between light and dark themes", async ({ page }) => 
   });
   await page.goto("/");
 
-  const initialPrefersDark = await page.evaluate(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return false;
-    }
-
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
-  });
-
   const initialHasDark = await getHtmlHasDark(page);
 
-  // Ensure initial state aligns with preference when using system theme
-  if (initialPrefersDark) {
-    expect(initialHasDark).toBe(true);
-  }
+  // Default theme is light, so initial state should be light (no dark class)
+  expect(initialHasDark).toBe(false);
 
   const toggle = page.getByRole("button", { name: TOGGLE_NAME });
 

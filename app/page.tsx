@@ -9,7 +9,6 @@ import Link from "next/link";
 import { StaggeredText } from "@/components/marketing/effects/staggered-text";
 import { BenefitsSectionSkeleton } from "@/components/marketing/sections/benefits-section";
 import { LampContainer } from "@/components/marketing/effects/lamp-effect";
-import { EnhancedSocialProof } from "@/components/marketing/sections/enhanced-social-proof";
 import { TestimonialCarousel } from "@/components/marketing/sections/testimonial-carousel";
 import { Button } from "@/components/ui/button";
 import { JsonLd } from "./page.metadata";
@@ -63,7 +62,6 @@ function useTrackSectionView(sectionName: string, loadThreshold = 0.1) {
 }
 
 export default function Home() {
-  const { ref: socialProofRef, shouldLoad: loadSocialProof } = useTrackSectionView("social_proof");
   const { ref: benefitsRef, shouldLoad: loadBenefits } = useTrackSectionView("benefits");
   const { ref: pricingPreviewRef, shouldLoad: loadPricingPreview } =
     useTrackSectionView("pricing_preview");
@@ -143,13 +141,19 @@ export default function Home() {
                   size="lg"
                   tone="accent"
                   className="w-full sm:w-auto text-lg"
+                >
+                  <Link href="/diagnostic">Try Free Diagnostic</Link>
+                </Button>
+                <Button 
+                  asChild 
+                  variant="outline" 
+                  tone="accent" 
+                  size="lg" 
+                  className="w-full sm:w-auto text-lg"
                   iconRight={<ArrowRight className="h-5 w-5" />}
-                  onClick={() => handlePricingClick("hero_primary")}
+                  onClick={() => handlePricingClick("hero_secondary")}
                 >
                   <Link href="/pricing">View Pricing Plans</Link>
-                </Button>
-                <Button asChild variant="solid" tone="neutral" size="lg" className="w-full sm:w-auto text-lg">
-                  <Link href="/diagnostic">Try Free Diagnostic</Link>
                 </Button>
               </div>
               <p className="text-sm text-white/80 mt-4 text-center">
@@ -198,11 +202,6 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </section>
-
-        {/* Enhanced Social Proof Section */}
-        <section ref={socialProofRef} aria-labelledby="social-proof-heading">
-          {loadSocialProof ? <EnhancedSocialProof /> : null}
         </section>
 
         {/* Pricing Preview Section */}

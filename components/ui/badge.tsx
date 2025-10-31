@@ -72,7 +72,7 @@ const badgeVariants = cva(
       {
         variant: "soft",
         tone: "accent",
-        class: "bg-accent/10 text-accent ring-accent/20",
+        class: "bg-accent/10 text-[color:var(--tone-accent)] ring-[color:var(--tone-accent)]/20",
       },
       {
         variant: "soft",
@@ -107,7 +107,7 @@ const badgeVariants = cva(
       {
         variant: "outline",
         tone: "accent",
-        class: "text-accent ring-accent/40",
+        class: "text-[color:var(--tone-accent)] ring-[color:var(--tone-accent)]/40",
       },
       {
         variant: "outline",
@@ -142,7 +142,7 @@ const badgeVariants = cva(
       {
         variant: "ghost",
         tone: "accent",
-        class: "text-accent hover:bg-accent/10",
+        class: "text-[color:var(--tone-accent)] hover:bg-accent/10",
       },
       {
         variant: "ghost",
