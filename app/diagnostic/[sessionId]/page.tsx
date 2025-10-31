@@ -290,7 +290,7 @@ const DiagnosticSessionPage = () => {
     // Access denied
     if (error === "access_denied_to_session") {
       return (
-        <main className="max-w-2xl mx-auto my-8 p-6 border border-slate-200 rounded-lg">
+        <main className="max-w-2xl mx-auto my-8 p-4 md:p-6 border border-slate-200 rounded-lg">
           <h1 className="text-xl font-semibold mb-4">Access Denied</h1>
           <div className="mb-6">
             <p className="text-red-600 mb-4">
@@ -311,16 +311,16 @@ const DiagnosticSessionPage = () => {
     // Session not found
     if (error === "session_not_found") {
       return (
-        <main className="max-w-2xl mx-auto my-8 p-6 border border-slate-200 rounded-lg">
+        <main className="max-w-2xl mx-auto my-8 p-4 md:p-6 border border-slate-200 rounded-lg">
           <h1 className="text-xl font-semibold mb-4">Session Not Found</h1>
           <div className="mb-6">
             <p className="text-red-600 mb-4">
               Your diagnostic session has expired or could not be found. This can happen if:
             </p>
             <ul className="text-slate-600 mb-6 space-y-1">
-              <li>• The session expired due to inactivity</li>
-              <li>• The server was restarted during development</li>
-              <li>• The session ID is invalid</li>
+              <li>? The session expired due to inactivity</li>
+              <li>? The server was restarted during development</li>
+              <li>? The session ID is invalid</li>
             </ul>
             <p>Please start a new diagnostic test to continue.</p>
           </div>
@@ -337,7 +337,7 @@ const DiagnosticSessionPage = () => {
     // Session expired
     if (error === "session_expired") {
       return (
-        <main className="max-w-2xl mx-auto my-8 p-6 border border-slate-200 rounded-lg">
+        <main className="max-w-2xl mx-auto my-8 p-4 md:p-6 border border-slate-200 rounded-lg">
           <h1 className="text-xl font-semibold mb-4">Session Expired</h1>
           <div className="mb-6">
             <p className="text-red-600 mb-4">
@@ -359,7 +359,7 @@ const DiagnosticSessionPage = () => {
     // Authentication required
     if (error === "authentication_required") {
       return (
-        <main className="max-w-2xl mx-auto my-8 p-6 border border-slate-200 rounded-lg">
+        <main className="max-w-2xl mx-auto my-8 p-4 md:p-6 border border-slate-200 rounded-lg">
           <h1 className="text-xl font-semibold mb-4">Authentication Required</h1>
           <div className="mb-6">
             <p className="text-red-600 mb-4">
@@ -427,7 +427,7 @@ const DiagnosticSessionPage = () => {
           {/* Left rail - Desktop only */}
           <aside className="hidden lg:block lg:col-span-3 space-y-4 sticky top-20">
             {/* Exam meta card */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm">
               <h3 className="text-sm font-semibold text-slate-900 mb-2">Progress</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -448,7 +448,7 @@ const DiagnosticSessionPage = () => {
             </div>
 
             {/* Flag for review card */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm">
               <h3 className="text-sm font-semibold text-slate-900 mb-2">Review</h3>
               <button
                 onClick={() => setIsFlagged(!isFlagged)}
@@ -458,7 +458,7 @@ const DiagnosticSessionPage = () => {
                     : 'bg-white text-slate-600 border border-slate-300 hover:border-slate-400'
                 }`}
               >
-                {isFlagged ? '🚩 Flagged' : 'Flag for review'}
+                {isFlagged ? '?? Flagged' : 'Flag for review'}
               </button>
               <p className="text-xs text-slate-500 mt-2">
                 Review all flagged questions before final submission.
@@ -467,7 +467,7 @@ const DiagnosticSessionPage = () => {
 
             {/* Submission status card - only show if there are errors or retries */}
             {(submissionErrors.size > 0 || retryQueue.length > 0) && (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 md:p-6 shadow-sm">
                 <h3 className="text-sm font-semibold text-amber-800 mb-2">Submission Status</h3>
                 {submissionErrors.size > 0 && (
                   <div className="mb-2">
@@ -493,7 +493,7 @@ const DiagnosticSessionPage = () => {
           {/* Main column */}
           <div className="col-span-12 lg:col-span-9">
             {/* Question card */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm">
               <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-6">
                 Diagnostic Assessment
               </h2>

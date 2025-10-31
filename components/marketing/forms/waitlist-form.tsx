@@ -349,7 +349,7 @@ export function WaitlistForm({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
             key="success"
-            className="rounded-lg border border-[color:var(--tone-success)] bg-[color:var(--tone-success-surface)] p-6 text-center"
+            className="rounded-lg border border-[color:var(--tone-success)] bg-[color:var(--tone-success-surface)] p-4 md:p-6 text-center"
             role="status"
             aria-live="polite"
           >

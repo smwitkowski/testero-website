@@ -47,7 +47,7 @@ const SocialProofCard: React.FC<SocialProofCardProps> = ({
   return (
     <article
       className={cn(
-        'rounded-lg border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 sm:p-6 shadow-md',
+        'rounded-lg border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 md:p-6 shadow-md',
         'transform transition-all duration-300',
         'hover:-translate-y-1 hover:shadow-lg'
       )}
@@ -187,7 +187,7 @@ export function SocialProofSection() {
             animationDelay: `${duration.fast * 6}ms`
           }}
         >
-          <div className="rounded-xl border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 shadow-md sm:p-6">
+          <div className="rounded-xl border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 md:p-6 shadow-md">
           <h3 className="sr-only">Customer Testimonial</h3>
           <blockquote className="text-base italic text-muted-foreground sm:text-lg">
             &quot;The diagnostic test immediately showed me my weak areas in Google Cloud. The practice questions with detailed explanations helped me understand concepts I was struggling with. Great platform!&quot;

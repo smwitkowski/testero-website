@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Card Padding Standardization**: Standardized card padding across the site to use responsive design tokens (`p-4 md:p-6` = 16px mobile, 24px desktop). Updated Card component, diagnostic pages, dashboard components, and marketing sections to use consistent spacing following design system scale (--space-md for mobile, --space-lg for desktop)
 - **Navigation CTAs**: Replaced "Join Waitlist" CTAs in navigation (desktop and mobile) with "Get Started" button pointing to `/signup` for standard SaaS sign-up flow
 - **Navigation Menu**: Added "Pricing" link to main navigation menu to support purchase decisions as per SaaS best practices
 - **Theme Default**: Changed default theme from "system" to "light" mode for better consistency across all users

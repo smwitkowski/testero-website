@@ -315,9 +315,9 @@ const DiagnosticStartPage = () => {
 
         <CardContent className="space-y-6">
           {!user && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 md:p-6">
               <p className="text-sm text-blue-700 m-0">
-                💡 <strong>No signup required!</strong> Take the diagnostic anonymously and get instant results.
+                ?? <strong>No signup required!</strong> Take the diagnostic anonymously and get instant results.
                 Create an account later to save your progress and access personalized study plans.
               </p>
             </div>
@@ -385,22 +385,22 @@ const DiagnosticStartPage = () => {
             </Button>
             {error && (
               <div className="text-red-600 text-sm mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                ⚠️ {error}
+                ?? {error}
               </div>
             )}
           </div>
 
           <div className="border-t border-slate-200 pt-6 mt-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-slate-50 rounded-lg">
+              <div className="text-center p-4 md:p-6 bg-slate-50 rounded-lg">
                 <BarChart3 className="w-5 h-5 mx-auto mb-2 text-slate-600" />
                 <p className="text-sm text-slate-700 font-medium">Instant score</p>
               </div>
-              <div className="text-center p-4 bg-slate-50 rounded-lg">
+              <div className="text-center p-4 md:p-6 bg-slate-50 rounded-lg">
                 <Target className="w-5 h-5 mx-auto mb-2 text-slate-600" />
                 <p className="text-sm text-slate-700 font-medium">Find weak areas</p>
               </div>
-              <div className="text-center p-4 bg-slate-50 rounded-lg">
+              <div className="text-center p-4 md:p-6 bg-slate-50 rounded-lg">
                 <BookOpen className="w-5 h-5 mx-auto mb-2 text-slate-600" />
                 <p className="text-sm text-slate-700 font-medium">Get a study plan</p>
               </div>

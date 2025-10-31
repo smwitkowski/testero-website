@@ -240,7 +240,7 @@ export const StudyRecommendations: React.FC<StudyRecommendationsProps> = ({
             <div
               key={index}
               data-testid="recommendation-item"
-              className={cn("rounded-lg border p-4", prioritySurfaces[rec.priority])}
+              className={cn("rounded-lg border p-4 md:p-6", prioritySurfaces[rec.priority])}
             >
               <div className="flex items-start justify-between mb-2">
                 <h5 className={cn("font-semibold", priorityText[rec.priority])}>
@@ -256,7 +256,7 @@ export const StudyRecommendations: React.FC<StudyRecommendationsProps> = ({
               <ul className="space-y-1 text-sm text-muted-foreground">
                 {rec.actionItems.map((item, itemIndex) => (
                   <li key={itemIndex} className="flex items-start">
-                    <span className="mr-2">•</span>
+                    <span className="mr-2">?</span>
                     <span>{item}</span>
                   </li>
                 ))}

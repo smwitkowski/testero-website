@@ -137,7 +137,7 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
         aria-labelledby="upsell-title"
         aria-describedby="upsell-description"
         data-trigger={trigger}
-        className="relative w-full max-w-lg transform rounded-2xl border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-6 opacity-100 shadow-xl transition-all duration-200 sm:p-8"
+        className="relative w-full max-w-lg transform rounded-2xl border border-[color:var(--divider-color)] bg-[color:var(--surface-elevated)] p-4 md:p-6 opacity-100 shadow-xl transition-all duration-200"
         style={{
           animation: isOpen ? 'modalEnter 200ms ease-out' : undefined,
         }}

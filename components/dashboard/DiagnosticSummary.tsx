@@ -76,7 +76,7 @@ export const DiagnosticSummary: React.FC<DiagnosticSummaryProps> = ({
             {sessions.map((session) => (
               <div
                 key={session.id}
-                className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
+                className="flex items-center justify-between p-4 md:p-6 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
               >
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm truncate">
