@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Payment System Assessment**: Comprehensive end-to-end analysis of payment and account management capabilities, including current state analysis, gap identification, architecture diagrams, deployment roadmap, and risk assessment. Generated two detailed reports: `PAYMENT_SYSTEM_ASSESSMENT.md` (technical deep-dive) and `PAYMENT_SYSTEM_SUMMARY.md` (executive summary)
 - **Dashboard Practice Stats**: Dashboard API now computes and returns practice statistics (`totalQuestionsAnswered`, `correctAnswers`, `accuracyPercentage`, `lastPracticeDate`) from `practice_attempts` table. Practice accuracy is integrated into readiness score calculation using 60/40 weighting (60% diagnostic, 40% practice). Uses efficient count-based queries for performance (no row fetching, leverages `practice_attempts_user_answered_at_idx` index).
 - **Practice Attempts Persistence**: Added `practice_attempts` table with RLS (authenticated users can insert and select only their own rows) and indexes for dashboard queries. Submit endpoint now persists minimal attempt row with snapshot of topic and difficulty; failures are logged server-side and do not affect feedback response.
 - **Practice Submit and Dashboard Tests**: Added minimal integration tests for practice submit feedback (`__tests__/api.questions.submit-feedback.test.ts`) verifying POST `/api/questions/submit` returns expected `{ isCorrect, correctOptionKey, explanationText }` structure, and dashboard integration test (`__tests__/api.dashboard.integration.test.ts`) verifying practice stats populate correctly after one attempt and readiness score reflects practice when diagnostic data is present.
@@ -73,27 +74,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Moved
 - Strategic documents to `/docs/strategy/`:
-  - `product-vision.md` → `docs/strategy/product-vision.md`
-  - `metrics-kpis.md` → `docs/strategy/metrics-kpis.md`
-  - `revenue-model.md` → `docs/strategy/revenue-model.md`
-  - `risks-assumptions.md` → `docs/strategy/risks-assumptions.md`
-  - `dashboard_mvp_overview.md` → `docs/strategy/dashboard-mvp-overview.md`
+  - `product-vision.md` ? `docs/strategy/product-vision.md`
+  - `metrics-kpis.md` ? `docs/strategy/metrics-kpis.md`
+  - `revenue-model.md` ? `docs/strategy/revenue-model.md`
+  - `risks-assumptions.md` ? `docs/strategy/risks-assumptions.md`
+  - `dashboard_mvp_overview.md` ? `docs/strategy/dashboard-mvp-overview.md`
 - Deployment guides to `/docs/deployment/`:
-  - `DEPLOYMENT.md` → `docs/deployment/deployment-guide.md`
-  - `STRIPE_SETUP.md` → `docs/deployment/stripe-setup.md`
+  - `DEPLOYMENT.md` ? `docs/deployment/deployment-guide.md`
+  - `STRIPE_SETUP.md` ? `docs/deployment/stripe-setup.md`
 - Development documents to `/docs/development/`:
-  - `system-instructions.md` → `docs/development/ai-system-instructions.md`
+  - `system-instructions.md` ? `docs/development/ai-system-instructions.md`
 - Data files to `/data/seo/`:
-  - `Google Certification Matching Terms Aug 7 2025.csv` → `data/seo/`
+  - `Google Certification Matching Terms Aug 7 2025.csv` ? `data/seo/`
 - Security key to `.local/`:
-  - `github-actions-key.json` → `.local/github-actions-key.json`
+  - `github-actions-key.json` ? `.local/github-actions-key.json`
 - Design system docs to `/docs/design-system/`:
-  - `dark-mode-audit.md` → `docs/design-system/dark-mode-audit.md`
-  - `dark-mode-setup.md` → `docs/design-system/dark-mode-setup.md`
-  - `ds-migration-report.md` → `docs/design-system/migration-report.md`
+  - `dark-mode-audit.md` ? `docs/design-system/dark-mode-audit.md`
+  - `dark-mode-setup.md` ? `docs/design-system/dark-mode-setup.md`
+  - `ds-migration-report.md` ? `docs/design-system/migration-report.md`
 - Payment integration doc to `/docs/deployment/`:
-  - `PAYMENT_INTEGRATION.md` → `docs/deployment/payment-integration.md`
+  - `PAYMENT_INTEGRATION.md` ? `docs/deployment/payment-integration.md`
 - Refactor docs to `/docs/refactors/`:
-  - `pr-008-section-primitive.md` → `docs/refactors/pr-008-section-primitive.md`
+  - `pr-008-section-primitive.md` ? `docs/refactors/pr-008-section-primitive.md`
 - Testing docs to `/docs/testing/`:
-  - `testing-a11y.md` → `docs/testing/accessibility-testing.md`
+  - `testing-a11y.md` ? `docs/testing/accessibility-testing.md`
