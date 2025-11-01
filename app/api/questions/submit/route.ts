@@ -13,6 +13,15 @@ export async function POST(req: Request) {
       );
     }
 
+    // Validate questionId is numeric
+    const questionIdNum = Number(questionId);
+    if (!Number.isFinite(questionIdNum) || !Number.isInteger(questionIdNum)) {
+      return NextResponse.json(
+        { error: "Invalid questionId format." },
+        { status: 400 }
+      );
+    }
+
     // Create server-side Supabase client and check authentication
     const supabase = createServerSupabaseClient();
     const {
@@ -69,17 +78,23 @@ export async function POST(req: Request) {
       .single();
 
     // Best-effort insert to practice_attempts (idempotent within one request execution)
-    try {
-      await supabase.from("practice_attempts").insert({
+    const { data: insertData, error: insertError } = await supabase
+      .from("practice_attempts")
+      .insert({
         user_id: user.id,
-        question_id: Number(questionId),
+        question_id: questionIdNum,
         selected_label: selectedOptionKey,
         is_correct: isCorrect,
         topic: questionMeta?.topic ?? null,
         difficulty: questionMeta?.difficulty ?? null,
       });
-    } catch (error) {
-      console.error("practice_attempts insert failed", error);
+
+    if (insertError) {
+      console.error("practice_attempts insert failed:", {
+        error: insertError,
+        data: insertData,
+        context: { questionId: questionIdNum, userId: user.id },
+      });
     }
 
     return NextResponse.json({

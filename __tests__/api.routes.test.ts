@@ -261,7 +261,10 @@ describe("API routes", () => {
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectQuestionMock });
 
       // Mock practice_attempts insert failure
-      const insertMock = jest.fn().mockRejectedValue(new Error("Database connection failed"));
+      const insertMock = jest.fn().mockResolvedValue({ 
+        data: null, 
+        error: { message: "Database connection failed", code: "23505" } 
+      });
       serverSupabaseMock.from.mockReturnValueOnce({ insert: insertMock });
 
       const req = new Request("http://localhost/api/questions/submit", {

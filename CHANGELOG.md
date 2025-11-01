@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Practice Attempts Persistence**: Added `practice_attempts` table with RLS (authenticated users can insert and select only their own rows) and indexes for dashboard queries. Submit endpoint now persists minimal attempt row with snapshot of topic and difficulty; failures are logged server-side and do not affect feedback response.
 
+### Fixed
+- **Submit Endpoint Error Handling**: Fixed Supabase error handling in practice attempts insert to properly detect and log failures using error response destructuring instead of try-catch
+- **Submit Endpoint Validation**: Added numeric validation for questionId to prevent NaN values in database inserts
+
 ### Changed
 - **Card Padding Standardization**: Standardized card padding across the site to use responsive design tokens (`p-4 md:p-6` = 16px mobile, 24px desktop). Updated Card component, diagnostic pages, dashboard components, and marketing sections to use consistent spacing following design system scale (--space-md for mobile, --space-lg for desktop)
 - **Navigation CTAs**: Replaced "Join Waitlist" CTAs in navigation (desktop and mobile) with "Get Started" button pointing to `/signup` for standard SaaS sign-up flow
