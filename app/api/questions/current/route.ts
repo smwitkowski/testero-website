@@ -1,5 +1,27 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { serializeQuestion } from '@/lib/practice/serialize';
+
+// Question row shape returned from Supabase with explanations inner join
+type QuestionWithExplanation = {
+  id: string;
+  stem: string;
+  explanations: Array<{ id: string }>;
+};
+
+// Sample size for question selection
+const QUESTION_SAMPLE_SIZE = 50;
+
+/**
+ * Calculate deterministic question index for rotation based on user ID and time.
+ * Ensures different users get different questions and the same user gets variety over time.
+ */
+function calculateQuestionIndex(userId: string, questionsLength: number): number {
+  const currentHour = new Date().getHours();
+  const userIdHash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const timeSlot = Math.floor(Date.now() / (1000 * 60 * 10)); // 10-minute slots
+  return (userIdHash + currentHour + timeSlot) % questionsLength;
+}
 
 export async function GET() {
   try {
@@ -18,24 +40,20 @@ export async function GET() {
     // For MVP, we'll implement a simple question rotation without persistence
     // TODO: Implement question tracking when user_question_progress table is properly set up
     
-    // Get all available questions
+    // Get questions that have explanations (inner join filter)
     const { data: questions, error: questionError } = await supabase
       .from('questions')
-      .select('*')
-      .limit(50); // Get a good sample size
+      .select('id, stem, explanations!inner(id)')
+      .limit(QUESTION_SAMPLE_SIZE);
 
     if (questionError || !questions || questions.length === 0) {
-      return NextResponse.json({ error: 'No questions available in the database.' }, { status: 404 });
+      console.info('No eligible questions with explanations for user', { userId: user.id, sampleLimit: QUESTION_SAMPLE_SIZE });
+      return NextResponse.json({ error: 'No eligible questions with explanations.' }, { status: 404 });
     }
 
-    // For now, use a simple rotation based on user ID and current time
-    // This ensures different users get different questions and the same user gets variety over time
-    const userId = user.id;
-    const currentHour = new Date().getHours();
-    const userIdHash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const questionIndex = (userIdHash + currentHour + Math.floor(Date.now() / (1000 * 60 * 10))) % questions.length;
-    
-    const question = questions[questionIndex];
+    // Use deterministic rotation to select a question
+    const questionIndex = calculateQuestionIndex(user.id, questions.length);
+    const question = questions[questionIndex] as QuestionWithExplanation;
 
     // Fetch options for the question
     const { data: options, error: optionsError } = await supabase
@@ -48,11 +66,7 @@ export async function GET() {
     }
 
     // Shape the response
-    return NextResponse.json({
-      id: question.id,
-      question_text: question.stem,
-      options: options || [],
-    });
+    return NextResponse.json(serializeQuestion(question, options || []));
   } catch (error) {
     console.error('Current question API error:', error);
     return NextResponse.json({ 
