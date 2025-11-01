@@ -109,7 +109,8 @@ describe("API routes", () => {
         { id: 7, stem: "q3" },
       ];
       const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
-      const selectMockQ = jest.fn(() => ({ limit: limitMock }));
+      const eqEligibleMock = jest.fn(() => ({ limit: limitMock }));
+      const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
       // Mock the options query
@@ -119,7 +120,8 @@ describe("API routes", () => {
       const selectMockO = jest.fn(() => ({ eq: eqMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
 
-      const res = await currentGET();
+      const req = new NextRequest("http://localhost/api/questions/current");
+      const res = await currentGET(req);
       const data = await res.json();
       expect(res.status).toBe(200);
       expect(data.question_text).toBeDefined();

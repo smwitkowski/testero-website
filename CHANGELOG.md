@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Practice Question Filters**: Added optional query parameters to `GET /api/questions/current`: `topic?`, `difficulty? (1-5)`, `hasExplanation? (default true)`. Filters work together with AND semantics. Always scopes to `is_diagnostic_eligible=true` to leverage partial indexes. Supports filtering by topic and/or difficulty, with `hasExplanation=false` allowing questions without explanations.
 - **Dashboard Practice Stats**: Dashboard API now computes and returns practice statistics (`totalQuestionsAnswered`, `correctAnswers`, `accuracyPercentage`, `lastPracticeDate`) from `practice_attempts` table. Practice accuracy is integrated into readiness score calculation using 60/40 weighting (60% diagnostic, 40% practice). Uses efficient count-based queries for performance (no row fetching, leverages `practice_attempts_user_answered_at_idx` index).
 - **Practice Attempts Persistence**: Added `practice_attempts` table with RLS (authenticated users can insert and select only their own rows) and indexes for dashboard queries. Submit endpoint now persists minimal attempt row with snapshot of topic and difficulty; failures are logged server-side and do not affect feedback response.
 
