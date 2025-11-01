@@ -26,7 +26,7 @@ export async function GET() {
     }
 
     // Return only the IDs
-    const questionIds = questions.map(q => q.id);
+    const questionIds = questions.map(q => String(q.id));
 
     return NextResponse.json({
       questionIds,

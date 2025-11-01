@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Security**: Created `.local/` folder for secure local development files (secrets, keys, etc.)
 
 ### Fixed
+- **QuestionData.id Type Consistency**: Fixed type mismatch between client (expects string) and API (returned numeric) for QuestionData.id. All question and option IDs are now serialized as strings at API boundaries to prevent bigint precision issues and align with client types. Added serializeQuestion helper to ensure consistent ID serialization across all question endpoints
 - **Card Header Spacing**: Fixed excessive vertical spacing under Dashboard "Diagnostic Tests" card header by removing default bottom margin from CardTitle component. Header spacing is now controlled solely by CardHeader padding/gap, ensuring consistent visual rhythm across all dashboard cards (Exam Readiness, Practice Questions, Diagnostic Tests)
 - **Pricing Button State**: Fixed PricingCard component to disable "Get started" button when Stripe price IDs are missing, ensuring consistent behavior with exam package buttons (TES-348)
 - **Stripe Checkout Validation**: Fixed checkout API to validate all 9 price IDs from pricing constants instead of only Pro tier

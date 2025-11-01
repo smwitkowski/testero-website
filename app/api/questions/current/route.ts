@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { serializeQuestion } from '@/lib/practice/serialize';
 
 // Question row shape returned from Supabase with explanations inner join
 type QuestionWithExplanation = {
@@ -65,11 +66,7 @@ export async function GET() {
     }
 
     // Shape the response
-    return NextResponse.json({
-      id: question.id,
-      question_text: question.stem,
-      options: options || [],
-    });
+    return NextResponse.json(serializeQuestion(question, options || []));
   } catch (error) {
     console.error('Current question API error:', error);
     return NextResponse.json({ 
