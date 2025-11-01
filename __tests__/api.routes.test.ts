@@ -109,7 +109,8 @@ describe("API routes", () => {
         { id: 7, stem: "q3" },
       ];
       const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
-      const selectMockQ = jest.fn(() => ({ limit: limitMock }));
+      const eqEligibleMock = jest.fn(() => ({ limit: limitMock }));
+      const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
       // Mock the options query

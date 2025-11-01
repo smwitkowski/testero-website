@@ -23,6 +23,31 @@ function calculateQuestionIndex(userId: string, questionsLength: number): number
   return (userIdHash + currentHour + timeSlot) % questionsLength;
 }
 
+/**
+ * Parse and validate difficulty parameter from query string.
+ * Returns undefined if not provided, or throws validation error.
+ */
+function parseDifficulty(difficultyStr: string | null): number | undefined {
+  if (!difficultyStr) {
+    return undefined;
+  }
+  const difficulty = Number.parseInt(difficultyStr, 10);
+  if (Number.isNaN(difficulty) || difficulty < 1 || difficulty > 5) {
+    throw new Error('Invalid difficulty (must be 1-5)');
+  }
+  return difficulty;
+}
+
+/**
+ * Build select columns string based on hasExplanation flag.
+ * Returns inner join when true (default), regular join when false.
+ */
+function selectColumns(hasExplanation: boolean): string {
+  return hasExplanation 
+    ? 'id, stem, explanations!inner(id)' 
+    : 'id, stem, explanations(id)';
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Parse excludeIds from query parameters (comma-separated list)
@@ -45,14 +70,38 @@ export async function GET(request: NextRequest) {
       }, { status: 401 });
     }
 
-    // For MVP, we'll implement a simple question rotation without persistence
-    // TODO: Implement question tracking when user_question_progress table is properly set up
+    // Parse query parameters
+    const searchParams = request.nextUrl.searchParams;
+    const topic = searchParams.get('topic')?.trim() || undefined;
+    const hasExplanationParam = searchParams.get('hasExplanation');
+    const hasExplanation = hasExplanationParam?.toLowerCase() === 'false' ? false : true;
     
-    // Get questions that have explanations (inner join filter)
-    const { data: questions, error: questionError } = await supabase
+    // Validate difficulty parameter
+    let difficulty: number | undefined;
+    try {
+      difficulty = parseDifficulty(searchParams.get('difficulty'));
+    } catch (error) {
+      return NextResponse.json({ 
+        error: error instanceof Error ? error.message : 'Invalid difficulty (must be 1-5)' 
+      }, { status: 400 });
+    }
+
+    // Build query with filters - always apply is_diagnostic_eligible=true
+    let query = supabase
       .from('questions')
-      .select('id, stem, explanations!inner(id)')
-      .limit(QUESTION_SAMPLE_SIZE);
+      .select(selectColumns(hasExplanation))
+      .eq('is_diagnostic_eligible', true);
+
+    // Apply optional filters with AND semantics
+    if (topic) {
+      query = query.eq('topic', topic);
+    }
+    if (difficulty !== undefined) {
+      query = query.eq('difficulty', difficulty);
+    }
+
+    // Execute query with limit
+    const { data: questions, error: questionError } = await query.limit(QUESTION_SAMPLE_SIZE);
 
     if (questionError || !questions || questions.length === 0) {
       console.info('No eligible questions with explanations for user', { userId: user.id, sampleLimit: QUESTION_SAMPLE_SIZE });
@@ -62,12 +111,12 @@ export async function GET(request: NextRequest) {
     // Use deterministic rotation to select a question, but skip excluded IDs
     const startIndex = calculateQuestionIndex(user.id, questions.length);
     let chosenIndex = -1;
-    
+
     // Circular scan from deterministic start index, skipping excluded IDs
     for (let offset = 0; offset < questions.length; offset++) {
       const candidateIndex = (startIndex + offset) % questions.length;
-      const candidateId = String((questions[candidateIndex] as QuestionWithExplanation).id);
-      
+      const candidateId = String((questions[candidateIndex] as unknown as QuestionWithExplanation).id);
+
       if (!excludeIds.has(candidateId)) {
         chosenIndex = candidateIndex;
         break;
@@ -82,7 +131,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const question = questions[chosenIndex] as QuestionWithExplanation;
+    const question = questions[chosenIndex] as unknown as QuestionWithExplanation;
 
     // Fetch options for the question
     const { data: options, error: optionsError } = await supabase

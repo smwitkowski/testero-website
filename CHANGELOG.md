@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Practice Question Filters**: Added optional query parameters to `GET /api/questions/current`: `topic?`, `difficulty? (1-5)`, `hasExplanation? (default true)`. Filters work together with AND semantics. Always scopes to `is_diagnostic_eligible=true` to leverage partial indexes. Supports filtering by topic and/or difficulty, with `hasExplanation=false` allowing questions without explanations.
 - **Question Exclusion Parameter**: `GET /api/questions/current` now supports optional `excludeIds` query parameter (comma-separated list) to skip recently seen questions. When provided, the API performs a deterministic circular scan from the calculated rotation index, skipping excluded IDs. Returns 404 with helpful error message if all candidates are excluded. Practice UI automatically tracks last 7 served question IDs and includes them in `excludeIds` when fetching the next question to avoid immediate repeats.
 - **Dashboard Practice Stats**: Dashboard API now computes and returns practice statistics (`totalQuestionsAnswered`, `correctAnswers`, `accuracyPercentage`, `lastPracticeDate`) from `practice_attempts` table. Practice accuracy is integrated into readiness score calculation using 60/40 weighting (60% diagnostic, 40% practice). Uses efficient count-based queries for performance (no row fetching, leverages `practice_attempts_user_answered_at_idx` index).
 - **Practice Attempts Persistence**: Added `practice_attempts` table with RLS (authenticated users can insert and select only their own rows) and indexes for dashboard queries. Submit endpoint now persists minimal attempt row with snapshot of topic and difficulty; failures are logged server-side and do not affect feedback response.
@@ -74,27 +75,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Moved
 - Strategic documents to `/docs/strategy/`:
-  - `product-vision.md` → `docs/strategy/product-vision.md`
-  - `metrics-kpis.md` → `docs/strategy/metrics-kpis.md`
-  - `revenue-model.md` → `docs/strategy/revenue-model.md`
-  - `risks-assumptions.md` → `docs/strategy/risks-assumptions.md`
-  - `dashboard_mvp_overview.md` → `docs/strategy/dashboard-mvp-overview.md`
+  - `product-vision.md` ? `docs/strategy/product-vision.md`
+  - `metrics-kpis.md` ? `docs/strategy/metrics-kpis.md`
+  - `revenue-model.md` ? `docs/strategy/revenue-model.md`
+  - `risks-assumptions.md` ? `docs/strategy/risks-assumptions.md`
+  - `dashboard_mvp_overview.md` ? `docs/strategy/dashboard-mvp-overview.md`
 - Deployment guides to `/docs/deployment/`:
-  - `DEPLOYMENT.md` → `docs/deployment/deployment-guide.md`
-  - `STRIPE_SETUP.md` → `docs/deployment/stripe-setup.md`
+  - `DEPLOYMENT.md` ? `docs/deployment/deployment-guide.md`
+  - `STRIPE_SETUP.md` ? `docs/deployment/stripe-setup.md`
 - Development documents to `/docs/development/`:
-  - `system-instructions.md` → `docs/development/ai-system-instructions.md`
+  - `system-instructions.md` ? `docs/development/ai-system-instructions.md`
 - Data files to `/data/seo/`:
-  - `Google Certification Matching Terms Aug 7 2025.csv` → `data/seo/`
+  - `Google Certification Matching Terms Aug 7 2025.csv` ? `data/seo/`
 - Security key to `.local/`:
-  - `github-actions-key.json` → `.local/github-actions-key.json`
+  - `github-actions-key.json` ? `.local/github-actions-key.json`
 - Design system docs to `/docs/design-system/`:
-  - `dark-mode-audit.md` → `docs/design-system/dark-mode-audit.md`
-  - `dark-mode-setup.md` → `docs/design-system/dark-mode-setup.md`
-  - `ds-migration-report.md` → `docs/design-system/migration-report.md`
+  - `dark-mode-audit.md` ? `docs/design-system/dark-mode-audit.md`
+  - `dark-mode-setup.md` ? `docs/design-system/dark-mode-setup.md`
+  - `ds-migration-report.md` ? `docs/design-system/migration-report.md`
 - Payment integration doc to `/docs/deployment/`:
-  - `PAYMENT_INTEGRATION.md` → `docs/deployment/payment-integration.md`
+  - `PAYMENT_INTEGRATION.md` ? `docs/deployment/payment-integration.md`
 - Refactor docs to `/docs/refactors/`:
-  - `pr-008-section-primitive.md` → `docs/refactors/pr-008-section-primitive.md`
+  - `pr-008-section-primitive.md` ? `docs/refactors/pr-008-section-primitive.md`
 - Testing docs to `/docs/testing/`:
-  - `testing-a11y.md` → `docs/testing/accessibility-testing.md`
+  - `testing-a11y.md` ? `docs/testing/accessibility-testing.md`
