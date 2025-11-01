@@ -137,32 +137,57 @@ export async function GET() {
       }
     }
 
-    // NOTE: Currently, the practice question submit API doesn't save user answers to any table.
-    // It only returns whether the answer was correct without persisting the data.
-    // Until practice answer persistence is implemented, we'll show empty practice data.
-    
-    // For now, return empty practice data (this is correct behavior given current implementation)
-    const practiceData: Array<{is_correct: boolean | null, answered_at: string | null}> = [];
-    
-    // TODO: Future enhancement - implement practice answer persistence in the question submit API
-    // When implemented, this code can fetch from the appropriate table:
-    // const { data: practiceData, error: practiceError } = await supabase
-    //   .from('user_answers') // or appropriate table
-    //   .select('is_correct, answered_at')
-    //   .eq('user_id', user.id)
-    //   .order('answered_at', { ascending: false });
+    // Fetch practice statistics from practice_attempts table
+    // Use count queries for efficiency (no need to fetch all rows)
+    // Leverages practice_attempts_user_answered_at_idx index for optimal performance
+    // Count queries compute totals across all attempts but only return the count, not the data
+    const { count: totalAttempts, error: totalError } = await supabase
+      .from('practice_attempts')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id);
+
+    // Error handling: log but don't fail (graceful degradation)
+    // If practice queries fail, we'll return zero stats rather than breaking the dashboard
+    if (totalError) {
+      console.error('Error fetching practice attempts count:', totalError);
+    }
+
+    const { count: correctAttempts, error: correctError } = await supabase
+      .from('practice_attempts')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('is_correct', true);
+
+    if (correctError) {
+      console.error('Error fetching correct practice attempts count:', correctError);
+    }
+
+    // Fetch last practice date (latest answered_at)
+    // Uses limit(1) with maybeSingle() to fetch only the most recent attempt's timestamp
+    // This query leverages the practice_attempts_user_answered_at_idx index
+    const { data: lastRow, error: lastDateError } = await supabase
+      .from('practice_attempts')
+      .select('answered_at')
+      .eq('user_id', user.id)
+      .order('answered_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (lastDateError) {
+      console.error('Error fetching last practice date:', lastDateError);
+    }
 
     // Calculate practice statistics
-    const totalPracticeQuestions = practiceData?.length || 0;
-    const correctPracticeAnswers = practiceData?.filter(p => p.is_correct).length || 0;
-    const practiceAccuracy = totalPracticeQuestions > 0 
-      ? Math.round((correctPracticeAnswers / totalPracticeQuestions) * 100) 
+    const total = totalAttempts || 0;
+    const correct = correctAttempts || 0;
+    const practiceAccuracy = total > 0 
+      ? Math.round((correct / total) * 100) 
       : 0;
-    const lastPracticeDate = practiceData && practiceData.length > 0 ? practiceData[0].answered_at : null;
+    const lastPracticeDate = lastRow?.answered_at ?? null;
 
     const practiceStats: PracticeStatsSummary = {
-      totalQuestionsAnswered: totalPracticeQuestions,
-      correctAnswers: correctPracticeAnswers,
+      totalQuestionsAnswered: total,
+      correctAnswers: correct,
       accuracyPercentage: practiceAccuracy,
       lastPracticeDate: lastPracticeDate,
     };
@@ -170,7 +195,7 @@ export async function GET() {
     // Calculate readiness score
     const readinessScore = calculateReadinessScore(
       avgDiagnosticScore, 
-      totalPracticeQuestions > 0 ? practiceAccuracy : null
+      total > 0 ? practiceAccuracy : null
     );
 
     // Prepare response
