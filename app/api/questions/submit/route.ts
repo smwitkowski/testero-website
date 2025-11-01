@@ -61,6 +61,27 @@ export async function POST(req: Request) {
       .single();
     const explanationText = explanationRow?.text || "";
 
+    // Fetch question metadata for practice_attempts snapshot
+    const { data: questionMeta } = await supabase
+      .from("questions")
+      .select("topic, difficulty")
+      .eq("id", questionId)
+      .single();
+
+    // Best-effort insert to practice_attempts (idempotent within one request execution)
+    try {
+      await supabase.from("practice_attempts").insert({
+        user_id: user.id,
+        question_id: Number(questionId),
+        selected_label: selectedOptionKey,
+        is_correct: isCorrect,
+        topic: questionMeta?.topic ?? null,
+        difficulty: questionMeta?.difficulty ?? null,
+      });
+    } catch (error) {
+      console.error("practice_attempts insert failed", error);
+    }
+
     return NextResponse.json({
       isCorrect,
       correctOptionKey: correctOption.label,

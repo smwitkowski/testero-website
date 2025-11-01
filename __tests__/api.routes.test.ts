@@ -147,7 +147,7 @@ describe("API routes", () => {
 
   describe("submit answer", () => {
     it("evaluates answer", async () => {
-      serverSupabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 1 } }, error: null });
+      serverSupabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: "user-123" } }, error: null });
       const eqOptMock = jest.fn().mockResolvedValue({
         data: [
           { id: 1, label: "A", is_correct: false },
@@ -162,9 +162,18 @@ describe("API routes", () => {
       const selectExpMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleExpMock })) }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectExpMock });
 
+      // Mock question metadata fetch for practice_attempts
+      const singleQuestionMock = jest.fn().mockResolvedValue({ data: { topic: "Cardiology", difficulty: 3 }, error: null });
+      const selectQuestionMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleQuestionMock })) }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectQuestionMock });
+
+      // Mock practice_attempts insert
+      const insertMock = jest.fn().mockResolvedValue({ data: [{ id: 1 }], error: null });
+      serverSupabaseMock.from.mockReturnValueOnce({ insert: insertMock });
+
       const req = new Request("http://localhost/api/questions/submit", {
         method: "POST",
-        body: JSON.stringify({ questionId: 1, selectedOptionKey: "B" }),
+        body: JSON.stringify({ questionId: "123", selectedOptionKey: "B" }),
         headers: { "Content-Type": "application/json" },
       });
       const res = await submitPOST(req);
@@ -172,6 +181,144 @@ describe("API routes", () => {
       expect(res.status).toBe(200);
       expect(json.isCorrect).toBe(true);
       expect(json.explanationText).toBe("exp");
+
+      // Verify practice_attempts insert was called with correct data
+      expect(insertMock).toHaveBeenCalledWith({
+        user_id: "user-123",
+        question_id: 123,
+        selected_label: "B",
+        is_correct: true,
+        topic: "Cardiology",
+        difficulty: 3,
+      });
+    });
+
+    it("persists attempt with incorrect answer", async () => {
+      serverSupabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: "user-456" } }, error: null });
+      const eqOptMock = jest.fn().mockResolvedValue({
+        data: [
+          { id: 1, label: "A", is_correct: true },
+          { id: 2, label: "B", is_correct: false },
+        ],
+        error: null,
+      });
+      const selectMockO = jest.fn(() => ({ eq: eqOptMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
+
+      const singleExpMock = jest.fn().mockResolvedValue({ data: { text: "explanation" }, error: null });
+      const selectExpMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleExpMock })) }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectExpMock });
+
+      // Mock question metadata fetch
+      const singleQuestionMock = jest.fn().mockResolvedValue({ data: { topic: "Neurology", difficulty: 5 }, error: null });
+      const selectQuestionMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleQuestionMock })) }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectQuestionMock });
+
+      // Mock practice_attempts insert
+      const insertMock = jest.fn().mockResolvedValue({ data: [{ id: 2 }], error: null });
+      serverSupabaseMock.from.mockReturnValueOnce({ insert: insertMock });
+
+      const req = new Request("http://localhost/api/questions/submit", {
+        method: "POST",
+        body: JSON.stringify({ questionId: "456", selectedOptionKey: "B" }),
+        headers: { "Content-Type": "application/json" },
+      });
+      const res = await submitPOST(req);
+      const json = await res.json();
+      expect(res.status).toBe(200);
+      expect(json.isCorrect).toBe(false);
+
+      // Verify practice_attempts insert was called with incorrect answer
+      expect(insertMock).toHaveBeenCalledWith({
+        user_id: "user-456",
+        question_id: 456,
+        selected_label: "B",
+        is_correct: false,
+        topic: "Neurology",
+        difficulty: 5,
+      });
+    });
+
+    it("returns feedback even if practice_attempts insert fails", async () => {
+      serverSupabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: "user-789" } }, error: null });
+      const eqOptMock = jest.fn().mockResolvedValue({
+        data: [
+          { id: 1, label: "A", is_correct: false },
+          { id: 2, label: "B", is_correct: true },
+        ],
+        error: null,
+      });
+      const selectMockO = jest.fn(() => ({ eq: eqOptMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
+
+      const singleExpMock = jest.fn().mockResolvedValue({ data: { text: "exp" }, error: null });
+      const selectExpMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleExpMock })) }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectExpMock });
+
+      // Mock question metadata fetch
+      const singleQuestionMock = jest.fn().mockResolvedValue({ data: { topic: "Pulmonology", difficulty: 2 }, error: null });
+      const selectQuestionMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleQuestionMock })) }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectQuestionMock });
+
+      // Mock practice_attempts insert failure
+      const insertMock = jest.fn().mockRejectedValue(new Error("Database connection failed"));
+      serverSupabaseMock.from.mockReturnValueOnce({ insert: insertMock });
+
+      const req = new Request("http://localhost/api/questions/submit", {
+        method: "POST",
+        body: JSON.stringify({ questionId: "789", selectedOptionKey: "B" }),
+        headers: { "Content-Type": "application/json" },
+      });
+      const res = await submitPOST(req);
+      const json = await res.json();
+      expect(res.status).toBe(200);
+      expect(json.isCorrect).toBe(true);
+      expect(json.explanationText).toBe("exp");
+    });
+
+    it("handles missing question metadata gracefully", async () => {
+      serverSupabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: "user-999" } }, error: null });
+      const eqOptMock = jest.fn().mockResolvedValue({
+        data: [
+          { id: 1, label: "A", is_correct: true },
+        ],
+        error: null,
+      });
+      const selectMockO = jest.fn(() => ({ eq: eqOptMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
+
+      const singleExpMock = jest.fn().mockResolvedValue({ data: null, error: null });
+      const selectExpMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleExpMock })) }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectExpMock });
+
+      // Mock question metadata fetch returning null
+      const singleQuestionMock = jest.fn().mockResolvedValue({ data: null, error: null });
+      const selectQuestionMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleQuestionMock })) }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectQuestionMock });
+
+      // Mock practice_attempts insert
+      const insertMock = jest.fn().mockResolvedValue({ data: [{ id: 3 }], error: null });
+      serverSupabaseMock.from.mockReturnValueOnce({ insert: insertMock });
+
+      const req = new Request("http://localhost/api/questions/submit", {
+        method: "POST",
+        body: JSON.stringify({ questionId: "999", selectedOptionKey: "A" }),
+        headers: { "Content-Type": "application/json" },
+      });
+      const res = await submitPOST(req);
+      const json = await res.json();
+      expect(res.status).toBe(200);
+      expect(json.isCorrect).toBe(true);
+
+      // Verify practice_attempts insert with null topic/difficulty
+      expect(insertMock).toHaveBeenCalledWith({
+        user_id: "user-999",
+        question_id: 999,
+        selected_label: "A",
+        is_correct: true,
+        topic: null,
+        difficulty: null,
+      });
     });
 
     it("missing fields", async () => {

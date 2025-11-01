@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Practice Attempts Persistence**: Added `practice_attempts` table with RLS (authenticated users can insert and select only their own rows) and indexes for dashboard queries. Submit endpoint now persists minimal attempt row with snapshot of topic and difficulty; failures are logged server-side and do not affect feedback response.
+
 ### Changed
 - **Card Padding Standardization**: Standardized card padding across the site to use responsive design tokens (`p-4 md:p-6` = 16px mobile, 24px desktop). Updated Card component, diagnostic pages, dashboard components, and marketing sections to use consistent spacing following design system scale (--space-md for mobile, --space-lg for desktop)
 - **Navigation CTAs**: Replaced "Join Waitlist" CTAs in navigation (desktop and mobile) with "Get Started" button pointing to `/signup` for standard SaaS sign-up flow
@@ -44,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Security**: Created `.local/` folder for secure local development files (secrets, keys, etc.)
 
 ### Fixed
+- **Card Header Spacing**: Fixed excessive vertical spacing under Dashboard "Diagnostic Tests" card header by removing default bottom margin from CardTitle component. Header spacing is now controlled solely by CardHeader padding/gap, ensuring consistent visual rhythm across all dashboard cards (Exam Readiness, Practice Questions, Diagnostic Tests)
 - **Pricing Button State**: Fixed PricingCard component to disable "Get started" button when Stripe price IDs are missing, ensuring consistent behavior with exam package buttons (TES-348)
 - **Stripe Checkout Validation**: Fixed checkout API to validate all 9 price IDs from pricing constants instead of only Pro tier
 - **One-Time Payments**: Removed subscription-only restriction, allowing users to purchase exam packages even if they have an active subscription
