@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
     // Circular scan from deterministic start index, skipping excluded IDs
     for (let offset = 0; offset < questions.length; offset++) {
       const candidateIndex = (startIndex + offset) % questions.length;
-      const candidateId = String((questions[candidateIndex] as QuestionWithExplanation).id);
+      const candidateId = String((questions[candidateIndex] as unknown as QuestionWithExplanation).id);
 
       if (!excludeIds.has(candidateId)) {
         chosenIndex = candidateIndex;
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const question = questions[chosenIndex] as QuestionWithExplanation;
+    const question = questions[chosenIndex] as unknown as QuestionWithExplanation;
 
     // Fetch options for the question
     const { data: options, error: optionsError } = await supabase
