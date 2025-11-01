@@ -48,8 +48,16 @@ function selectColumns(hasExplanation: boolean): string {
     : 'id, stem, explanations(id)';
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
+    // Parse excludeIds from query parameters (comma-separated list)
+    const excludeIdsParam = request.nextUrl.searchParams.get("excludeIds");
+    const excludeIds = new Set(
+      (excludeIdsParam?.split(",") || [])
+        .map((id) => id.trim())
+        .filter(Boolean)
+    );
+
     // Create server-side Supabase client and check authentication
     const supabase = createServerSupabaseClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -63,7 +71,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Parse query parameters
-    const searchParams = req.nextUrl.searchParams;
+    const searchParams = request.nextUrl.searchParams;
     const topic = searchParams.get('topic')?.trim() || undefined;
     const hasExplanationParam = searchParams.get('hasExplanation');
     const hasExplanation = hasExplanationParam?.toLowerCase() === 'false' ? false : true;
@@ -100,9 +108,30 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'No eligible questions with explanations.' }, { status: 404 });
     }
 
-    // Use deterministic rotation to select a question
-    const questionIndex = calculateQuestionIndex(user.id, questions.length);
-    const question = questions[questionIndex] as unknown as QuestionWithExplanation;
+    // Use deterministic rotation to select a question, but skip excluded IDs
+    const startIndex = calculateQuestionIndex(user.id, questions.length);
+    let chosenIndex = -1;
+
+    // Circular scan from deterministic start index, skipping excluded IDs
+    for (let offset = 0; offset < questions.length; offset++) {
+      const candidateIndex = (startIndex + offset) % questions.length;
+      const candidateId = String((questions[candidateIndex] as QuestionWithExplanation).id);
+
+      if (!excludeIds.has(candidateId)) {
+        chosenIndex = candidateIndex;
+        break;
+      }
+    }
+
+    // If all questions were excluded, return 404
+    if (chosenIndex === -1) {
+      return NextResponse.json(
+        { error: 'No eligible questions available given exclusions.' },
+        { status: 404 }
+      );
+    }
+
+    const question = questions[chosenIndex] as QuestionWithExplanation;
 
     // Fetch options for the question
     const { data: options, error: optionsError } = await supabase
