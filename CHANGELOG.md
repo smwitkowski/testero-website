@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dependencies**: Resolved missing build dependencies (`ts-node`, `prettier`) that were preventing the build process from completing
 
 ### Removed
+- **Claude Code Review Action**: Removed automated Claude code review workflow (`.github/workflows/claude-code-review.yml`) that ran on pull requests
 - **Obsolete Files**: Cleaned up root directory by removing:
   - `0_Code Quality.txt` - GitHub Actions log file
   - `implement/` folder - Temporary task tracking (completed work)
