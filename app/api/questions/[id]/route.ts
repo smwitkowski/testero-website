@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { serializeQuestion } from '@/lib/practice/serialize';
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,13 +46,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Shape the response
-    return NextResponse.json({
-      id: question.id,
-      question_text: question.stem,
-      options: options || [],
-      // Potentially include other question details needed for the page, like explanation if available directly
-      // explanation: question.explanation_text, // Assuming such a field exists
-    });
+    return NextResponse.json(serializeQuestion(question, options || []));
   } catch (error) {
     console.error('Question by ID API error:', error);
     return NextResponse.json({ 

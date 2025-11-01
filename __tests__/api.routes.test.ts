@@ -81,7 +81,11 @@ describe("API routes", () => {
       const res = await listGET();
       expect(res.status).toBe(200);
       const json = await res.json();
-      expect(json.questionIds).toEqual([1, 2]);
+      expect(json.questionIds).toEqual(["1", "2"]);
+      // Assert all IDs are strings
+      json.questionIds.forEach((id: unknown) => {
+        expect(typeof id).toBe("string");
+      });
     });
 
     it("requires auth", async () => {
@@ -120,6 +124,12 @@ describe("API routes", () => {
       expect(res.status).toBe(200);
       expect(data.question_text).toBeDefined();
       expect(data.options.length).toBe(1);
+      // Assert question ID is string
+      expect(typeof data.id).toBe("string");
+      // Assert all option IDs are strings
+      data.options.forEach((option: { id: unknown }) => {
+        expect(typeof option.id).toBe("string");
+      });
     });
   });
 
@@ -133,7 +143,7 @@ describe("API routes", () => {
       const selectMockQ = jest.fn(() => ({ eq: eqMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
-      const eqOptMock = jest.fn().mockResolvedValue({ data: [], error: null });
+      const eqOptMock = jest.fn().mockResolvedValue({ data: [{ id: 10, label: "A", text: "Answer" }], error: null });
       const selectMockO = jest.fn(() => ({ eq: eqOptMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
 
@@ -141,7 +151,13 @@ describe("API routes", () => {
       const res = await idGET(req);
       const json = await res.json();
       expect(res.status).toBe(200);
-      expect(json.id).toBe(9);
+      expect(json.id).toBe("9");
+      // Assert question ID is string
+      expect(typeof json.id).toBe("string");
+      // Assert all option IDs are strings
+      json.options.forEach((option: { id: unknown }) => {
+        expect(typeof option.id).toBe("string");
+      });
     });
   });
 
