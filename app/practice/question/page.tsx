@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   QuestionDisplay,
   QuestionFeedback,
@@ -21,6 +21,8 @@ const PracticeQuestionPage = () => {
   const [feedback, setFeedback] = useState<FeedbackType | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
+  // Track last 7 question IDs to avoid immediate repeats
+  const recentQuestionIds = useRef<string[]>([]);
   const posthog = usePostHog();
   const { user } = useAuth();
 
@@ -39,7 +41,13 @@ const PracticeQuestionPage = () => {
 
     setLoading(true);
     setError(null);
-    fetch("/api/questions/current")
+    
+    // Build URL with excludeIds if we have recent question IDs
+    const url = recentQuestionIds.current.length
+      ? `/api/questions/current?excludeIds=${recentQuestionIds.current.join(",")}`
+      : "/api/questions/current";
+    
+    fetch(url)
       .then(async (res) => {
         if (!res.ok) {
           const errorMessage = await getApiErrorMessage(res);
@@ -51,6 +59,12 @@ const PracticeQuestionPage = () => {
         setQuestion(data);
         setQuestionStartTime(new Date());
         setLoading(false);
+
+        // Update recent question IDs: add new ID to front, remove duplicates, keep last 7
+        recentQuestionIds.current = [
+          data.id,
+          ...recentQuestionIds.current.filter((id) => id !== data.id),
+        ].slice(0, 7);
 
         // Track question loaded
         captureWithDeduplication(posthog, "practice_question_loaded", {
@@ -79,7 +93,12 @@ const PracticeQuestionPage = () => {
     setSubmitError(null);
 
     try {
-      const res = await fetch("/api/questions/current");
+      // Build URL with excludeIds if we have recent question IDs
+      const url = recentQuestionIds.current.length
+        ? `/api/questions/current?excludeIds=${recentQuestionIds.current.join(",")}`
+        : "/api/questions/current";
+      
+      const res = await fetch(url);
       if (!res.ok) {
         const errorMessage = await getApiErrorMessage(res);
         throw new Error(errorMessage);
@@ -87,6 +106,12 @@ const PracticeQuestionPage = () => {
       const data = (await res.json()) as QuestionData;
       setQuestion(data);
       setQuestionStartTime(new Date());
+
+      // Update recent question IDs: add new ID to front, remove duplicates, keep last 7
+      recentQuestionIds.current = [
+        data.id,
+        ...recentQuestionIds.current.filter((id) => id !== data.id),
+      ].slice(0, 7);
 
       // Track new question loaded
       captureWithDeduplication(posthog, "practice_question_loaded", {
