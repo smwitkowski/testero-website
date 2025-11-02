@@ -62,7 +62,9 @@ function setCachedValue(userId: string, value: boolean): void {
   const ttl = value ? POSITIVE_TTL_MS : NEGATIVE_TTL_MS;
   const expiresAt = now + ttl;
 
-  evictIfNeeded();
+  if (!cache.has(userId)) {
+    evictIfNeeded();
+  }
 
   cache.set(userId, { value, expiresAt });
   updateAccessOrder(userId);
