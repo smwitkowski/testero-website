@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Billing Access Gate**: Added server-side subscription access utility (`lib/billing/access.ts`) with `isSubscriber()` and `requireSubscriber()` functions. Includes feature flag support via `BILLING_ENFORCEMENT` env var (`off` or `active_required`), per-user LRU cache with TTL (60s for positive results, 30s for negative), and structured logging/analytics for paywall blocks.
+- **Grace Cookie Support**: Added HMAC-signed cookie utilities (`lib/billing/grace-cookie.ts`) for checkout success grace period. Cookie expires in 15 minutes, uses `PAYWALL_SIGNING_SECRET` for signing, and supports both NextRequest and standard Request objects.
+- **Billing Config**: Added `lib/config/billing.ts` with `getBillingEnforcement()` function to read `BILLING_ENFORCEMENT` environment variable (defaults to `off`).
+- **Gate Analytics Events**: Added analytics events for paywall gate interactions: `gate_viewed`, `gate_cta_clicked`, `gate_dismissed`, `entitlement_check_failed`.
+- **Billing Access Tests**: Added comprehensive unit tests for subscription status checking, TTL caching behavior, feature flag enforcement, and grace cookie integration (`__tests__/billing.access.test.ts`).
+- **Grace Cookie Tests**: Added unit tests for cookie signing/verification, expiration handling, and tamper detection (`__tests__/billing.grace-cookie.test.ts`).
+
+### Changed
 - **Practice Question Filters**: Added optional query parameters to `GET /api/questions/current`: `topic?`, `difficulty? (1-5)`, `hasExplanation? (default true)`. Filters work together with AND semantics. Always scopes to `is_diagnostic_eligible=true` to leverage partial indexes. Supports filtering by topic and/or difficulty, with `hasExplanation=false` allowing questions without explanations.
 - **Question Exclusion Parameter**: `GET /api/questions/current` now supports optional `excludeIds` query parameter (comma-separated list) to skip recently seen questions. When provided, the API performs a deterministic circular scan from the calculated rotation index, skipping excluded IDs. Returns 404 with helpful error message if all candidates are excluded. Practice UI automatically tracks last 7 served question IDs and includes them in `excludeIds` when fetching the next question to avoid immediate repeats.
 - **Dashboard Practice Stats**: Dashboard API now computes and returns practice statistics (`totalQuestionsAnswered`, `correctAnswers`, `accuracyPercentage`, `lastPracticeDate`) from `practice_attempts` table. Practice accuracy is integrated into readiness score calculation using 60/40 weighting (60% diagnostic, 40% practice). Uses efficient count-based queries for performance (no row fetching, leverages `practice_attempts_user_answered_at_idx` index).
