@@ -1,19 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { requireSubscriber } from '@/lib/auth/require-subscriber';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Create server-side Supabase client and check authentication
+    // Premium gate check
+    const block = await requireSubscriber(request, "/api/questions");
+    if (block) return block;
+
+    // Create server-side Supabase client - user may be null if access via grace cookie
     const supabase = createServerSupabaseClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    await supabase.auth.getUser(); // Check auth state (not used but required for Supabase context)
     
-    if (authError || !user) {
-      console.log('Auth check failed in questions list API:', authError?.message);
-      return NextResponse.json({ 
-        error: 'Authentication required. Please log in to access questions.',
-        authError: authError?.message 
-      }, { status: 401 });
-    }
+    // Note: requireSubscriber ensures user is authenticated OR has valid grace cookie
+    // This endpoint doesn't require user.id, so we can proceed without it
 
     // Fetch all question IDs
     const { data: questions, error: questionError } = await supabase

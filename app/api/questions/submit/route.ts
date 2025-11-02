@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { requireSubscriber } from "@/lib/auth/require-subscriber";
 
 export async function POST(req: Request) {
   try {
+    // Premium gate check
+    const block = await requireSubscriber(req, "/api/questions/submit");
+    if (block) return block;
+
     const body = (await req.json()) as { questionId: string; selectedOptionKey: string };
     const { questionId, selectedOptionKey } = body;
 
@@ -22,23 +27,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create server-side Supabase client and check authentication
+    // Create server-side Supabase client - user may be null if access via grace cookie
     const supabase = createServerSupabaseClient();
     const {
       data: { user },
-      error: authError,
     } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      console.log("Auth check failed in question submit API:", authError?.message);
-      return NextResponse.json(
-        {
-          error: "Authentication required. Please log in to submit answers.",
-          authError: authError?.message,
-        },
-        { status: 401 }
-      );
-    }
+    
+    // Note: requireSubscriber ensures user is authenticated OR has valid grace cookie
+    // If user is null (grace cookie), we skip practice_attempts tracking
 
     // Fetch options for the question
     const { data: options, error: optionsError } = await supabase
@@ -77,24 +73,26 @@ export async function POST(req: Request) {
       .eq("id", questionId)
       .single();
 
-    // Best-effort insert to practice_attempts (idempotent within one request execution)
-    const { data: insertData, error: insertError } = await supabase
-      .from("practice_attempts")
-      .insert({
-        user_id: user.id,
-        question_id: questionIdNum,
-        selected_label: selectedOptionKey,
-        is_correct: isCorrect,
-        topic: questionMeta?.topic ?? null,
-        difficulty: questionMeta?.difficulty ?? null,
-      });
+    // Best-effort insert to practice_attempts (only if user is authenticated)
+    if (user) {
+      const { data: insertData, error: insertError } = await supabase
+        .from("practice_attempts")
+        .insert({
+          user_id: user.id,
+          question_id: questionIdNum,
+          selected_label: selectedOptionKey,
+          is_correct: isCorrect,
+          topic: questionMeta?.topic ?? null,
+          difficulty: questionMeta?.difficulty ?? null,
+        });
 
-    if (insertError) {
-      console.error("practice_attempts insert failed:", {
-        error: insertError,
-        data: insertData,
-        context: { questionId: questionIdNum, userId: user.id },
-      });
+      if (insertError) {
+        console.error("practice_attempts insert failed:", {
+          error: insertError,
+          data: insertData,
+          context: { questionId: questionIdNum, userId: user.id },
+        });
+      }
     }
 
     return NextResponse.json({
