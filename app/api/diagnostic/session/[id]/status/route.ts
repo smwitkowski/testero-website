@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getAnonymousSessionIdFromCookie } from '@/lib/auth/anonymous-session-server';
+import { requireSubscriber } from '@/lib/auth/require-subscriber';
 
 export async function GET(req: Request) {
+  // Premium gate check
+  const block = await requireSubscriber(req, "/api/diagnostic/session/[id]/status");
+  if (block) return block;
+
   const supabase = createServerSupabaseClient();
   
   try {

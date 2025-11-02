@@ -6,6 +6,7 @@ import {
 } from "@/lib/auth/anonymous-session-server";
 import { trackDiagnosticCompleteWithCampaign } from "@/lib/analytics/campaign-analytics-integration";
 import { PostHog } from "posthog-node";
+import { requireSubscriber } from "@/lib/auth/require-subscriber";
 
 // Types for better type safety
 
@@ -90,6 +91,10 @@ function validateAnswerRequest(
 // Define a type for questions fetched from the database
 
 export async function GET(req: Request) {
+  // Premium gate check
+  const block = await requireSubscriber(req, "/api/diagnostic");
+  if (block) return block;
+
   const supabase = createServerSupabaseClient();
   await cleanExpiredSessions(supabase); // Clean expired sessions
 
@@ -195,6 +200,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  // Premium gate check
+  const block = await requireSubscriber(req, "/api/diagnostic");
+  if (block) return block;
+
   const supabase = createServerSupabaseClient();
   await cleanExpiredSessions(supabase); // Clean expired sessions
 
