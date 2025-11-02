@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { serializeQuestion } from '@/lib/practice/serialize';
+import { requireSubscriber } from '@/lib/auth/require-subscriber';
 
 export async function GET(request: NextRequest) {
   try {
+    // Premium gate check
+    const block = await requireSubscriber(request, "/api/questions/[id]");
+    if (block) return block;
+
     // Extract ID from the URL path
     const pathParts = request.nextUrl.pathname.split('/');
     const questionId = pathParts[pathParts.length - 1];
@@ -12,17 +17,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Question ID is required.' }, { status: 400 });
     }
 
-    // Create server-side Supabase client and check authentication
+    // Create server-side Supabase client - user may be null if access via grace cookie
     const supabase = createServerSupabaseClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    await supabase.auth.getUser(); // Check auth state (not used but required for Supabase context)
     
-    if (authError || !user) {
-      console.log('Auth check failed in question by ID API:', authError?.message);
-      return NextResponse.json({ 
-        error: 'Authentication required. Please log in to access questions.',
-        authError: authError?.message 
-      }, { status: 401 });
-    }
+    // Note: requireSubscriber ensures user is authenticated OR has valid grace cookie
+    // This endpoint doesn't require user.id, so we can proceed without it
 
     // Fetch the question by ID
     const { data: question, error: questionError } = await supabase

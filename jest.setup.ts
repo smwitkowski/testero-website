@@ -4,6 +4,55 @@ import { toHaveNoViolations } from "jest-axe";
 expect.extend(toHaveNoViolations);
 // All undici and Web API polyfills removed for pure business logic test compatibility.
 
+// Minimal Request polyfill for NextRequest compatibility
+// NextRequest extends Request, so Request must exist
+if (typeof global.Request === "undefined") {
+  // Use a minimal implementation that doesn't conflict with NextRequest
+  global.Request = class Request {
+    readonly headers!: Headers;
+    readonly url!: string;
+    readonly method!: string;
+
+    constructor(input: string | Request, init?: RequestInit) {
+      const url = typeof input === "string" ? input : input.url;
+      const headers = new Headers(init?.headers || (typeof input === "object" && "headers" in input ? input.headers : undefined));
+      const method = init?.method || (typeof input === "object" && "method" in input ? input.method : "GET");
+      
+      // Use Object.defineProperty to make read-only properties
+      Object.defineProperty(this, "url", { value: url, writable: false, enumerable: true });
+      Object.defineProperty(this, "method", { value: method, writable: false, enumerable: true });
+      Object.defineProperty(this, "headers", { value: headers, writable: false, enumerable: true });
+    }
+  } as any;
+}
+
+// Minimal Response polyfill
+if (typeof global.Response === "undefined") {
+  global.Response = class Response {
+    readonly status!: number;
+    readonly statusText!: string;
+    readonly headers!: Headers;
+    readonly body!: ReadableStream | null;
+    readonly bodyUsed!: boolean;
+
+    constructor(body?: BodyInit | null, init?: ResponseInit) {
+      Object.defineProperty(this, "status", { value: init?.status || 200, writable: false });
+      Object.defineProperty(this, "statusText", { value: init?.statusText || "", writable: false });
+      Object.defineProperty(this, "headers", { value: new Headers(init?.headers), writable: false });
+      Object.defineProperty(this, "body", { value: null, writable: false });
+      Object.defineProperty(this, "bodyUsed", { value: false, writable: false });
+    }
+
+    async json() {
+      return {};
+    }
+
+    async text() {
+      return "";
+    }
+  } as any;
+}
+
 import {
   mockRouter,
   mockSearchParams,
