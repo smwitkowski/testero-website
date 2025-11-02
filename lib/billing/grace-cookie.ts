@@ -4,7 +4,7 @@ import { createHmac } from "crypto";
 export const PAYWALL_GRACE_COOKIE = "checkout_grace";
 const GRACE_COOKIE_TTL_SECONDS = 900; // 15 minutes
 
-interface SignedCookie {
+export interface SignedCookie {
   name: string;
   value: string;
   options: {
