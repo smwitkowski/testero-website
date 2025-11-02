@@ -104,7 +104,7 @@ export async function POST(
     const session = await stripeService.createCheckoutSession({
       customerId: customer.id,
       priceId,
-      successUrl: `${siteUrl}/dashboard/billing?success=true`,
+      successUrl: `${siteUrl}/api/billing/checkout/success`,
       cancelUrl: `${siteUrl}/pricing`,
       userId: user.id,
     });

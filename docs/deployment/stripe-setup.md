@@ -15,6 +15,10 @@ NEXT_PUBLIC_STRIPE_PRO_YEARLY=price_your_pro_yearly_id
 
 # Webhook Secret (for production - get from webhook endpoint settings)
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+
+# Grace Cookie Signing Secret (for checkout success grace window)
+# Generate a secure random string (32+ characters recommended)
+PAYWALL_SIGNING_SECRET=your_secure_random_secret_here
 ```
 
 ## Setup Steps

@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { createHmac } from "crypto";
+import type { SerializeOptions } from "cookie";
 
 export const PAYWALL_GRACE_COOKIE = "checkout_grace";
 const GRACE_COOKIE_TTL_SECONDS = 900; // 15 minutes
@@ -7,13 +8,7 @@ const GRACE_COOKIE_TTL_SECONDS = 900; // 15 minutes
 export interface SignedCookie {
   name: string;
   value: string;
-  options: {
-    httpOnly: boolean;
-    secure: boolean;
-    sameSite: "lax";
-    path: string;
-    maxAge: number;
-  };
+  options: SerializeOptions;
 }
 
 /**
@@ -38,7 +33,7 @@ export function signGraceCookie(): SignedCookie {
     value,
     options: {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
       maxAge: GRACE_COOKIE_TTL_SECONDS,
@@ -106,5 +101,48 @@ export function verifyGraceCookie(req: NextRequest | Request): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Get grace cookie value from request
+ */
+export function getGraceCookieValue(req: NextRequest | Request): string | null {
+  if (req instanceof NextRequest) {
+    return req.cookies.get(PAYWALL_GRACE_COOKIE)?.value || null;
+  } else {
+    // Standard Request object - parse cookie header manually
+    const cookieHeader = req.headers.get("cookie");
+    if (cookieHeader) {
+      const cookies = cookieHeader.split(";").map((c) => c.trim().split("="));
+      const cookie = cookies.find(([name]) => name === PAYWALL_GRACE_COOKIE);
+      return cookie?.[1] || null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Check if grace cookie exists in request (regardless of validity)
+ */
+export function hasGraceCookie(req: NextRequest | Request): boolean {
+  return getGraceCookieValue(req) !== null;
+}
+
+/**
+ * Get cookie clearing options
+ * Returns cookie options to clear the grace cookie
+ */
+export function clearGraceCookie(): SignedCookie {
+  return {
+    name: PAYWALL_GRACE_COOKIE,
+    value: "",
+    options: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    },
+  };
 }
 
