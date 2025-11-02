@@ -68,6 +68,7 @@ export const ANALYTICS_EVENTS = {
   CHECKOUT_SESSION_CREATED: "checkout_session_created",
   CHECKOUT_ERROR: "checkout_error",
   BILLING_PORTAL_ACCESSED: "billing_portal_accessed",
+  ENTITLEMENT_CHECK_FAILED: "entitlement_check_failed",
 
   // Pricing
   PRICING_PAGE_VIEWED: "pricing_page_viewed",
