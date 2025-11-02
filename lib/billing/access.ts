@@ -129,7 +129,7 @@ export async function isSubscriber(userId: string): Promise<boolean> {
   return isEntitled;
 }
 
-interface AccessResult {
+export interface AccessResult {
   allowed: boolean;
   code?: string;
   details?: {
