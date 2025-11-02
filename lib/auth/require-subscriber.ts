@@ -55,13 +55,18 @@ function validateGraceCookie(cookieValue: string): GraceCookiePayload | null {
       return null;
     }
 
-    // Verify signature
+    // Verify signature (using timing-safe comparison)
     const payload = Buffer.from(payloadBase64, "base64").toString("utf-8");
     const hmac = crypto.createHmac("sha256", secret);
     hmac.update(payload);
-    const expectedSignature = hmac.digest("hex");
+    const expectedSignature = Buffer.from(hmac.digest("hex"));
+    const actualSignature = Buffer.from(signature, "utf-8");
 
-    if (signature !== expectedSignature) {
+    // Use timing-safe comparison to prevent timing attacks
+    if (
+      expectedSignature.length !== actualSignature.length ||
+      !crypto.timingSafeEqual(expectedSignature, actualSignature)
+    ) {
       return null; // Invalid signature
     }
 
