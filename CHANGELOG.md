@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Gate Analytics Events**: Added analytics events for paywall gate interactions: `gate_viewed`, `gate_cta_clicked`, `gate_dismissed`, `entitlement_check_failed`.
 - **Billing Access Tests**: Added comprehensive unit tests for subscription status checking, TTL caching behavior, feature flag enforcement, and grace cookie integration (`__tests__/billing.access.test.ts`).
 - **Grace Cookie Tests**: Added unit tests for cookie signing/verification, expiration handling, and tamper detection (`__tests__/billing.grace-cookie.test.ts`).
+- **UpgradePrompt Component**: Added minimal premium gate modal component (`components/billing/UpgradePrompt.tsx`) with internal open/close state management. Component accepts optional `featureName` prop and tracks `gate_viewed` on mount, `gate_cta_clicked` when primary CTA navigates to `/pricing`, and `gate_dismissed` when secondary CTA closes modal. All analytics events include route and feature context. Includes comprehensive unit tests covering analytics tracking, modal state, and navigation behavior (P1.4).
 
 ### Changed
 - **Practice Question Filters**: Added optional query parameters to `GET /api/questions/current`: `topic?`, `difficulty? (1-5)`, `hasExplanation? (default true)`. Filters work together with AND semantics. Always scopes to `is_diagnostic_eligible=true` to leverage partial indexes. Supports filtering by topic and/or difficulty, with `hasExplanation=false` allowing questions without explanations.
