@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { serializeQuestion } from '@/lib/practice/serialize';
+import { requireSubscriber } from '@/lib/auth/require-subscriber';
 
 // Question row shape returned from Supabase with explanations inner join
 type QuestionWithExplanation = {
@@ -50,6 +51,10 @@ function selectColumns(hasExplanation: boolean): string {
 
 export async function GET(request: NextRequest) {
   try {
+    // Premium gate check
+    const block = await requireSubscriber(request, "/api/questions/current");
+    if (block) return block;
+
     // Parse excludeIds from query parameters (comma-separated list)
     const excludeIdsParam = request.nextUrl.searchParams.get("excludeIds");
     const excludeIds = new Set(
@@ -58,17 +63,13 @@ export async function GET(request: NextRequest) {
         .filter(Boolean)
     );
 
-    // Create server-side Supabase client and check authentication
+    // Create server-side Supabase client - user may be null if access via grace cookie
     const supabase = createServerSupabaseClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     
-    if (authError || !user) {
-      console.log('Auth check failed in current question API:', authError?.message);
-      return NextResponse.json({ 
-        error: 'Authentication required. Please log in to access questions.',
-        authError: authError?.message 
-      }, { status: 401 });
-    }
+    // Note: requireSubscriber ensures user is authenticated OR has valid grace cookie
+    // If grace cookie allows access, user might be null, so we use a fallback for user ID
+    const userIdForIndex = user?.id || "anonymous";
 
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams;
@@ -104,12 +105,12 @@ export async function GET(request: NextRequest) {
     const { data: questions, error: questionError } = await query.limit(QUESTION_SAMPLE_SIZE);
 
     if (questionError || !questions || questions.length === 0) {
-      console.info('No eligible questions with explanations for user', { userId: user.id, sampleLimit: QUESTION_SAMPLE_SIZE });
+      console.info('No eligible questions with explanations', { userId: user?.id || "anonymous", sampleLimit: QUESTION_SAMPLE_SIZE });
       return NextResponse.json({ error: 'No eligible questions with explanations.' }, { status: 404 });
     }
 
     // Use deterministic rotation to select a question, but skip excluded IDs
-    const startIndex = calculateQuestionIndex(user.id, questions.length);
+    const startIndex = calculateQuestionIndex(userIdForIndex, questions.length);
     let chosenIndex = -1;
 
     // Circular scan from deterministic start index, skipping excluded IDs
