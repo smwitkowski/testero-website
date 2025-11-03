@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 
-interface UpgradePromptProps {
+export interface UpgradePromptProps {
   featureName?: string;
 }
 
