@@ -44,6 +44,10 @@ STRIPE_PRICE_ID_MONTHLY=price_... # Created in Stripe Dashboard
 STRIPE_PRICE_ID_YEARLY=price_... # Created in Stripe Dashboard
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 
+# Grace Cookie Signing Secret (for checkout success grace window)
+# Generate a secure random string (32+ characters recommended)
+PAYWALL_SIGNING_SECRET=your_secure_random_secret_here
+
 # Email Service
 RESEND_API_KEY=re_... # From Resend Dashboard
 ```
@@ -140,10 +144,13 @@ npm test -- __tests__/integration/billing-flow.test.ts
 3. Creates checkout session with price ID
 4. User redirected to Stripe Checkout
 5. Payment processed by Stripe
-6. Webhook received at `/api/billing/webhook`
-7. Subscription record created in database
-8. Email confirmation sent via Resend
-9. User redirected to `/dashboard/billing?success=true`
+6. User redirected to `/api/billing/checkout/success?session_id={CHECKOUT_SESSION_ID}` (Stripe replaces placeholder)
+7. Success endpoint verifies Stripe session, confirms user authentication, and sets 15-minute grace cookie
+8. Success endpoint redirects to `/dashboard/billing?success=1`
+9. Webhook received at `/api/billing/webhook` (may arrive after redirect)
+10. Subscription record created in database
+11. Email confirmation sent via Resend
+12. Grace cookie allows access while webhook finalizes (cleared on first successful entitlement check)
 
 ### Subscription Management
 
@@ -255,6 +262,16 @@ Creates a Stripe checkout session.
   "url": "https://checkout.stripe.com/pay/cs_..."
 }
 ```
+
+### GET /api/billing/checkout/success
+
+Handles Stripe checkout success redirect. Sets a signed grace cookie (`checkout_grace`) that grants temporary access for 15 minutes while the webhook finalizes. Redirects to `/dashboard/billing?success=1`.
+
+**Cookies Set:**
+- `checkout_grace`: Signed cookie with 15-minute TTL (HttpOnly, SameSite=Lax, Secure in production)
+
+**Redirect:**
+- Location: `/dashboard/billing?success=1`
 
 ### POST /api/billing/portal
 

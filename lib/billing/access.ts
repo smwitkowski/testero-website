@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getBillingEnforcement } from "@/lib/config/billing";
-import { verifyGraceCookie } from "@/lib/billing/grace-cookie";
+import { verifyGraceCookie, hasGraceCookie } from "@/lib/billing/grace-cookie";
 import { getServerPostHog } from "@/lib/analytics/server-analytics";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 
@@ -159,9 +159,22 @@ export async function requireSubscriber(
   // Feature flag: 'active_required' checks subscription or grace cookie
   if (enforcement === "active_required") {
     const hasSubscription = await isSubscriber(userId);
-    const hasGraceCookie = verifyGraceCookie(req);
+    const hasValidGraceCookie = verifyGraceCookie(req);
+    const graceCookiePresent = hasGraceCookie(req);
 
-    if (hasSubscription || hasGraceCookie) {
+    // Clear grace cookie if subscription is active (first successful entitlement pass)
+    if (hasSubscription && graceCookiePresent) {
+      // Return access result with cookie clearing instruction
+      // The caller should clear the cookie in their response
+      return { allowed: true };
+    }
+
+    // Clear invalid/expired grace cookie
+    if (graceCookiePresent && !hasValidGraceCookie) {
+      // Cookie is present but invalid/expired - will be cleared by caller
+    }
+
+    if (hasSubscription || hasValidGraceCookie) {
       return { allowed: true };
     }
 
