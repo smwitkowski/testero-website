@@ -24,32 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Gate Analytics Events**: Added analytics events for paywall gate interactions: `gate_viewed`, `gate_cta_clicked`, `gate_dismissed`, `entitlement_check_failed`.
 - **Billing Access Tests**: Added comprehensive unit tests for subscription status checking, TTL caching behavior, feature flag enforcement, and grace cookie integration (`__tests__/billing.access.test.ts`).
 - **Grace Cookie Tests**: Added unit tests for cookie signing/verification, expiration handling, and tamper detection (`__tests__/billing.grace-cookie.test.ts`).
-
-### Changed
-- **Practice Question Filters**: Added optional query parameters to `GET /api/questions/current`: `topic?`, `difficulty? (1-5)`, `hasExplanation? (default true)`. Filters work together with AND semantics. Always scopes to `is_diagnostic_eligible=true` to leverage partial indexes. Supports filtering by topic and/or difficulty, with `hasExplanation=false` allowing questions without explanations.
-- **Question Exclusion Parameter**: `GET /api/questions/current` now supports optional `excludeIds` query parameter (comma-separated list) to skip recently seen questions. When provided, the API performs a deterministic circular scan from the calculated rotation index, skipping excluded IDs. Returns 404 with helpful error message if all candidates are excluded. Practice UI automatically tracks last 7 served question IDs and includes them in `excludeIds` when fetching the next question to avoid immediate repeats.
-- **Dashboard Practice Stats**: Dashboard API now computes and returns practice statistics (`totalQuestionsAnswered`, `correctAnswers`, `accuracyPercentage`, `lastPracticeDate`) from `practice_attempts` table. Practice accuracy is integrated into readiness score calculation using 60/40 weighting (60% diagnostic, 40% practice). Uses efficient count-based queries for performance (no row fetching, leverages `practice_attempts_user_answered_at_idx` index).
-- **Practice Attempts Persistence**: Added `practice_attempts` table with RLS (authenticated users can insert and select only their own rows) and indexes for dashboard queries. Submit endpoint now persists minimal attempt row with snapshot of topic and difficulty; failures are logged server-side and do not affect feedback response.
-- **Practice Submit and Dashboard Tests**: Added minimal integration tests for practice submit feedback (`__tests__/api.questions.submit-feedback.test.ts`) verifying POST `/api/questions/submit` returns expected `{ isCorrect, correctOptionKey, explanationText }` structure, and dashboard integration test (`__tests__/api.dashboard.integration.test.ts`) verifying practice stats populate correctly after one attempt and readiness score reflects practice when diagnostic data is present.
-
-### Fixed
-- **Submit Endpoint Error Handling**: Fixed Supabase error handling in practice attempts insert to properly detect and log failures using error response destructuring instead of try-catch
-- **Submit Endpoint Validation**: Added numeric validation for questionId to prevent NaN values in database inserts
-
-### Changed
-- **Practice API Filter**: `/api/questions/current` now serves only questions that have corresponding explanations in the database. Returns 404 with clear error message when no eligible questions exist. Adds lightweight logging for observability when no eligible questions are found.
-- **Card Padding Standardization**: Standardized card padding across the site to use responsive design tokens (`p-4 md:p-6` = 16px mobile, 24px desktop). Updated Card component, diagnostic pages, dashboard components, and marketing sections to use consistent spacing following design system scale (--space-md for mobile, --space-lg for desktop)
-- **Navigation CTAs**: Replaced "Join Waitlist" CTAs in navigation (desktop and mobile) with "Get Started" button pointing to `/signup` for standard SaaS sign-up flow
-- **Navigation Menu**: Added "Pricing" link to main navigation menu to support purchase decisions as per SaaS best practices
-- **Theme Default**: Changed default theme from "system" to "light" mode for better consistency across all users
-- **CTA Color System**: Unified accent CTA color system to use brand orange (`--tone-accent`) consistently across all button variants. Solid accent buttons now use orange backgrounds with white text (`--tone-accent-foreground`), outline/ghost variants use orange text/borders with orange-tinted hover states, ensuring proper contrast and brand consistency in both light and dark modes
-- **Webhook Event Configuration**: Updated webhook documentation to reflect Checkout-only payment flow (removed `payment_intent.*` events from required list)
-- **Event Naming**: Clarified that `invoice.paid` or `invoice.payment_succeeded` can be used depending on Stripe account configuration
-- **Stripe Setup Documentation**: Updated `docs/deployment/stripe-setup.md` with all products and required environment variables
-- Production build now successfully generates optimized static content for all 26 pages
-- Sitemap generation now handles missing Supabase connection gracefully during build process
-
-### Added
 - **Billing Analytics Enhancements**: Added comprehensive analytics tracking properties (`tier_name`, `payment_mode`, `plan_type`) to checkout events (`CHECKOUT_INITIATED`, `CHECKOUT_SESSION_CREATED`, `CHECKOUT_ERROR`) and trial events (`trial_started`) for accurate revenue attribution and conversion tracking (TES-350)
 - **Pricing Analytics Helpers**: Created `lib/pricing/price-utils.ts` with helper functions to extract tier names, payment modes, and plan types from Stripe price IDs
 - **Pricing Page E2E Tests**: Added comprehensive Playwright tests for pricing page covering button states, billing interval toggle, exam packages section, and checkout redirects for authenticated and unauthenticated users (TES-348)
@@ -73,7 +47,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Enhanced README**: Updated root README.md with improved project description, setup instructions, and clear navigation to documentation
 - **Security**: Created `.local/` folder for secure local development files (secrets, keys, etc.)
 
+### Changed
+- **Practice Question Filters**: Added optional query parameters to `GET /api/questions/current`: `topic?`, `difficulty? (1-5)`, `hasExplanation? (default true)`. Filters work together with AND semantics. Always scopes to `is_diagnostic_eligible=true` to leverage partial indexes. Supports filtering by topic and/or difficulty, with `hasExplanation=false` allowing questions without explanations.
+- **Question Exclusion Parameter**: `GET /api/questions/current` now supports optional `excludeIds` query parameter (comma-separated list) to skip recently seen questions. When provided, the API performs a deterministic circular scan from the calculated rotation index, skipping excluded IDs. Returns 404 with helpful error message if all candidates are excluded. Practice UI automatically tracks last 7 served question IDs and includes them in `excludeIds` when fetching the next question to avoid immediate repeats.
+- **Dashboard Practice Stats**: Dashboard API now computes and returns practice statistics (`totalQuestionsAnswered`, `correctAnswers`, `accuracyPercentage`, `lastPracticeDate`) from `practice_attempts` table. Practice accuracy is integrated into readiness score calculation using 60/40 weighting (60% diagnostic, 40% practice). Uses efficient count-based queries for performance (no row fetching, leverages `practice_attempts_user_answered_at_idx` index).
+- **Practice Attempts Persistence**: Added `practice_attempts` table with RLS (authenticated users can insert and select only their own rows) and indexes for dashboard queries. Submit endpoint now persists minimal attempt row with snapshot of topic and difficulty; failures are logged server-side and do not affect feedback response.
+- **Practice Submit and Dashboard Tests**: Added minimal integration tests for practice submit feedback (`__tests__/api.questions.submit-feedback.test.ts`) verifying POST `/api/questions/submit` returns expected `{ isCorrect, correctOptionKey, explanationText }` structure, and dashboard integration test (`__tests__/api.dashboard.integration.test.ts`) verifying practice stats populate correctly after one attempt and readiness score reflects practice when diagnostic data is present.
+- **Practice API Filter**: `/api/questions/current` now serves only questions that have corresponding explanations in the database. Returns 404 with clear error message when no eligible questions exist. Adds lightweight logging for observability when no eligible questions are found.
+- **Navigation CTAs**: Replaced "Join Waitlist" CTAs in navigation (desktop and mobile) with "Get Started" button pointing to `/signup` for standard SaaS sign-up flow
+- **Navigation Menu**: Added "Pricing" link to main navigation menu to support purchase decisions as per SaaS best practices
+- **Theme Default**: Changed default theme from "system" to "light" mode for better consistency across all users
+- **CTA Color System**: Unified accent CTA color system to use brand orange (`--tone-accent`) consistently across all button variants. Solid accent buttons now use orange backgrounds with white text (`--tone-accent-foreground`), outline/ghost variants use orange text/borders with orange-tinted hover states, ensuring proper contrast and brand consistency in both light and dark modes
+- **Webhook Event Configuration**: Updated webhook documentation to reflect Checkout-only payment flow (removed `payment_intent.*` events from required list)
+- **Event Naming**: Clarified that `invoice.paid` or `invoice.payment_succeeded` can be used depending on Stripe account configuration
+- **Stripe Setup Documentation**: Updated `docs/deployment/stripe-setup.md` with all products and required environment variables
+- Production build now successfully generates optimized static content for all 26 pages
+- Sitemap generation now handles missing Supabase connection gracefully during build process
+
 ### Fixed
+- **Submit Endpoint Error Handling**: Fixed Supabase error handling in practice attempts insert to properly detect and log failures using error response destructuring instead of try-catch
+- **Submit Endpoint Validation**: Added numeric validation for questionId to prevent NaN values in database inserts
 - **QuestionData.id Type Consistency**: Fixed type mismatch between client (expects string) and API (returned numeric) for QuestionData.id. All question and option IDs are now serialized as strings at API boundaries to prevent bigint precision issues and align with client types. Added serializeQuestion helper to ensure consistent ID serialization across all question endpoints
 - **Card Header Spacing**: Fixed excessive vertical spacing under Dashboard "Diagnostic Tests" card header by removing default bottom margin from CardTitle component. Header spacing is now controlled solely by CardHeader padding/gap, ensuring consistent visual rhythm across all dashboard cards (Exam Readiness, Practice Questions, Diagnostic Tests)
 - **Pricing Button State**: Fixed PricingCard component to disable "Get started" button when Stripe price IDs are missing, ensuring consistent behavior with exam package buttons (TES-348)

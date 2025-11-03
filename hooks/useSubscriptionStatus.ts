@@ -71,16 +71,15 @@ export function useSubscriptionStatus(
 
   // Re-fetch when user ID changes (but not on initial mount)
   useEffect(() => {
-    if (!options?.initial && hasFetchedRef.current) {
-      // If user logged out (user?.id became undefined), reset to non-subscriber
-      if (!user?.id && prevUserIdRef.current) {
-        setStatus({ isSubscriber: false, status: "none" });
-        setIsLoading(false);
-      }
-      // If user ID changed (login or account switch), refetch
-      else if (user?.id && prevUserIdRef.current !== user?.id) {
-        fetchStatus();
-      }
+    // If user logged out (user?.id became undefined), reset to non-subscriber
+    if (!user?.id && prevUserIdRef.current) {
+      setStatus({ isSubscriber: false, status: "none" });
+      setIsLoading(false);
+      hasFetchedRef.current = false;
+    }
+    // If user ID changed (login or account switch), refetch (skip if SSR data provided)
+    else if (!options?.initial && hasFetchedRef.current && user?.id && prevUserIdRef.current !== user?.id) {
+      fetchStatus();
     }
     prevUserIdRef.current = user?.id;
     // eslint-disable-next-line react-hooks/exhaustive-deps
