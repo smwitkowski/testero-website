@@ -223,7 +223,7 @@ describe("Checkout Session API", () => {
       expect(mockStripeService.createCheckoutSession).toHaveBeenCalledWith({
         customerId: mockCustomer.id,
         priceId: "price_monthly",
-        successUrl: "https://testero.ai/api/billing/checkout/success",
+        successUrl: "https://testero.ai/api/billing/checkout/success?session_id={CHECKOUT_SESSION_ID}",
         cancelUrl: "https://testero.ai/pricing",
         userId: mockUser.id,
       });
@@ -270,7 +270,7 @@ describe("Checkout Session API", () => {
       expect(mockStripeService.createCheckoutSession).toHaveBeenCalledWith({
         customerId: mockCustomer.id,
         priceId: "price_yearly",
-        successUrl: "https://testero.ai/api/billing/checkout/success",
+        successUrl: "https://testero.ai/api/billing/checkout/success?session_id={CHECKOUT_SESSION_ID}",
         cancelUrl: "https://testero.ai/pricing",
         userId: mockUser.id,
       });

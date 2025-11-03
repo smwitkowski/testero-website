@@ -108,7 +108,7 @@ describe("Billing Flow Integration", () => {
       const session = await stripeService.createCheckoutSession({
         customerId: customer.id,
         priceId,
-        successUrl: "https://testero.ai/api/billing/checkout/success",
+        successUrl: "https://testero.ai/api/billing/checkout/success?session_id={CHECKOUT_SESSION_ID}",
         cancelUrl: "https://testero.ai/pricing",
         userId,
       });
@@ -162,7 +162,7 @@ describe("Billing Flow Integration", () => {
         mode: "subscription",
         customer: customer.id,
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: "https://testero.ai/api/billing/checkout/success",
+        success_url: "https://testero.ai/api/billing/checkout/success?session_id={CHECKOUT_SESSION_ID}",
         cancel_url: "https://testero.ai/pricing",
         metadata: { user_id: userId },
         subscription_data: {

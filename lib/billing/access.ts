@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getBillingEnforcement } from "@/lib/config/billing";
-import { verifyGraceCookie, hasGraceCookie, clearGraceCookie } from "@/lib/billing/grace-cookie";
+import { verifyGraceCookie, hasGraceCookie } from "@/lib/billing/grace-cookie";
 import { getServerPostHog } from "@/lib/analytics/server-analytics";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 

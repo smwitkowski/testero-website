@@ -144,12 +144,13 @@ npm test -- __tests__/integration/billing-flow.test.ts
 3. Creates checkout session with price ID
 4. User redirected to Stripe Checkout
 5. Payment processed by Stripe
-6. User redirected to `/api/billing/checkout/success` (sets 15-minute grace cookie)
-7. Success endpoint redirects to `/dashboard/billing?success=1`
-8. Webhook received at `/api/billing/webhook` (may arrive after redirect)
-9. Subscription record created in database
-10. Email confirmation sent via Resend
-11. Grace cookie allows access while webhook finalizes (cleared on first successful entitlement check)
+6. User redirected to `/api/billing/checkout/success?session_id={CHECKOUT_SESSION_ID}` (Stripe replaces placeholder)
+7. Success endpoint verifies Stripe session, confirms user authentication, and sets 15-minute grace cookie
+8. Success endpoint redirects to `/dashboard/billing?success=1`
+9. Webhook received at `/api/billing/webhook` (may arrive after redirect)
+10. Subscription record created in database
+11. Email confirmation sent via Resend
+12. Grace cookie allows access while webhook finalizes (cleared on first successful entitlement check)
 
 ### Subscription Management
 
