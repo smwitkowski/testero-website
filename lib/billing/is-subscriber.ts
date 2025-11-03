@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { computeIsSubscriber } from "@/lib/billing/subscription-status";
 
 /**
  * Checks if a user has an active or valid trialing subscription
@@ -19,15 +20,7 @@ export async function isSubscriber(userId: string): Promise<boolean> {
 
     if (error || !data) return false;
     
-    // Active subscription always allows access
-    if (data.status === "active") return true;
-    
-    // Trialing subscription only allows access if trial_ends_at is in the future
-    if (data.status === "trialing") {
-      return !!data.trial_ends_at && new Date(data.trial_ends_at) > new Date();
-    }
-    
-    return false;
+    return computeIsSubscriber(data);
   } catch (error) {
     // Handle any unexpected errors (network, database connection, etc.)
     console.error("Error checking subscription status:", error);
