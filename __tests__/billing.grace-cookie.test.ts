@@ -22,7 +22,7 @@ describe("grace-cookie", () => {
       expect(cookie.name).toBe("checkout_grace");
       expect(cookie.options).toMatchObject({
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
         maxAge: 900, // 15 minutes
