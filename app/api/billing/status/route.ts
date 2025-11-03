@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { computeIsSubscriber, type SubscriptionStatus } from "@/lib/billing/subscription-status";
 
@@ -13,7 +13,7 @@ export type BillingStatusResponse = {
  * Server remains authoritative for authorization.
  * No sensitive plan details (plan_id, Stripe IDs, amounts) are returned.
  */
-export async function GET(request: NextRequest): Promise<NextResponse<BillingStatusResponse>> {
+export async function GET(): Promise<NextResponse<BillingStatusResponse>> {
   try {
     const supabase = createServerSupabaseClient();
     const {
