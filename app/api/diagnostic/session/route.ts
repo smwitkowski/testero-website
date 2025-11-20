@@ -1,3 +1,14 @@
+/**
+ * Diagnostic Session Creation Endpoint (Alternative/API-focused)
+ * 
+ * NOTE: This endpoint provides an alternative API-focused interface for creating diagnostic sessions.
+ * The PRIMARY frontend path uses POST /api/diagnostic with action: "start".
+ * 
+ * This endpoint uses the same canonical PMLE selection logic as the main diagnostic endpoint.
+ * Both endpoints now use selectPmleQuestionsByBlueprint() for PMLE exams.
+ * 
+ * TODO: Consider consolidating these endpoints or clearly documenting when to use each.
+ */
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 // Analytics imports for future use

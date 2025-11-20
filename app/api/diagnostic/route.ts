@@ -200,6 +200,19 @@ export async function GET(req: Request) {
   }
 }
 
+/**
+ * Main diagnostic API endpoint
+ * 
+ * This is the PRIMARY canonical diagnostic creation path for PMLE diagnostics.
+ * The frontend diagnostic page uses this endpoint with action: "start".
+ * 
+ * For PMLE exams (exam_id = 6), this endpoint uses:
+ * - Canonical questions schema (questions, answers, explanations, exam_domains)
+ * - Blueprint-weighted domain selection via selectPmleQuestionsByBlueprint()
+ * - Domain info snapshots in diagnostic_questions (domain_id, domain_code)
+ * 
+ * Legacy exams continue to use exam_versions and legacy question selection.
+ */
 export async function POST(req: Request) {
   // Premium gate check
   const block = await requireSubscriber(req, "/api/diagnostic");
