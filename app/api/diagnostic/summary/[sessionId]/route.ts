@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { requireSubscriber } from '@/lib/auth/require-subscriber';
+import { getPmleDomainConfig } from '@/lib/constants/pmle-blueprint';
 
 export async function GET(req: Request) {
   // Premium gate check
@@ -56,7 +57,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Session not completed yet' }, { status: 400 });
     }
 
-    // Fetch diagnostic questions (snapshots) with responses
+    // Fetch diagnostic questions (snapshots) with responses and domain info
     const { data: questionsWithResponses, error: questionsError } = await supabase
       .from('diagnostic_questions')
       .select(`
@@ -65,6 +66,8 @@ export async function GET(req: Request) {
         options,
         correct_label,
         original_question_id,
+        domain_code,
+        domain_id,
         diagnostic_responses (
           selected_label,
           is_correct,
@@ -85,29 +88,54 @@ export async function GET(req: Request) {
     ).length;
     const score = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
-    // Fetch topics/domains for domain breakdown (if available)
-    const originalQuestionIds = questionsWithResponses.map(q => q.original_question_id).filter(Boolean);
-    const { data: questionTopics } = await supabase
-      .from('questions')
-      .select('id, topic')
-      .in('id', originalQuestionIds);
-
-    // Calculate domain breakdown
+    // Calculate domain breakdown from snapshot domain_code (canonical) or fallback to legacy topic lookup
     const domainStats: { [key: string]: { correct: number; total: number } } = {};
     
-    questionsWithResponses.forEach(q => {
-      const topicData = questionTopics?.find(t => t.id === q.original_question_id);
-      const domain = topicData?.topic || 'General';
+    // Check if we have domain_code in snapshots (canonical PMLE questions)
+    const hasDomainCode = questionsWithResponses.some((q: any) => q.domain_code);
+    
+    if (hasDomainCode) {
+      // Use canonical domain_code from snapshot
+      questionsWithResponses.forEach((q: any) => {
+        // Get human-readable domain name from blueprint config
+        const domainCode = q.domain_code || 'UNKNOWN';
+        const domainConfig = getPmleDomainConfig(domainCode);
+        const domain = domainConfig?.displayName || domainCode;
+        
+        if (!domainStats[domain]) {
+          domainStats[domain] = { correct: 0, total: 0 };
+        }
+        
+        domainStats[domain].total++;
+        if (q.diagnostic_responses?.[0]?.is_correct) {
+          domainStats[domain].correct++;
+        }
+      });
+    } else {
+      // Fallback: Legacy path - fetch topics from questions table for backward compatibility
+      const originalQuestionIds = questionsWithResponses
+        .map((q: any) => q.original_question_id)
+        .filter(Boolean);
       
-      if (!domainStats[domain]) {
-        domainStats[domain] = { correct: 0, total: 0 };
-      }
-      
-      domainStats[domain].total++;
-      if (q.diagnostic_responses?.[0]?.is_correct) {
-        domainStats[domain].correct++;
-      }
-    });
+      const { data: questionTopics } = await supabase
+        .from('questions')
+        .select('id, topic')
+        .in('id', originalQuestionIds);
+
+      questionsWithResponses.forEach((q: any) => {
+        const topicData = questionTopics?.find((t: any) => t.id === q.original_question_id);
+        const domain = topicData?.topic || 'General';
+        
+        if (!domainStats[domain]) {
+          domainStats[domain] = { correct: 0, total: 0 };
+        }
+        
+        domainStats[domain].total++;
+        if (q.diagnostic_responses?.[0]?.is_correct) {
+          domainStats[domain].correct++;
+        }
+      });
+    }
 
     const domainBreakdown = Object.entries(domainStats).map(([domain, stats]) => ({
       domain,

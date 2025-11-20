@@ -7,6 +7,7 @@ import { z } from "zod";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
 import { DIAGNOSTIC_CONFIG, getSessionTimeoutMs } from "@/lib/constants/diagnostic-config";
 import { requireSubscriber } from "@/lib/auth/require-subscriber";
+import { selectPmleQuestionsByBlueprint } from "@/lib/diagnostic/pmle-selection";
 
 // Zod schema for input validation
 const CreateSessionRequestSchema = z.object({
@@ -112,44 +113,23 @@ export async function POST(req: Request) {
 
     const { examKey, blueprintVersion, betaVariant, source, numQuestions } = validationResult.data;
 
-    // Create diagnostic session using existing logic from main diagnostic endpoint
+    // Create diagnostic session using canonical PMLE questions with blueprint weights
     const examType = "Google ML Engineer";
     const examIdToUse = 6; // PMLE exam ID
 
-    // Get current exam version
-    const { data: currentExamVersion, error: versionError } = await supabase
-      .from("exam_versions")
-      .select("id")
-      .eq("exam_id", examIdToUse)
-      .eq("is_current", true)
-      .single();
-
-    if (versionError || !currentExamVersion) {
-      console.error("Error fetching current exam version:", versionError);
+    // Select PMLE questions using canonical schema and blueprint weights
+    let selectionResult;
+    try {
+      selectionResult = await selectPmleQuestionsByBlueprint(supabase, numQuestions);
+    } catch (error) {
+      console.error("Error selecting PMLE questions:", error);
       return NextResponse.json(
-        { error: "Could not determine current exam version." },
+        { error: error instanceof Error ? error.message : "Could not fetch questions for the diagnostic." },
         { status: 500 }
       );
     }
 
-    // Fetch diagnostic questions
-    const { data: dbQuestions, error: questionsFetchError } = await supabase
-      .from("questions")
-      .select("id, stem, topic, difficulty, options(label, text, is_correct), explanations(text)")
-      .eq("exam_version_id", currentExamVersion.id)
-      .eq("is_diagnostic_eligible", true)
-      .limit(numQuestions * DIAGNOSTIC_CONFIG.QUESTION_SELECTION_MULTIPLIER);
-
-    if (questionsFetchError || !dbQuestions || dbQuestions.length < numQuestions) {
-      console.error("Error fetching questions:", questionsFetchError);
-      return NextResponse.json(
-        { error: "Could not fetch enough questions for the diagnostic." },
-        { status: 500 }
-      );
-    }
-
-    // Randomize and select questions
-    const selectedQuestions = dbQuestions.sort(() => 0.5 - Math.random()).slice(0, numQuestions);
+    const selectedQuestions = selectionResult.questions;
 
     // Create session
     const sessionExpiresAt = new Date(Date.now() + getSessionTimeoutMs());
@@ -173,13 +153,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Failed to start diagnostic session." }, { status: 500 });
     }
 
-    // Create question snapshots
+    // Create question snapshots with domain info
     const questionSnapshots = selectedQuestions.map((q) => ({
       session_id: newSession.id,
       original_question_id: q.id,
       stem: q.stem,
-      options: q.options.map((opt) => ({ label: opt.label, text: opt.text })),
-      correct_label: q.options.find((opt) => opt.is_correct)?.label || "",
+      options: q.answers.map((opt) => ({ label: opt.choice_label, text: opt.choice_text })),
+      correct_label: q.answers.find((opt) => opt.is_correct)?.choice_label || "",
+      domain_id: q.domain_id,
+      domain_code: q.domain_code,
     }));
 
     const { error: snapshotError } = await supabase
