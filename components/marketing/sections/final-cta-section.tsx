@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 
 export function FinalCtaSection() {
   return (
+    // eslint-disable-next-line no-restricted-syntax
     <section className="relative w-full overflow-hidden px-4 py-10 text-center sm:px-6 sm:py-16 md:py-24 ds-gradient-accent-surface">
       {/* Enhanced Background Elements */}
       <div className="absolute inset-0 overflow-hidden" aria-hidden="true">

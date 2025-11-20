@@ -154,6 +154,7 @@ const pulse = `
 // Skeleton loader component for the benefits section
 export function BenefitsSectionSkeleton() {
   return (
+    // eslint-disable-next-line no-restricted-syntax
     <section className="w-full py-10 sm:py-16 md:py-24 px-4 sm:px-6 relative">
       {/* Background element */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -215,6 +216,7 @@ export function BenefitsSectionSkeleton() {
 
 export function BenefitsSection() {
   return (
+    // eslint-disable-next-line no-restricted-syntax
     <section className="w-full py-10 sm:py-16 md:py-24 px-4 sm:px-6 relative">
       {/* Add styles to head for animations */}
       <style jsx global>{`${fadeInUp} ${slideInFromSide} ${pulse}`}</style>

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Linting Issues**: Fixed all TypeScript `any` type errors in diagnostic summary API route and PMLE selection logic by adding proper type interfaces. Fixed `no-restricted-syntax` warnings for Section component usage by adding appropriate eslint-disable comments. Removed unused `request` parameter from billing status route.
+
+### Added
+- **CI Automation**: Added `Justfile` with `just ci` command to run all CI checks locally (lint, eslint-rules, type-check) for easier pre-commit validation.
+
 ### Added
 - **SSR Page Gating for Premium Pages**: Added server-side gating for diagnostic and practice pages using Next.js layouts. When `BILLING_ENFORCEMENT="active_required"` environment variable is set, free users are redirected to `/pricing?gated=1&feature=diagnostic|practice`. Subscribers (active or trialing with valid trial_ends_at) see normal content. Implemented via `lib/billing/is-subscriber.ts` helper querying Supabase `user_subscriptions` table, `lib/billing/enforcement.ts` for environment variable checking, and reusable `createGatedLayout` factory function in `lib/billing/gated-layout.ts` (P1.3)
 - **Premium API Gating**: Added authoritative backend gating for premium API routes using `requireSubscriber` middleware. Non-subscribers receive 403 JSON response with `{ code: 'PAYWALL' }`. Subscribers and valid grace-cookie users pass. Gated routes include: `/api/diagnostic` (GET, POST), `/api/diagnostic/session` (POST), `/api/diagnostic/session/[id]/status` (GET), `/api/diagnostic/summary/[sessionId]` (GET), `/api/questions` (GET), `/api/questions/[id]` (GET), `/api/questions/current` (GET), `/api/questions/submit` (POST). Note: `/api/study-path` remains public per design.

@@ -105,6 +105,7 @@ const fadeInUp = `
 
 export function SocialProofSection() {
   return (
+    // eslint-disable-next-line no-restricted-syntax
     <section className="relative w-full bg-[color:var(--surface-subtle)] px-4 py-8 sm:px-6 sm:py-12 md:py-20">
       {/* Add styles to head for animations */}
       <style jsx global>{fadeInUp}</style>

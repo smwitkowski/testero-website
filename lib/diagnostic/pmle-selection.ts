@@ -145,7 +145,15 @@ export async function selectPmleQuestionsByBlueprint(
   const domainCodeToId = new Map<string, string>();
   const domainCodeToName = new Map<string, string>();
 
-  domainCounts?.forEach((q: any) => {
+  interface DomainCountRow {
+    domain_id: string;
+    exam_domains: {
+      code: string;
+      name: string;
+    };
+  }
+
+  (domainCounts as unknown as DomainCountRow[] | null)?.forEach((q) => {
     const domain = q.exam_domains;
     const code = domain.code;
     domainAvailability.set(code, (domainAvailability.get(code) || 0) + 1);
@@ -213,15 +221,26 @@ export async function selectPmleQuestionsByBlueprint(
     const shuffled = [...domainQuestions].sort(() => Math.random() - 0.5);
     const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
 
+    interface DomainQuestionRow {
+      id: string;
+      stem: string;
+      difficulty: string | null;
+      answers: Array<{
+        choice_label: string;
+        choice_text: string;
+        is_correct: boolean;
+      }> | null;
+    }
+
     // Transform to CanonicalQuestionWithAnswers format
-    const transformed = selected.map((q: any) => ({
+    const transformed = (selected as DomainQuestionRow[]).map((q) => ({
       id: q.id,
       stem: q.stem,
       domain_id: domainId,
       domain_code: domainCode,
       domain_name: domainCodeToName.get(domainCode) || domainCode,
       difficulty: q.difficulty,
-      answers: (q.answers || []).map((a: any) => ({
+      answers: (q.answers || []).map((a) => ({
         choice_label: a.choice_label,
         choice_text: a.choice_text,
         is_correct: a.is_correct,

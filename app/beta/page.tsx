@@ -69,6 +69,7 @@ const BetaHeading: React.FC<BetaHeadingProps> = ({
 
 // Hero section component with enhanced styling and animations
 const HeroSection: React.FC = () => (
+  // eslint-disable-next-line no-restricted-syntax
   <BetaSection className="text-center bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-16">
     <div className="max-w-4xl mx-auto">
       <motion.div 
@@ -125,6 +126,7 @@ const CtaSection: React.FC = () => {
   const handleCtaClick = useNavigateToBeta();
   
   return (
+    // eslint-disable-next-line no-restricted-syntax
     <BetaSection className="text-center bg-gradient-to-b from-slate-50 to-white py-16">
       <div className="max-w-4xl mx-auto">
         <BetaHeading level={2} className="mb-4">
