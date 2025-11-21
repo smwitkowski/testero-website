@@ -40,6 +40,7 @@ test.describe("Diagnostic Summary Page Components", () => {
                   { label: "C", text: "To perform calculations" },
                   { label: "D", text: "To replace algorithms" },
                 ],
+                explanation: "Neural networks are designed to mimic the structure and function of the human brain, processing information through interconnected nodes (neurons) to recognize patterns and make decisions.",
               },
               {
                 id: "2",
@@ -53,6 +54,7 @@ test.describe("Diagnostic Summary Page Components", () => {
                   { label: "C", text: "Linear regression" },
                   { label: "D", text: "DBSCAN" },
                 ],
+                explanation: "Linear regression is a supervised learning algorithm because it learns from labeled training data (input-output pairs) to predict continuous values. K-means, PCA, and DBSCAN are unsupervised algorithms.",
               },
             ],
           },
@@ -95,6 +97,115 @@ test.describe("Diagnostic Summary Page Components", () => {
     // Check for action buttons
     await expect(page.getByRole("button", { name: "Take Another Diagnostic" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Start My Study Plan" })).toBeVisible();
+  });
+
+  test("should display explanations when questions are expanded", async ({ page }) => {
+    const sessionId = "test-session-explanations";
+
+    // Mock the summary API response with explanations
+    await page.route(`/api/diagnostic/summary/${sessionId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          summary: {
+            sessionId: sessionId,
+            examType: "Google ML Engineer",
+            totalQuestions: 1,
+            correctAnswers: 1,
+            score: 100,
+            startedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+            completedAt: new Date().toISOString(),
+            questions: [
+              {
+                id: "1",
+                stem: "What is the primary purpose of feature engineering?",
+                userAnswer: "B",
+                correctAnswer: "B",
+                isCorrect: true,
+                options: [
+                  { label: "A", text: "To reduce dataset size" },
+                  { label: "B", text: "To transform raw data into meaningful features" },
+                  { label: "C", text: "To visualize data patterns" },
+                  { label: "D", text: "To store data in databases" },
+                ],
+                explanation: "Feature engineering transforms raw data into meaningful features that ML algorithms can use effectively. This process directly impacts model accuracy by creating informative input signals.",
+              },
+            ],
+          },
+          domainBreakdown: [],
+        }),
+      });
+    });
+
+    // Navigate to the summary page
+    await page.goto(`/diagnostic/${sessionId}/summary`);
+
+    // Find and click the "View explanation" button for the question
+    const viewExplanationButton = page.getByRole("button", { name: /view explanation/i }).first();
+    await expect(viewExplanationButton).toBeVisible();
+    await viewExplanationButton.click();
+
+    // Verify the explanation text is visible
+    await expect(
+      page.getByText(
+        "Feature engineering transforms raw data into meaningful features that ML algorithms can use effectively. This process directly impacts model accuracy by creating informative input signals."
+      )
+    ).toBeVisible();
+
+    // Verify the explanation heading is present
+    await expect(page.getByText("Explanation:")).toBeVisible();
+  });
+
+  test("should not show explanation section when explanation is missing", async ({ page }) => {
+    const sessionId = "test-session-no-explanation";
+
+    // Mock the summary API response without explanations
+    await page.route(`/api/diagnostic/summary/${sessionId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          summary: {
+            sessionId: sessionId,
+            examType: "Google ML Engineer",
+            totalQuestions: 1,
+            correctAnswers: 1,
+            score: 100,
+            startedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+            completedAt: new Date().toISOString(),
+            questions: [
+              {
+                id: "1",
+                stem: "What is the primary purpose of feature engineering?",
+                userAnswer: "B",
+                correctAnswer: "B",
+                isCorrect: true,
+                options: [
+                  { label: "A", text: "To reduce dataset size" },
+                  { label: "B", text: "To transform raw data into meaningful features" },
+                  { label: "C", text: "To visualize data patterns" },
+                  { label: "D", text: "To store data in databases" },
+                ],
+                // No explanation field
+              },
+            ],
+          },
+          domainBreakdown: [],
+        }),
+      });
+    });
+
+    // Navigate to the summary page
+    await page.goto(`/diagnostic/${sessionId}/summary`);
+
+    // Expand the question
+    const viewExplanationButton = page.getByRole("button", { name: /view explanation/i }).first();
+    await expect(viewExplanationButton).toBeVisible();
+    await viewExplanationButton.click();
+
+    // Verify the explanation heading is NOT present (since explanation is missing)
+    await expect(page.getByText("Explanation:")).not.toBeVisible();
   });
 
   test("should handle expand/collapse in question review", async ({ page }) => {
