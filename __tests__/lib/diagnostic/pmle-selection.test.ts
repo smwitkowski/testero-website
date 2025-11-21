@@ -3,8 +3,17 @@
  */
 
 import { selectPmleQuestionsByBlueprint, calculateDomainTargets } from '@/lib/diagnostic/pmle-selection';
-import { PMLE_BLUEPRINT } from '@/lib/constants/pmle-blueprint';
+import { PMLE_BLUEPRINT, validateBlueprintWeights } from '@/lib/constants/pmle-blueprint';
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+const CANONICAL_DOMAIN_CODES = [
+  'ARCHITECTING_LOW_CODE_ML_SOLUTIONS',
+  'COLLABORATING_TO_MANAGE_DATA_AND_MODELS',
+  'SCALING_PROTOTYPES_INTO_ML_MODELS',
+  'SERVING_AND_SCALING_MODELS',
+  'AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES',
+  'MONITORING_ML_SOLUTIONS',
+] as const;
 
 // Mock Supabase client
 const createMockSupabaseClient = (): Partial<SupabaseClient> => {
@@ -12,17 +21,26 @@ const createMockSupabaseClient = (): Partial<SupabaseClient> => {
     {
       id: 'q1',
       domain_id: 'd1',
-      exam_domains: { code: 'ONLINE_AND_BATCH_PREDICTION_DEPLOYMENT', name: 'Online and batch prediction deployment' },
+      exam_domains: {
+        code: 'ARCHITECTING_LOW_CODE_ML_SOLUTIONS',
+        name: 'Architecting Low-Code ML Solutions',
+      },
     },
     {
       id: 'q2',
       domain_id: 'd1',
-      exam_domains: { code: 'ONLINE_AND_BATCH_PREDICTION_DEPLOYMENT', name: 'Online and batch prediction deployment' },
+      exam_domains: {
+        code: 'ARCHITECTING_LOW_CODE_ML_SOLUTIONS',
+        name: 'Architecting Low-Code ML Solutions',
+      },
     },
     {
       id: 'q3',
       domain_id: 'd2',
-      exam_domains: { code: 'CUSTOM_TRAINING_WITH_DIFFERENT_ML_FRAMEWORKS', name: 'Custom training' },
+      exam_domains: {
+        code: 'COLLABORATING_TO_MANAGE_DATA_AND_MODELS',
+        name: 'Collaborating to Manage Data & Models',
+      },
     },
   ];
 
@@ -78,6 +96,17 @@ const createMockSupabaseClient = (): Partial<SupabaseClient> => {
 };
 
 describe('PMLE Question Selection', () => {
+  describe('PMLE blueprint config', () => {
+    it('defines the six canonical domains in order', () => {
+      expect(PMLE_BLUEPRINT).toHaveLength(CANONICAL_DOMAIN_CODES.length);
+      expect(PMLE_BLUEPRINT.map((config) => config.domainCode)).toEqual(CANONICAL_DOMAIN_CODES);
+    });
+
+    it('passes the blueprint weight validation', () => {
+      expect(validateBlueprintWeights()).toBe(true);
+    });
+  });
+
   describe('calculateDomainTargets', () => {
     it('should calculate targets that sum to total questions', () => {
       const domainAvailability = new Map<string, number>();
@@ -93,20 +122,20 @@ describe('PMLE Question Selection', () => {
 
     it('should cap targets at available question count', () => {
       const domainAvailability = new Map<string, number>();
-      domainAvailability.set('ONLINE_AND_BATCH_PREDICTION_DEPLOYMENT', 2); // Limited availability
-      domainAvailability.set('CUSTOM_TRAINING_WITH_DIFFERENT_ML_FRAMEWORKS', 100);
+      domainAvailability.set('ARCHITECTING_LOW_CODE_ML_SOLUTIONS', 2); // Limited availability
+      domainAvailability.set('COLLABORATING_TO_MANAGE_DATA_AND_MODELS', 100);
 
       const targets = calculateDomainTargets(10, domainAvailability);
 
       // Should not exceed available count
-      const onlineTarget = targets.get('ONLINE_AND_BATCH_PREDICTION_DEPLOYMENT') || 0;
+      const onlineTarget = targets.get('ARCHITECTING_LOW_CODE_ML_SOLUTIONS') || 0;
       expect(onlineTarget).toBeLessThanOrEqual(2);
     });
 
     it('should handle domains with zero availability', () => {
       const domainAvailability = new Map<string, number>();
       PMLE_BLUEPRINT.forEach((config) => {
-        if (config.domainCode === 'EXPLAINABLE_AI_AND_MODEL_INTERPRETABILITY') {
+        if (config.domainCode === 'MONITORING_ML_SOLUTIONS') {
           domainAvailability.set(config.domainCode, 0);
         } else {
           domainAvailability.set(config.domainCode, 10);
@@ -114,9 +143,9 @@ describe('PMLE Question Selection', () => {
       });
 
       const targets = calculateDomainTargets(10, domainAvailability);
-      const explainableTarget = targets.get('EXPLAINABLE_AI_AND_MODEL_INTERPRETABILITY') || 0;
+      const monitoringTarget = targets.get('MONITORING_ML_SOLUTIONS') || 0;
 
-      expect(explainableTarget).toBe(0);
+      expect(monitoringTarget).toBe(0);
     });
   });
 
@@ -131,8 +160,14 @@ describe('PMLE Question Selection', () => {
               eq: jest.fn(() => ({
                 eq: jest.fn(() => ({
                   data: [
-                    { domain_id: 'd1', exam_domains: { code: 'ONLINE_AND_BATCH_PREDICTION_DEPLOYMENT', name: 'Domain 1' } },
-                    { domain_id: 'd2', exam_domains: { code: 'CUSTOM_TRAINING_WITH_DIFFERENT_ML_FRAMEWORKS', name: 'Domain 2' } },
+                    {
+                      domain_id: 'd1',
+                      exam_domains: { code: 'ARCHITECTING_LOW_CODE_ML_SOLUTIONS', name: 'Domain 1' },
+                    },
+                    {
+                      domain_id: 'd2',
+                      exam_domains: { code: 'COLLABORATING_TO_MANAGE_DATA_AND_MODELS', name: 'Domain 2' },
+                    },
                   ],
                   error: null,
                 })),
