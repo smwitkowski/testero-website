@@ -143,9 +143,9 @@ describe('PMLE Question Selection', () => {
       });
 
       const targets = calculateDomainTargets(10, domainAvailability);
-      const explainableTarget = targets.get('EXPLAINABLE_AI_AND_MODEL_INTERPRETABILITY') || 0;
+      const monitoringTarget = targets.get('MONITORING_ML_SOLUTIONS') || 0;
 
-      expect(explainableTarget).toBe(0);
+      expect(monitoringTarget).toBe(0);
     });
   });
 
