@@ -12,6 +12,10 @@ jest.mock("../lib/supabase/client", () => ({
   supabase: clientSupabaseMock,
 }));
 
+jest.mock("../lib/auth/require-subscriber", () => ({
+  requireSubscriber: jest.fn().mockResolvedValue(null),
+}));
+
 import { POST as waitlistPOST } from "../app/api/waitlist/route";
 import { GET as listGET } from "../app/api/questions/route";
 import { GET as currentGET } from "../app/api/questions/current/route";
@@ -375,6 +379,219 @@ describe("API routes", () => {
       const req = new Request("http://localhost/api/diagnostic");
       const res = await diagnosticGET(req as any);
       expect(res.status).toBe(400);
+    });
+
+    describe("answer action", () => {
+      beforeEach(() => {
+        // Reset mocks for each test
+        serverSupabaseMock.from.mockReset();
+      });
+
+      it("returns answer with canonical explanation when found", async () => {
+        serverSupabaseMock.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
+
+        let diagnosticsSessionsCallCount = 0;
+        serverSupabaseMock.from.mockImplementation((table: string) => {
+          if (table === "diagnostics_sessions") {
+            diagnosticsSessionsCallCount++;
+            if (diagnosticsSessionsCallCount === 1) {
+              // First call: cleanExpiredSessions (delete)
+              return {
+                delete: jest.fn(() => ({
+                  lt: jest.fn(() => ({
+                    is: jest.fn(() => Promise.resolve({ error: null })),
+                  })),
+                })),
+              };
+            } else {
+              // Second call: session lookup (select)
+              return {
+                select: jest.fn(() => ({
+                  eq: jest.fn(() => ({
+                    single: jest.fn().mockResolvedValue({
+                      data: {
+                        id: "session-123",
+                        user_id: null,
+                        expires_at: new Date(Date.now() + 3600000).toISOString(),
+                        completed_at: null,
+                        anonymous_session_id: null,
+                      },
+                      error: null,
+                    }),
+                  })),
+                })),
+              };
+            }
+          }
+          if (table === "diagnostic_questions") {
+            return {
+              select: jest.fn(() => ({
+                eq: jest.fn(() => ({
+                  eq: jest.fn(() => ({
+                    single: jest.fn().mockResolvedValue({
+                      data: {
+                        id: "question-uuid-123",
+                        correct_label: "A",
+                        original_question_id: "canonical-question-uuid-456",
+                      },
+                      error: null,
+                    }),
+                  })),
+                })),
+              })),
+            };
+          }
+          if (table === "diagnostic_responses") {
+            return {
+              insert: jest.fn().mockResolvedValue({ data: [{ id: 1 }], error: null }),
+            };
+          }
+          if (table === "explanations") {
+            return {
+              select: jest.fn(() => ({
+                eq: jest.fn(() => ({
+                  single: jest.fn().mockResolvedValue({
+                    data: { explanation_text: "Canonical explanation text" },
+                    error: null,
+                  }),
+                })),
+              })),
+            };
+          }
+          return { select: jest.fn(), insert: jest.fn() };
+        });
+
+        const req = new Request("http://localhost/api/diagnostic", {
+          method: "POST",
+          body: JSON.stringify({
+            action: "answer",
+            sessionId: "session-123",
+            data: { questionId: "question-uuid-123", selectedLabel: "A" },
+          }),
+          headers: { "Content-Type": "application/json" },
+        });
+
+        const res = await diagnosticPOST(req);
+        const json = await res.json();
+
+        expect(res.status).toBe(200);
+        expect(json.isCorrect).toBe(true);
+        expect(json.correctAnswer).toBe("A");
+        expect(json.explanation).toBe("Canonical explanation text");
+
+        // Verify explanations table was queried (not explanations_legacy)
+        const fromCalls = serverSupabaseMock.from.mock.calls;
+        const explanationsCall = fromCalls.find((call) => call[0] === "explanations");
+        expect(explanationsCall).toBeDefined();
+        const explanationsLegacyCall = fromCalls.find((call) => call[0] === "explanations_legacy");
+        expect(explanationsLegacyCall).toBeUndefined();
+      });
+
+      it("returns null explanation when canonical explanation is missing", async () => {
+        const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+        serverSupabaseMock.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
+
+        let diagnosticsSessionsCallCount = 0;
+        serverSupabaseMock.from.mockImplementation((table: string) => {
+          if (table === "diagnostics_sessions") {
+            diagnosticsSessionsCallCount++;
+            if (diagnosticsSessionsCallCount === 1) {
+              // First call: cleanExpiredSessions (delete)
+              return {
+                delete: jest.fn(() => ({
+                  lt: jest.fn(() => ({
+                    is: jest.fn(() => Promise.resolve({ error: null })),
+                  })),
+                })),
+              };
+            } else {
+              // Second call: session lookup (select)
+              return {
+                select: jest.fn(() => ({
+                  eq: jest.fn(() => ({
+                    single: jest.fn().mockResolvedValue({
+                      data: {
+                        id: "session-456",
+                        user_id: null,
+                        expires_at: new Date(Date.now() + 3600000).toISOString(),
+                        completed_at: null,
+                        anonymous_session_id: null,
+                      },
+                      error: null,
+                    }),
+                  })),
+                })),
+              };
+            }
+          }
+          if (table === "diagnostic_questions") {
+            return {
+              select: jest.fn(() => ({
+                eq: jest.fn(() => ({
+                  eq: jest.fn(() => ({
+                    single: jest.fn().mockResolvedValue({
+                      data: {
+                        id: "question-uuid-789",
+                        correct_label: "B",
+                        original_question_id: "canonical-question-uuid-999",
+                      },
+                      error: null,
+                    }),
+                  })),
+                })),
+              })),
+            };
+          }
+          if (table === "diagnostic_responses") {
+            return {
+              insert: jest.fn().mockResolvedValue({ data: [{ id: 2 }], error: null }),
+            };
+          }
+          if (table === "explanations") {
+            return {
+              select: jest.fn(() => ({
+                eq: jest.fn(() => ({
+                  single: jest.fn().mockResolvedValue({
+                    data: null,
+                    error: { code: "PGRST116", message: "No rows returned" },
+                  }),
+                })),
+              })),
+            };
+          }
+          return { select: jest.fn(), insert: jest.fn() };
+        });
+
+        const req = new Request("http://localhost/api/diagnostic", {
+          method: "POST",
+          body: JSON.stringify({
+            action: "answer",
+            sessionId: "session-456",
+            data: { questionId: "question-uuid-789", selectedLabel: "B" },
+          }),
+          headers: { "Content-Type": "application/json" },
+        });
+
+        const res = await diagnosticPOST(req);
+        const json = await res.json();
+
+        expect(res.status).toBe(200);
+        expect(json.isCorrect).toBe(true);
+        expect(json.correctAnswer).toBe("B");
+        expect(json.explanation).toBeNull();
+
+        // Verify warning was logged
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          expect.stringContaining("Missing canonical explanation for question canonical-question-uuid-999 in session session-456")
+        );
+
+        // Verify explanations_legacy was NOT queried
+        const fromCalls = serverSupabaseMock.from.mock.calls;
+        const explanationsLegacyCall = fromCalls.find((call) => call[0] === "explanations_legacy");
+        expect(explanationsLegacyCall).toBeUndefined();
+
+        consoleWarnSpy.mockRestore();
+      });
     });
   });
 });
