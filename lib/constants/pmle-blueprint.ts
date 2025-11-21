@@ -1,20 +1,18 @@
 /**
  * PMLE Blueprint Domain Weights Configuration
- * 
- * This configuration defines the domain weights for the Professional Machine Learning Engineer (PMLE) exam.
- * These weights are used to compute per-exam question counts for domain-balanced diagnostics.
- * 
+ *
+ * This Week 2 stopgap configuration defines the domain weights for the Professional Machine Learning
+ * Engineer (PMLE) exam. `calculateDomainTargets()` multiplies these weights by the requested question
+ * count (`weight * N`), rounds them, and then balances remainders to ensure exactly `N` questions while
+ * respecting per-domain availability.
+ *
  * Usage:
- * - For a diagnostic with N total questions, each domain gets approximately (weight * N) questions
- * - The selection algorithm rounds these targets and balances remainders to ensure exactly N questions
- * - Domains with insufficient questions will have their targets capped, and remaining slots redistributed
- * 
- * IMPORTANT: This is a temporary in-code config. In a future iteration, this should be moved to a 
- * DB-driven blueprint editor to allow non-developers to update weights without code changes.
- * 
- * TODO: Verify these weights match the official Google PMLE exam blueprint percentages.
- * Current weights are estimated based on available question distribution and should be validated
- * against the official exam guide.
+ * - Each diagnostic domain target starts as roughly `weight * N`
+ * - `calculateDomainTargets()` rounds, caps by availability, and redistributes remainders
+ * - Domains with insufficient inventory contribute fewer questions; remaining slots are reassigned
+ *
+ * IMPORTANT: This is a temporary in-code blueprint for Week 2. A future iteration will replace it
+ * with a DB-driven blueprint editor so non-developers can adjust weights without code changes.
  */
 
 export interface PmleDomainConfig {
@@ -22,7 +20,10 @@ export interface PmleDomainConfig {
   domainCode: string;
   /** Human-readable display name for the domain */
   displayName: string;
-  /** Weight (0-1) representing approximate percentage of exam questions from this domain */
+  /**
+   * Weight (0–1) approximating this domain's official PMLE blueprint percentage.
+   * Used by `calculateDomainTargets()` as a fraction of the requested question count.
+   */
   weight: number;
 }
 
@@ -34,119 +35,34 @@ export interface PmleDomainConfig {
  */
 export const PMLE_BLUEPRINT: PmleDomainConfig[] = [
   {
-    domainCode: "ONLINE_AND_BATCH_PREDICTION_DEPLOYMENT",
-    displayName: "Online and batch prediction deployment",
-    weight: 0.08, // ~8% - High importance for production ML
+    domainCode: "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
+    displayName: "Architecting Low-Code ML Solutions",
+    weight: 0.125, // 12–13%
   },
   {
-    domainCode: "CUSTOM_TRAINING_WITH_DIFFERENT_ML_FRAMEWORKS",
-    displayName: "Custom training with different ML frameworks",
-    weight: 0.08, // ~8% - Core ML engineering skill
+    domainCode: "COLLABORATING_TO_MANAGE_DATA_AND_MODELS",
+    displayName: "Collaborating to Manage Data & Models",
+    weight: 0.155, // 14–16%
   },
   {
-    domainCode: "BIGQUERY_ML_FOR_CLASSIFICATION_AND_REGRESSION",
-    displayName: "BigQuery ML for classification and regression",
-    weight: 0.06, // ~6% - Important GCP-specific tool
+    domainCode: "SCALING_PROTOTYPES_INTO_ML_MODELS",
+    displayName: "Scaling Prototypes into ML Models",
+    weight: 0.18, // 18%
   },
   {
-    domainCode: "AUTOML_FOR_TABULAR_TEXT_AND_IMAGE_DATA",
-    displayName: "AutoML for tabular, text, and image data",
-    weight: 0.06, // ~6% - AutoML is a key PMLE topic
+    domainCode: "SERVING_AND_SCALING_MODELS",
+    displayName: "Serving & Scaling Models",
+    weight: 0.195, // 19–20%
   },
   {
-    domainCode: "VERTEX_AI_PIPELINES_AND_KUBEFLOW_ORCHESTRATION",
-    displayName: "Vertex AI Pipelines and Kubeflow orchestration",
-    weight: 0.06, // ~6% - ML pipeline orchestration
+    domainCode: "AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES",
+    displayName: "Automating & Orchestrating ML Pipelines",
+    weight: 0.215, // 21–22%
   },
   {
-    domainCode: "DATA_PREPROCESSING_WITH_DATAFLOW_AND_TFX",
-    displayName: "Data preprocessing with Dataflow and TFX",
-    weight: 0.05, // ~5% - Data engineering for ML
-  },
-  {
-    domainCode: "DISTRIBUTED_TRAINING_WITH_TPUS_AND_GPUS",
-    displayName: "Distributed training with TPUs and GPUs",
-    weight: 0.05, // ~5% - Training at scale
-  },
-  {
-    domainCode: "HYPERPARAMETER_TUNING_STRATEGIES",
-    displayName: "Hyperparameter tuning strategies",
-    weight: 0.05, // ~5% - Model optimization
-  },
-  {
-    domainCode: "ML_APIS_AND_MODEL_GARDEN_APPLICATIONS",
-    displayName: "ML APIs and Model Garden applications",
-    weight: 0.05, // ~5% - Pre-built ML solutions
-  },
-  {
-    domainCode: "VERTEX_AI_FEATURE_STORE_MANAGEMENT",
-    displayName: "Vertex AI Feature Store management",
-    weight: 0.05, // ~5% - Feature engineering and management
-  },
-  {
-    domainCode: "VERTEX_AI_WORKBENCH_AND_JUPYTER_ENVIRONMENTS",
-    displayName: "Vertex AI Workbench and Jupyter environments",
-    weight: 0.05, // ~5% - Development environments
-  },
-  {
-    domainCode: "AUTOMATED_MODEL_RETRAINING_STRATEGIES",
-    displayName: "Automated model retraining strategies",
-    weight: 0.04, // ~4% - MLOps automation
-  },
-  {
-    domainCode: "CICD_FOR_ML_WITH_CLOUD_BUILD",
-    displayName: "CI/CD for ML with Cloud Build",
-    weight: 0.04, // ~4% - ML DevOps
-  },
-  {
-    domainCode: "MODEL_MONITORING_AND_DRIFT_DETECTION",
-    displayName: "Model monitoring and drift detection",
-    weight: 0.04, // ~4% - Production monitoring
-  },
-  {
-    domainCode: "MODEL_VERSIONING_AND_AB_TESTING",
-    displayName: "Model versioning and A/B testing",
-    weight: 0.04, // ~4% - Model management
-  },
-  {
-    domainCode: "RESPONSIBLE_AI_AND_BIAS_DETECTION",
-    displayName: "Responsible AI and bias detection",
-    weight: 0.04, // ~4% - Ethics and fairness
-  },
-  {
-    domainCode: "SCALING_SERVING_INFRASTRUCTURE_AND_HARDWARE_SELECTION",
-    displayName: "Scaling serving infrastructure and hardware selection",
-    weight: 0.04, // ~4% - Infrastructure scaling
-  },
-  {
-    domainCode: "FINE_TUNING_FOUNDATIONAL_MODELS",
-    displayName: "Fine-tuning foundational models",
-    weight: 0.03, // ~3% - LLM/GenAI focus
-  },
-  {
-    domainCode: "ML_EXPERIMENTS_TRACKING_WITH_VERTEX_AI_EXPERIMENTS",
-    displayName: "ML experiments tracking with Vertex AI Experiments",
-    weight: 0.03, // ~3% - Experimentation
-  },
-  {
-    domainCode: "RETRIEVAL_AUGMENTED_GENERATION_RAG_WITH_VERTEX_AI_AGENT_BUILDER",
-    displayName: "Retrieval Augmented Generation (RAG) with Vertex AI Agent Builder",
-    weight: 0.03, // ~3% - GenAI applications
-  },
-  {
-    domainCode: "EXPLAINABLE_AI_AND_MODEL_INTERPRETABILITY",
-    displayName: "Explainable AI and model interpretability",
-    weight: 0.02, // ~2% - Model explainability
-  },
-  {
-    domainCode: "ML_METADATA_TRACKING_AND_LINEAGE",
-    displayName: "ML metadata tracking and lineage",
-    weight: 0.02, // ~2% - Metadata management
-  },
-  {
-    domainCode: "MODEL_OPTIMIZATION_FOR_PRODUCTION",
-    displayName: "Model optimization for production",
-    weight: 0.02, // ~2% - Performance optimization
+    domainCode: "MONITORING_ML_SOLUTIONS",
+    displayName: "Monitoring ML Solutions",
+    weight: 0.135, // 13–14%
   },
 ];
 
