@@ -412,6 +412,9 @@ graph TD
 **GET `/api/diagnostic/summary/[sessionId]`**
 - Returns complete session results
 - Includes all questions with answers
+- **Domain Breakdown:** Computed entirely from `diagnostic_questions.domain_code` and `diagnostic_responses.is_correct` with no legacy `questions` table joins
+- **Domain Labels:** Human-readable domain names are derived from canonical PMLE blueprint config via `getPmleDomainConfig(domain_code)`
+- **Non-Canonical Sessions:** For sessions where all questions have `domain_code = null`, `domainBreakdown` returns an empty array (no domain breakdown available)
 
 ---
 

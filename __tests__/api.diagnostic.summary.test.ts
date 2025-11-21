@@ -168,26 +168,18 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
         eq: jest.fn().mockReturnThis(),
       };
 
-      // Setup chain for topics query
-      const topicsQuery = {
-        from: jest.fn().mockReturnThis(),
-        select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-      };
-
       // Configure mockSupabase to return different chains for different tables
       mockSupabase.from.mockImplementation((table: string) => {
         if (table === "diagnostics_sessions") {
           return mockSupabase; // Original chain for sessions
         } else if (table === "diagnostic_questions") {
           return questionsQuery;
-        } else if (table === "questions") {
-          return topicsQuery;
         }
+        // No longer querying questions table for legacy topics
         return mockSupabase;
       });
 
-      // Mock the second query for questions with responses
+      // Mock the query for questions with responses (including domain_code for canonical sessions)
       (questionsQuery as any).eq.mockResolvedValue({
         data: [
           {
@@ -201,6 +193,8 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
             ],
             correct_label: "A",
             original_question_id: 101,
+            domain_code: null, // Can be null for legacy sessions
+            domain_id: null,
             diagnostic_responses: [
               {
                 selected_label: "A",
@@ -220,6 +214,8 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
             ],
             correct_label: "B",
             original_question_id: 102,
+            domain_code: null,
+            domain_id: null,
             diagnostic_responses: [
               {
                 selected_label: "C",
@@ -239,6 +235,8 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
             ],
             correct_label: "A",
             original_question_id: 103,
+            domain_code: null,
+            domain_id: null,
             diagnostic_responses: [
               {
                 selected_label: "A",
@@ -247,16 +245,6 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
               },
             ],
           },
-        ],
-        error: null,
-      });
-
-      // Mock the third query for question topics
-      (topicsQuery as any).in.mockResolvedValue({
-        data: [
-          { id: 101, topic: "Machine Learning Fundamentals" },
-          { id: 102, topic: "Machine Learning Fundamentals" },
-          { id: 103, topic: "Data Engineering" },
         ],
         error: null,
       });
@@ -322,8 +310,114 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
     });
 
     it("should calculate domain breakdown correctly", async () => {
+      const mockGetPmleDomainConfig = getPmleDomainConfig as jest.MockedFunction<typeof getPmleDomainConfig>;
+      
+      // Mock domain config lookups
+      mockGetPmleDomainConfig.mockImplementation((code: string) => {
+        const configs: Record<string, { domainCode: string; displayName: string; weight: number }> = {
+          'ARCHITECTING_LOW_CODE_ML_SOLUTIONS': {
+            domainCode: 'ARCHITECTING_LOW_CODE_ML_SOLUTIONS',
+            displayName: 'Architecting Low-Code ML Solutions',
+            weight: 0.125,
+          },
+          'SERVING_AND_SCALING_MODELS': {
+            domainCode: 'SERVING_AND_SCALING_MODELS',
+            displayName: 'Serving & Scaling Models',
+            weight: 0.195,
+          },
+        };
+        return configs[code];
+      });
+
       const completedAt = new Date().toISOString();
       const startedAt = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
+      // Override the questions query to include domain_code
+      const questionsQuery = {
+        from: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: [
+            {
+              id: 1,
+              stem: "What is machine learning?",
+              options: [
+                { label: "A", text: "A subset of AI" },
+                { label: "B", text: "A database" },
+                { label: "C", text: "A programming language" },
+                { label: "D", text: "A hardware device" },
+              ],
+              correct_label: "A",
+              original_question_id: 101,
+              domain_code: "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
+              domain_id: "domain-uuid-1",
+              diagnostic_responses: [
+                {
+                  selected_label: "A",
+                  is_correct: true,
+                  responded_at: new Date().toISOString(),
+                },
+              ],
+            },
+            {
+              id: 2,
+              stem: "What is TensorFlow?",
+              options: [
+                { label: "A", text: "A database" },
+                { label: "B", text: "A framework" },
+                { label: "C", text: "An OS" },
+                { label: "D", text: "A language" },
+              ],
+              correct_label: "B",
+              original_question_id: 102,
+              domain_code: "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
+              domain_id: "domain-uuid-1",
+              diagnostic_responses: [
+                {
+                  selected_label: "C",
+                  is_correct: false,
+                  responded_at: new Date().toISOString(),
+                },
+              ],
+            },
+            {
+              id: 3,
+              stem: "What is BigQuery?",
+              options: [
+                { label: "A", text: "A data warehouse" },
+                { label: "B", text: "A web server" },
+                { label: "C", text: "A mobile app" },
+                { label: "D", text: "A game engine" },
+              ],
+              correct_label: "A",
+              original_question_id: 103,
+              domain_code: "SERVING_AND_SCALING_MODELS",
+              domain_id: "domain-uuid-2",
+              diagnostic_responses: [
+                {
+                  selected_label: "A",
+                  is_correct: true,
+                  responded_at: new Date().toISOString(),
+                },
+              ],
+            },
+          ],
+          error: null,
+        }),
+      };
+
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === "diagnostics_sessions") {
+          return mockSupabase;
+        } else if (table === "diagnostic_questions") {
+          return questionsQuery;
+        }
+        // Should NOT query questions table
+        return {
+          select: jest.fn().mockReturnThis(),
+          in: jest.fn().mockResolvedValue({ data: [], error: null }),
+        };
+      });
 
       mockSupabase.single.mockResolvedValue({
         data: {
@@ -349,19 +443,25 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
       expect(data.domainBreakdown).toEqual(
         expect.arrayContaining([
           {
-            domain: "Machine Learning Fundamentals",
+            domain: "Architecting Low-Code ML Solutions",
             correct: 1,
             total: 2,
             percentage: 50,
           },
           {
-            domain: "Data Engineering",
+            domain: "Serving & Scaling Models",
             correct: 1,
             total: 1,
             percentage: 100,
           },
         ])
       );
+
+      // Verify questions table was NOT queried
+      const questionsTableQueries = mockSupabase.from.mock.calls.filter(
+        (call) => call[0] === "questions"
+      );
+      expect(questionsTableQueries.length).toBe(0);
     });
 
     it("should handle questions with no responses", async () => {
@@ -582,6 +682,104 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
         (call) => call[0] === "questions"
       );
       // For canonical sessions with domain_code, we should not query questions table
+      expect(questionsTableQueries.length).toBe(0);
+    });
+
+    it("should return empty domainBreakdown when all questions have null domain_code", async () => {
+      const completedAt = new Date().toISOString();
+      const startedAt = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
+      // Setup questions query with null domain_code (non-canonical or older sessions)
+      const questionsQuery = {
+        from: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: [
+            {
+              id: 1,
+              stem: "Legacy question 1",
+              options: [
+                { label: "A", text: "Answer A" },
+                { label: "B", text: "Answer B" },
+              ],
+              correct_label: "A",
+              original_question_id: "legacy-q1",
+              domain_id: null,
+              domain_code: null, // No domain_code
+              diagnostic_responses: [
+                {
+                  selected_label: "A",
+                  is_correct: true,
+                  responded_at: new Date().toISOString(),
+                },
+              ],
+            },
+            {
+              id: 2,
+              stem: "Legacy question 2",
+              options: [
+                { label: "A", text: "Answer A" },
+                { label: "B", text: "Answer B" },
+              ],
+              correct_label: "B",
+              original_question_id: "legacy-q2",
+              domain_id: null,
+              domain_code: null, // No domain_code
+              diagnostic_responses: [
+                {
+                  selected_label: "A",
+                  is_correct: false,
+                  responded_at: new Date().toISOString(),
+                },
+              ],
+            },
+          ],
+          error: null,
+        }),
+      };
+
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === "diagnostics_sessions") {
+          return mockSupabase;
+        } else if (table === "diagnostic_questions") {
+          return questionsQuery;
+        }
+        // Should NOT query questions table even for legacy sessions
+        return {
+          select: jest.fn().mockReturnThis(),
+          in: jest.fn().mockResolvedValue({ data: [], error: null }),
+        };
+      });
+
+      mockSupabase.single.mockResolvedValue({
+        data: {
+          id: "test-session-legacy",
+          user_id: null,
+          anonymous_session_id: "anon-789",
+          completed_at: completedAt,
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          exam_type: "Legacy Exam",
+          started_at: startedAt,
+          question_count: 2,
+        },
+        error: null,
+      });
+
+      const req = new Request(
+        "http://localhost:3000/api/diagnostic/summary/test-session-legacy?anonymousSessionId=anon-789"
+      );
+      const response = await GET(req);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      
+      // Verify domain breakdown is empty when domain_code is null for all questions
+      expect(data.domainBreakdown).toEqual([]);
+
+      // Verify questions table was NOT queried (no legacy fallback)
+      const questionsTableQueries = mockSupabase.from.mock.calls.filter(
+        (call) => call[0] === "questions"
+      );
       expect(questionsTableQueries.length).toBe(0);
     });
   });
