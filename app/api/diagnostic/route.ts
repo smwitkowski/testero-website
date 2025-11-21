@@ -8,15 +8,11 @@ import { trackDiagnosticCompleteWithCampaign } from "@/lib/analytics/campaign-an
 import { PostHog } from "posthog-node";
 import { requireSubscriber } from "@/lib/auth/require-subscriber";
 import { selectPmleQuestionsByBlueprint } from "@/lib/diagnostic/pmle-selection";
+import { DIAGNOSTIC_CONFIG, getSessionTimeoutMs } from "@/lib/constants/diagnostic-config";
 
 // Types for better type safety
 
 // import { createServerActionClient } from '@supabase/auth-helpers-nextjs'; // Example, adjust if using different helper
-
-// Security constants
-const SESSION_TIMEOUT_MINUTES = 30; // Can be adjusted, e.g., 24 * 60 for anonymous
-const MAX_QUESTIONS = 20;
-const MIN_QUESTIONS = 1;
 
 // Initialize PostHog for server-side analytics
 const posthog = (() => {
@@ -57,8 +53,11 @@ function validateStartRequest(
   const examType = typeof body.examType === "string" ? body.examType.trim() : "Google ML Engineer"; // Default or ensure valid
   const numQuestions =
     typeof body.numQuestions === "number"
-      ? Math.max(MIN_QUESTIONS, Math.min(MAX_QUESTIONS, Math.floor(body.numQuestions)))
-      : 5; // Default num questions
+      ? Math.max(
+          DIAGNOSTIC_CONFIG.MIN_QUESTION_COUNT,
+          Math.min(DIAGNOSTIC_CONFIG.MAX_QUESTION_COUNT, Math.floor(body.numQuestions))
+        )
+      : DIAGNOSTIC_CONFIG.DEFAULT_QUESTION_COUNT; // Default num questions
 
   const anonymousSessionId =
     typeof body.anonymousSessionId === "string" ? body.anonymousSessionId.trim() : undefined;
@@ -331,6 +330,16 @@ export async function POST(req: Request) {
 
         if (examIdToUse === 6) {
           // PMLE: Use canonical schema with blueprint weights
+          // 
+          // This uses selectPmleQuestionsByBlueprint() which:
+          // - Filters canonical questions by exam='GCP_PM_ML_ENG' and status='ACTIVE'
+          // - Joins to answers table to build options
+          // - Uses PMLE_BLUEPRINT domain weights to calculate per-domain targets
+          // - Randomly selects from each domain pool to meet target counts
+          // - Redistributes remaining slots if some domains have insufficient questions
+          //
+          // Debug logging: Set DIAGNOSTIC_BLUEPRINT_DEBUG=true to see domain distribution
+          // in console logs (domain code, selectedCount/targetCount, available count)
           try {
             const selectionResult = await selectPmleQuestionsByBlueprint(supabase, numQuestions);
             selectedQuestions = selectionResult.questions.map((q) => ({
@@ -410,7 +419,7 @@ export async function POST(req: Request) {
         }
 
         // 3. Create diagnostics_sessions record
-        const newSessionExpiresAt = new Date(Date.now() + SESSION_TIMEOUT_MINUTES * 60 * 1000);
+        const newSessionExpiresAt = new Date(Date.now() + getSessionTimeoutMs());
         const newAnonymousId = user ? null : effectiveAnonymousSessionId || crypto.randomUUID();
 
         const { data: newSessionRecord, error: newSessionError } = await supabase

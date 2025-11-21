@@ -129,6 +129,16 @@ export async function POST(req: Request) {
     const examIdToUse = 6; // PMLE exam ID
 
     // Select PMLE questions using canonical schema and blueprint weights
+    //
+    // This uses selectPmleQuestionsByBlueprint() which:
+    // - Filters canonical questions by exam='GCP_PM_ML_ENG' and status='ACTIVE'
+    // - Joins to answers table to build options
+    // - Uses PMLE_BLUEPRINT domain weights to calculate per-domain targets
+    // - Randomly selects from each domain pool to meet target counts
+    // - Redistributes remaining slots if some domains have insufficient questions
+    //
+    // Debug logging: Set DIAGNOSTIC_BLUEPRINT_DEBUG=true to see domain distribution
+    // in console logs (domain code, selectedCount/targetCount, available count)
     let selectionResult;
     try {
       selectionResult = await selectPmleQuestionsByBlueprint(supabase, numQuestions);
