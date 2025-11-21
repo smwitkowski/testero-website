@@ -4,9 +4,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GET } from "@/app/api/diagnostic/summary/[sessionId]/route";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getPmleDomainConfig } from "@/lib/constants/pmle-blueprint";
 
 // Mock the dependencies
 jest.mock("@/lib/supabase/server");
+jest.mock("@/lib/constants/pmle-blueprint");
+jest.mock("@/lib/auth/require-subscriber", () => ({
+  requireSubscriber: jest.fn().mockResolvedValue(null),
+}));
 
 const mockCreateServerSupabaseClient = createServerSupabaseClient as jest.MockedFunction<
   typeof createServerSupabaseClient
@@ -421,6 +426,163 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
         correctAnswer: "A",
         isCorrect: false,
       });
+    });
+
+    it("should use canonical domain_code from snapshots without joining questions table", async () => {
+      const mockGetPmleDomainConfig = getPmleDomainConfig as jest.MockedFunction<typeof getPmleDomainConfig>;
+      
+      // Mock domain config lookups
+      mockGetPmleDomainConfig.mockImplementation((code: string) => {
+        const configs: Record<string, { domainCode: string; displayName: string; weight: number }> = {
+          'ARCHITECTING_LOW_CODE_ML_SOLUTIONS': {
+            domainCode: 'ARCHITECTING_LOW_CODE_ML_SOLUTIONS',
+            displayName: 'Architecting Low-Code ML Solutions',
+            weight: 0.125,
+          },
+          'SERVING_AND_SCALING_MODELS': {
+            domainCode: 'SERVING_AND_SCALING_MODELS',
+            displayName: 'Serving & Scaling Models',
+            weight: 0.195,
+          },
+        };
+        return configs[code];
+      });
+
+      const completedAt = new Date().toISOString();
+      const startedAt = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
+      // Setup questions query with domain_code populated (canonical PMLE)
+      const questionsQuery = {
+        from: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: [
+            {
+              id: 1,
+              stem: "Canonical question 1",
+              options: [
+                { label: "A", text: "Answer A" },
+                { label: "B", text: "Answer B" },
+              ],
+              correct_label: "A",
+              original_question_id: "q1",
+              domain_id: "domain-uuid-1",
+              domain_code: "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
+              diagnostic_responses: [
+                {
+                  selected_label: "A",
+                  is_correct: true,
+                  responded_at: new Date().toISOString(),
+                },
+              ],
+            },
+            {
+              id: 2,
+              stem: "Canonical question 2",
+              options: [
+                { label: "A", text: "Answer A" },
+                { label: "B", text: "Answer B" },
+              ],
+              correct_label: "B",
+              original_question_id: "q2",
+              domain_id: "domain-uuid-1",
+              domain_code: "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
+              diagnostic_responses: [
+                {
+                  selected_label: "A",
+                  is_correct: false,
+                  responded_at: new Date().toISOString(),
+                },
+              ],
+            },
+            {
+              id: 3,
+              stem: "Canonical question 3",
+              options: [
+                { label: "A", text: "Answer A" },
+                { label: "B", text: "Answer B" },
+              ],
+              correct_label: "A",
+              original_question_id: "q3",
+              domain_id: "domain-uuid-2",
+              domain_code: "SERVING_AND_SCALING_MODELS",
+              diagnostic_responses: [
+                {
+                  selected_label: "A",
+                  is_correct: true,
+                  responded_at: new Date().toISOString(),
+                },
+              ],
+            },
+          ],
+          error: null,
+        }),
+      };
+
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === "diagnostics_sessions") {
+          return mockSupabase;
+        } else if (table === "diagnostic_questions") {
+          return questionsQuery;
+        }
+        // Should NOT query questions table for canonical sessions
+        return {
+          select: jest.fn().mockReturnThis(),
+          in: jest.fn().mockResolvedValue({ data: [], error: null }),
+        };
+      });
+
+      mockSupabase.single.mockResolvedValue({
+        data: {
+          id: "test-session-123",
+          user_id: null,
+          anonymous_session_id: "anon-456",
+          completed_at: completedAt,
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          exam_type: "Google Professional ML Engineer",
+          started_at: startedAt,
+          question_count: 3,
+        },
+        error: null,
+      });
+
+      const req = new Request(
+        "http://localhost:3000/api/diagnostic/summary/test-session-123?anonymousSessionId=anon-456"
+      );
+      const response = await GET(req);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      
+      // Verify domain breakdown uses canonical domain codes from snapshots
+      expect(data.domainBreakdown).toEqual(
+        expect.arrayContaining([
+          {
+            domain: "Architecting Low-Code ML Solutions",
+            correct: 1,
+            total: 2,
+            percentage: 50,
+          },
+          {
+            domain: "Serving & Scaling Models",
+            correct: 1,
+            total: 1,
+            percentage: 100,
+          },
+        ])
+      );
+
+      // Verify getPmleDomainConfig was called with domain codes from snapshots
+      expect(mockGetPmleDomainConfig).toHaveBeenCalledWith("ARCHITECTING_LOW_CODE_ML_SOLUTIONS");
+      expect(mockGetPmleDomainConfig).toHaveBeenCalledWith("SERVING_AND_SCALING_MODELS");
+
+      // Verify questions table was NOT queried (no join needed for canonical sessions)
+      // The summary endpoint should use domain_code directly from diagnostic_questions snapshots
+      const questionsTableQueries = mockSupabase.from.mock.calls.filter(
+        (call) => call[0] === "questions"
+      );
+      // For canonical sessions with domain_code, we should not query questions table
+      expect(questionsTableQueries.length).toBe(0);
     });
   });
 
