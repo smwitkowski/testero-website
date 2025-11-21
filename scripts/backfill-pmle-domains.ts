@@ -52,15 +52,25 @@ async function ensureBlueprintDomainsExist(): Promise<Map<string, string>> {
   
   const domainCodeToId = new Map<string, string>();
   
-  for (const blueprintDomain of PMLE_BLUEPRINT) {
+  // Define the 6 canonical blueprint domains (regardless of what's in PMLE_BLUEPRINT)
+  const canonicalBlueprintDomains = [
+    { domainCode: 'ARCHITECTING_LOW_CODE_ML_SOLUTIONS', displayName: 'Architecting Low-Code ML Solutions' },
+    { domainCode: 'COLLABORATING_TO_MANAGE_DATA_AND_MODELS', displayName: 'Collaborating to Manage Data & Models' },
+    { domainCode: 'SCALING_PROTOTYPES_INTO_ML_MODELS', displayName: 'Scaling Prototypes into ML Models' },
+    { domainCode: 'SERVING_AND_SCALING_MODELS', displayName: 'Serving & Scaling Models' },
+    { domainCode: 'AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES', displayName: 'Automating & Orchestrating ML Pipelines' },
+    { domainCode: 'MONITORING_ML_SOLUTIONS', displayName: 'Monitoring ML Solutions' },
+  ];
+  
+  for (const blueprintDomain of canonicalBlueprintDomains) {
     // Check if domain exists
     const { data: existing, error: fetchError } = await supabase
       .from('exam_domains')
       .select('id, code, name')
       .eq('code', blueprintDomain.domainCode)
-      .single();
+      .maybeSingle(); // Use maybeSingle() instead of single() to return null instead of error when not found
     
-    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = not found
+    if (fetchError) {
       console.error(`❌ Error checking domain ${blueprintDomain.domainCode}:`, fetchError);
       throw fetchError;
     }
@@ -82,6 +92,11 @@ async function ensureBlueprintDomainsExist(): Promise<Map<string, string>> {
       if (createError) {
         console.error(`❌ Error creating domain ${blueprintDomain.domainCode}:`, createError);
         throw createError;
+      }
+      
+      if (!created) {
+        console.error(`❌ Failed to create domain ${blueprintDomain.domainCode}: No data returned`);
+        throw new Error(`Failed to create domain ${blueprintDomain.domainCode}`);
       }
       
       console.log(`  ✓ Created domain: ${blueprintDomain.domainCode}`);
