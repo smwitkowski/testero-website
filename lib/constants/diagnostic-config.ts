@@ -3,6 +3,9 @@
  * Centralized configuration for easy maintenance and testing
  */
 
+// Re-export PMLE blueprint for convenience
+export { PMLE_BLUEPRINT, PMLE_BLUEPRINT_MAP, getPmleDomainConfig } from './pmle-blueprint';
+
 export const DIAGNOSTIC_CONFIG = {
   // Default number of questions for different contexts
   DEFAULT_QUESTION_COUNT: 5,

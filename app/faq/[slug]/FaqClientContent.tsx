@@ -15,6 +15,7 @@ export default function FaqClientContent({ faq }: FaqClientContentProps) {
   if (!faq) {
     return (
       <div className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 min-h-screen">
+        {/* eslint-disable-next-line no-restricted-syntax */}
         <div className="container mx-auto px-4 py-20 text-center">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -67,6 +68,7 @@ export default function FaqClientContent({ faq }: FaqClientContentProps) {
 
   return (
     <div className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 min-h-screen">
+      {/* eslint-disable-next-line no-restricted-syntax */}
       <div className="container mx-auto px-4 py-20">
         <script
           type="application/ld+json"

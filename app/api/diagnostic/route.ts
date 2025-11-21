@@ -7,6 +7,7 @@ import {
 import { trackDiagnosticCompleteWithCampaign } from "@/lib/analytics/campaign-analytics-integration";
 import { PostHog } from "posthog-node";
 import { requireSubscriber } from "@/lib/auth/require-subscriber";
+import { selectPmleQuestionsByBlueprint } from "@/lib/diagnostic/pmle-selection";
 
 // Types for better type safety
 
@@ -199,6 +200,19 @@ export async function GET(req: Request) {
   }
 }
 
+/**
+ * Main diagnostic API endpoint
+ * 
+ * This is the PRIMARY canonical diagnostic creation path for PMLE diagnostics.
+ * The frontend diagnostic page uses this endpoint with action: "start".
+ * 
+ * For PMLE exams (exam_id = 6), this endpoint uses:
+ * - Canonical questions schema (questions, answers, explanations, exam_domains)
+ * - Blueprint-weighted domain selection via selectPmleQuestionsByBlueprint()
+ * - Domain info snapshots in diagnostic_questions (domain_id, domain_code)
+ * 
+ * Legacy exams continue to use exam_versions and legacy question selection.
+ */
 export async function POST(req: Request) {
   // Premium gate check
   const block = await requireSubscriber(req, "/api/diagnostic");
@@ -306,52 +320,85 @@ export async function POST(req: Request) {
           }
         }
 
-        // 2. Fetch current exam_version_id for the given examIdToUse
-        const { data: currentExamVersion, error: versionError } = await supabase
-          .from("exam_versions")
-          .select("id")
-          .eq("exam_id", examIdToUse)
-          .eq("is_current", true)
-          .single();
+        // 2. Select questions - use canonical PMLE selection for PMLE exams, legacy for others
+        let selectedQuestions: Array<{
+          id: string;
+          stem: string;
+          options: Array<{ label: string; text: string; is_correct: boolean }>;
+          domain_id?: string;
+          domain_code?: string;
+        }>;
 
-        if (versionError || !currentExamVersion) {
-          console.error(
-            `Error fetching current exam version for exam_id ${examIdToUse}:`,
-            versionError
-          );
-          return NextResponse.json(
-            { error: "Could not determine current exam version." },
-            { status: 500 }
-          );
+        if (examIdToUse === 6) {
+          // PMLE: Use canonical schema with blueprint weights
+          try {
+            const selectionResult = await selectPmleQuestionsByBlueprint(supabase, numQuestions);
+            selectedQuestions = selectionResult.questions.map((q) => ({
+              id: q.id,
+              stem: q.stem,
+              options: q.answers.map((a) => ({
+                label: a.choice_label,
+                text: a.choice_text,
+                is_correct: a.is_correct,
+              })),
+              domain_id: q.domain_id,
+              domain_code: q.domain_code,
+            }));
+          } catch (error) {
+            console.error("Error selecting PMLE questions:", error);
+            return NextResponse.json(
+              {
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "Could not fetch questions for the diagnostic.",
+              },
+              { status: 500 }
+            );
+          }
+        } else {
+          // Legacy: Use exam_versions for non-PMLE exams
+          const { data: currentExamVersion, error: versionError } = await supabase
+            .from("exam_versions")
+            .select("id")
+            .eq("exam_id", examIdToUse)
+            .eq("is_current", true)
+            .single();
+
+          if (versionError || !currentExamVersion) {
+            console.error(
+              `Error fetching current exam version for exam_id ${examIdToUse}:`,
+              versionError
+            );
+            return NextResponse.json(
+              { error: "Could not determine current exam version." },
+              { status: 500 }
+            );
+          }
+          const currentExamVersionId = currentExamVersion.id;
+
+          const { data: dbQuestions, error: questionsFetchError } = await supabase
+            .from("questions")
+            .select(
+              "id, stem, topic, difficulty, options(label, text, is_correct), explanations(text)"
+            )
+            .eq("exam_version_id", currentExamVersionId)
+            .eq("is_diagnostic_eligible", true)
+            .limit(numQuestions * 5);
+
+          if (questionsFetchError || !dbQuestions || dbQuestions.length < numQuestions) {
+            console.error(
+              "Error fetching questions from DB or not enough questions:",
+              questionsFetchError
+            );
+            return NextResponse.json(
+              { error: "Could not fetch enough questions for the diagnostic." },
+              { status: 500 }
+            );
+          }
+
+          selectedQuestions = dbQuestions.sort(() => 0.5 - Math.random()).slice(0, numQuestions);
         }
-        const currentExamVersionId = currentExamVersion.id;
-
-        // 2.b. Fetch questions from public.questions using the currentExamVersionId
-        const { data: dbQuestions, error: questionsFetchError } = await supabase
-          .from("questions")
-          .select(
-            "id, stem, topic, difficulty, options(label, text, is_correct), explanations(text)"
-          )
-          .eq("exam_version_id", currentExamVersionId)
-          .eq("is_diagnostic_eligible", true)
-          // .order('random()') // This can be slow on large tables. Consider pg_tgrm for similarity or other strategies if true random is too slow.
-          .limit(numQuestions * 5); // Fetch more to randomize in code, or use a DB function for random rows if available & performant.
-
-        if (questionsFetchError || !dbQuestions || dbQuestions.length < numQuestions) {
-          console.error(
-            "Error fetching questions from DB or not enough questions:",
-            questionsFetchError
-          );
-          return NextResponse.json(
-            { error: "Could not fetch enough questions for the diagnostic." },
-            { status: 500 }
-          );
-        }
-
-        // Simple in-code randomization if DB random is not used
-        const selectedQuestions = dbQuestions
-          .sort(() => 0.5 - Math.random())
-          .slice(0, numQuestions);
 
         // 3. Create diagnostics_sessions record
         const newSessionExpiresAt = new Date(Date.now() + SESSION_TIMEOUT_MINUTES * 60 * 1000);
@@ -383,11 +430,14 @@ export async function POST(req: Request) {
         // 4. Create diagnostic_questions (snapshot) records
         const questionSnapshotsToInsert = selectedQuestions.map((q) => ({
           session_id: newDbSessionId,
-          original_question_id: q.id, // This is public.questions.id
+          original_question_id: q.id, // This is public.questions.id (UUID for canonical, bigint for legacy)
           stem: q.stem,
           // Ensure options are in {label: string, text: string} format for snapshot
           options: q.options.map((opt) => ({ label: opt.label, text: opt.text })),
           correct_label: q.options.find((opt) => opt.is_correct)?.label || "", // Store correct label in snapshot
+          // Include domain info for canonical PMLE questions
+          domain_id: q.domain_id || null,
+          domain_code: q.domain_code || null,
         }));
 
         const { error: snapshotInsertError } = await supabase
@@ -492,17 +542,39 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: "Failed to save answer." }, { status: 500 });
         }
 
-        // Fetch explanation from public.explanations using original_question_id
-        let explanationText = "No explanation available.";
+        // Fetch explanation from canonical explanations table using original_question_id
+        let explanationText: string | null = null;
         if (snapQuestion.original_question_id) {
-          const { data: explanationData, error: expError } = await supabase
+          // Try canonical explanations table first (for PMLE and future canonical questions)
+          const { data: canonicalExplanation, error: canonicalError } = await supabase
             .from("explanations")
-            .select("text")
+            .select("explanation_text")
             .eq("question_id", snapQuestion.original_question_id)
             .single();
-          if (explanationData && !expError) {
-            explanationText = explanationData.text;
+
+          if (canonicalExplanation && !canonicalError) {
+            explanationText = canonicalExplanation.explanation_text;
+          } else {
+            // Fallback to legacy explanations table for backward compatibility
+            // TODO: Remove this fallback once all questions are migrated to canonical schema
+            const { data: legacyExplanation, error: legacyError } = await supabase
+              .from("explanations_legacy")
+              .select("text")
+              .eq("question_id", snapQuestion.original_question_id)
+              .single();
+
+            if (legacyExplanation && !legacyError) {
+              explanationText = legacyExplanation.text;
+            }
           }
+        }
+
+        // Use fallback message if no explanation found
+        if (!explanationText) {
+          explanationText = "No explanation available yet.";
+          console.warn(
+            `Missing explanation for question ${snapQuestion.original_question_id} in session ${sessionId}`
+          );
         }
 
         return NextResponse.json({

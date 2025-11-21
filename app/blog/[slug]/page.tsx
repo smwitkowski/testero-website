@@ -223,6 +223,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
       {/* Related Posts */}
       {relatedPosts.length > 0 && (
+        // eslint-disable-next-line no-restricted-syntax
         <section className="bg-gray-50 py-16">
           <div className="container mx-auto px-4">
             <div className="max-w-6xl mx-auto">

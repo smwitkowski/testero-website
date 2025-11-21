@@ -1,6 +1,30 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { requireSubscriber } from '@/lib/auth/require-subscriber';
+import { getPmleDomainConfig } from '@/lib/constants/pmle-blueprint';
+
+// Types for diagnostic questions with responses
+interface DiagnosticResponse {
+  selected_label: string;
+  is_correct: boolean;
+  responded_at: string;
+}
+
+interface DiagnosticQuestionWithResponse {
+  id: string;
+  stem: string;
+  options: Array<{ label: string; text: string }>;
+  correct_label: string;
+  original_question_id: string | null;
+  domain_code: string | null;
+  domain_id: string | null;
+  diagnostic_responses: DiagnosticResponse[] | null;
+}
+
+interface QuestionTopic {
+  id: string;
+  topic: string | null;
+}
 
 export async function GET(req: Request) {
   // Premium gate check
@@ -56,7 +80,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Session not completed yet' }, { status: 400 });
     }
 
-    // Fetch diagnostic questions (snapshots) with responses
+    // Fetch diagnostic questions (snapshots) with responses and domain info
     const { data: questionsWithResponses, error: questionsError } = await supabase
       .from('diagnostic_questions')
       .select(`
@@ -65,6 +89,8 @@ export async function GET(req: Request) {
         options,
         correct_label,
         original_question_id,
+        domain_code,
+        domain_id,
         diagnostic_responses (
           selected_label,
           is_correct,
@@ -85,29 +111,59 @@ export async function GET(req: Request) {
     ).length;
     const score = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
-    // Fetch topics/domains for domain breakdown (if available)
-    const originalQuestionIds = questionsWithResponses.map(q => q.original_question_id).filter(Boolean);
-    const { data: questionTopics } = await supabase
-      .from('questions')
-      .select('id, topic')
-      .in('id', originalQuestionIds);
-
-    // Calculate domain breakdown
+    // Calculate domain breakdown from snapshot domain_code (canonical) or fallback to legacy topic lookup
     const domainStats: { [key: string]: { correct: number; total: number } } = {};
     
-    questionsWithResponses.forEach(q => {
-      const topicData = questionTopics?.find(t => t.id === q.original_question_id);
-      const domain = topicData?.topic || 'General';
+    // Type assertion for the query result
+    const typedQuestions = questionsWithResponses as DiagnosticQuestionWithResponse[];
+    
+    // Check if we have domain_code in snapshots (canonical PMLE questions)
+    const hasDomainCode = typedQuestions.some((q) => q.domain_code);
+    
+    if (hasDomainCode) {
+      // Use canonical domain_code from snapshot
+      typedQuestions.forEach((q) => {
+        // Get human-readable domain name from blueprint config
+        const domainCode = q.domain_code || 'UNKNOWN';
+        const domainConfig = getPmleDomainConfig(domainCode);
+        const domain = domainConfig?.displayName || domainCode;
+        
+        if (!domainStats[domain]) {
+          domainStats[domain] = { correct: 0, total: 0 };
+        }
+        
+        domainStats[domain].total++;
+        if (q.diagnostic_responses?.[0]?.is_correct) {
+          domainStats[domain].correct++;
+        }
+      });
+    } else {
+      // Fallback: Legacy path - fetch topics from questions table for backward compatibility
+      const originalQuestionIds = typedQuestions
+        .map((q) => q.original_question_id)
+        .filter((id): id is string => Boolean(id));
       
-      if (!domainStats[domain]) {
-        domainStats[domain] = { correct: 0, total: 0 };
-      }
-      
-      domainStats[domain].total++;
-      if (q.diagnostic_responses?.[0]?.is_correct) {
-        domainStats[domain].correct++;
-      }
-    });
+      const { data: questionTopics } = await supabase
+        .from('questions')
+        .select('id, topic')
+        .in('id', originalQuestionIds);
+
+      const typedTopics = questionTopics as QuestionTopic[] | null;
+
+      typedQuestions.forEach((q) => {
+        const topicData = typedTopics?.find((t) => t.id === q.original_question_id);
+        const domain = topicData?.topic || 'General';
+        
+        if (!domainStats[domain]) {
+          domainStats[domain] = { correct: 0, total: 0 };
+        }
+        
+        domainStats[domain].total++;
+        if (q.diagnostic_responses?.[0]?.is_correct) {
+          domainStats[domain].correct++;
+        }
+      });
+    }
 
     const domainBreakdown = Object.entries(domainStats).map(([domain, stats]) => ({
       domain,

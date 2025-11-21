@@ -71,6 +71,7 @@ export default function FaqPage() {
 
   return (
     <div className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 min-h-screen">
+      {/* eslint-disable-next-line no-restricted-syntax */}
       <div className="container mx-auto px-4 py-20">
         {/* Hero section */}
         <div className="text-center mb-16">

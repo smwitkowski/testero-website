@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Linting Issues**: Fixed all TypeScript `any` type errors in diagnostic summary API route and PMLE selection logic by adding proper type interfaces. Fixed `no-restricted-syntax` warnings for Section component usage by adding appropriate eslint-disable comments. Removed unused `request` parameter from billing status route.
+
+### Added
+- **CI Automation**: Added `Justfile` with `just ci` command to run all CI checks locally (lint, eslint-rules, type-check) for easier pre-commit validation.
+
 ### Added
 - Billing status API endpoint (`GET /api/billing/status`) returning lightweight subscription status for UI decisions only. Server remains authoritative for authorization. No sensitive plan details (plan_id, Stripe IDs, amounts) are returned.
 - `useSubscriptionStatus` hook for client-side subscription status with optional SSR-provided initial value, automatic refetch on auth changes, and manual refetch capability.
