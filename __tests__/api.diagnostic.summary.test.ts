@@ -7,6 +7,9 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 // Mock the dependencies
 jest.mock("@/lib/supabase/server");
+jest.mock("@/lib/auth/require-subscriber", () => ({
+  requireSubscriber: jest.fn().mockResolvedValue(null),
+}));
 
 const mockCreateServerSupabaseClient = createServerSupabaseClient as jest.MockedFunction<
   typeof createServerSupabaseClient
@@ -316,7 +319,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
       });
     });
 
-    it("should calculate domain breakdown correctly", async () => {
+    it("should calculate domain breakdown correctly using legacy topic lookup", async () => {
       const completedAt = new Date().toISOString();
       const startedAt = new Date(Date.now() - 10 * 60 * 1000).toISOString();
 
@@ -357,6 +360,135 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
           },
         ])
       );
+    });
+
+    it("should calculate domain breakdown using canonical domain_code from snapshot", async () => {
+      const completedAt = new Date().toISOString();
+      const startedAt = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
+      // Mock questions with domain_code (canonical PMLE questions)
+      const canonicalQuestionsQuery = {
+        from: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: [
+            {
+              id: 1,
+              stem: "What is Vertex AI?",
+              options: [
+                { label: "A", text: "A ML platform" },
+                { label: "B", text: "A database" },
+                { label: "C", text: "A programming language" },
+                { label: "D", text: "A hardware device" },
+              ],
+              correct_label: "A",
+              original_question_id: "q-uuid-1",
+              domain_code: "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
+              domain_id: "domain-uuid-1",
+              diagnostic_responses: [
+                {
+                  selected_label: "A",
+                  is_correct: true,
+                  responded_at: new Date().toISOString(),
+                },
+              ],
+            },
+            {
+              id: 2,
+              stem: "What is BigQuery ML?",
+              options: [
+                { label: "A", text: "A database" },
+                { label: "B", text: "A ML framework" },
+                { label: "C", text: "An OS" },
+                { label: "D", text: "A language" },
+              ],
+              correct_label: "B",
+              original_question_id: "q-uuid-2",
+              domain_code: "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
+              domain_id: "domain-uuid-1",
+              diagnostic_responses: [
+                {
+                  selected_label: "C",
+                  is_correct: false,
+                  responded_at: new Date().toISOString(),
+                },
+              ],
+            },
+            {
+              id: 3,
+              stem: "What is Dataflow?",
+              options: [
+                { label: "A", text: "A data processing service" },
+                { label: "B", text: "A web server" },
+                { label: "C", text: "A mobile app" },
+                { label: "D", text: "A game engine" },
+              ],
+              correct_label: "A",
+              original_question_id: "q-uuid-3",
+              domain_code: "AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES",
+              domain_id: "domain-uuid-2",
+              diagnostic_responses: [
+                {
+                  selected_label: "A",
+                  is_correct: true,
+                  responded_at: new Date().toISOString(),
+                },
+              ],
+            },
+          ],
+          error: null,
+        }),
+      };
+
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === "diagnostics_sessions") {
+          return mockSupabase;
+        } else if (table === "diagnostic_questions") {
+          return canonicalQuestionsQuery;
+        }
+        return mockSupabase;
+      });
+
+      mockSupabase.single.mockResolvedValue({
+        data: {
+          id: "test-session-123",
+          user_id: null,
+          anonymous_session_id: "anon-456",
+          completed_at: completedAt,
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          exam_type: "Google Professional ML Engineer",
+          started_at: startedAt,
+          question_count: 3,
+        },
+        error: null,
+      });
+
+      const req = new Request(
+        "http://localhost:3000/api/diagnostic/summary/test-session-123?anonymousSessionId=anon-456"
+      );
+      const response = await GET(req);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      // Should use canonical domain_code and convert to display names via getPmleDomainConfig
+      expect(data.domainBreakdown).toEqual(
+        expect.arrayContaining([
+          {
+            domain: "Architecting Low-Code ML Solutions",
+            correct: 1,
+            total: 2,
+            percentage: 50,
+          },
+          {
+            domain: "Automating & Orchestrating ML Pipelines",
+            correct: 1,
+            total: 1,
+            percentage: 100,
+          },
+        ])
+      );
+      // Verify that no legacy topic lookup query was made (questions table should not be queried)
+      expect(mockSupabase.from).not.toHaveBeenCalledWith("questions");
     });
 
     it("should handle questions with no responses", async () => {
