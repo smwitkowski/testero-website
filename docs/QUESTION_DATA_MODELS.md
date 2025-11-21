@@ -404,7 +404,10 @@ graph TD
 
 **POST `/api/diagnostic`** (action: "answer")
 - Submits answer to diagnostic question
-- Returns immediate feedback
+- Returns immediate feedback (isCorrect, correctAnswer, explanation)
+- **Explanation Source:** The diagnostic answer API uses canonical `public.explanations` as the sole explanation source, queried via `original_question_id` from the question snapshot
+- **Missing Explanations:** If a canonical explanation is missing, the `explanation` field in the response will be `null` (rather than a fallback message), and a warning is logged for cleanup
+- **Legacy Behavior:** For non-canonical or historical sessions where no canonical explanation exists, the endpoint returns `explanation: null` rather than querying legacy explanation tables
 
 **GET `/api/diagnostic/summary/[sessionId]`**
 - Returns complete session results

@@ -566,9 +566,10 @@ export async function POST(req: Request) {
         }
 
         // Fetch explanation from canonical explanations table using original_question_id
+        // This endpoint uses canonical public.explanations as the sole explanation source.
+        // Missing canonical explanations return null and are logged for cleanup.
         let explanationText: string | null = null;
         if (snapQuestion.original_question_id) {
-          // Try canonical explanations table first (for PMLE and future canonical questions)
           const { data: canonicalExplanation, error: canonicalError } = await supabase
             .from("explanations")
             .select("explanation_text")
@@ -578,26 +579,14 @@ export async function POST(req: Request) {
           if (canonicalExplanation && !canonicalError) {
             explanationText = canonicalExplanation.explanation_text;
           } else {
-            // Fallback to legacy explanations table for backward compatibility
-            // TODO: Remove this fallback once all questions are migrated to canonical schema
-            const { data: legacyExplanation, error: legacyError } = await supabase
-              .from("explanations_legacy")
-              .select("text")
-              .eq("question_id", snapQuestion.original_question_id)
-              .single();
-
-            if (legacyExplanation && !legacyError) {
-              explanationText = legacyExplanation.text;
-            }
+            // Canonical explanation missing - return null and log for cleanup
+            // For non-canonical or historical sessions where no canonical explanation exists,
+            // the endpoint returns explanation: null rather than querying legacy tables.
+            console.warn(
+              `Missing canonical explanation for question ${snapQuestion.original_question_id} in session ${sessionId}`
+            );
+            explanationText = null;
           }
-        }
-
-        // Use fallback message if no explanation found
-        if (!explanationText) {
-          explanationText = "No explanation available yet.";
-          console.warn(
-            `Missing explanation for question ${snapQuestion.original_question_id} in session ${sessionId}`
-          );
         }
 
         return NextResponse.json({
