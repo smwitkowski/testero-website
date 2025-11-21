@@ -184,36 +184,15 @@ export async function POST(req: Request) {
     }
 
     // Create question snapshots with domain info
-    // HOTFIX: original_question_id is bigint in DB, but PMLE canonical questions use UUID.
-    // For PMLE questions (UUID strings), set original_question_id to null to avoid type mismatch.
-    // For legacy questions (bigint), preserve the ID for backward compatibility.
-    // Note: Supabase returns bigint as string to avoid precision loss, UUIDs are also strings.
-    // We detect UUIDs by checking if the string contains dashes (UUID format: 8-4-4-4-12).
-    const questionSnapshots = selectedQuestions.map((q) => {
-      let originalQuestionId: number | null = null;
-      if (typeof q.id === "number") {
-        // Direct number (legacy bigint that fits in JS number)
-        originalQuestionId = q.id;
-      } else if (typeof q.id === "string") {
-        // String ID: could be bigint string or UUID string
-        // UUIDs contain dashes (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-        // Bigint strings are numeric only
-        if (!q.id.includes("-") && !isNaN(Number(q.id))) {
-          // Numeric string (legacy bigint) - convert to number
-          originalQuestionId = Number(q.id);
-        }
-        // Otherwise it's a UUID string, leave as null
-      }
-      return {
-        session_id: newSession.id,
-        original_question_id: originalQuestionId,
-        stem: q.stem,
-        options: q.answers.map((opt) => ({ label: opt.choice_label, text: opt.choice_text })),
-        correct_label: q.answers.find((opt) => opt.is_correct)?.choice_label || "",
-        domain_id: q.domain_id,
-        domain_code: q.domain_code,
-      };
-    });
+    const questionSnapshots = selectedQuestions.map((q) => ({
+      session_id: newSession.id,
+      original_question_id: q.id,
+      stem: q.stem,
+      options: q.answers.map((opt) => ({ label: opt.choice_label, text: opt.choice_text })),
+      correct_label: q.answers.find((opt) => opt.is_correct)?.choice_label || "",
+      domain_id: q.domain_id,
+      domain_code: q.domain_code,
+    }));
 
     const { error: snapshotError } = await supabase
       .from("diagnostic_questions")
