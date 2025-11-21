@@ -25,6 +25,14 @@ jest.mock('@/lib/auth/rate-limiter', () => ({
   checkRateLimit: jest.fn()
 }));
 
+jest.mock('@/lib/diagnostic/pmle-selection', () => ({
+  selectPmleQuestionsByBlueprint: jest.fn()
+}));
+
+jest.mock('@/lib/auth/require-subscriber', () => ({
+  requireSubscriber: jest.fn().mockResolvedValue(null)
+}));
+
 describe('/api/diagnostic/session', () => {
   beforeEach(() => {
     // Reset all mocks before each test
@@ -408,6 +416,248 @@ describe('/api/diagnostic/session', () => {
       };
 
       expect(typeof validResponse.sessionId).toBe('string');
+    });
+  });
+
+  describe('PMLE Canonical Selection', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should use canonical PMLE selection for PMLE exam key', async () => {
+      const { checkRateLimit } = require('@/lib/auth/rate-limiter');
+      checkRateLimit.mockResolvedValue(true);
+
+      const { selectPmleQuestionsByBlueprint } = require('@/lib/diagnostic/pmle-selection');
+      const mockSelectionResult = {
+        questions: [
+          {
+            id: 'q1',
+            stem: 'Test question',
+            domain_id: 'd1',
+            domain_code: 'ARCHITECTING_LOW_CODE_ML_SOLUTIONS',
+            answers: [
+              { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
+              { choice_label: 'B', choice_text: 'Answer B', is_correct: false },
+            ],
+          },
+        ],
+        domainDistribution: [
+          {
+            domainCode: 'ARCHITECTING_LOW_CODE_ML_SOLUTIONS',
+            targetCount: 1,
+            availableCount: 10,
+            selectedCount: 1,
+          },
+        ],
+      };
+      selectPmleQuestionsByBlueprint.mockResolvedValue(mockSelectionResult);
+
+      const mockSupabase = {
+        auth: {
+          getUser: jest.fn().mockResolvedValue({
+            data: { user: { id: 'test-user', user_metadata: { is_early_access: true } } },
+            error: null,
+          }),
+        },
+        from: jest.fn((table) => {
+          if (table === 'user_subscriptions') {
+            // For requireSubscriber check
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              in: jest.fn().mockReturnThis(),
+              single: jest.fn().mockResolvedValue({
+                data: { status: 'active' },
+                error: null,
+              }),
+            };
+          }
+          if (table === 'diagnostics_sessions') {
+            return {
+              insert: jest.fn().mockReturnThis(),
+              select: jest.fn().mockReturnThis(),
+              single: jest.fn().mockResolvedValue({
+                data: { id: 'session-123' },
+                error: null,
+              }),
+            };
+          }
+          if (table === 'diagnostic_questions') {
+            return {
+              insert: jest.fn().mockResolvedValue({ error: null }),
+            };
+          }
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            single: jest.fn().mockResolvedValue({ data: null, error: null }),
+          };
+        }),
+      };
+
+      const { createServerSupabaseClient } = require('@/lib/supabase/server');
+      createServerSupabaseClient.mockReturnValue(mockSupabase);
+
+      const { POST } = require('@/app/api/diagnostic/session/route');
+      
+      const mockRequest = new NextRequest('http://localhost/api/diagnostic/session', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          examKey: 'pmle',
+          numQuestions: 5,
+          source: 'beta_welcome'
+        }),
+      });
+
+      const response = await POST(mockRequest);
+      
+      expect(selectPmleQuestionsByBlueprint).toHaveBeenCalledWith(mockSupabase, 5);
+      expect(response.status).not.toBe(500);
+    });
+
+    it('should store domain_id and domain_code in question snapshots', async () => {
+      const { checkRateLimit } = require('@/lib/auth/rate-limiter');
+      checkRateLimit.mockResolvedValue(true);
+
+      const { selectPmleQuestionsByBlueprint } = require('@/lib/diagnostic/pmle-selection');
+      const mockSelectionResult = {
+        questions: [
+          {
+            id: 'q1',
+            stem: 'Test question',
+            domain_id: 'domain-uuid-1',
+            domain_code: 'ARCHITECTING_LOW_CODE_ML_SOLUTIONS',
+            answers: [
+              { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
+              { choice_label: 'B', choice_text: 'Answer B', is_correct: false },
+            ],
+          },
+        ],
+        domainDistribution: [],
+      };
+      selectPmleQuestionsByBlueprint.mockResolvedValue(mockSelectionResult);
+
+      const insertMock = jest.fn().mockResolvedValue({ error: null });
+      const mockSupabase = {
+        auth: {
+          getUser: jest.fn().mockResolvedValue({
+            data: { user: { id: 'test-user', user_metadata: { is_early_access: true } } },
+            error: null,
+          }),
+        },
+        from: jest.fn((table) => {
+          if (table === 'user_subscriptions') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              in: jest.fn().mockReturnThis(),
+              single: jest.fn().mockResolvedValue({
+                data: { status: 'active' },
+                error: null,
+              }),
+            };
+          }
+          if (table === 'diagnostics_sessions') {
+            return {
+              insert: jest.fn().mockReturnThis(),
+              select: jest.fn().mockReturnThis(),
+              single: jest.fn().mockResolvedValue({
+                data: { id: 'session-123' },
+                error: null,
+              }),
+            };
+          }
+          if (table === 'diagnostic_questions') {
+            return {
+              insert: insertMock,
+            };
+          }
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            single: jest.fn().mockResolvedValue({ data: null, error: null }),
+          };
+        }),
+      };
+
+      const { createServerSupabaseClient } = require('@/lib/supabase/server');
+      createServerSupabaseClient.mockReturnValue(mockSupabase);
+
+      const { POST } = require('@/app/api/diagnostic/session/route');
+      
+      const mockRequest = new NextRequest('http://localhost/api/diagnostic/session', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          examKey: 'pmle',
+          numQuestions: 1,
+          source: 'beta_welcome'
+        }),
+      });
+
+      await POST(mockRequest);
+      
+      expect(insertMock).toHaveBeenCalled();
+      const snapshotCall = insertMock.mock.calls[0][0];
+      expect(snapshotCall[0]).toHaveProperty('domain_id', 'domain-uuid-1');
+      expect(snapshotCall[0]).toHaveProperty('domain_code', 'ARCHITECTING_LOW_CODE_ML_SOLUTIONS');
+    });
+
+    it('should handle insufficient questions error gracefully', async () => {
+      const { checkRateLimit } = require('@/lib/auth/rate-limiter');
+      checkRateLimit.mockResolvedValue(true);
+
+      const { selectPmleQuestionsByBlueprint } = require('@/lib/diagnostic/pmle-selection');
+      selectPmleQuestionsByBlueprint.mockRejectedValue(
+        new Error('Insufficient questions: requested 10, selected 5, total available 5. Content gaps detected.')
+      );
+
+      const mockSupabase = {
+        auth: {
+          getUser: jest.fn().mockResolvedValue({
+            data: { user: { id: 'test-user', user_metadata: { is_early_access: true } } },
+            error: null,
+          }),
+        },
+        from: jest.fn((table) => {
+          if (table === 'user_subscriptions') {
+            return {
+              select: jest.fn().mockReturnThis(),
+              eq: jest.fn().mockReturnThis(),
+              in: jest.fn().mockReturnThis(),
+              single: jest.fn().mockResolvedValue({
+                data: { status: 'active' },
+                error: null,
+              }),
+            };
+          }
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            single: jest.fn().mockResolvedValue({ data: null, error: null }),
+          };
+        }),
+      };
+
+      const { createServerSupabaseClient } = require('@/lib/supabase/server');
+      createServerSupabaseClient.mockReturnValue(mockSupabase);
+
+      const { POST } = require('@/app/api/diagnostic/session/route');
+      
+      const mockRequest = new NextRequest('http://localhost/api/diagnostic/session', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          examKey: 'pmle',
+          numQuestions: 10,
+          source: 'beta_welcome'
+        }),
+      });
+
+      const response = await POST(mockRequest);
+      const body = await response.json();
+      
+      expect(response.status).toBe(500);
+      expect(body.error).toContain('Insufficient questions');
     });
   });
 });

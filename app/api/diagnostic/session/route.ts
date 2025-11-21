@@ -132,6 +132,15 @@ export async function POST(req: Request) {
     let selectionResult;
     try {
       selectionResult = await selectPmleQuestionsByBlueprint(supabase, numQuestions);
+      
+      // Debug logging for PMLE domain distribution (when enabled)
+      if (process.env.DIAGNOSTIC_BLUEPRINT_DEBUG === 'true') {
+        console.log(`[PMLE Diagnostic] Session creation - Domain distribution:`, 
+          selectionResult.domainDistribution.map(d => 
+            `${d.domainCode}: ${d.selectedCount}/${d.targetCount}`
+          ).join(', ')
+        );
+      }
     } catch (error) {
       console.error("Error selecting PMLE questions:", error);
       return NextResponse.json(
@@ -202,6 +211,11 @@ export async function POST(req: Request) {
       },
       user.id
     );
+
+    // Debug logging for PMLE sessions (when enabled)
+    if (process.env.DIAGNOSTIC_BLUEPRINT_DEBUG === 'true') {
+      console.log(`[PMLE Diagnostic] Created session ${newSession.id} with ${selectedQuestions.length} questions`);
+    }
 
     return NextResponse.json({ sessionId: newSession.id } as CreateSessionResponse);
   } catch (error) {

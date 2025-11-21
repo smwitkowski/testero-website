@@ -344,6 +344,15 @@ export async function POST(req: Request) {
               domain_id: q.domain_id,
               domain_code: q.domain_code,
             }));
+
+            // Debug logging for PMLE domain distribution (when enabled)
+            if (process.env.DIAGNOSTIC_BLUEPRINT_DEBUG === 'true') {
+              console.log(`[PMLE Diagnostic] Session creation - Domain distribution:`, 
+                selectionResult.domainDistribution.map(d => 
+                  `${d.domainCode}: ${d.selectedCount}/${d.targetCount}`
+                ).join(', ')
+              );
+            }
           } catch (error) {
             console.error("Error selecting PMLE questions:", error);
             return NextResponse.json(
@@ -467,6 +476,11 @@ export async function POST(req: Request) {
         // Set cookie for new anonymous sessions
         if (!user && newAnonymousId) {
           await setAnonymousSessionIdCookie(newAnonymousId);
+        }
+
+        // Debug logging for PMLE sessions (when enabled)
+        if (examIdToUse === 6 && process.env.DIAGNOSTIC_BLUEPRINT_DEBUG === 'true') {
+          console.log(`[PMLE Diagnostic] Created session ${newDbSessionId} with ${finalSessionQuestions.length} questions`);
         }
 
         return NextResponse.json({
