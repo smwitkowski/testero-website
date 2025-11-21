@@ -73,3 +73,49 @@ WHERE q.exam = 'GCP_PM_ML_ENG'
 
 -- Expected result: 0 rows (all domain_id values should reference valid exam_domains)
 
+-- 6. Verify all ACTIVE PMLE questions are mapped to blueprint domains
+SELECT 
+    d.code,
+    d.name,
+    COUNT(q.id) as question_count
+FROM exam_domains d
+INNER JOIN questions q ON d.id = q.domain_id
+WHERE q.exam = 'GCP_PM_ML_ENG'
+  AND q.status = 'ACTIVE'
+  AND d.code NOT IN (
+    'ARCHITECTING_LOW_CODE_ML_SOLUTIONS',
+    'COLLABORATING_TO_MANAGE_DATA_AND_MODELS',
+    'SCALING_PROTOTYPES_INTO_ML_MODELS',
+    'SERVING_AND_SCALING_MODELS',
+    'AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES',
+    'MONITORING_ML_SOLUTIONS'
+  )
+GROUP BY d.code, d.name
+ORDER BY question_count DESC;
+
+-- Expected result: 0 rows (all ACTIVE questions should be mapped to blueprint domains)
+-- If rows are returned, these are legacy domains that need to be backfilled
+
+-- 7. Blueprint domain distribution (for Week 2 selection validation)
+SELECT 
+    d.code,
+    d.name,
+    COUNT(q.id) as question_count
+FROM exam_domains d
+LEFT JOIN questions q ON d.id = q.domain_id 
+    AND q.exam = 'GCP_PM_ML_ENG' 
+    AND q.status = 'ACTIVE'
+WHERE d.code IN (
+    'ARCHITECTING_LOW_CODE_ML_SOLUTIONS',
+    'COLLABORATING_TO_MANAGE_DATA_AND_MODELS',
+    'SCALING_PROTOTYPES_INTO_ML_MODELS',
+    'SERVING_AND_SCALING_MODELS',
+    'AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES',
+    'MONITORING_ML_SOLUTIONS'
+)
+GROUP BY d.code, d.name
+ORDER BY d.code;
+
+-- This shows the distribution of ACTIVE questions across the six blueprint domains
+-- Useful for verifying domain-weighted selection has sufficient inventory
+
