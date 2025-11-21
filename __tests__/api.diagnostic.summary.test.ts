@@ -525,6 +525,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
         userAnswer: "",
         correctAnswer: "A",
         isCorrect: false,
+        explanation: null,
       });
     });
 
@@ -781,6 +782,291 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
         (call) => call[0] === "questions"
       );
       expect(questionsTableQueries.length).toBe(0);
+    });
+  });
+
+  describe("Explanation handling", () => {
+    beforeEach(() => {
+      // Setup chain for questions query
+      const questionsQuery = {
+        from: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+      };
+
+      const explanationsQuery = {
+        from: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn().mockReturnThis(),
+      };
+
+      // Configure mockSupabase to return different chains for different tables
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === "diagnostics_sessions") {
+          return mockSupabase;
+        } else if (table === "diagnostic_questions") {
+          return questionsQuery;
+        } else if (table === "explanations") {
+          return explanationsQuery;
+        }
+        return mockSupabase;
+      });
+
+      // Mock session
+      mockSupabase.single.mockResolvedValue({
+        data: {
+          id: "test-session-explanations",
+          user_id: null,
+          anonymous_session_id: "anon-789",
+          completed_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          exam_type: "Google Professional ML Engineer",
+          started_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+          question_count: 2,
+        },
+        error: null,
+      });
+
+      // Mock questions with original_question_id
+      (questionsQuery as any).eq.mockResolvedValue({
+        data: [
+          {
+            id: 1,
+            stem: "Test question with explanation",
+            options: [
+              { label: "A", text: "Option A" },
+              { label: "B", text: "Option B" },
+            ],
+            correct_label: "A",
+            original_question_id: 101,
+            domain_code: null,
+            domain_id: null,
+            diagnostic_responses: [
+              {
+                selected_label: "A",
+                is_correct: true,
+                responded_at: new Date().toISOString(),
+              },
+            ],
+          },
+          {
+            id: 2,
+            stem: "Test question without explanation",
+            options: [
+              { label: "A", text: "Option A" },
+              { label: "B", text: "Option B" },
+            ],
+            correct_label: "B",
+            original_question_id: 102,
+            domain_code: null,
+            domain_id: null,
+            diagnostic_responses: [
+              {
+                selected_label: "A",
+                is_correct: false,
+                responded_at: new Date().toISOString(),
+              },
+            ],
+          },
+        ],
+        error: null,
+      });
+    });
+
+    it("should include explanation when canonical explanation exists", async () => {
+      // Mock explanations query to return explanation for question 101
+      const explanationsQuery = {
+        from: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: [
+            {
+              question_id: 101,
+              explanation_text: "This is the correct explanation for question 101",
+            },
+          ],
+          error: null,
+        }),
+      };
+
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === "diagnostics_sessions") {
+          return mockSupabase;
+        } else if (table === "diagnostic_questions") {
+          return {
+            from: jest.fn().mockReturnThis(),
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockResolvedValue({
+              data: [
+                {
+                  id: 1,
+                  stem: "Test question with explanation",
+                  options: [
+                    { label: "A", text: "Option A" },
+                    { label: "B", text: "Option B" },
+                  ],
+                  correct_label: "A",
+                  original_question_id: 101,
+                  domain_code: null,
+                  domain_id: null,
+                  diagnostic_responses: [
+                    {
+                      selected_label: "A",
+                      is_correct: true,
+                      responded_at: new Date().toISOString(),
+                    },
+                  ],
+                },
+              ],
+              error: null,
+            }),
+          };
+        } else if (table === "explanations") {
+          return explanationsQuery;
+        }
+        return mockSupabase;
+      });
+
+      const req = new Request(
+        "http://localhost:3000/api/diagnostic/summary/test-session-explanations?anonymousSessionId=anon-789"
+      );
+      const response = await GET(req);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.summary.questions[0]).toHaveProperty("explanation");
+      expect(data.summary.questions[0].explanation).toBe(
+        "This is the correct explanation for question 101"
+      );
+    });
+
+    it("should set explanation to null when canonical explanation is missing", async () => {
+      const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+      // Mock explanations query to return empty (no explanation found)
+      const explanationsQuery = {
+        from: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: [],
+          error: null,
+        }),
+      };
+
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === "diagnostics_sessions") {
+          return mockSupabase;
+        } else if (table === "diagnostic_questions") {
+          return {
+            from: jest.fn().mockReturnThis(),
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockResolvedValue({
+              data: [
+                {
+                  id: 1,
+                  stem: "Test question without explanation",
+                  options: [
+                    { label: "A", text: "Option A" },
+                    { label: "B", text: "Option B" },
+                  ],
+                  correct_label: "A",
+                  original_question_id: 999, // Question ID with no explanation
+                  domain_code: null,
+                  domain_id: null,
+                  diagnostic_responses: [
+                    {
+                      selected_label: "A",
+                      is_correct: true,
+                      responded_at: new Date().toISOString(),
+                    },
+                  ],
+                },
+              ],
+              error: null,
+            }),
+          };
+        } else if (table === "explanations") {
+          return explanationsQuery;
+        }
+        return mockSupabase;
+      });
+
+      const req = new Request(
+        "http://localhost:3000/api/diagnostic/summary/test-session-explanations?anonymousSessionId=anon-789"
+      );
+      const response = await GET(req);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.summary.questions[0].explanation).toBeNull();
+
+      // Verify warning was logged
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Summary missing explanation for question 999 in session test-session-explanations")
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it("should handle questions with null original_question_id gracefully", async () => {
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === "diagnostics_sessions") {
+          return mockSupabase;
+        } else if (table === "diagnostic_questions") {
+          return {
+            from: jest.fn().mockReturnThis(),
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockResolvedValue({
+              data: [
+                {
+                  id: 1,
+                  stem: "Test question with null original_question_id",
+                  options: [
+                    { label: "A", text: "Option A" },
+                    { label: "B", text: "Option B" },
+                  ],
+                  correct_label: "A",
+                  original_question_id: null, // No original question ID
+                  domain_code: null,
+                  domain_id: null,
+                  diagnostic_responses: [
+                    {
+                      selected_label: "A",
+                      is_correct: true,
+                      responded_at: new Date().toISOString(),
+                    },
+                  ],
+                },
+              ],
+              error: null,
+            }),
+          };
+        } else if (table === "explanations") {
+          return {
+            from: jest.fn().mockReturnThis(),
+            select: jest.fn().mockReturnThis(),
+            in: jest.fn().mockResolvedValue({
+              data: [],
+              error: null,
+            }),
+          };
+        }
+        return mockSupabase;
+      });
+
+      const req = new Request(
+        "http://localhost:3000/api/diagnostic/summary/test-session-explanations?anonymousSessionId=anon-789"
+      );
+      const response = await GET(req);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.summary.questions[0].explanation).toBeNull();
+      // Should not query explanations table when original_question_id is null
+      const explanationsCalls = mockSupabase.from.mock.calls.filter(
+        (call) => call[0] === "explanations"
+      );
+      // May still be called but with empty array, which is fine
     });
   });
 

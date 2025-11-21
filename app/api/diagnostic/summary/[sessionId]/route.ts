@@ -144,15 +144,62 @@ export async function GET(req: Request) {
       percentage: Math.round((stats.correct / stats.total) * 100)
     }));
 
-    // Format questions for client
-    const questions = questionsWithResponses.map(q => ({
-      id: q.id,
-      stem: q.stem,
-      options: q.options,
-      userAnswer: q.diagnostic_responses?.[0]?.selected_label || '',
-      correctAnswer: q.correct_label,
-      isCorrect: q.diagnostic_responses?.[0]?.is_correct || false
-    }));
+    // Fetch canonical explanations in bulk for questions with original_question_id
+    // Note: For canonical PMLE sessions, original_question_id may be null due to schema type mismatch
+    // (diagnostic_questions.original_question_id is bigint, but canonical questions.id is uuid).
+    // This limitation will be addressed in a future schema migration.
+    const originalQuestionIds = typedQuestions
+      .map((q) => q.original_question_id)
+      .filter((id): id is string => id !== null && id !== undefined);
+
+    let explanationByQuestionId: Record<string, string> = {};
+
+    if (originalQuestionIds.length > 0) {
+      // Convert all IDs to strings for consistent lookup
+      const questionIdStrings = originalQuestionIds.map((id) => String(id));
+
+      const { data: explanations, error: explanationsError } = await supabase
+        .from('explanations')
+        .select('question_id, explanation_text')
+        .in('question_id', questionIdStrings);
+
+      if (explanationsError) {
+        console.error('Error fetching explanations for summary:', explanationsError);
+        // Continue without explanations rather than failing the entire request
+      } else if (explanations) {
+        // Build lookup map: question_id (as string) -> explanation_text
+        explanationByQuestionId = Object.fromEntries(
+          explanations.map((e: { question_id: string | number; explanation_text: string }) => [
+            String(e.question_id),
+            e.explanation_text,
+          ])
+        );
+      }
+    }
+
+    // Format questions for client, including explanations
+    const questions = typedQuestions.map(q => {
+      const explanation = q.original_question_id
+        ? explanationByQuestionId[String(q.original_question_id)] ?? null
+        : null;
+
+      // Log warning if original_question_id is set but no explanation was found
+      if (q.original_question_id && explanation === null) {
+        console.warn(
+          `Summary missing explanation for question ${q.original_question_id} in session ${sessionId}`
+        );
+      }
+
+      return {
+        id: q.id,
+        stem: q.stem,
+        options: q.options,
+        userAnswer: q.diagnostic_responses?.[0]?.selected_label || '',
+        correctAnswer: q.correct_label,
+        isCorrect: q.diagnostic_responses?.[0]?.is_correct || false,
+        explanation
+      };
+    });
 
     const summary = {
       sessionId: dbSession.id,

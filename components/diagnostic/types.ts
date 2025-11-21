@@ -9,6 +9,7 @@ export interface QuestionSummary {
     text: string;
   }>;
   domain?: string;
+  explanation?: string | null;
 }
 
 export interface DomainBreakdown {
