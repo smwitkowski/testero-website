@@ -28,6 +28,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 async function validatePmleDomains() {
   console.log('🔍 Validating PMLE question domain mappings...\n');
 
+  let hasErrors = false;
+
   // Check 1: All ACTIVE PMLE questions have domain_id
   const { data: questionsWithoutDomain, error: error1 } = await supabase
     .from('questions')
@@ -38,7 +40,7 @@ async function validatePmleDomains() {
 
   if (error1) {
     console.error('❌ Error checking questions without domain:', error1);
-    return;
+    process.exit(1);
   }
 
   if (questionsWithoutDomain && questionsWithoutDomain.length > 0) {
@@ -47,8 +49,38 @@ async function validatePmleDomains() {
       console.error(`  - ${q.id}: ${q.stem.substring(0, 80)}...`);
     });
     console.error('\n⚠️  These questions need domain_id assignment before diagnostics can work.\n');
+    hasErrors = true;
   } else {
     console.log('✅ All ACTIVE PMLE questions have domain_id assigned\n');
+  }
+
+  // Check 1b: All domain_id values reference valid exam_domains
+  const { data: invalidDomainRefs, error: error1b } = await supabase
+    .from('questions')
+    .select(`
+      id,
+      stem,
+      domain_id,
+      exam_domains!left(id)
+    `)
+    .eq('exam', 'GCP_PM_ML_ENG')
+    .eq('status', 'ACTIVE')
+    .is('exam_domains.id', null);
+
+  if (error1b) {
+    console.error('❌ Error checking invalid domain references:', error1b);
+    process.exit(1);
+  }
+
+  if (invalidDomainRefs && invalidDomainRefs.length > 0) {
+    console.error(`❌ Found ${invalidDomainRefs.length} ACTIVE PMLE questions with invalid domain_id references:`);
+    invalidDomainRefs.forEach((q: any) => {
+      console.error(`  - ${q.id}: domain_id=${q.domain_id} (invalid reference)`);
+    });
+    console.error('\n⚠️  These questions have domain_id values that don\'t reference valid exam_domains.\n');
+    hasErrors = true;
+  } else {
+    console.log('✅ All ACTIVE PMLE questions have valid domain_id references\n');
   }
 
   // Check 2: Domain distribution for capacity planning
@@ -127,6 +159,13 @@ async function validatePmleDomains() {
 
   if (missingInDb.length === 0 && missingInBlueprint.length === 0) {
     console.log('✅ All blueprint domains exist in database\n');
+  } else {
+    hasErrors = true;
+  }
+
+  if (hasErrors) {
+    console.error('❌ Validation failed - see errors above');
+    process.exit(1);
   }
 
   console.log('✅ Validation complete!');

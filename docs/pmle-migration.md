@@ -274,3 +274,91 @@ After migration is complete:
 4. ✅ Manual QA pass (TES-364)
 5. ✅ Define quality rubric (TES-364)
 
+---
+
+## Domain Backfill: Legacy → Blueprint Mapping
+
+After the initial migration, PMLE questions were assigned domain codes derived from topic names. For Week 2 domain-weighted selection, all questions must be mapped to the six canonical blueprint domains.
+
+### Running the Backfill Script
+
+**Prerequisites:**
+- Environment variables set:
+  ```bash
+  export NEXT_PUBLIC_SUPABASE_URL='https://your-project.supabase.co'
+  export SUPABASE_SERVICE_ROLE_KEY='your-service-key'
+  ```
+
+**Dry Run (Preview Changes):**
+```bash
+npx tsx scripts/backfill-pmle-domains.ts --dry-run
+```
+
+This will:
+- Show which questions would be updated
+- Display mapping statistics
+- **Not make any database changes**
+
+**Apply Changes:**
+```bash
+npx tsx scripts/backfill-pmle-domains.ts
+```
+
+This will:
+- Create blueprint domains if they don't exist
+- Update `questions.domain_id` for all mapped questions
+- Log progress and summary statistics
+
+### Validation After Backfill
+
+**Run Validation Script:**
+```bash
+npx tsx scripts/validate-pmle-domains.ts
+```
+
+This checks:
+- ✅ All ACTIVE PMLE questions have `domain_id` assigned
+- ✅ All `domain_id` values reference valid `exam_domains`
+- ✅ Domain distribution across blueprint domains
+- ✅ Blueprint domains exist in database
+
+**Run SQL Validation Queries:**
+
+See `docs/sql/pmle-domain-check.sql` for comprehensive validation queries, including:
+- Questions without `domain_id` (should be 0)
+- Invalid `domain_id` references (should be 0)
+- Legacy domains still in use (should be 0 after backfill)
+- Blueprint domain distribution
+
+**Using Supabase MCP:**
+
+Quick validation queries via MCP:
+```typescript
+// Check for questions without domain_id
+mcp_supabase_execute_sql({
+  query: "SELECT COUNT(*) FROM questions WHERE exam = 'GCP_PM_ML_ENG' AND status = 'ACTIVE' AND domain_id IS NULL"
+})
+
+// Check blueprint domain distribution
+mcp_supabase_execute_sql({
+  query: "SELECT d.code, COUNT(q.id) FROM exam_domains d LEFT JOIN questions q ON d.id = q.domain_id WHERE q.exam = 'GCP_PM_ML_ENG' AND q.status = 'ACTIVE' AND d.code IN ('ARCHITECTING_LOW_CODE_ML_SOLUTIONS', ...) GROUP BY d.code"
+})
+```
+
+### Acceptance Criteria
+
+After running the backfill:
+
+- [ ] **100% coverage**: All ACTIVE PMLE questions have non-null `domain_id`
+- [ ] **Valid references**: All `domain_id` values reference valid `exam_domains.id`
+- [ ] **Blueprint mapping**: All ACTIVE questions are mapped to one of the six blueprint domains
+- [ ] **Distribution**: Each blueprint domain has sufficient questions for weighted selection
+- [ ] **Validation passes**: `scripts/validate-pmle-domains.ts` exits with code 0
+
+### Mapping Documentation
+
+See `docs/pmle-domain-mapping.md` for:
+- Complete mapping table (legacy → blueprint)
+- Mapping rationale for each domain
+- Future maintenance guidelines
+

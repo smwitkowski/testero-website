@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **PMLE Domain Backfill**: Added backfill script (`scripts/backfill-pmle-domains.ts`) to map legacy topic-based domain codes to canonical blueprint domains. Script creates blueprint domains if missing, updates `questions.domain_id` for all ACTIVE PMLE questions, supports dry-run mode, and includes comprehensive logging. Added domain mapping module (`lib/diagnostic/pmle-domain-mapping.ts`) with helper functions for legacy-to-blueprint mapping. Extended validation script (`scripts/validate-pmle-domains.ts`) to fail fast on validation errors and check for invalid domain references. Added domain mapping documentation (`docs/pmle-domain-mapping.md`) with complete mapping table and rationale. Added SQL validation queries (`docs/sql/pmle-domain-check.sql`) to verify blueprint domain coverage and distribution. Added unit tests for mapping functions (`__tests__/lib/diagnostic/pmle-domain-mapping.test.ts`). Updated migration documentation (`docs/pmle-migration.md`) with backfill runbook and acceptance criteria.
+
 ### Fixed
 - **Linting Issues**: Fixed all TypeScript `any` type errors in diagnostic summary API route and PMLE selection logic by adding proper type interfaces. Fixed `no-restricted-syntax` warnings for Section component usage by adding appropriate eslint-disable comments. Removed unused `request` parameter from billing status route.
 
