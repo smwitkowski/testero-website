@@ -9,41 +9,16 @@ import { TrialConversionModal } from "@/components/billing/TrialConversionModal"
 import { UpsellModal } from "@/components/diagnostic/UpsellModal";
 import { useUpsell } from "@/hooks/useUpsell";
 import { useTriggerDetection } from "@/hooks/useTriggerDetection";
+import { QuestionSummary, DomainBreakdown, SessionSummary } from "@/components/diagnostic/types";
 
-// Types
-interface QuestionSummary {
-  id: string;
-  stem: string;
-  userAnswer: string;
-  correctAnswer: string;
-  isCorrect: boolean;
-  options: Array<{
-    label: string;
-    text: string;
-  }>;
-  domain?: string;
-  explanation?: string;
+// Extended types for UI-specific fields
+interface ExtendedQuestionSummary extends QuestionSummary {
   timeSpent?: number;
   isFlagged?: boolean;
   confidence?: 'low' | 'medium' | 'high';
 }
 
-interface DomainBreakdown {
-  domain: string;
-  correct: number;
-  total: number;
-  percentage: number;
-}
-
-interface SessionSummary {
-  sessionId: string;
-  examType: string;
-  totalQuestions: number;
-  correctAnswers: number;
-  score: number;
-  startedAt: string;
-  completedAt: string;
-  questions: QuestionSummary[];
+interface ExtendedSessionSummary extends SessionSummary {
   totalTimeSpent?: number;
   averageTimePerQuestion?: number;
   flaggedCount?: number;
@@ -105,7 +80,7 @@ const VerdictBlock = ({
   onStartPractice,
   onRetakeDiagnostic 
 }: {
-  summary: SessionSummary;
+  summary: ExtendedSessionSummary;
   onStartPractice: () => void;
   onRetakeDiagnostic: () => void;
 }) => {
@@ -341,7 +316,7 @@ const QuestionReview = ({
   onTrackReviewExit,
   onTrackExpansion,
 }: {
-  questions: QuestionSummary[];
+  questions: ExtendedQuestionSummary[];
   activeFilter: 'all' | 'incorrect' | 'flagged' | 'low-confidence';
   onFilterChange: (filter: 'all' | 'incorrect' | 'flagged' | 'low-confidence') => void;
   selectedDomain: string | null;
@@ -648,7 +623,7 @@ const DiagnosticSummaryPage = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<SessionSummary | null>(null);
+  const [summary, setSummary] = useState<ExtendedSessionSummary | null>(null);
   const [domainBreakdown, setDomainBreakdown] = useState<DomainBreakdown[]>([]);
   const [showTrialModal, setShowTrialModal] = useState(false);
   
@@ -703,7 +678,7 @@ const DiagnosticSummaryPage = () => {
         const response = await fetch(apiUrl);
         const data = (await response.json()) as {
           error?: string;
-          summary?: SessionSummary;
+          summary?: ExtendedSessionSummary;
           domainBreakdown?: DomainBreakdown[];
         };
 

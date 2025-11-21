@@ -451,6 +451,12 @@ export async function POST(req: Request) {
         // For legacy questions (bigint), preserve the ID for backward compatibility.
         // Note: Supabase returns bigint as string to avoid precision loss, UUIDs are also strings.
         // We detect UUIDs by checking if the string contains dashes (UUID format: 8-4-4-4-12).
+        //
+        // SCHEMA LIMITATION: This means canonical PMLE diagnostic sessions cannot link back to
+        // explanations via original_question_id. The summary API will attempt to fetch explanations
+        // but will only find them for legacy sessions with numeric original_question_id values.
+        // A future migration should migrate diagnostic_questions.original_question_id from bigint
+        // to uuid to enable full explanation support for canonical PMLE diagnostics.
         const questionSnapshotsToInsert = selectedQuestions.map((q) => {
           let originalQuestionId: number | null = null;
           if (typeof q.id === "number") {
