@@ -4,6 +4,7 @@ import { isSubscriber } from "@/lib/auth/entitlements";
 import { getServerPostHog } from "@/lib/analytics/server-analytics";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import { verifyGraceCookie, hasGraceCookie, clearGraceCookie } from "@/lib/billing/grace-cookie";
+import { isBillingEnforcementActive } from "@/lib/billing/enforcement";
 
 /**
  * Create structured log entry for paywall block
@@ -22,8 +23,9 @@ function createPaywallLog(route: string, userId: string | null, reason: string):
  * Require subscriber access for premium API routes.
  * 
  * Checks in order:
- * 1. Valid grace cookie (checkout_grace) - allows access without auth
- * 2. Authenticated user with active/trialing subscription
+ * 1. Billing enforcement flag - if disabled, allows all access
+ * 2. Valid grace cookie (checkout_grace) - allows access without auth
+ * 3. Authenticated user with active/trialing subscription
  * 
  * Returns null if access is granted, or NextResponse with 403 if blocked.
  * Grace cookies are cleared on first successful entitlement pass or when expired/invalid.
@@ -36,6 +38,11 @@ export async function requireSubscriber(
   req: Request | NextRequest,
   route: string
 ): Promise<NextResponse | null> {
+  // When billing enforcement is disabled, never block (no paywall in this environment)
+  if (!isBillingEnforcementActive()) {
+    return null;
+  }
+
   // Check grace cookie first
   const hasGrace = hasGraceCookie(req);
   const isValidGrace = verifyGraceCookie(req);
