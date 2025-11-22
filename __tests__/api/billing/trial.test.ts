@@ -559,6 +559,50 @@ describe("Trial API Endpoint", () => {
       expect(responseData.error).toContain("already used your free trial");
       expect(mockStripeService.createTrialSubscription).not.toHaveBeenCalled();
     });
+
+    it("should NOT clear metadata if subscription history query fails (fail closed)", async () => {
+      const mockUser = {
+        id: "user_123",
+        email: "test@example.com",
+        user_metadata: {
+          has_used_trial: true,
+        },
+      };
+
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: mockUser },
+        error: null,
+      });
+
+      // Mock: no active subscription
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      // Mock: subscription history query fails
+      mockSupabase.limit.mockResolvedValueOnce({
+        data: null,
+        error: { message: "Database connection error", code: "PGRST301" },
+      });
+
+      mockRequest = new NextRequest("http://localhost:3000/api/billing/trial", {
+        method: "POST",
+      });
+
+      const response = await POST(mockRequest);
+      const responseData = await response.json();
+
+      // Should fail closed - return error instead of granting trial
+      expect(response.status).toBe(500);
+      expect(responseData.error).toContain("Unable to verify subscription eligibility");
+      
+      // Verify metadata was NOT cleared (no updateUser calls)
+      expect(mockSupabase.auth.updateUser).not.toHaveBeenCalled();
+      
+      // Verify trial was NOT created
+      expect(mockStripeService.createTrialSubscription).not.toHaveBeenCalled();
+    });
   });
 
   describe("Active Subscription Prevention", () => {
@@ -630,7 +674,7 @@ describe("Trial API Endpoint", () => {
       expect(mockStripeService.createTrialSubscription).not.toHaveBeenCalled();
     });
 
-    it("should handle database query errors gracefully and continue", async () => {
+    it("should handle active subscription query errors gracefully and continue", async () => {
       const mockUser = {
         id: "user_123",
         email: "test@example.com",
@@ -642,13 +686,13 @@ describe("Trial API Endpoint", () => {
         error: null,
       });
 
-      // Mock: database error when checking active subscription
+      // Mock: database error when checking active subscription (logged but continues)
       mockSupabase.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: { message: "Database connection error" },
       });
 
-      // Mock: no subscription history (or error here too)
+      // Mock: subscription history query succeeds with no history
       mockSupabase.limit.mockResolvedValueOnce({
         data: [],
         error: null,
@@ -677,7 +721,8 @@ describe("Trial API Endpoint", () => {
       const response = await POST(mockRequest);
       const responseData = await response.json();
 
-      // Should succeed despite query error (logged but doesn't block)
+      // Should succeed despite active subscription query error (logged but doesn't block)
+      // Note: History query errors fail closed (see test in "Duplicate Trial Prevention")
       expect(response.status).toBe(200);
       expect(responseData.status).toBe("ok");
     });

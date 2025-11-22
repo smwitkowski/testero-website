@@ -94,7 +94,11 @@ export async function POST(
 
     if (historyError) {
       console.error(`[Trial] Error checking subscription history for user ${user.id}:`, historyError);
-      // Continue - don't block on query errors
+      // Don't proceed if we can't verify subscription history - fail closed
+      return NextResponse.json(
+        { error: "Unable to verify subscription eligibility. Please try again." },
+        { status: 500 }
+      );
     }
 
     // Determine if user has actually used a trial based on subscription history
@@ -129,9 +133,11 @@ export async function POST(
     }
 
     // Step 3: Check metadata as advisory (less reliable, but useful for edge cases)
+    // Only perform metadata operations if we successfully queried subscription history
     const hasUsedTrialMetadata = user.user_metadata?.has_used_trial === true;
 
     if (hasUsedTrialMetadata) {
+      // At this point, we know subscriptionHistory query succeeded (no historyError)
       if (!subscriptionHistory || subscriptionHistory.length === 0) {
         // Metadata says trial was used but no subscription record exists
         // This suggests a previous failed attempt - log warning and clear metadata
