@@ -10,7 +10,7 @@ import { UpsellModal } from "@/components/diagnostic/UpsellModal";
 import { useUpsell } from "@/hooks/useUpsell";
 import { useTriggerDetection } from "@/hooks/useTriggerDetection";
 import { QuestionSummary, DomainBreakdown, SessionSummary } from "@/components/diagnostic/types";
-import { getExamReadinessTier, getDomainTier, getExamReadinessTierColors, getDomainTierColors } from "@/lib/readiness";
+import { getExamReadinessTier, getDomainTier, getDomainTierColors } from "@/lib/readiness";
 
 // Extended types for UI-specific fields
 interface ExtendedQuestionSummary extends QuestionSummary {
@@ -86,7 +86,6 @@ const VerdictBlock = ({
   onRetakeDiagnostic: () => void;
 }) => {
   const readinessTier = getExamReadinessTier(summary.score);
-  const tierColors = getExamReadinessTierColors(readinessTier.id);
   const strokeColorClass = getStrokeColorClass(readinessTier.id);
   const duration = summary.totalTimeSpent ? 
     formatTime(summary.totalTimeSpent) : 

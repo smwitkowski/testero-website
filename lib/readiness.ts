@@ -194,11 +194,13 @@ export function getDomainTierColors(tierId: DomainTierId): DomainTierColors {
  */
 export function getExamReadinessSemanticColor(tierId: ExamReadinessTierId): string {
   // Import inline to avoid circular dependencies
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { primitive } = require("@/lib/design-system/tokens/colors") as { primitive: { red: Record<number, string>; orange: Record<number, string>; blue: Record<number, string>; green: Record<number, string> } };
   const colorMap: Record<ExamReadinessTierId, string> = {
-    low: '#ef4444',      // red-500
-    building: '#ea580c', // orange-600
-    ready: '#3b82f6',    // blue-500
-    strong: '#22c55e',   // green-500
+    low: primitive.red[500],      // red-500
+    building: primitive.orange[600], // orange-600
+    ready: primitive.blue[500],    // blue-500
+    strong: primitive.green[500],   // green-500
   };
   return colorMap[tierId];
 }
