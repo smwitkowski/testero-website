@@ -400,12 +400,48 @@ describe('/api/practice/session', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle question selection errors', async () => {
+    it('should handle question selection errors with no questions available', async () => {
       const { checkRateLimit } = require('@/lib/auth/rate-limiter');
       checkRateLimit.mockResolvedValue(true);
 
       const { selectPracticeQuestionsByDomains } = require('@/lib/practice/domain-selection');
-      selectPracticeQuestionsByDomains.mockRejectedValue(new Error('No questions available'));
+      selectPracticeQuestionsByDomains.mockRejectedValue(new Error('No domains found for codes: D1'));
+
+      const mockSupabase = {
+        auth: {
+          getUser: jest.fn().mockResolvedValue({
+            data: { user: { id: 'test-user' } },
+            error: null
+          })
+        }
+      };
+
+      const { createServerSupabaseClient } = require('@/lib/supabase/server');
+      createServerSupabaseClient.mockReturnValue(mockSupabase);
+
+      const { POST } = require('@/app/api/practice/session/route');
+      
+      const mockRequest = new NextRequest('http://localhost/api/practice/session', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          examKey: 'pmle',
+          domainCodes: ['D1']
+        })
+      });
+
+      const response = await POST(mockRequest);
+      expect(response.status).toBe(404);
+      
+      const responseBody = await response.json();
+      expect(responseBody.error).toBe('No questions available for the requested domains.');
+    });
+
+    it('should handle unexpected question selection errors', async () => {
+      const { checkRateLimit } = require('@/lib/auth/rate-limiter');
+      checkRateLimit.mockResolvedValue(true);
+
+      const { selectPracticeQuestionsByDomains } = require('@/lib/practice/domain-selection');
+      selectPracticeQuestionsByDomains.mockRejectedValue(new Error('Database connection failed'));
 
       const mockSupabase = {
         auth: {
@@ -433,7 +469,7 @@ describe('/api/practice/session', () => {
       expect(response.status).toBe(500);
       
       const responseBody = await response.json();
-      expect(responseBody.error).toBe('No questions available');
+      expect(responseBody.error).toBe('Could not fetch questions for the practice session.');
     });
 
     it('should handle empty question selection', async () => {

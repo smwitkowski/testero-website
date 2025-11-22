@@ -123,14 +123,28 @@ export async function POST(req: Request) {
         questionCount
       );
     } catch (error) {
-      console.error("Error selecting practice questions:", error);
+      // Log detailed error for debugging
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error("Error selecting practice questions:", {
+        error: errorMessage,
+        stack: errorStack,
+        examKey,
+        domainCodes,
+        questionCount,
+      });
+      
+      // Check if this is a "no questions available" scenario
+      if (errorMessage.includes("No domains found") || errorMessage.includes("no available questions")) {
+        return NextResponse.json(
+          { error: "No questions available for the requested domains." },
+          { status: 404 }
+        );
+      }
+      
+      // For other errors, return 500 with generic message
       return NextResponse.json(
-        {
-          error:
-            error instanceof Error
-              ? error.message
-              : "Could not fetch questions for the practice session.",
-        },
+        { error: "Could not fetch questions for the practice session." },
         { status: 500 }
       );
     }
@@ -139,6 +153,11 @@ export async function POST(req: Request) {
 
     // Validate we have at least some questions
     if (selectedQuestions.length === 0) {
+      console.warn("Practice session creation: No questions selected", {
+        domainCodes,
+        questionCount,
+        domainDistribution: selectionResult.domainDistribution,
+      });
       return NextResponse.json(
         { error: "No questions available for the requested domains." },
         { status: 404 }
