@@ -7,6 +7,7 @@ import { usePostHog } from "posthog-js/react";
 import { useUpsell } from "@/hooks/useUpsell";
 import { useTriggerDetection } from "@/hooks/useTriggerDetection";
 import DiagnosticSummaryPage from "@/app/diagnostic/[sessionId]/summary/page";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 
 // Mock dependencies
 jest.mock("next/navigation", () => ({
@@ -71,6 +72,7 @@ const mockSuccessResponse = {
         userAnswer: "A",
         correctAnswer: "A",
         isCorrect: true,
+        domain: "Architecting Low-Code ML Solutions",
         options: [
           { label: "A", text: "A method of data analysis" },
           { label: "B", text: "A type of database" },
@@ -82,6 +84,7 @@ const mockSuccessResponse = {
         userAnswer: "B",
         correctAnswer: "A",
         isCorrect: false,
+        domain: "Collaborating to Manage Data & Models",
         options: [
           { label: "A", text: "A subset of machine learning" },
           { label: "B", text: "A programming language" },
@@ -90,8 +93,8 @@ const mockSuccessResponse = {
     ],
   },
   domainBreakdown: [
-    { domain: "Machine Learning", correct: 4, total: 5, percentage: 80 },
-    { domain: "Deep Learning", correct: 3, total: 5, percentage: 60 },
+    { domain: "Architecting Low-Code ML Solutions", correct: 4, total: 5, percentage: 80 },
+    { domain: "Collaborating to Manage Data & Models", correct: 3, total: 5, percentage: 60 },
   ],
 };
 
@@ -190,7 +193,7 @@ describe("DiagnosticSummaryPage Integration", () => {
 
       const domainHeading = await screen.findByText(/domain performance/i);
       expect(domainHeading).toBeInTheDocument();
-      expect(screen.getAllByText("Machine Learning").length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Architecting Low-Code ML Solutions/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/4\s*\/\s*5/).length).toBeGreaterThan(0);
       expect(screen.getByText(/80\s*%/)).toBeInTheDocument();
     });
@@ -263,13 +266,15 @@ describe("DiagnosticSummaryPage Integration", () => {
       render(<DiagnosticSummaryPage />);
 
       await waitFor(() => {
-        expect(mockPostHog.capture).toHaveBeenCalledWith("diagnostic_summary_viewed", {
+        expect(mockPostHog.capture).toHaveBeenCalledWith(ANALYTICS_EVENTS.DIAGNOSTIC_SUMMARY_VIEWED, {
           sessionId: "test-session-123",
           examType: "Google Professional ML Engineer",
+          examKey: "pmle",
           score: 70,
           totalQuestions: 10,
           correctAnswers: 7,
           domainCount: 2,
+          readinessTier: expect.any(String),
         });
       });
     });
@@ -287,7 +292,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       expect(mockPostHog.capture).not.toHaveBeenCalled();
     });
 
-    it("should request upsell gating feature flags", async () => {
+    it("should initialize upsell hook with score", async () => {
       jest.useFakeTimers({ now: new Date("2024-01-01T00:00:00Z") });
       (useAuth as jest.Mock).mockReturnValue({ user: null, isLoading: false });
       (global.fetch as jest.Mock).mockResolvedValue({
@@ -302,15 +307,130 @@ describe("DiagnosticSummaryPage Integration", () => {
       try {
         render(<DiagnosticSummaryPage />);
 
-        expect(mockPostHog.getFeatureFlag).toHaveBeenCalledWith("upsell_modal_test");
+        // Wait for summary to load
+        await waitFor(() => {
+          expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
+        });
 
-        jest.setSystemTime(new Date("2024-01-01T00:00:25Z"));
-        await waitFor(() =>
-          expect(mockPostHog.isFeatureEnabled).toHaveBeenCalledWith("upsell_high_score")
+        // Verify useUpsell was called with the score
+        expect(useUpsell).toHaveBeenCalledWith(
+          expect.objectContaining({
+            score: 85,
+          })
         );
       } finally {
         jest.useRealTimers();
       }
+    });
+
+    it("should track domain click with correct properties", async () => {
+      (useAuth as jest.Mock).mockReturnValue({ user: null, isLoading: false });
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/domain performance/i)).toBeInTheDocument();
+      });
+
+      // Find and click a domain row - look for clickable domain elements
+      const domainTexts = screen.getAllByText(/Architecting Low-Code ML Solutions/i);
+      expect(domainTexts.length).toBeGreaterThan(0);
+      
+      // Find the parent clickable div
+      const domainRow = domainTexts[0].closest('div[class*="cursor-pointer"]');
+      expect(domainRow).not.toBeNull();
+      
+      if (domainRow) {
+        fireEvent.click(domainRow);
+        
+        await waitFor(() => {
+          expect(mockPostHog.capture).toHaveBeenCalledWith(
+            ANALYTICS_EVENTS.DIAGNOSTIC_DOMAIN_CLICKED,
+            expect.objectContaining({
+              sessionId: "test-session-123",
+              examKey: "pmle",
+              domainCode: expect.any(String),
+              domainTier: expect.any(String),
+            })
+          );
+        });
+      }
+    });
+
+    it("should track study plan CTA click with domain_row source", async () => {
+      const mockPracticeResponse = {
+        sessionId: "practice-session-domain",
+        route: "/practice?sessionId=practice-session-domain",
+        questionCount: 10,
+      };
+
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockSuccessResponse,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockPracticeResponse,
+        });
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        const studyPlanHeadings = screen.getAllByText(/study plan/i);
+        expect(studyPlanHeadings.length).toBeGreaterThan(0);
+      });
+
+      const studyPlanButtons = screen.getAllByRole("button", { 
+        name: /start practice \(10\)/i 
+      });
+      
+      expect(studyPlanButtons.length).toBeGreaterThan(0);
+      fireEvent.click(studyPlanButtons[0]);
+
+      await waitFor(() => {
+        expect(mockPostHog.capture).toHaveBeenCalledWith(
+          ANALYTICS_EVENTS.STUDY_PLAN_START_PRACTICE_CLICKED,
+          expect.objectContaining({
+            sessionId: "test-session-123",
+            examKey: "pmle",
+            domainCodes: expect.any(Array),
+            questionCount: 10,
+            source: "domain_row",
+          })
+        );
+      });
+    });
+
+    it("should track question explanation viewed", async () => {
+      (useAuth as jest.Mock).mockReturnValue({ user: null, isLoading: false });
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        const questionReviewHeadings = screen.getAllByText(/question review/i);
+        expect(questionReviewHeadings.length).toBeGreaterThan(0);
+      });
+
+      // Find and click a "View explanation" button
+      const viewExplanationButtons = screen.getAllByText(/view explanation/i);
+      expect(viewExplanationButtons.length).toBeGreaterThan(0);
+      fireEvent.click(viewExplanationButtons[0]);
+
+      await waitFor(() => {
+        expect(mockPostHog.capture).toHaveBeenCalledWith(
+          ANALYTICS_EVENTS.QUESTION_EXPLANATION_VIEWED,
+          expect.objectContaining({
+            sessionId: "test-session-123",
+            examKey: "pmle",
+            questionId: expect.any(String),
+            domain: expect.any(String),
+            isCorrect: expect.any(Boolean),
+          })
+        );
+      });
     });
 
   });
@@ -394,20 +514,24 @@ describe("DiagnosticSummaryPage Integration", () => {
       fireEvent.click(practiceButton);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith(
-          "/api/practice/session",
-          expect.objectContaining({
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              examKey: "pmle",
-              domainCodes: expect.arrayContaining([expect.any(String)]),
-              questionCount: 10,
-              source: "diagnostic_summary",
-              sourceSessionId: "test-session-123",
-            }),
-          })
+        const fetchCalls = (global.fetch as jest.Mock).mock.calls;
+        const practiceCall = fetchCalls.find((call: any[]) => 
+          call[0]?.includes("/api/practice/session")
         );
+        expect(practiceCall).toBeDefined();
+        expect(practiceCall[1]).toMatchObject({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        const body = JSON.parse(practiceCall[1].body);
+        expect(body).toMatchObject({
+          examKey: "pmle",
+          questionCount: 10,
+          source: "diagnostic_summary",
+          sourceSessionId: "test-session-123",
+        });
+        expect(Array.isArray(body.domainCodes)).toBe(true);
+        expect(body.domainCodes.length).toBeGreaterThan(0);
       });
 
       await waitFor(() => {
@@ -415,11 +539,25 @@ describe("DiagnosticSummaryPage Integration", () => {
       });
 
       expect(mockPostHog.capture).toHaveBeenCalledWith(
-        "practice_session_created_from_diagnostic",
+        ANALYTICS_EVENTS.PRACTICE_SESSION_CREATED_FROM_DIAGNOSTIC,
         expect.objectContaining({
           diagnosticSessionId: "test-session-123",
+          practiceSessionId: "practice-session-456",
+          examKey: "pmle",
           domainCodes: expect.any(Array),
           questionCount: 10,
+        })
+      );
+      
+      // Verify study_plan_start_practice_clicked was also fired
+      expect(mockPostHog.capture).toHaveBeenCalledWith(
+        ANALYTICS_EVENTS.STUDY_PLAN_START_PRACTICE_CLICKED,
+        expect.objectContaining({
+          sessionId: "test-session-123",
+          examKey: "pmle",
+          domainCodes: expect.any(Array),
+          questionCount: 10,
+          source: "weakest",
         })
       );
     });
@@ -507,10 +645,20 @@ describe("DiagnosticSummaryPage Integration", () => {
 
       // Should track error
       expect(mockPostHog.capture).toHaveBeenCalledWith(
-        "practice_session_creation_failed_from_diagnostic",
+        ANALYTICS_EVENTS.PRACTICE_SESSION_CREATION_FAILED_FROM_DIAGNOSTIC,
         expect.objectContaining({
           diagnosticSessionId: "test-session-123",
           statusCode: 500,
+        })
+      );
+      
+      // Verify study_plan_start_practice_clicked was still fired before the error
+      expect(mockPostHog.capture).toHaveBeenCalledWith(
+        ANALYTICS_EVENTS.STUDY_PLAN_START_PRACTICE_CLICKED,
+        expect.objectContaining({
+          sessionId: "test-session-123",
+          examKey: "pmle",
+          source: "weakest",
         })
       );
     });

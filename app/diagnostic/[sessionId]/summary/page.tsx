@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { usePostHog } from "posthog-js/react";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TrialConversionModal } from "@/components/billing/TrialConversionModal";
@@ -353,6 +354,7 @@ const QuestionReview = ({
   onTrackReviewEntry,
   onTrackReviewExit,
   onTrackExpansion,
+  onExplanationViewed,
 }: {
   questions: ExtendedQuestionSummary[];
   activeFilter: 'all' | 'incorrect' | 'flagged' | 'low-confidence';
@@ -362,6 +364,7 @@ const QuestionReview = ({
   onTrackReviewEntry?: () => void;
   onTrackReviewExit?: () => void;
   onTrackExpansion?: () => void;
+  onExplanationViewed?: (question: ExtendedQuestionSummary) => void;
 }) => {
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -389,19 +392,21 @@ const QuestionReview = ({
     return () => observer.disconnect();
   }, [onTrackReviewEntry, onTrackReviewExit]);
 
-  const toggleExpanded = useCallback((questionId: string) => {
+  const toggleExpanded = useCallback((question: ExtendedQuestionSummary) => {
     setExpandedQuestions(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(questionId)) {
-        newSet.delete(questionId);
+      if (newSet.has(question.id)) {
+        newSet.delete(question.id);
       } else {
-        newSet.add(questionId);
+        newSet.add(question.id);
         // Track expansion for upsell trigger
         onTrackExpansion?.();
+        // Track explanation viewed for analytics
+        onExplanationViewed?.(question);
       }
       return newSet;
     });
-  }, [onTrackExpansion]);
+  }, [onTrackExpansion, onExplanationViewed]);
 
   // Filter questions
   const filteredQuestions = questions.filter(q => {
@@ -506,7 +511,7 @@ const QuestionReview = ({
                 
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => toggleExpanded(question.id)}
+                    onClick={() => toggleExpanded(question)}
                     className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
                   >
                     {isExpanded ? 'Hide' : 'View'} explanation
@@ -747,13 +752,15 @@ const DiagnosticSummaryPage = () => {
 
         // Track summary view
         if (data.summary) {
-          posthog?.capture("diagnostic_summary_viewed", {
+          trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_SUMMARY_VIEWED, {
             sessionId: data.summary.sessionId,
             examType: data.summary.examType,
+            examKey: "pmle",
             score: data.summary.score,
             totalQuestions: data.summary.totalQuestions,
             correctAnswers: data.summary.correctAnswers,
             domainCount: data.domainBreakdown?.length || 0,
+            readinessTier: getExamReadinessTier(data.summary.score).id,
           });
         }
 
@@ -826,6 +833,15 @@ const DiagnosticSummaryPage = () => {
       return;
     }
     
+    // Track study plan start practice clicked
+    trackEvent(posthog, ANALYTICS_EVENTS.STUDY_PLAN_START_PRACTICE_CLICKED, {
+      sessionId: summary.sessionId,
+      examKey: "pmle",
+      domainCodes: codesToUse,
+      questionCount: 10,
+      source: domainCodes && domainCodes.length > 0 ? "domain_row" : "weakest",
+    });
+    
     setCreatingPracticeSession(true);
     
     try {
@@ -848,7 +864,7 @@ const DiagnosticSummaryPage = () => {
         const errorMessage = errorData.error || 'Failed to create practice session';
         
         // Track error
-        posthog?.capture("practice_session_creation_failed_from_diagnostic", {
+        trackEvent(posthog, ANALYTICS_EVENTS.PRACTICE_SESSION_CREATION_FAILED_FROM_DIAGNOSTIC, {
           diagnosticSessionId: summary.sessionId,
           domainCodes: codesToUse,
           statusCode: response.status,
@@ -870,8 +886,10 @@ const DiagnosticSummaryPage = () => {
       };
       
       // Track success
-      posthog?.capture("practice_session_created_from_diagnostic", {
+      trackEvent(posthog, ANALYTICS_EVENTS.PRACTICE_SESSION_CREATED_FROM_DIAGNOSTIC, {
         diagnosticSessionId: summary.sessionId,
+        practiceSessionId: data.sessionId,
+        examKey: "pmle",
         domainCodes: codesToUse,
         questionCount: data.questionCount,
       });
@@ -882,7 +900,7 @@ const DiagnosticSummaryPage = () => {
       console.error('Error creating practice session:', err);
       
       // Track error
-      posthog?.capture("practice_session_creation_failed_from_diagnostic", {
+      trackEvent(posthog, ANALYTICS_EVENTS.PRACTICE_SESSION_CREATION_FAILED_FROM_DIAGNOSTIC, {
         diagnosticSessionId: summary.sessionId,
         domainCodes: codesToUse,
         errorType: 'network_error',
@@ -904,9 +922,23 @@ const DiagnosticSummaryPage = () => {
   }, [router]);
 
   const handleDomainClick = useCallback((domain: string) => {
+    // Track domain click analytics
+    if (summary && posthog) {
+      const domainCode = getDomainCodeFromDisplayName(domain) || domain;
+      const domainData = domainBreakdown.find(d => d.domain === domain);
+      const domainTier = domainData ? getDomainTier(domainData.percentage).id : null;
+      
+      trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_DOMAIN_CLICKED, {
+        sessionId: summary.sessionId,
+        examKey: "pmle",
+        domainCode,
+        domainTier,
+      });
+    }
+    
     setSelectedDomain(selectedDomain === domain ? null : domain);
     setActiveFilter('all');
-  }, [selectedDomain]);
+  }, [selectedDomain, summary, posthog, domainBreakdown]);
 
   const handleExport = useCallback(() => {
     // Implementation for PDF export
@@ -917,6 +949,18 @@ const DiagnosticSummaryPage = () => {
     // Implementation for sharing
     posthog?.capture("summary_shared");
   }, [posthog]);
+
+  const handleExplanationViewed = useCallback((question: ExtendedQuestionSummary) => {
+    if (summary && posthog) {
+      trackEvent(posthog, ANALYTICS_EVENTS.QUESTION_EXPLANATION_VIEWED, {
+        sessionId: summary.sessionId,
+        examKey: "pmle",
+        questionId: question.id,
+        domain: question.domain,
+        isCorrect: question.isCorrect,
+      });
+    }
+  }, [summary, posthog]);
 
   // Handle study plan generation with upsell check - currently not used but ready for implementation
   // const handleGenerateStudyPlan = useCallback(() => {
@@ -1101,6 +1145,7 @@ const DiagnosticSummaryPage = () => {
               onTrackReviewEntry={triggers.trackReviewSectionEntry}
               onTrackReviewExit={triggers.trackReviewSectionExit}
               onTrackExpansion={triggers.trackExplanationExpansion}
+              onExplanationViewed={handleExplanationViewed}
             />
           </div>
 

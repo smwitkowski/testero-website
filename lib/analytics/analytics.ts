@@ -47,6 +47,9 @@ export const ANALYTICS_EVENTS = {
   DIAGNOSTIC_QUESTION_ANSWERED: "diagnostic_question_answered",
   DIAGNOSTIC_COMPLETED: "diagnostic_completed",
   DIAGNOSTIC_ABANDONED: "diagnostic_abandoned",
+  DIAGNOSTIC_SUMMARY_VIEWED: "diagnostic_summary_viewed",
+  DIAGNOSTIC_DOMAIN_CLICKED: "diagnostic_domain_clicked",
+  STUDY_PLAN_START_PRACTICE_CLICKED: "study_plan_start_practice_clicked",
 
   // Study Path
   STUDY_PATH_VIEWED: "study_path_viewed",
@@ -58,6 +61,9 @@ export const ANALYTICS_EVENTS = {
   PRACTICE_QUESTION_LOADED: "practice_question_loaded",
   PRACTICE_QUESTION_ANSWERED: "practice_question_answered",
   PRACTICE_QUESTION_ERROR: "practice_question_error",
+  PRACTICE_SESSION_CREATED_FROM_DIAGNOSTIC: "practice_session_created_from_diagnostic",
+  PRACTICE_SESSION_CREATION_FAILED_FROM_DIAGNOSTIC: "practice_session_creation_failed_from_diagnostic",
+  QUESTION_EXPLANATION_VIEWED: "question_explanation_viewed",
 
   // Subscription & Billing
   SUBSCRIPTION_CREATED: "subscription_created",
