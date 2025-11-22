@@ -50,14 +50,14 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
       expect(data).toEqual({ error: "Session not found" });
     });
 
-    it("should return 410 when session has expired", async () => {
+    it("should return 410 when incomplete session has expired", async () => {
       const expiredDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // Yesterday
       mockSupabase.single.mockResolvedValue({
         data: {
           id: "test-session-123",
           user_id: null,
           anonymous_session_id: "anon-456",
-          completed_at: new Date().toISOString(),
+          completed_at: null, // Not completed
           expires_at: expiredDate.toISOString(),
           exam_type: "Google Professional ML Engineer",
           started_at: new Date().toISOString(),
@@ -66,12 +66,90 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
         error: null,
       });
 
-      const req = new Request("http://localhost:3000/api/diagnostic/summary/test-session-123");
+      // Add matching anonymous session ID to pass authorization check
+      const req = new Request(
+        "http://localhost:3000/api/diagnostic/summary/test-session-123?anonymousSessionId=anon-456"
+      );
       const response = await GET(req);
       const data = await response.json();
 
       expect(response.status).toBe(410);
       expect(data).toEqual({ error: "Session expired" });
+    });
+
+    it("should return 200 for completed session even if expired", async () => {
+      const expiredDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // Yesterday
+      mockSupabase.single.mockResolvedValue({
+        data: {
+          id: "test-session-123",
+          user_id: null,
+          anonymous_session_id: "anon-456",
+          completed_at: new Date().toISOString(), // Completed
+          expires_at: expiredDate.toISOString(), // But expired
+          exam_type: "Google Professional ML Engineer",
+          started_at: new Date().toISOString(),
+          question_count: 5,
+        },
+        error: null,
+      });
+
+      // Mock questions query
+      const questionsQuery = {
+        from: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: [
+            {
+              id: "q1",
+              stem: "Test question",
+              options: [{ label: "A", text: "Option A" }],
+              correct_label: "A",
+              canonical_question_id: null,
+              original_question_id: "101",
+              domain_code: null,
+              domain_id: null,
+              diagnostic_responses: [
+                {
+                  selected_label: "A",
+                  is_correct: true,
+                  responded_at: new Date().toISOString(),
+                },
+              ],
+            },
+          ],
+          error: null,
+        }),
+      };
+
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === "diagnostics_sessions") {
+          return mockSupabase;
+        } else if (table === "diagnostic_questions") {
+          return questionsQuery;
+        }
+        return mockSupabase;
+      });
+
+      // Mock explanations query (empty for this test)
+      (questionsQuery as any).in = jest.fn().mockResolvedValue({
+        data: [],
+        error: null,
+      });
+
+      // Mock getPmleDomainConfig to return null (no domain config needed for this test)
+      (getPmleDomainConfig as jest.Mock).mockReturnValue(null);
+
+      // Add matching anonymous session ID to pass authorization check
+      const req = new Request(
+        "http://localhost:3000/api/diagnostic/summary/test-session-123?anonymousSessionId=anon-456"
+      );
+      const response = await GET(req);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data).toHaveProperty("summary");
+      expect(data).toHaveProperty("domainBreakdown");
+      expect(data.summary.sessionId).toBe("test-session-123");
     });
 
     it("should return 400 when session is not completed", async () => {
@@ -1018,7 +1096,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
 
       // Verify warning was logged
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Summary missing explanation for question 999 in session test-session-explanations")
+        expect.stringContaining("Summary missing explanation for legacy question 999 in session test-session-explanations")
       );
 
       consoleWarnSpy.mockRestore();

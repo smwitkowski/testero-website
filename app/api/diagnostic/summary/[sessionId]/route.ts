@@ -54,12 +54,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    // Check if session expired
-    if (dbSession.expires_at && new Date(dbSession.expires_at) < new Date()) {
-      return NextResponse.json({ error: 'Session expired' }, { status: 410 });
-    }
-
-    // Authorization check
+    // Authorization check (must happen before expiration check for proper error handling)
     if (dbSession.user_id) {
       // Session belongs to a logged-in user
       if (!user || dbSession.user_id !== user.id) {
@@ -74,8 +69,15 @@ export async function GET(req: Request) {
 
     // Check if session is completed
     if (!dbSession.completed_at) {
+      // For incomplete sessions, check expiration - expired incomplete sessions cannot be accessed
+      if (dbSession.expires_at && new Date(dbSession.expires_at) < new Date()) {
+        return NextResponse.json({ error: 'Session expired' }, { status: 410 });
+      }
       return NextResponse.json({ error: 'Session not completed yet' }, { status: 400 });
     }
+
+    // For completed sessions, allow access regardless of expiration time
+    // This allows users to review their completed diagnostic results indefinitely
 
     // Fetch diagnostic questions (snapshots) with responses and domain info
     const { data: questionsWithResponses, error: questionsError } = await supabase
