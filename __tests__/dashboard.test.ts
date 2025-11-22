@@ -119,62 +119,56 @@ describe('Dashboard Readiness Calculation', () => {
   });
 });
 
-// Test helper functions that might be used in the dashboard components
-describe('Dashboard Helper Functions', () => {
-  describe('getReadinessColor', () => {
-    function getReadinessColor(score: number): string {
-      if (score >= 80) return '#10B981'; // Green
-      if (score >= 60) return '#F59E0B'; // Yellow
-      if (score >= 40) return '#EF4444'; // Red
-      return '#6B7280'; // Gray
-    }
+// Test shared readiness helpers used in dashboard components
+describe('Dashboard Readiness Tier Integration', () => {
+  const { getExamReadinessTier } = require('@/lib/readiness');
 
-    it('should return correct colors for different score ranges', () => {
-      expect(getReadinessColor(100)).toBe('#10B981'); // Green
-      expect(getReadinessColor(85)).toBe('#10B981'); // Green
-      expect(getReadinessColor(80)).toBe('#10B981'); // Green
+  describe('getExamReadinessTier integration', () => {
+    it('should return correct tier labels for dashboard readiness scores', () => {
+      // Strong tier (85+)
+      expect(getExamReadinessTier(100).label).toBe('Strong');
+      expect(getExamReadinessTier(90).label).toBe('Strong');
+      expect(getExamReadinessTier(85).label).toBe('Strong');
       
-      expect(getReadinessColor(79)).toBe('#F59E0B'); // Yellow
-      expect(getReadinessColor(65)).toBe('#F59E0B'); // Yellow
-      expect(getReadinessColor(60)).toBe('#F59E0B'); // Yellow
+      // Ready tier (70-84)
+      expect(getExamReadinessTier(84).label).toBe('Ready');
+      expect(getExamReadinessTier(75).label).toBe('Ready');
+      expect(getExamReadinessTier(70).label).toBe('Ready');
       
-      expect(getReadinessColor(59)).toBe('#EF4444'); // Red
-      expect(getReadinessColor(45)).toBe('#EF4444'); // Red
-      expect(getReadinessColor(40)).toBe('#EF4444'); // Red
+      // Building tier (40-69)
+      expect(getExamReadinessTier(69).label).toBe('Building');
+      expect(getExamReadinessTier(55).label).toBe('Building');
+      expect(getExamReadinessTier(40).label).toBe('Building');
       
-      expect(getReadinessColor(39)).toBe('#6B7280'); // Gray
-      expect(getReadinessColor(20)).toBe('#6B7280'); // Gray
-      expect(getReadinessColor(0)).toBe('#6B7280'); // Gray
+      // Low tier (<40)
+      expect(getExamReadinessTier(39).label).toBe('Low');
+      expect(getExamReadinessTier(20).label).toBe('Low');
+      expect(getExamReadinessTier(0).label).toBe('Low');
     });
-  });
 
-  describe('getReadinessText', () => {
-    function getReadinessText(score: number): string {
-      if (score >= 80) return 'Exam Ready!';
-      if (score >= 60) return 'Almost Ready';
-      if (score >= 40) return 'Needs Work';
-      if (score > 0) return 'Getting Started';
-      return 'Not Started';
-    }
+    it('should return tier IDs matching expected values', () => {
+      expect(getExamReadinessTier(100).id).toBe('strong');
+      expect(getExamReadinessTier(75).id).toBe('ready');
+      expect(getExamReadinessTier(55).id).toBe('building');
+      expect(getExamReadinessTier(30).id).toBe('low');
+    });
 
-    it('should return correct text for different score ranges', () => {
-      expect(getReadinessText(100)).toBe('Exam Ready!');
-      expect(getReadinessText(85)).toBe('Exam Ready!');
-      expect(getReadinessText(80)).toBe('Exam Ready!');
+    it('should include descriptions for all tiers', () => {
+      const strongTier = getExamReadinessTier(90);
+      expect(strongTier.description).toBeTruthy();
+      expect(typeof strongTier.description).toBe('string');
       
-      expect(getReadinessText(79)).toBe('Almost Ready');
-      expect(getReadinessText(65)).toBe('Almost Ready');
-      expect(getReadinessText(60)).toBe('Almost Ready');
+      const readyTier = getExamReadinessTier(75);
+      expect(readyTier.description).toBeTruthy();
+      expect(typeof readyTier.description).toBe('string');
       
-      expect(getReadinessText(59)).toBe('Needs Work');
-      expect(getReadinessText(45)).toBe('Needs Work');
-      expect(getReadinessText(40)).toBe('Needs Work');
+      const buildingTier = getExamReadinessTier(55);
+      expect(buildingTier.description).toBeTruthy();
+      expect(typeof buildingTier.description).toBe('string');
       
-      expect(getReadinessText(39)).toBe('Getting Started');
-      expect(getReadinessText(20)).toBe('Getting Started');
-      expect(getReadinessText(1)).toBe('Getting Started');
-      
-      expect(getReadinessText(0)).toBe('Not Started');
+      const lowTier = getExamReadinessTier(30);
+      expect(lowTier.description).toBeTruthy();
+      expect(typeof lowTier.description).toBe('string');
     });
   });
 });
