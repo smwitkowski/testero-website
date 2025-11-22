@@ -476,12 +476,83 @@ User properties are set via `posthog.identify()` and persist across sessions:
 **Properties:**
 - `sessionId` (string): Session ID
 - `examType` (string): Exam type
+- `examKey` (string): Exam key identifier (e.g., "pmle")
 - `score` (number): Final score percentage
 - `totalQuestions` (number): Total questions
 - `correctAnswers` (number): Number of correct answers
 - `domainCount` (number): Number of domains assessed
+- `readinessTier` (string): Readiness tier ID (e.g., "low", "building", "ready", "strong")
 
 **Location:** `app/diagnostic/[sessionId]/summary/page.tsx`
+
+---
+
+#### `diagnostic_domain_clicked`
+**Description:** Fired when user clicks into a domain from Domain Performance section.
+
+**Properties:**
+- `sessionId` (string): Session ID
+- `examKey` (string): Exam key identifier (e.g., "pmle")
+- `domainCode` (string): Domain code identifier
+- `domainTier` (string): Domain tier ID based on performance percentage
+
+**Location:** `app/diagnostic/[sessionId]/summary/page.tsx`
+
+---
+
+#### `study_plan_start_practice_clicked`
+**Description:** Fired when user clicks a practice CTA from Study Plan section or top "weakest topics" CTA.
+
+**Properties:**
+- `sessionId` (string): Session ID
+- `examKey` (string): Exam key identifier (e.g., "pmle")
+- `domainCodes` (string[]): Array of domain codes for the practice session
+- `questionCount` (number): Number of questions in the practice session
+- `source` (string): Source of the click - "weakest" for top CTA or "domain_row" for Study Plan domain-specific CTAs
+
+**Location:** `app/diagnostic/[sessionId]/summary/page.tsx`
+
+---
+
+#### `practice_session_created_from_diagnostic`
+**Description:** Fired when a practice session is successfully created from the diagnostic summary page.
+
+**Properties:**
+- `diagnosticSessionId` (string): Diagnostic session ID
+- `practiceSessionId` (string): Practice session ID
+- `examKey` (string): Exam key identifier (e.g., "pmle")
+- `domainCodes` (string[]): Array of domain codes for the practice session
+- `questionCount` (number): Number of questions in the practice session
+
+**Location:** `app/diagnostic/[sessionId]/summary/page.tsx`
+
+---
+
+#### `practice_session_creation_failed_from_diagnostic`
+**Description:** Fired when practice session creation fails from the diagnostic summary page.
+
+**Properties:**
+- `diagnosticSessionId` (string): Diagnostic session ID
+- `domainCodes` (string[]): Array of domain codes that were attempted
+- `statusCode` (number, optional): HTTP status code if API call failed
+- `errorType` (string, optional): Error type (e.g., "network_error")
+- `error` (string): Error message
+
+**Location:** `app/diagnostic/[sessionId]/summary/page.tsx`
+
+---
+
+#### `question_explanation_viewed`
+**Description:** Fired when user opens/expands an explanation in Question Review section.
+
+**Properties:**
+- `sessionId` (string): Diagnostic session ID
+- `examKey` (string): Exam key identifier (e.g., "pmle")
+- `questionId` (string): Question ID
+- `domain` (string): Question domain
+- `isCorrect` (boolean): Whether the user's answer was correct
+
+**Location:** `app/diagnostic/[sessionId]/summary/page.tsx` (QuestionReview component)
 
 ---
 
@@ -568,13 +639,15 @@ User properties are set via `posthog.identify()` and persist across sessions:
 ---
 
 #### `practice_started`
-**Description:** Fired when user starts a practice session.
+**Description:** Fired when user starts a practice session. (Historical event - superseded by `practice_session_created_from_diagnostic` for readiness loop tracking)
 
 **Properties:**
 - `source` (string): Source context (e.g., "diagnostic_summary")
 - `topics` (string \| string[]): Topics or "weakest" for weakest topics
 
 **Location:** `app/diagnostic/[sessionId]/summary/page.tsx`
+
+**Note:** For Week 3 readiness and practice loop analytics, use `practice_session_created_from_diagnostic` instead, which provides more detailed tracking including session IDs and domain codes.
 
 ---
 
