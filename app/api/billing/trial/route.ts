@@ -61,29 +61,122 @@ export async function POST(
     const parsedBody = trialBodySchema.safeParse(body);
     const anonymousSessionId = parsedBody.success ? parsedBody.data.anonymousSessionId : undefined;
 
-    // Check if user has already used trial
-    const hasUsedTrial = user.user_metadata?.has_used_trial === true;
-    if (hasUsedTrial) {
-      return NextResponse.json({ error: "You have already used your free trial" }, { status: 400 });
-    }
-
-    // Check for existing active subscription
-    const { data: existingSubscription } = await supabase
+    // Step 1: Check for existing active subscription (authoritative check)
+    const { data: existingActiveSubscription, error: activeSubError } = await supabase
       .from("user_subscriptions")
       .select("*")
       .eq("user_id", user.id)
       .in("status", ["active", "trialing"])
-      .single();
+      .maybeSingle();
 
-    if (existingSubscription) {
+    if (activeSubError) {
+      console.error(`[Trial] Error checking active subscription for user ${user.id}:`, activeSubError);
+      // Continue - don't block on query errors, but log for investigation
+    }
+
+    if (existingActiveSubscription) {
+      console.log(
+        `[Trial] User ${user.id} already has active subscription: ${existingActiveSubscription.status}, subscription_id: ${existingActiveSubscription.stripe_subscription_id}`
+      );
       return NextResponse.json(
         { error: "You already have an active subscription" },
         { status: 400 }
       );
     }
 
+    // Step 2: Check subscription history to determine if trial was actually used
+    const { data: subscriptionHistory, error: historyError } = await supabase
+      .from("user_subscriptions")
+      .select("id, status, trial_ends_at, created_at, stripe_subscription_id")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(3);
+
+    if (historyError) {
+      console.error(`[Trial] Error checking subscription history for user ${user.id}:`, historyError);
+      // Don't proceed if we can't verify subscription history - fail closed
+      return NextResponse.json(
+        { error: "Unable to verify subscription eligibility. Please try again." },
+        { status: 500 }
+      );
+    }
+
+    // Determine if user has actually used a trial based on subscription history
+    const hasUsedTrialFromHistory =
+      subscriptionHistory &&
+      subscriptionHistory.length > 0 &&
+      subscriptionHistory.some((sub) => {
+        // User has used trial if:
+        // 1. They have a subscription with trial_ends_at set (trial was created)
+        // 2. Status is not currently trialing (trial ended or converted)
+        return (
+          sub.trial_ends_at !== null &&
+          sub.status !== "trialing" &&
+          (sub.status === "active" ||
+            sub.status === "canceled" ||
+            sub.status === "past_due" ||
+            sub.status === "unpaid" ||
+            sub.status === "incomplete" ||
+            sub.status === "incomplete_expired")
+        );
+      });
+
+    if (hasUsedTrialFromHistory) {
+      const trialSub = subscriptionHistory!.find((sub) => sub.trial_ends_at !== null);
+      console.log(
+        `[Trial] User ${user.id} has used trial (found in history): status=${trialSub?.status}, trial_ends_at=${trialSub?.trial_ends_at}, subscription_id=${trialSub?.stripe_subscription_id}`
+      );
+      return NextResponse.json(
+        { error: "You have already used your free trial" },
+        { status: 400 }
+      );
+    }
+
+    // Step 3: Check metadata as advisory (less reliable, but useful for edge cases)
+    // Only perform metadata operations if we successfully queried subscription history
+    const hasUsedTrialMetadata = user.user_metadata?.has_used_trial === true;
+
+    if (hasUsedTrialMetadata) {
+      // At this point, we know subscriptionHistory query succeeded (no historyError)
+      if (!subscriptionHistory || subscriptionHistory.length === 0) {
+        // Metadata says trial was used but no subscription record exists
+        // This suggests a previous failed attempt - log warning and clear metadata
+        console.warn(
+          `[Trial] User ${user.id} has has_used_trial=true metadata but no subscription history. Clearing incorrect metadata to allow retry.`
+        );
+        // Clear the incorrect metadata flag
+        const { error: clearError } = await supabase.auth.updateUser({
+          data: { has_used_trial: false },
+        });
+        if (clearError) {
+          console.error(
+            `[Trial] Failed to clear incorrect metadata for user ${user.id}:`,
+            clearError
+          );
+        } else {
+          console.log(`[Trial] Cleared incorrect has_used_trial metadata for user ${user.id}`);
+        }
+        // Continue - allow user to proceed
+      } else {
+        // Metadata and database both indicate trial was used
+        console.log(
+          `[Trial] User ${user.id} has has_used_trial=true metadata and subscription history. Rejecting trial request.`
+        );
+        return NextResponse.json(
+          { error: "You have already used your free trial" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Log eligibility check result
+    console.log(
+      `[Trial] User ${user.id} is eligible for trial: hasActiveSub=${!!existingActiveSubscription}, hasHistory=${!!(subscriptionHistory && subscriptionHistory.length > 0)}, hasMetadata=${hasUsedTrialMetadata}`
+    );
+
     // Create or retrieve Stripe customer
     const stripeService = new StripeService();
+    console.log(`[Trial] Creating/retrieving Stripe customer for user ${user.id}`);
     const customer = await stripeService.createOrRetrieveCustomer(user.id, user.email!);
 
     // Get default price ID for Pro tier (most popular)
@@ -92,7 +185,11 @@ export async function POST(
         ? parsedBody.data.priceId
         : process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY || "price_pro_monthly";
 
-    // Create trial subscription
+    console.log(
+      `[Trial] Creating trial subscription for user ${user.id}, customer ${customer.id}, price ${priceId}`
+    );
+
+    // Create trial subscription in Stripe
     const subscription = await stripeService.createTrialSubscription({
       customerId: customer.id,
       priceId,
@@ -103,13 +200,13 @@ export async function POST(
     // Calculate trial end date
     const trialEndsAt = new Date(subscription.trial_end! * 1000).toISOString();
 
-    // Update user metadata to mark trial as used
-    await supabase.auth.updateUser({
-      data: { has_used_trial: true },
-    });
+    console.log(
+      `[Trial] Trial subscription created in Stripe: ${subscription.id}, status: ${subscription.status}, trial_ends_at: ${trialEndsAt}`
+    );
 
-    // Save subscription to database
-    await supabase.from("user_subscriptions").insert({
+    // Save subscription to database FIRST (before updating metadata)
+    // This ensures we have a record even if metadata update fails
+    const { error: insertError } = await supabase.from("user_subscriptions").insert({
       user_id: user.id,
       stripe_customer_id: customer.id,
       stripe_subscription_id: subscription.id,
@@ -119,6 +216,35 @@ export async function POST(
       current_period_end: trialEndsAt,
       trial_ends_at: trialEndsAt,
     });
+
+    if (insertError) {
+      console.error(
+        `[Trial] Failed to insert subscription to database for user ${user.id}:`,
+        insertError
+      );
+      // Don't fail the request - subscription exists in Stripe
+      // But log the error for investigation
+    } else {
+      console.log(
+        `[Trial] Successfully saved subscription to database for user ${user.id}, subscription_id: ${subscription.id}`
+      );
+    }
+
+    // Update user metadata to mark trial as used (after successful DB insert)
+    const { error: metadataError } = await supabase.auth.updateUser({
+      data: { has_used_trial: true },
+    });
+
+    if (metadataError) {
+      console.error(
+        `[Trial] Failed to update user metadata for user ${user.id}:`,
+        metadataError
+      );
+      // Don't fail the request - subscription is created and saved to DB
+      // Metadata is less critical than the actual subscription record
+    } else {
+      console.log(`[Trial] Successfully updated has_used_trial metadata for user ${user.id}`);
+    }
 
     // Track analytics event
     const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
@@ -152,23 +278,33 @@ export async function POST(
       { status: 200 }
     );
   } catch (error) {
-    console.error("Trial creation error:", error);
+    console.error(`[Trial] Trial creation error:`, error);
 
     // More specific error messages for debugging
     if (error instanceof Error) {
+      console.error(`[Trial] Error details: message="${error.message}", stack="${error.stack}"`);
+
       if (error.message.includes("STRIPE_SECRET_KEY")) {
+        console.error(`[Trial] Stripe secret key not configured`);
         return NextResponse.json(
           { error: "Payment system not configured. Please contact support." },
           { status: 503 }
         );
       }
       if (error.message.includes("Price")) {
+        console.error(`[Trial] Invalid price ID in request`);
         return NextResponse.json(
           { error: "Invalid subscription plan. Please try again." },
           { status: 400 }
         );
       }
     }
+
+    // Log full error context for debugging
+    console.error(`[Trial] Unhandled error during trial creation:`, {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
 
     return NextResponse.json(
       { error: "Failed to start trial. Please try again." },
