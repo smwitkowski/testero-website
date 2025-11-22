@@ -212,6 +212,13 @@ export async function GET(req: Request) {
       // Primary path: Use canonical_question_id for PMLE canonical sessions
       if (q.canonical_question_id) {
         explanation = explanationByCanonicalId[q.canonical_question_id] ?? null;
+        
+        // Log warning if canonical_question_id is set but no explanation was found
+        if (explanation === null) {
+          console.warn(
+            `Summary missing explanation for canonical question ${q.canonical_question_id} in session ${sessionId}`
+          );
+        }
       }
       // Fallback path: Use original_question_id for legacy sessions
       else if (q.original_question_id) {
