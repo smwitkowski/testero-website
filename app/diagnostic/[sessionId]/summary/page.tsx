@@ -11,6 +11,8 @@ import { useUpsell } from "@/hooks/useUpsell";
 import { useTriggerDetection } from "@/hooks/useTriggerDetection";
 import { QuestionSummary, DomainBreakdown, SessionSummary } from "@/components/diagnostic/types";
 import { getExamReadinessTier, getDomainTier, getDomainTierColors } from "@/lib/readiness";
+import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
+import { useToastQueue, Toast } from "@/components/ui/toast";
 
 // Extended types for UI-specific fields
 interface ExtendedQuestionSummary extends QuestionSummary {
@@ -38,6 +40,33 @@ const formatTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   return `${minutes}m ${remainingSeconds}s`;
+};
+
+// Helper to map display name back to domain code
+const getDomainCodeFromDisplayName = (displayName: string): string | null => {
+  const config = PMLE_BLUEPRINT.find(d => d.displayName === displayName);
+  return config?.domainCode || null;
+};
+
+// Minimum attempts required for a domain to be eligible for practice
+const MIN_DOMAIN_ATTEMPTS_FOR_PRACTICE = 1;
+
+// Select weakest 2-3 domains with sufficient attempts
+const selectWeakestDomains = (domainBreakdown: DomainBreakdown[]): string[] => {
+  // Filter domains with sufficient attempts and sort by percentage (lowest first)
+  const eligibleDomains = domainBreakdown
+    .filter(d => d.total >= MIN_DOMAIN_ATTEMPTS_FOR_PRACTICE)
+    .sort((a, b) => a.percentage - b.percentage);
+  
+  // Select top 2-3 weakest domains
+  const selectedDomains = eligibleDomains.slice(0, 3);
+  
+  // Convert display names to domain codes
+  const domainCodes = selectedDomains
+    .map(d => getDomainCodeFromDisplayName(d.domain))
+    .filter((code): code is string => code !== null);
+  
+  return domainCodes;
 };
 
 // Components
@@ -79,11 +108,13 @@ const StatusChip = ({
 const VerdictBlock = ({ 
   summary, 
   onStartPractice,
-  onRetakeDiagnostic 
+  onRetakeDiagnostic,
+  isLoading 
 }: {
   summary: ExtendedSessionSummary;
   onStartPractice: () => void;
   onRetakeDiagnostic: () => void;
+  isLoading?: boolean;
 }) => {
   const readinessTier = getExamReadinessTier(summary.score);
   const strokeColorClass = getStrokeColorClass(readinessTier.id);
@@ -153,14 +184,15 @@ const VerdictBlock = ({
 
       {/* CTAs */}
       <div className="flex flex-col sm:flex-row gap-3 mt-6">
-        <Button onClick={onStartPractice} tone="accent" size="md">
-          Start 10-min practice on your weakest topics
+        <Button onClick={onStartPractice} tone="accent" size="md" disabled={isLoading}>
+          {isLoading ? "Creating practice session..." : "Start 10-min practice on your weakest topics"}
         </Button>
         <Button
           onClick={onRetakeDiagnostic}
           variant="outline"
           tone="accent"
           size="md"
+          disabled={isLoading}
         >
           Retake diagnostic (20 Q)
         </Button>
@@ -213,10 +245,12 @@ const DomainPerformance = ({
 
 const StudyPlan = ({ 
   domains, 
-  onStartPractice 
+  onStartPractice,
+  isLoading 
 }: { 
   domains: DomainBreakdown[];
-  onStartPractice: (topics: string[]) => void;
+  onStartPractice: (domainCodes: string[]) => void;
+  isLoading?: boolean;
 }) => {
   const foundation = domains.filter(d => d.percentage < 40);
   const core = domains.filter(d => d.percentage >= 40 && d.percentage < 70);
@@ -258,8 +292,9 @@ const StudyPlan = ({
                 variant="outline"
                 tone="accent"
                 className="text-xs"
+                disabled={isLoading}
               >
-                Start practice (10)
+                {isLoading ? "Creating..." : "Start practice (10)"}
               </Button>
             </div>
           );
@@ -548,12 +583,14 @@ const QuickActions = ({
   onRetake, 
   onPractice, 
   onExport, 
-  onShare 
+  onShare,
+  isLoading 
 }: {
   onRetake: () => void;
   onPractice: () => void;
   onExport: () => void;
   onShare: () => void;
+  isLoading?: boolean;
 }) => (
   <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm">
     <h3 className="font-semibold text-slate-900 mb-4">Quick Actions</h3>
@@ -575,8 +612,9 @@ const QuickActions = ({
         size="sm"
         fullWidth
         className="justify-start text-sm"
+        disabled={isLoading}
       >
-        📚 Start 10-min practice
+        {isLoading ? "Creating..." : "📚 Start 10-min practice"}
       </Button>
       <Button
         onClick={onExport}
@@ -629,10 +667,14 @@ const DiagnosticSummaryPage = () => {
   const [summary, setSummary] = useState<ExtendedSessionSummary | null>(null);
   const [domainBreakdown, setDomainBreakdown] = useState<DomainBreakdown[]>([]);
   const [showTrialModal, setShowTrialModal] = useState(false);
+  const [creatingPracticeSession, setCreatingPracticeSession] = useState(false);
   
   // UI State
   const [activeFilter, setActiveFilter] = useState<'all' | 'incorrect' | 'flagged' | 'low-confidence'>('all');
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
+  
+  // Toast queue for error messages
+  const { toasts, addToast, dismissToast } = useToastQueue();
 
   // Calculate critical domains for upsell triggers (using shared tier helper)
   const criticalDomainCount = domainBreakdown.filter(d => getDomainTier(d.percentage).id === "critical").length;
@@ -741,22 +783,121 @@ const DiagnosticSummaryPage = () => {
   }, [sessionId, user, isAuthLoading, posthog]);
 
   // Event handlers
-  const handleStartPractice = useCallback((topics?: string[]) => {
+  const handleStartPractice = useCallback(async (domainCodes?: string[]) => {
     // Check if should trigger paywall modal
     if (!user?.user_metadata?.has_subscription) {
       const triggered = triggers.checkPaywallTrigger('practice');
       if (triggered) return; // Modal opened, don't proceed
     }
     
-    // Implementation for starting practice
-    posthog?.capture("practice_started", { 
-      source: "diagnostic_summary",
-      topics: topics || "weakest"
-    });
+    if (!summary) {
+      addToast({
+        tone: "danger",
+        title: "Couldn't start practice",
+        description: "Diagnostic summary not loaded. Please refresh the page.",
+      });
+      return;
+    }
     
-    // Navigate to practice
-    router.push('/practice');
-  }, [posthog, triggers, user, router]);
+    // Determine domain codes to use
+    let codesToUse: string[];
+    if (domainCodes && domainCodes.length > 0) {
+      // If domain codes provided (from Study Plan), convert display names to codes if needed
+      codesToUse = domainCodes
+        .map(domain => {
+          // Check if it's already a domain code (contains underscore) or if it's a display name
+          if (domain.includes('_')) {
+            return domain; // Already a code
+          }
+          return getDomainCodeFromDisplayName(domain) || domain;
+        })
+        .filter((code): code is string => code !== null);
+    } else {
+      // Compute weakest domains for top CTA
+      codesToUse = selectWeakestDomains(domainBreakdown);
+    }
+    
+    if (codesToUse.length === 0) {
+      addToast({
+        tone: "danger",
+        title: "Couldn't start practice",
+        description: "No eligible domains found for practice. Please try again later.",
+      });
+      return;
+    }
+    
+    setCreatingPracticeSession(true);
+    
+    try {
+      const response = await fetch('/api/practice/session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          examKey: 'pmle',
+          domainCodes: codesToUse,
+          questionCount: 10,
+          source: 'diagnostic_summary',
+          sourceSessionId: summary.sessionId,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        const errorMessage = errorData.error || 'Failed to create practice session';
+        
+        // Track error
+        posthog?.capture("practice_session_creation_failed_from_diagnostic", {
+          diagnosticSessionId: summary.sessionId,
+          domainCodes: codesToUse,
+          statusCode: response.status,
+          error: errorMessage,
+        });
+        
+        addToast({
+          tone: "danger",
+          title: "Couldn't start practice",
+          description: errorMessage || "Something went wrong. Please try again.",
+        });
+        return;
+      }
+      
+      const data = await response.json() as {
+        sessionId: string;
+        route: string;
+        questionCount: number;
+      };
+      
+      // Track success
+      posthog?.capture("practice_session_created_from_diagnostic", {
+        diagnosticSessionId: summary.sessionId,
+        domainCodes: codesToUse,
+        questionCount: data.questionCount,
+      });
+      
+      // Navigate to practice session
+      router.push(data.route || `/practice?sessionId=${data.sessionId}`);
+    } catch (err) {
+      console.error('Error creating practice session:', err);
+      
+      // Track error
+      posthog?.capture("practice_session_creation_failed_from_diagnostic", {
+        diagnosticSessionId: summary.sessionId,
+        domainCodes: codesToUse,
+        errorType: 'network_error',
+        error: err instanceof Error ? err.message : 'Network error',
+      });
+      
+      addToast({
+        tone: "danger",
+        title: "Couldn't start practice",
+        description: "Network error. Please check your connection and try again.",
+      });
+    } finally {
+      setCreatingPracticeSession(false);
+    }
+  }, [posthog, triggers, user, router, summary, domainBreakdown, addToast]);
 
   const handleRetakeDiagnostic = useCallback(() => {
     router.push("/diagnostic");
@@ -889,6 +1030,17 @@ const DiagnosticSummaryPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Toast Notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {toasts.map((toast) => (
+          <Toast
+            key={toast.id}
+            {...toast}
+            onClose={() => dismissToast(toast.id)}
+          />
+        ))}
+      </div>
+      
       {/* Top Header */}
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -919,6 +1071,7 @@ const DiagnosticSummaryPage = () => {
               summary={summary}
               onStartPractice={() => handleStartPractice()}
               onRetakeDiagnostic={handleRetakeDiagnostic}
+              isLoading={creatingPracticeSession}
             />
 
             {/* Domain Performance */}
@@ -934,6 +1087,7 @@ const DiagnosticSummaryPage = () => {
               <StudyPlan 
                 domains={domainBreakdown}
                 onStartPractice={handleStartPractice}
+                isLoading={creatingPracticeSession}
               />
             </div>
 
@@ -957,6 +1111,7 @@ const DiagnosticSummaryPage = () => {
               onPractice={() => handleStartPractice()}
               onExport={handleExport}
               onShare={handleShare}
+              isLoading={creatingPracticeSession}
             />
 
             {/* Trial CTA for non-subscribed users */}
