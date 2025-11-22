@@ -11,7 +11,7 @@ import { UpsellModal } from "@/components/diagnostic/UpsellModal";
 import { useUpsell } from "@/hooks/useUpsell";
 import { useTriggerDetection } from "@/hooks/useTriggerDetection";
 import { QuestionSummary, DomainBreakdown, SessionSummary } from "@/components/diagnostic/types";
-import { getExamReadinessTier, getDomainTier, getDomainTierColors } from "@/lib/readiness";
+import { getExamReadinessTier, getDomainTier, getDomainTierColors, READINESS_PASS_THRESHOLD } from "@/lib/readiness";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
 import { useToastQueue, Toast } from "@/components/ui/toast";
 
@@ -122,9 +122,20 @@ const VerdictBlock = ({
   const duration = summary.totalTimeSpent ? 
     formatTime(summary.totalTimeSpent) : 
     Math.round((new Date(summary.completedAt).getTime() - new Date(summary.startedAt).getTime()) / 60000) + "m";
+  
+  // Constructive messaging for 0-score diagnostics
+  const isZeroScore = summary.score === 0;
+  const verdictIntro = isZeroScore 
+    ? "This was your first attempt. Here's where to start building your foundation."
+    : null;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm mb-8">
+      {verdictIntro && (
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm text-blue-700">{verdictIntro}</p>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Gauge and Readiness */}
         <div className="flex items-center gap-6">
@@ -155,7 +166,7 @@ const VerdictBlock = ({
               Readiness: {readinessTier.label}
             </div>
             <div className="text-sm text-slate-500">
-              Pass typically ≥70%
+              Pass typically ≥{READINESS_PASS_THRESHOLD}%
             </div>
           </div>
         </div>
@@ -253,6 +264,37 @@ const StudyPlan = ({
   onStartPractice: (domainCodes: string[]) => void;
   isLoading?: boolean;
 }) => {
+  // Handle legacy sessions without domain breakdown
+  if (domains.length === 0) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm mb-8">
+        <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-4">Study Plan</h2>
+        <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 mb-4">
+          <p className="text-sm text-amber-700 mb-2">
+            <strong>Note:</strong> Domain-level breakdown isn&apos;t available for this earlier diagnostic session.
+          </p>
+          <p className="text-sm text-amber-700">
+            Take a new diagnostic to unlock domain-specific study guidance and a personalized study plan.
+          </p>
+        </div>
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">
+            In the meantime, focus on reviewing exam-wide concepts and practicing with our question bank.
+          </p>
+          <Button
+            onClick={() => onStartPractice([])}
+            size="sm"
+            variant="outline"
+            tone="accent"
+            disabled={isLoading}
+          >
+            {isLoading ? "Creating..." : "Start general practice (10 questions)"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const foundation = domains.filter(d => d.percentage < 40);
   const core = domains.filter(d => d.percentage >= 40 && d.percentage < 70);
   const stretch = domains.filter(d => d.percentage >= 70);
@@ -311,7 +353,7 @@ const StudyPlan = ({
       {foundation.length > 0 && (
         <StudyGroup 
           title="Foundation First"
-          description="Critical gaps that need immediate attention. Master these before moving on."
+          description="Critical gaps that need immediate attention. Master these foundational concepts before moving on."
           domains={foundation}
           timeEstimate="35-45 min"
         />
@@ -320,7 +362,7 @@ const StudyPlan = ({
       {core.length > 0 && (
         <StudyGroup 
           title="Core"
-          description="Important topics that need strengthening to reach passing level."
+          description="Important topics that need strengthening to reach passing level. Focus here after mastering foundation concepts."
           domains={core}
           timeEstimate="60-90 min"
         />
@@ -329,7 +371,7 @@ const StudyPlan = ({
       {stretch.length > 0 && (
         <StudyGroup 
           title="Stretch"
-          description="Areas where you're already strong. Practice to maintain and perfect."
+          description="Areas where you're already strong. Practice to maintain and perfect your knowledge."
           domains={stretch}
           timeEstimate="30-45 min"
         />
@@ -337,8 +379,8 @@ const StudyPlan = ({
 
       <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
         <p className="text-sm text-blue-700">
-          <strong>Tip:</strong> Knock out &apos;Foundation&apos; first (~35–45 min), then &apos;Core&apos; (~60–90 min). 
-          Retake when your weakest three domains ≥60%.
+          <strong>Tip:</strong> Focus on &apos;Foundation&apos; first (~35–45 min), then &apos;Core&apos; (~60–90 min). 
+          Consider retaking the diagnostic when your weakest domains reach ≥{READINESS_PASS_THRESHOLD}% to track progress.
         </p>
       </div>
     </div>
@@ -1124,6 +1166,22 @@ const DiagnosticSummaryPage = () => {
                 domains={domainBreakdown}
                 onDomainClick={handleDomainClick}
               />
+            )}
+
+            {/* Legacy session notice */}
+            {summary && domainBreakdown.length === 0 && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 md:p-6 shadow-sm mb-8">
+                <h3 className="text-lg font-semibold text-amber-900 mb-2">
+                  Domain Breakdown Unavailable
+                </h3>
+                <p className="text-sm text-amber-700 mb-4">
+                  This diagnostic session was completed before domain-level analysis was available. 
+                  Take a new diagnostic to get domain-specific readiness insights and a personalized study plan.
+                </p>
+                <Button onClick={handleRetakeDiagnostic} tone="accent" size="sm">
+                  Take New Diagnostic
+                </Button>
+              </div>
             )}
 
             {/* Study Plan */}

@@ -37,7 +37,7 @@ export const ReadinessMeter: React.FC<ReadinessMeterProps> = ({
   const tier = hasCompletedDiagnostic ? getExamReadinessTier(displayScore) : null;
   const color = tier ? getExamReadinessSemanticColor(tier.id) : colorSemantic.text.muted;
   const statusText = tier ? tier.label : 'Get started';
-  const description = tier ? tier.description : 'Take your first PMLE diagnostic to see your readiness score.';
+  const description = tier ? tier.description : 'Take your first PMLE diagnostic to see your readiness score and get a tailored study plan based on domain-level performance.';
 
   // Create a circular progress indicator
   const radius = 45;

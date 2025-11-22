@@ -289,7 +289,7 @@ const DashboardPage = () => {
               Dashboard
             </h1>
             <p style={{ color: colorSemantic.text.secondary }}>
-              Track your progress and exam readiness
+              Track your readiness and get domain-specific study guidance
             </p>
           </div>
 
@@ -322,7 +322,7 @@ const DashboardPage = () => {
           </div>
 
           {/* Additional Info/Tips Section */}
-          {dashboardData.readinessScore === 0 && (
+          {(!examReadiness?.hasCompletedDiagnostic || dashboardData.readinessScore === 0) && (
             <div
               className="mt-8 rounded-lg p-6 border"
               style={{
@@ -331,20 +331,16 @@ const DashboardPage = () => {
               }}
             >
               <h3 className="text-lg font-semibold mb-2" style={{ color: colorSemantic.info.dark }}>
-                Get Started with Your Study Journey
+                Get Your Readiness Baseline
               </h3>
               <p className="mb-4" style={{ color: colorSemantic.info.base }}>
-                Welcome to your dashboard! To get the most accurate readiness assessment:
+                {!examReadiness?.hasCompletedDiagnostic 
+                  ? "You haven't run a diagnostic yet. Take your first diagnostic to get your readiness baseline and a personalized study plan based on domain-level performance."
+                  : "Take a diagnostic to assess your readiness and get domain-specific guidance on where to focus your study time."}
               </p>
-              <ul
-                className="space-y-1 text-sm list-disc list-inside"
-                style={{ color: colorSemantic.info.base }}
-              >
-                <li>Take a diagnostic test to assess your current knowledge</li>
-                <li>Practice regularly with our question bank</li>
-                <li>Track your progress over time</li>
-                <li>Focus on areas where you need improvement</li>
-              </ul>
+              <Button onClick={handleStartDiagnostic} tone="accent" className="mt-2">
+                Start Diagnostic
+              </Button>
             </div>
           )}
         </div>
