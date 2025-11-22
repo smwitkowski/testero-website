@@ -12,7 +12,7 @@ import { X } from "lucide-react";
 
 // Import types from the API route
 import type { DashboardData, SuccessResponse, ErrorResponse } from "@/app/api/dashboard/route";
-import type { ExamReadinessSummary, DashboardSummarySuccessResponse } from "@/app/api/dashboard/summary/route";
+import type { ExamReadinessSummary, DashboardSummarySuccessResponse, ErrorResponse as DashboardSummaryErrorResponse } from "@/app/api/dashboard/summary/route";
 
 // Import beta onboarding constants
 import { FEATURE_FLAGS, getBetaVariantContent } from "@/lib/constants/beta-onboarding";
@@ -117,16 +117,17 @@ const DashboardPage = () => {
     const fetchExamReadiness = async () => {
       try {
         const response = await fetch("/api/dashboard/summary?examKey=pmle");
-        const data: DashboardSummarySuccessResponse | ErrorResponse = await response.json();
+        const data: DashboardSummarySuccessResponse | DashboardSummaryErrorResponse = await response.json();
 
-        if (response.ok && data.status === 'ok') {
+        if (response.ok && 'status' in data && data.status === 'ok') {
           setExamReadiness(data.data);
         } else {
           // Log error but don't break the dashboard - fall back to empty state
-          console.error('Failed to fetch exam readiness summary:', (data as ErrorResponse).error);
+          const errorMessage = 'error' in data ? data.error : "Unknown error";
+          console.error('Failed to fetch exam readiness summary:', errorMessage);
           posthog?.capture("dashboard_readiness_summary_error", {
             user_id: user.id,
-            error: (data as ErrorResponse).error || "Unknown error",
+            error: errorMessage,
           });
         }
       } catch (err) {
