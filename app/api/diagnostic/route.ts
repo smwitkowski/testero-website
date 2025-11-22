@@ -446,34 +446,34 @@ export async function POST(req: Request) {
         const newDbSessionId = newSessionRecord.id;
 
         // 4. Create diagnostic_questions (snapshot) records
-        // HOTFIX: original_question_id is bigint in DB, but PMLE canonical questions use UUID.
-        // For PMLE questions (UUID strings), set original_question_id to null to avoid type mismatch.
-        // For legacy questions (bigint), preserve the ID for backward compatibility.
-        // Note: Supabase returns bigint as string to avoid precision loss, UUIDs are also strings.
-        // We detect UUIDs by checking if the string contains dashes (UUID format: 8-4-4-4-12).
-        //
-        // SCHEMA LIMITATION: This means canonical PMLE diagnostic sessions cannot link back to
-        // explanations via original_question_id. The summary API will attempt to fetch explanations
-        // but will only find them for legacy sessions with numeric original_question_id values.
-        // A future migration should migrate diagnostic_questions.original_question_id from bigint
-        // to uuid to enable full explanation support for canonical PMLE diagnostics.
+        // For PMLE canonical questions (examIdToUse === 6), use canonical_question_id (UUID) to link to canonical questions.
+        // For legacy questions, use original_question_id (bigint) for backward compatibility.
         const questionSnapshotsToInsert = selectedQuestions.map((q) => {
+          // For PMLE canonical questions, set canonical_question_id to the UUID
+          const canonicalQuestionId = examIdToUse === 6 && typeof q.id === "string" && q.id.includes("-")
+            ? q.id
+            : null;
+
+          // For legacy questions, preserve original_question_id logic
           let originalQuestionId: number | null = null;
-          if (typeof q.id === "number") {
-            // Direct number (legacy bigint that fits in JS number)
-            originalQuestionId = q.id;
-          } else if (typeof q.id === "string") {
-            // String ID: could be bigint string or UUID string
-            // UUIDs contain dashes (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-            // Bigint strings are numeric only
-            if (!q.id.includes("-") && !isNaN(Number(q.id))) {
-              // Numeric string (legacy bigint) - convert to number
-              originalQuestionId = Number(q.id);
+          if (examIdToUse !== 6) {
+            // Legacy path: handle bigint IDs
+            if (typeof q.id === "number") {
+              originalQuestionId = q.id;
+            } else if (typeof q.id === "string") {
+              // String ID: could be bigint string or UUID string
+              // UUIDs contain dashes (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+              // Bigint strings are numeric only
+              if (!q.id.includes("-") && !isNaN(Number(q.id))) {
+                // Numeric string (legacy bigint) - convert to number
+                originalQuestionId = Number(q.id);
+              }
             }
-            // Otherwise it's a UUID string, leave as null
           }
+
           return {
             session_id: newDbSessionId,
+            canonical_question_id: canonicalQuestionId,
             original_question_id: originalQuestionId,
             stem: q.stem,
             // Ensure options are in {label: string, text: string} format for snapshot
@@ -561,10 +561,10 @@ export async function POST(req: Request) {
         }
         // For anonymous, if anonymous_session_id is set, client should provide it (not implemented here yet for answer)
 
-        // Fetch the snapshotted question to get correct_label and original_question_id
+        // Fetch the snapshotted question to get correct_label, canonical_question_id, and original_question_id
         const { data: snapQuestion, error: snapQError } = await supabase
           .from("diagnostic_questions")
-          .select("id, correct_label, original_question_id")
+          .select("id, correct_label, canonical_question_id, original_question_id")
           .eq("id", snapshottedQuestionId) // UUID of the question in diagnostic_questions
           .eq("session_id", sessionId)
           .single();
@@ -592,25 +592,33 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: "Failed to save answer." }, { status: 500 });
         }
 
-        // Fetch explanation from canonical explanations table using original_question_id
-        // This endpoint uses canonical public.explanations as the sole explanation source.
-        // Missing canonical explanations return null and are logged for cleanup.
+        // Fetch explanation from canonical explanations table
+        // Primary path: Use canonical_question_id (UUID) for PMLE canonical sessions
+        // Fallback path: Use original_question_id (bigint) for legacy sessions
         let explanationText: string | null = null;
-        if (snapQuestion.original_question_id) {
+        let questionIdForExplanation: string | number | null = null;
+
+        if (snapQuestion.canonical_question_id) {
+          // Primary path: PMLE canonical sessions
+          questionIdForExplanation = snapQuestion.canonical_question_id;
+        } else if (snapQuestion.original_question_id) {
+          // Fallback path: Legacy sessions
+          questionIdForExplanation = snapQuestion.original_question_id;
+        }
+
+        if (questionIdForExplanation) {
           const { data: canonicalExplanation, error: canonicalError } = await supabase
             .from("explanations")
             .select("explanation_text")
-            .eq("question_id", snapQuestion.original_question_id)
+            .eq("question_id", questionIdForExplanation)
             .single();
 
           if (canonicalExplanation && !canonicalError) {
             explanationText = canonicalExplanation.explanation_text;
           } else {
             // Canonical explanation missing - return null and log for cleanup
-            // For non-canonical or historical sessions where no canonical explanation exists,
-            // the endpoint returns explanation: null rather than querying legacy tables.
             console.warn(
-              `Missing canonical explanation for question ${snapQuestion.original_question_id} in session ${sessionId}`
+              `Missing canonical explanation for question ${questionIdForExplanation} (canonical: ${snapQuestion.canonical_question_id}, original: ${snapQuestion.original_question_id}) in session ${sessionId}`
             );
             explanationText = null;
           }
