@@ -1,0 +1,3477 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: frontend/app/api/diagnostic/**/*.ts, frontend/app/diagnostic/**/*.tsx, frontend/components/diagnostic/**/*.ts, frontend/lib/constants/diagnostic-config.ts, frontend/components/diagnostic/types.ts, frontend/supabase/migrations/20251119162319_create_pmle_canonical_schema.sql, frontend/scripts/create_diagnostic_tables.sql
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+frontend/
+  app/
+    api/
+      diagnostic/
+        session/
+          [id]/
+            status/
+              route.ts
+          route.ts
+        summary/
+          [sessionId]/
+            route.ts
+        route.ts
+    diagnostic/
+      [sessionId]/
+        summary/
+          page.tsx
+        page.tsx
+      layout.tsx
+      page.tsx
+  components/
+    diagnostic/
+      index.ts
+      types.ts
+  lib/
+    constants/
+      diagnostic-config.ts
+  scripts/
+    create_diagnostic_tables.sql
+  supabase/
+    migrations/
+      20251119162319_create_pmle_canonical_schema.sql
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="frontend/app/api/diagnostic/session/[id]/status/route.ts">
+import { NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getAnonymousSessionIdFromCookie } from '@/lib/auth/anonymous-session-server';
+import { requireSubscriber } from '@/lib/auth/require-subscriber';
+
+export async function GET(req: Request) {
+  // Premium gate check
+  const block = await requireSubscriber(req, "/api/diagnostic/session/[id]/status");
+  if (block) return block;
+
+  const supabase = createServerSupabaseClient();
+  
+  try {
+    // Extract session ID from the URL path
+    const pathParts = new URL(req.url).pathname.split('/');
+    const sessionId = pathParts[pathParts.length - 2]; // status is the last part, id is second to last
+    const { searchParams } = new URL(req.url);
+    const clientAnonymousSessionId = searchParams.get('anonymousSessionId');
+    
+    // Try to get anonymous session ID from cookie as fallback
+    const cookieAnonymousSessionId = await getAnonymousSessionIdFromCookie();
+    const effectiveAnonymousSessionId = clientAnonymousSessionId || cookieAnonymousSessionId;
+
+    if (!sessionId || typeof sessionId !== 'string') {
+      return NextResponse.json({ error: 'Invalid session ID' }, { status: 400 });
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Fetch session from DB
+    const { data: dbSession, error: sessionError } = await supabase
+      .from('diagnostics_sessions')
+      .select('id, user_id, anonymous_session_id, completed_at, expires_at, exam_type, started_at')
+      .eq('id', sessionId)
+      .single();
+
+    if (sessionError || !dbSession) {
+      return NextResponse.json({ 
+        exists: false,
+        status: 'not_found'
+      });
+    }
+
+    // Check if session expired
+    if (dbSession.expires_at && new Date(dbSession.expires_at) < new Date()) {
+      return NextResponse.json({ 
+        exists: true,
+        status: 'expired'
+      });
+    }
+
+    // Authorization check
+    if (dbSession.user_id) {
+      // Session belongs to a logged-in user
+      if (!user || dbSession.user_id !== user.id) {
+        return NextResponse.json({ 
+          exists: true,
+          status: 'unauthorized'
+        });
+      }
+    } else {
+      // Anonymous session
+      if (dbSession.anonymous_session_id && effectiveAnonymousSessionId !== dbSession.anonymous_session_id) {
+        return NextResponse.json({ 
+          exists: true,
+          status: 'unauthorized'
+        });
+      }
+    }
+
+    // Check if session is completed
+    if (dbSession.completed_at) {
+      return NextResponse.json({ 
+        exists: true,
+        status: 'completed',
+        completedAt: dbSession.completed_at
+      });
+    }
+
+    // Session is active and accessible
+    return NextResponse.json({ 
+      exists: true,
+      status: 'active',
+      examType: dbSession.exam_type,
+      startedAt: dbSession.started_at,
+      expiresAt: dbSession.expires_at
+    });
+
+  } catch (error) {
+    console.error('GET diagnostic session status error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+</file>
+
+<file path="frontend/app/api/diagnostic/session/route.ts">
+import { NextResponse } from "next/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+// Analytics imports for future use
+import { trackDiagnosticStartWithCampaign } from "@/lib/analytics/campaign-analytics-integration";
+import { PostHog } from "posthog-node";
+import { z } from "zod";
+import { checkRateLimit } from "@/lib/auth/rate-limiter";
+import { DIAGNOSTIC_CONFIG, getSessionTimeoutMs } from "@/lib/constants/diagnostic-config";
+import { requireSubscriber } from "@/lib/auth/require-subscriber";
+
+// Zod schema for input validation
+const CreateSessionRequestSchema = z.object({
+  examKey: z.literal("pmle", {
+    errorMap: () => ({ message: "Only 'pmle' exam key is currently supported" }),
+  }),
+  blueprintVersion: z.string().optional().default("current"),
+  betaVariant: z
+    .enum(["A", "B"], {
+      errorMap: () => ({ message: "Beta variant must be either 'A' or 'B'" }),
+    })
+    .optional(),
+  source: z.string().min(1, "Source cannot be empty").optional().default("beta_welcome"),
+  numQuestions: z
+    .number()
+    .int("Number of questions must be an integer")
+    .min(
+      DIAGNOSTIC_CONFIG.MIN_QUESTION_COUNT,
+      `Must have at least ${DIAGNOSTIC_CONFIG.MIN_QUESTION_COUNT} question`
+    )
+    .max(
+      DIAGNOSTIC_CONFIG.MAX_QUESTION_COUNT,
+      `Cannot exceed ${DIAGNOSTIC_CONFIG.MAX_QUESTION_COUNT} questions`
+    )
+    .optional()
+    .default(DIAGNOSTIC_CONFIG.BETA_QUESTION_COUNT),
+});
+
+// TypeScript interface for documentation (Zod schema is the source of truth)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type CreateSessionRequest = z.infer<typeof CreateSessionRequestSchema>;
+
+interface CreateSessionResponse {
+  sessionId: string;
+}
+
+// Initialize PostHog for server-side analytics
+const posthog = (() => {
+  const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  return new PostHog(apiKey, {
+    host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
+  });
+})();
+
+export async function POST(req: Request) {
+  const supabase = createServerSupabaseClient();
+
+  try {
+    // Extract IP address for rate limiting
+    const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+
+    // Check rate limit
+    if (!(await checkRateLimit(ip))) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      );
+    }
+
+    // Premium gate check
+    const block = await requireSubscriber(req, "/api/diagnostic/session");
+    if (block) return block;
+
+    // Get authenticated user
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
+    // Check beta access - user must have early access or explicit beta access
+    const hasEarlyAccess = user.user_metadata?.is_early_access === true;
+    const hasBetaFlag = user.user_metadata?.beta_access === true;
+    const isDevelopment = process.env.NODE_ENV === "development";
+
+    if (!isDevelopment && !hasEarlyAccess && !hasBetaFlag) {
+      return NextResponse.json({ error: "Beta access required" }, { status: 403 });
+    }
+
+    // Parse and validate request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
+    }
+
+    // Validate input using Zod schema
+    const validationResult = CreateSessionRequestSchema.safeParse(requestBody);
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors
+        .map((err) => `${err.path.join(".")}: ${err.message}`)
+        .join(", ");
+
+      return NextResponse.json({ error: `Invalid request data: ${errors}` }, { status: 400 });
+    }
+
+    const { examKey, blueprintVersion, betaVariant, source, numQuestions } = validationResult.data;
+
+    // Create diagnostic session using existing logic from main diagnostic endpoint
+    const examType = "Google ML Engineer";
+    const examIdToUse = 6; // PMLE exam ID
+
+    // Get current exam version
+    const { data: currentExamVersion, error: versionError } = await supabase
+      .from("exam_versions")
+      .select("id")
+      .eq("exam_id", examIdToUse)
+      .eq("is_current", true)
+      .single();
+
+    if (versionError || !currentExamVersion) {
+      console.error("Error fetching current exam version:", versionError);
+      return NextResponse.json(
+        { error: "Could not determine current exam version." },
+        { status: 500 }
+      );
+    }
+
+    // Fetch diagnostic questions
+    const { data: dbQuestions, error: questionsFetchError } = await supabase
+      .from("questions")
+      .select("id, stem, topic, difficulty, options(label, text, is_correct), explanations(text)")
+      .eq("exam_version_id", currentExamVersion.id)
+      .eq("is_diagnostic_eligible", true)
+      .limit(numQuestions * DIAGNOSTIC_CONFIG.QUESTION_SELECTION_MULTIPLIER);
+
+    if (questionsFetchError || !dbQuestions || dbQuestions.length < numQuestions) {
+      console.error("Error fetching questions:", questionsFetchError);
+      return NextResponse.json(
+        { error: "Could not fetch enough questions for the diagnostic." },
+        { status: 500 }
+      );
+    }
+
+    // Randomize and select questions
+    const selectedQuestions = dbQuestions.sort(() => 0.5 - Math.random()).slice(0, numQuestions);
+
+    // Create session
+    const sessionExpiresAt = new Date(Date.now() + getSessionTimeoutMs());
+
+    const { data: newSession, error: sessionError } = await supabase
+      .from("diagnostics_sessions")
+      .insert({
+        user_id: user.id,
+        exam_id: examIdToUse,
+        exam_type: examType,
+        question_count: selectedQuestions.length,
+        started_at: new Date().toISOString(),
+        expires_at: sessionExpiresAt.toISOString(),
+        anonymous_session_id: null, // User is authenticated
+      })
+      .select("id")
+      .single();
+
+    if (sessionError || !newSession) {
+      console.error("Error creating session:", sessionError);
+      return NextResponse.json({ error: "Failed to start diagnostic session." }, { status: 500 });
+    }
+
+    // Create question snapshots
+    const questionSnapshots = selectedQuestions.map((q) => ({
+      session_id: newSession.id,
+      original_question_id: q.id,
+      stem: q.stem,
+      options: q.options.map((opt) => ({ label: opt.label, text: opt.text })),
+      correct_label: q.options.find((opt) => opt.is_correct)?.label || "",
+    }));
+
+    const { error: snapshotError } = await supabase
+      .from("diagnostic_questions")
+      .insert(questionSnapshots);
+
+    if (snapshotError) {
+      console.error("Error creating question snapshots:", snapshotError);
+      return NextResponse.json(
+        { error: "Failed to prepare diagnostic questions." },
+        { status: 500 }
+      );
+    }
+
+    // Track analytics event with campaign attribution
+    trackDiagnosticStartWithCampaign(
+      posthog,
+      {
+        session_id: newSession.id,
+        exam_key: examKey,
+        exam_type: examType,
+        blueprint_version: blueprintVersion || "current",
+        source: source || "beta_welcome",
+        beta_variant: betaVariant,
+        question_count: selectedQuestions.length,
+        user_id: user.id,
+      },
+      user.id
+    );
+
+    return NextResponse.json({ sessionId: newSession.id } as CreateSessionResponse);
+  } catch (error) {
+    console.error("Error creating diagnostic session:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+</file>
+
+<file path="frontend/app/api/diagnostic/summary/[sessionId]/route.ts">
+import { NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { requireSubscriber } from '@/lib/auth/require-subscriber';
+
+export async function GET(req: Request) {
+  // Premium gate check
+  const block = await requireSubscriber(req, "/api/diagnostic/summary/[sessionId]");
+  if (block) return block;
+
+  const supabase = createServerSupabaseClient();
+  
+  try {
+    // Extract session ID from the URL path
+    const pathParts = new URL(req.url).pathname.split('/');
+    const sessionId = pathParts[pathParts.length - 1];
+    const { searchParams } = new URL(req.url);
+    const anonymousSessionId = searchParams.get('anonymousSessionId');
+
+    if (!sessionId || typeof sessionId !== 'string') {
+      return NextResponse.json({ error: 'Invalid session ID' }, { status: 400 });
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Fetch session from DB
+    const { data: dbSession, error: sessionError } = await supabase
+      .from('diagnostics_sessions')
+      .select('id, user_id, anonymous_session_id, completed_at, expires_at, exam_type, started_at, question_count')
+      .eq('id', sessionId)
+      .single();
+
+    if (sessionError || !dbSession) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
+    // Check if session expired
+    if (dbSession.expires_at && new Date(dbSession.expires_at) < new Date()) {
+      return NextResponse.json({ error: 'Session expired' }, { status: 410 });
+    }
+
+    // Authorization check
+    if (dbSession.user_id) {
+      // Session belongs to a logged-in user
+      if (!user || dbSession.user_id !== user.id) {
+        return NextResponse.json({ error: 'Unauthorized to access this session' }, { status: 403 });
+      }
+    } else {
+      // Anonymous session
+      if (dbSession.anonymous_session_id && anonymousSessionId !== dbSession.anonymous_session_id) {
+        return NextResponse.json({ error: 'Invalid anonymous session identifier' }, { status: 403 });
+      }
+    }
+
+    // Check if session is completed
+    if (!dbSession.completed_at) {
+      return NextResponse.json({ error: 'Session not completed yet' }, { status: 400 });
+    }
+
+    // Fetch diagnostic questions (snapshots) with responses
+    const { data: questionsWithResponses, error: questionsError } = await supabase
+      .from('diagnostic_questions')
+      .select(`
+        id,
+        stem,
+        options,
+        correct_label,
+        original_question_id,
+        diagnostic_responses (
+          selected_label,
+          is_correct,
+          responded_at
+        )
+      `)
+      .eq('session_id', sessionId);
+
+    if (questionsError) {
+      console.error('Error fetching questions with responses:', questionsError);
+      return NextResponse.json({ error: 'Failed to load session data' }, { status: 500 });
+    }
+
+    // Calculate overall statistics
+    const totalQuestions = questionsWithResponses.length;
+    const correctAnswers = questionsWithResponses.filter(q => 
+      q.diagnostic_responses?.[0]?.is_correct
+    ).length;
+    const score = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+
+    // Fetch topics/domains for domain breakdown (if available)
+    const originalQuestionIds = questionsWithResponses.map(q => q.original_question_id).filter(Boolean);
+    const { data: questionTopics } = await supabase
+      .from('questions')
+      .select('id, topic')
+      .in('id', originalQuestionIds);
+
+    // Calculate domain breakdown
+    const domainStats: { [key: string]: { correct: number; total: number } } = {};
+    
+    questionsWithResponses.forEach(q => {
+      const topicData = questionTopics?.find(t => t.id === q.original_question_id);
+      const domain = topicData?.topic || 'General';
+      
+      if (!domainStats[domain]) {
+        domainStats[domain] = { correct: 0, total: 0 };
+      }
+      
+      domainStats[domain].total++;
+      if (q.diagnostic_responses?.[0]?.is_correct) {
+        domainStats[domain].correct++;
+      }
+    });
+
+    const domainBreakdown = Object.entries(domainStats).map(([domain, stats]) => ({
+      domain,
+      correct: stats.correct,
+      total: stats.total,
+      percentage: Math.round((stats.correct / stats.total) * 100)
+    }));
+
+    // Format questions for client
+    const questions = questionsWithResponses.map(q => ({
+      id: q.id,
+      stem: q.stem,
+      options: q.options,
+      userAnswer: q.diagnostic_responses?.[0]?.selected_label || '',
+      correctAnswer: q.correct_label,
+      isCorrect: q.diagnostic_responses?.[0]?.is_correct || false
+    }));
+
+    const summary = {
+      sessionId: dbSession.id,
+      examType: dbSession.exam_type,
+      totalQuestions,
+      correctAnswers,
+      score,
+      startedAt: dbSession.started_at,
+      completedAt: dbSession.completed_at,
+      questions
+    };
+
+    return NextResponse.json({
+      summary,
+      domainBreakdown
+    });
+
+  } catch (error) {
+    console.error('GET diagnostic summary error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+</file>
+
+<file path="frontend/app/api/diagnostic/route.ts">
+import { NextResponse } from "next/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import {
+  getAnonymousSessionIdFromCookie,
+  setAnonymousSessionIdCookie,
+} from "@/lib/auth/anonymous-session-server";
+import { trackDiagnosticCompleteWithCampaign } from "@/lib/analytics/campaign-analytics-integration";
+import { PostHog } from "posthog-node";
+import { requireSubscriber } from "@/lib/auth/require-subscriber";
+
+// Types for better type safety
+
+// import { createServerActionClient } from '@supabase/auth-helpers-nextjs'; // Example, adjust if using different helper
+
+// Security constants
+const SESSION_TIMEOUT_MINUTES = 30; // Can be adjusted, e.g., 24 * 60 for anonymous
+const MAX_QUESTIONS = 20;
+const MIN_QUESTIONS = 1;
+
+// Initialize PostHog for server-side analytics
+const posthog = (() => {
+  const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  return new PostHog(apiKey, {
+    host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
+  });
+})();
+
+// Utility functions
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+async function cleanExpiredSessions(supabase: SupabaseClient) {
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("diagnostics_sessions")
+    .delete()
+    .lt("expires_at", now)
+    .is("completed_at", null);
+
+  if (error) {
+    console.error("Error cleaning expired sessions:", error);
+  }
+}
+
+// examType is the string from the frontend, examId is the integer FK for public.exams
+function validateStartRequest(
+  data: unknown
+): { examType: string; numQuestions: number; anonymousSessionId?: string } | null {
+  if (!data || typeof data !== "object") return null;
+
+  const body = data as Record<string, unknown>;
+
+  const examType = typeof body.examType === "string" ? body.examType.trim() : "Google ML Engineer"; // Default or ensure valid
+  const numQuestions =
+    typeof body.numQuestions === "number"
+      ? Math.max(MIN_QUESTIONS, Math.min(MAX_QUESTIONS, Math.floor(body.numQuestions)))
+      : 5; // Default num questions
+
+  const anonymousSessionId =
+    typeof body.anonymousSessionId === "string" ? body.anonymousSessionId.trim() : undefined;
+
+  // Basic validation for examType, more robust validation/mapping to exam_id will happen in the handler
+  if (!examType) return null;
+
+  return { examType, numQuestions, anonymousSessionId };
+}
+
+function validateAnswerRequest(
+  data: unknown
+): { questionId: string; selectedLabel: string } | null {
+  // questionId is UUID of snapshotted q
+  if (!data || typeof data !== "object") return null;
+
+  const body = data as Record<string, unknown>;
+
+  // questionId is the UUID of the *snapshotted* question in diagnostic_questions table
+  const questionId = typeof body.questionId === "string" ? body.questionId.trim() : null;
+  const selectedLabel =
+    typeof body.selectedLabel === "string" ? body.selectedLabel.trim().toUpperCase() : null;
+
+  if (!questionId || !selectedLabel || !["A", "B", "C", "D"].includes(selectedLabel)) {
+    return null;
+  }
+
+  return { questionId, selectedLabel };
+}
+
+// Define a type for questions fetched from the database
+
+export async function GET(req: Request) {
+  // Premium gate check
+  const block = await requireSubscriber(req, "/api/diagnostic");
+  if (block) return block;
+
+  const supabase = createServerSupabaseClient();
+  await cleanExpiredSessions(supabase); // Clean expired sessions
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const sessionId = searchParams.get("sessionId"); // This is diagnostics_sessions.id (UUID)
+    const clientAnonymousSessionId = searchParams.get("anonymousSessionId"); // For anonymous resume attempt
+
+    // Try to get anonymous session ID from cookie as fallback
+    const cookieAnonymousSessionId = await getAnonymousSessionIdFromCookie();
+    const effectiveAnonymousSessionId = clientAnonymousSessionId || cookieAnonymousSessionId;
+
+    if (!sessionId || typeof sessionId !== "string") {
+      return NextResponse.json({ error: "Invalid session ID provided" }, { status: 400 });
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    // Fetch session from DB
+    const { data: dbSession, error: sessionError } = await supabase
+      .from("diagnostics_sessions")
+      .select("*")
+      .eq("id", sessionId)
+      .single();
+
+    if (sessionError || !dbSession) {
+      console.error("Error fetching session or session not found:", sessionError);
+      return NextResponse.json({ error: "Session not found or expired." }, { status: 404 });
+    }
+
+    // Check session expiration
+    if (dbSession.expires_at && new Date(dbSession.expires_at) < new Date()) {
+      // Optionally delete it here or rely on cleanExpiredSessions
+      return NextResponse.json({ error: "Session expired." }, { status: 410 });
+    }
+
+    // Authorization check
+    if (dbSession.user_id) {
+      // Session belongs to a logged-in user
+      if (!user || dbSession.user_id !== user.id) {
+        return NextResponse.json(
+          { error: "Unauthorized to access this session." },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Anonymous session
+      if (
+        dbSession.anonymous_session_id &&
+        effectiveAnonymousSessionId !== dbSession.anonymous_session_id
+      ) {
+        // If the session has an anonymous ID, the client must provide it to resume
+        return NextResponse.json(
+          { error: "Invalid anonymous session identifier." },
+          { status: 403 }
+        );
+      }
+      // If dbSession.anonymous_session_id is null, it's an older anonymous session perhaps, or an issue.
+      // For now, if user_id is null and client provides no anonymousId, or if it doesn't match, deny.
+    }
+
+    // Fetch snapshotted questions for this session
+    const { data: sessionQuestions, error: questionsError } = await supabase
+      .from("diagnostic_questions") // This is the snapshot table
+      .select("id, stem, options, original_question_id") // options are JSONB, correct_label is not sent to client initially
+      .eq("session_id", sessionId);
+
+    if (questionsError) {
+      console.error("Error fetching session questions:", questionsError);
+      return NextResponse.json(
+        { error: "Failed to load questions for the session." },
+        { status: 500 }
+      );
+    }
+
+    // Reconstruct session object for client, similar to previous structure but from DB
+    const clientSessionData = {
+      id: dbSession.id,
+      userId: dbSession.user_id, // Will be null for anonymous
+      examType: dbSession.exam_type, // Textual exam type
+      questions: sessionQuestions.map((q) => ({
+        // These are from diagnostic_questions (snapshot)
+        id: q.id, // UUID of the snapshotted question
+        stem: q.stem,
+        options: q.options, // JSONB options {label, text}
+        // original_question_id: q.original_question_id // Not strictly needed by client during quiz
+      })),
+      // Answers are not sent back here; client builds them up or fetches current progress differently
+      // For simplicity, client can refetch answers or this endpoint can be extended
+      startedAt: dbSession.started_at,
+      currentQuestion: 0, // Client will determine this based on its state or answers submitted
+      expiresAt: dbSession.expires_at,
+      anonymousSessionId: dbSession.anonymous_session_id, // Send back if present
+    };
+
+    return NextResponse.json({ session: clientSessionData });
+  } catch (error) {
+    console.error("GET diagnostic error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  // Premium gate check
+  const block = await requireSubscriber(req, "/api/diagnostic");
+  if (block) return block;
+
+  const supabase = createServerSupabaseClient();
+  await cleanExpiredSessions(supabase); // Clean expired sessions
+
+  try {
+    const body = (await req.json()) as { action: string; sessionId?: string; data?: unknown };
+    const { action, sessionId, data } = body; // sessionId is diagnostics_sessions.id (UUID)
+
+    if (typeof action !== "string" || !["start", "answer", "complete"].includes(action)) {
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser(); // user can be null
+
+    switch (action) {
+      case "start":
+        const validatedData = validateStartRequest(data);
+        if (!validatedData) {
+          return NextResponse.json({ error: "Invalid request data" }, { status: 400 });
+        }
+
+        const {
+          examType,
+          numQuestions,
+          anonymousSessionId: clientAnonymousSessionId,
+        } = validatedData;
+
+        // Try to get anonymous session ID from cookie as fallback
+        const cookieAnonymousSessionId = await getAnonymousSessionIdFromCookie();
+        const effectiveAnonymousSessionId = clientAnonymousSessionId || cookieAnonymousSessionId;
+
+        // 1. Determine exam_id (e.g., "Google ML Engineer" -> 2)
+        // This mapping should be robust, perhaps from a config or query `public.exams`
+        let examIdToUse: number | null = null;
+        // The questions are linked to exam_versions.id = 2, which has exam_id = 6.
+        // So, "Google ML Engineer" should map to exams.id = 6.
+        if (
+          examType === "Google ML Engineer" ||
+          examType === "Google Professional ML Engineer" ||
+          examType === "Google Professional Machine Learning Engineer"
+        ) {
+          examIdToUse = 6;
+        } else {
+          // Fallback or fetch from DB:
+          const { data: examData, error: examError } = await supabase
+            .from("exams")
+            .select("id")
+            .eq("name", examType) // Or use 'code'
+            .single();
+          if (examError || !examData) {
+            console.error(`Exam type '${examType}' not found or error:`, examError);
+            return NextResponse.json({ error: `Invalid exam type: ${examType}` }, { status: 400 });
+          }
+          examIdToUse = examData.id;
+        }
+        if (!examIdToUse) {
+          return NextResponse.json({ error: "Could not determine exam ID." }, { status: 400 });
+        }
+
+        // 1.b. (Optional) Resume anonymous session
+        if (!user && effectiveAnonymousSessionId) {
+          const { data: existingAnonSession, error: anonSessionError } = await supabase
+            .from("diagnostics_sessions")
+            .select("id, expires_at, completed_at")
+            .eq("anonymous_session_id", effectiveAnonymousSessionId)
+            .is("user_id", null)
+            .order("started_at", { ascending: false })
+            .limit(1)
+            .single();
+
+          if (existingAnonSession && !anonSessionError) {
+            if (
+              !existingAnonSession.completed_at &&
+              new Date(existingAnonSession.expires_at) > new Date()
+            ) {
+              // Found a resumable anonymous session
+              // Fetch its questions and return
+              const { data: existingQuestions, error: existingQuestionsError } = await supabase
+                .from("diagnostic_questions")
+                .select("id, stem, options")
+                .eq("session_id", existingAnonSession.id);
+
+              if (existingQuestions && !existingQuestionsError) {
+                // Ensure the cookie is set if it was missing
+                if (!cookieAnonymousSessionId && effectiveAnonymousSessionId) {
+                  await setAnonymousSessionIdCookie(effectiveAnonymousSessionId);
+                }
+
+                return NextResponse.json({
+                  sessionId: existingAnonSession.id,
+                  questions: existingQuestions,
+                  totalQuestions: existingQuestions.length,
+                  expiresAt: existingAnonSession.expires_at,
+                  anonymousSessionId: effectiveAnonymousSessionId, // return it back
+                  resumed: true,
+                });
+              }
+            }
+          }
+        }
+
+        // 2. Fetch current exam_version_id for the given examIdToUse
+        const { data: currentExamVersion, error: versionError } = await supabase
+          .from("exam_versions")
+          .select("id")
+          .eq("exam_id", examIdToUse)
+          .eq("is_current", true)
+          .single();
+
+        if (versionError || !currentExamVersion) {
+          console.error(
+            `Error fetching current exam version for exam_id ${examIdToUse}:`,
+            versionError
+          );
+          return NextResponse.json(
+            { error: "Could not determine current exam version." },
+            { status: 500 }
+          );
+        }
+        const currentExamVersionId = currentExamVersion.id;
+
+        // 2.b. Fetch questions from public.questions using the currentExamVersionId
+        const { data: dbQuestions, error: questionsFetchError } = await supabase
+          .from("questions")
+          .select(
+            "id, stem, topic, difficulty, options(label, text, is_correct), explanations(text)"
+          )
+          .eq("exam_version_id", currentExamVersionId)
+          .eq("is_diagnostic_eligible", true)
+          // .order('random()') // This can be slow on large tables. Consider pg_tgrm for similarity or other strategies if true random is too slow.
+          .limit(numQuestions * 5); // Fetch more to randomize in code, or use a DB function for random rows if available & performant.
+
+        if (questionsFetchError || !dbQuestions || dbQuestions.length < numQuestions) {
+          console.error(
+            "Error fetching questions from DB or not enough questions:",
+            questionsFetchError
+          );
+          return NextResponse.json(
+            { error: "Could not fetch enough questions for the diagnostic." },
+            { status: 500 }
+          );
+        }
+
+        // Simple in-code randomization if DB random is not used
+        const selectedQuestions = dbQuestions
+          .sort(() => 0.5 - Math.random())
+          .slice(0, numQuestions);
+
+        // 3. Create diagnostics_sessions record
+        const newSessionExpiresAt = new Date(Date.now() + SESSION_TIMEOUT_MINUTES * 60 * 1000);
+        const newAnonymousId = user ? null : effectiveAnonymousSessionId || crypto.randomUUID();
+
+        const { data: newSessionRecord, error: newSessionError } = await supabase
+          .from("diagnostics_sessions")
+          .insert({
+            user_id: user ? user.id : null,
+            exam_id: examIdToUse,
+            exam_type: examType, // Store the display name/requested type
+            question_count: selectedQuestions.length,
+            started_at: new Date().toISOString(),
+            expires_at: newSessionExpiresAt.toISOString(),
+            anonymous_session_id: newAnonymousId,
+          })
+          .select("id") // Get the generated UUID for the session
+          .single();
+
+        if (newSessionError || !newSessionRecord) {
+          console.error("Error creating new session record:", newSessionError);
+          return NextResponse.json(
+            { error: "Failed to start diagnostic session." },
+            { status: 500 }
+          );
+        }
+        const newDbSessionId = newSessionRecord.id;
+
+        // 4. Create diagnostic_questions (snapshot) records
+        const questionSnapshotsToInsert = selectedQuestions.map((q) => ({
+          session_id: newDbSessionId,
+          original_question_id: q.id, // This is public.questions.id
+          stem: q.stem,
+          // Ensure options are in {label: string, text: string} format for snapshot
+          options: q.options.map((opt) => ({ label: opt.label, text: opt.text })),
+          correct_label: q.options.find((opt) => opt.is_correct)?.label || "", // Store correct label in snapshot
+        }));
+
+        const { error: snapshotInsertError } = await supabase
+          .from("diagnostic_questions")
+          .insert(questionSnapshotsToInsert);
+
+        if (snapshotInsertError) {
+          console.error("Error inserting question snapshots:", snapshotInsertError);
+          // TODO: Consider cleanup / transaction rollback if part of it fails
+          return NextResponse.json(
+            { error: "Failed to prepare diagnostic questions." },
+            { status: 500 }
+          );
+        }
+
+        // Fetch the newly created snapshots to get their UUIDs for the client
+        const { data: finalSessionQuestions, error: finalQuestionsError } = await supabase
+          .from("diagnostic_questions")
+          .select("id, stem, options") // only id, stem, options sent to client
+          .eq("session_id", newDbSessionId);
+
+        if (finalQuestionsError || !finalSessionQuestions) {
+          console.error("Error fetching final session questions for client:", finalQuestionsError);
+          return NextResponse.json({ error: "Failed to load session questions." }, { status: 500 });
+        }
+
+        // Set cookie for new anonymous sessions
+        if (!user && newAnonymousId) {
+          await setAnonymousSessionIdCookie(newAnonymousId);
+        }
+
+        return NextResponse.json({
+          sessionId: newDbSessionId,
+          questions: finalSessionQuestions, // These are from diagnostic_questions, with their UUIDs
+          totalQuestions: finalSessionQuestions.length,
+          expiresAt: newSessionExpiresAt.toISOString(),
+          anonymousSessionId: newAnonymousId, // Send back for anonymous users
+        });
+
+      case "answer":
+        if (typeof sessionId !== "string" || !sessionId) {
+          return NextResponse.json({ error: "Invalid session ID" }, { status: 400 });
+        }
+        const validatedAnswer = validateAnswerRequest(data); // questionId is UUID of snapshotted q
+        if (!validatedAnswer) {
+          return NextResponse.json({ error: "Invalid answer data" }, { status: 400 });
+        }
+
+        const { questionId: snapshottedQuestionId, selectedLabel } = validatedAnswer;
+
+        // Fetch the session
+        const { data: answerDbSession, error: ansSessErr } = await supabase
+          .from("diagnostics_sessions")
+          .select("id, user_id, expires_at, completed_at, anonymous_session_id")
+          .eq("id", sessionId)
+          .single();
+
+        if (ansSessErr || !answerDbSession) {
+          return NextResponse.json({ error: "Session not found." }, { status: 404 });
+        }
+        if (answerDbSession.completed_at) {
+          return NextResponse.json({ error: "Session already completed." }, { status: 400 });
+        }
+        if (new Date(answerDbSession.expires_at) < new Date()) {
+          return NextResponse.json({ error: "Session expired." }, { status: 410 });
+        }
+
+        // Authorization for answer
+        if (answerDbSession.user_id && (!user || answerDbSession.user_id !== user.id)) {
+          return NextResponse.json({ error: "Unauthorized." }, { status: 403 });
+        }
+        // For anonymous, if anonymous_session_id is set, client should provide it (not implemented here yet for answer)
+
+        // Fetch the snapshotted question to get correct_label and original_question_id
+        const { data: snapQuestion, error: snapQError } = await supabase
+          .from("diagnostic_questions")
+          .select("id, correct_label, original_question_id")
+          .eq("id", snapshottedQuestionId) // UUID of the question in diagnostic_questions
+          .eq("session_id", sessionId)
+          .single();
+
+        if (snapQError || !snapQuestion) {
+          return NextResponse.json(
+            { error: "Question not found in this session." },
+            { status: 404 }
+          );
+        }
+
+        const isCorrect = snapQuestion.correct_label === selectedLabel;
+
+        // Store the response
+        const { error: insertResponseError } = await supabase.from("diagnostic_responses").insert({
+          session_id: sessionId,
+          question_id: snapshottedQuestionId, // Match DB column name (was diagnostic_question_id)
+          selected_label: selectedLabel,
+          is_correct: isCorrect,
+          responded_at: new Date().toISOString(),
+        });
+
+        if (insertResponseError) {
+          console.error("Error inserting response:", insertResponseError);
+          return NextResponse.json({ error: "Failed to save answer." }, { status: 500 });
+        }
+
+        // Fetch explanation from public.explanations using original_question_id
+        let explanationText = "No explanation available.";
+        if (snapQuestion.original_question_id) {
+          const { data: explanationData, error: expError } = await supabase
+            .from("explanations")
+            .select("text")
+            .eq("question_id", snapQuestion.original_question_id)
+            .single();
+          if (explanationData && !expError) {
+            explanationText = explanationData.text;
+          }
+        }
+
+        return NextResponse.json({
+          isCorrect,
+          correctAnswer: snapQuestion.correct_label,
+          explanation: explanationText,
+        });
+
+      case "complete":
+        if (typeof sessionId !== "string" || !sessionId) {
+          return NextResponse.json({ error: "Invalid session ID" }, { status: 400 });
+        }
+
+        // Fetch session
+        const { data: completeDbSession, error: compSessErr } = await supabase
+          .from("diagnostics_sessions")
+          .select(
+            "id, user_id, exam_type, question_count, expires_at, completed_at, anonymous_session_id"
+          )
+          .eq("id", sessionId)
+          .single();
+
+        if (compSessErr || !completeDbSession) {
+          return NextResponse.json({ error: "Session not found." }, { status: 404 });
+        }
+        if (completeDbSession.completed_at) {
+          // Potentially re-fetch results if already completed
+          return NextResponse.json(
+            { error: "Session already marked as completed." },
+            { status: 400 }
+          );
+        }
+        if (new Date(completeDbSession.expires_at) < new Date()) {
+          return NextResponse.json({ error: "Session expired." }, { status: 410 });
+        }
+
+        // Authorization for complete
+        if (completeDbSession.user_id && (!user || completeDbSession.user_id !== user.id)) {
+          return NextResponse.json({ error: "Unauthorized." }, { status: 403 });
+        }
+        // Add anonymous check if needed
+
+        // Fetch all responses for this session
+        const { data: responses, error: responsesError } = await supabase
+          .from("diagnostic_responses")
+          .select("is_correct")
+          .eq("session_id", sessionId);
+
+        if (responsesError) {
+          console.error("Error fetching responses for completion:", responsesError);
+          return NextResponse.json(
+            { error: "Could not retrieve answers to score." },
+            { status: 500 }
+          );
+        }
+
+        const correctAnswers = responses.filter((r) => r.is_correct).length;
+        const totalQuestionsInSession = completeDbSession.question_count; // Use the count stored at session start
+
+        const score =
+          totalQuestionsInSession > 0 ? (correctAnswers / totalQuestionsInSession) * 100 : 0;
+
+        // Update session completed_at
+        const { error: updateSessionError } = await supabase
+          .from("diagnostics_sessions")
+          .update({ completed_at: new Date().toISOString() })
+          .eq("id", sessionId);
+
+        if (updateSessionError) {
+          console.error("Error marking session complete:", updateSessionError);
+          // Continue to return results even if update fails, but log it
+        }
+
+        // Track diagnostic completion with campaign attribution
+        trackDiagnosticCompleteWithCampaign(
+          posthog,
+          {
+            session_id: sessionId,
+            exam_type: completeDbSession.exam_type,
+            total_questions: totalQuestionsInSession,
+            correct_answers: correctAnswers,
+            score: Math.round(score),
+            completion_time_ms: Date.now(), // Could calculate based on session start
+            user_id: completeDbSession.user_id,
+          },
+          completeDbSession.user_id || undefined
+        );
+
+        // Simplified recommendations
+        const recommendations = ["Focus on areas where you were unsure."];
+        if (score < 70)
+          recommendations.push(
+            "Consider reviewing the fundamentals of " + completeDbSession.exam_type
+          );
+        else recommendations.push("Great job! Consider advanced topics or practice tests.");
+
+        return NextResponse.json({
+          totalQuestions: totalQuestionsInSession,
+          correctAnswers: correctAnswers,
+          score: Math.round(score),
+          recommendations,
+          examType: completeDbSession.exam_type,
+        });
+
+      default:
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    }
+  } catch (error) {
+    console.error("POST diagnostic error:", error);
+    // Don't leak internal error details
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+      },
+      { status: 500 }
+    );
+  }
+}
+</file>
+
+<file path="frontend/app/diagnostic/[sessionId]/summary/page.tsx">
+"use client";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { usePostHog } from "posthog-js/react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { TrialConversionModal } from "@/components/billing/TrialConversionModal";
+import { UpsellModal } from "@/components/diagnostic/UpsellModal";
+import { useUpsell } from "@/hooks/useUpsell";
+import { useTriggerDetection } from "@/hooks/useTriggerDetection";
+
+// Types
+interface QuestionSummary {
+  id: string;
+  stem: string;
+  userAnswer: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  options: Array<{
+    label: string;
+    text: string;
+  }>;
+  domain?: string;
+  explanation?: string;
+  timeSpent?: number;
+  isFlagged?: boolean;
+  confidence?: 'low' | 'medium' | 'high';
+}
+
+interface DomainBreakdown {
+  domain: string;
+  correct: number;
+  total: number;
+  percentage: number;
+}
+
+interface SessionSummary {
+  sessionId: string;
+  examType: string;
+  totalQuestions: number;
+  correctAnswers: number;
+  score: number;
+  startedAt: string;
+  completedAt: string;
+  questions: QuestionSummary[];
+  totalTimeSpent?: number;
+  averageTimePerQuestion?: number;
+  flaggedCount?: number;
+}
+
+// Helper functions
+const getReadinessLabel = (score: number) => {
+  if (score >= 85) return { label: "Excellent", color: "emerald" };
+  if (score >= 70) return { label: "Good", color: "blue" };
+  if (score >= 60) return { label: "Fair", color: "amber" };
+  if (score >= 45) return { label: "Needs Work", color: "orange" };
+  return { label: "Low", color: "red" };
+};
+
+const formatTime = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}m ${remainingSeconds}s`;
+};
+
+// Components
+const StatusChip = ({ 
+  type, 
+  className = "" 
+}: { 
+  type: 'correct' | 'incorrect' | 'flagged';
+  className?: string;
+}) => {
+  const configs = {
+    correct: {
+      icon: "✓",
+      text: "Correct",
+      classes: "text-emerald-700 border border-emerald-200 bg-emerald-50"
+    },
+    incorrect: {
+      icon: "✗",
+      text: "Incorrect", 
+      classes: "text-rose-700 border border-rose-200 bg-rose-50"
+    },
+    flagged: {
+      icon: "🚩",
+      text: "Flagged",
+      classes: "text-amber-700 border border-amber-200 bg-amber-50"
+    }
+  };
+
+  const config = configs[type];
+  
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.classes} ${className}`}>
+      <span>{config.icon}</span>
+      {config.text}
+    </span>
+  );
+};
+
+const VerdictBlock = ({ 
+  summary, 
+  onStartPractice,
+  onRetakeDiagnostic 
+}: {
+  summary: SessionSummary;
+  onStartPractice: () => void;
+  onRetakeDiagnostic: () => void;
+}) => {
+  const readiness = getReadinessLabel(summary.score);
+  const duration = summary.totalTimeSpent ? 
+    formatTime(summary.totalTimeSpent) : 
+    Math.round((new Date(summary.completedAt).getTime() - new Date(summary.startedAt).getTime()) / 60000) + "m";
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: Gauge and Readiness */}
+        <div className="flex items-center gap-6">
+          <div className="relative w-24 h-24">
+            <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 36 36">
+              <path
+                className="text-slate-100"
+                stroke="currentColor"
+                strokeWidth="3"
+                fill="transparent"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <path
+                className={`text-${readiness.color}-600`}
+                stroke="currentColor"
+                strokeWidth="3"
+                fill="transparent"
+                strokeDasharray={`${summary.score}, 100`}
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-lg font-bold text-slate-900">{summary.score}%</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-slate-900 mb-1">
+              Readiness: {readiness.label}
+            </div>
+            <div className="text-sm text-slate-500">
+              Pass typically ≥70%
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Key Facts */}
+        <div className="space-y-3">
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-600">Exam:</span>
+            <span className="font-medium text-slate-900">{summary.examType} — Oct &apos;24</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-600">Score:</span>
+            <span className="font-medium text-slate-900">{summary.score}% ({summary.totalQuestions} Qs)</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-600">Time taken:</span>
+            <span className="font-medium text-slate-900">{duration}</span>
+          </div>
+          {summary.flaggedCount !== undefined && (
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-600">Flagged:</span>
+              <span className="font-medium text-slate-900">{summary.flaggedCount}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* CTAs */}
+      <div className="flex flex-col sm:flex-row gap-3 mt-6">
+        <Button onClick={onStartPractice} tone="accent" size="md">
+          Start 10-min practice on your weakest topics
+        </Button>
+        <Button
+          onClick={onRetakeDiagnostic}
+          variant="outline"
+          tone="accent"
+          size="md"
+        >
+          Retake diagnostic (20 Q)
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+const DomainPerformance = ({ 
+  domains, 
+  onDomainClick 
+}: { 
+  domains: DomainBreakdown[];
+  onDomainClick: (domain: string) => void;
+}) => {
+  // Sort domains by percentage (ascending - worst first)
+  const sortedDomains = [...domains].sort((a, b) => a.percentage - b.percentage);
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm mb-8">
+      <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-4">Domain Performance</h2>
+      <div className="space-y-3">
+        {sortedDomains.map((domain) => (
+          <div 
+            key={domain.domain}
+            onClick={() => onDomainClick(domain.domain)}
+            className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors"
+          >
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-medium text-slate-900">{domain.domain}</span>
+                <span className="text-sm font-medium text-slate-900">{domain.percentage}%</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-slate-100 h-2 rounded">
+                  <div 
+                    className="bg-indigo-600 h-2 rounded transition-all duration-300"
+                    style={{ width: `${domain.percentage}%` }}
+                  />
+                </div>
+                <span className="text-xs text-slate-500">{domain.correct}/{domain.total}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const StudyPlan = ({ 
+  domains, 
+  onStartPractice 
+}: { 
+  domains: DomainBreakdown[];
+  onStartPractice: (topics: string[]) => void;
+}) => {
+  const foundation = domains.filter(d => d.percentage < 40);
+  const core = domains.filter(d => d.percentage >= 40 && d.percentage < 70);
+  const stretch = domains.filter(d => d.percentage >= 70);
+
+  const StudyGroup = ({ 
+    title, 
+    description, 
+    domains, 
+    timeEstimate 
+  }: { 
+    title: string;
+    description: string;
+    domains: DomainBreakdown[];
+    timeEstimate: string;
+  }) => (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+        <span className="text-sm text-slate-500">{timeEstimate}</span>
+      </div>
+      <p className="text-sm text-slate-600 mb-4">{description}</p>
+      <div className="space-y-2">
+        {domains.map((domain) => (
+          <div key={domain.domain} className="flex items-center justify-between p-3 rounded-lg border border-slate-200">
+            <div className="flex items-center gap-3">
+              <span className="font-medium text-slate-900">{domain.domain}</span>
+              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                domain.percentage < 40 ? 'bg-red-100 text-red-700' :
+                domain.percentage < 70 ? 'bg-amber-100 text-amber-700' :
+                'bg-green-100 text-green-700'
+              }`}>
+                {domain.percentage < 40 ? 'Critical' : domain.percentage < 70 ? 'Moderate' : 'Strong'}
+              </span>
+            </div>
+            <Button
+              onClick={() => onStartPractice([domain.domain])}
+              size="sm"
+              variant="outline"
+              tone="accent"
+              className="text-xs"
+            >
+              Start practice (10)
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm mb-8">
+      <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-6">Study Plan</h2>
+      
+      {foundation.length > 0 && (
+        <StudyGroup 
+          title="Foundation First"
+          description="Critical gaps that need immediate attention. Master these before moving on."
+          domains={foundation}
+          timeEstimate="35-45 min"
+        />
+      )}
+      
+      {core.length > 0 && (
+        <StudyGroup 
+          title="Core"
+          description="Important topics that need strengthening to reach passing level."
+          domains={core}
+          timeEstimate="60-90 min"
+        />
+      )}
+      
+      {stretch.length > 0 && (
+        <StudyGroup 
+          title="Stretch"
+          description="Areas where you're already strong. Practice to maintain and perfect."
+          domains={stretch}
+          timeEstimate="30-45 min"
+        />
+      )}
+
+      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <p className="text-sm text-blue-700">
+          <strong>Tip:</strong> Knock out &apos;Foundation&apos; first (~35–45 min), then &apos;Core&apos; (~60–90 min). 
+          Retake when your weakest three domains ≥60%.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+const QuestionReview = ({ 
+  questions, 
+  activeFilter, 
+  onFilterChange,
+  selectedDomain,
+  onDomainChange,
+  onTrackReviewEntry,
+  onTrackReviewExit,
+  onTrackExpansion,
+}: {
+  questions: QuestionSummary[];
+  activeFilter: 'all' | 'incorrect' | 'flagged' | 'low-confidence';
+  onFilterChange: (filter: 'all' | 'incorrect' | 'flagged' | 'low-confidence') => void;
+  selectedDomain: string | null;
+  onDomainChange: (domain: string | null) => void;
+  onTrackReviewEntry?: () => void;
+  onTrackReviewExit?: () => void;
+  onTrackExpansion?: () => void;
+}) => {
+  const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const reviewSectionRef = useRef<HTMLDivElement>(null);
+
+  // Track review section visibility for engagement trigger
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            onTrackReviewEntry?.();
+          } else {
+            onTrackReviewExit?.();
+          }
+        });
+      },
+      { threshold: 0.3 }
+    );
+
+    if (reviewSectionRef.current) {
+      observer.observe(reviewSectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [onTrackReviewEntry, onTrackReviewExit]);
+
+  const toggleExpanded = useCallback((questionId: string) => {
+    setExpandedQuestions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(questionId)) {
+        newSet.delete(questionId);
+      } else {
+        newSet.add(questionId);
+        // Track expansion for upsell trigger
+        onTrackExpansion?.();
+      }
+      return newSet;
+    });
+  }, [onTrackExpansion]);
+
+  // Filter questions
+  const filteredQuestions = questions.filter(q => {
+    // Apply filter
+    if (activeFilter === 'incorrect' && q.isCorrect) return false;
+    if (activeFilter === 'flagged' && !q.isFlagged) return false;
+    if (activeFilter === 'low-confidence' && q.confidence !== 'low') return false;
+    
+    // Apply domain filter
+    if (selectedDomain && q.domain !== selectedDomain) return false;
+    
+    // Apply search
+    if (searchQuery && !q.stem.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    
+    return true;
+  });
+
+  const domains = Array.from(new Set(questions.map(q => q.domain).filter(Boolean)));
+
+  return (
+    <div ref={reviewSectionRef} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mb-8">
+      <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-6">Question Review</h2>
+      
+      {/* Controls */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        {/* Filter Pills */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: 'all', label: 'All' },
+            { key: 'incorrect', label: 'Incorrect' },
+            { key: 'flagged', label: 'Flagged' },
+            { key: 'low-confidence', label: 'Low Confidence' }
+          ].map(filter => (
+            <button
+              key={filter.key}
+              onClick={() => onFilterChange(filter.key as 'all' | 'incorrect' | 'flagged' | 'low-confidence')}
+              className={`rounded-full px-3 py-1 text-sm border transition-colors ${
+                activeFilter === filter.key
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Domain Dropdown */}
+        <select
+          value={selectedDomain || ''}
+          onChange={(e) => onDomainChange(e.target.value || null)}
+          className="px-3 py-2.5 min-h-[44px] border border-slate-300 rounded-lg text-base md:text-sm"
+        >
+          <option value="">All Domains</option>
+          {domains.map(domain => (
+            <option key={domain} value={domain}>{domain}</option>
+          ))}
+        </select>
+
+        {/* Search */}
+        <input
+          type="text"
+          placeholder="Search questions..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="px-3 py-2.5 min-h-[44px] border border-slate-300 rounded-lg text-base md:text-sm flex-1 min-w-0"
+        />
+      </div>
+
+      {/* Question Cards */}
+      <div className="space-y-3">
+        {filteredQuestions.map((question) => {
+          const isExpanded = expandedQuestions.has(question.id);
+          
+          return (
+            <div key={question.id} className="border border-slate-200 rounded-xl">
+              {/* Collapsed Summary */}
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <StatusChip type={question.isCorrect ? 'correct' : 'incorrect'} />
+                  {question.isFlagged && <StatusChip type="flagged" />}
+                  {question.domain && (
+                    <span className="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs font-medium">
+                      {question.domain}
+                    </span>
+                  )}
+                  {question.timeSpent && (
+                    <span className="text-xs text-slate-500">
+                      {formatTime(question.timeSpent)}
+                    </span>
+                  )}
+                </div>
+                
+                <div className="text-sm text-slate-700 mb-3" style={{ 
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden'
+                }}>
+                  {question.stem}
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => toggleExpanded(question.id)}
+                    className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                  >
+                    {isExpanded ? 'Hide' : 'View'} explanation
+                  </button>
+                  <button className="text-sm text-slate-500 hover:text-slate-700">
+                    Practice similar
+                  </button>
+                  <button className="text-sm text-slate-500 hover:text-slate-700">
+                    Bookmark
+                  </button>
+                </div>
+              </div>
+
+              {/* Expanded Details */}
+              {isExpanded && (
+                <div className="border-t border-slate-200 p-4 bg-slate-50">
+                  <div className="space-y-4">
+                    {/* Full Question */}
+                    <div>
+                      <h4 className="font-medium text-slate-900 mb-2">Question:</h4>
+                      <p className="text-slate-700">{question.stem}</p>
+                    </div>
+
+                    {/* Options */}
+                    <div>
+                      <h4 className="font-medium text-slate-900 mb-2">Answer Choices:</h4>
+                      <div className="space-y-2">
+                        {question.options.map((option) => (
+                          <div 
+                            key={option.label}
+                            className={`p-2 rounded border ${
+                              option.label === question.correctAnswer ? 'bg-green-50 border-green-200' :
+                              option.label === question.userAnswer ? 'bg-red-50 border-red-200' :
+                              'bg-white border-slate-200'
+                            }`}
+                          >
+                            <span className="font-medium">{option.label}:</span> {option.text}
+                            {option.label === question.correctAnswer && (
+                              <span className="ml-2 text-green-600 text-sm">✓ Correct</span>
+                            )}
+                            {option.label === question.userAnswer && option.label !== question.correctAnswer && (
+                              <span className="ml-2 text-red-600 text-sm">✗ Your answer</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Explanation */}
+                    {question.explanation && (
+                      <div>
+                        <h4 className="font-medium text-slate-900 mb-2">Explanation:</h4>
+                        <p className="text-slate-700">{question.explanation}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {filteredQuestions.length === 0 && (
+        <div className="text-center py-8 text-slate-500">
+          No questions match your current filters.
+        </div>
+      )}
+    </div>
+  );
+};
+
+const QuickActions = ({ 
+  onRetake, 
+  onPractice, 
+  onExport, 
+  onShare 
+}: {
+  onRetake: () => void;
+  onPractice: () => void;
+  onExport: () => void;
+  onShare: () => void;
+}) => (
+  <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm">
+    <h3 className="font-semibold text-slate-900 mb-4">Quick Actions</h3>
+    <div className="space-y-3">
+      <Button
+        onClick={onRetake}
+        variant="outline"
+        tone="accent"
+        size="sm"
+        fullWidth
+        className="justify-start text-sm"
+      >
+        🔄 Retake diagnostic
+      </Button>
+      <Button
+        onClick={onPractice}
+        variant="outline"
+        tone="accent"
+        size="sm"
+        fullWidth
+        className="justify-start text-sm"
+      >
+        📚 Start 10-min practice
+      </Button>
+      <Button
+        onClick={onExport}
+        variant="outline"
+        tone="accent"
+        size="sm"
+        fullWidth
+        className="justify-start text-sm"
+      >
+        📄 Export PDF
+      </Button>
+      <Button
+        onClick={onShare}
+        variant="outline"
+        tone="accent"
+        size="sm"
+        fullWidth
+        className="justify-start text-sm"
+      >
+        🔗 Share results
+      </Button>
+    </div>
+
+    <div className="mt-4 pt-4 border-t border-slate-200">
+      <h4 className="text-sm font-medium text-slate-900 mb-2">Schedule Study</h4>
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" tone="accent" className="flex-1 text-xs">
+          15m
+        </Button>
+        <Button size="sm" variant="outline" tone="accent" className="flex-1 text-xs">
+          30m
+        </Button>
+        <Button size="sm" variant="outline" tone="accent" className="flex-1 text-xs">
+          45m
+        </Button>
+      </div>
+    </div>
+  </div>
+);
+
+const DiagnosticSummaryPage = () => {
+  const params = useParams();
+  const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const posthog = usePostHog();
+  const sessionId = params?.sessionId as string;
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<SessionSummary | null>(null);
+  const [domainBreakdown, setDomainBreakdown] = useState<DomainBreakdown[]>([]);
+  const [showTrialModal, setShowTrialModal] = useState(false);
+  
+  // UI State
+  const [activeFilter, setActiveFilter] = useState<'all' | 'incorrect' | 'flagged' | 'low-confidence'>('all');
+  const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
+
+  // Calculate critical domains for upsell triggers
+  const criticalDomainCount = domainBreakdown.filter(d => d.percentage < 40).length;
+  const weakDomains = domainBreakdown.filter(d => d.percentage < 60).map(d => d.domain);
+  
+  // Initialize upsell hook
+  const upsell = useUpsell({
+    score: summary?.score || 0,
+    enableExitIntent: process.env.NODE_ENV !== 'production' || false, // Feature flag
+    enableDeepScroll: process.env.NODE_ENV !== 'production' || false, // Feature flag
+    weakDomains,
+  });
+
+  // Initialize trigger detection
+  const triggers = useTriggerDetection({
+    onTrigger: upsell.maybeOpen,
+    score: summary?.score || 0,
+    criticalDomainCount,
+    enableExitIntent: process.env.NODE_ENV !== 'production' || false,
+    enableDeepScroll: process.env.NODE_ENV !== 'production' || false,
+  });
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      if (!sessionId) {
+        setError("Session ID not found");
+        setLoading(false);
+        return;
+      }
+
+      if (isAuthLoading) {
+        return; // Wait for auth state
+      }
+
+      try {
+        let apiUrl = `/api/diagnostic/summary/${sessionId}`;
+
+        // Include anonymous session ID if user is not logged in
+        if (!user) {
+          const anonymousSessionId = localStorage.getItem("anonymousSessionId");
+          if (anonymousSessionId) {
+            apiUrl += `?anonymousSessionId=${anonymousSessionId}`;
+          }
+        }
+
+        const response = await fetch(apiUrl);
+        const data = (await response.json()) as {
+          error?: string;
+          summary?: SessionSummary;
+          domainBreakdown?: DomainBreakdown[];
+        };
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            setError("session_not_found");
+          } else if (response.status === 403) {
+            setError("access_denied");
+          } else if (response.status === 400) {
+            setError("session_not_completed");
+          } else {
+            setError(data.error || "Failed to load summary");
+          }
+          return;
+        }
+
+        if (data.summary) {
+          setSummary(data.summary);
+        }
+        setDomainBreakdown(data.domainBreakdown || []);
+
+        // Track summary view
+        if (data.summary) {
+          posthog?.capture("diagnostic_summary_viewed", {
+            sessionId: data.summary.sessionId,
+            examType: data.summary.examType,
+            score: data.summary.score,
+            totalQuestions: data.summary.totalQuestions,
+            correctAnswers: data.summary.correctAnswers,
+            domainCount: data.domainBreakdown?.length || 0,
+          });
+        }
+
+        // Clean up localStorage since session is completed
+        localStorage.removeItem("testero_diagnostic_session_id");
+
+        // Show trial modal after 5 seconds if user isn't subscribed
+        if (!user?.user_metadata?.has_subscription) {
+          setTimeout(() => {
+            setShowTrialModal(true);
+            posthog?.capture("trial_modal_shown", {
+              source: "diagnostic_summary",
+              delay_seconds: 5,
+              diagnostic_score: data.summary?.score,
+            });
+          }, 5000);
+        }
+      } catch (err) {
+        console.error("Error fetching summary:", err);
+        setError("Failed to load diagnostic summary");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSummary();
+  }, [sessionId, user, isAuthLoading, posthog]);
+
+  // Event handlers
+  const handleStartPractice = useCallback((topics?: string[]) => {
+    // Check if should trigger paywall modal
+    if (!user?.user_metadata?.has_subscription) {
+      const triggered = triggers.checkPaywallTrigger('practice');
+      if (triggered) return; // Modal opened, don't proceed
+    }
+    
+    // Implementation for starting practice
+    posthog?.capture("practice_started", { 
+      source: "diagnostic_summary",
+      topics: topics || "weakest"
+    });
+    
+    // Navigate to practice
+    router.push('/practice');
+  }, [posthog, triggers, user, router]);
+
+  const handleRetakeDiagnostic = useCallback(() => {
+    router.push("/diagnostic");
+  }, [router]);
+
+  const handleDomainClick = useCallback((domain: string) => {
+    setSelectedDomain(selectedDomain === domain ? null : domain);
+    setActiveFilter('all');
+  }, [selectedDomain]);
+
+  const handleExport = useCallback(() => {
+    // Implementation for PDF export
+    posthog?.capture("summary_exported", { format: "pdf" });
+  }, [posthog]);
+
+  const handleShare = useCallback(() => {
+    // Implementation for sharing
+    posthog?.capture("summary_shared");
+  }, [posthog]);
+
+  // Handle study plan generation with upsell check - currently not used but ready for implementation
+  // const handleGenerateStudyPlan = useCallback(() => {
+  //   // Check if should trigger paywall modal
+  //   if (!user?.user_metadata?.has_subscription) {
+  //     const triggered = triggers.checkPaywallTrigger('study_plan');
+  //     if (triggered) return; // Modal opened, don't proceed
+  //   }
+  //   
+  //   // Implementation for generating study plan
+  //   posthog?.capture("study_plan_generated", { 
+  //     source: "diagnostic_summary",
+  //     score: summary?.score,
+  //   });
+  //   
+  //   // Navigate to study path
+  //   router.push('/study-path');
+  // }, [triggers, user, posthog, summary, router]);
+
+  // Upsell modal handlers
+  const handleUpsellCTA = useCallback(() => {
+    upsell.handleCTAClick();
+    // Navigate to billing/signup
+    router.push('/signup');
+  }, [upsell, router]);
+
+  const handleContinueWithoutTrial = useCallback(() => {
+    upsell.dismiss();
+  }, [upsell]);
+
+  // Error states (keeping existing error handling)
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg text-slate-600">Loading diagnostic summary...</div>
+      </div>
+    );
+  }
+
+  if (error === "session_not_found") {
+    return (
+      <main className="max-w-2xl mx-auto px-6 py-8">
+        <Card>
+          <CardContent className="text-center py-8">
+            <h1 className="text-2xl font-bold mb-4">Summary Not Found</h1>
+            <p className="text-red-600 mb-6">
+              The diagnostic session could not be found or may have expired.
+            </p>
+            <Button onClick={() => router.push("/diagnostic")}>Start New Diagnostic</Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  if (error === "access_denied") {
+    return (
+      <main className="max-w-2xl mx-auto px-6 py-8">
+        <Card>
+          <CardContent className="text-center py-8">
+            <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+            <p className="text-red-600 mb-6">
+              You don&apos;t have permission to view this diagnostic summary.
+            </p>
+            <Button onClick={() => router.push("/diagnostic")}>Start New Diagnostic</Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  if (error === "session_not_completed") {
+    return (
+      <main className="max-w-2xl mx-auto px-6 py-8">
+        <Card>
+          <CardContent className="text-center py-8">
+            <h1 className="text-2xl font-bold mb-4">Diagnostic Not Completed</h1>
+            <p className="text-red-600 mb-6">
+              This diagnostic session hasn&apos;t been completed yet.
+            </p>
+            <Button onClick={() => router.push(`/diagnostic/${sessionId}`)}>
+              Continue Diagnostic
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="max-w-2xl mx-auto px-6 py-8">
+        <Card>
+          <CardContent className="text-center py-8">
+            <h1 className="text-2xl font-bold mb-4">Error</h1>
+            <p className="text-red-600 mb-6">{error}</p>
+            <Button onClick={() => router.push("/diagnostic")}>Start New Diagnostic</Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <main className="max-w-2xl mx-auto px-6 py-8">
+        <div className="text-center">No summary data available</div>
+      </main>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      {/* Top Header */}
+      <header className="bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-slate-900">Diagnostic Results</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-slate-500">
+              {new Date(summary.completedAt).toLocaleDateString()} • {summary.examType}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button onClick={handleExport} size="sm" variant="ghost" tone="neutral">
+                📄 Export
+              </Button>
+              <Button onClick={handleShare} size="sm" variant="ghost" tone="neutral">
+                🔗 Share
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Content (8-9 cols) */}
+          <div className="lg:col-span-9 space-y-8">
+            {/* Verdict Block */}
+            <VerdictBlock 
+              summary={summary}
+              onStartPractice={() => handleStartPractice()}
+              onRetakeDiagnostic={handleRetakeDiagnostic}
+            />
+
+            {/* Domain Performance */}
+            {domainBreakdown.length > 0 && (
+              <DomainPerformance 
+                domains={domainBreakdown}
+                onDomainClick={handleDomainClick}
+              />
+            )}
+
+            {/* Study Plan */}
+            <div ref={triggers.setStudyPlanRef}>
+              <StudyPlan 
+                domains={domainBreakdown}
+                onStartPractice={handleStartPractice}
+              />
+            </div>
+
+            {/* Question Review */}
+            <QuestionReview 
+              questions={summary.questions}
+              activeFilter={activeFilter}
+              onFilterChange={setActiveFilter}
+              selectedDomain={selectedDomain}
+              onDomainChange={setSelectedDomain}
+              onTrackReviewEntry={triggers.trackReviewSectionEntry}
+              onTrackReviewExit={triggers.trackReviewSectionExit}
+              onTrackExpansion={triggers.trackExplanationExpansion}
+            />
+          </div>
+
+          {/* Right Rail (3-4 cols) */}
+          <div className="lg:col-span-3 space-y-6">
+            <QuickActions 
+              onRetake={handleRetakeDiagnostic}
+              onPractice={() => handleStartPractice()}
+              onExport={handleExport}
+              onShare={handleShare}
+            />
+
+            {/* Trial CTA for non-subscribed users */}
+            {!user?.user_metadata?.has_subscription && (
+              <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 md:p-6 shadow-sm">
+                <h3 className="font-semibold text-slate-900 mb-2">Ready to Pass?</h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  Get personalized study plans and unlimited practice
+                </p>
+                <Button
+                  onClick={() => {
+                    setShowTrialModal(true);
+                    posthog?.capture("trial_cta_clicked", {
+                      source: "diagnostic_summary_rail",
+                      diagnostic_score: summary?.score,
+                    });
+                  }}
+                  tone="accent"
+                  size="sm"
+                  fullWidth
+                >
+                  Start Free Trial
+                </Button>
+                <p className="text-xs text-slate-500 mt-2 text-center">No credit card required</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* Upsell Modal */}
+      <UpsellModal
+        isOpen={upsell.isOpen}
+        variant={upsell.variant}
+        trigger={upsell.trigger}
+        onClose={upsell.dismiss}
+        onCTAClick={handleUpsellCTA}
+        onContinueWithoutTrial={handleContinueWithoutTrial}
+      />
+
+      {/* Trial Conversion Modal */}
+      <TrialConversionModal
+        open={showTrialModal}
+        onClose={() => setShowTrialModal(false)}
+        diagnosticScore={summary?.score}
+        weakAreas={domainBreakdown.filter((d) => d.percentage < 60).map((d) => d.domain)}
+      />
+    </div>
+  );
+};
+
+export default DiagnosticSummaryPage;
+</file>
+
+<file path="frontend/app/diagnostic/[sessionId]/page.tsx">
+"use client";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { usePostHog } from "posthog-js/react";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
+
+interface Option {
+  label: string;
+  text: string;
+}
+
+interface QuestionData {
+  id: number;
+  stem: string;
+  options: Option[];
+}
+
+interface DiagnosticSessionData {
+  id: string;
+  userId: string;
+  examType: string;
+  questions: QuestionData[];
+  answers: Record<number, string>;
+  startedAt: string;
+  currentQuestion: number;
+}
+
+const DiagnosticSessionPage = () => {
+  const params = useParams();
+  const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const posthog = usePostHog();
+  const sessionId = params?.sessionId as string;
+
+  const [sessionData, setSessionData] = useState<DiagnosticSessionData | null>(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedOptionLabel, setSelectedOptionLabel] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isFlagged, setIsFlagged] = useState(false);
+  const [submissionErrors, setSubmissionErrors] = useState<Set<number>>(new Set());
+  const [retryQueue, setRetryQueue] = useState<Array<{questionId: number; selectedLabel: string; attempts: number}>>([]);
+
+  useEffect(() => {
+    const fetchSession = async () => {
+      if (!sessionId) {
+        setError("Session ID not found in URL.");
+        setLoading(false);
+        return;
+      }
+      if (isAuthLoading) {
+        setLoading(true);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      let apiUrl = `/api/diagnostic?sessionId=${sessionId}`;
+      if (!user) {
+        const storedAnonId = localStorage.getItem("anonymousSessionId");
+        if (storedAnonId) {
+          apiUrl += `&anonymousSessionId=${storedAnonId}`;
+        }
+      }
+
+      try {
+        const res = await fetch(apiUrl);
+        const data = (await res.json()) as { error?: string; session?: DiagnosticSessionData };
+        if (!res.ok) {
+          if (res.status === 404) {
+            setError("session_not_found");
+          } else if (res.status === 410) {
+            setError("session_expired");
+          } else if (res.status === 401) {
+            setError("authentication_required");
+          } else if (res.status === 403) {
+            setError("access_denied_to_session");
+          } else {
+            setError(data.error || "Failed to fetch diagnostic session.");
+          }
+          return;
+        }
+        if (data.session) {
+          setSessionData(data.session);
+        }
+
+        trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_STARTED, {
+          sessionId: sessionId,
+          examType: data.session?.examType || "unknown",
+          questionCount: data.session?.questions?.length || 0,
+          userId: user?.id || null,
+          isAnonymous: !user,
+        });
+
+        setCurrentQuestionIndex(0);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "An error occurred while fetching session.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSession();
+  }, [sessionId, user, isAuthLoading, posthog]);
+
+  const currentQuestion = sessionData?.questions[currentQuestionIndex];
+
+  const handleNextQuestion = useCallback(async () => {
+    setSelectedOptionLabel(null);
+    setIsFlagged(false);
+    if (sessionData && currentQuestionIndex < sessionData.questions.length - 1) {
+      setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
+    } else {
+      // All questions answered, complete the session
+      setLoading(true);
+      try {
+        const res = await fetch("/api/diagnostic", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "complete",
+            sessionId,
+          }),
+        });
+        const data = (await res.json()) as { error?: string };
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to fetch results.");
+        }
+
+        trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_COMPLETED, {
+          sessionId: sessionId,
+          examType: sessionData?.examType,
+          totalQuestions: sessionData?.questions.length || 0,
+          userId: user?.id || null,
+          isAnonymous: !user,
+        });
+
+        localStorage.removeItem("testero_diagnostic_session_id");
+        router.push(`/diagnostic/${sessionId}/summary`);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    }
+  }, [sessionData, currentQuestionIndex, sessionId, posthog, user, router]);
+
+  // Background answer submission with retry logic and error tracking
+  const submitAnswerWithRetry = useCallback(async (questionId: number, selectedLabel: string, attempt: number = 1) => {
+    const maxAttempts = 3;
+    const baseDelay = 1000; // 1 second base delay
+    
+    try {
+      const response = await fetch("/api/diagnostic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "answer",
+          sessionId,
+          data: {
+            questionId,
+            selectedLabel,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Success - remove from error tracking
+      setSubmissionErrors(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(questionId);
+        return newSet;
+      });
+
+      // Remove from retry queue if it was there
+      setRetryQueue(prev => prev.filter(item => item.questionId !== questionId));
+
+    } catch (error) {
+      console.error(`Failed to submit answer for question ${questionId} (attempt ${attempt}):`, error);
+      
+      // Add to error tracking
+      setSubmissionErrors(prev => new Set(prev).add(questionId));
+
+      if (attempt < maxAttempts) {
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        
+        // Add to retry queue
+        setRetryQueue(prev => {
+          const filtered = prev.filter(item => item.questionId !== questionId);
+          return [...filtered, { questionId, selectedLabel, attempts: attempt + 1 }];
+        });
+
+        // Schedule retry
+        setTimeout(() => {
+          submitAnswerWithRetry(questionId, selectedLabel, attempt + 1);
+        }, delay);
+      } else {
+        // Max attempts reached - keep in error state for manual retry
+        console.error(`Failed to submit answer for question ${questionId} after ${maxAttempts} attempts`);
+      }
+    }
+  }, [sessionId]);
+
+  const handleSubmitAnswer = useCallback(async () => {
+    if (!currentQuestion || selectedOptionLabel === null) return;
+
+    // Track the question answered event immediately
+    trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_QUESTION_ANSWERED, {
+      sessionId: sessionId,
+      questionNumber: currentQuestionIndex + 1,
+      totalQuestions: sessionData?.questions.length || 0,
+      questionId: currentQuestion.id,
+      selectedAnswer: selectedOptionLabel,
+      examType: sessionData?.examType,
+      userId: user?.id || null,
+      isAnonymous: !user,
+    });
+
+    // Submit answer in background with retry logic
+    submitAnswerWithRetry(currentQuestion.id, selectedOptionLabel);
+
+    // Immediately advance to next question
+    handleNextQuestion();
+  }, [currentQuestion, selectedOptionLabel, sessionId, currentQuestionIndex, sessionData, posthog, user, handleNextQuestion, submitAnswerWithRetry]);
+
+  // Keyboard navigation
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (!sessionData) return;
+
+    const currentQuestion = sessionData.questions[currentQuestionIndex];
+    if (!currentQuestion) return;
+
+    const options = currentQuestion.options;
+    const currentIndex = selectedOptionLabel ? 
+      options.findIndex(opt => opt.label === selectedOptionLabel) : -1;
+
+    switch (event.key) {
+      case 'ArrowDown':
+      case 'j':
+        event.preventDefault();
+        const nextIndex = currentIndex < options.length - 1 ? currentIndex + 1 : 0;
+        setSelectedOptionLabel(options[nextIndex].label);
+        break;
+      case 'ArrowUp':
+      case 'k':
+        event.preventDefault();
+        const prevIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1;
+        setSelectedOptionLabel(options[prevIndex].label);
+        break;
+      case 'Enter':
+        event.preventDefault();
+        if (selectedOptionLabel) {
+          handleSubmitAnswer();
+        }
+        break;
+    }
+  }, [sessionData, currentQuestionIndex, selectedOptionLabel, handleSubmitAnswer]);
+
+  // Use ref pattern to prevent memory leak from frequent event listener re-registration
+  const handleKeyDownRef = useRef(handleKeyDown);
+  handleKeyDownRef.current = handleKeyDown;
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => handleKeyDownRef.current(e);
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []); // Empty dependency array prevents unnecessary re-registration
+
+
+  const handleSkip = useCallback(() => {
+    // Simply advance to next question without submitting answer
+    handleNextQuestion();
+  }, [handleNextQuestion]);
+
+  if (loading)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg text-slate-600">Loading diagnostic...</div>
+      </div>
+    );
+
+  // Other error cases (keeping existing structure but with updated styles)
+  if (error) {
+    // Access denied
+    if (error === "access_denied_to_session") {
+      return (
+        <main className="max-w-2xl mx-auto my-8 p-4 md:p-6 border border-slate-200 rounded-lg">
+          <h1 className="text-xl font-semibold mb-4">Access Denied</h1>
+          <div className="mb-6">
+            <p className="text-red-600 mb-4">
+              You do not have permission to access this diagnostic session, or the session identifier
+              is invalid.
+            </p>
+          </div>
+          <button
+            onClick={() => router.push("/diagnostic")}
+            className="h-10 px-8 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors"
+          >
+            Start New Diagnostic
+          </button>
+        </main>
+      );
+    }
+
+    // Session not found
+    if (error === "session_not_found") {
+      return (
+        <main className="max-w-2xl mx-auto my-8 p-4 md:p-6 border border-slate-200 rounded-lg">
+          <h1 className="text-xl font-semibold mb-4">Session Not Found</h1>
+          <div className="mb-6">
+            <p className="text-red-600 mb-4">
+              Your diagnostic session has expired or could not be found. This can happen if:
+            </p>
+            <ul className="text-slate-600 mb-6 space-y-1">
+              <li>The session expired due to inactivity</li>
+              <li>The server was restarted during development</li>
+              <li>The session ID is invalid</li>
+            </ul>
+            <p>Please start a new diagnostic test to continue.</p>
+          </div>
+          <button
+            onClick={() => router.push("/diagnostic")}
+            className="h-10 px-8 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors"
+          >
+            Start New Diagnostic
+          </button>
+        </main>
+      );
+    }
+
+    // Session expired
+    if (error === "session_expired") {
+      return (
+        <main className="max-w-2xl mx-auto my-8 p-4 md:p-6 border border-slate-200 rounded-lg">
+          <h1 className="text-xl font-semibold mb-4">Session Expired</h1>
+          <div className="mb-6">
+            <p className="text-red-600 mb-4">
+              Your diagnostic session has expired after 30 minutes of inactivity for security
+              reasons.
+            </p>
+            <p>Please start a new diagnostic test to continue.</p>
+          </div>
+          <button
+            onClick={() => router.push("/diagnostic")}
+            className="h-10 px-8 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors"
+          >
+            Start New Diagnostic
+          </button>
+        </main>
+      );
+    }
+
+    // Authentication required
+    if (error === "authentication_required") {
+      return (
+        <main className="max-w-2xl mx-auto my-8 p-4 md:p-6 border border-slate-200 rounded-lg">
+          <h1 className="text-xl font-semibold mb-4">Authentication Required</h1>
+          <div className="mb-6">
+            <p className="text-red-600 mb-4">
+              You need to be logged in to access this diagnostic session.
+            </p>
+          </div>
+          <button
+            onClick={() => router.push("/login")}
+            className="h-10 px-8 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors"
+          >
+            Go to Login
+          </button>
+        </main>
+      );
+    }
+
+    // Generic error fallback
+    return (
+      <main className="max-w-2xl mx-auto my-8 p-6 border border-slate-200 rounded-lg">
+        <h1 className="text-xl font-semibold mb-4">Error</h1>
+        <div className="mb-6">
+          <p className="text-red-600 mb-4">Error: {error}</p>
+        </div>
+        <button
+          onClick={() => router.push("/diagnostic")}
+          className="h-10 px-8 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors"
+        >
+          Start New Diagnostic
+        </button>
+      </main>
+    );
+  }
+
+  if (!currentQuestion)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg text-slate-600">No questions found for this session.</div>
+      </div>
+    );
+
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Top app bar with progress */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-slate-900">Diagnostic</h1>
+          <div className="text-sm font-medium text-slate-600">
+            Question {currentQuestionIndex + 1} of {sessionData?.questions.length}
+          </div>
+        </div>
+        {/* Progress bar */}
+        <div className="h-1 bg-slate-100">
+          <div 
+            className="h-1 bg-indigo-600 transition-all duration-300 ease-out"
+            style={{ 
+              width: `${((currentQuestionIndex + 1) / (sessionData?.questions.length || 1)) * 100}%` 
+            }}
+          />
+        </div>
+      </header>
+
+      {/* Main content */}
+      <main className="max-w-5xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-12 gap-6">
+          {/* Left rail - Desktop only */}
+          <aside className="hidden lg:block lg:col-span-3 space-y-4 sticky top-20">
+            {/* Exam meta card */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm">
+              <h3 className="text-sm font-semibold text-slate-900 mb-2">Progress</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Completed</span>
+                  <span className="font-medium text-slate-900">
+                    {currentQuestionIndex} / {sessionData?.questions.length || 0}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div 
+                    className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                    style={{ 
+                      width: `${(currentQuestionIndex / (sessionData?.questions.length || 1)) * 100}%` 
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Flag for review card */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm">
+              <h3 className="text-sm font-semibold text-slate-900 mb-2">Review</h3>
+              <button
+                onClick={() => setIsFlagged(!isFlagged)}
+                className={`w-full h-8 px-3 rounded-lg text-sm font-medium transition-colors ${
+                  isFlagged
+                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : 'bg-white text-slate-600 border border-slate-300 hover:border-slate-400'
+                }`}
+              >
+                {isFlagged ? '?? Flagged' : 'Flag for review'}
+              </button>
+              <p className="text-xs text-slate-500 mt-2">
+                Review all flagged questions before final submission.
+              </p>
+            </div>
+
+            {/* Submission status card - only show if there are errors or retries */}
+            {(submissionErrors.size > 0 || retryQueue.length > 0) && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 md:p-6 shadow-sm">
+                <h3 className="text-sm font-semibold text-amber-800 mb-2">Submission Status</h3>
+                {submissionErrors.size > 0 && (
+                  <div className="mb-2">
+                    <p className="text-xs text-amber-700">
+                      {submissionErrors.size} answer{submissionErrors.size === 1 ? '' : 's'} failed to save
+                    </p>
+                  </div>
+                )}
+                {retryQueue.length > 0 && (
+                  <div className="mb-2">
+                    <p className="text-xs text-amber-700">
+                      Retrying {retryQueue.length} submission{retryQueue.length === 1 ? '' : 's'}...
+                    </p>
+                  </div>
+                )}
+                <p className="text-xs text-amber-600">
+                  Answers will be retried automatically. Continue with the test.
+                </p>
+              </div>
+            )}
+          </aside>
+
+          {/* Main column */}
+          <div className="col-span-12 lg:col-span-9">
+            {/* Question card */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm">
+              <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-6">
+                Diagnostic Assessment
+              </h2>
+              
+              {/* Question stem */}
+              <div className="max-w-3xl mb-8">
+                <div className="text-lg leading-relaxed text-slate-700">
+                  {currentQuestion.stem}
+                </div>
+              </div>
+
+              {/* Answer options - Radio group */}
+              <div role="radiogroup" aria-label="Answer choices" className="space-y-3 mb-8">
+                {currentQuestion.options.map((option, index) => {
+                  const isSelected = selectedOptionLabel === option.label;
+                  const labels = ['A', 'B', 'C', 'D'];
+
+                  return (
+                    <label
+                      key={option.label}
+                      className={`relative flex gap-3 rounded-xl border p-4 cursor-pointer transition shadow-sm ${
+                        isSelected
+                          ? 'border-indigo-600 ring-4 ring-indigo-600/10 bg-indigo-50'
+                          : 'border-slate-200 hover:border-slate-400'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="answer"
+                        value={option.label}
+                        checked={isSelected}
+                        onChange={() => setSelectedOptionLabel(option.label)}
+                        className="sr-only"
+                      />
+                      
+                      {/* A/B/C/D bubble */}
+                      <div className={`w-8 h-8 rounded-full grid place-content-center text-sm font-medium flex-shrink-0 ${
+                        isSelected
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        {labels[index]}
+                      </div>
+                      
+                      {/* Option text */}
+                      <div className="flex-1 text-slate-700 leading-relaxed">
+                        {option.text}
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Sticky bottom action bar */}
+      <footer className="sticky bottom-0 z-40 border-t border-slate-200 bg-white/90 backdrop-blur">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3 justify-end">
+          <button
+            onClick={handleSkip}
+            className="h-10 px-4 rounded-lg border border-slate-300 text-slate-700 hover:border-slate-400 transition-colors"
+          >
+            Skip
+          </button>
+          <button
+            onClick={handleSubmitAnswer}
+            disabled={selectedOptionLabel === null}
+            className={`h-10 px-5 rounded-lg font-medium shadow-sm transition-all ${
+              selectedOptionLabel === null
+                ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-500/30'
+            }`}
+          >
+            Submit answer
+          </button>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default DiagnosticSessionPage;
+</file>
+
+<file path="frontend/app/diagnostic/layout.tsx">
+import { createGatedLayout } from "@/lib/billing/gated-layout";
+
+export default createGatedLayout("diagnostic");
+</file>
+
+<file path="frontend/app/diagnostic/page.tsx">
+"use client";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/providers/AuthProvider"; // Assuming this is still relevant for logged-in users
+import { usePostHog } from "posthog-js/react";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
+import {
+  getAnonymousSessionId,
+  setAnonymousSessionId,
+  generateAnonymousSessionId,
+} from "@/lib/auth/anonymous-session";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { ArrowRight, Target, BarChart3, BookOpen, Info, AlertCircle } from "lucide-react";
+
+interface ExamTypeOption {
+  name: string; // This will be the value sent to the API (e.g., "Google Professional ML Engineer")
+  displayName: string; // This will be shown in the dropdown (e.g., "Google ML Engineer")
+}
+
+const DiagnosticStartPage = () => {
+  const [examTypes, setExamTypes] = useState<ExamTypeOption[]>([]);
+  const [selectedExamName, setSelectedExamName] = useState<string>(""); // Store the 'name' field for API
+  const [numQuestions, setNumQuestions] = useState(20); // Default to full diagnostic
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resumeSession, setResumeSession] = useState<{
+    sessionId: string;
+    examType: string;
+    startedAt: string;
+  } | null>(null);
+  const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth(); // Keep auth for logged-in user tracking
+  const posthog = usePostHog();
+
+  useEffect(() => {
+    // Fetch exam types - this part does not require authentication as per new requirements
+    const fetchExamTypes = async () => {
+      try {
+        // This endpoint needs to be created or use an existing one that lists exams
+        // For now, let's assume a simple GET to /api/exams (needs implementation)
+        // Or, for MVP, we can hardcode them if an API endpoint is too much scope now
+        // Based on previous DB query, we have:
+        const fetchedExams: ExamTypeOption[] = [
+          { name: "Google Professional Machine Learning Engineer", displayName: "PMLE - Professional ML Engineer (October 2024)" },
+          { name: "Google Cloud Digital Leader", displayName: "Google Cloud Digital Leader" },
+          {
+            name: "Google Cloud Professional Cloud Architect",
+            displayName: "Google Cloud Architect",
+          },
+          // Add others if needed
+        ];
+        setExamTypes(fetchedExams);
+        if (fetchedExams.length > 0) {
+          setSelectedExamName(fetchedExams[0].name); // Default to first exam
+        }
+      } catch (err) {
+        console.error("Failed to fetch exam types", err);
+        setError("Could not load exam types.");
+        // Fallback to a default if fetch fails
+        const fallbackExams: ExamTypeOption[] = [
+          { name: "Google Professional Machine Learning Engineer", displayName: "PMLE - Professional ML Engineer (October 2024)" },
+        ];
+        setExamTypes(fallbackExams);
+        setSelectedExamName(fallbackExams[0].name);
+      }
+    };
+    fetchExamTypes();
+  }, []);
+
+  useEffect(() => {
+    // Check for unfinished session on page load
+    const checkUnfinishedSession = async () => {
+      if (isAuthLoading) return; // Wait for auth state to load
+
+      const storedSessionId = localStorage.getItem("testero_diagnostic_session_id");
+      if (!storedSessionId) return;
+
+      try {
+        let statusUrl = `/api/diagnostic/session/${storedSessionId}/status`;
+
+        // Include anonymous session ID if user is not logged in
+        if (!user) {
+          const anonymousSessionId = getAnonymousSessionId();
+          if (anonymousSessionId) {
+            statusUrl += `?anonymousSessionId=${anonymousSessionId}`;
+          }
+        }
+
+        const response = await fetch(statusUrl);
+        if (!response.ok) {
+          throw new Error(`Status check failed: ${response.status}`);
+        }
+        const data = (await response.json()) as {
+          exists?: boolean;
+          status?: string;
+          examType?: string;
+          startedAt?: string;
+        };
+
+        if (data.exists && data.status === "active" && data.examType && data.startedAt) {
+          setResumeSession({
+            sessionId: storedSessionId,
+            examType: data.examType,
+            startedAt: data.startedAt,
+          });
+
+          // Track resume opportunity shown
+          trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_RESUME_SHOWN, {
+            sessionId: storedSessionId,
+            examType: data.examType,
+            startedAt: data.startedAt,
+          });
+        } else if (
+          data.status === "completed" ||
+          data.status === "expired" ||
+          data.status === "not_found"
+        ) {
+          // Clean up localStorage for completed/expired/not found sessions
+          localStorage.removeItem("testero_diagnostic_session_id");
+        }
+      } catch (err) {
+        console.error("Error checking session status:", err);
+        // Clean up localStorage on error
+        localStorage.removeItem("testero_diagnostic_session_id");
+      }
+    };
+
+    checkUnfinishedSession();
+  }, [user, isAuthLoading, posthog]);
+
+  // No longer forcing login for this page
+  // useEffect(() => {
+  //   if (!isAuthLoading && !user) {
+  //     router.push('/login');
+  //   }
+  // }, [user, isAuthLoading, router]);
+
+  const handleResumeSession = () => {
+    if (resumeSession) {
+      // Track resume action
+      trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_RESUMED, {
+        sessionId: resumeSession.sessionId,
+        examType: resumeSession.examType,
+        startedAt: resumeSession.startedAt,
+      });
+
+      router.push(`/diagnostic/${resumeSession.sessionId}`);
+    }
+  };
+
+  const handleStartOver = () => {
+    // Clear stored session data
+    localStorage.removeItem("testero_diagnostic_session_id");
+    setResumeSession(null);
+  };
+
+  const handleStartDiagnostic = async () => {
+    if (!selectedExamName) {
+      setError("Please select a valid exam type.");
+      return;
+    }
+
+    if (!numQuestions || numQuestions < 1 || numQuestions > 30) {
+      setError("Please select between 1 and 30 questions.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const requestBody: {
+      action: "start";
+      data: { examType: string; numQuestions: number; anonymousSessionId?: string };
+    } = {
+      action: "start",
+      data: {
+        examType: selectedExamName, // Send the 'name' field
+        numQuestions,
+      },
+    };
+
+    // For anonymous users, try to send existing anonymousSessionId for potential resume
+    if (!user) {
+      let anonymousSessionId = getAnonymousSessionId();
+      if (!anonymousSessionId) {
+        // Generate new anonymous session ID if none exists
+        anonymousSessionId = generateAnonymousSessionId();
+        setAnonymousSessionId(anonymousSessionId);
+      }
+      requestBody.data.anonymousSessionId = anonymousSessionId;
+    }
+
+    try {
+      const res = await fetch("/api/diagnostic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+
+      const responseData = (await res.json()) as {
+        error?: string;
+        sessionId?: string;
+        anonymousSessionId?: string;
+      };
+      if (!res.ok) {
+        // Error handling remains similar, but 429 (too many sessions) is removed
+        // 401 might still occur if a logged-in user's token expires, but not for anonymous
+        if (res.status === 401 && user) {
+          // Only redirect to login if it was an auth issue for a logged-in user
+          setError("Authentication issue. Please log in again.");
+          router.replace("/login");
+        } else {
+          setError(responseData.error || "Failed to start diagnostic.");
+        }
+        return;
+      }
+
+      // If API returns a new anonymousSessionId (for new anonymous sessions), store it
+      if (responseData.anonymousSessionId && !user) {
+        setAnonymousSessionId(responseData.anonymousSessionId);
+      }
+
+      // Store diagnostic session ID in localStorage for session persistence
+      if (responseData.sessionId) {
+        localStorage.setItem("testero_diagnostic_session_id", responseData.sessionId);
+      }
+
+      // Track diagnostic started
+      trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_STARTED, {
+        sessionId: responseData.sessionId,
+        examType: selectedExamName,
+        questionCount: numQuestions,
+        userId: user?.id || null,
+        isAnonymous: !user,
+      });
+
+      // If it was a resumed session, the API might indicate it. For now, just redirect.
+      if (responseData.sessionId) {
+        router.push(`/diagnostic/${responseData.sessionId}`);
+      } else {
+        setError("Failed to start diagnostic session");
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Determine if the main button should be disabled
+  // Auth loading is relevant if a user *might* be logged in.
+  // If strictly anonymous, isAuthLoading might not be as critical here,
+  // but keeping it for cases where a user *is* logged in.
+  const isButtonDisabled = loading || (user && isAuthLoading) || examTypes.length === 0;
+
+  return (
+    <main className="max-w-2xl mx-auto my-8 px-4">
+      <Card size="lg" className="border-slate-200 shadow-sm">
+        <CardHeader>
+          <div className="flex justify-end mb-4">
+            <Badge variant="soft" tone="accent" size="sm">
+              Updated Oct 2024 exam changes
+            </Badge>
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">
+            PMLE Diagnostic
+          </h1>
+          <p className="text-lg text-slate-600 mb-4">
+            10-minute readiness check. Updated for Oct &apos;24 changes.
+          </p>
+          <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 text-slate-700 text-sm">
+              <BarChart3 className="w-4 h-4" />
+              6 domains
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 text-slate-700 text-sm">
+              <Target className="w-4 h-4" />
+              Vertex AI Model Garden
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 text-slate-700 text-sm">
+              <BookOpen className="w-4 h-4" />
+              GenAI & RAG
+            </div>
+          </div>
+        </CardHeader>
+
+        {resumeSession && (
+          <Card size="sm" compact className="mb-6 border-blue-200 bg-blue-50">
+            <CardContent className="gap-0">
+              <h2 className="text-lg font-semibold text-blue-700 mb-3">Unfinished Diagnostic Found</h2>
+              <p className="text-sm text-blue-600 mb-2">
+                You have an unfinished <strong>{resumeSession.examType}</strong> diagnostic started on{" "}
+                {new Date(resumeSession.startedAt).toLocaleString()}.
+              </p>
+              <p className="text-sm text-blue-600 mb-4">Would you like to resume or start over?</p>
+              <div className="flex gap-3">
+                <Button onClick={handleResumeSession} tone="accent" size="sm">
+                  Resume
+                </Button>
+                <Button
+                  onClick={handleStartOver}
+                  variant="outline"
+                  tone="accent"
+                  size="sm"
+                >
+                  Start Over
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <CardContent className="space-y-6">
+          {!user && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 md:p-6">
+              <p className="text-sm text-blue-700 m-0">
+                <Info className="inline w-4 h-4 mr-1 -mt-0.5" aria-hidden="true" />
+                <span className="sr-only">Information: </span>
+                <strong>No signup required!</strong> Take the diagnostic anonymously and get instant results.
+                Create an account later to save your progress and access personalized study plans.
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="examType" className="text-sm font-medium text-slate-700">
+                Certification Exam
+              </Label>
+              <select
+                id="examType"
+                value={selectedExamName}
+                onChange={(e) => setSelectedExamName(e.target.value)}
+                className="w-full px-3 py-2.5 min-h-[44px] border border-slate-300 rounded-lg text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={examTypes.length === 0}
+                aria-describedby="exam-helper-text"
+              >
+                {examTypes.length === 0 && <option>Loading exams...</option>}
+                {examTypes.map((exam) => (
+                  <option key={exam.name} value={exam.name}>
+                    {exam.displayName}
+                  </option>
+                ))}
+              </select>
+              <p id="exam-helper-text" className="text-xs text-slate-500">Search or pick an exam</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-700">
+                Diagnostic Length
+              </Label>
+              <div className="flex gap-2" role="group" aria-labelledby="question-count-label">
+                {[10, 20, 30].map((count) => (
+                  <button
+                    key={count}
+                    type="button"
+                    onClick={() => setNumQuestions(count)}
+                    aria-pressed={numQuestions === count}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                      numQuestions === count
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {count}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500">
+                <strong>Recommended: 20 questions</strong> for comprehensive assessment (10 minutes)
+              </p>
+            </div>
+            <Button
+              onClick={handleStartDiagnostic}
+              disabled={isButtonDisabled}
+              fullWidth
+              size="lg"
+              tone="accent"
+              className="mt-2"
+              iconRight={<ArrowRight className="h-4 w-4" />}
+            >
+              {user && isAuthLoading ? "Loading user..." : loading ? "Starting..." : (
+                <>Start free diagnostic</>
+              )}
+            </Button>
+            {error && (
+              <div className="text-red-600 text-sm mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="inline w-4 h-4 mr-1 -mt-0.5" aria-hidden="true" />
+                <span className="sr-only">Error: </span>
+                {error}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-slate-200 pt-6 mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="text-center p-4 md:p-6 bg-slate-50 rounded-lg">
+                <BarChart3 className="w-5 h-5 mx-auto mb-2 text-slate-600" />
+                <p className="text-sm text-slate-700 font-medium">Instant score</p>
+              </div>
+              <div className="text-center p-4 md:p-6 bg-slate-50 rounded-lg">
+                <Target className="w-5 h-5 mx-auto mb-2 text-slate-600" />
+                <p className="text-sm text-slate-700 font-medium">Find weak areas</p>
+              </div>
+              <div className="text-center p-4 md:p-6 bg-slate-50 rounded-lg">
+                <BookOpen className="w-5 h-5 mx-auto mb-2 text-slate-600" />
+                <p className="text-sm text-slate-700 font-medium">Get a study plan</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </main>
+  );
+};
+
+// Note: Question limits are now handled by the pill selection (10, 20, 30)
+
+export default DiagnosticStartPage;
+</file>
+
+<file path="frontend/components/diagnostic/index.ts">
+export * from "./StudyRecommendations";
+export * from "./ScoreChart";
+export * from "./DomainBreakdown";
+export * from "./QuestionReview";
+export type {
+  QuestionSummary,
+  SessionSummary,
+  StudyRecommendation,
+  DomainBreakdown as DomainBreakdownType,
+} from "./types";
+</file>
+
+<file path="frontend/components/diagnostic/types.ts">
+export interface QuestionSummary {
+  id: string;
+  stem: string;
+  userAnswer: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  options: Array<{
+    label: string;
+    text: string;
+  }>;
+  domain?: string;
+}
+
+export interface DomainBreakdown {
+  domain: string;
+  correct: number;
+  total: number;
+  percentage: number;
+}
+
+export interface SessionSummary {
+  sessionId: string;
+  examType: string;
+  totalQuestions: number;
+  correctAnswers: number;
+  score: number;
+  startedAt: string;
+  completedAt: string;
+  questions: QuestionSummary[];
+}
+
+export interface StudyRecommendation {
+  priority: "high" | "medium" | "low";
+  domain: string;
+  message: string;
+  actionItems: string[];
+}
+</file>
+
+<file path="frontend/lib/constants/diagnostic-config.ts">
+/**
+ * Configuration constants for diagnostic sessions
+ * Centralized configuration for easy maintenance and testing
+ */
+
+export const DIAGNOSTIC_CONFIG = {
+  // Default number of questions for different contexts
+  DEFAULT_QUESTION_COUNT: 5,
+  BETA_QUESTION_COUNT: parseInt(process.env.NEXT_PUBLIC_BETA_QUESTION_COUNT || '5', 10),
+  FULL_DIAGNOSTIC_QUESTION_COUNT: parseInt(process.env.NEXT_PUBLIC_FULL_DIAGNOSTIC_QUESTION_COUNT || '25', 10),
+  
+  // Question count limits for validation
+  MIN_QUESTION_COUNT: 1,
+  MAX_QUESTION_COUNT: parseInt(process.env.NEXT_PUBLIC_MAX_QUESTION_COUNT || '50', 10),
+  
+  // Session timeout in minutes
+  SESSION_TIMEOUT_MINUTES: parseInt(process.env.NEXT_PUBLIC_DIAGNOSTIC_TIMEOUT_MINUTES || '30', 10),
+  
+  // Question selection multiplier (fetch more questions than needed for randomization)
+  QUESTION_SELECTION_MULTIPLIER: 5,
+} as const;
+
+/**
+ * Get the appropriate question count based on context
+ */
+export function getQuestionCountForContext(context: 'beta' | 'full' | 'default'): number {
+  switch (context) {
+    case 'beta':
+      return DIAGNOSTIC_CONFIG.BETA_QUESTION_COUNT;
+    case 'full':
+      return DIAGNOSTIC_CONFIG.FULL_DIAGNOSTIC_QUESTION_COUNT;
+    case 'default':
+    default:
+      return DIAGNOSTIC_CONFIG.DEFAULT_QUESTION_COUNT;
+  }
+}
+
+/**
+ * Validate question count is within acceptable limits
+ */
+export function validateQuestionCount(count: number): boolean {
+  return count >= DIAGNOSTIC_CONFIG.MIN_QUESTION_COUNT && 
+         count <= DIAGNOSTIC_CONFIG.MAX_QUESTION_COUNT;
+}
+
+/**
+ * Get session timeout in milliseconds
+ */
+export function getSessionTimeoutMs(): number {
+  return DIAGNOSTIC_CONFIG.SESSION_TIMEOUT_MINUTES * 60 * 1000;
+}
+</file>
+
+<file path="frontend/scripts/create_diagnostic_tables.sql">
+CREATE TABLE diagnostics_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    exam_type TEXT NOT NULL,
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE diagnostic_questions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id UUID REFERENCES diagnostics_sessions(id) ON DELETE CASCADE,
+    question_id UUID, -- Nullable, for AI-generated questions not yet in main questions table
+    stem TEXT NOT NULL,
+    options JSONB NOT NULL, -- Store options as JSONB array of { label: string, text: string }
+    correct_label TEXT NOT NULL -- Store the label of the correct option
+);
+
+CREATE TABLE diagnostic_responses (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id UUID REFERENCES diagnostics_sessions(id) ON DELETE CASCADE,
+    question_id UUID REFERENCES diagnostic_questions(id) ON DELETE CASCADE,
+    selected_label TEXT NOT NULL,
+    is_correct BOOLEAN NOT NULL,
+    responded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+</file>
+
+<file path="frontend/supabase/migrations/20251119162319_create_pmle_canonical_schema.sql">
+-- Migration: Create canonical PMLE question schema
+-- This migration creates the new canonical tables for PMLE questions, answers, explanations, and domains.
+-- Legacy tables (questions, options, etc.) are renamed to _legacy suffix if they exist.
+
+-- Handle legacy tables first (non-destructive rename if they exist)
+-- If legacy tables exist with the same names, rename them to _legacy suffix
+-- Then create fresh canonical tables with the original names
+DO $$
+BEGIN
+    -- Rename legacy questions table if it exists and canonical table doesn't exist yet
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'questions') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'questions_legacy') THEN
+        ALTER TABLE public.questions RENAME TO questions_legacy;
+        COMMENT ON TABLE public.questions_legacy IS 'DEPRECATED: Legacy questions table. Use canonical questions table instead.';
+    END IF;
+    
+    -- Rename legacy options table if it exists
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'options')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'options_legacy') THEN
+        ALTER TABLE public.options RENAME TO options_legacy;
+        COMMENT ON TABLE public.options_legacy IS 'DEPRECATED: Legacy options table. Use canonical answers table instead.';
+    END IF;
+    
+    -- Check for legacy explanations table (if it exists with different structure)
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'explanations')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'explanations_legacy') THEN
+        ALTER TABLE public.explanations RENAME TO explanations_legacy;
+        COMMENT ON TABLE public.explanations_legacy IS 'DEPRECATED: Legacy explanations table. Use canonical explanations table instead.';
+    END IF;
+END $$;
+
+-- Create exam_domains table
+CREATE TABLE IF NOT EXISTS public.exam_domains (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT
+);
+
+COMMENT ON TABLE public.exam_domains IS 'Blueprint domains/topics for exams (e.g., "Designing ML Pipelines")';
+COMMENT ON COLUMN public.exam_domains.code IS 'Domain code in uppercase with underscores (e.g., "DATA_PIPELINES")';
+COMMENT ON COLUMN public.exam_domains.name IS 'Human-readable domain name (e.g., "Designing ML Pipelines")';
+
+-- Create questions table
+CREATE TABLE IF NOT EXISTS public.questions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    exam TEXT NOT NULL,
+    domain_id UUID NOT NULL REFERENCES public.exam_domains(id) ON DELETE RESTRICT,
+    stem TEXT NOT NULL,
+    difficulty TEXT CHECK (difficulty IN ('EASY', 'MEDIUM', 'HARD')),
+    source_ref TEXT,
+    status TEXT CHECK (status IN ('ACTIVE', 'DRAFT', 'RETIRED')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.questions IS 'Canonical questions table for PMLE and future exams';
+COMMENT ON COLUMN public.questions.exam IS 'Exam identifier (e.g., "GCP_PM_ML_ENG")';
+COMMENT ON COLUMN public.questions.domain_id IS 'Foreign key to exam_domains';
+COMMENT ON COLUMN public.questions.stem IS 'The question text/scenario';
+COMMENT ON COLUMN public.questions.difficulty IS 'Difficulty level: EASY, MEDIUM, or HARD';
+COMMENT ON COLUMN public.questions.status IS 'Question status: ACTIVE, DRAFT, or RETIRED';
+COMMENT ON COLUMN public.questions.source_ref IS 'Reference to blueprint section or doc URL slug';
+
+-- Create answers table
+CREATE TABLE IF NOT EXISTS public.answers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    question_id UUID NOT NULL REFERENCES public.questions(id) ON DELETE CASCADE,
+    choice_label TEXT NOT NULL,
+    choice_text TEXT NOT NULL,
+    is_correct BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+COMMENT ON TABLE public.answers IS 'Answer choices for questions. Each question should have 3-5 answers with exactly one marked as correct.';
+COMMENT ON COLUMN public.answers.choice_label IS 'Label for the choice (e.g., "A", "B", "C", "D")';
+COMMENT ON COLUMN public.answers.choice_text IS 'The answer option text';
+COMMENT ON COLUMN public.answers.is_correct IS 'Whether this is the correct answer (exactly one per question should be true)';
+
+-- Create explanations table
+CREATE TABLE IF NOT EXISTS public.explanations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    question_id UUID NOT NULL UNIQUE REFERENCES public.questions(id) ON DELETE CASCADE,
+    explanation_text TEXT NOT NULL,
+    reasoning_style TEXT,
+    doc_links JSONB
+);
+
+COMMENT ON TABLE public.explanations IS 'Explanations for questions. Each question should have exactly one explanation.';
+COMMENT ON COLUMN public.explanations.question_id IS 'Foreign key to questions (unique - one explanation per question)';
+COMMENT ON COLUMN public.explanations.explanation_text IS 'The explanation text explaining why the correct answer is correct';
+COMMENT ON COLUMN public.explanations.reasoning_style IS 'Optional reasoning style (e.g., "SHORT_RATIONALE")';
+COMMENT ON COLUMN public.explanations.doc_links IS 'JSON array of URLs or document identifiers';
+
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS questions_exam_idx ON public.questions(exam);
+CREATE INDEX IF NOT EXISTS questions_domain_id_idx ON public.questions(domain_id);
+CREATE INDEX IF NOT EXISTS answers_question_id_idx ON public.answers(question_id);
+CREATE INDEX IF NOT EXISTS explanations_question_id_idx ON public.explanations(question_id);
+
+-- Create function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to automatically update updated_at
+CREATE TRIGGER update_questions_updated_at
+    BEFORE UPDATE ON public.questions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+</file>
+
+</files>

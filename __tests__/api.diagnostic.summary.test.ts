@@ -192,6 +192,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
               { label: "D", text: "A hardware device" },
             ],
             correct_label: "A",
+            canonical_question_id: null,
             original_question_id: 101,
             domain_code: null, // Can be null for legacy sessions
             domain_id: null,
@@ -213,6 +214,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
               { label: "D", text: "A language" },
             ],
             correct_label: "B",
+            canonical_question_id: null,
             original_question_id: 102,
             domain_code: null,
             domain_id: null,
@@ -234,6 +236,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
               { label: "D", text: "A game engine" },
             ],
             correct_label: "A",
+            canonical_question_id: null,
             original_question_id: 103,
             domain_code: null,
             domain_id: null,
@@ -348,6 +351,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
                 { label: "D", text: "A hardware device" },
               ],
               correct_label: "A",
+              canonical_question_id: null,
               original_question_id: 101,
               domain_code: "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
               domain_id: "domain-uuid-1",
@@ -369,6 +373,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
                 { label: "D", text: "A language" },
               ],
               correct_label: "B",
+              canonical_question_id: null,
               original_question_id: 102,
               domain_code: "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
               domain_id: "domain-uuid-1",
@@ -390,6 +395,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
                 { label: "D", text: "A game engine" },
               ],
               correct_label: "A",
+              canonical_question_id: null,
               original_question_id: 103,
               domain_code: "SERVING_AND_SCALING_MODELS",
               domain_id: "domain-uuid-2",
@@ -479,6 +485,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
                 { label: "B", text: "Option B" },
               ],
               correct_label: "A",
+              canonical_question_id: null,
               original_question_id: 101,
               diagnostic_responses: [], // No response
             },
@@ -566,7 +573,8 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
                 { label: "B", text: "Answer B" },
               ],
               correct_label: "A",
-              original_question_id: "q1",
+              canonical_question_id: "q1",
+              original_question_id: null,
               domain_id: "domain-uuid-1",
               domain_code: "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
               diagnostic_responses: [
@@ -585,7 +593,8 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
                 { label: "B", text: "Answer B" },
               ],
               correct_label: "B",
-              original_question_id: "q2",
+              canonical_question_id: "q2",
+              original_question_id: null,
               domain_id: "domain-uuid-1",
               domain_code: "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
               diagnostic_responses: [
@@ -604,7 +613,8 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
                 { label: "B", text: "Answer B" },
               ],
               correct_label: "A",
-              original_question_id: "q3",
+              canonical_question_id: "q3",
+              original_question_id: null,
               domain_id: "domain-uuid-2",
               domain_code: "SERVING_AND_SCALING_MODELS",
               diagnostic_responses: [
@@ -704,6 +714,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
                 { label: "B", text: "Answer B" },
               ],
               correct_label: "A",
+              canonical_question_id: null,
               original_question_id: "legacy-q1",
               domain_id: null,
               domain_code: null, // No domain_code
@@ -723,6 +734,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
                 { label: "B", text: "Answer B" },
               ],
               correct_label: "B",
+              canonical_question_id: null,
               original_question_id: "legacy-q2",
               domain_id: null,
               domain_code: null, // No domain_code
@@ -827,7 +839,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
         error: null,
       });
 
-      // Mock questions with original_question_id
+      // Mock questions with original_question_id (legacy sessions)
       (questionsQuery as any).eq.mockResolvedValue({
         data: [
           {
@@ -838,6 +850,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
               { label: "B", text: "Option B" },
             ],
             correct_label: "A",
+            canonical_question_id: null,
             original_question_id: 101,
             domain_code: null,
             domain_id: null,
@@ -857,6 +870,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
               { label: "B", text: "Option B" },
             ],
             correct_label: "B",
+            canonical_question_id: null,
             original_question_id: 102,
             domain_code: null,
             domain_id: null,
@@ -906,6 +920,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
                     { label: "B", text: "Option B" },
                   ],
                   correct_label: "A",
+              canonical_question_id: null,
                   original_question_id: 101,
                   domain_code: null,
                   domain_id: null,
@@ -970,6 +985,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
                     { label: "B", text: "Option B" },
                   ],
                   correct_label: "A",
+                  canonical_question_id: null,
                   original_question_id: 999, // Question ID with no explanation
                   domain_code: null,
                   domain_id: null,
@@ -1008,6 +1024,80 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
       consoleWarnSpy.mockRestore();
     });
 
+    it("should use canonical_question_id for PMLE canonical sessions", async () => {
+      // Mock questions with canonical_question_id (PMLE canonical sessions)
+      const explanationsQuery = {
+        from: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: [
+            {
+              question_id: "canonical-uuid-123",
+              explanation_text: "This is the explanation for canonical question",
+            },
+          ],
+          error: null,
+        }),
+      };
+
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === "diagnostics_sessions") {
+          return mockSupabase;
+        } else if (table === "diagnostic_questions") {
+          return {
+            from: jest.fn().mockReturnThis(),
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockResolvedValue({
+              data: [
+                {
+                  id: 1,
+                  stem: "PMLE canonical question",
+                  options: [
+                    { label: "A", text: "Option A" },
+                    { label: "B", text: "Option B" },
+                  ],
+                  correct_label: "A",
+                  canonical_question_id: "canonical-uuid-123",
+                  original_question_id: null,
+                  domain_code: "AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES",
+                  domain_id: "domain-uuid-1",
+                  diagnostic_responses: [
+                    {
+                      selected_label: "A",
+                      is_correct: true,
+                      responded_at: new Date().toISOString(),
+                    },
+                  ],
+                },
+              ],
+              error: null,
+            }),
+          };
+        } else if (table === "explanations") {
+          return explanationsQuery;
+        }
+        return mockSupabase;
+      });
+
+      const req = new Request(
+        "http://localhost:3000/api/diagnostic/summary/test-session-explanations?anonymousSessionId=anon-789"
+      );
+      const response = await GET(req);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.summary.questions[0]).toHaveProperty("explanation");
+      expect(data.summary.questions[0].explanation).toBe(
+        "This is the explanation for canonical question"
+      );
+
+      // Verify explanations query was called with canonical_question_id
+      const explanationsCalls = mockSupabase.from.mock.calls.filter(
+        (call) => call[0] === "explanations"
+      );
+      expect(explanationsCalls.length).toBeGreaterThan(0);
+    });
+
     it("should handle questions with null original_question_id gracefully", async () => {
       mockSupabase.from.mockImplementation((table: string) => {
         if (table === "diagnostics_sessions") {
@@ -1026,6 +1116,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
                     { label: "B", text: "Option B" },
                   ],
                   correct_label: "A",
+                  canonical_question_id: null,
                   original_question_id: null, // No original question ID
                   domain_code: null,
                   domain_id: null,

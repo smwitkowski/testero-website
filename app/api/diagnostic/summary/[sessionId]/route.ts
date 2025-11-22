@@ -15,6 +15,7 @@ interface DiagnosticQuestionWithResponse {
   stem: string;
   options: Array<{ label: string; text: string }>;
   correct_label: string;
+  canonical_question_id: string | null;
   original_question_id: string | null;
   domain_code: string | null;
   domain_id: string | null;
@@ -84,6 +85,7 @@ export async function GET(req: Request) {
         stem,
         options,
         correct_label,
+        canonical_question_id,
         original_question_id,
         domain_code,
         domain_id,
@@ -144,32 +146,58 @@ export async function GET(req: Request) {
       percentage: Math.round((stats.correct / stats.total) * 100)
     }));
 
-    // Fetch canonical explanations in bulk for questions with original_question_id
-    // Note: For canonical PMLE sessions, original_question_id may be null due to schema type mismatch
-    // (diagnostic_questions.original_question_id is bigint, but canonical questions.id is uuid).
-    // This limitation will be addressed in a future schema migration.
+    // Fetch canonical explanations in bulk
+    // Primary path: Use canonical_question_id (UUID) for PMLE canonical sessions
+    // Fallback path: Use original_question_id (bigint) for legacy sessions
+    const canonicalQuestionIds = typedQuestions
+      .map((q) => q.canonical_question_id)
+      .filter((id): id is string => id !== null && id !== undefined);
+
     const originalQuestionIds = typedQuestions
       .map((q) => q.original_question_id)
       .filter((id): id is string => id !== null && id !== undefined);
 
-    let explanationByQuestionId: Record<string, string> = {};
+    let explanationByCanonicalId: Record<string, string> = {};
+    let explanationByOriginalId: Record<string, string> = {};
 
+    // Fetch explanations via canonical_question_id (primary path for PMLE)
+    if (canonicalQuestionIds.length > 0) {
+      const { data: canonicalExplanations, error: canonicalExplanationsError } = await supabase
+        .from('explanations')
+        .select('question_id, explanation_text')
+        .in('question_id', canonicalQuestionIds);
+
+      if (canonicalExplanationsError) {
+        console.error('Error fetching canonical explanations for summary:', canonicalExplanationsError);
+        // Continue without explanations rather than failing the entire request
+      } else if (canonicalExplanations) {
+        // Build lookup map: question_id (UUID string) -> explanation_text
+        explanationByCanonicalId = Object.fromEntries(
+          canonicalExplanations.map((e: { question_id: string; explanation_text: string }) => [
+            e.question_id,
+            e.explanation_text,
+          ])
+        );
+      }
+    }
+
+    // Fetch explanations via original_question_id (fallback for legacy sessions)
     if (originalQuestionIds.length > 0) {
       // Convert all IDs to strings for consistent lookup
       const questionIdStrings = originalQuestionIds.map((id) => String(id));
 
-      const { data: explanations, error: explanationsError } = await supabase
+      const { data: legacyExplanations, error: legacyExplanationsError } = await supabase
         .from('explanations')
         .select('question_id, explanation_text')
         .in('question_id', questionIdStrings);
 
-      if (explanationsError) {
-        console.error('Error fetching explanations for summary:', explanationsError);
+      if (legacyExplanationsError) {
+        console.error('Error fetching legacy explanations for summary:', legacyExplanationsError);
         // Continue without explanations rather than failing the entire request
-      } else if (explanations) {
+      } else if (legacyExplanations) {
         // Build lookup map: question_id (as string) -> explanation_text
-        explanationByQuestionId = Object.fromEntries(
-          explanations.map((e: { question_id: string | number; explanation_text: string }) => [
+        explanationByOriginalId = Object.fromEntries(
+          legacyExplanations.map((e: { question_id: string | number; explanation_text: string }) => [
             String(e.question_id),
             e.explanation_text,
           ])
@@ -179,15 +207,29 @@ export async function GET(req: Request) {
 
     // Format questions for client, including explanations
     const questions = typedQuestions.map(q => {
-      const explanation = q.original_question_id
-        ? explanationByQuestionId[String(q.original_question_id)] ?? null
-        : null;
+      let explanation: string | null = null;
 
-      // Log warning if original_question_id is set but no explanation was found
-      if (q.original_question_id && explanation === null) {
-        console.warn(
-          `Summary missing explanation for question ${q.original_question_id} in session ${sessionId}`
-        );
+      // Primary path: Use canonical_question_id for PMLE canonical sessions
+      if (q.canonical_question_id) {
+        explanation = explanationByCanonicalId[q.canonical_question_id] ?? null;
+        
+        // Log warning if canonical_question_id is set but no explanation was found
+        if (explanation === null) {
+          console.warn(
+            `Summary missing explanation for canonical question ${q.canonical_question_id} in session ${sessionId}`
+          );
+        }
+      }
+      // Fallback path: Use original_question_id for legacy sessions
+      else if (q.original_question_id) {
+        explanation = explanationByOriginalId[String(q.original_question_id)] ?? null;
+
+        // Log warning if original_question_id is set but no explanation was found
+        if (explanation === null) {
+          console.warn(
+            `Summary missing explanation for legacy question ${q.original_question_id} in session ${sessionId}`
+          );
+        }
       }
 
       return {
