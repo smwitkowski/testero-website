@@ -66,7 +66,10 @@ describe("Trial API Endpoint", () => {
       insert: jest.fn().mockResolvedValue({ data: {}, error: null }),
       eq: jest.fn().mockReturnThis(),
       in: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue({ data: [], error: null }),
       single: jest.fn().mockResolvedValue({ data: null, error: null }),
+      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
     };
     (createServerSupabaseClient as jest.Mock).mockReturnValue(mockSupabase);
 
@@ -119,6 +122,18 @@ describe("Trial API Endpoint", () => {
 
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: mockUser },
+        error: null,
+      });
+
+      // Mock: no active subscription
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      // Mock: no subscription history
+      mockSupabase.limit.mockResolvedValueOnce({
+        data: [],
         error: null,
       });
 
@@ -237,6 +252,18 @@ describe("Trial API Endpoint", () => {
         error: null,
       });
 
+      // Mock: no active subscription
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      // Mock: no subscription history
+      mockSupabase.limit.mockResolvedValueOnce({
+        data: [],
+        error: null,
+      });
+
       const mockCustomer = {
         id: "cus_test_123",
         email: mockUser.email,
@@ -278,6 +305,18 @@ describe("Trial API Endpoint", () => {
 
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: mockUser },
+        error: null,
+      });
+
+      // Mock: no active subscription
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      // Mock: no subscription history
+      mockSupabase.limit.mockResolvedValueOnce({
+        data: [],
         error: null,
       });
 
@@ -324,6 +363,18 @@ describe("Trial API Endpoint", () => {
         error: null,
       });
 
+      // Mock: no active subscription
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      // Mock: no subscription history
+      mockSupabase.limit.mockResolvedValueOnce({
+        data: [],
+        error: null,
+      });
+
       const mockCustomer = {
         id: "cus_test_123",
         email: mockUser.email,
@@ -357,7 +408,51 @@ describe("Trial API Endpoint", () => {
   });
 
   describe("Duplicate Trial Prevention", () => {
-    it("should prevent trial if user has already used trial", async () => {
+    it("should prevent trial if user has subscription history showing trial was used", async () => {
+      const mockUser = {
+        id: "user_123",
+        email: "test@example.com",
+        user_metadata: {},
+      };
+
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: mockUser },
+        error: null,
+      });
+
+      // Mock: no active subscription
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      // Mock: subscription history shows trial was used (trial_ends_at set, status not trialing)
+      mockSupabase.limit.mockResolvedValueOnce({
+        data: [
+          {
+            id: "sub_123",
+            status: "canceled",
+            trial_ends_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+            created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+            stripe_subscription_id: "sub_stripe_123",
+          },
+        ],
+        error: null,
+      });
+
+      mockRequest = new NextRequest("http://localhost:3000/api/billing/trial", {
+        method: "POST",
+      });
+
+      const response = await POST(mockRequest);
+      const responseData = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(responseData.error).toContain("already used your free trial");
+      expect(mockStripeService.createTrialSubscription).not.toHaveBeenCalled();
+    });
+
+    it("should allow trial if user has metadata=true but no subscription history (clears metadata)", async () => {
       const mockUser = {
         id: "user_123",
         email: "test@example.com",
@@ -368,6 +463,88 @@ describe("Trial API Endpoint", () => {
 
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: mockUser },
+        error: null,
+      });
+
+      // Mock: no active subscription
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      // Mock: no subscription history
+      mockSupabase.limit.mockResolvedValueOnce({
+        data: [],
+        error: null,
+      });
+
+      // Mock successful trial creation
+      const mockCustomer = {
+        id: "cus_test_123",
+        email: mockUser.email,
+      } as Stripe.Customer;
+
+      const trialEnd = Math.floor(Date.now() / 1000) + 14 * 24 * 60 * 60;
+      const mockSubscription = {
+        id: "sub_test_123",
+        status: "trialing",
+        trial_end: trialEnd,
+      } as Stripe.Subscription;
+
+      mockStripeService.createOrRetrieveCustomer.mockResolvedValue(mockCustomer);
+      mockStripeService.createTrialSubscription.mockResolvedValue(mockSubscription);
+
+      mockRequest = new NextRequest("http://localhost:3000/api/billing/trial", {
+        method: "POST",
+      });
+
+      const response = await POST(mockRequest);
+      const responseData = await response.json();
+
+      // Should succeed - metadata cleared and trial created
+      expect(response.status).toBe(200);
+      expect(responseData.status).toBe("ok");
+      // Verify metadata was cleared first, then set to true after trial creation
+      expect(mockSupabase.auth.updateUser).toHaveBeenCalledTimes(2);
+      expect(mockSupabase.auth.updateUser).toHaveBeenNthCalledWith(1, {
+        data: { has_used_trial: false },
+      });
+      expect(mockSupabase.auth.updateUser).toHaveBeenNthCalledWith(2, {
+        data: { has_used_trial: true },
+      });
+    });
+
+    it("should prevent trial if metadata=true AND subscription history confirms trial was used", async () => {
+      const mockUser = {
+        id: "user_123",
+        email: "test@example.com",
+        user_metadata: {
+          has_used_trial: true,
+        },
+      };
+
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: mockUser },
+        error: null,
+      });
+
+      // Mock: no active subscription
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      // Mock: subscription history shows trial was used
+      mockSupabase.limit.mockResolvedValueOnce({
+        data: [
+          {
+            id: "sub_123",
+            status: "active",
+            trial_ends_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+            created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+            stripe_subscription_id: "sub_stripe_123",
+          },
+        ],
         error: null,
       });
 
@@ -397,7 +574,8 @@ describe("Trial API Endpoint", () => {
         error: null,
       });
 
-      mockSupabase.single.mockResolvedValue({
+      // Mock: active subscription found
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
         data: {
           id: "sub_existing",
           status: "active",
@@ -430,7 +608,8 @@ describe("Trial API Endpoint", () => {
         error: null,
       });
 
-      mockSupabase.single.mockResolvedValue({
+      // Mock: trialing subscription found
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
         data: {
           id: "sub_existing",
           status: "trialing",
@@ -450,6 +629,58 @@ describe("Trial API Endpoint", () => {
       expect(responseData.error).toContain("already have an active subscription");
       expect(mockStripeService.createTrialSubscription).not.toHaveBeenCalled();
     });
+
+    it("should handle database query errors gracefully and continue", async () => {
+      const mockUser = {
+        id: "user_123",
+        email: "test@example.com",
+        user_metadata: {},
+      };
+
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: mockUser },
+        error: null,
+      });
+
+      // Mock: database error when checking active subscription
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: { message: "Database connection error" },
+      });
+
+      // Mock: no subscription history (or error here too)
+      mockSupabase.limit.mockResolvedValueOnce({
+        data: [],
+        error: null,
+      });
+
+      // Mock successful trial creation
+      const mockCustomer = {
+        id: "cus_test_123",
+        email: mockUser.email,
+      } as Stripe.Customer;
+
+      const trialEnd = Math.floor(Date.now() / 1000) + 14 * 24 * 60 * 60;
+      const mockSubscription = {
+        id: "sub_test_123",
+        status: "trialing",
+        trial_end: trialEnd,
+      } as Stripe.Subscription;
+
+      mockStripeService.createOrRetrieveCustomer.mockResolvedValue(mockCustomer);
+      mockStripeService.createTrialSubscription.mockResolvedValue(mockSubscription);
+
+      mockRequest = new NextRequest("http://localhost:3000/api/billing/trial", {
+        method: "POST",
+      });
+
+      const response = await POST(mockRequest);
+      const responseData = await response.json();
+
+      // Should succeed despite query error (logged but doesn't block)
+      expect(response.status).toBe(200);
+      expect(responseData.status).toBe("ok");
+    });
   });
 
   describe("Trial Subscription Creation", () => {
@@ -462,6 +693,18 @@ describe("Trial API Endpoint", () => {
 
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: mockUser },
+        error: null,
+      });
+
+      // Mock: no active subscription
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      // Mock: no subscription history
+      mockSupabase.limit.mockResolvedValueOnce({
+        data: [],
         error: null,
       });
 
@@ -506,6 +749,18 @@ describe("Trial API Endpoint", () => {
         error: null,
       });
 
+      // Mock: no active subscription
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      // Mock: no subscription history
+      mockSupabase.limit.mockResolvedValueOnce({
+        data: [],
+        error: null,
+      });
+
       const mockCustomer = {
         id: "cus_test_123",
         email: mockUser.email,
@@ -545,6 +800,18 @@ describe("Trial API Endpoint", () => {
 
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: mockUser },
+        error: null,
+      });
+
+      // Mock: no active subscription
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      // Mock: no subscription history
+      mockSupabase.limit.mockResolvedValueOnce({
+        data: [],
         error: null,
       });
 
@@ -596,6 +863,18 @@ describe("Trial API Endpoint", () => {
         error: null,
       });
 
+      // Mock: no active subscription
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      // Mock: no subscription history
+      mockSupabase.limit.mockResolvedValueOnce({
+        data: [],
+        error: null,
+      });
+
       const mockCustomer = {
         id: "cus_test_123",
         email: mockUser.email,
@@ -631,7 +910,7 @@ describe("Trial API Endpoint", () => {
   });
 
   describe("User Metadata Updates", () => {
-    it("should set has_used_trial flag to true", async () => {
+    it("should set has_used_trial flag to true after successful trial creation", async () => {
       const mockUser = {
         id: "user_123",
         email: "test@example.com",
@@ -640,6 +919,18 @@ describe("Trial API Endpoint", () => {
 
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: mockUser },
+        error: null,
+      });
+
+      // Mock: no active subscription
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      // Mock: no subscription history
+      mockSupabase.limit.mockResolvedValueOnce({
+        data: [],
         error: null,
       });
 
@@ -681,6 +972,18 @@ describe("Trial API Endpoint", () => {
 
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: mockUser },
+        error: null,
+      });
+
+      // Mock: no active subscription
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      // Mock: no subscription history
+      mockSupabase.limit.mockResolvedValueOnce({
+        data: [],
         error: null,
       });
 
