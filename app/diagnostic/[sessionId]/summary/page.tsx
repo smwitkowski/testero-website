@@ -10,6 +10,7 @@ import { UpsellModal } from "@/components/diagnostic/UpsellModal";
 import { useUpsell } from "@/hooks/useUpsell";
 import { useTriggerDetection } from "@/hooks/useTriggerDetection";
 import { QuestionSummary, DomainBreakdown, SessionSummary } from "@/components/diagnostic/types";
+import { getExamReadinessTier, getDomainTier, getDomainTierColors } from "@/lib/readiness";
 
 // Extended types for UI-specific fields
 interface ExtendedQuestionSummary extends QuestionSummary {
@@ -24,13 +25,13 @@ interface ExtendedSessionSummary extends SessionSummary {
   flaggedCount?: number;
 }
 
-// Helper functions
-const getReadinessLabel = (score: number) => {
-  if (score >= 85) return { label: "Excellent", color: "emerald" };
-  if (score >= 70) return { label: "Good", color: "blue" };
-  if (score >= 60) return { label: "Fair", color: "amber" };
-  if (score >= 45) return { label: "Needs Work", color: "orange" };
-  return { label: "Low", color: "red" };
+// Helper function to get complete stroke color class name for SVG
+// This ensures Tailwind can detect the classes at build time
+const getStrokeColorClass = (tierId: string): string => {
+  if (tierId === 'low') return 'text-red-600';
+  if (tierId === 'building') return 'text-orange-600';
+  if (tierId === 'ready') return 'text-blue-600';
+  return 'text-emerald-600'; // strong
 };
 
 const formatTime = (seconds: number) => {
@@ -84,7 +85,8 @@ const VerdictBlock = ({
   onStartPractice: () => void;
   onRetakeDiagnostic: () => void;
 }) => {
-  const readiness = getReadinessLabel(summary.score);
+  const readinessTier = getExamReadinessTier(summary.score);
+  const strokeColorClass = getStrokeColorClass(readinessTier.id);
   const duration = summary.totalTimeSpent ? 
     formatTime(summary.totalTimeSpent) : 
     Math.round((new Date(summary.completedAt).getTime() - new Date(summary.startedAt).getTime()) / 60000) + "m";
@@ -104,7 +106,7 @@ const VerdictBlock = ({
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               />
               <path
-                className={`text-${readiness.color}-600`}
+                className={strokeColorClass}
                 stroke="currentColor"
                 strokeWidth="3"
                 fill="transparent"
@@ -118,7 +120,7 @@ const VerdictBlock = ({
           </div>
           <div>
             <div className="text-2xl font-bold text-slate-900 mb-1">
-              Readiness: {readiness.label}
+              Readiness: {readinessTier.label}
             </div>
             <div className="text-sm text-slate-500">
               Pass typically ≥70%
@@ -220,6 +222,7 @@ const StudyPlan = ({
   const core = domains.filter(d => d.percentage >= 40 && d.percentage < 70);
   const stretch = domains.filter(d => d.percentage >= 70);
 
+
   const StudyGroup = ({ 
     title, 
     description, 
@@ -238,29 +241,29 @@ const StudyPlan = ({
       </div>
       <p className="text-sm text-slate-600 mb-4">{description}</p>
       <div className="space-y-2">
-        {domains.map((domain) => (
-          <div key={domain.domain} className="flex items-center justify-between p-3 rounded-lg border border-slate-200">
-            <div className="flex items-center gap-3">
-              <span className="font-medium text-slate-900">{domain.domain}</span>
-              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                domain.percentage < 40 ? 'bg-red-100 text-red-700' :
-                domain.percentage < 70 ? 'bg-amber-100 text-amber-700' :
-                'bg-green-100 text-green-700'
-              }`}>
-                {domain.percentage < 40 ? 'Critical' : domain.percentage < 70 ? 'Moderate' : 'Strong'}
-              </span>
+        {domains.map((domain) => {
+          const tier = getDomainTier(domain.percentage);
+          const colors = getDomainTierColors(tier.id);
+          return (
+            <div key={domain.domain} className="flex items-center justify-between p-3 rounded-lg border border-slate-200">
+              <div className="flex items-center gap-3">
+                <span className="font-medium text-slate-900">{domain.domain}</span>
+                <span className={`px-2 py-1 rounded text-xs font-medium ${colors.bg} ${colors.text}`}>
+                  {tier.label}
+                </span>
+              </div>
+              <Button
+                onClick={() => onStartPractice([domain.domain])}
+                size="sm"
+                variant="outline"
+                tone="accent"
+                className="text-xs"
+              >
+                Start practice (10)
+              </Button>
             </div>
-            <Button
-              onClick={() => onStartPractice([domain.domain])}
-              size="sm"
-              variant="outline"
-              tone="accent"
-              className="text-xs"
-            >
-              Start practice (10)
-            </Button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -631,8 +634,8 @@ const DiagnosticSummaryPage = () => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'incorrect' | 'flagged' | 'low-confidence'>('all');
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
 
-  // Calculate critical domains for upsell triggers
-  const criticalDomainCount = domainBreakdown.filter(d => d.percentage < 40).length;
+  // Calculate critical domains for upsell triggers (using shared tier helper)
+  const criticalDomainCount = domainBreakdown.filter(d => getDomainTier(d.percentage).id === "critical").length;
   const weakDomains = domainBreakdown.filter(d => d.percentage < 60).map(d => d.domain);
   
   // Initialize upsell hook

@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Shared Readiness Tier Helpers**: Added centralized readiness tier helpers (`lib/readiness.ts`) with `getExamReadinessTier()` and `getDomainTier()` functions. Exam readiness tiers: Low (<40), Building (40-69), Ready (70-84), Strong (85+). Domain tiers: Critical (<40), Moderate (40-69), Strong (70+). Thresholds are explicitly defined and documented. Diagnostic Results page (`app/diagnostic/[sessionId]/summary/page.tsx`) and Dashboard ReadinessMeter component (`components/dashboard/ReadinessMeter.tsx`) now use these helpers for consistent readiness labels and domain tier display. Added comprehensive unit tests (`__tests__/lib/readiness.test.ts`) covering all tier boundaries and edge cases.
+
+### Changed
+- **Diagnostic Results Readiness Labels**: Updated Diagnostic Results page to use shared `getExamReadinessTier()` helper instead of inline `getReadinessLabel()` function. Readiness labels now consistently use "Low", "Building", "Ready", "Strong" across Diagnostic Results and Dashboard.
+- **Diagnostic Study Plan Domain Tiers**: Updated Study Plan component to use shared `getDomainTier()` helper instead of inline threshold logic. Domain tier badges now consistently use "Critical", "Moderate", "Strong" labels.
+- **Dashboard Readiness Display**: Updated Dashboard ReadinessMeter component to use shared `getExamReadinessTier()` helper instead of separate `getReadinessColor()`, `getReadinessText()`, and `getReadinessDescription()` functions. Dashboard now displays consistent readiness labels matching Diagnostic Results.
+
 ### Fixed
+- **Readiness Color Consistency**: Fixed inconsistent color mapping between Diagnostic Summary page and Dashboard ReadinessMeter component. Added shared color mapping functions (`getExamReadinessTierColors()`, `getDomainTierColors()`, `getExamReadinessSemanticColor()`) to `lib/readiness.ts` ensuring consistent color scheme across all components: Low→Red, Building→Orange, Ready→Blue, Strong→Green for exam readiness; Critical→Red, Moderate→Amber, Strong→Green for domains. Updated Diagnostic Summary page to use static Tailwind class helper function instead of dynamic string interpolation (which Tailwind JIT compiler cannot detect). Updated Dashboard ReadinessMeter to use shared semantic color function for inline styles.
 - **Diagnostic Summary Explanations**: Fixed diagnostic summary page (`/diagnostic/[sessionId]/summary`) to display question explanations in the Question Review section. The summary API now fetches canonical explanations from `public.explanations` table in bulk and attaches them to each question. Missing explanations are logged with structured warnings for content cleanup. Note: For canonical PMLE sessions, explanation support is currently limited due to schema type mismatch (`diagnostic_questions.original_question_id` is `bigint` while canonical `questions.id` is `uuid`). This will be addressed in a future schema migration.
 
 ### Added
