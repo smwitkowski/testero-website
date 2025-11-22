@@ -552,6 +552,122 @@ Before inserting a question:
 
 ---
 
+## 3. Practice Session Questions System
+
+### Database Schema
+
+Practice sessions use a snapshot pattern similar to diagnostic sessions, allowing users to launch short, targeted practice sessions (e.g., 10 questions) based on weak domains from their diagnostic results.
+
+#### `practice_sessions` Table
+```sql
+-- From supabase/migrations/20250123_create_practice_sessions.sql
+CREATE TABLE practice_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    exam TEXT NOT NULL, -- Exam identifier (e.g., 'pmle', 'GCP_PM_ML_ENG')
+    exam_id INTEGER REFERENCES exams(id) ON DELETE SET NULL,
+    source TEXT NOT NULL DEFAULT 'study_plan_domain', -- e.g., 'from_diagnostic', 'study_plan_domain'
+    source_session_id UUID REFERENCES diagnostics_sessions(id) ON DELETE SET NULL,
+    question_count INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+```
+
+#### `practice_questions` Table
+```sql
+CREATE TABLE practice_questions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id UUID NOT NULL REFERENCES practice_sessions(id) ON DELETE CASCADE,
+    canonical_question_id UUID REFERENCES questions(id) ON DELETE SET NULL,
+    stem TEXT NOT NULL,
+    options JSONB NOT NULL, -- Array of { label: string, text: string }
+    correct_label TEXT NOT NULL,
+    domain_code TEXT, -- Domain code snapshot for quick domain breakdown queries
+    domain_id UUID REFERENCES exam_domains(id) ON DELETE SET NULL
+);
+```
+
+**Design Notes:**
+- Practice sessions are **authenticated-only** (no anonymous session support)
+- Questions are snapshotted at session creation time for consistency
+- Domain info (`domain_code`, `domain_id`) is captured for analytics and breakdown calculations
+- `source` and `source_session_id` track the origin of the practice session (e.g., from diagnostic results)
+
+### API Endpoint
+
+**POST `/api/practice/session`**
+
+Creates a new practice session with domain-targeted questions.
+
+**Request Body:**
+```typescript
+{
+  examKey: "pmle", // Currently only 'pmle' supported
+  domainCodes: string[], // Array of domain codes (e.g., ["D1", "D2"])
+  questionCount?: number, // Default: 10, min: 5, max: 20
+  source?: string, // Default: "study_plan_domain"
+  sourceSessionId?: string // Optional UUID of originating diagnostic session
+}
+```
+
+**Response:**
+```typescript
+{
+  sessionId: string, // UUID of practice_sessions.id
+  route: string, // Frontend route (e.g., "/practice?sessionId=...")
+  questionCount: number,
+  domainDistribution?: Array<{
+    domainCode: string;
+    selectedCount: number;
+    requestedCount: number;
+  }>
+}
+```
+
+**Question Selection Logic:**
+- Questions are selected from canonical `questions` table filtered by:
+  - `exam = 'GCP_PM_ML_ENG'` (for PMLE)
+  - `status = 'ACTIVE'`
+  - `domain_code IN (domainCodes)`
+  - Must have explanations (inner join on `explanations` table)
+- Questions are distributed **evenly** across requested domains
+- If a domain has insufficient questions, allocation is reduced and remaining slots are redistributed
+- Final question set is shuffled to randomize domain order
+
+**Frontend Integration:**
+- Diagnostic Results UI: "Start 10-min practice on your weakest topics" buttons
+- Study Plan: Domain-level "Start practice (10)" buttons
+- These buttons call `POST /api/practice/session` with `domainCodes` based on selected weak domains
+- Frontend navigates to the returned `route` to start the practice session
+
+### TypeScript Types
+
+```typescript
+// From lib/practice/domain-selection.ts
+export interface PracticeQuestionWithAnswers {
+  id: string;
+  stem: string;
+  domain_id: string;
+  domain_code: string;
+  domain_name: string;
+  answers: Array<{
+    choice_label: string;
+    choice_text: string;
+    is_correct: boolean;
+  }>;
+}
+
+export interface PracticeSelectionResult {
+  questions: PracticeQuestionWithAnswers[];
+  domainDistribution: DomainSelectionResult[];
+  totalRequested: number;
+  totalSelected: number;
+}
+```
+
+---
+
 ## Next Steps
 
 With this understanding of the question data models, the next phase is to design the **Question Creation Pipeline** which will cover:
