@@ -1,6 +1,7 @@
 import {
   getExamReadinessTier,
   getDomainTier,
+  READINESS_PASS_THRESHOLD,
   type ExamReadinessTier,
   type DomainTier,
 } from "@/lib/readiness";
@@ -132,6 +133,18 @@ describe("readiness helpers", () => {
       expect(typeof tier.id).toBe("string");
       expect(typeof tier.label).toBe("string");
       expect(["critical", "moderate", "strong"]).toContain(tier.id);
+    });
+  });
+
+  describe("READINESS_PASS_THRESHOLD", () => {
+    it("should be set to 70", () => {
+      expect(READINESS_PASS_THRESHOLD).toBe(70);
+    });
+
+    it("should align with Ready tier threshold", () => {
+      // Pass threshold should match the lower bound of the "Ready" tier
+      const tierAtThreshold = getExamReadinessTier(READINESS_PASS_THRESHOLD);
+      expect(tierAtThreshold.id).toBe("ready");
     });
   });
 });
