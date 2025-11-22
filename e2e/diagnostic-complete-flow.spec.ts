@@ -174,4 +174,215 @@ test.describe('Diagnostic Complete Flow', () => {
     await startPage.expectPageTitle();
     await startPage.expectStartDiagnosticFormVisible();
   });
+
+  test.describe('Practice Session Creation from Diagnostic Summary', () => {
+    test.beforeEach(async ({ page }) => {
+      startPage = new DiagnosticStartPage(page);
+      questionPage = new DiagnosticQuestionPage(page);
+      summaryPage = new DiagnosticSummaryPage(page);
+      helpers = new DiagnosticHelpers(page);
+
+      // Set up API mocks
+      await helpers.setupApiMocks();
+      
+      // Mock practice session API
+      await page.route('**/api/practice/session', async route => {
+        const request = route.request();
+        const method = request.method();
+        
+        if (method === 'POST') {
+          const body = request.postDataJSON();
+          console.log('[E2E] Practice session creation request:', body);
+          
+          // Mock successful response
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              sessionId: 'practice-session-123',
+              route: '/practice?sessionId=practice-session-123',
+              questionCount: 10,
+              domainDistribution: [
+                { domainCode: 'ARCHITECTING_LOW_CODE_ML_SOLUTIONS', selectedCount: 3, requestedCount: 3 },
+                { domainCode: 'COLLABORATING_TO_MANAGE_DATA_AND_MODELS', selectedCount: 4, requestedCount: 4 },
+              ]
+            })
+          });
+        }
+      });
+      
+      await page.goto('/');
+      await helpers.clearLocalStorage();
+    });
+
+    test('should create practice session from top CTA and navigate', async ({ page }) => {
+      // Complete diagnostic first
+      await startPage.goto();
+      await startPage.selectExamType('Google ML Engineer');
+      await startPage.setQuestionCount(3);
+      await startPage.startDiagnostic();
+
+      // Answer all questions
+      for (let i = 1; i <= 3; i++) {
+        await helpers.waitForPageLoad();
+        await questionPage.selectOption('B');
+        await questionPage.submitAnswer();
+        
+        if (i < 3) {
+          await questionPage.clickNext();
+        } else {
+          await questionPage.clickViewResults();
+        }
+      }
+
+      // Wait for summary page
+      await helpers.waitForPageLoad('**/summary');
+      await summaryPage.expectSummaryPage();
+
+      // Click top practice CTA
+      const practiceButton = page.getByRole('button', { 
+        name: /start 10-min practice on your weakest topics/i 
+      });
+      await expect(practiceButton).toBeVisible();
+      await practiceButton.click();
+
+      // Should navigate to practice session
+      await page.waitForURL('**/practice?sessionId=practice-session-123', { timeout: 5000 });
+      expect(page.url()).toContain('/practice?sessionId=practice-session-123');
+    });
+
+    test('should create practice session from Study Plan domain CTA', async ({ page }) => {
+      // Complete diagnostic first
+      await startPage.goto();
+      await startPage.selectExamType('Google ML Engineer');
+      await startPage.setQuestionCount(3);
+      await startPage.startDiagnostic();
+
+      // Answer all questions
+      for (let i = 1; i <= 3; i++) {
+        await helpers.waitForPageLoad();
+        await questionPage.selectOption('B');
+        await questionPage.submitAnswer();
+        
+        if (i < 3) {
+          await questionPage.clickNext();
+        } else {
+          await questionPage.clickViewResults();
+        }
+      }
+
+      // Wait for summary page
+      await helpers.waitForPageLoad('**/summary');
+      await summaryPage.expectSummaryPage();
+
+      // Find and click a Study Plan practice button
+      const studyPlanButtons = page.getByRole('button', { 
+        name: /start practice \(10\)/i 
+      });
+      
+      if (await studyPlanButtons.count() > 0) {
+        await studyPlanButtons.first().click();
+        
+        // Should navigate to practice session
+        await page.waitForURL('**/practice?sessionId=practice-session-123', { timeout: 5000 });
+        expect(page.url()).toContain('/practice?sessionId=practice-session-123');
+      }
+    });
+
+    test('should show error toast when practice session creation fails', async ({ page }) => {
+      // Override practice session mock to return error
+      await page.route('**/api/practice/session', async route => {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Failed to create practice session' })
+        });
+      });
+
+      // Complete diagnostic first
+      await startPage.goto();
+      await startPage.selectExamType('Google ML Engineer');
+      await startPage.setQuestionCount(3);
+      await startPage.startDiagnostic();
+
+      // Answer all questions
+      for (let i = 1; i <= 3; i++) {
+        await helpers.waitForPageLoad();
+        await questionPage.selectOption('B');
+        await questionPage.submitAnswer();
+        
+        if (i < 3) {
+          await questionPage.clickNext();
+        } else {
+          await questionPage.clickViewResults();
+        }
+      }
+
+      // Wait for summary page
+      await helpers.waitForPageLoad('**/summary');
+      await summaryPage.expectSummaryPage();
+
+      // Click practice CTA
+      const practiceButton = page.getByRole('button', { 
+        name: /start 10-min practice on your weakest topics/i 
+      });
+      await practiceButton.click();
+
+      // Should show error toast
+      await expect(page.getByText(/couldn't start practice/i)).toBeVisible({ timeout: 5000 });
+
+      // Should stay on summary page
+      expect(page.url()).toContain('/summary');
+      expect(page.url()).not.toContain('/practice');
+    });
+
+    test('should disable buttons while creating practice session', async ({ page }) => {
+      // Add delay to practice session API to test loading state
+      await page.route('**/api/practice/session', async route => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            sessionId: 'practice-session-123',
+            route: '/practice?sessionId=practice-session-123',
+            questionCount: 10,
+          })
+        });
+      });
+
+      // Complete diagnostic first
+      await startPage.goto();
+      await startPage.selectExamType('Google ML Engineer');
+      await startPage.setQuestionCount(3);
+      await startPage.startDiagnostic();
+
+      // Answer all questions
+      for (let i = 1; i <= 3; i++) {
+        await helpers.waitForPageLoad();
+        await questionPage.selectOption('B');
+        await questionPage.submitAnswer();
+        
+        if (i < 3) {
+          await questionPage.clickNext();
+        } else {
+          await questionPage.clickViewResults();
+        }
+      }
+
+      // Wait for summary page
+      await helpers.waitForPageLoad('**/summary');
+      await summaryPage.expectSummaryPage();
+
+      // Click practice CTA
+      const practiceButton = page.getByRole('button', { 
+        name: /start 10-min practice on your weakest topics/i 
+      });
+      await practiceButton.click();
+
+      // Button should show loading state
+      await expect(practiceButton).toBeDisabled();
+      await expect(practiceButton).toContainText(/creating/i);
+    });
+  });
 });

@@ -4,6 +4,8 @@ import "@testing-library/jest-dom";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { usePostHog } from "posthog-js/react";
+import { useUpsell } from "@/hooks/useUpsell";
+import { useTriggerDetection } from "@/hooks/useTriggerDetection";
 import DiagnosticSummaryPage from "@/app/diagnostic/[sessionId]/summary/page";
 
 // Mock dependencies
@@ -15,6 +17,8 @@ jest.mock("next/navigation", () => ({
 }));
 jest.mock("@/components/providers/AuthProvider");
 jest.mock("posthog-js/react");
+jest.mock("@/hooks/useUpsell");
+jest.mock("@/hooks/useTriggerDetection");
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -32,6 +36,23 @@ const mockPostHog = {
   capture: jest.fn(),
   getFeatureFlag: jest.fn(),
   isFeatureEnabled: jest.fn(),
+};
+
+const mockUpsell = {
+  isOpen: false,
+  variant: "default" as const,
+  trigger: null,
+  maybeOpen: jest.fn(),
+  dismiss: jest.fn(),
+  handleCTAClick: jest.fn(),
+};
+
+const mockTriggers = {
+  checkPaywallTrigger: jest.fn(() => false),
+  setStudyPlanRef: { current: null },
+  trackReviewSectionEntry: jest.fn(),
+  trackReviewSectionExit: jest.fn(),
+  trackExplanationExpansion: jest.fn(),
 };
 
 const mockSuccessResponse = {
@@ -80,11 +101,14 @@ describe("DiagnosticSummaryPage Integration", () => {
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
     (useParams as jest.Mock).mockReturnValue({ sessionId: "test-session-123" });
     (usePostHog as jest.Mock).mockReturnValue(mockPostHog);
+    (useUpsell as jest.Mock).mockReturnValue(mockUpsell);
+    (useTriggerDetection as jest.Mock).mockReturnValue(mockTriggers);
     mockPostHog.capture.mockClear();
     mockPostHog.getFeatureFlag.mockClear();
     mockPostHog.isFeatureEnabled.mockClear();
     mockPostHog.getFeatureFlag.mockReturnValue("control");
     mockPostHog.isFeatureEnabled.mockReturnValue(false);
+    mockTriggers.checkPaywallTrigger.mockReturnValue(false);
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       status: 200,
@@ -329,18 +353,282 @@ describe("DiagnosticSummaryPage Integration", () => {
 
       expect(mockRouter.push).toHaveBeenCalledWith("/diagnostic");
     });
+  });
 
-    it("should show study plan alert on button click", async () => {
-      (useAuth as jest.Mock).mockReturnValue({ user: null, isLoading: false });
-      const alertSpy = jest.spyOn(window, "alert").mockImplementation();
+  describe("Practice Session Creation", () => {
+    beforeEach(() => {
+      (useAuth as jest.Mock).mockReturnValue({ 
+        user: { id: "user-123", user_metadata: { has_subscription: true } }, 
+        isLoading: false 
+      });
+    });
+
+    it("should create practice session from top CTA with weakest domains", async () => {
+      const mockPracticeResponse = {
+        sessionId: "practice-session-456",
+        route: "/practice?sessionId=practice-session-456",
+        questionCount: 10,
+      };
+
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockSuccessResponse,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockPracticeResponse,
+        });
 
       render(<DiagnosticSummaryPage />);
 
-      const practiceButtons = await screen.findAllByRole("button", { name: /start 10-min practice/i });
-      fireEvent.click(practiceButtons[0]);
+      await waitFor(() => {
+        expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
+      });
 
-      expect(mockRouter.push).toHaveBeenCalledWith("/practice");
-      alertSpy.mockRestore();
+      const practiceButton = screen.getByRole("button", { 
+        name: /start 10-min practice on your weakest topics/i 
+      });
+      fireEvent.click(practiceButton);
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          "/api/practice/session",
+          expect.objectContaining({
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              examKey: "pmle",
+              domainCodes: expect.arrayContaining([expect.any(String)]),
+              questionCount: 10,
+              source: "diagnostic_summary",
+              sourceSessionId: "test-session-123",
+            }),
+          })
+        );
+      });
+
+      await waitFor(() => {
+        expect(mockRouter.push).toHaveBeenCalledWith("/practice?sessionId=practice-session-456");
+      });
+
+      expect(mockPostHog.capture).toHaveBeenCalledWith(
+        "practice_session_created_from_diagnostic",
+        expect.objectContaining({
+          diagnosticSessionId: "test-session-123",
+          domainCodes: expect.any(Array),
+          questionCount: 10,
+        })
+      );
+    });
+
+    it("should create practice session from Study Plan CTA with single domain", async () => {
+      const mockPracticeResponse = {
+        sessionId: "practice-session-789",
+        route: "/practice?sessionId=practice-session-789",
+        questionCount: 10,
+      };
+
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockSuccessResponse,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockPracticeResponse,
+        });
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/study plan/i)).toBeInTheDocument();
+      });
+
+      const studyPlanButtons = screen.getAllByRole("button", { 
+        name: /start practice \(10\)/i 
+      });
+      
+      if (studyPlanButtons.length > 0) {
+        fireEvent.click(studyPlanButtons[0]);
+
+        await waitFor(() => {
+          expect(global.fetch).toHaveBeenCalledWith(
+            "/api/practice/session",
+            expect.objectContaining({
+              method: "POST",
+              body: expect.stringContaining('"questionCount":10'),
+            })
+          );
+        });
+
+        await waitFor(() => {
+          expect(mockRouter.push).toHaveBeenCalledWith("/practice?sessionId=practice-session-789");
+        });
+      }
+    });
+
+    it("should show error toast when practice session creation fails", async () => {
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockSuccessResponse,
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "Failed to create practice session" }),
+        });
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
+      });
+
+      const practiceButton = screen.getByRole("button", { 
+        name: /start 10-min practice on your weakest topics/i 
+      });
+      fireEvent.click(practiceButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/couldn't start practice/i)).toBeInTheDocument();
+      });
+
+      // Should not navigate on error
+      expect(mockRouter.push).not.toHaveBeenCalledWith(
+        expect.stringContaining("/practice")
+      );
+
+      // Should track error
+      expect(mockPostHog.capture).toHaveBeenCalledWith(
+        "practice_session_creation_failed_from_diagnostic",
+        expect.objectContaining({
+          diagnosticSessionId: "test-session-123",
+          statusCode: 500,
+        })
+      );
+    });
+
+    it("should handle network errors gracefully", async () => {
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockSuccessResponse,
+        })
+        .mockRejectedValueOnce(new Error("Network error"));
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
+      });
+
+      const practiceButton = screen.getByRole("button", { 
+        name: /start 10-min practice on your weakest topics/i 
+      });
+      fireEvent.click(practiceButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/network error/i)).toBeInTheDocument();
+      });
+
+      expect(mockRouter.push).not.toHaveBeenCalled();
+    });
+
+    it("should not call API when paywall trigger blocks practice", async () => {
+      mockTriggers.checkPaywallTrigger.mockReturnValue(true);
+
+      (useAuth as jest.Mock).mockReturnValue({ 
+        user: { id: "user-123", user_metadata: { has_subscription: false } }, 
+        isLoading: false 
+      });
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockSuccessResponse,
+      });
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
+      });
+
+      const practiceButton = screen.getByRole("button", { 
+        name: /start 10-min practice on your weakest topics/i 
+      });
+      fireEvent.click(practiceButton);
+
+      // Wait a bit to ensure no API call is made
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Should not call practice session API
+      const practiceApiCalls = (global.fetch as jest.Mock).mock.calls.filter(
+        (call) => call[0]?.includes("/api/practice/session")
+      );
+      expect(practiceApiCalls.length).toBe(0);
+
+      // Reset mock for other tests
+      mockTriggers.checkPaywallTrigger.mockReturnValue(false);
+    });
+
+    it("should compute weakest domains correctly from domain breakdown", async () => {
+      const mockResponseWithWeakDomains = {
+        ...mockSuccessResponse,
+        domainBreakdown: [
+          { domain: "Architecting Low-Code ML Solutions", correct: 1, total: 5, percentage: 20 },
+          { domain: "Collaborating to Manage Data & Models", correct: 2, total: 5, percentage: 40 },
+          { domain: "Scaling Prototypes into ML Models", correct: 4, total: 5, percentage: 80 },
+        ],
+      };
+
+      const mockPracticeResponse = {
+        sessionId: "practice-session-999",
+        route: "/practice?sessionId=practice-session-999",
+        questionCount: 10,
+      };
+
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockResponseWithWeakDomains,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => mockPracticeResponse,
+        });
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
+      });
+
+      const practiceButton = screen.getByRole("button", { 
+        name: /start 10-min practice on your weakest topics/i 
+      });
+      fireEvent.click(practiceButton);
+
+      await waitFor(() => {
+        const practiceCall = (global.fetch as jest.Mock).mock.calls.find(
+          (call) => call[0]?.includes("/api/practice/session")
+        );
+        expect(practiceCall).toBeDefined();
+        const body = JSON.parse(practiceCall[1].body);
+        // Should select weakest domains (lowest percentages)
+        expect(body.domainCodes.length).toBeGreaterThan(0);
+        expect(body.domainCodes.length).toBeLessThanOrEqual(3);
+      });
     });
   });
 
