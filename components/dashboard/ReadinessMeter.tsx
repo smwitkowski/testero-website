@@ -3,27 +3,16 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { colorSemantic } from '@/lib/design-system';
-import { getExamReadinessTier } from '@/lib/readiness';
+import { getExamReadinessTier, getExamReadinessSemanticColor } from '@/lib/readiness';
 
 interface ReadinessMeterProps {
   score: number;
   className?: string;
 }
 
-// Map tier IDs to design system colors
-function getTierColor(tierId: string): string {
-  const colorMap: Record<string, string> = {
-    low: colorSemantic.text.muted, // Gray - Low readiness
-    building: colorSemantic.error.base, // Red - Building
-    ready: colorSemantic.warning.base, // Yellow - Ready
-    strong: colorSemantic.success.base, // Green - Strong
-  };
-  return colorMap[tierId] || colorSemantic.text.muted;
-}
-
 export const ReadinessMeter: React.FC<ReadinessMeterProps> = ({ score, className }) => {
   const tier = getExamReadinessTier(score);
-  const color = getTierColor(tier.id);
+  const color = getExamReadinessSemanticColor(tier.id);
   const statusText = tier.label;
   const description = tier.description;
 

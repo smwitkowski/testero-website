@@ -104,3 +104,102 @@ export function getDomainTier(score: number): DomainTier {
   };
 }
 
+/**
+ * Exam readiness tier color mapping.
+ * 
+ * Returns Tailwind color names for use in complete class names.
+ * These colors are consistent across the Diagnostic Summary and Dashboard.
+ * 
+ * Color scheme:
+ * - Low: Red (error/danger state)
+ * - Building: Orange (warning/caution state)
+ * - Ready: Blue (info/approaching goal)
+ * - Strong: Green (success/achievement)
+ */
+export interface ExamReadinessTierColors {
+  tailwind: string;
+  text: string;
+  bg: string;
+  bgLight: string;
+}
+
+export function getExamReadinessTierColors(tierId: ExamReadinessTierId): ExamReadinessTierColors {
+  const colorMap: Record<ExamReadinessTierId, ExamReadinessTierColors> = {
+    low: { 
+      tailwind: 'red', 
+      text: 'text-red-700',
+      bg: 'bg-red-600',
+      bgLight: 'bg-red-100'
+    },
+    building: { 
+      tailwind: 'orange', 
+      text: 'text-orange-700',
+      bg: 'bg-orange-600',
+      bgLight: 'bg-orange-100'
+    },
+    ready: { 
+      tailwind: 'blue', 
+      text: 'text-blue-700',
+      bg: 'bg-blue-600',
+      bgLight: 'bg-blue-100'
+    },
+    strong: { 
+      tailwind: 'emerald', 
+      text: 'text-emerald-700',
+      bg: 'bg-emerald-600',
+      bgLight: 'bg-emerald-100'
+    },
+  };
+  return colorMap[tierId];
+}
+
+/**
+ * Domain tier color mapping.
+ * 
+ * Returns complete Tailwind class names for domain tier badges.
+ * 
+ * Color scheme:
+ * - Critical: Red (needs immediate attention)
+ * - Moderate: Amber (needs strengthening)
+ * - Strong: Green (already proficient)
+ */
+export interface DomainTierColors {
+  bg: string;
+  text: string;
+}
+
+export function getDomainTierColors(tierId: DomainTierId): DomainTierColors {
+  const colorMap: Record<DomainTierId, DomainTierColors> = {
+    critical: { 
+      bg: 'bg-red-100', 
+      text: 'text-red-700' 
+    },
+    moderate: { 
+      bg: 'bg-amber-100', 
+      text: 'text-amber-700' 
+    },
+    strong: { 
+      bg: 'bg-green-100', 
+      text: 'text-green-700' 
+    },
+  };
+  return colorMap[tierId];
+}
+
+/**
+ * Get design system semantic colors for a given exam readiness tier.
+ * 
+ * This function is used primarily by the ReadinessMeter component for inline styles.
+ * Returns hex color values from the design system for dynamic styling.
+ */
+export function getExamReadinessSemanticColor(tierId: ExamReadinessTierId): string {
+  // Import inline to avoid circular dependencies
+  const colorMap: Record<ExamReadinessTierId, string> = {
+    low: '#ef4444',      // red-500
+    building: '#ea580c', // orange-600
+    ready: '#3b82f6',    // blue-500
+    strong: '#22c55e',   // green-500
+  };
+  return colorMap[tierId];
+}
+

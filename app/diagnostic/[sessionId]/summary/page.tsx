@@ -10,7 +10,7 @@ import { UpsellModal } from "@/components/diagnostic/UpsellModal";
 import { useUpsell } from "@/hooks/useUpsell";
 import { useTriggerDetection } from "@/hooks/useTriggerDetection";
 import { QuestionSummary, DomainBreakdown, SessionSummary } from "@/components/diagnostic/types";
-import { getExamReadinessTier, getDomainTier } from "@/lib/readiness";
+import { getExamReadinessTier, getDomainTier, getExamReadinessTierColors, getDomainTierColors } from "@/lib/readiness";
 
 // Extended types for UI-specific fields
 interface ExtendedQuestionSummary extends QuestionSummary {
@@ -25,12 +25,13 @@ interface ExtendedSessionSummary extends SessionSummary {
   flaggedCount?: number;
 }
 
-// Map tier IDs to Tailwind color classes for styling
-const tierColorMap: Record<string, string> = {
-  low: "red",
-  building: "orange",
-  ready: "blue",
-  strong: "emerald",
+// Helper function to get complete stroke color class name for SVG
+// This ensures Tailwind can detect the classes at build time
+const getStrokeColorClass = (tierId: string): string => {
+  if (tierId === 'low') return 'text-red-600';
+  if (tierId === 'building') return 'text-orange-600';
+  if (tierId === 'ready') return 'text-blue-600';
+  return 'text-emerald-600'; // strong
 };
 
 const formatTime = (seconds: number) => {
@@ -85,7 +86,8 @@ const VerdictBlock = ({
   onRetakeDiagnostic: () => void;
 }) => {
   const readinessTier = getExamReadinessTier(summary.score);
-  const readinessColor = tierColorMap[readinessTier.id] || "slate";
+  const tierColors = getExamReadinessTierColors(readinessTier.id);
+  const strokeColorClass = getStrokeColorClass(readinessTier.id);
   const duration = summary.totalTimeSpent ? 
     formatTime(summary.totalTimeSpent) : 
     Math.round((new Date(summary.completedAt).getTime() - new Date(summary.startedAt).getTime()) / 60000) + "m";
@@ -105,7 +107,7 @@ const VerdictBlock = ({
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               />
               <path
-                className={`text-${readinessColor}-600`}
+                className={strokeColorClass}
                 stroke="currentColor"
                 strokeWidth="3"
                 fill="transparent"
@@ -221,12 +223,6 @@ const StudyPlan = ({
   const core = domains.filter(d => d.percentage >= 40 && d.percentage < 70);
   const stretch = domains.filter(d => d.percentage >= 70);
 
-  // Map domain tier IDs to Tailwind color classes
-  const domainTierColorMap: Record<string, { bg: string; text: string }> = {
-    critical: { bg: 'bg-red-100', text: 'text-red-700' },
-    moderate: { bg: 'bg-amber-100', text: 'text-amber-700' },
-    strong: { bg: 'bg-green-100', text: 'text-green-700' },
-  };
 
   const StudyGroup = ({ 
     title, 
@@ -248,7 +244,7 @@ const StudyPlan = ({
       <div className="space-y-2">
         {domains.map((domain) => {
           const tier = getDomainTier(domain.percentage);
-          const colors = domainTierColorMap[tier.id];
+          const colors = getDomainTierColors(tier.id);
           return (
             <div key={domain.domain} className="flex items-center justify-between p-3 rounded-lg border border-slate-200">
               <div className="flex items-center gap-3">
