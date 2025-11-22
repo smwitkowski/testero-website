@@ -42,6 +42,7 @@ const CreatePracticeSessionRequestSchema = z.object({
 });
 
 // TypeScript interface for documentation (Zod schema is the source of truth)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type CreatePracticeSessionRequest = z.infer<typeof CreatePracticeSessionRequestSchema>;
 
 interface CreatePracticeSessionResponse {
