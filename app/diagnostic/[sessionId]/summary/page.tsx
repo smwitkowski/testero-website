@@ -271,7 +271,7 @@ const StudyPlan = ({
         <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-4">Study Plan</h2>
         <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 mb-4">
           <p className="text-sm text-amber-700 mb-2">
-            <strong>Note:</strong> Domain-level breakdown isn't available for this earlier diagnostic session.
+            <strong>Note:</strong> Domain-level breakdown isn&apos;t available for this earlier diagnostic session.
           </p>
           <p className="text-sm text-amber-700">
             Take a new diagnostic to unlock domain-specific study guidance and a personalized study plan.
