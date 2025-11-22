@@ -134,15 +134,7 @@ export async function POST(req: Request) {
         questionCount,
       });
       
-      // Check if this is a "no questions available" scenario
-      if (errorMessage.includes("No domains found") || errorMessage.includes("no available questions")) {
-        return NextResponse.json(
-          { error: "No questions available for the requested domains." },
-          { status: 404 }
-        );
-      }
-      
-      // For other errors, return 500 with generic message
+      // For unexpected errors, return 500 with generic message
       return NextResponse.json(
         { error: "Could not fetch questions for the practice session." },
         { status: 500 }

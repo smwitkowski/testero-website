@@ -400,12 +400,20 @@ describe('/api/practice/session', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle question selection errors with no questions available', async () => {
+    it('should handle empty question selection (no domains found)', async () => {
       const { checkRateLimit } = require('@/lib/auth/rate-limiter');
       checkRateLimit.mockResolvedValue(true);
 
       const { selectPracticeQuestionsByDomains } = require('@/lib/practice/domain-selection');
-      selectPracticeQuestionsByDomains.mockRejectedValue(new Error('No domains found for codes: D1'));
+      // When no domains are found, the function returns empty results (doesn't throw)
+      selectPracticeQuestionsByDomains.mockResolvedValue({
+        questions: [],
+        domainDistribution: [
+          { domainCode: 'D1', requestedCount: 0, availableCount: 0, selectedCount: 0 }
+        ],
+        totalRequested: 10,
+        totalSelected: 0
+      });
 
       const mockSupabase = {
         auth: {
