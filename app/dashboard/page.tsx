@@ -12,6 +12,7 @@ import { X } from "lucide-react";
 
 // Import types from the API route
 import type { DashboardData, SuccessResponse, ErrorResponse } from "@/app/api/dashboard/route";
+import type { ExamReadinessSummary, DashboardSummarySuccessResponse, ErrorResponse as DashboardSummaryErrorResponse } from "@/app/api/dashboard/summary/route";
 
 // Import beta onboarding constants
 import { FEATURE_FLAGS, getBetaVariantContent } from "@/lib/constants/beta-onboarding";
@@ -19,6 +20,7 @@ import { FEATURE_FLAGS, getBetaVariantContent } from "@/lib/constants/beta-onboa
 const DashboardPage = () => {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [examReadiness, setExamReadiness] = useState<ExamReadinessSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showBetaBanner, setShowBetaBanner] = useState(false);
@@ -108,6 +110,39 @@ const DashboardPage = () => {
     fetchDashboardData();
   }, [user, posthog]);
 
+  // Fetch exam readiness summary separately
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchExamReadiness = async () => {
+      try {
+        const response = await fetch("/api/dashboard/summary?examKey=pmle");
+        const data: DashboardSummarySuccessResponse | DashboardSummaryErrorResponse = await response.json();
+
+        if (response.ok && 'status' in data && data.status === 'ok') {
+          setExamReadiness(data.data);
+        } else {
+          // Log error but don't break the dashboard - fall back to empty state
+          const errorMessage = 'error' in data ? data.error : "Unknown error";
+          console.error('Failed to fetch exam readiness summary:', errorMessage);
+          posthog?.capture("dashboard_readiness_summary_error", {
+            user_id: user.id,
+            error: errorMessage,
+          });
+        }
+      } catch (err) {
+        // Log error but don't break the dashboard
+        console.error('Error fetching exam readiness summary:', err);
+        posthog?.capture("dashboard_readiness_summary_error", {
+          user_id: user.id,
+          error: err instanceof Error ? err.message : "Unknown error",
+        });
+      }
+    };
+
+    fetchExamReadiness();
+  }, [user, posthog]);
+
   const handleDismissBanner = () => {
     setShowBetaBanner(false);
     try {
@@ -126,7 +161,7 @@ const DashboardPage = () => {
         },
         body: JSON.stringify({
           examKey: 'pmle',
-          source: 'dashboard_banner',
+          source: 'dashboard_readiness_card',
         }),
       });
 
@@ -262,7 +297,14 @@ const DashboardPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Readiness Meter - Full width on mobile, spans 2 cols on desktop */}
             <div className="lg:col-span-2">
-              <ReadinessMeter score={dashboardData.readinessScore} className="h-full" />
+              <ReadinessMeter 
+                score={examReadiness?.currentReadinessScore ?? 0}
+                hasCompletedDiagnostic={examReadiness?.hasCompletedDiagnostic ?? false}
+                lastDiagnosticDate={examReadiness?.lastDiagnosticDate ?? null}
+                lastDiagnosticSessionId={examReadiness?.lastDiagnosticSessionId ?? null}
+                onStartDiagnostic={handleStartDiagnostic}
+                className="h-full" 
+              />
             </div>
 
             {/* Practice Summary */}

@@ -1,25 +1,48 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { colorSemantic } from '@/lib/design-system';
 import { getExamReadinessTier, getExamReadinessSemanticColor } from '@/lib/readiness';
 
 interface ReadinessMeterProps {
   score: number;
+  hasCompletedDiagnostic: boolean;
+  lastDiagnosticDate?: string | null;
+  lastDiagnosticSessionId?: string | null;
+  onStartDiagnostic?: () => void;
   className?: string;
 }
 
-export const ReadinessMeter: React.FC<ReadinessMeterProps> = ({ score, className }) => {
-  const tier = getExamReadinessTier(score);
-  const color = getExamReadinessSemanticColor(tier.id);
-  const statusText = tier.label;
-  const description = tier.description;
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+export const ReadinessMeter: React.FC<ReadinessMeterProps> = ({ 
+  score, 
+  hasCompletedDiagnostic,
+  lastDiagnosticDate,
+  lastDiagnosticSessionId,
+  onStartDiagnostic,
+  className 
+}) => {
+  const displayScore = hasCompletedDiagnostic ? score : 0;
+  const tier = hasCompletedDiagnostic ? getExamReadinessTier(displayScore) : null;
+  const color = tier ? getExamReadinessSemanticColor(tier.id) : colorSemantic.text.muted;
+  const statusText = tier ? tier.label : 'Get started';
+  const description = tier ? tier.description : 'Take your first PMLE diagnostic to see your readiness score.';
 
   // Create a circular progress indicator
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (score / 100) * circumference;
+  const strokeDashoffset = circumference - (displayScore / 100) * circumference;
 
   return (
     <Card className={className}>
@@ -62,7 +85,7 @@ export const ReadinessMeter: React.FC<ReadinessMeterProps> = ({ score, className
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
               <div className="text-3xl font-bold" style={{ color }}>
-                {score}%
+                {displayScore}%
               </div>
             </div>
           </div>
@@ -78,6 +101,30 @@ export const ReadinessMeter: React.FC<ReadinessMeterProps> = ({ score, className
           </p>
         </div>
 
+        {/* Additional info for completed diagnostics */}
+        {hasCompletedDiagnostic && (
+          <div className="text-center space-y-2 w-full">
+            <p className="text-xs" style={{ color: colorSemantic.text.muted }}>
+              Based on your latest diagnostic
+              {lastDiagnosticDate && ` • ${formatDate(lastDiagnosticDate)}`}
+            </p>
+            {lastDiagnosticSessionId && (
+              <Button asChild size="sm" variant="outline" tone="accent" className="text-xs">
+                <Link href={`/diagnostic/${lastDiagnosticSessionId}/summary`}>
+                  View results
+                </Link>
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Empty state CTA */}
+        {!hasCompletedDiagnostic && onStartDiagnostic && (
+          <Button onClick={onStartDiagnostic} size="sm" tone="accent" className="w-full max-w-sm">
+            Take your first diagnostic
+          </Button>
+        )}
+
         {/* Progress bar for mobile/alternative view */}
         <div className="w-full max-w-sm">
           <div className="flex justify-between text-xs mb-1" style={{ color: colorSemantic.text.muted }}>
@@ -88,7 +135,7 @@ export const ReadinessMeter: React.FC<ReadinessMeterProps> = ({ score, className
             <div
               className="h-2 rounded-full transition-all duration-500 ease-in-out"
               style={{
-                width: `${score}%`,
+                width: `${displayScore}%`,
                 backgroundColor: color,
               }}
             />
