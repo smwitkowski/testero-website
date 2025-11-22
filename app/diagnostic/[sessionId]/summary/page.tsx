@@ -781,6 +781,8 @@ const DiagnosticSummaryPage = () => {
             setError("access_denied");
           } else if (response.status === 400) {
             setError("session_not_completed");
+          } else if (response.status === 410) {
+            setError("session_expired");
           } else {
             setError(data.error || "Failed to load summary");
           }
@@ -1085,6 +1087,27 @@ const DiagnosticSummaryPage = () => {
             </p>
             <Button onClick={() => router.push(`/diagnostic/${sessionId}`)}>
               Continue Diagnostic
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  if (error === "session_expired") {
+    return (
+      <main className="max-w-2xl mx-auto px-6 py-8">
+        <Card>
+          <CardContent className="text-center py-8">
+            <h1 className="text-2xl font-bold mb-4">Session Expired</h1>
+            <p className="text-red-600 mb-6">
+              Your diagnostic session expired before completion. Diagnostic sessions expire after a period of inactivity for security reasons.
+            </p>
+            <p className="text-slate-600 mb-6">
+              Please start a new diagnostic test to continue.
+            </p>
+            <Button onClick={() => router.push("/diagnostic")}>
+              Start New Diagnostic
             </Button>
           </CardContent>
         </Card>

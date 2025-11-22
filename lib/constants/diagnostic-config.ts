@@ -17,7 +17,9 @@ export const DIAGNOSTIC_CONFIG = {
   MAX_QUESTION_COUNT: parseInt(process.env.NEXT_PUBLIC_MAX_QUESTION_COUNT || '50', 10),
   
   // Session timeout in minutes
-  SESSION_TIMEOUT_MINUTES: parseInt(process.env.NEXT_PUBLIC_DIAGNOSTIC_TIMEOUT_MINUTES || '30', 10),
+  // Default: 120 minutes (2 hours) - allows users more time to resume incomplete diagnostics
+  // Can be overridden via NEXT_PUBLIC_DIAGNOSTIC_TIMEOUT_MINUTES environment variable
+  SESSION_TIMEOUT_MINUTES: parseInt(process.env.NEXT_PUBLIC_DIAGNOSTIC_TIMEOUT_MINUTES || '120', 10),
   
   // Question selection multiplier (fetch more questions than needed for randomization)
   QUESTION_SELECTION_MULTIPLIER: 5,
