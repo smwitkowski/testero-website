@@ -75,14 +75,21 @@ describe("GET /auth/confirm", () => {
       expect(response.headers.get("location")).toBe("http://localhost:3000/verify-email");
       expect(mockVerifyOtp).toHaveBeenCalledWith({
         token_hash: "abc123",
-        type: "signup",
+        type: "email", // "signup" is normalized to "email" for Supabase verifyOtp
       });
     });
 
     it("should handle different valid types", async () => {
-      const validTypes = ["email", "signup", "recovery", "magiclink", "invite", "email_change"];
+      const testCases = [
+        { input: "email", expected: "email" },
+        { input: "signup", expected: "email" }, // "signup" is normalized to "email"
+        { input: "recovery", expected: "recovery" },
+        { input: "magiclink", expected: "magiclink" },
+        { input: "invite", expected: "invite" },
+        { input: "email_change", expected: "email_change" },
+      ];
 
-      for (const type of validTypes) {
+      for (const { input, expected } of testCases) {
         const mockSession = {
           access_token: "mock-access-token",
           refresh_token: "mock-refresh-token",
@@ -95,7 +102,7 @@ describe("GET /auth/confirm", () => {
         });
 
         const request = new NextRequest(
-          `http://localhost:3000/auth/confirm?token_hash=abc123&type=${type}`
+          `http://localhost:3000/auth/confirm?token_hash=abc123&type=${input}`
         );
 
         const response = await GET(request);
@@ -103,7 +110,7 @@ describe("GET /auth/confirm", () => {
         expect(response.status).toBe(307);
         expect(mockVerifyOtp).toHaveBeenCalledWith({
           token_hash: "abc123",
-          type,
+          type: expected, // Use expected normalized type
         });
 
         mockVerifyOtp.mockClear();
