@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getPmleDomainConfig } from '@/lib/constants/pmle-blueprint';
-import {
-  getPmleAccessLevelForRequest,
-  canUseFeature,
-} from '@/lib/access/pmleEntitlements';
+import { canUseFeature } from '@/lib/access/pmleEntitlements';
+import { getPmleAccessLevelForRequest } from '@/lib/access/pmleEntitlements.server';
 import { getServerPostHog } from '@/lib/analytics/server-analytics';
 import { trackEvent, ANALYTICS_EVENTS } from '@/lib/analytics/analytics';
 
@@ -32,7 +30,7 @@ export async function GET(req: Request) {
   const supabase = createServerSupabaseClient();
 
   // Get PMLE access level for entitlement checks
-  const { accessLevel, user } = await getPmleAccessLevelForRequest(req);
+  const { accessLevel, user } = await getPmleAccessLevelForRequest();
 
   // Check if user can access diagnostic summary (basic level)
   if (!canUseFeature(accessLevel, "DIAGNOSTIC_SUMMARY_BASIC")) {

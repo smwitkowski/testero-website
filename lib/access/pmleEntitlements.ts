@@ -147,37 +147,3 @@ export function getPmleAccessLevelForUser(
   return getAccessLevel({ user, isSubscriber });
 }
 
-/**
- * Server-side helper to get PMLE access level from a Request
- * 
- * This function:
- * 1. Gets the authenticated user from Supabase
- * 2. Checks subscription status using isSubscriber()
- * 3. Returns the computed access level
- * 
- * @param _req - Request or NextRequest object (unused but kept for API consistency)
- * @returns Promise with access level and user object
- */
-export async function getPmleAccessLevelForRequest(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _req: Request
-): Promise<{ accessLevel: AccessLevel; user: User | null }> {
-  // Dynamic import to avoid circular dependencies
-  const { createServerSupabaseClient } = await import("@/lib/supabase/server");
-  const { isSubscriber } = await import("@/lib/auth/entitlements");
-
-  const supabase = createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { accessLevel: "ANONYMOUS", user: null };
-  }
-
-  const hasSubscription = await isSubscriber(user.id);
-  const accessLevel = getAccessLevel({ user, isSubscriber: hasSubscription });
-
-  return { accessLevel, user };
-}
-

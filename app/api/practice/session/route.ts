@@ -16,10 +16,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
 import { z } from "zod";
 import { selectPracticeQuestionsByDomains } from "@/lib/practice/domain-selection";
-import {
-  getPmleAccessLevelForRequest,
-  canUseFeature,
-} from "@/lib/access/pmleEntitlements";
+import { canUseFeature } from "@/lib/access/pmleEntitlements";
+import { getPmleAccessLevelForRequest } from "@/lib/access/pmleEntitlements.server";
 import { getServerPostHog } from "@/lib/analytics/server-analytics";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 
@@ -77,7 +75,7 @@ export async function POST(req: Request) {
     }
 
     // Get PMLE access level for entitlement checks
-    const { accessLevel, user } = await getPmleAccessLevelForRequest(req);
+    const { accessLevel, user } = await getPmleAccessLevelForRequest();
 
     // Check authentication (practice sessions require login)
     if (!user) {
