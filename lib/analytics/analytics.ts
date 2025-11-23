@@ -48,6 +48,8 @@ export const ANALYTICS_EVENTS = {
   DIAGNOSTIC_COMPLETED: "diagnostic_completed",
   DIAGNOSTIC_ABANDONED: "diagnostic_abandoned",
   DIAGNOSTIC_SUMMARY_VIEWED: "diagnostic_summary_viewed",
+  DIAGNOSTIC_SUMMARY_GATED_VIEWED: "diagnostic_summary_gated_viewed",
+  DIAGNOSTIC_SUMMARY_SIGNUP_CTA_CLICKED: "diagnostic_summary_signup_cta_clicked",
   DIAGNOSTIC_DOMAIN_CLICKED: "diagnostic_domain_clicked",
   STUDY_PLAN_START_PRACTICE_CLICKED: "study_plan_start_practice_clicked",
 

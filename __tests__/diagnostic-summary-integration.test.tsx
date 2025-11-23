@@ -843,4 +843,208 @@ describe("DiagnosticSummaryPage Integration", () => {
       });
     });
   });
+
+  describe("Anonymous user gating", () => {
+    beforeEach(() => {
+      (useAuth as jest.Mock).mockReturnValue({ user: null, isLoading: false });
+      // Mock billing status API to return ANONYMOUS access level
+      (global.fetch as jest.Mock).mockImplementation((url: string) => {
+        if (url.includes("/api/billing/status")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({ isSubscriber: false }),
+          });
+        }
+        if (url.includes("/api/diagnostic/summary")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => mockSuccessResponse,
+          });
+        }
+        return Promise.reject(new Error(`Unexpected fetch call: ${url}`));
+      });
+    });
+
+    it("should show verdict block for anonymous users", async () => {
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
+        expect(screen.getByText(/readiness:/i)).toBeInTheDocument();
+        expect(screen.getByText(/70\s*%/)).toBeInTheDocument();
+      });
+    });
+
+    it("should show locked sections for Domain Performance, Study Plan, and Question Review", async () => {
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/domain performance/i)).toBeInTheDocument();
+        expect(screen.getByText(/study plan/i)).toBeInTheDocument();
+      });
+
+      // Check for lock icon or locked overlay text
+      const lockIcons = screen.getAllByText(/sign up free to unlock/i);
+      expect(lockIcons.length).toBeGreaterThan(0);
+    });
+
+    it("should show signup panel for anonymous users", async () => {
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/create a free account to unlock your full breakdown/i)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /sign up free/i })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /continue without account/i })).toBeInTheDocument();
+      });
+    });
+
+    it("should track gated view event for anonymous users", async () => {
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(mockPostHog.capture).toHaveBeenCalledWith(
+          ANALYTICS_EVENTS.DIAGNOSTIC_SUMMARY_GATED_VIEWED,
+          expect.objectContaining({
+            sessionId: "test-session-123",
+            examKey: "pmle",
+            score: 70,
+            examType: "Google Professional ML Engineer",
+            source: "diagnostic_summary",
+          })
+        );
+      });
+    });
+
+    it("should track signup CTA click and navigate with redirect", async () => {
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /sign up free/i })).toBeInTheDocument();
+      });
+
+      const signupButton = screen.getByRole("button", { name: /sign up free/i });
+      fireEvent.click(signupButton);
+
+      await waitFor(() => {
+        expect(mockPostHog.capture).toHaveBeenCalledWith(
+          ANALYTICS_EVENTS.DIAGNOSTIC_SUMMARY_SIGNUP_CTA_CLICKED,
+          expect.objectContaining({
+            sessionId: "test-session-123",
+            examKey: "pmle",
+            accessLevel: "ANONYMOUS",
+            source: "diagnostic_summary_anonymous",
+          })
+        );
+        expect(mockRouter.push).toHaveBeenCalledWith(
+          "/signup?redirect=/diagnostic/test-session-123/summary"
+        );
+      });
+    });
+
+    it("should hide signup panel when 'Continue without account' is clicked", async () => {
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /continue without account/i })).toBeInTheDocument();
+      });
+
+      const continueButton = screen.getByRole("button", { name: /continue without account/i });
+      fireEvent.click(continueButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText(/create a free account to unlock your full breakdown/i)).not.toBeInTheDocument();
+      });
+    });
+
+    it("should not show trial CTA for anonymous users", async () => {
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
+      });
+
+      // Trial CTA should not be visible for anonymous users
+      expect(screen.queryByText(/ready to pass/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Logged-in user access (FREE and SUBSCRIBER)", () => {
+    it("should show full content for FREE users", async () => {
+      (useAuth as jest.Mock).mockReturnValue({ 
+        user: { id: "user-123", email: "test@example.com" }, 
+        isLoading: false 
+      });
+      
+      (global.fetch as jest.Mock).mockImplementation((url: string) => {
+        if (url.includes("/api/billing/status")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({ isSubscriber: false }),
+          });
+        }
+        if (url.includes("/api/diagnostic/summary")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => mockSuccessResponse,
+          });
+        }
+        return Promise.reject(new Error(`Unexpected fetch call: ${url}`));
+      });
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/domain performance/i)).toBeInTheDocument();
+        expect(screen.getByText(/study plan/i)).toBeInTheDocument();
+        expect(screen.getByText(/question review/i)).toBeInTheDocument();
+      });
+
+      // Should not show lock overlays
+      expect(screen.queryByText(/sign up free to unlock/i)).not.toBeInTheDocument();
+      // Should not show signup panel
+      expect(screen.queryByText(/create a free account to unlock/i)).not.toBeInTheDocument();
+    });
+
+    it("should show full content for SUBSCRIBER users", async () => {
+      (useAuth as jest.Mock).mockReturnValue({ 
+        user: { id: "user-456", email: "subscriber@example.com" }, 
+        isLoading: false 
+      });
+      
+      (global.fetch as jest.Mock).mockImplementation((url: string) => {
+        if (url.includes("/api/billing/status")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({ isSubscriber: true }),
+          });
+        }
+        if (url.includes("/api/diagnostic/summary")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => mockSuccessResponse,
+          });
+        }
+        return Promise.reject(new Error(`Unexpected fetch call: ${url}`));
+      });
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/domain performance/i)).toBeInTheDocument();
+        expect(screen.getByText(/study plan/i)).toBeInTheDocument();
+        expect(screen.getByText(/question review/i)).toBeInTheDocument();
+      });
+
+      // Should not show lock overlays
+      expect(screen.queryByText(/sign up free to unlock/i)).not.toBeInTheDocument();
+      // Should not show signup panel
+      expect(screen.queryByText(/create a free account to unlock/i)).not.toBeInTheDocument();
+    });
+  });
 });
