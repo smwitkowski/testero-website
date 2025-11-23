@@ -12,6 +12,7 @@ export const PUBLIC_ROUTES = [
   "/reset-password",
   "/verify-email",
   "/auth/confirm", // PKCE-style email confirmation endpoint
+  "/early-access-coming-soon", // Early access info page should be reachable without auth
   "/waitlist",
   "/beta",
   "/content",
