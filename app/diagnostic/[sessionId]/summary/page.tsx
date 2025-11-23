@@ -14,6 +14,12 @@ import { QuestionSummary, DomainBreakdown, SessionSummary } from "@/components/d
 import { getExamReadinessTier, getDomainTier, getDomainTierColors, READINESS_PASS_THRESHOLD } from "@/lib/readiness";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
 import { useToastQueue, Toast } from "@/components/ui/toast";
+import {
+  getPmleAccessLevelForUser,
+  canUseFeature,
+  type AccessLevel,
+} from "@/lib/access/pmleEntitlements";
+import type { BillingStatusResponse } from "@/app/api/billing/status/route";
 
 // Extended types for UI-specific fields
 interface ExtendedQuestionSummary extends QuestionSummary {
@@ -397,6 +403,7 @@ const QuestionReview = ({
   onTrackReviewExit,
   onTrackExpansion,
   onExplanationViewed,
+  canAccessExplanations,
 }: {
   questions: ExtendedQuestionSummary[];
   activeFilter: 'all' | 'incorrect' | 'flagged' | 'low-confidence';
@@ -407,6 +414,7 @@ const QuestionReview = ({
   onTrackReviewExit?: () => void;
   onTrackExpansion?: () => void;
   onExplanationViewed?: (question: ExtendedQuestionSummary) => void;
+  canAccessExplanations: boolean;
 }) => {
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -552,12 +560,24 @@ const QuestionReview = ({
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => toggleExpanded(question)}
-                    className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-                  >
-                    {isExpanded ? 'Hide' : 'View'} explanation
-                  </button>
+                  {canAccessExplanations ? (
+                    <button
+                      onClick={() => toggleExpanded(question)}
+                      className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                    >
+                      {isExpanded ? 'Hide' : 'View'} explanation
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        // Could trigger upsell modal here
+                        onTrackExpansion?.();
+                      }}
+                      className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                    >
+                      View explanation (Premium)
+                    </button>
+                  )}
                   <button className="text-sm text-slate-500 hover:text-slate-700">
                     Practice similar
                   </button>
@@ -603,12 +623,21 @@ const QuestionReview = ({
                     </div>
 
                     {/* Explanation */}
-                    {question.explanation && (
+                    {canAccessExplanations && question.explanation ? (
                       <div>
                         <h4 className="font-medium text-slate-900 mb-2">Explanation:</h4>
                         <p className="text-slate-700">{question.explanation}</p>
                       </div>
-                    )}
+                    ) : !canAccessExplanations ? (
+                      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <p className="text-sm text-blue-700 mb-2">
+                          <strong>Explanations are available for subscribers.</strong>
+                        </p>
+                        <p className="text-sm text-blue-600">
+                          Upgrade to unlock detailed explanations for all questions and improve your understanding.
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               )}
@@ -715,6 +744,7 @@ const DiagnosticSummaryPage = () => {
   const [domainBreakdown, setDomainBreakdown] = useState<DomainBreakdown[]>([]);
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [creatingPracticeSession, setCreatingPracticeSession] = useState(false);
+  const [accessLevel, setAccessLevel] = useState<AccessLevel>("ANONYMOUS");
   
   // UI State
   const [activeFilter, setActiveFilter] = useState<'all' | 'incorrect' | 'flagged' | 'low-confidence'>('all');
@@ -743,6 +773,30 @@ const DiagnosticSummaryPage = () => {
     enableExitIntent: process.env.NODE_ENV !== 'production' || false,
     enableDeepScroll: process.env.NODE_ENV !== 'production' || false,
   });
+
+  // Fetch billing status to compute access level
+  useEffect(() => {
+    if (isAuthLoading) {
+      return; // Wait for auth state
+    }
+
+    const fetchBillingStatus = async () => {
+      try {
+        const response = await fetch("/api/billing/status");
+        if (response.ok) {
+          const data = (await response.json()) as BillingStatusResponse;
+          const level = getPmleAccessLevelForUser(user, data);
+          setAccessLevel(level);
+        }
+      } catch (err) {
+        console.error("Error fetching billing status:", err);
+        // Default to ANONYMOUS if fetch fails
+        setAccessLevel(getPmleAccessLevelForUser(user, null));
+      }
+    };
+
+    fetchBillingStatus();
+  }, [user, isAuthLoading]);
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -811,8 +865,9 @@ const DiagnosticSummaryPage = () => {
         // Clean up localStorage since session is completed
         localStorage.removeItem("testero_diagnostic_session_id");
 
-        // Show trial modal after 5 seconds if user isn't subscribed
-        if (!user?.user_metadata?.has_subscription) {
+        // Show trial modal after 5 seconds if user isn't a subscriber
+        // Use accessLevel instead of has_subscription
+        if (accessLevel !== "SUBSCRIBER") {
           setTimeout(() => {
             setShowTrialModal(true);
             posthog?.capture("trial_modal_shown", {
@@ -831,12 +886,12 @@ const DiagnosticSummaryPage = () => {
     };
 
     fetchSummary();
-  }, [sessionId, user, isAuthLoading, posthog]);
+  }, [sessionId, user, isAuthLoading, posthog, accessLevel]);
 
   // Event handlers
   const handleStartPractice = useCallback(async (domainCodes?: string[]) => {
-    // Check if should trigger paywall modal
-    if (!user?.user_metadata?.has_subscription) {
+    // Check if should trigger paywall modal (non-subscribers)
+    if (accessLevel !== "SUBSCRIBER") {
       const triggered = triggers.checkPaywallTrigger('practice');
       if (triggered) return; // Modal opened, don't proceed
     }
@@ -959,7 +1014,7 @@ const DiagnosticSummaryPage = () => {
     } finally {
       setCreatingPracticeSession(false);
     }
-  }, [posthog, triggers, user, router, summary, domainBreakdown, addToast]);
+  }, [posthog, triggers, accessLevel, router, summary, domainBreakdown, addToast]);
 
   const handleRetakeDiagnostic = useCallback(() => {
     router.push("/diagnostic");
@@ -1217,17 +1272,39 @@ const DiagnosticSummaryPage = () => {
             </div>
 
             {/* Question Review */}
-            <QuestionReview 
-              questions={summary.questions}
-              activeFilter={activeFilter}
-              onFilterChange={setActiveFilter}
-              selectedDomain={selectedDomain}
-              onDomainChange={setSelectedDomain}
-              onTrackReviewEntry={triggers.trackReviewSectionEntry}
-              onTrackReviewExit={triggers.trackReviewSectionExit}
-              onTrackExpansion={triggers.trackExplanationExpansion}
-              onExplanationViewed={handleExplanationViewed}
-            />
+            {canUseFeature(accessLevel, "DIAGNOSTIC_SUMMARY_FULL") ? (
+              <QuestionReview 
+                questions={summary.questions}
+                activeFilter={activeFilter}
+                onFilterChange={setActiveFilter}
+                selectedDomain={selectedDomain}
+                onDomainChange={setSelectedDomain}
+                onTrackReviewEntry={triggers.trackReviewSectionEntry}
+                onTrackReviewExit={triggers.trackReviewSectionExit}
+                onTrackExpansion={triggers.trackExplanationExpansion}
+                onExplanationViewed={handleExplanationViewed}
+                canAccessExplanations={canUseFeature(accessLevel, "EXPLANATIONS")}
+              />
+            ) : (
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mb-8">
+                <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-4">Question Review</h2>
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-700 mb-2">
+                    <strong>Sign up to view detailed question review</strong>
+                  </p>
+                  <p className="text-sm text-blue-600 mb-4">
+                    Create a free account to see your answers, correct solutions, and detailed explanations for each question.
+                  </p>
+                  <Button
+                    onClick={() => router.push("/signup")}
+                    tone="accent"
+                    size="sm"
+                  >
+                    Sign Up Free
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Rail (3-4 cols) */}
@@ -1241,7 +1318,7 @@ const DiagnosticSummaryPage = () => {
             />
 
             {/* Trial CTA for non-subscribed users */}
-            {!user?.user_metadata?.has_subscription && (
+            {accessLevel !== "SUBSCRIBER" && (
               <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 md:p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">Ready to Pass?</h3>
                 <p className="text-sm text-slate-600 mb-4">

@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { requireSubscriber } from '@/lib/auth/require-subscriber';
 import { getPmleDomainConfig } from '@/lib/constants/pmle-blueprint';
+import { canUseFeature } from '@/lib/access/pmleEntitlements';
+import { getPmleAccessLevelForRequest } from '@/lib/access/pmleEntitlements.server';
+import { getServerPostHog } from '@/lib/analytics/server-analytics';
+import { trackEvent, ANALYTICS_EVENTS } from '@/lib/analytics/analytics';
 
 // Types for diagnostic questions with responses
 interface DiagnosticResponse {
@@ -24,11 +27,30 @@ interface DiagnosticQuestionWithResponse {
 
 
 export async function GET(req: Request) {
-  // Premium gate check
-  const block = await requireSubscriber(req, "/api/diagnostic/summary/[sessionId]");
-  if (block) return block;
-
   const supabase = createServerSupabaseClient();
+
+  // Get PMLE access level for entitlement checks
+  const { accessLevel, user } = await getPmleAccessLevelForRequest();
+
+  // Check if user can access diagnostic summary (basic level)
+  if (!canUseFeature(accessLevel, "DIAGNOSTIC_SUMMARY_BASIC")) {
+    const posthog = getServerPostHog();
+    if (posthog) {
+      trackEvent(
+        posthog,
+        ANALYTICS_EVENTS.ENTITLEMENT_CHECK_FAILED,
+        {
+          route: "/api/diagnostic/summary/[sessionId]",
+          reason: "insufficient_access_level",
+          accessLevel,
+          feature: "DIAGNOSTIC_SUMMARY_BASIC",
+          userId: user?.id || null,
+        },
+        user?.id
+      );
+    }
+    return NextResponse.json({ code: "PAYWALL" }, { status: 403 });
+  }
   
   try {
     // Extract session ID from the URL path
@@ -148,91 +170,105 @@ export async function GET(req: Request) {
       percentage: Math.round((stats.correct / stats.total) * 100)
     }));
 
-    // Fetch canonical explanations in bulk
-    // Primary path: Use canonical_question_id (UUID) for PMLE canonical sessions
-    // Fallback path: Use original_question_id (bigint) for legacy sessions
-    const canonicalQuestionIds = typedQuestions
-      .map((q) => q.canonical_question_id)
-      .filter((id): id is string => id !== null && id !== undefined);
-
-    const originalQuestionIds = typedQuestions
-      .map((q) => q.original_question_id)
-      .filter((id): id is string => id !== null && id !== undefined);
+    // Gate explanations based on access level
+    // Only fetch explanations if user has EXPLANATIONS feature access (SUBSCRIBER only)
+    const canAccessExplanations = canUseFeature(accessLevel, "EXPLANATIONS");
 
     let explanationByCanonicalId: Record<string, string> = {};
     let explanationByOriginalId: Record<string, string> = {};
 
-    // Fetch explanations via canonical_question_id (primary path for PMLE)
-    if (canonicalQuestionIds.length > 0) {
-      const { data: canonicalExplanations, error: canonicalExplanationsError } = await supabase
-        .from('explanations')
-        .select('question_id, explanation_text')
-        .in('question_id', canonicalQuestionIds);
+    if (canAccessExplanations) {
+      // Fetch canonical explanations in bulk
+      // Primary path: Use canonical_question_id (UUID) for PMLE canonical sessions
+      // Fallback path: Use original_question_id (bigint) for legacy sessions
+      const canonicalQuestionIds = typedQuestions
+        .map((q) => q.canonical_question_id)
+        .filter((id): id is string => id !== null && id !== undefined);
 
-      if (canonicalExplanationsError) {
-        console.error('Error fetching canonical explanations for summary:', canonicalExplanationsError);
-        // Continue without explanations rather than failing the entire request
-      } else if (canonicalExplanations) {
-        // Build lookup map: question_id (UUID string) -> explanation_text
-        explanationByCanonicalId = Object.fromEntries(
-          canonicalExplanations.map((e: { question_id: string; explanation_text: string }) => [
-            e.question_id,
-            e.explanation_text,
-          ])
-        );
+      const originalQuestionIds = typedQuestions
+        .map((q) => q.original_question_id)
+        .filter((id): id is string => id !== null && id !== undefined);
+
+      // Fetch explanations via canonical_question_id (primary path for PMLE)
+      if (canonicalQuestionIds.length > 0) {
+        const { data: canonicalExplanations, error: canonicalExplanationsError } = await supabase
+          .from('explanations')
+          .select('question_id, explanation_text')
+          .in('question_id', canonicalQuestionIds);
+
+        if (canonicalExplanationsError) {
+          console.error('Error fetching canonical explanations for summary:', canonicalExplanationsError);
+          // Continue without explanations rather than failing the entire request
+        } else if (canonicalExplanations) {
+          // Build lookup map: question_id (UUID string) -> explanation_text
+          explanationByCanonicalId = Object.fromEntries(
+            canonicalExplanations.map((e: { question_id: string; explanation_text: string }) => [
+              e.question_id,
+              e.explanation_text,
+            ])
+          );
+        }
+      }
+
+      // Fetch explanations via original_question_id (fallback for legacy sessions)
+      if (originalQuestionIds.length > 0) {
+        // Convert all IDs to strings for consistent lookup
+        const questionIdStrings = originalQuestionIds.map((id) => String(id));
+
+        const { data: legacyExplanations, error: legacyExplanationsError } = await supabase
+          .from('explanations')
+          .select('question_id, explanation_text')
+          .in('question_id', questionIdStrings);
+
+        if (legacyExplanationsError) {
+          console.error('Error fetching legacy explanations for summary:', legacyExplanationsError);
+          // Continue without explanations rather than failing the entire request
+        } else if (legacyExplanations) {
+          // Build lookup map: question_id (as string) -> explanation_text
+          explanationByOriginalId = Object.fromEntries(
+            legacyExplanations.map((e: { question_id: string | number; explanation_text: string }) => [
+              String(e.question_id),
+              e.explanation_text,
+            ])
+          );
+        }
       }
     }
+    // If user doesn't have EXPLANATIONS access, explanations will remain null for all questions
 
-    // Fetch explanations via original_question_id (fallback for legacy sessions)
-    if (originalQuestionIds.length > 0) {
-      // Convert all IDs to strings for consistent lookup
-      const questionIdStrings = originalQuestionIds.map((id) => String(id));
-
-      const { data: legacyExplanations, error: legacyExplanationsError } = await supabase
-        .from('explanations')
-        .select('question_id, explanation_text')
-        .in('question_id', questionIdStrings);
-
-      if (legacyExplanationsError) {
-        console.error('Error fetching legacy explanations for summary:', legacyExplanationsError);
-        // Continue without explanations rather than failing the entire request
-      } else if (legacyExplanations) {
-        // Build lookup map: question_id (as string) -> explanation_text
-        explanationByOriginalId = Object.fromEntries(
-          legacyExplanations.map((e: { question_id: string | number; explanation_text: string }) => [
-            String(e.question_id),
-            e.explanation_text,
-          ])
-        );
-      }
-    }
-
-    // Format questions for client, including explanations
+    // Format questions for client, including explanations (if user has access)
+    // Note: For anonymous users, we may want to restrict to DIAGNOSTIC_SUMMARY_BASIC only
+    // (score + domain breakdown without question-level details) in a future ticket
+    
     const questions = typedQuestions.map(q => {
       let explanation: string | null = null;
 
-      // Primary path: Use canonical_question_id for PMLE canonical sessions
-      if (q.canonical_question_id) {
-        explanation = explanationByCanonicalId[q.canonical_question_id] ?? null;
-        
-        // Log warning if canonical_question_id is set but no explanation was found
-        if (explanation === null) {
-          console.warn(
-            `Summary missing explanation for canonical question ${q.canonical_question_id} in session ${sessionId}`
-          );
+      // Only fetch explanations if user has EXPLANATIONS access
+      if (canAccessExplanations) {
+        // Primary path: Use canonical_question_id for PMLE canonical sessions
+        if (q.canonical_question_id) {
+          explanation = explanationByCanonicalId[q.canonical_question_id] ?? null;
+          
+          // Log warning if canonical_question_id is set but no explanation was found
+          if (explanation === null) {
+            console.warn(
+              `Summary missing explanation for canonical question ${q.canonical_question_id} in session ${sessionId}`
+            );
+          }
         }
-      }
-      // Fallback path: Use original_question_id for legacy sessions
-      else if (q.original_question_id) {
-        explanation = explanationByOriginalId[String(q.original_question_id)] ?? null;
+        // Fallback path: Use original_question_id for legacy sessions
+        else if (q.original_question_id) {
+          explanation = explanationByOriginalId[String(q.original_question_id)] ?? null;
 
-        // Log warning if original_question_id is set but no explanation was found
-        if (explanation === null) {
-          console.warn(
-            `Summary missing explanation for legacy question ${q.original_question_id} in session ${sessionId}`
-          );
+          // Log warning if original_question_id is set but no explanation was found
+          if (explanation === null) {
+            console.warn(
+              `Summary missing explanation for legacy question ${q.original_question_id} in session ${sessionId}`
+            );
+          }
         }
       }
+      // If user doesn't have EXPLANATIONS access, explanation remains null
 
       return {
         id: q.id,

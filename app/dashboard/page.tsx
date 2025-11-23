@@ -16,6 +16,12 @@ import type { ExamReadinessSummary, DashboardSummarySuccessResponse, ErrorRespon
 
 // Import beta onboarding constants
 import { FEATURE_FLAGS, getBetaVariantContent } from "@/lib/constants/beta-onboarding";
+import {
+  getPmleAccessLevelForUser,
+  canUseFeature,
+  type AccessLevel,
+} from "@/lib/access/pmleEntitlements";
+import type { BillingStatusResponse } from "@/app/api/billing/status/route";
 
 const DashboardPage = () => {
   const { user } = useAuth();
@@ -25,16 +31,43 @@ const DashboardPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [showBetaBanner, setShowBetaBanner] = useState(false);
   const [betaVariant, setBetaVariant] = useState<'A' | 'B'>('A');
+  const [accessLevel, setAccessLevel] = useState<AccessLevel>("ANONYMOUS");
   const posthog = usePostHog();
+
+  // Fetch billing status to compute access level
+  useEffect(() => {
+    if (!user) {
+      setAccessLevel("ANONYMOUS");
+      return;
+    }
+
+    const fetchBillingStatus = async () => {
+      try {
+        const response = await fetch("/api/billing/status");
+        if (response.ok) {
+          const data = (await response.json()) as BillingStatusResponse;
+          const level = getPmleAccessLevelForUser(user, data);
+          setAccessLevel(level);
+        }
+      } catch (err) {
+        console.error("Error fetching billing status:", err);
+        // Default to FREE if fetch fails (user is logged in)
+        setAccessLevel(getPmleAccessLevelForUser(user, null));
+      }
+    };
+
+    fetchBillingStatus();
+  }, [user]);
 
   // Track dashboard page view (middleware ensures auth)
   useEffect(() => {
     if (user) {
       posthog?.capture("dashboard_viewed", {
         user_id: user.id,
+        access_level: accessLevel,
       });
     }
-  }, [user, posthog]);
+  }, [user, posthog, accessLevel]);
 
   // Check if we should show the beta banner
   useEffect(() => {
@@ -341,6 +374,43 @@ const DashboardPage = () => {
               <Button onClick={handleStartDiagnostic} tone="accent" className="mt-2">
                 Start Diagnostic
               </Button>
+            </div>
+          )}
+
+          {/* Practice CTA based on access level */}
+          {canUseFeature(accessLevel, "PRACTICE_SESSION") && examReadiness?.hasCompletedDiagnostic && (
+            <div
+              className="mt-8 rounded-lg p-6 border"
+              style={{
+                backgroundColor: colorSemantic.success.light,
+                borderColor: colorSemantic.success.base + "40",
+              }}
+            >
+              <h3 className="text-lg font-semibold mb-2" style={{ color: colorSemantic.success.dark }}>
+                Practice Your Weakest Domains
+              </h3>
+              <p className="mb-4" style={{ color: colorSemantic.success.base }}>
+                Use unlimited practice sessions to strengthen your knowledge in areas where you need the most improvement.
+              </p>
+            </div>
+          )}
+
+          {canUseFeature(accessLevel, "PRACTICE_SESSION_FREE_QUOTA") && 
+           !canUseFeature(accessLevel, "PRACTICE_SESSION") && 
+           examReadiness?.hasCompletedDiagnostic && (
+            <div
+              className="mt-8 rounded-lg p-6 border"
+              style={{
+                backgroundColor: colorSemantic.info.light,
+                borderColor: colorSemantic.info.base + "40",
+              }}
+            >
+              <h3 className="text-lg font-semibold mb-2" style={{ color: colorSemantic.info.dark }}>
+                Practice Limited Questions
+              </h3>
+              <p className="mb-4" style={{ color: colorSemantic.info.base }}>
+                You have access to limited practice questions. Upgrade to unlock unlimited practice and detailed explanations.
+              </p>
             </div>
           )}
         </div>

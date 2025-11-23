@@ -1,0 +1,53 @@
+
+📦 Repomix v1.9.1
+
+No custom config found at repomix.config.ts, repomix.config.mts, repomix.config.cts, repomix.config.js, repomix.config.mjs, repomix.config.cjs, repomix.config.json5, repomix.config.jsonc, repomix.config.json or global config at /Users/switkowski/.config/repomix/repomix.config.ts, /Users/switkowski/.config/repomix/repomix.config.mts, /Users/switkowski/.config/repomix/repomix.config.cts, /Users/switkowski/.config/repomix/repomix.config.js, /Users/switkowski/.config/repomix/repomix.config.mjs, /Users/switkowski/.config/repomix/repomix.config.cjs, /Users/switkowski/.config/repomix/repomix.config.json5, /Users/switkowski/.config/repomix/repomix.config.jsonc, /Users/switkowski/.config/repomix/repomix.config.json.
+You can add a config file for additional settings. Please check https://github.com/yamadashy/repomix for more information.
+⠙ Collecting files...
+[2K[1A[2K[G⠹ Collect file... (121/654) app/api/admin/migrate-metadata/route.ts
+[2K[1A[2K[G⠸ Collect file... (524/654) lib/supabase/server.ts
+[2K[1A[2K[G⠼ Running security check...
+[2K[1A[2K[G⠴ Running security check... (642/642) diagnostic-readiness-week3-code.txt
+[2K[1A[2K[G⠦ Processing file... (621/642) jest-dom.d.ts
+[2K[1A[2K[G⠧ Generating output...
+[2K[1A[2K[G⠇ Writing output file...
+[2K[1A[2K[G⠏ Calculating metrics...
+[2K[1A[2K[G⠋ Calculating metrics...
+[2K[1A[2K[G⠙ Calculating metrics...
+[2K[1A[2K[G⠹ Calculating metrics... (43/50) public/sitemap-questions.xml
+[2K[1A[2K[G⠸ Calculating metrics... (50/50) diagnostic-readiness-week3-code.txt
+[2K[1A[2K[G⠼ Calculating metrics... (50/50) diagnostic-readiness-week3-code.txt
+[2K[1A[2K[G✔ Packing completed successfully!
+
+📈 Top 5 Files by Token Count:
+──────────────────────────────
+1.  diagnostic-readiness-week3-code.txt (60,201 tokens, 258,731 chars, 5.9%)
+2.  diagnostic-research-repomix.txt (29,498 tokens, 128,771 chars, 2.9%)
+3.  app/diagnostic/[sessionId]/summary/page.tsx (10,767 tokens, 46,041 chars, 1%)
+4.  docs/posthog-events-data-dictionary.md (9,305 tokens, 38,542 chars, 0.9%)
+5.  __tests__/api.diagnostic.summary.test.ts (9,299 tokens, 43,431 chars, 0.9%)
+
+🔎 Security Check:
+──────────────────
+✔ No suspicious files detected.
+
+📄 Binary Files Detected:
+─────────────────────────
+1 file detected as binary by content inspection:
+1. data/seo/Google Certification Matching Terms Aug 7 2025.csv
+
+These files have been excluded from the output.
+Please review these files if you expected them to contain text content.
+
+📊 Pack Summary:
+────────────────
+  Total Files: 642 files
+ Total Tokens: 1,027,131 tokens
+  Total Chars: 4,357,201 chars
+       Output: repomix-output.xml
+     Security: ✔ No suspicious files detected
+
+🎉 All Done!
+Your repository has been successfully packed.
+
+💡 Repomix is now available in your browser! Try it at https://repomix.com

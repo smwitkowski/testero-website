@@ -13,10 +13,13 @@
  */
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { requireSubscriber } from "@/lib/auth/require-subscriber";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
 import { z } from "zod";
 import { selectPracticeQuestionsByDomains } from "@/lib/practice/domain-selection";
+import { canUseFeature } from "@/lib/access/pmleEntitlements";
+import { getPmleAccessLevelForRequest } from "@/lib/access/pmleEntitlements.server";
+import { getServerPostHog } from "@/lib/analytics/server-analytics";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 
 // Zod schema for input validation
 const CreatePracticeSessionRequestSchema = z.object({
@@ -71,17 +74,48 @@ export async function POST(req: Request) {
       );
     }
 
-    // Premium gate check
-    const block = await requireSubscriber(req, "/api/practice/session");
-    if (block) return block;
+    // Get PMLE access level for entitlement checks
+    const { accessLevel, user } = await getPmleAccessLevelForRequest();
 
-    // Get authenticated user (required for practice sessions)
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
+    // Check authentication (practice sessions require login)
     if (!user) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
+    // Check practice session access based on access level
+    const canAccessUnlimitedPractice = canUseFeature(accessLevel, "PRACTICE_SESSION");
+    const canAccessFreeQuota = canUseFeature(accessLevel, "PRACTICE_SESSION_FREE_QUOTA");
+
+    if (!canAccessUnlimitedPractice && !canAccessFreeQuota) {
+      // User doesn't have access to practice sessions
+      const posthog = getServerPostHog();
+      if (posthog) {
+        trackEvent(
+          posthog,
+          ANALYTICS_EVENTS.ENTITLEMENT_CHECK_FAILED,
+          {
+            route: "/api/practice/session",
+            reason: "insufficient_access_level",
+            accessLevel,
+            feature: "PRACTICE_SESSION",
+            userId: user.id,
+          },
+          user.id
+        );
+      }
+      return NextResponse.json({ code: "PAYWALL" }, { status: 403 });
+    }
+
+    // If user has free quota access but not unlimited, check quota limits
+    // TODO: Implement actual quota checking (e.g., count practice_sessions for user + exam in last 7 days)
+    // For now, we'll allow free users to create sessions but could add quota enforcement later
+    if (canAccessFreeQuota && !canAccessUnlimitedPractice) {
+      // Free tier: Allow practice session creation
+      // Future: Add quota check here (e.g., max 5 questions per week)
+      // const quotaExceeded = await checkPracticeQuota(user.id, examKey);
+      // if (quotaExceeded) {
+      //   return NextResponse.json({ code: "QUOTA_EXCEEDED" }, { status: 403 });
+      // }
     }
 
     // Parse and validate request body
