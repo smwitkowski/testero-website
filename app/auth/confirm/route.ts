@@ -13,13 +13,21 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type");
   const next = searchParams.get("next") ?? "/dashboard";
 
+  // Determine the canonical site URL for redirects
+  // Prefer NEXT_PUBLIC_SITE_URL (production) and fall back to the request origin (local/tests)
+  const siteUrl =
+    (process.env.NEXT_PUBLIC_SITE_URL &&
+      // Ensure no trailing slash to avoid duplicated slashes when constructing URLs
+      process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")) ||
+    new URL(request.url).origin;
+
   // Validate required parameters
   if (!tokenHash || !type) {
     console.error("Auth confirm: Missing required parameters", {
       hasTokenHash: !!tokenHash,
       hasType: !!type,
     });
-    const url = new URL("/login", request.url);
+    const url = new URL("/login", siteUrl);
     url.searchParams.set("verification_error", "1");
     return NextResponse.redirect(url);
   }
@@ -58,7 +66,7 @@ export async function GET(request: NextRequest) {
       });
 
       // Redirect to login with error flag
-      const url = new URL("/login", request.url);
+      const url = new URL("/login", siteUrl);
       url.searchParams.set("verification_error", "1");
       return NextResponse.redirect(url);
     }
@@ -66,31 +74,32 @@ export async function GET(request: NextRequest) {
     // Verify we got a session back
     if (!data.session) {
       console.error("Auth confirm: verifyOtp succeeded but no session returned");
-      const url = new URL("/login", request.url);
+      const url = new URL("/login", siteUrl);
       url.searchParams.set("verification_error", "1");
       return NextResponse.redirect(url);
     }
 
     // Success: redirect to the specified next URL or dashboard
     // The session cookies are automatically set by the Supabase server client
-    
+
     // Handle both relative and absolute URLs for the next parameter
     let redirectUrl: URL;
     try {
       // Try parsing as absolute URL first
       redirectUrl = new URL(next);
-      // If it's an absolute URL, ensure it's on the same origin for security
-      const requestOrigin = new URL(request.url).origin;
-      if (redirectUrl.origin !== requestOrigin) {
-        console.warn("Auth confirm: Invalid redirect origin, defaulting to dashboard", {
-          requestedOrigin: redirectUrl.origin,
-          requestOrigin,
-        });
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
     } catch {
-      // If parsing as absolute URL fails, treat as relative path
-      redirectUrl = new URL(next, request.url);
+      // If parsing as absolute URL fails, treat as relative path under the canonical site URL
+      redirectUrl = new URL(next, siteUrl);
+    }
+
+    // Ensure the redirect URL stays on our canonical site origin
+    const allowedOrigin = new URL(siteUrl).origin;
+    if (redirectUrl.origin !== allowedOrigin) {
+      console.warn("Auth confirm: Invalid redirect origin, defaulting to dashboard", {
+        requestedOrigin: redirectUrl.origin,
+        allowedOrigin,
+      });
+      return NextResponse.redirect(new URL("/dashboard", siteUrl));
     }
 
     return NextResponse.redirect(redirectUrl);
@@ -102,7 +111,7 @@ export async function GET(request: NextRequest) {
       normalizedType,
     });
 
-    const url = new URL("/login", request.url);
+    const url = new URL("/login", siteUrl);
     url.searchParams.set("verification_error", "1");
     return NextResponse.redirect(url);
   }
