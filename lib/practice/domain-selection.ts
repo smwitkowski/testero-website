@@ -62,7 +62,53 @@ export async function selectPracticeQuestionsByDomains(
     throw new Error(`Unsupported exam key: ${examKey}. Only 'pmle' is currently supported.`);
   }
 
+  // Step 0: Fetch domain IDs from domain codes (required because Supabase doesn't support
+  // filtering on joined table fields directly)
+  const { data: domainMetadata, error: domainMetadataError } = await supabase
+    .from('exam_domains')
+    .select('id, code, name')
+    .in('code', domainCodes);
+
+  if (domainMetadataError) {
+    throw new Error(`Failed to fetch domain metadata: ${domainMetadataError.message}`);
+  }
+
+  if (!domainMetadata || domainMetadata.length === 0) {
+    // Log warning but don't throw - allow function to return empty result
+    console.warn(`No domains found for codes: ${domainCodes.join(', ')}`);
+    return {
+      questions: [],
+      domainDistribution: domainCodes.map(code => ({
+        domainCode: code,
+        requestedCount: 0,
+        availableCount: 0,
+        selectedCount: 0,
+      })),
+      totalRequested: questionCount,
+      totalSelected: 0,
+    };
+  }
+
+  // Build domain code to ID/name mappings
+  const domainCodeToId = new Map<string, string>();
+  const domainCodeToName = new Map<string, string>();
+  const domainIds: string[] = [];
+
+  for (const domain of domainMetadata) {
+    domainCodeToId.set(domain.code, domain.id);
+    domainCodeToName.set(domain.code, domain.name);
+    domainIds.push(domain.id);
+  }
+
+  // Validate all requested domains were found
+  for (const domainCode of domainCodes) {
+    if (!domainCodeToId.has(domainCode)) {
+      console.warn(`Domain ${domainCode} not found in exam_domains table`);
+    }
+  }
+
   // Step 1: Get domain availability counts (only questions with explanations)
+  // Filter by domain_id instead of joined table field
   const { data: domainCounts, error: countError } = await supabase
     .from('questions')
     .select(`
@@ -72,16 +118,14 @@ export async function selectPracticeQuestionsByDomains(
     `)
     .eq('exam', 'GCP_PM_ML_ENG')
     .eq('status', 'ACTIVE')
-    .in('exam_domains.code', domainCodes);
+    .in('domain_id', domainIds);
 
   if (countError) {
     throw new Error(`Failed to fetch domain counts: ${countError.message}`);
   }
 
-  // Build availability map and domain metadata
+  // Build availability map (domain metadata already fetched above)
   const domainAvailability = new Map<string, number>();
-  const domainCodeToId = new Map<string, string>();
-  const domainCodeToName = new Map<string, string>();
 
   interface DomainCountRow {
     domain_id: string;
@@ -95,8 +139,6 @@ export async function selectPracticeQuestionsByDomains(
     const domain = q.exam_domains;
     const code = domain.code;
     domainAvailability.set(code, (domainAvailability.get(code) || 0) + 1);
-    domainCodeToId.set(code, q.domain_id);
-    domainCodeToName.set(code, domain.name);
   });
 
   // Validate all requested domains exist
