@@ -20,20 +20,33 @@ export function useStartBasicCheckout() {
         user_id: user?.id,
       });
 
+      // For anonymous users, always redirect to signup even if price ID is missing
+      // This ensures signup flows work regardless of Stripe configuration
+      if (!user) {
+        if (!BASIC_MONTHLY_PRICE_ID) {
+          // Log warning for configuration issues but don't block UX
+          console.warn("Basic monthly price ID is not configured - signup redirect will proceed");
+          trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_ERROR, {
+            source,
+            error: "missing_basic_monthly_price_id",
+            user_state: "anonymous",
+          });
+        }
+        trackEvent(posthog, ANALYTICS_EVENTS.UPGRADE_SIGNUP_REDIRECT, {
+          source,
+        });
+        router.push("/signup?redirect=/pricing");
+        return;
+      }
+
+      // For authenticated users, require price ID before initiating checkout
       if (!BASIC_MONTHLY_PRICE_ID) {
         console.error("Basic monthly price ID is not configured");
         trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_ERROR, {
           source,
           error: "missing_basic_monthly_price_id",
+          user_state: "authenticated",
         });
-        return;
-      }
-
-      if (!user) {
-        trackEvent(posthog, ANALYTICS_EVENTS.UPGRADE_SIGNUP_REDIRECT, {
-          source,
-        });
-        router.push("/signup?redirect=/pricing");
         return;
       }
 
