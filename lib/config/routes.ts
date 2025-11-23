@@ -11,6 +11,7 @@ export const PUBLIC_ROUTES = [
   "/forgot-password",
   "/reset-password",
   "/verify-email",
+  "/auth/confirm", // PKCE-style email confirmation endpoint
   "/waitlist",
   "/beta",
   "/content",
