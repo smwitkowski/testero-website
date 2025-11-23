@@ -48,16 +48,6 @@ export async function updateSession(request: NextRequest) {
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
     }
-    
-    // If on a protected route, check early access
-    if (!isPublicRoute) {
-      const isEarlyAccess = user.user_metadata?.is_early_access === true;
-      if (!isEarlyAccess) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/early-access-coming-soon";
-        return NextResponse.redirect(url);
-      }
-    }
   } else {
     // If user is not authenticated and trying to access a protected route
     if (!isPublicRoute) {
