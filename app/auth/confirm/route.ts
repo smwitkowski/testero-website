@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
   }
 
   // Validate type is one of the expected values
+  // Note: Supabase's verifyOtp only accepts: "email", "recovery", "magiclink", "invite", "email_change"
+  // For signup confirmations, we normalize "signup" to "email"
   const validTypes = ["email", "signup", "recovery", "magiclink", "invite", "email_change"];
   if (!validTypes.includes(type)) {
     console.error("Auth confirm: Invalid type parameter", { type });
@@ -33,20 +35,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Normalize "signup" to "email" since Supabase's verifyOtp doesn't accept "signup"
+  const normalizedType = type === "signup" ? "email" : type;
+
   try {
     const supabase = createServerSupabaseClient();
 
     // Verify the OTP token hash with Supabase
     const { data, error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
-      type: type as "email" | "signup" | "recovery" | "magiclink" | "invite" | "email_change",
+      type: normalizedType as "email" | "recovery" | "magiclink" | "invite" | "email_change",
     });
 
     if (error) {
       // Log detailed error server-side for debugging
       console.error("Auth confirm: verifyOtp failed", {
         error: error.message,
-        type,
+        originalType: type,
+        normalizedType,
         // Don't log full token_hash for security
         tokenHashPrefix: tokenHash.substring(0, 8),
       });
@@ -67,15 +73,24 @@ export async function GET(request: NextRequest) {
 
     // Success: redirect to the specified next URL or dashboard
     // The session cookies are automatically set by the Supabase server client
-    const redirectUrl = new URL(next, request.url);
     
-    // Ensure the redirect URL is on the same origin for security
-    if (redirectUrl.origin !== new URL(request.url).origin) {
-      console.warn("Auth confirm: Invalid redirect origin, defaulting to dashboard", {
-        requestedOrigin: redirectUrl.origin,
-        requestOrigin: new URL(request.url).origin,
-      });
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+    // Handle both relative and absolute URLs for the next parameter
+    let redirectUrl: URL;
+    try {
+      // Try parsing as absolute URL first
+      redirectUrl = new URL(next);
+      // If it's an absolute URL, ensure it's on the same origin for security
+      const requestOrigin = new URL(request.url).origin;
+      if (redirectUrl.origin !== requestOrigin) {
+        console.warn("Auth confirm: Invalid redirect origin, defaulting to dashboard", {
+          requestedOrigin: redirectUrl.origin,
+          requestOrigin,
+        });
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+    } catch {
+      // If parsing as absolute URL fails, treat as relative path
+      redirectUrl = new URL(next, request.url);
     }
 
     return NextResponse.redirect(redirectUrl);
@@ -83,7 +98,8 @@ export async function GET(request: NextRequest) {
     // Catch any unexpected errors
     console.error("Auth confirm: Unexpected error", {
       error: error instanceof Error ? error.message : String(error),
-      type,
+      originalType: type,
+      normalizedType,
     });
 
     const url = new URL("/login", request.url);
