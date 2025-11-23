@@ -212,6 +212,32 @@ The codebase validates price IDs in `app/api/billing/checkout/route.ts`:
 - Rejects any price ID not in the configured list
 - This ensures only valid prices can be used
 
+### Production Environment Variable Verification
+
+**CI/CD Configuration**:
+- Stripe price IDs are wired through GitHub Actions workflow (`.github/workflows/deploy-to-cloud-run.yml`)
+- Variables are passed as Docker build args and Cloud Run `--set-env-vars` flags
+- Ensure GitHub repository secrets are configured for all `NEXT_PUBLIC_STRIPE_*` variables
+
+**Verifying Cloud Run Configuration**:
+```bash
+# Check configured env vars on Cloud Run service
+gcloud run services describe testero-frontend --region=us-central1 \
+  --format='yaml(spec.template.spec.containers[0].env)'
+
+# Search logs for missing price ID configuration issues
+gcloud logging read "resource.type=cloud_run_revision AND \
+  resource.labels.service_name=testero-frontend AND \
+  (textPayload=~'missing_basic_monthly_price_id' OR \
+   jsonPayload.error=~'missing_basic_monthly_price_id')" \
+  --limit=50 --format=json
+```
+
+**Behavioral Notes**:
+- Missing `NEXT_PUBLIC_STRIPE_BASIC_*` vars will **not** break anonymous signup flows (users are redirected to `/signup` regardless)
+- Missing vars **will** prevent authenticated users from initiating checkout (error logged, checkout blocked)
+- The `useStartBasicCheckout` hook enforces price ID presence only for authenticated checkout flows
+
 ---
 
 ## 8. Summary

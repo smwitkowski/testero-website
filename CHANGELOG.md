@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Diagnostic Summary Signup CTA**: Fixed diagnostic summary page signup/upgrade CTA that was blocked when Stripe Basic monthly price ID environment variable was missing. Updated `useStartBasicCheckout` hook to always redirect anonymous users to `/signup?redirect=/pricing` even when `NEXT_PUBLIC_STRIPE_BASIC_MONTHLY` is not configured, ensuring signup flows work regardless of Stripe configuration. Price ID validation is now only enforced for authenticated checkout flows. Updated GitHub Actions CI/CD workflow to wire `NEXT_PUBLIC_STRIPE_BASIC_MONTHLY` and `NEXT_PUBLIC_STRIPE_BASIC_ANNUAL` through Docker build args and Cloud Run environment variables. Added documentation for verifying Cloud Run env vars and troubleshooting missing price ID errors via `gcloud` commands.
+
 ### Changed
 - **Readiness Copy and Empty States**: Polished readiness-related copy and empty states across Diagnostic Results and Dashboard to align with Testero's readiness assistant positioning. Updated all readiness tier descriptions to be more constructive and guidance-focused. Standardized "Pass typically ≥70%" messaging using shared `READINESS_PASS_THRESHOLD` constant. Improved dashboard empty state copy to emphasize readiness-first language and domain-specific guidance. Enhanced diagnostic summary 0-score handling with constructive messaging ("This was your first attempt. Here's where to start building your foundation."). Added legacy session handling for diagnostics without domain breakdown, showing explanatory message and fallback study plan. Updated study plan descriptions to be more actionable and aligned with domain tier story. Updated retake guidance tip to use canonical pass threshold (≥70%) instead of hard-coded value. Dashboard header subtitle updated to "Track your readiness and get domain-specific study guidance" to better reflect positioning.
 
