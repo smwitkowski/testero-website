@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Supabase PKCE Email Confirmation Endpoint**: Added `/auth/confirm` endpoint (`app/auth/confirm/route.ts`) to handle Supabase PKCE-style email confirmation via token hash. Endpoint verifies signup tokens using `supabase.auth.verifyOtp()` and redirects users to `/dashboard` (or custom `next` URL) on success, or to `/login?verification_error=1` on failure. Added `/auth/confirm` to public routes configuration. Added comprehensive Jest tests covering success scenarios, missing/invalid parameters, Supabase verification errors, and security validation (redirect origin checks). This fixes the email confirmation loop issue where users clicking confirmation links were not being properly verified.
+
 ### Fixed
 - **Diagnostic Summary Signup CTA**: Fixed diagnostic summary page signup/upgrade CTA that was blocked when Stripe Basic monthly price ID environment variable was missing. Updated `useStartBasicCheckout` hook to always redirect anonymous users to `/signup?redirect=/pricing` even when `NEXT_PUBLIC_STRIPE_BASIC_MONTHLY` is not configured, ensuring signup flows work regardless of Stripe configuration. Price ID validation is now only enforced for authenticated checkout flows. Updated GitHub Actions CI/CD workflow to wire `NEXT_PUBLIC_STRIPE_BASIC_MONTHLY` and `NEXT_PUBLIC_STRIPE_BASIC_ANNUAL` through Docker build args and Cloud Run environment variables. Added documentation for verifying Cloud Run env vars and troubleshooting missing price ID errors via `gcloud` commands.
 
