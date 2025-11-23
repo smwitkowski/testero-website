@@ -30,11 +30,16 @@ The following features can be gated by access level:
 ### ANONYMOUS
 
 - ✅ `DIAGNOSTIC_RUN`: 1 diagnostic run allowed
-- ✅ `DIAGNOSTIC_SUMMARY_BASIC`: Can view basic summary (score + domain breakdown)
+- ✅ `DIAGNOSTIC_SUMMARY_BASIC`: Can view basic summary (score + readiness tier)
 - ❌ `DIAGNOSTIC_SUMMARY_FULL`: Cannot view full summary with question details
 - ❌ `EXPLANATIONS`: No explanations access
 - ❌ `PRACTICE_SESSION`: No unlimited practice
 - ❌ `PRACTICE_SESSION_FREE_QUOTA`: No free practice quota
+
+**Note**: Anonymous users see a teaser view on the diagnostic summary page:
+- ✅ **Visible**: Overall score, readiness tier, exam type, session date
+- 🔒 **Locked/Blurred**: Domain Performance breakdown, Study Plan, and Question Review sections
+- 📝 **Signup Panel**: Displayed with CTAs to sign up or continue without account
 
 ### FREE (logged in, no subscription)
 
@@ -128,8 +133,15 @@ function MyComponent() {
 ### Diagnostic Summary Page
 
 - **File**: `app/diagnostic/[sessionId]/summary/page.tsx`
-- **Changes**: Fetches billing status, computes access level, gates explanation UI
-- **Behavior**: Shows upsell messages for non-subscribers when viewing explanations
+- **Changes**: 
+  - Fetches billing status, computes access level
+  - Implements UI gating for anonymous users (teaser view with locked sections)
+  - Gates explanation UI for non-subscribers
+- **Behavior**: 
+  - **Anonymous users**: See verdict block (score + readiness tier) with Domain Performance, Study Plan, and Question Review sections blurred/locked. Signup panel displayed in right rail.
+  - **FREE users**: See full summary including question details, but explanations are gated (upsell messages shown)
+  - **SUBSCRIBER users**: Full access to all features including explanations
+- **Analytics**: Tracks `diagnostic_summary_gated_viewed` for anonymous views and `diagnostic_summary_signup_cta_clicked` for signup CTA clicks
 
 ### Practice Session API
 
@@ -154,6 +166,8 @@ To add a new feature to the entitlements system:
 
 ## Analytics
 
+### Entitlement Check Failures
+
 Entitlement check failures are tracked via PostHog with the `ENTITLEMENT_CHECK_FAILED` event, including:
 - `route`: The API route where the check failed
 - `reason`: Why access was denied (e.g., "insufficient_access_level")
@@ -161,9 +175,26 @@ Entitlement check failures are tracked via PostHog with the `ENTITLEMENT_CHECK_F
 - `feature`: The feature that was denied
 - `userId`: The user ID (if authenticated)
 
+### Anonymous Diagnostic Summary Gating
+
+The following events are tracked for anonymous users viewing diagnostic summaries:
+- `diagnostic_summary_gated_viewed`: Fired when an anonymous user views the gated summary page
+  - Properties: `sessionId`, `examKey`, `score`, `examType`, `source`
+- `diagnostic_summary_signup_cta_clicked`: Fired when an anonymous user clicks the signup CTA
+  - Properties: `sessionId`, `examKey`, `accessLevel`, `source`
+
 ## Future Enhancements
 
 - **Quota Enforcement**: Implement actual quota checking for `PRACTICE_SESSION_FREE_QUOTA` (currently allows all free users)
-- **Anonymous Summary**: Consider restricting anonymous users to `DIAGNOSTIC_SUMMARY_BASIC` only (score + domain breakdown without question details)
 - **Multi-Exam Support**: Extend the system to support other exams beyond PMLE
+
+## Implementation Notes
+
+### Anonymous Diagnostic Summary Gating (Week 4)
+
+Anonymous users now see a teaser view of their diagnostic results:
+- **API Behavior**: The diagnostic summary API continues to return full data (including domain breakdown and questions) for anonymous sessions, but the UI gates access client-side
+- **UI Gating**: Uses a `LockedSection` component that applies visual blur and an overlay with lock icon to Domain Performance, Study Plan, and Question Review sections
+- **Signup Flow**: Signup CTA includes redirect parameter (`/signup?redirect=/diagnostic/[sessionId]/summary`) to return users to their summary after signup
+- **Analytics**: Tracks gated views and signup CTA clicks to measure conversion funnel effectiveness
 

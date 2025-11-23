@@ -112,6 +112,53 @@ const StatusChip = ({
   );
 };
 
+const LockedSection = ({
+  children,
+  isLocked,
+}: {
+  children: React.ReactNode;
+  isLocked: boolean;
+}) => {
+  if (!isLocked) {
+    return <>{children}</>;
+  }
+
+  return (
+    <div className="relative">
+      {/* Blurred content */}
+      <div className="blur-sm pointer-events-none select-none">
+        {children}
+      </div>
+      {/* Overlay with lock icon */}
+      <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-sm rounded-2xl">
+        <div className="text-center p-6 max-w-md">
+          <div className="mb-4">
+            <svg
+              className="w-12 h-12 mx-auto text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">
+            Sign up free to unlock
+          </h3>
+          <p className="text-sm text-slate-600">
+            Create a free account to see your full breakdown and study plan.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const VerdictBlock = ({ 
   summary, 
   onStartPractice,
@@ -745,6 +792,8 @@ const DiagnosticSummaryPage = () => {
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [creatingPracticeSession, setCreatingPracticeSession] = useState(false);
   const [accessLevel, setAccessLevel] = useState<AccessLevel>("ANONYMOUS");
+  const [showSignupPanel, setShowSignupPanel] = useState(true);
+  const [hasTrackedGatedView, setHasTrackedGatedView] = useState(false);
   
   // UI State
   const [activeFilter, setActiveFilter] = useState<'all' | 'incorrect' | 'flagged' | 'low-confidence'>('all');
@@ -752,6 +801,9 @@ const DiagnosticSummaryPage = () => {
   
   // Toast queue for error messages
   const { toasts, addToast, dismissToast } = useToastQueue();
+
+  // Derive anonymous flag
+  const isAnonymous = accessLevel === "ANONYMOUS";
 
   // Calculate critical domains for upsell triggers (using shared tier helper)
   const criticalDomainCount = domainBreakdown.filter(d => getDomainTier(d.percentage).id === "critical").length;
@@ -887,6 +939,20 @@ const DiagnosticSummaryPage = () => {
 
     fetchSummary();
   }, [sessionId, user, isAuthLoading, posthog, accessLevel]);
+
+  // Track gated summary view for anonymous users
+  useEffect(() => {
+    if (summary && accessLevel === "ANONYMOUS" && !hasTrackedGatedView && posthog) {
+      trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_SUMMARY_GATED_VIEWED, {
+        sessionId: summary.sessionId,
+        examKey: "pmle",
+        score: summary.score,
+        examType: summary.examType,
+        source: "diagnostic_summary",
+      });
+      setHasTrackedGatedView(true);
+    }
+  }, [summary, accessLevel, hasTrackedGatedView, posthog]);
 
   // Event handlers
   const handleStartPractice = useCallback(async (domainCodes?: string[]) => {
@@ -1090,6 +1156,22 @@ const DiagnosticSummaryPage = () => {
     upsell.dismiss();
   }, [upsell]);
 
+  const handleSignupCTAClick = useCallback(() => {
+    if (summary && posthog) {
+      trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_SUMMARY_SIGNUP_CTA_CLICKED, {
+        sessionId: summary.sessionId,
+        examKey: "pmle",
+        accessLevel,
+        source: "diagnostic_summary_anonymous",
+      });
+    }
+    router.push(`/signup?redirect=/diagnostic/${sessionId}/summary`);
+  }, [summary, posthog, accessLevel, router, sessionId]);
+
+  const handleContinueWithoutAccount = useCallback(() => {
+    setShowSignupPanel(false);
+  }, []);
+
   // Error states (keeping existing error handling)
   if (loading) {
     return (
@@ -1240,10 +1322,12 @@ const DiagnosticSummaryPage = () => {
 
             {/* Domain Performance */}
             {domainBreakdown.length > 0 && (
-              <DomainPerformance 
-                domains={domainBreakdown}
-                onDomainClick={handleDomainClick}
-              />
+              <LockedSection isLocked={isAnonymous}>
+                <DomainPerformance 
+                  domains={domainBreakdown}
+                  onDomainClick={handleDomainClick}
+                />
+              </LockedSection>
             )}
 
             {/* Legacy session notice */}
@@ -1264,11 +1348,13 @@ const DiagnosticSummaryPage = () => {
 
             {/* Study Plan */}
             <div ref={triggers.setStudyPlanRef}>
-              <StudyPlan 
-                domains={domainBreakdown}
-                onStartPractice={handleStartPractice}
-                isLoading={creatingPracticeSession}
-              />
+              <LockedSection isLocked={isAnonymous}>
+                <StudyPlan 
+                  domains={domainBreakdown}
+                  onStartPractice={handleStartPractice}
+                  isLoading={creatingPracticeSession}
+                />
+              </LockedSection>
             </div>
 
             {/* Question Review */}
@@ -1286,29 +1372,52 @@ const DiagnosticSummaryPage = () => {
                 canAccessExplanations={canUseFeature(accessLevel, "EXPLANATIONS")}
               />
             ) : (
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mb-8">
-                <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-4">Question Review</h2>
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-700 mb-2">
-                    <strong>Sign up to view detailed question review</strong>
-                  </p>
-                  <p className="text-sm text-blue-600 mb-4">
-                    Create a free account to see your answers, correct solutions, and detailed explanations for each question.
-                  </p>
-                  <Button
-                    onClick={() => router.push("/signup")}
-                    tone="accent"
-                    size="sm"
-                  >
-                    Sign Up Free
-                  </Button>
+              <LockedSection isLocked={isAnonymous}>
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mb-8">
+                  <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-6">Question Review</h2>
+                  <div className="space-y-3">
+                    <div className="text-sm text-slate-600">
+                      Review your answers, see correct solutions, and access detailed explanations for each question.
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </LockedSection>
             )}
           </div>
 
           {/* Right Rail (3-4 cols) */}
           <div className="lg:col-span-3 space-y-6">
+            {/* Signup Panel for Anonymous Users */}
+            {isAnonymous && showSignupPanel && (
+              <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 md:p-6 shadow-sm">
+                <h3 className="font-semibold text-slate-900 mb-2">
+                  Create a free account to unlock your full breakdown
+                </h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  Sign up to see your domain performance, personalized study plan, and detailed question review.
+                </p>
+                <div className="space-y-2">
+                  <Button
+                    onClick={handleSignupCTAClick}
+                    tone="accent"
+                    size="sm"
+                    fullWidth
+                  >
+                    Sign up free
+                  </Button>
+                  <Button
+                    onClick={handleContinueWithoutAccount}
+                    variant="outline"
+                    tone="neutral"
+                    size="sm"
+                    fullWidth
+                  >
+                    Continue without account
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <QuickActions 
               onRetake={handleRetakeDiagnostic}
               onPractice={() => handleStartPractice()}
@@ -1317,8 +1426,8 @@ const DiagnosticSummaryPage = () => {
               isLoading={creatingPracticeSession}
             />
 
-            {/* Trial CTA for non-subscribed users */}
-            {accessLevel !== "SUBSCRIBER" && (
+            {/* Trial CTA for non-subscribed users (logged in but not subscribers) */}
+            {!isAnonymous && accessLevel !== "SUBSCRIBER" && (
               <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 md:p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">Ready to Pass?</h3>
                 <p className="text-sm text-slate-600 mb-4">
