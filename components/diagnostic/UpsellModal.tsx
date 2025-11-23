@@ -30,6 +30,10 @@ const variantConfigs: Record<UpsellVariant, VariantConfig> = {
     title: 'Polish for the win',
     promo: 'Perfect your knowledge for exam day',
   },
+  quota_exceeded: {
+    title: 'Weekly Free Limit Reached',
+    promo: 'Upgrade for unlimited practice',
+  },
 };
 
 export const UpsellModal: React.FC<UpsellModalProps> = ({

@@ -82,6 +82,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
+    // Parse and validate request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
+    }
+
+    // Validate input using Zod schema
+    const validationResult = CreatePracticeSessionRequestSchema.safeParse(requestBody);
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors
+        .map((err) => `${err.path.join(".")}: ${err.message}`)
+        .join(", ");
+
+      return NextResponse.json({ error: `Invalid request data: ${errors}` }, { status: 400 });
+    }
+
+    const { examKey, domainCodes, questionCount, source, sourceSessionId } = validationResult.data;
+
     // Check practice session access based on access level
     const canAccessUnlimitedPractice = canUseFeature(accessLevel, "PRACTICE_SESSION");
     const canAccessFreeQuota = canUseFeature(accessLevel, "PRACTICE_SESSION_FREE_QUOTA");
@@ -107,36 +127,30 @@ export async function POST(req: Request) {
     }
 
     // If user has free quota access but not unlimited, check quota limits
-    // TODO: Implement actual quota checking (e.g., count practice_sessions for user + exam in last 7 days)
-    // For now, we'll allow free users to create sessions but could add quota enforcement later
     if (canAccessFreeQuota && !canAccessUnlimitedPractice) {
-      // Free tier: Allow practice session creation
-      // Future: Add quota check here (e.g., max 5 questions per week)
-      // const quotaExceeded = await checkPracticeQuota(user.id, examKey);
-      // if (quotaExceeded) {
-      //   return NextResponse.json({ code: "QUOTA_EXCEEDED" }, { status: 403 });
-      // }
+      // Free tier: Check and increment quota
+      const { checkAndIncrementQuota } = await import("@/lib/practice/quota");
+      const quotaResult = await checkAndIncrementQuota(supabase, user.id, examKey, questionCount);
+      
+      if (!quotaResult.allowed) {
+        const posthog = getServerPostHog();
+        if (posthog) {
+           trackEvent(
+              posthog,
+              ANALYTICS_EVENTS.PRACTICE_QUOTA_EXCEEDED,
+              {
+                  userId: user.id,
+                  exam: examKey,
+                  week_start: quotaResult.usage?.week_start,
+                  sessions_started: quotaResult.usage?.sessions_started,
+                  questions_served: quotaResult.usage?.questions_served
+              },
+              user.id
+           );
+        }
+        return NextResponse.json({ code: "FREE_QUOTA_EXCEEDED" }, { status: 403 });
+      }
     }
-
-    // Parse and validate request body
-    let requestBody;
-    try {
-      requestBody = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
-    }
-
-    // Validate input using Zod schema
-    const validationResult = CreatePracticeSessionRequestSchema.safeParse(requestBody);
-    if (!validationResult.success) {
-      const errors = validationResult.error.errors
-        .map((err) => `${err.path.join(".")}: ${err.message}`)
-        .join(", ");
-
-      return NextResponse.json({ error: `Invalid request data: ${errors}` }, { status: 400 });
-    }
-
-    const { examKey, domainCodes, questionCount, source, sourceSessionId } = validationResult.data;
 
     // Map examKey to exam_id (currently only PMLE supported)
     const examIdToUse = examKey === "pmle" ? 6 : null;

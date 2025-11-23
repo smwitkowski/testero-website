@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { usePostHog } from 'posthog-js/react';
 
-export type UpsellTrigger = 'paywall' | 'engagement' | 'exit-intent' | 'performance';
-export type UpsellVariant = 'foundation' | 'almost' | 'polish';
+export type UpsellTrigger = 'paywall' | 'engagement' | 'exit-intent' | 'performance' | 'quota_exceeded';
+export type UpsellVariant = 'foundation' | 'almost' | 'polish' | 'quota_exceeded';
 
 interface UpsellState {
   isOpen: boolean;
