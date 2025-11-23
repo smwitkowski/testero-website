@@ -39,6 +39,7 @@ function BillingDashboardContent() {
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -90,7 +91,7 @@ function BillingDashboardContent() {
       fetchSubscriptionData();
 
       // Track successful checkout
-      if (searchParams.get("success") === "true") {
+      if (searchParams.get("success") === "true" || searchParams.get("success") === "1") {
         posthog?.capture("checkout_completed", {
           user_id: user.id,
         });
@@ -99,6 +100,13 @@ function BillingDashboardContent() {
       router.push("/login?redirect=/dashboard/billing");
     }
   }, [user, loading, router, posthog, searchParams, supabase]);
+
+  useEffect(() => {
+    const successParam = searchParams.get("success");
+    if (successParam === "1" || successParam === "true") {
+      setShowSuccessBanner(true);
+    }
+  }, [searchParams]);
 
   const handleManageSubscription = async () => {
     try {
@@ -216,16 +224,25 @@ function BillingDashboardContent() {
         )}
 
         {/* Success Alert */}
-        {searchParams.get("success") === "true" && (
-          <div className="mb-6 rounded-md bg-green-50 p-4">
-            <div className="flex">
-              <CheckCircleIcon className="h-5 w-5 text-green-400" />
-              <div className="ml-3">
+        {showSuccessBanner && (
+          <div className="mb-6 rounded-md bg-green-50 p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <CheckCircleIcon className="h-5 w-5 text-green-500" />
+              <div>
                 <p className="text-sm font-medium text-green-800">
                   Payment successful! Your subscription is now active.
                 </p>
+                <p className="text-sm text-green-700">
+                  You&apos;re all set—jump back into your PMLE study plan.
+                </p>
               </div>
             </div>
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="inline-flex w-full sm:w-auto justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              Back to your PMLE study plan
+            </button>
           </div>
         )}
 

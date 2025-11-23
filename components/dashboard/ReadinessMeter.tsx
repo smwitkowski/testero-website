@@ -13,6 +13,8 @@ interface ReadinessMeterProps {
   lastDiagnosticDate?: string | null;
   lastDiagnosticSessionId?: string | null;
   onStartDiagnostic?: () => void;
+  onUpgrade?: () => void;
+  showUpgradeCTA?: boolean;
   className?: string;
 }
 
@@ -25,13 +27,15 @@ function formatDate(dateString: string): string {
   });
 }
 
-export const ReadinessMeter: React.FC<ReadinessMeterProps> = ({ 
-  score, 
+export const ReadinessMeter: React.FC<ReadinessMeterProps> = ({
+  score,
   hasCompletedDiagnostic,
   lastDiagnosticDate,
   lastDiagnosticSessionId,
   onStartDiagnostic,
-  className 
+  onUpgrade,
+  showUpgradeCTA,
+  className
 }) => {
   const displayScore = hasCompletedDiagnostic ? score : 0;
   const tier = hasCompletedDiagnostic ? getExamReadinessTier(displayScore) : null;
@@ -122,6 +126,12 @@ export const ReadinessMeter: React.FC<ReadinessMeterProps> = ({
         {!hasCompletedDiagnostic && onStartDiagnostic && (
           <Button onClick={onStartDiagnostic} size="sm" tone="accent" className="w-full max-w-sm">
             Take your first diagnostic
+          </Button>
+        )}
+
+        {showUpgradeCTA && onUpgrade && (
+          <Button onClick={onUpgrade} size="sm" tone="accent" variant="outline" className="w-full max-w-sm">
+            Upgrade to Premium
           </Button>
         )}
 
