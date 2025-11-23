@@ -1026,6 +1026,13 @@ const DiagnosticSummaryPage = () => {
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        
+        // Check for quota exceeded error
+        if (response.status === 403 && errorData.code === 'FREE_QUOTA_EXCEEDED') {
+          upsell.openNow('quota_exceeded');
+          return;
+        }
+
         const errorMessage = errorData.error || 'Failed to create practice session';
         
         // Track error
@@ -1080,7 +1087,7 @@ const DiagnosticSummaryPage = () => {
     } finally {
       setCreatingPracticeSession(false);
     }
-  }, [posthog, triggers, accessLevel, router, summary, domainBreakdown, addToast]);
+  }, [posthog, triggers, accessLevel, router, summary, domainBreakdown, addToast, upsell]);
 
   const handleRetakeDiagnostic = useCallback(() => {
     router.push("/diagnostic");

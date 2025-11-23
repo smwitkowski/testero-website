@@ -65,6 +65,7 @@ export const ANALYTICS_EVENTS = {
   PRACTICE_QUESTION_ERROR: "practice_question_error",
   PRACTICE_SESSION_CREATED_FROM_DIAGNOSTIC: "practice_session_created_from_diagnostic",
   PRACTICE_SESSION_CREATION_FAILED_FROM_DIAGNOSTIC: "practice_session_creation_failed_from_diagnostic",
+  PRACTICE_QUOTA_EXCEEDED: "practice_quota_exceeded",
   QUESTION_EXPLANATION_VIEWED: "question_explanation_viewed",
 
   // Subscription & Billing
