@@ -6,7 +6,6 @@ import { usePostHog } from "posthog-js/react";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrialConversionModal } from "@/components/billing/TrialConversionModal";
 import { UpsellModal } from "@/components/diagnostic/UpsellModal";
 import { useUpsell } from "@/hooks/useUpsell";
 import { useTriggerDetection } from "@/hooks/useTriggerDetection";
@@ -800,7 +799,6 @@ const DiagnosticSummaryPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<ExtendedSessionSummary | null>(null);
   const [domainBreakdown, setDomainBreakdown] = useState<DomainBreakdown[]>([]);
-  const [showTrialModal, setShowTrialModal] = useState(false);
   const [creatingPracticeSession, setCreatingPracticeSession] = useState(false);
   const [accessLevel, setAccessLevel] = useState<AccessLevel>("ANONYMOUS");
   const [showSignupPanel, setShowSignupPanel] = useState(true);
@@ -930,18 +928,6 @@ const DiagnosticSummaryPage = () => {
         // Clean up localStorage since session is completed
         localStorage.removeItem("testero_diagnostic_session_id");
 
-        // Show trial modal after 5 seconds if user isn't a subscriber
-        // Use accessLevel instead of has_subscription
-        if (accessLevel !== "SUBSCRIBER") {
-          setTimeout(() => {
-            setShowTrialModal(true);
-            posthog?.capture("trial_modal_shown", {
-              source: "diagnostic_summary",
-              delay_seconds: 5,
-              diagnostic_score: data.summary?.score,
-            });
-          }, 5000);
-        }
       } catch (err) {
         console.error("Error fetching summary:", err);
         setError("Failed to load diagnostic summary");
@@ -1178,7 +1164,7 @@ const DiagnosticSummaryPage = () => {
     startBasicCheckout(source);
   }, [startBasicCheckout, upsell]);
 
-  const handleContinueWithoutTrial = useCallback(() => {
+  const handleDismissUpsell = useCallback(() => {
     upsell.dismiss();
   }, [upsell]);
 
@@ -1454,7 +1440,7 @@ const DiagnosticSummaryPage = () => {
               isLoading={creatingPracticeSession}
             />
 
-            {/* Trial CTA for non-subscribed users (logged in but not subscribers) */}
+            {/* Upgrade CTA for non-subscribed users (logged in but not subscribers) */}
             {!isAnonymous && accessLevel !== "SUBSCRIBER" && (
               <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 md:p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">Ready to Pass?</h3>
@@ -1463,10 +1449,6 @@ const DiagnosticSummaryPage = () => {
                 </p>
                 <Button
                   onClick={() => {
-                    posthog?.capture("trial_cta_clicked", {
-                      source: "diagnostic_summary_rail",
-                      diagnostic_score: summary?.score,
-                    });
                     startBasicCheckout("diagnostic_summary_sidebar");
                   }}
                   tone="accent"
@@ -1475,7 +1457,7 @@ const DiagnosticSummaryPage = () => {
                 >
                   Upgrade to Premium
                 </Button>
-                <p className="text-xs text-slate-500 mt-2 text-center">No credit card required</p>
+                <p className="text-xs text-slate-500 mt-2 text-center">7-day money-back guarantee</p>
               </div>
             )}
           </div>
@@ -1489,16 +1471,9 @@ const DiagnosticSummaryPage = () => {
         trigger={upsell.trigger}
         onClose={upsell.dismiss}
         onCTAClick={handleUpsellCTA}
-        onContinueWithoutTrial={handleContinueWithoutTrial}
+        onDismiss={handleDismissUpsell}
       />
 
-      {/* Trial Conversion Modal */}
-      <TrialConversionModal
-        open={showTrialModal}
-        onClose={() => setShowTrialModal(false)}
-        diagnosticScore={summary?.score}
-        weakAreas={domainBreakdown.filter((d) => d.percentage < 60).map((d) => d.domain)}
-      />
     </div>
   );
 };

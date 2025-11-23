@@ -9,7 +9,7 @@ interface UpsellModalProps {
   trigger: UpsellTrigger | null;
   onClose: () => void;
   onCTAClick: () => void;
-  onContinueWithoutTrial: () => void;
+  onDismiss: () => void;
 }
 
 interface VariantConfig {
@@ -42,7 +42,7 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
   trigger,
   onClose,
   onCTAClick,
-  onContinueWithoutTrial,
+  onDismiss,
 }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -208,7 +208,7 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
 
         {/* Secondary Action */}
         <Button
-          onClick={onContinueWithoutTrial}
+          onClick={onDismiss}
           variant="outline"
           tone="neutral"
           size="md"
