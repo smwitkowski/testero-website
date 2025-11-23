@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { colorSemantic } from "@/lib/design-system";
 import { usePostHog } from "posthog-js/react";
 import { X } from "lucide-react";
+import { useStartBasicCheckout } from "@/hooks/useStartBasicCheckout";
 
 // Import types from the API route
 import type { DashboardData, SuccessResponse, ErrorResponse } from "@/app/api/dashboard/route";
@@ -33,6 +34,7 @@ const DashboardPage = () => {
   const [betaVariant, setBetaVariant] = useState<'A' | 'B'>('A');
   const [accessLevel, setAccessLevel] = useState<AccessLevel>("ANONYMOUS");
   const posthog = usePostHog();
+  const { startBasicCheckout } = useStartBasicCheckout();
 
   // Fetch billing status to compute access level
   useEffect(() => {
@@ -330,13 +332,15 @@ const DashboardPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Readiness Meter - Full width on mobile, spans 2 cols on desktop */}
             <div className="lg:col-span-2">
-              <ReadinessMeter 
+              <ReadinessMeter
                 score={examReadiness?.currentReadinessScore ?? 0}
                 hasCompletedDiagnostic={examReadiness?.hasCompletedDiagnostic ?? false}
                 lastDiagnosticDate={examReadiness?.lastDiagnosticDate ?? null}
                 lastDiagnosticSessionId={examReadiness?.lastDiagnosticSessionId ?? null}
                 onStartDiagnostic={handleStartDiagnostic}
-                className="h-full" 
+                onUpgrade={() => startBasicCheckout("dashboard_readiness_card")}
+                showUpgradeCTA={accessLevel !== "SUBSCRIBER"}
+                className="h-full"
               />
             </div>
 

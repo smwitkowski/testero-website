@@ -10,6 +10,7 @@ import { TrialConversionModal } from "@/components/billing/TrialConversionModal"
 import { UpsellModal } from "@/components/diagnostic/UpsellModal";
 import { useUpsell } from "@/hooks/useUpsell";
 import { useTriggerDetection } from "@/hooks/useTriggerDetection";
+import { useStartBasicCheckout } from "@/hooks/useStartBasicCheckout";
 import { QuestionSummary, DomainBreakdown, SessionSummary } from "@/components/diagnostic/types";
 import { getExamReadinessTier, getDomainTier, getDomainTierColors, READINESS_PASS_THRESHOLD } from "@/lib/readiness";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
@@ -451,6 +452,7 @@ const QuestionReview = ({
   onTrackExpansion,
   onExplanationViewed,
   canAccessExplanations,
+  onUpgrade,
 }: {
   questions: ExtendedQuestionSummary[];
   activeFilter: 'all' | 'incorrect' | 'flagged' | 'low-confidence';
@@ -462,6 +464,7 @@ const QuestionReview = ({
   onTrackExpansion?: () => void;
   onExplanationViewed?: (question: ExtendedQuestionSummary) => void;
   canAccessExplanations: boolean;
+  onUpgrade?: () => void;
 }) => {
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -617,8 +620,8 @@ const QuestionReview = ({
                   ) : (
                     <button
                       onClick={() => {
-                        // Could trigger upsell modal here
                         onTrackExpansion?.();
+                        onUpgrade?.();
                       }}
                       className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
                     >
@@ -683,6 +686,14 @@ const QuestionReview = ({
                         <p className="text-sm text-blue-600">
                           Upgrade to unlock detailed explanations for all questions and improve your understanding.
                         </p>
+                        <Button
+                          size="sm"
+                          tone="accent"
+                          className="mt-3"
+                          onClick={() => onUpgrade?.()}
+                        >
+                          Upgrade for explanations
+                        </Button>
                       </div>
                     ) : null}
                   </div>
@@ -808,6 +819,8 @@ const DiagnosticSummaryPage = () => {
   // Calculate critical domains for upsell triggers (using shared tier helper)
   const criticalDomainCount = domainBreakdown.filter(d => getDomainTier(d.percentage).id === "critical").length;
   const weakDomains = domainBreakdown.filter(d => d.percentage < 60).map(d => d.domain);
+
+  const { startBasicCheckout } = useStartBasicCheckout();
   
   // Initialize upsell hook
   const upsell = useUpsell({
@@ -1155,9 +1168,15 @@ const DiagnosticSummaryPage = () => {
   // Upsell modal handlers
   const handleUpsellCTA = useCallback(() => {
     upsell.handleCTAClick();
-    // Navigate to billing/signup
-    router.push('/signup');
-  }, [upsell, router]);
+    const source =
+      upsell.variant === "quota_exceeded"
+        ? "practice_quota_paywall"
+        : upsell.trigger === "paywall"
+          ? "diagnostic_summary_paywall"
+          : `upsell_${upsell.trigger ?? "unknown"}`;
+
+    startBasicCheckout(source);
+  }, [startBasicCheckout, upsell]);
 
   const handleContinueWithoutTrial = useCallback(() => {
     upsell.dismiss();
@@ -1172,8 +1191,9 @@ const DiagnosticSummaryPage = () => {
         source: "diagnostic_summary_anonymous",
       });
     }
-    router.push(`/signup?redirect=/diagnostic/${sessionId}/summary`);
-  }, [summary, posthog, accessLevel, router, sessionId]);
+
+    startBasicCheckout("diagnostic_summary_anonymous_banner");
+  }, [summary, posthog, accessLevel, startBasicCheckout]);
 
   const handleContinueWithoutAccount = useCallback(() => {
     setShowSignupPanel(false);
@@ -1366,7 +1386,7 @@ const DiagnosticSummaryPage = () => {
 
             {/* Question Review */}
             {canUseFeature(accessLevel, "DIAGNOSTIC_SUMMARY_FULL") ? (
-              <QuestionReview 
+              <QuestionReview
                 questions={summary.questions}
                 activeFilter={activeFilter}
                 onFilterChange={setActiveFilter}
@@ -1377,6 +1397,7 @@ const DiagnosticSummaryPage = () => {
                 onTrackExpansion={triggers.trackExplanationExpansion}
                 onExplanationViewed={handleExplanationViewed}
                 canAccessExplanations={canUseFeature(accessLevel, "EXPLANATIONS")}
+                onUpgrade={() => startBasicCheckout("diagnostic_summary_explanations")}
               />
             ) : (
               <LockedSection isLocked={isAnonymous}>
@@ -1442,17 +1463,17 @@ const DiagnosticSummaryPage = () => {
                 </p>
                 <Button
                   onClick={() => {
-                    setShowTrialModal(true);
                     posthog?.capture("trial_cta_clicked", {
                       source: "diagnostic_summary_rail",
                       diagnostic_score: summary?.score,
                     });
+                    startBasicCheckout("diagnostic_summary_sidebar");
                   }}
                   tone="accent"
                   size="sm"
                   fullWidth
                 >
-                  Start Free Trial
+                  Upgrade to Premium
                 </Button>
                 <p className="text-xs text-slate-500 mt-2 text-center">No credit card required</p>
               </div>

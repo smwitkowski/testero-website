@@ -203,7 +203,7 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
           fullWidth
           className="mt-5 rounded-xl"
         >
-          Start 14-Day Free Trial
+          Upgrade to Premium
         </Button>
 
         {/* Secondary Action */}

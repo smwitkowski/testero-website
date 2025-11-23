@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import {
   Dialog,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
+import { useStartBasicCheckout } from "@/hooks/useStartBasicCheckout";
 
 export interface UpgradePromptProps {
   featureName?: string;
@@ -19,10 +20,10 @@ export interface UpgradePromptProps {
 
 export function UpgradePrompt({ featureName }: UpgradePromptProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const posthog = usePostHog();
   const [open, setOpen] = useState(true);
   const hasTrackedView = useRef(false);
+  const { startBasicCheckout } = useStartBasicCheckout();
 
   // Track gate_viewed on mount (only once)
   useEffect(() => {
@@ -42,9 +43,11 @@ export function UpgradePrompt({ featureName }: UpgradePromptProps) {
         route: pathname,
         plan_context: "unknown",
         feature: featureName ?? "unknown",
+        source: "upgrade_prompt",
       });
     }
-    router.push("/pricing");
+
+    startBasicCheckout(`upgrade_prompt_${featureName ?? "generic"}`);
   };
 
   const handleDismiss = () => {

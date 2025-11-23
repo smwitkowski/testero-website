@@ -76,6 +76,8 @@ export const ANALYTICS_EVENTS = {
   CHECKOUT_INITIATED: "checkout_initiated",
   CHECKOUT_SESSION_CREATED: "checkout_session_created",
   CHECKOUT_ERROR: "checkout_error",
+  UPGRADE_CTA_CLICKED: "upgrade_cta_clicked",
+  UPGRADE_SIGNUP_REDIRECT: "upgrade_signup_redirect",
   BILLING_PORTAL_ACCESSED: "billing_portal_accessed",
   GATE_VIEWED: "gate_viewed",
   GATE_CTA_CLICKED: "gate_cta_clicked",
