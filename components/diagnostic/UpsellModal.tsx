@@ -215,12 +215,12 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
           fullWidth
           className="mt-3 rounded-lg"
         >
-          Continue without trial
+          Not now
         </Button>
 
         {/* Trust Line */}
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          No credit card required • Cancel anytime
+          Cancel anytime
         </p>
       </div>
 
