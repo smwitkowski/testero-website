@@ -268,11 +268,7 @@ describe('/api/diagnostic/session', () => {
       expect(responseBody.error).toBe('Authentication required');
     });
 
-    it('should reject users without beta access with 403', async () => {
-      // Mock NODE_ENV to production to test beta access
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'production';
-
+    it('should allow authenticated users regardless of metadata flags', async () => {
       const { checkRateLimit } = require('@/lib/auth/rate-limiter');
       checkRateLimit.mockResolvedValue(true);
 
@@ -282,48 +278,7 @@ describe('/api/diagnostic/session', () => {
             data: { 
               user: { 
                 id: 'test-user', 
-                user_metadata: { is_early_access: false, beta_access: false } 
-              } 
-            },
-            error: null
-          })
-        }
-      };
-
-      const { createServerSupabaseClient } = require('@/lib/supabase/server');
-      createServerSupabaseClient.mockReturnValue(mockSupabase);
-
-      const { POST } = require('@/app/api/diagnostic/session/route');
-      
-      const mockRequest = new NextRequest('http://localhost/api/diagnostic/session', {
-        method: 'POST',
-        body: JSON.stringify({ 
-          examKey: 'pmle',
-          source: 'beta_welcome'
-        })
-      });
-
-      const response = await POST(mockRequest);
-      expect(response.status).toBe(403);
-      
-      const responseBody = await response.json();
-      expect(responseBody.error).toBe('Beta access required');
-
-      // Restore original NODE_ENV
-      process.env.NODE_ENV = originalEnv;
-    });
-
-    it('should allow users with early access', async () => {
-      const { checkRateLimit } = require('@/lib/auth/rate-limiter');
-      checkRateLimit.mockResolvedValue(true);
-
-      const mockSupabase = {
-        auth: {
-          getUser: jest.fn().mockResolvedValue({
-            data: { 
-              user: { 
-                id: 'test-user', 
-                user_metadata: { is_early_access: true } 
+                user_metadata: {} 
               } 
             },
             error: null
@@ -367,43 +322,7 @@ describe('/api/diagnostic/session', () => {
 
       const response = await POST(mockRequest);
       // Should proceed beyond auth checks (likely fail on database operations in test)
-      expect(response.status).not.toBe(401);
-      expect(response.status).not.toBe(403);
-    });
-
-    it('should allow users with explicit beta access', async () => {
-      const { checkRateLimit } = require('@/lib/auth/rate-limiter');
-      checkRateLimit.mockResolvedValue(true);
-
-      const mockSupabase = {
-        auth: {
-          getUser: jest.fn().mockResolvedValue({
-            data: { 
-              user: { 
-                id: 'test-user', 
-                user_metadata: { beta_access: true } 
-              } 
-            },
-            error: null
-          })
-        }
-      };
-
-      const { createServerSupabaseClient } = require('@/lib/supabase/server');
-      createServerSupabaseClient.mockReturnValue(mockSupabase);
-
-      const { POST } = require('@/app/api/diagnostic/session/route');
-      
-      const mockRequest = new NextRequest('http://localhost/api/diagnostic/session', {
-        method: 'POST',
-        body: JSON.stringify({ 
-          examKey: 'pmle',
-          source: 'beta_welcome'
-        })
-      });
-
-      const response = await POST(mockRequest);
-      // Should proceed beyond auth checks
+      // No longer checking beta access - access is controlled by subscription/entitlement logic
       expect(response.status).not.toBe(401);
       expect(response.status).not.toBe(403);
     });

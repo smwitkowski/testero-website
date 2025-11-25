@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Removed Beta Access Gating**: Removed all runtime gating based on `is_early_access` and `beta_access` user metadata flags. Access to diagnostic sessions and other features is now controlled solely by the existing anonymous/free/paid tier logic and billing/entitlement checks. Updated `/api/diagnostic/session` endpoint to remove beta-specific access checks. Retired dedicated beta onboarding pages (`/beta` and `/beta/welcome`) by redirecting them to main product flows (`/pricing` and `/diagnostic` respectively). Updated unit and E2E tests to reflect new access control behavior.
+
 ### Fixed
 - **Auth Redirect URLs Using Internal Container Address**: Fixed email verification and password reset redirects that were incorrectly using internal container URLs (`0.0.0.0:3000`) instead of the public site URL (`https://testero.ai`) in Cloud Run deployments. Updated `app/auth/confirm/route.ts` and `app/auth/reset-password/route.ts` to use `NEXT_PUBLIC_SITE_URL` environment variable for all redirect URL construction, falling back to `request.url` origin only in development. This fixes the bug where users clicking email verification links were redirected to `0.0.0.0:3000/login?verification_error=1` which timed out. Added comprehensive tests verifying redirects use the environment variable when set and fallback behavior when not set.
 
