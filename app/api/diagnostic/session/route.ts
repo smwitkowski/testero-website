@@ -95,15 +95,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    // Check beta access - user must have early access or explicit beta access
-    const hasEarlyAccess = user.user_metadata?.is_early_access === true;
-    const hasBetaFlag = user.user_metadata?.beta_access === true;
-    const isDevelopment = process.env.NODE_ENV === "development";
-
-    if (!isDevelopment && !hasEarlyAccess && !hasBetaFlag) {
-      return NextResponse.json({ error: "Beta access required" }, { status: 403 });
-    }
-
     // Parse and validate request body
     let requestBody;
     try {
