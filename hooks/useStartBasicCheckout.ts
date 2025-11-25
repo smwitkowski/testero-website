@@ -47,6 +47,8 @@ export function useStartBasicCheckout() {
           error: "missing_basic_monthly_price_id",
           user_state: "authenticated",
         });
+        // Redirect to pricing page as fallback instead of silent failure
+        router.push("/pricing");
         return;
       }
 
