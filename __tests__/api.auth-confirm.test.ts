@@ -251,5 +251,86 @@ describe("GET /auth/confirm", () => {
       expect(response.headers.get("location")).toContain("verification_error=1");
     });
   });
+
+  describe("redirect URL construction with NEXT_PUBLIC_SITE_URL", () => {
+    const originalEnv = process.env.NEXT_PUBLIC_SITE_URL;
+
+    afterEach(() => {
+      if (originalEnv) {
+        process.env.NEXT_PUBLIC_SITE_URL = originalEnv;
+      } else {
+        delete process.env.NEXT_PUBLIC_SITE_URL;
+      }
+    });
+
+    it("should use NEXT_PUBLIC_SITE_URL for redirects instead of request.url origin", async () => {
+      // Set production URL
+      process.env.NEXT_PUBLIC_SITE_URL = "https://testero.ai";
+
+      mockVerifyOtp.mockResolvedValue({
+        data: { session: null },
+        error: { message: "Token expired" },
+      });
+
+      // Request comes from internal container URL (simulating Cloud Run)
+      const request = new NextRequest(
+        "http://0.0.0.0:3000/auth/confirm?token_hash=abc123&type=email"
+      );
+
+      const response = await GET(request);
+
+      expect(response.status).toBe(307);
+      const location = response.headers.get("location");
+      expect(location).toBe("https://testero.ai/login?verification_error=1");
+      // Verify it does NOT use the request.url origin
+      expect(location).not.toContain("0.0.0.0");
+    });
+
+    it("should fallback to request.url origin when NEXT_PUBLIC_SITE_URL is not set", async () => {
+      delete process.env.NEXT_PUBLIC_SITE_URL;
+
+      mockVerifyOtp.mockResolvedValue({
+        data: { session: null },
+        error: { message: "Token expired" },
+      });
+
+      const request = new NextRequest(
+        "http://localhost:3000/auth/confirm?token_hash=abc123&type=email"
+      );
+
+      const response = await GET(request);
+
+      expect(response.status).toBe(307);
+      const location = response.headers.get("location");
+      expect(location).toBe("http://localhost:3000/login?verification_error=1");
+    });
+
+    it("should use NEXT_PUBLIC_SITE_URL for successful redirects", async () => {
+      process.env.NEXT_PUBLIC_SITE_URL = "https://testero.ai";
+
+      const mockSession = {
+        access_token: "mock-access-token",
+        refresh_token: "mock-refresh-token",
+        user: { id: "user-123", email: "test@example.com" },
+      };
+
+      mockVerifyOtp.mockResolvedValue({
+        data: { session: mockSession },
+        error: null,
+      });
+
+      // Request from internal URL
+      const request = new NextRequest(
+        "http://0.0.0.0:3000/auth/confirm?token_hash=abc123&type=email&next=/verify-email"
+      );
+
+      const response = await GET(request);
+
+      expect(response.status).toBe(307);
+      const location = response.headers.get("location");
+      expect(location).toBe("https://testero.ai/verify-email");
+      expect(location).not.toContain("0.0.0.0");
+    });
+  });
 });
 
