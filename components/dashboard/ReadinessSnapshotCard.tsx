@@ -18,21 +18,10 @@ export interface ReadinessSnapshotCardProps {
   periodContext?: string;
   weakestDomain?: string;
   weakestDomainWeight?: number;
-  lastDiagnosticDate?: string | null;
-  lastDiagnosticSessionId?: string | null;
   onStartDiagnostic?: () => void;
   onUpgrade?: () => void;
   showUpgradeCTA?: boolean;
   className?: string;
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 export const ReadinessSnapshotCard: React.FC<ReadinessSnapshotCardProps> = ({
@@ -43,8 +32,6 @@ export const ReadinessSnapshotCard: React.FC<ReadinessSnapshotCardProps> = ({
   periodContext = "Based on last 7 days of practice",
   weakestDomain,
   weakestDomainWeight,
-  lastDiagnosticDate,
-  lastDiagnosticSessionId,
   onStartDiagnostic,
   onUpgrade,
   showUpgradeCTA,

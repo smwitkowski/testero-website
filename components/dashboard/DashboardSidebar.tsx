@@ -6,7 +6,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Home, HelpCircle, BarChart3, Calendar, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { colorSemantic, colorComponent } from "@/lib/design-system";
+import { colorComponent } from "@/lib/design-system";
 
 export interface DashboardSidebarProps {
   activeItem?: "dashboard" | "practice" | "performance" | "study-plan" | "settings";

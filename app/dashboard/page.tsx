@@ -25,7 +25,6 @@ import type { ExamReadinessSummary, DashboardSummarySuccessResponse, ErrorRespon
 import { FEATURE_FLAGS, getBetaVariantContent } from "@/lib/constants/beta-onboarding";
 import {
   getPmleAccessLevelForUser,
-  canUseFeature,
   type AccessLevel,
 } from "@/lib/access/pmleEntitlements";
 import type { BillingStatusResponse } from "@/app/api/billing/status/route";
@@ -418,9 +417,10 @@ const DashboardPage = () => {
             overallAccuracy={dashboardData.practice.accuracyPercentage}
             blueprintCoverage={blueprintCoverage}
             weakestDomain={weakestDomain?.displayName}
-            weakestDomainWeight={weakestDomain ? Math.round(PMLE_BLUEPRINT.find((d) => d.domainCode === weakestDomain.domainCode)?.weight! * 100) : undefined}
-            lastDiagnosticDate={examReadiness?.lastDiagnosticDate ?? null}
-            lastDiagnosticSessionId={examReadiness?.lastDiagnosticSessionId ?? null}
+            weakestDomainWeight={weakestDomain ? (() => {
+              const domain = PMLE_BLUEPRINT.find((d) => d.domainCode === weakestDomain.domainCode);
+              return domain ? Math.round(domain.weight * 100) : undefined;
+            })() : undefined}
             onStartDiagnostic={handleStartDiagnostic}
             onUpgrade={() => startBasicCheckout("dashboard_readiness_card")}
             showUpgradeCTA={accessLevel !== "SUBSCRIBER"}

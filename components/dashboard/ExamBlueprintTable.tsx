@@ -8,7 +8,6 @@ import { Table } from "@/components/ui/table";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { colorComponent } from "@/lib/design-system";
 
 export interface DomainStat {
   domainCode: string;
