@@ -6,39 +6,28 @@ import { cn } from "@/lib/utils";
 export interface DashboardLayoutProps {
   sidebar: React.ReactNode;
   main: React.ReactNode;
-  rightPanel?: React.ReactNode;
   className?: string;
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   sidebar,
   main,
-  rightPanel,
   className,
 }) => {
   return (
     <div className={cn("min-h-screen bg-background", className)}>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 h-screen">
+      <div className="flex h-screen">
         {/* Sidebar - fixed width on desktop */}
-        <div className="lg:col-span-3 xl:col-span-2 hidden lg:block">
+        <div className="hidden lg:block lg:flex-shrink-0" style={{ width: "var(--sidebar-width, 240px)" }}>
           {sidebar}
         </div>
 
         {/* Main content area */}
-        <div className="lg:col-span-9 xl:col-span-7 overflow-y-auto">
-          <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="flex-1 min-w-0 overflow-y-auto">
+          <div className="mx-auto px-4 py-8 lg:px-8" style={{ maxWidth: "var(--main-content-max-width, 1200px)" }}>
             {main}
           </div>
         </div>
-
-        {/* Right panel - optional */}
-        {rightPanel && (
-          <div className="lg:col-span-3 xl:col-span-3 hidden lg:block overflow-y-auto border-l border-border/60">
-            <div className="p-6 space-y-6">
-              {rightPanel}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Mobile sidebar overlay */}

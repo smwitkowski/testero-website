@@ -147,6 +147,17 @@ export const component = {
       gap: semantic.component.md,      // 24px between slides
     },
   },
+
+  // Dashboard shell spacing
+  dashboardShell: {
+    topBarHeight: '3.5rem',     // 56px
+    sidebarWidth: '15rem',      // 240px
+    mainPadding: {
+      mobile: semantic.container.xs,   // 16px
+      desktop: semantic.container.md,  // 32px
+    },
+    mainMaxWidth: '75rem',      // 1200px
+  },
 };
 
 // RESPONSIVE SPACING (Breakpoint-aware)

@@ -3,8 +3,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { ReadinessSnapshotCard } from "@/components/dashboard/ReadinessSnapshotCard";
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { ExamBlueprintTable } from "@/components/dashboard/ExamBlueprintTable";
 import { NextBestStepCard } from "@/components/dashboard/NextBestStepCard";
@@ -214,22 +212,6 @@ const DashboardPage = () => {
     }
   };
 
-  const handleStartPractice = () => {
-    window.location.href = '/practice/question';
-  };
-
-  const handleReviewWeakest = () => {
-    // Navigate to practice with weakest domain filter
-    const weakestDomain = mockDomainStats.find(
-      (stat) => stat.accuracy === Math.min(...mockDomainStats.map((s) => s.accuracy))
-    );
-    if (weakestDomain) {
-      const domainConfig = PMLE_BLUEPRINT.find((d) => d.domainCode === weakestDomain.domainCode);
-      if (domainConfig) {
-        window.location.href = `/practice/question?domain=${encodeURIComponent(domainConfig.displayName)}`;
-      }
-    }
-  };
 
   // Mock domain stats (placeholder until API provides this data)
   const mockDomainStats: DomainStat[] = useMemo(() => {
@@ -352,106 +334,92 @@ const DashboardPage = () => {
   const variantContent = getBetaVariantContent(betaVariant);
 
   return (
-    <DashboardLayout
-      sidebar={
-        <DashboardSidebar
-          activeItem="dashboard"
-          showUpgradeCTA={accessLevel !== "SUBSCRIBER"}
-          onUpgrade={() => startBasicCheckout("dashboard_sidebar")}
-        />
-      }
-      main={
-        <div className="space-y-6">
-          {/* Beta Diagnostic Banner */}
-          {showBetaBanner && (
-            <div className="mb-6">
-              <div
-                className="rounded-lg p-4 border flex items-center justify-between"
-                style={{
-                  backgroundColor: colorSemantic.info.light,
-                  borderColor: colorSemantic.info.base + "40",
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="text-2xl">{betaVariant === 'B' ? '🎁' : '🎯'}</div>
-                  <div>
-                    <p className="font-medium" style={{ color: colorSemantic.info.dark }}>
-                      {variantContent.skipBanner.message}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={handleStartDiagnostic}
-                    size="sm"
-                    tone="accent"
-                    data-testid="dashboard-beta-start-btn"
-                  >
-                    {variantContent.skipBanner.cta}
-                  </Button>
-                  <Button
-                    onClick={handleDismissBanner}
-                    variant="ghost"
-                    size="sm"
-                    tone="neutral"
-                    className="size-8 p-1"
-                    aria-label="Dismiss beta banner"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
+    <div className="space-y-6">
+      {/* Beta Diagnostic Banner */}
+      {showBetaBanner && (
+        <div className="mb-6">
+          <div
+            className="rounded-lg p-4 border flex items-center justify-between"
+            style={{
+              backgroundColor: colorSemantic.info.light,
+              borderColor: colorSemantic.info.base + "40",
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">{betaVariant === 'B' ? '🎁' : '🎯'}</div>
+              <div>
+                <p className="font-medium" style={{ color: colorSemantic.info.dark }}>
+                  {variantContent.skipBanner.message}
+                </p>
               </div>
             </div>
-          )}
-
-          {/* Header */}
-          <DashboardHeader
-            onStartPractice={handleStartPractice}
-            onReviewWeakest={handleReviewWeakest}
-          />
-
-          {/* Readiness Snapshot Card */}
-          <ReadinessSnapshotCard
-            score={examReadiness?.currentReadinessScore ?? 0}
-            hasCompletedDiagnostic={examReadiness?.hasCompletedDiagnostic ?? false}
-            overallAccuracy={dashboardData.practice.accuracyPercentage}
-            blueprintCoverage={blueprintCoverage}
-            weakestDomain={weakestDomain?.displayName}
-            weakestDomainWeight={weakestDomain ? (() => {
-              const domain = PMLE_BLUEPRINT.find((d) => d.domainCode === weakestDomain.domainCode);
-              return domain ? Math.round(domain.weight * 100) : undefined;
-            })() : undefined}
-            onStartDiagnostic={handleStartDiagnostic}
-            onUpgrade={() => startBasicCheckout("dashboard_readiness_card")}
-            showUpgradeCTA={accessLevel !== "SUBSCRIBER"}
-          />
-
-          {/* Exam Blueprint Table */}
-          <ExamBlueprintTable domainStats={mockDomainStats} />
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleStartDiagnostic}
+                size="sm"
+                tone="accent"
+                data-testid="dashboard-beta-start-btn"
+              >
+                {variantContent.skipBanner.cta}
+              </Button>
+              <Button
+                onClick={handleDismissBanner}
+                variant="ghost"
+                size="sm"
+                tone="neutral"
+                className="size-8 p-1"
+                aria-label="Dismiss beta banner"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
-      }
-      rightPanel={
-        <div className="space-y-6">
-          {/* Next Best Step Card */}
-          {weakestDomain && (
-            <NextBestStepCard
-              domain={weakestDomain.displayName}
-              questionCount={25}
-              estimatedTime="30 mins"
-              onStartSession={() => {
-                window.location.href = `/practice/question?domain=${encodeURIComponent(weakestDomain.displayName)}`;
-              }}
-              onChooseAnotherMode={() => {
-                window.location.href = '/practice/question';
-              }}
-            />
-          )}
+      )}
 
-          {/* Recent Activity List */}
-          <RecentActivityList activities={mockActivities} />
-        </div>
-      }
-    />
+      {/* Header */}
+      <DashboardHeader />
+
+      {/* Next Best Step Card - Promoted */}
+      {weakestDomain && (
+        <NextBestStepCard
+          domain={weakestDomain.displayName}
+          questionCount={25}
+          estimatedTime="30 mins"
+          onStartSession={() => {
+            window.location.href = `/practice/question?domain=${encodeURIComponent(weakestDomain.displayName)}`;
+          }}
+          onChooseAnotherMode={() => {
+            window.location.href = '/practice/question';
+          }}
+        />
+      )}
+
+      {/* Two-column section: Readiness + Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Readiness Snapshot Card */}
+        <ReadinessSnapshotCard
+          score={examReadiness?.currentReadinessScore ?? 0}
+          hasCompletedDiagnostic={examReadiness?.hasCompletedDiagnostic ?? false}
+          overallAccuracy={dashboardData.practice.accuracyPercentage}
+          blueprintCoverage={blueprintCoverage}
+          weakestDomain={weakestDomain?.displayName}
+          weakestDomainWeight={weakestDomain ? (() => {
+            const domain = PMLE_BLUEPRINT.find((d) => d.domainCode === weakestDomain.domainCode);
+            return domain ? Math.round(domain.weight * 100) : undefined;
+          })() : undefined}
+          onStartDiagnostic={handleStartDiagnostic}
+          onUpgrade={() => startBasicCheckout("dashboard_readiness_card")}
+          showUpgradeCTA={accessLevel !== "SUBSCRIBER"}
+        />
+
+        {/* Recent Activity List */}
+        <RecentActivityList activities={mockActivities} />
+      </div>
+
+      {/* Exam Blueprint Table */}
+      <ExamBlueprintTable domainStats={mockDomainStats} />
+    </div>
   );
 };
 

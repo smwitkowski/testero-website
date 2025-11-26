@@ -1,5 +1,9 @@
 ---
-title: GFM Test
+title: "GFM Test"
+description: "Markdown feature coverage"
+date: "2024-02-01"
+publishedAt: "2024-02-01"
+type: "hub"
 ---
 
 # Tables
