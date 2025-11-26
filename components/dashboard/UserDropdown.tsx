@@ -96,8 +96,8 @@ export const UserDropdown: React.FC<UserDropdownProps> = ({ className }) => {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="min-w-[200px]"
         style={{
+          minWidth: "200px",
           backgroundColor: colorComponent.dashboard.userDropdown.menuBg,
           borderColor: colorComponent.dashboard.userDropdown.menuBorder,
           boxShadow: `0 4px 6px -1px ${colorComponent.dashboard.userDropdown.menuShadow}`,

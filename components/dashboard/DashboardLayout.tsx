@@ -18,13 +18,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     <div className={cn("min-h-screen bg-background", className)}>
       <div className="flex h-screen">
         {/* Sidebar - fixed width on desktop */}
-        <div className="hidden lg:block lg:w-[240px] lg:flex-shrink-0">
+        <div className="hidden lg:block lg:flex-shrink-0" style={{ width: "var(--sidebar-width, 240px)" }}>
           {sidebar}
         </div>
 
         {/* Main content area */}
         <div className="flex-1 min-w-0 overflow-y-auto">
-          <div className="mx-auto max-w-[1200px] px-4 py-8 lg:px-8">
+          <div className="mx-auto px-4 py-8 lg:px-8" style={{ maxWidth: "var(--main-content-max-width, 1200px)" }}>
             {main}
           </div>
         </div>

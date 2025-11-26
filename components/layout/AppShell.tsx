@@ -66,13 +66,14 @@ export const AppShell: React.FC<AppShellProps> = ({ children, className }) => {
       {/* TopBar - fixed at top */}
       <TopBar onMenuToggle={handleMenuToggle} />
 
-      <div className="flex pt-[56px]">
+      <div className="flex" style={{ paddingTop: "var(--topbar-height, 56px)" }}>
         {/* Desktop Sidebar - always visible on lg+ */}
-        <aside className="hidden lg:block lg:w-[240px] lg:flex-shrink-0">
+        <aside className="hidden lg:block lg:flex-shrink-0" style={{ width: "var(--sidebar-width, 240px)" }}>
           <div
-            className="fixed left-0 top-[56px] h-[calc(100vh-56px)] overflow-y-auto border-r"
+            className="fixed left-0 h-[calc(100vh-var(--topbar-height,56px))] overflow-y-auto border-r"
             style={{
-              width: "240px",
+              top: "var(--topbar-height, 56px)",
+              width: "var(--sidebar-width, 240px)",
               backgroundColor: colorComponent.dashboard.sidebar.background,
               borderColor: colorComponent.dashboard.sidebar.hoverBg,
             }}
@@ -95,8 +96,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children, className }) => {
             />
             {/* Sidebar */}
             <aside
-              className="fixed left-0 top-[56px] z-50 h-[calc(100vh-56px)] w-[280px] overflow-y-auto border-r lg:hidden"
+              className="fixed left-0 z-50 h-[calc(100vh-var(--topbar-height,56px))] overflow-y-auto border-r lg:hidden"
               style={{
+                top: "var(--topbar-height, 56px)",
+                width: colorComponent.dashboard.sidebarOverlay.width,
                 backgroundColor: colorComponent.dashboard.sidebar.background,
                 borderColor: colorComponent.dashboard.sidebar.hoverBg,
               }}
@@ -118,7 +121,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children, className }) => {
 
         {/* Main Content */}
         <main className="flex-1 min-w-0">
-          <div className="mx-auto max-w-[1200px] px-4 py-8 lg:px-8">{children}</div>
+          <div className="mx-auto px-4 py-8 lg:px-8" style={{ maxWidth: "var(--main-content-max-width, 1200px)" }}>
+            {children}
+          </div>
         </main>
       </div>
     </div>

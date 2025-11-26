@@ -2,7 +2,6 @@
 
 import React from "react";
 import Link from "next/link";
-import { useAuth } from "@/components/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Home, HelpCircle, BarChart3, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
