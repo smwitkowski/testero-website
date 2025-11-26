@@ -41,6 +41,23 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Card spacing tokens for Tailwind v4 */
+  --spacing-card-x-sm: var(--space-card-x-sm);
+  --spacing-card-y-sm: var(--space-card-y-sm);
+  --spacing-card-sm: var(--gap-card-sm);
+  
+  --spacing-card-x-md: var(--space-card-x-md);
+  --spacing-card-y-md: var(--space-card-y-md);
+  --spacing-card-md: var(--gap-card-md);
+  
+  --spacing-card-x-lg: var(--space-card-x-lg);
+  --spacing-card-y-lg: var(--space-card-y-lg);
+  --spacing-card-lg: var(--gap-card-lg);
+  
+  --spacing-card-x: var(--space-card-x);
+  --spacing-card-y: var(--space-card-y);
+  --spacing-card-gap: var(--gap-card);
 }
 
 :root {
