@@ -95,7 +95,7 @@ describe("TopBar", () => {
     const { container } = render(<TopBar onMenuToggle={mockOnMenuToggle} />);
 
     const topBar = container.querySelector("header");
-    expect(topBar).toHaveClass("h-[56px]");
+    expect(topBar).toHaveStyle({ height: "var(--topbar-height, 56px)" });
   });
 });
 
