@@ -27,16 +27,17 @@ function calculateQuestionIndex(userId: string, questionsLength: number): number
 /**
  * Parse and validate difficulty parameter from query string.
  * Returns undefined if not provided, or throws validation error.
+ * Accepts text values: 'EASY', 'MEDIUM', 'HARD' (canonical schema)
  */
-function parseDifficulty(difficultyStr: string | null): number | undefined {
+function parseDifficulty(difficultyStr: string | null): string | undefined {
   if (!difficultyStr) {
     return undefined;
   }
-  const difficulty = Number.parseInt(difficultyStr, 10);
-  if (Number.isNaN(difficulty) || difficulty < 1 || difficulty > 5) {
-    throw new Error('Invalid difficulty (must be 1-5)');
+  const upperDifficulty = difficultyStr.toUpperCase();
+  if (!['EASY', 'MEDIUM', 'HARD'].includes(upperDifficulty)) {
+    throw new Error('Invalid difficulty (must be EASY, MEDIUM, or HARD)');
   }
-  return difficulty;
+  return upperDifficulty;
 }
 
 /**
@@ -73,17 +74,18 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams;
-    const topic = searchParams.get('topic')?.trim() || undefined;
+    // Note: topic filter removed - questions table doesn't have topic column
+    // Use domain_id join if topic filtering is needed in future
     const hasExplanationParam = searchParams.get('hasExplanation');
     const hasExplanation = hasExplanationParam?.toLowerCase() === 'false' ? false : true;
     
-    // Validate difficulty parameter
-    let difficulty: number | undefined;
+    // Validate difficulty parameter (accepts 'EASY', 'MEDIUM', 'HARD')
+    let difficulty: string | undefined;
     try {
       difficulty = parseDifficulty(searchParams.get('difficulty'));
     } catch (error) {
       return NextResponse.json({ 
-        error: error instanceof Error ? error.message : 'Invalid difficulty (must be 1-5)' 
+        error: error instanceof Error ? error.message : 'Invalid difficulty (must be EASY, MEDIUM, or HARD)' 
       }, { status: 400 });
     }
 
@@ -94,9 +96,6 @@ export async function GET(request: NextRequest) {
       .eq('status', 'ACTIVE');
 
     // Apply optional filters with AND semantics
-    if (topic) {
-      query = query.eq('topic', topic);
-    }
     if (difficulty !== undefined) {
       query = query.eq('difficulty', difficulty);
     }
@@ -134,18 +133,18 @@ export async function GET(request: NextRequest) {
 
     const question = questions[chosenIndex] as unknown as QuestionWithExplanation;
 
-    // Fetch options for the question
-    const { data: options, error: optionsError } = await supabase
-      .from('options')
-      .select('id, label, text')
+    // Fetch answers for the question (canonical schema uses 'answers' table)
+    const { data: answers, error: answersError } = await supabase
+      .from('answers')
+      .select('id, choice_label, choice_text')
       .eq('question_id', question.id);
 
-    if (optionsError) {
-      return NextResponse.json({ error: 'Error fetching options.' }, { status: 500 });
+    if (answersError) {
+      return NextResponse.json({ error: 'Error fetching answers.' }, { status: 500 });
     }
 
-    // Shape the response
-    return NextResponse.json(serializeQuestion(question, options || []));
+    // Shape the response (serializeQuestion will map choice_label->label, choice_text->text)
+    return NextResponse.json(serializeQuestion(question, answers || []));
   } catch (error) {
     console.error('Current question API error:', error);
     return NextResponse.json({ 

@@ -44,16 +44,16 @@ describe("GET /api/questions/current", () => {
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
-      // Mock options query
+      // Mock answers query (canonical schema uses 'answers' table)
       const eqMock = jest.fn().mockResolvedValue({
         data: [
-          { id: "opt1", label: "A", text: "Option A" },
-          { id: "opt2", label: "B", text: "Option B" },
+          { id: "ans1", choice_label: "A", choice_text: "Option A" },
+          { id: "ans2", choice_label: "B", choice_text: "Option B" },
         ],
         error: null,
       });
-      const selectMockO = jest.fn(() => ({ eq: eqMock }));
-      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
+      const selectMockA = jest.fn(() => ({ eq: eqMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockA });
 
       const req = new NextRequest("http://localhost/api/questions/current");
       const res = await GET(req);
@@ -195,39 +195,6 @@ describe("GET /api/questions/current", () => {
   });
 
   describe("query parameter filters", () => {
-    it("filters by topic when topic parameter is provided", async () => {
-      const mockUser = { id: "user-topic" };
-      serverSupabaseMock.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      const questionsData = [
-        { id: "q1", stem: "Question 1", explanations: [{ id: "e1" }] },
-      ];
-      const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
-      const eqTopicMock = jest.fn(() => ({ limit: limitMock }));
-      const eqEligibleMock = jest.fn(() => ({ eq: eqTopicMock }));
-      const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
-      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
-
-      const eqOptMock = jest.fn().mockResolvedValue({
-        data: [{ id: "opt1", label: "A", text: "Option A" }],
-        error: null,
-      });
-      const selectMockO = jest.fn(() => ({ eq: eqOptMock }));
-      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
-
-      const req = new NextRequest("http://localhost/api/questions/current?topic=Cardiology");
-      const res = await GET(req);
-      const data = await res.json();
-
-      expect(res.status).toBe(200);
-      expect(data.id).toBeDefined();
-      expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
-      expect(eqTopicMock).toHaveBeenCalledWith("topic", "Cardiology");
-    });
-
     it("filters by difficulty when difficulty parameter is provided", async () => {
       const mockUser = { id: "user-difficulty" };
       serverSupabaseMock.auth.getUser.mockResolvedValue({
@@ -244,57 +211,23 @@ describe("GET /api/questions/current", () => {
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
-      const eqOptMock = jest.fn().mockResolvedValue({
-        data: [{ id: "opt1", label: "A", text: "Option A" }],
+      const eqAnsMock = jest.fn().mockResolvedValue({
+        data: [{ id: "ans1", choice_label: "A", choice_text: "Option A" }],
         error: null,
       });
-      const selectMockO = jest.fn(() => ({ eq: eqOptMock }));
-      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
+      const selectMockA = jest.fn(() => ({ eq: eqAnsMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockA });
 
-      const req = new NextRequest("http://localhost/api/questions/current?difficulty=3");
+      const req = new NextRequest("http://localhost/api/questions/current?difficulty=MEDIUM");
       const res = await GET(req);
       const data = await res.json();
 
       expect(res.status).toBe(200);
       expect(data.id).toBeDefined();
       expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
-      expect(eqDifficultyMock).toHaveBeenCalledWith("difficulty", 3);
+      expect(eqDifficultyMock).toHaveBeenCalledWith("difficulty", "MEDIUM");
     });
 
-    it("applies topic and difficulty filters together with AND semantics", async () => {
-      const mockUser = { id: "user-combined" };
-      serverSupabaseMock.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      const questionsData = [
-        { id: "q1", stem: "Question 1", explanations: [{ id: "e1" }] },
-      ];
-      const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
-      const eqDifficultyMock = jest.fn(() => ({ limit: limitMock }));
-      const eqTopicMock = jest.fn(() => ({ eq: eqDifficultyMock }));
-      const eqEligibleMock = jest.fn(() => ({ eq: eqTopicMock }));
-      const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
-      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
-
-      const eqOptMock = jest.fn().mockResolvedValue({
-        data: [{ id: "opt1", label: "A", text: "Option A" }],
-        error: null,
-      });
-      const selectMockO = jest.fn(() => ({ eq: eqOptMock }));
-      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
-
-      const req = new NextRequest("http://localhost/api/questions/current?topic=Cardiology&difficulty=2");
-      const res = await GET(req);
-      const data = await res.json();
-
-      expect(res.status).toBe(200);
-      expect(data.id).toBeDefined();
-      expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
-      expect(eqTopicMock).toHaveBeenCalledWith("topic", "Cardiology");
-      expect(eqDifficultyMock).toHaveBeenCalledWith("difficulty", 2);
-    });
 
     it("uses non-inner join when hasExplanation=false", async () => {
       const mockUser = { id: "user-no-explanation" };
@@ -311,12 +244,12 @@ describe("GET /api/questions/current", () => {
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
-      const eqOptMock = jest.fn().mockResolvedValue({
-        data: [{ id: "opt1", label: "A", text: "Option A" }],
+      const eqAnsMock = jest.fn().mockResolvedValue({
+        data: [{ id: "ans1", choice_label: "A", choice_text: "Option A" }],
         error: null,
       });
-      const selectMockO = jest.fn(() => ({ eq: eqOptMock }));
-      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
+      const selectMockA = jest.fn(() => ({ eq: eqAnsMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockA });
 
       const req = new NextRequest("http://localhost/api/questions/current?hasExplanation=false");
       const res = await GET(req);
@@ -328,49 +261,19 @@ describe("GET /api/questions/current", () => {
       expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
     });
 
-    it("returns 400 for invalid difficulty (out of range)", async () => {
+    it("returns 400 for invalid difficulty (not EASY/MEDIUM/HARD)", async () => {
       const mockUser = { id: "user-invalid" };
       serverSupabaseMock.auth.getUser.mockResolvedValue({
         data: { user: mockUser },
         error: null,
       });
 
-      const req = new NextRequest("http://localhost/api/questions/current?difficulty=6");
+      const req = new NextRequest("http://localhost/api/questions/current?difficulty=HARDEST");
       const res = await GET(req);
       const data = await res.json();
 
       expect(res.status).toBe(400);
-      expect(data.error).toBe("Invalid difficulty (must be 1-5)");
-    });
-
-    it("returns 400 for invalid difficulty (below range)", async () => {
-      const mockUser = { id: "user-invalid-low" };
-      serverSupabaseMock.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      const req = new NextRequest("http://localhost/api/questions/current?difficulty=0");
-      const res = await GET(req);
-      const data = await res.json();
-
-      expect(res.status).toBe(400);
-      expect(data.error).toBe("Invalid difficulty (must be 1-5)");
-    });
-
-    it("returns 400 for invalid difficulty (non-numeric)", async () => {
-      const mockUser = { id: "user-invalid-nan" };
-      serverSupabaseMock.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      const req = new NextRequest("http://localhost/api/questions/current?difficulty=abc");
-      const res = await GET(req);
-      const data = await res.json();
-
-      expect(res.status).toBe(400);
-      expect(data.error).toBe("Invalid difficulty (must be 1-5)");
+      expect(data.error).toBe("Invalid difficulty (must be EASY, MEDIUM, or HARD)");
     });
 
     it("always applies status filter even with query params", async () => {
@@ -385,26 +288,24 @@ describe("GET /api/questions/current", () => {
       ];
       const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
       const eqDifficultyMock = jest.fn(() => ({ limit: limitMock }));
-      const eqTopicMock = jest.fn(() => ({ eq: eqDifficultyMock }));
-      const eqEligibleMock = jest.fn(() => ({ eq: eqTopicMock }));
+      const eqEligibleMock = jest.fn(() => ({ eq: eqDifficultyMock }));
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
-      const eqOptMock = jest.fn().mockResolvedValue({
-        data: [{ id: "opt1", label: "A", text: "Option A" }],
+      const eqAnsMock = jest.fn().mockResolvedValue({
+        data: [{ id: "ans1", choice_label: "A", choice_text: "Option A" }],
         error: null,
       });
-      const selectMockO = jest.fn(() => ({ eq: eqOptMock }));
-      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
+      const selectMockA = jest.fn(() => ({ eq: eqAnsMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockA });
 
-      const req = new NextRequest("http://localhost/api/questions/current?topic=Cardiology&difficulty=2&hasExplanation=true");
+      const req = new NextRequest("http://localhost/api/questions/current?difficulty=MEDIUM&hasExplanation=true");
       const res = await GET(req);
       const data = await res.json();
 
       expect(res.status).toBe(200);
       expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
-      expect(eqTopicMock).toHaveBeenCalledWith("topic", "Cardiology");
-      expect(eqDifficultyMock).toHaveBeenCalledWith("difficulty", 2);
+      expect(eqDifficultyMock).toHaveBeenCalledWith("difficulty", "MEDIUM");
     });
   });
 
@@ -456,16 +357,16 @@ describe("GET /api/questions/current", () => {
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
-      // Mock options query
+      // Mock answers query (canonical schema uses 'answers' table)
       const eqMock = jest.fn().mockResolvedValue({
         data: [
-          { id: "opt1", label: "A", text: "Option A" },
-          { id: "opt2", label: "B", text: "Option B" },
+          { id: "ans1", choice_label: "A", choice_text: "Option A" },
+          { id: "ans2", choice_label: "B", choice_text: "Option B" },
         ],
         error: null,
       });
-      const selectMockO = jest.fn(() => ({ eq: eqMock }));
-      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
+      const selectMockA = jest.fn(() => ({ eq: eqMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockA });
 
       // First, get the question without exclusions to see what would be picked
       const reqNoExclude = new NextRequest("http://localhost/api/questions/current");
@@ -484,13 +385,13 @@ describe("GET /api/questions/current", () => {
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ2 });
       const eqMock2 = jest.fn().mockResolvedValue({
         data: [
-          { id: "opt1", label: "A", text: "Option A" },
-          { id: "opt2", label: "B", text: "Option B" },
+          { id: "ans1", choice_label: "A", choice_text: "Option A" },
+          { id: "ans2", choice_label: "B", choice_text: "Option B" },
         ],
         error: null,
       });
-      const selectMockO2 = jest.fn(() => ({ eq: eqMock2 }));
-      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO2 });
+      const selectMockA2 = jest.fn(() => ({ eq: eqMock2 }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockA2 });
 
       // Now exclude the question that was picked first
       const excludedId = dataNoExclude.id;

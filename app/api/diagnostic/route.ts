@@ -376,6 +376,9 @@ export async function POST(req: Request) {
           }
         } else {
           // Legacy: Use exam_versions for non-PMLE exams
+          // NOTE: This path is currently broken - canonical schema doesn't have exam_version_id
+          // If legacy exams are needed, this should query questions_legacy table instead
+          // TODO: Update this path to use canonical schema or migrate to questions_legacy
           const { data: currentExamVersion, error: versionError } = await supabase
             .from("exam_versions")
             .select("id")
@@ -395,6 +398,8 @@ export async function POST(req: Request) {
           }
           const currentExamVersionId = currentExamVersion.id;
 
+          // NOTE: This query will fail - canonical questions table doesn't have exam_version_id
+          // Should use questions_legacy table or migrate legacy exams to canonical schema
           const { data: dbQuestions, error: questionsFetchError } = await supabase
             .from("questions")
             .select(

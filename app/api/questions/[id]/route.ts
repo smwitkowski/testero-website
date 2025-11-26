@@ -35,18 +35,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Question not found or database error.' }, { status: 404 });
     }
 
-    // Fetch options for the question
-    const { data: options, error: optionsError } = await supabase
-      .from('options')
-      .select('id, label, text')
+    // Fetch answers for the question (canonical schema uses 'answers' table)
+    const { data: answers, error: answersError } = await supabase
+      .from('answers')
+      .select('id, choice_label, choice_text')
       .eq('question_id', question.id);
 
-    if (optionsError) {
-      return NextResponse.json({ error: 'Error fetching options.' }, { status: 500 });
+    if (answersError) {
+      return NextResponse.json({ error: 'Error fetching answers.' }, { status: 500 });
     }
 
-    // Shape the response
-    return NextResponse.json(serializeQuestion(question, options || []));
+    // Shape the response (serializeQuestion will map choice_label->label, choice_text->text)
+    return NextResponse.json(serializeQuestion(question, answers || []));
   } catch (error) {
     console.error('Question by ID API error:', error);
     return NextResponse.json({ 
