@@ -9,10 +9,16 @@ jest.mock("@/lib/supabase/server", () => ({
   createServerSupabaseClient: jest.fn(() => serverSupabaseMock),
 }));
 
+const mockRequireSubscriber = jest.fn().mockResolvedValue(null);
+jest.mock("@/lib/auth/require-subscriber", () => ({
+  requireSubscriber: () => mockRequireSubscriber(),
+}));
+
 describe("GET /api/questions/current", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(console, "info").mockImplementation(() => {});
+    mockRequireSubscriber.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -60,8 +66,8 @@ describe("GET /api/questions/current", () => {
       expect(Array.isArray(data.options)).toBe(true);
       // Verify the select was called with explanations inner join
       expect(selectMockQ).toHaveBeenCalledWith("id, stem, explanations!inner(id)");
-      // Verify is_diagnostic_eligible filter is always applied
-      expect(eqEligibleMock).toHaveBeenCalledWith("is_diagnostic_eligible", true);
+      // Verify status filter is always applied
+      expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
     });
 
     it("never returns questions without explanations", async () => {
@@ -98,8 +104,8 @@ describe("GET /api/questions/current", () => {
       expect(data.id).toBeDefined();
       // The inner join filter ensures only questions with explanations are in the result set
       expect(questionsData.some((q) => q.id === data.id && q.explanations.length > 0)).toBe(true);
-      // Verify is_diagnostic_eligible filter is always applied
-      expect(eqEligibleMock).toHaveBeenCalledWith("is_diagnostic_eligible", true);
+      // Verify status filter is always applied
+      expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
     });
   });
 
@@ -124,7 +130,7 @@ describe("GET /api/questions/current", () => {
       expect(res.status).toBe(404);
       expect(data.error).toBe("No eligible questions with explanations.");
       expect(selectMockQ).toHaveBeenCalledWith("id, stem, explanations!inner(id)");
-      expect(eqEligibleMock).toHaveBeenCalledWith("is_diagnostic_eligible", true);
+      expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
     });
 
     it("logs info message when no eligible questions exist", async () => {
@@ -143,7 +149,7 @@ describe("GET /api/questions/current", () => {
       await GET(req);
 
       expect(console.info).toHaveBeenCalledWith(
-        "No eligible questions with explanations for user",
+        "No eligible questions with explanations",
         { userId: mockUser.id, sampleLimit: 50 }
       );
     });
@@ -171,10 +177,13 @@ describe("GET /api/questions/current", () => {
 
   describe("authentication", () => {
     it("returns 401 when user is not authenticated", async () => {
-      serverSupabaseMock.auth.getUser.mockResolvedValue({
-        data: { user: null },
-        error: null,
-      });
+      const { NextResponse } = await import("next/server");
+      mockRequireSubscriber.mockResolvedValueOnce(
+        NextResponse.json(
+          { error: "Authentication required. Please log in to access questions." },
+          { status: 401 }
+        )
+      );
 
       const req = new NextRequest("http://localhost/api/questions/current");
       const res = await GET(req);
@@ -215,7 +224,7 @@ describe("GET /api/questions/current", () => {
 
       expect(res.status).toBe(200);
       expect(data.id).toBeDefined();
-      expect(eqEligibleMock).toHaveBeenCalledWith("is_diagnostic_eligible", true);
+      expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
       expect(eqTopicMock).toHaveBeenCalledWith("topic", "Cardiology");
     });
 
@@ -248,7 +257,7 @@ describe("GET /api/questions/current", () => {
 
       expect(res.status).toBe(200);
       expect(data.id).toBeDefined();
-      expect(eqEligibleMock).toHaveBeenCalledWith("is_diagnostic_eligible", true);
+      expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
       expect(eqDifficultyMock).toHaveBeenCalledWith("difficulty", 3);
     });
 
@@ -282,7 +291,7 @@ describe("GET /api/questions/current", () => {
 
       expect(res.status).toBe(200);
       expect(data.id).toBeDefined();
-      expect(eqEligibleMock).toHaveBeenCalledWith("is_diagnostic_eligible", true);
+      expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
       expect(eqTopicMock).toHaveBeenCalledWith("topic", "Cardiology");
       expect(eqDifficultyMock).toHaveBeenCalledWith("difficulty", 2);
     });
@@ -316,7 +325,7 @@ describe("GET /api/questions/current", () => {
       expect(res.status).toBe(200);
       expect(data.id).toBeDefined();
       expect(selectMockQ).toHaveBeenCalledWith("id, stem, explanations(id)");
-      expect(eqEligibleMock).toHaveBeenCalledWith("is_diagnostic_eligible", true);
+      expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
     });
 
     it("returns 400 for invalid difficulty (out of range)", async () => {
@@ -364,7 +373,7 @@ describe("GET /api/questions/current", () => {
       expect(data.error).toBe("Invalid difficulty (must be 1-5)");
     });
 
-    it("always applies is_diagnostic_eligible filter even with query params", async () => {
+    it("always applies status filter even with query params", async () => {
       const mockUser = { id: "user-always-eligible" };
       serverSupabaseMock.auth.getUser.mockResolvedValue({
         data: { user: mockUser },
@@ -393,7 +402,7 @@ describe("GET /api/questions/current", () => {
       const data = await res.json();
 
       expect(res.status).toBe(200);
-      expect(eqEligibleMock).toHaveBeenCalledWith("is_diagnostic_eligible", true);
+      expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
       expect(eqTopicMock).toHaveBeenCalledWith("topic", "Cardiology");
       expect(eqDifficultyMock).toHaveBeenCalledWith("difficulty", 2);
     });

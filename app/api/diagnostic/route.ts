@@ -401,7 +401,7 @@ export async function POST(req: Request) {
               "id, stem, topic, difficulty, options(label, text, is_correct), explanations(text)"
             )
             .eq("exam_version_id", currentExamVersionId)
-            .eq("is_diagnostic_eligible", true)
+            .eq("status", "ACTIVE")
             .limit(numQuestions * 5);
 
           if (questionsFetchError || !dbQuestions || dbQuestions.length < numQuestions) {
