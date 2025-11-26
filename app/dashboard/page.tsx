@@ -1,15 +1,21 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { ReadinessMeter } from "@/components/dashboard/ReadinessMeter";
-import { DiagnosticSummary } from "@/components/dashboard/DiagnosticSummary";
-import { PracticeSummary } from "@/components/dashboard/PracticeSummary";
+import { ReadinessSnapshotCard } from "@/components/dashboard/ReadinessSnapshotCard";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { ExamBlueprintTable } from "@/components/dashboard/ExamBlueprintTable";
+import { NextBestStepCard } from "@/components/dashboard/NextBestStepCard";
+import { RecentActivityList, type Activity } from "@/components/dashboard/RecentActivityList";
 import { Button } from "@/components/ui/button";
 import { colorSemantic } from "@/lib/design-system";
 import { usePostHog } from "posthog-js/react";
 import { X } from "lucide-react";
 import { useStartBasicCheckout } from "@/hooks/useStartBasicCheckout";
+import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
+import type { DomainStat } from "@/components/dashboard/ExamBlueprintTable";
 
 // Import types from the API route
 import type { DashboardData, SuccessResponse, ErrorResponse } from "@/app/api/dashboard/route";
@@ -209,6 +215,80 @@ const DashboardPage = () => {
     }
   };
 
+  const handleStartPractice = () => {
+    window.location.href = '/practice/question';
+  };
+
+  const handleReviewWeakest = () => {
+    // Navigate to practice with weakest domain filter
+    const weakestDomain = mockDomainStats.find(
+      (stat) => stat.accuracy === Math.min(...mockDomainStats.map((s) => s.accuracy))
+    );
+    if (weakestDomain) {
+      const domainConfig = PMLE_BLUEPRINT.find((d) => d.domainCode === weakestDomain.domainCode);
+      if (domainConfig) {
+        window.location.href = `/practice/question?domain=${encodeURIComponent(domainConfig.displayName)}`;
+      }
+    }
+  };
+
+  // Mock domain stats (placeholder until API provides this data)
+  const mockDomainStats: DomainStat[] = useMemo(() => {
+    return PMLE_BLUEPRINT.map((domain) => {
+      // Mock data - in production this would come from API
+      const baseQuestions = Math.floor(Math.random() * 50) + 10;
+      const answered = Math.floor(baseQuestions * (0.5 + Math.random() * 0.5));
+      const accuracy = Math.floor(Math.random() * 40) + 60; // 60-100%
+      
+      return {
+        domainCode: domain.domainCode,
+        questionsAnswered: answered,
+        totalQuestions: baseQuestions,
+        accuracy,
+      };
+    });
+  }, []);
+
+  // Calculate weakest domain for recommendations
+  const weakestDomain = useMemo(() => {
+    if (mockDomainStats.length === 0) return null;
+    const weakest = mockDomainStats.reduce((min, stat) =>
+      stat.accuracy < min.accuracy ? stat : min
+    );
+    const domainConfig = PMLE_BLUEPRINT.find((d) => d.domainCode === weakest.domainCode);
+    return domainConfig ? { ...weakest, displayName: domainConfig.displayName } : null;
+  }, [mockDomainStats]);
+
+  // Mock recent activities (placeholder until API provides this data)
+  const mockActivities: Activity[] = useMemo(() => {
+    return [
+      {
+        type: "exam_completed",
+        title: "Completed a 50-question exam",
+        score: 88,
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+      },
+      {
+        type: "domain_mastered",
+        title: "Mastered 'Stakeholder Engagement'",
+        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+      },
+      {
+        type: "quiz_completed",
+        title: "Finished a 25-question quiz",
+        score: 75,
+        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+      },
+    ];
+  }, []);
+
+  // Calculate blueprint coverage
+  const blueprintCoverage = useMemo(() => {
+    const totalAnswered = mockDomainStats.reduce((sum, stat) => sum + stat.questionsAnswered, 0);
+    const totalPossible = mockDomainStats.reduce((sum, stat) => sum + stat.totalQuestions, 0);
+    return totalPossible > 0 ? Math.round((totalAnswered / totalPossible) * 100) : 0;
+  }, [mockDomainStats]);
+
   // Show loading state
   if (!user || loading) {
     return (
@@ -273,9 +353,16 @@ const DashboardPage = () => {
   const variantContent = getBetaVariantContent(betaVariant);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: colorSemantic.background.default }}>
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
+    <DashboardLayout
+      sidebar={
+        <DashboardSidebar
+          activeItem="dashboard"
+          showUpgradeCTA={accessLevel !== "SUBSCRIBER"}
+          onUpgrade={() => startBasicCheckout("dashboard_sidebar")}
+        />
+      }
+      main={
+        <div className="space-y-6">
           {/* Beta Diagnostic Banner */}
           {showBetaBanner && (
             <div className="mb-6">
@@ -319,107 +406,52 @@ const DashboardPage = () => {
           )}
 
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2" style={{ color: colorSemantic.text.primary }}>
-              Dashboard
-            </h1>
-            <p style={{ color: colorSemantic.text.secondary }}>
-              Track your readiness and get domain-specific study guidance
-            </p>
-          </div>
+          <DashboardHeader
+            onStartPractice={handleStartPractice}
+            onReviewWeakest={handleReviewWeakest}
+          />
 
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Readiness Meter - Full width on mobile, spans 2 cols on desktop */}
-            <div className="lg:col-span-2">
-              <ReadinessMeter
-                score={examReadiness?.currentReadinessScore ?? 0}
-                hasCompletedDiagnostic={examReadiness?.hasCompletedDiagnostic ?? false}
-                lastDiagnosticDate={examReadiness?.lastDiagnosticDate ?? null}
-                lastDiagnosticSessionId={examReadiness?.lastDiagnosticSessionId ?? null}
-                onStartDiagnostic={handleStartDiagnostic}
-                onUpgrade={() => startBasicCheckout("dashboard_readiness_card")}
-                showUpgradeCTA={accessLevel !== "SUBSCRIBER"}
-                className="h-full"
-              />
-            </div>
+          {/* Readiness Snapshot Card */}
+          <ReadinessSnapshotCard
+            score={examReadiness?.currentReadinessScore ?? 0}
+            hasCompletedDiagnostic={examReadiness?.hasCompletedDiagnostic ?? false}
+            overallAccuracy={dashboardData.practice.accuracyPercentage}
+            blueprintCoverage={blueprintCoverage}
+            weakestDomain={weakestDomain?.displayName}
+            weakestDomainWeight={weakestDomain ? Math.round(PMLE_BLUEPRINT.find((d) => d.domainCode === weakestDomain.domainCode)?.weight! * 100) : undefined}
+            lastDiagnosticDate={examReadiness?.lastDiagnosticDate ?? null}
+            lastDiagnosticSessionId={examReadiness?.lastDiagnosticSessionId ?? null}
+            onStartDiagnostic={handleStartDiagnostic}
+            onUpgrade={() => startBasicCheckout("dashboard_readiness_card")}
+            showUpgradeCTA={accessLevel !== "SUBSCRIBER"}
+          />
 
-            {/* Practice Summary */}
-            <div className="lg:col-span-1">
-              <PracticeSummary stats={dashboardData.practice} className="h-full" />
-            </div>
-
-            {/* Diagnostic Summary - Full width */}
-            <div className="lg:col-span-3">
-              <DiagnosticSummary
-                sessions={dashboardData.diagnostic.recentSessions}
-                totalSessions={dashboardData.diagnostic.totalSessions}
-              />
-            </div>
-          </div>
-
-          {/* Additional Info/Tips Section */}
-          {(!examReadiness?.hasCompletedDiagnostic || dashboardData.readinessScore === 0) && (
-            <div
-              className="mt-8 rounded-lg p-6 border"
-              style={{
-                backgroundColor: colorSemantic.info.light,
-                borderColor: colorSemantic.info.base + "40",
-              }}
-            >
-              <h3 className="text-lg font-semibold mb-2" style={{ color: colorSemantic.info.dark }}>
-                Get Your Readiness Baseline
-              </h3>
-              <p className="mb-4" style={{ color: colorSemantic.info.base }}>
-                {!examReadiness?.hasCompletedDiagnostic 
-                  ? "You haven't run a diagnostic yet. Take your first diagnostic to get your readiness baseline and a personalized study plan based on domain-level performance."
-                  : "Take a diagnostic to assess your readiness and get domain-specific guidance on where to focus your study time."}
-              </p>
-              <Button onClick={handleStartDiagnostic} tone="accent" className="mt-2">
-                Start Diagnostic
-              </Button>
-            </div>
-          )}
-
-          {/* Practice CTA based on access level */}
-          {canUseFeature(accessLevel, "PRACTICE_SESSION") && examReadiness?.hasCompletedDiagnostic && (
-            <div
-              className="mt-8 rounded-lg p-6 border"
-              style={{
-                backgroundColor: colorSemantic.success.light,
-                borderColor: colorSemantic.success.base + "40",
-              }}
-            >
-              <h3 className="text-lg font-semibold mb-2" style={{ color: colorSemantic.success.dark }}>
-                Practice Your Weakest Domains
-              </h3>
-              <p className="mb-4" style={{ color: colorSemantic.success.base }}>
-                Use unlimited practice sessions to strengthen your knowledge in areas where you need the most improvement.
-              </p>
-            </div>
-          )}
-
-          {canUseFeature(accessLevel, "PRACTICE_SESSION_FREE_QUOTA") && 
-           !canUseFeature(accessLevel, "PRACTICE_SESSION") && 
-           examReadiness?.hasCompletedDiagnostic && (
-            <div
-              className="mt-8 rounded-lg p-6 border"
-              style={{
-                backgroundColor: colorSemantic.info.light,
-                borderColor: colorSemantic.info.base + "40",
-              }}
-            >
-              <h3 className="text-lg font-semibold mb-2" style={{ color: colorSemantic.info.dark }}>
-                Practice Limited Questions
-              </h3>
-              <p className="mb-4" style={{ color: colorSemantic.info.base }}>
-                You have access to limited practice questions. Upgrade to unlock unlimited practice and detailed explanations.
-              </p>
-            </div>
-          )}
+          {/* Exam Blueprint Table */}
+          <ExamBlueprintTable domainStats={mockDomainStats} />
         </div>
-      </div>
-    </div>
+      }
+      rightPanel={
+        <div className="space-y-6">
+          {/* Next Best Step Card */}
+          {weakestDomain && (
+            <NextBestStepCard
+              domain={weakestDomain.displayName}
+              questionCount={25}
+              estimatedTime="30 mins"
+              onStartSession={() => {
+                window.location.href = `/practice/question?domain=${encodeURIComponent(weakestDomain.displayName)}`;
+              }}
+              onChooseAnotherMode={() => {
+                window.location.href = '/practice/question';
+              }}
+            />
+          )}
+
+          {/* Recent Activity List */}
+          <RecentActivityList activities={mockActivities} />
+        </div>
+      }
+    />
   );
 };
 

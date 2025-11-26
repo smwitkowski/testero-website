@@ -48,6 +48,10 @@
 
   /* Divider */
   --divider-color: color-mix(in oklch, var(--foreground) 12%, transparent);
+
+  /* Dashboard sidebar tokens */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 72px;
 }
 
 .dark {

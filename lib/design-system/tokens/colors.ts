@@ -432,6 +432,20 @@ export const component = {
       text: primitive.white,
     },
   },
+
+  // Dashboard-specific tokens
+  dashboard: {
+    sidebar: {
+      background: primitive.white,
+      activeItem: semantic.accent[500],
+      activeItemBg: `${semantic.accent[500]}10`,
+      hoverBg: primitive.slate[50],
+    },
+    blueprintTable: {
+      masteredBg: `${semantic.success.base}10`,
+      practiceBg: `${semantic.accent[500]}10`,
+    },
+  },
 };
 
 // Legacy compatibility (for existing components)
