@@ -89,9 +89,6 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
         })}
       </nav>
 
-      {/* Spacer to push upgrade CTA to bottom */}
-      <div className="flex-1" />
-
       {/* Upgrade CTA */}
       {showUpgradeCTA && (
         <div className="p-4 border-t border-border/60">

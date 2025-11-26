@@ -6,7 +6,7 @@ import { SessionTrackingProvider } from "@/components/providers/SessionTrackingP
 import { Providers } from "@/components/providers/Providers";
 import Script from "next/script";
 import { generateMetadata, generateJsonLd, generateViewport } from "@/lib/seo";
-import { ConditionalNavbar } from "@/components/layout/ConditionalNavbar";
+import { ConditionalNavbar, ConditionalMainWrapper } from "@/components/layout";
 
 // Generate default metadata for the root layout
 export const metadata = generateMetadata();
@@ -42,12 +42,11 @@ export default function RootLayout({
           <ErrorBoundary>
             <AuthProvider>
               <ConditionalNavbar />
-              <main id="main-content" className="pt-[72px]">
-                {/* Add padding to main content */}
+              <ConditionalMainWrapper>
                 <PostHogProvider>
                   <SessionTrackingProvider>{children}</SessionTrackingProvider>
                 </PostHogProvider>
-              </main>
+              </ConditionalMainWrapper>
             </AuthProvider>
           </ErrorBoundary>
         </Providers>

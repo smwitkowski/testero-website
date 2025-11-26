@@ -15,14 +15,15 @@ export interface AppShellProps {
 
 // Map pathname to active sidebar item
 const getActiveItem = (pathname: string): "dashboard" | "practice" | "performance" | "study-plan" => {
+  // Check more specific paths first
+  if (pathname.startsWith("/dashboard/performance")) {
+    return "performance";
+  }
   if (pathname.startsWith("/dashboard")) {
     return "dashboard";
   }
   if (pathname.startsWith("/practice")) {
     return "practice";
-  }
-  if (pathname.startsWith("/dashboard/performance")) {
-    return "performance";
   }
   if (pathname.startsWith("/study-path")) {
     return "study-plan";
@@ -70,9 +71,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children, className }) => {
         {/* Desktop Sidebar - always visible on lg+ */}
         <aside className="hidden lg:block lg:flex-shrink-0" style={{ width: "var(--sidebar-width, 240px)" }}>
           <div
-            className="fixed left-0 h-[calc(100vh-var(--topbar-height,56px))] overflow-y-auto border-r"
+            className="fixed left-0 overflow-y-auto border-r"
             style={{
               top: "var(--topbar-height, 56px)",
+              height: "calc(100vh - var(--topbar-height, 56px))",
               width: "var(--sidebar-width, 240px)",
               backgroundColor: colorComponent.dashboard.sidebar.background,
               borderColor: colorComponent.dashboard.sidebar.hoverBg,
@@ -96,9 +98,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children, className }) => {
             />
             {/* Sidebar */}
             <aside
-              className="fixed left-0 z-50 h-[calc(100vh-var(--topbar-height,56px))] overflow-y-auto border-r lg:hidden"
+              className="fixed left-0 z-50 overflow-y-auto border-r lg:hidden"
               style={{
                 top: "var(--topbar-height, 56px)",
+                height: "calc(100vh - var(--topbar-height, 56px))",
                 width: colorComponent.dashboard.sidebarOverlay.width,
                 backgroundColor: colorComponent.dashboard.sidebar.background,
                 borderColor: colorComponent.dashboard.sidebar.hoverBg,
