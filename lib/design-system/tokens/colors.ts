@@ -445,6 +445,32 @@ export const component = {
       masteredBg: `${semantic.success.base}10`,
       practiceBg: `${semantic.accent[500]}10`,
     },
+    topBar: {
+      background: primitive.white,
+      border: primitive.slate[200],
+      height: "56px",
+    },
+    userDropdown: {
+      avatarBg: primitive.slate[100],
+      avatarText: primitive.slate[600],
+      menuBg: primitive.white,
+      menuBorder: primitive.slate[200],
+      menuShadow: "rgba(0, 0, 0, 0.1)",
+      itemHover: primitive.slate[50],
+      itemText: primitive.slate[700],
+      itemIcon: primitive.slate[500],
+      divider: primitive.slate[200],
+    },
+    sidebarOverlay: {
+      backdrop: "rgba(0, 0, 0, 0.5)",
+      width: "280px",
+    },
+    examContext: {
+      background: primitive.slate[50],
+      text: primitive.slate[700],
+      label: primitive.slate[500],
+      border: primitive.slate[200],
+    },
   },
 };
 

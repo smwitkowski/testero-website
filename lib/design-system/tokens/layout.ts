@@ -149,6 +149,12 @@ export const component = {
     dashboard: {
       maxWidth: primitive.containers.xl,
       padding: { mobile: 'sm', tablet: 'md', desktop: 'lg' },
+      shell: {
+        topBarHeight: 56,
+        sidebarWidth: 240,
+        sidebarCollapsedWidth: 0,
+        mainContentMaxWidth: 1200,
+      },
     },
     form: {
       maxWidth: primitive.containers.md,

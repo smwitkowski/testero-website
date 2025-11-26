@@ -30,11 +30,11 @@ describe("DashboardSidebar", () => {
     });
   });
 
-  it("renders user profile with name and exam", () => {
+  it("renders exam context switcher", () => {
     render(<DashboardSidebar activeItem="dashboard" />);
 
-    expect(screen.getByText("Alex Hartman")).toBeInTheDocument();
-    expect(screen.getByText(/Studying for PMLE/i)).toBeInTheDocument();
+    expect(screen.getByText(/Studying for/i)).toBeInTheDocument();
+    expect(screen.getByText("PMLE")).toBeInTheDocument();
   });
 
   it("highlights active navigation item", () => {
@@ -47,13 +47,13 @@ describe("DashboardSidebar", () => {
   it("renders upgrade button for non-subscribers", () => {
     render(<DashboardSidebar activeItem="dashboard" showUpgradeCTA={true} />);
 
-    expect(screen.getByRole("button", { name: /Upgrade Plan/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Upgrade to Premium/i })).toBeInTheDocument();
   });
 
   it("hides upgrade button for subscribers", () => {
     render(<DashboardSidebar activeItem="dashboard" showUpgradeCTA={false} />);
 
-    expect(screen.queryByRole("button", { name: /Upgrade Plan/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Upgrade to Premium/i })).not.toBeInTheDocument();
   });
 
   it("calls onNavigate when nav item clicked", async () => {
@@ -68,14 +68,14 @@ describe("DashboardSidebar", () => {
     expect(onNavigate).toHaveBeenCalledWith("practice");
   });
 
-  it("renders all navigation items", () => {
+  it("renders exactly 4 navigation items (no Settings)", () => {
     render(<DashboardSidebar activeItem="dashboard" />);
 
     expect(screen.getByRole("link", { name: /Dashboard/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Practice Exams/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Performance/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Study Plan/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Settings/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Settings/i })).not.toBeInTheDocument();
   });
 
   it("calls onUpgrade when upgrade button clicked", async () => {
@@ -86,7 +86,7 @@ describe("DashboardSidebar", () => {
       <DashboardSidebar activeItem="dashboard" showUpgradeCTA={true} onUpgrade={onUpgrade} />
     );
 
-    const upgradeButton = screen.getByRole("button", { name: /Upgrade Plan/i });
+    const upgradeButton = screen.getByRole("button", { name: /Upgrade to Premium/i });
     await user.click(upgradeButton);
 
     expect(onUpgrade).toHaveBeenCalledTimes(1);

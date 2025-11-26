@@ -19,6 +19,12 @@ export type { NextBestStepCardProps } from "./NextBestStepCard";
 export { RecentActivityList } from "./RecentActivityList";
 export type { RecentActivityListProps, Activity } from "./RecentActivityList";
 
+export { UserDropdown } from "./UserDropdown";
+export type { UserDropdownProps } from "./UserDropdown";
+
+export { TopBar } from "./TopBar";
+export type { TopBarProps } from "./TopBar";
+
 // Legacy exports for backwards compatibility
 export { DiagnosticSummary } from "./DiagnosticSummary";
 export { PracticeSummary } from "./PracticeSummary";
