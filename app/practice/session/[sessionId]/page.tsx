@@ -39,7 +39,6 @@ const PracticeSessionPage = () => {
   const [selectedOptionLabel, setSelectedOptionLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isFlagged, setIsFlagged] = useState(false);
   const [submissionErrors, setSubmissionErrors] = useState<Set<string>>(new Set());
   const [retryQueue, setRetryQueue] = useState<
     Array<{ questionId: string; selectedLabel: string; attempts: number }>
@@ -110,7 +109,6 @@ const PracticeSessionPage = () => {
 
   const handleNextQuestion = useCallback(async () => {
     setSelectedOptionLabel(null);
-    setIsFlagged(false);
     if (sessionData && currentQuestionIndex < sessionData.questions.length - 1) {
       setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
     } else {

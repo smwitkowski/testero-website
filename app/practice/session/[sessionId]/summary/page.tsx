@@ -6,7 +6,6 @@ import { usePostHog } from "posthog-js/react";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getPmleDomainConfig } from "@/lib/constants/pmle-blueprint";
 
 interface QuestionSummary {
   id: string;
