@@ -80,3 +80,7 @@ BEGIN
   );
 END;
 $$;
+
+-- Grant execute permission to authenticated users (required for PostgREST to expose the function)
+GRANT EXECUTE ON FUNCTION check_and_increment_practice_quota(UUID, TEXT, INTEGER, INTEGER, INTEGER) TO authenticated;
+GRANT EXECUTE ON FUNCTION check_and_increment_practice_quota(UUID, TEXT, INTEGER, INTEGER, INTEGER) TO anon;

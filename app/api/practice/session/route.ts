@@ -257,10 +257,10 @@ export async function POST(req: Request) {
     }
 
     // Build response with route for frontend navigation
-    // Route format matches existing practice UI structure
+    // Route format matches new practice session page structure
     const response: CreatePracticeSessionResponse = {
       sessionId: newSession.id,
-      route: `/practice?sessionId=${newSession.id}`,
+      route: `/practice/session/${newSession.id}`,
       questionCount: selectedQuestions.length,
       domainDistribution: selectionResult.domainDistribution.map((dist) => ({
         domainCode: dist.domainCode,

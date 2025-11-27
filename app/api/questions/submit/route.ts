@@ -74,6 +74,19 @@ export async function POST(req: Request) {
     if (user) {
       // Try to convert UUID to numeric if possible, otherwise skip practice_attempts insert
       const questionIdNum = Number.parseInt(questionId.replace(/-/g, '').substring(0, 15), 16);
+      
+      // Convert text difficulty (EASY, MEDIUM, HARD) to numeric for legacy practice_attempts table
+      // practice_attempts.difficulty is smallint, but canonical questions.difficulty is TEXT
+      let difficultyNum: number | null = null;
+      if (questionMeta?.difficulty) {
+        const difficultyMap: Record<string, number> = {
+          'EASY': 1,
+          'MEDIUM': 3,
+          'HARD': 5,
+        };
+        difficultyNum = difficultyMap[questionMeta.difficulty.toUpperCase()] ?? null;
+      }
+      
       const { data: insertData, error: insertError } = await supabase
         .from("practice_attempts")
         .insert({
@@ -82,7 +95,7 @@ export async function POST(req: Request) {
           selected_label: selectedOptionKey,
           is_correct: isCorrect,
           topic: null, // topic column doesn't exist in canonical schema
-          difficulty: questionMeta?.difficulty ?? null,
+          difficulty: difficultyNum,
         });
 
       if (insertError) {
