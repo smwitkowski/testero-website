@@ -9,12 +9,12 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
  */
 export async function POST(
   req: Request,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   const supabase = createServerSupabaseClient();
 
   try {
-    const sessionId = params.sessionId;
+    const { sessionId } = await params;
 
     if (!sessionId || typeof sessionId !== "string") {
       return NextResponse.json({ error: "Invalid session ID provided" }, { status: 400 });

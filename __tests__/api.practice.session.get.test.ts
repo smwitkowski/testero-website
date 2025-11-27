@@ -101,7 +101,7 @@ describe('GET /api/practice/session/[sessionId]', () => {
 
     const { GET } = require('@/app/api/practice/session/[sessionId]/route');
     const req = new NextRequest('http://localhost/api/practice/session/session-123');
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await GET(req, { params });
     expect(res.status).toBe(200);
@@ -118,7 +118,7 @@ describe('GET /api/practice/session/[sessionId]', () => {
 
     const { GET } = require('@/app/api/practice/session/[sessionId]/route');
     const req = new NextRequest('http://localhost/api/practice/session/session-123');
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await GET(req, { params });
     expect(res.status).toBe(401);
@@ -134,7 +134,7 @@ describe('GET /api/practice/session/[sessionId]', () => {
 
     const { GET } = require('@/app/api/practice/session/[sessionId]/route');
     const req = new NextRequest('http://localhost/api/practice/session/session-123');
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await GET(req, { params });
     expect(res.status).toBe(404);
@@ -157,7 +157,7 @@ describe('GET /api/practice/session/[sessionId]', () => {
 
     const { GET } = require('@/app/api/practice/session/[sessionId]/route');
     const req = new NextRequest('http://localhost/api/practice/session/session-123');
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await GET(req, { params });
     expect(res.status).toBe(403);
@@ -180,7 +180,7 @@ describe('GET /api/practice/session/[sessionId]', () => {
 
     const { GET } = require('@/app/api/practice/session/[sessionId]/route');
     const req = new NextRequest('http://localhost/api/practice/session/session-123');
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await GET(req, { params });
     expect(res.status).toBe(400);
@@ -196,7 +196,7 @@ describe('GET /api/practice/session/[sessionId]', () => {
 
     const { GET } = require('@/app/api/practice/session/[sessionId]/route');
     const req = new NextRequest('http://localhost/api/practice/session/session-123');
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await GET(req, { params });
     expect(res.status).toBe(404);
@@ -210,7 +210,7 @@ describe('GET /api/practice/session/[sessionId]', () => {
 
     const { GET } = require('@/app/api/practice/session/[sessionId]/route');
     const req = new NextRequest('http://localhost/api/practice/session/invalid');
-    const params = { sessionId: '' };
+    const params = Promise.resolve({ sessionId: '' });
 
     const res = await GET(req, { params });
     expect(res.status).toBe(400);

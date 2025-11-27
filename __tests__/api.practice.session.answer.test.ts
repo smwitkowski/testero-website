@@ -107,7 +107,7 @@ describe('POST /api/practice/session/[sessionId]/answer', () => {
         selectedLabel: 'A',
       }),
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(200);
@@ -129,7 +129,7 @@ describe('POST /api/practice/session/[sessionId]/answer', () => {
         selectedLabel: 'B',
       }),
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(200);
@@ -157,7 +157,7 @@ describe('POST /api/practice/session/[sessionId]/answer', () => {
         selectedLabel: 'A',
       }),
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(200);
@@ -179,7 +179,7 @@ describe('POST /api/practice/session/[sessionId]/answer', () => {
         selectedLabel: 'A',
       }),
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(401);
@@ -199,7 +199,7 @@ describe('POST /api/practice/session/[sessionId]/answer', () => {
         selectedLabel: 'A',
       }),
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(400);
@@ -219,7 +219,7 @@ describe('POST /api/practice/session/[sessionId]/answer', () => {
         selectedLabel: 'Z',
       }),
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(400);
@@ -245,7 +245,7 @@ describe('POST /api/practice/session/[sessionId]/answer', () => {
         selectedLabel: 'A',
       }),
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(403);
@@ -271,7 +271,7 @@ describe('POST /api/practice/session/[sessionId]/answer', () => {
         selectedLabel: 'A',
       }),
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(400);
@@ -297,7 +297,7 @@ describe('POST /api/practice/session/[sessionId]/answer', () => {
         selectedLabel: 'A',
       }),
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(400);
@@ -317,7 +317,7 @@ describe('POST /api/practice/session/[sessionId]/answer', () => {
         selectedLabel: 'a', // lowercase
       }),
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(200);

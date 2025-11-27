@@ -70,7 +70,7 @@ describe('POST /api/practice/session/[sessionId]/complete', () => {
     const req = new NextRequest('http://localhost/api/practice/session/session-123/complete', {
       method: 'POST',
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(200);
@@ -98,7 +98,7 @@ describe('POST /api/practice/session/[sessionId]/complete', () => {
     const req = new NextRequest('http://localhost/api/practice/session/session-123/complete', {
       method: 'POST',
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(200);
@@ -115,7 +115,7 @@ describe('POST /api/practice/session/[sessionId]/complete', () => {
     const req = new NextRequest('http://localhost/api/practice/session/session-123/complete', {
       method: 'POST',
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(401);
@@ -158,7 +158,7 @@ describe('POST /api/practice/session/[sessionId]/complete', () => {
     const req = new NextRequest('http://localhost/api/practice/session/session-123/complete', {
       method: 'POST',
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(404);
@@ -180,7 +180,7 @@ describe('POST /api/practice/session/[sessionId]/complete', () => {
     const req = new NextRequest('http://localhost/api/practice/session/session-123/complete', {
       method: 'POST',
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(403);
@@ -198,7 +198,7 @@ describe('POST /api/practice/session/[sessionId]/complete', () => {
     const req = new NextRequest('http://localhost/api/practice/session/session-123/complete', {
       method: 'POST',
     });
-    const params = { sessionId: 'session-123' };
+    const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(500);
@@ -214,7 +214,7 @@ describe('POST /api/practice/session/[sessionId]/complete', () => {
     const req = new NextRequest('http://localhost/api/practice/session/invalid/complete', {
       method: 'POST',
     });
-    const params = { sessionId: '' };
+    const params = Promise.resolve({ sessionId: '' });
 
     const res = await POST(req, { params });
     expect(res.status).toBe(400);

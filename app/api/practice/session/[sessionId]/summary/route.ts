@@ -30,7 +30,7 @@ interface PracticeQuestionWithResponse {
  */
 export async function GET(
   req: Request,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   const supabase = createServerSupabaseClient();
 
@@ -43,7 +43,7 @@ export async function GET(
   }
 
   try {
-    const sessionId = params.sessionId;
+    const { sessionId } = await params;
 
     if (!sessionId || typeof sessionId !== "string") {
       return NextResponse.json({ error: "Invalid session ID" }, { status: 400 });
