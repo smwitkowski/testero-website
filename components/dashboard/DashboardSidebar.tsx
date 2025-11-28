@@ -3,9 +3,10 @@
 import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Home, HelpCircle, BarChart3, Calendar } from "lucide-react";
+import { Home, HelpCircle, BarChart3, Calendar, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { colorComponent } from "@/lib/design-system";
+import { useAdminStatus } from "@/hooks/useAdminStatus";
 
 export interface DashboardSidebarProps {
   activeItem?: "dashboard" | "practice" | "performance" | "study-plan";
@@ -29,6 +30,16 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   onUpgrade,
   className,
 }) => {
+  const { isAdmin } = useAdminStatus();
+
+  // Build navigation items, including admin link if user is admin
+  const allNavigationItems = [
+    ...navigationItems,
+    ...(isAdmin
+      ? [{ id: "admin" as const, label: "Admin", href: "/admin/questions", icon: Shield }]
+      : []),
+  ];
+
   return (
     <aside
       className={cn(
@@ -57,7 +68,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1" aria-label="Dashboard navigation">
-        {navigationItems.map((item) => {
+        {allNavigationItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeItem === item.id;
 

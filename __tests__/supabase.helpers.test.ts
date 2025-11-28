@@ -15,6 +15,10 @@ jest.mock("@/lib/config/routes", () => ({
   isAuthRoute: jest.fn((path: string) => path === "/login"),
 }));
 
+jest.mock("@/lib/auth/isAdmin", () => ({
+  isAdmin: jest.fn(),
+}));
+
 let createBrowserClient: jest.Mock;
 let createServerClient: jest.Mock;
 let cookiesFn: jest.Mock;
@@ -150,5 +154,57 @@ describe("supabase middleware updateSession", () => {
     const req = new NextRequest("http://example.com/login");
     const res = await updateSession(req);
     expect(res.status).toBe(200);
+  });
+
+  describe("admin route protection", () => {
+    beforeEach(() => {
+      const { isPublicRouteForMiddleware } = require("@/lib/config/routes");
+      isPublicRouteForMiddleware.mockImplementation((path: string) => path === "/login");
+    });
+
+    it("allows admin user to access /admin/questions", async () => {
+      const adminUser = { id: "admin-user-1", email: "admin@example.com" };
+      const supabase = {
+        auth: { getUser: jest.fn().mockResolvedValue({ data: { user: adminUser }, error: null }) },
+      };
+      createServerClient.mockReturnValue(supabase);
+      const { isAdmin } = require("../lib/auth/isAdmin");
+      isAdmin.mockReturnValue(true);
+      const { updateSession } = require("../lib/supabase/middleware");
+      const req = new NextRequest("http://example.com/admin/questions");
+      const res = await updateSession(req);
+      expect(res.status).toBe(200);
+      expect(isAdmin).toHaveBeenCalledWith(adminUser);
+    });
+
+    it("redirects non-admin authenticated user to /admin/forbidden", async () => {
+      const regularUser = { id: "regular-user", email: "user@example.com" };
+      const supabase = {
+        auth: { getUser: jest.fn().mockResolvedValue({ data: { user: regularUser }, error: null }) },
+      };
+      createServerClient.mockReturnValue(supabase);
+      const { isAdmin } = require("../lib/auth/isAdmin");
+      isAdmin.mockReturnValue(false);
+      const { updateSession } = require("../lib/supabase/middleware");
+      const req = new NextRequest("http://example.com/admin/questions");
+      const res = await updateSession(req);
+      expect(res.status).toBe(307);
+      expect(res.headers.get("location")).toBe("http://example.com/admin/forbidden");
+      expect(isAdmin).toHaveBeenCalledWith(regularUser);
+    });
+
+    it("redirects unauthenticated user to login with redirect param for /admin routes", async () => {
+      const supabase = {
+        auth: { getUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }) },
+      };
+      createServerClient.mockReturnValue(supabase);
+      const { isPublicRouteForMiddleware } = require("@/lib/config/routes");
+      isPublicRouteForMiddleware.mockImplementation((path: string) => path === "/login");
+      const { updateSession } = require("../lib/supabase/middleware");
+      const req = new NextRequest("http://example.com/admin/questions");
+      const res = await updateSession(req);
+      expect(res.status).toBe(307);
+      expect(res.headers.get("location")).toBe("http://example.com/login?redirect=%2Fadmin%2Fquestions");
+    });
   });
 });
