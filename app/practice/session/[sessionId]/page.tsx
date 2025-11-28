@@ -1,9 +1,19 @@
 "use client";
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { usePostHog } from "posthog-js/react";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
+import { usePracticeTestState } from "@/hooks/usePracticeTestState";
+import { getPmleDomainConfig } from "@/lib/constants/pmle-blueprint";
+import {
+  QuestionNavigator,
+  QuestionCard,
+  TestHeader,
+  TestFooter,
+  ExitTestModal,
+} from "@/components/practice-test";
 
 interface Option {
   label: string;
@@ -14,6 +24,7 @@ interface QuestionData {
   id: string;
   stem: string;
   options: Option[];
+  domain_code?: string | null;
 }
 
 interface PracticeSessionData {
@@ -35,14 +46,26 @@ const PracticeSessionPage = () => {
   const sessionId = params?.sessionId as string;
 
   const [sessionData, setSessionData] = useState<PracticeSessionData | null>(null);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedOptionLabel, setSelectedOptionLabel] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [submissionErrors, setSubmissionErrors] = useState<Set<string>>(new Set());
-  const [retryQueue, setRetryQueue] = useState<
-    Array<{ questionId: string; selectedLabel: string; attempts: number }>
-  >([]);
+  const [showExitModal, setShowExitModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Initialize test state hook
+  const {
+    answers,
+    flagged,
+    currentIndex,
+    stats,
+    setAnswer,
+    toggleFlag,
+    setCurrentIndex,
+    clearFlags,
+  } = usePracticeTestState({
+    sessionId: sessionId || "",
+    totalQuestions: sessionData?.questions.length || 0,
+    questionIds: sessionData?.questions.map((q) => q.id) || [],
+  });
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -93,8 +116,6 @@ const PracticeSessionPage = () => {
           userId: user?.id || null,
           source: data.session?.source,
         });
-
-        setCurrentQuestionIndex(0);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "An error occurred while fetching session.");
       } finally {
@@ -105,172 +126,111 @@ const PracticeSessionPage = () => {
     fetchSession();
   }, [sessionId, user, isAuthLoading, posthog]);
 
-  const currentQuestion = sessionData?.questions[currentQuestionIndex];
+  const currentQuestion = sessionData?.questions[currentIndex];
 
-  const handleNextQuestion = useCallback(async () => {
-    setSelectedOptionLabel(null);
-    if (sessionData && currentQuestionIndex < sessionData.questions.length - 1) {
-      setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
-    } else {
-      // All questions answered, complete the session
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/practice/session/${sessionId}/complete`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        });
-        const data = (await res.json()) as { error?: string; route?: string };
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to complete session.");
-        }
-
-        trackEvent(posthog, ANALYTICS_EVENTS.PRACTICE_SESSION_COMPLETED, {
-          sessionId: sessionId,
-          exam: sessionData?.exam,
-          totalQuestions: sessionData?.questions.length || 0,
-          userId: user?.id || null,
-        });
-
-        if (data.route) {
-          router.push(data.route);
-        } else {
-          router.push(`/practice/session/${sessionId}/summary`);
-        }
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        setLoading(false);
-      }
+  const handlePrevious = useCallback(() => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
     }
-  }, [sessionData, currentQuestionIndex, sessionId, posthog, user, router]);
+  }, [currentIndex, setCurrentIndex]);
 
-  // Background answer submission with retry logic and error tracking
-  const submitAnswerWithRetry = useCallback(
-    async (questionId: string, selectedLabel: string, attempt: number = 1) => {
-      const maxAttempts = 3;
-      const baseDelay = 1000; // 1 second base delay
+  const handleNext = useCallback(() => {
+    if (sessionData && currentIndex < sessionData.questions.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
+  }, [sessionData, currentIndex, setCurrentIndex]);
 
-      try {
-        const response = await fetch(`/api/practice/session/${sessionId}/answer`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            questionId,
-            selectedLabel,
-          }),
-        });
+  const handleSubmitTest = useCallback(async () => {
+    if (!sessionData || isSubmitting) return;
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
+    setIsSubmitting(true);
+    try {
+      // Submit all answers in bulk
+      const res = await fetch(`/api/practice/session/${sessionId}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answers: Object.fromEntries(
+            Object.entries(answers).filter(([_, value]) => value !== null)
+          ),
+        }),
+      });
 
-        // Success - remove from error tracking
-        setSubmissionErrors((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(questionId);
-          return newSet;
-        });
-
-        // Remove from retry queue if it was there
-        setRetryQueue((prev) => prev.filter((item) => item.questionId !== questionId));
-      } catch (error) {
-        console.error(`Failed to submit answer for question ${questionId} (attempt ${attempt}):`, error);
-
-        // Add to error tracking
-        setSubmissionErrors((prev) => new Set(prev).add(questionId));
-
-        if (attempt < maxAttempts) {
-          // Exponential backoff: 1s, 2s, 4s
-          const delay = baseDelay * Math.pow(2, attempt - 1);
-
-          // Add to retry queue
-          setRetryQueue((prev) => {
-            const filtered = prev.filter((item) => item.questionId !== questionId);
-            return [...filtered, { questionId, selectedLabel, attempts: attempt + 1 }];
-          });
-
-          // Schedule retry
-          setTimeout(() => {
-            submitAnswerWithRetry(questionId, selectedLabel, attempt + 1);
-          }, delay);
-        } else {
-          // Max attempts reached - keep in error state for manual retry
-          console.error(`Failed to submit answer for question ${questionId} after ${maxAttempts} attempts`);
-        }
+      const data = (await res.json()) as { error?: string; route?: string };
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to complete session.");
       }
-    },
-    [sessionId]
-  );
 
-  const handleSubmitAnswer = useCallback(async () => {
-    if (!currentQuestion || selectedOptionLabel === null) return;
+      // Clear flags from storage
+      clearFlags();
 
-    // Track the question answered event immediately
-    trackEvent(posthog, ANALYTICS_EVENTS.PRACTICE_QUESTION_ANSWERED, {
-      sessionId: sessionId,
-      questionNumber: currentQuestionIndex + 1,
-      totalQuestions: sessionData?.questions.length || 0,
-      questionId: currentQuestion.id,
-      selectedAnswer: selectedOptionLabel,
-      exam: sessionData?.exam,
-      userId: user?.id || null,
-    });
+      trackEvent(posthog, ANALYTICS_EVENTS.PRACTICE_SESSION_COMPLETED, {
+        sessionId: sessionId,
+        exam: sessionData.exam,
+        totalQuestions: sessionData.questions.length,
+        userId: user?.id || null,
+      });
 
-    // Submit answer in background with retry logic
-    submitAnswerWithRetry(currentQuestion.id, selectedOptionLabel);
+      if (data.route) {
+        router.push(data.route);
+      } else {
+        router.push(`/practice/session/${sessionId}/summary`);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+      setIsSubmitting(false);
+    }
+  }, [sessionData, sessionId, answers, isSubmitting, posthog, user, router, clearFlags]);
 
-    // Immediately advance to next question
-    handleNextQuestion();
-  }, [
-    currentQuestion,
-    selectedOptionLabel,
-    sessionId,
-    currentQuestionIndex,
-    sessionData,
-    posthog,
-    user,
-    handleNextQuestion,
-    submitAnswerWithRetry,
-  ]);
+  const handleExit = useCallback(() => {
+    router.push("/dashboard");
+  }, [router]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      if (!sessionData) return;
-
-      const currentQuestion = sessionData.questions[currentQuestionIndex];
-      if (!currentQuestion) return;
+      if (!sessionData || !currentQuestion) return;
 
       const options = currentQuestion.options;
-      const currentIndex = selectedOptionLabel
-        ? options.findIndex((opt) => opt.label === selectedOptionLabel)
+      const currentAnswer = answers[currentQuestion.id];
+      const currentOptionIndex = currentAnswer
+        ? options.findIndex((opt) => opt.label === currentAnswer)
         : -1;
 
       switch (event.key) {
         case "ArrowDown":
         case "j":
           event.preventDefault();
-          const nextIndex = currentIndex < options.length - 1 ? currentIndex + 1 : 0;
-          setSelectedOptionLabel(options[nextIndex].label);
+          const nextIndex = currentOptionIndex < options.length - 1 ? currentOptionIndex + 1 : 0;
+          setAnswer(currentQuestion.id, options[nextIndex].label);
           break;
         case "ArrowUp":
         case "k":
           event.preventDefault();
-          const prevIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1;
-          setSelectedOptionLabel(options[prevIndex].label);
+          const prevIndex = currentOptionIndex > 0 ? currentOptionIndex - 1 : options.length - 1;
+          setAnswer(currentQuestion.id, options[prevIndex].label);
           break;
-        case "Enter":
+        case "ArrowLeft":
           event.preventDefault();
-          if (selectedOptionLabel) {
-            handleSubmitAnswer();
+          handlePrevious();
+          break;
+        case "ArrowRight":
+          event.preventDefault();
+          if (currentIndex === (sessionData.questions.length || 0) - 1) {
+            handleSubmitTest();
+          } else {
+            handleNext();
           }
+          break;
+        case "Escape":
+          event.preventDefault();
+          setShowExitModal(true);
           break;
       }
     },
-    [sessionData, currentQuestionIndex, selectedOptionLabel, handleSubmitAnswer]
+    [sessionData, currentQuestion, answers, currentIndex, setAnswer, handlePrevious, handleNext, handleSubmitTest]
   );
 
-  // Use ref pattern to prevent memory leak from frequent event listener re-registration
   const handleKeyDownRef = useRef(handleKeyDown);
   handleKeyDownRef.current = handleKeyDown;
 
@@ -278,12 +238,14 @@ const PracticeSessionPage = () => {
     const handler = (e: KeyboardEvent) => handleKeyDownRef.current(e);
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, []); // Empty dependency array prevents unnecessary re-registration
+  }, []);
 
-  const handleSkip = useCallback(() => {
-    // Simply advance to next question without submitting answer
-    handleNextQuestion();
-  }, [handleNextQuestion]);
+  // Get domain name for display
+  const getDomainName = (domainCode: string | null | undefined): string => {
+    if (!domainCode) return "Unknown Domain";
+    const config = getPmleDomainConfig(domainCode);
+    return config?.displayName || domainCode;
+  };
 
   if (loading)
     return (
@@ -292,9 +254,8 @@ const PracticeSessionPage = () => {
       </div>
     );
 
-  // Error cases
+  // Error cases (keep existing error handling)
   if (error) {
-    // Access denied
     if (error === "access_denied_to_session") {
       return (
         <main className="max-w-2xl mx-auto my-8 p-4 md:p-6 border border-slate-200 rounded-lg">
@@ -314,7 +275,6 @@ const PracticeSessionPage = () => {
       );
     }
 
-    // Session not found
     if (error === "session_not_found") {
       return (
         <main className="max-w-2xl mx-auto my-8 p-4 md:p-6 border border-slate-200 rounded-lg">
@@ -339,7 +299,6 @@ const PracticeSessionPage = () => {
       );
     }
 
-    // Session already completed
     if (error === "session_already_completed") {
       return (
         <main className="max-w-2xl mx-auto my-8 p-4 md:p-6 border border-slate-200 rounded-lg">
@@ -357,7 +316,6 @@ const PracticeSessionPage = () => {
       );
     }
 
-    // Authentication required
     if (error === "authentication_required") {
       return (
         <main className="max-w-2xl mx-auto my-8 p-4 md:p-6 border border-slate-200 rounded-lg">
@@ -375,7 +333,6 @@ const PracticeSessionPage = () => {
       );
     }
 
-    // Generic error fallback
     return (
       <main className="max-w-2xl mx-auto my-8 p-6 border border-slate-200 rounded-lg">
         <h1 className="text-xl font-semibold mb-4">Error</h1>
@@ -392,169 +349,101 @@ const PracticeSessionPage = () => {
     );
   }
 
-  if (!currentQuestion)
+  if (!currentQuestion || !sessionData)
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-lg text-slate-600">No questions found for this session.</div>
       </div>
     );
 
+  const domainName = getDomainName(currentQuestion.domain_code);
+  const answeredQuestionIds = new Set(
+    Object.entries(answers)
+      .filter(([_, value]) => value !== null)
+      .map(([questionId]) => questionId)
+  );
+
   return (
     <div className="min-h-screen bg-white">
-      {/* Top app bar with progress */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-slate-900">Practice Session</h1>
-          <div className="text-sm font-medium text-slate-600">
-            Question {currentQuestionIndex + 1} of {sessionData?.questions.length}
-          </div>
-        </div>
-        {/* Progress bar */}
-        <div className="h-1 bg-slate-100">
-          <div
-            className="h-1 bg-indigo-600 transition-all duration-300 ease-out"
-            style={{
-              width: `${((currentQuestionIndex + 1) / (sessionData?.questions.length || 1)) * 100}%`,
-            }}
-          />
-        </div>
-      </header>
+      <TestHeader
+        examName="Google PMLE"
+        testType="Practice Test"
+        progressPercent={stats.progressPercent}
+        onExit={() => setShowExitModal(true)}
+      />
 
-      {/* Main content */}
-      <main className="max-w-5xl mx-auto px-4 py-8">
+      <main className="mx-auto max-w-7xl px-4 py-8">
         <div className="grid grid-cols-12 gap-6">
-          {/* Left rail - Desktop only */}
-          <aside className="hidden lg:block lg:col-span-3 space-y-4 sticky top-20">
-            {/* Progress card */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm">
-              <h3 className="text-sm font-semibold text-slate-900 mb-2">Progress</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Completed</span>
-                  <span className="font-medium text-slate-900">
-                    {currentQuestionIndex} / {sessionData?.questions.length || 0}
-                  </span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-2">
-                  <div
-                    className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${(currentQuestionIndex / (sessionData?.questions.length || 1)) * 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
+          {/* Left Column - Progress & Navigator */}
+          <aside className="col-span-12 lg:col-span-3">
+            <div className="sticky top-20">
+              <QuestionNavigator
+                totalQuestions={sessionData.questions.length}
+                currentIndex={currentIndex}
+                answeredQuestionIds={answeredQuestionIds}
+                flaggedQuestionIds={flagged}
+                questionIds={sessionData.questions.map((q) => q.id)}
+                onQuestionClick={setCurrentIndex}
+              />
             </div>
-
-            {/* Submission status card - only show if there are errors or retries */}
-            {(submissionErrors.size > 0 || retryQueue.length > 0) && (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 md:p-6 shadow-sm">
-                <h3 className="text-sm font-semibold text-amber-800 mb-2">Submission Status</h3>
-                {submissionErrors.size > 0 && (
-                  <div className="mb-2">
-                    <p className="text-xs text-amber-700">
-                      {submissionErrors.size} answer{submissionErrors.size === 1 ? "" : "s"} failed to save
-                    </p>
-                  </div>
-                )}
-                {retryQueue.length > 0 && (
-                  <div className="mb-2">
-                    <p className="text-xs text-amber-700">
-                      Retrying {retryQueue.length} submission{retryQueue.length === 1 ? "" : "s"}...
-                    </p>
-                  </div>
-                )}
-                <p className="text-xs text-amber-600">
-                  Answers will be retried automatically. Continue with the test.
-                </p>
-              </div>
-            )}
           </aside>
 
-          {/* Main column */}
-          <div className="col-span-12 lg:col-span-9">
-            {/* Question card */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm">
-              <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-6">
-                Practice Question
-              </h2>
+          {/* Center Column - Question Content */}
+          <div className="col-span-12 lg:col-span-6">
+            <QuestionCard
+              questionNumber={currentIndex + 1}
+              totalQuestions={sessionData.questions.length}
+              domainName={domainName}
+              scenario={currentQuestion.stem}
+              questionStem=""
+              options={currentQuestion.options}
+              selectedOptionLabel={answers[currentQuestion.id] || null}
+              onOptionSelect={(label) => setAnswer(currentQuestion.id, label)}
+            />
+          </div>
 
-              {/* Question stem */}
-              <div className="max-w-3xl mb-8">
-                <div className="text-lg leading-relaxed text-slate-700">{currentQuestion.stem}</div>
-              </div>
-
-              {/* Answer options - Radio group */}
-              <div role="radiogroup" aria-label="Answer choices" className="space-y-3 mb-8">
-                {currentQuestion.options.map((option, index) => {
-                  const isSelected = selectedOptionLabel === option.label;
-                  const labels = ["A", "B", "C", "D", "E", "F"];
-
-                  return (
-                    <label
-                      key={option.label}
-                      className={`relative flex gap-3 rounded-xl border p-4 cursor-pointer transition shadow-sm ${
-                        isSelected
-                          ? "border-indigo-600 ring-4 ring-indigo-600/10 bg-indigo-50"
-                          : "border-slate-200 hover:border-slate-400"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="answer"
-                        value={option.label}
-                        checked={isSelected}
-                        onChange={() => setSelectedOptionLabel(option.label)}
-                        className="sr-only"
-                      />
-
-                      {/* A/B/C/D bubble */}
-                      <div
-                        className={`w-8 h-8 rounded-full grid place-content-center text-sm font-medium flex-shrink-0 ${
-                          isSelected ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        {labels[index] || option.label}
-                      </div>
-
-                      {/* Option text */}
-                      <div className="flex-1 text-slate-700 leading-relaxed">{option.text}</div>
-                    </label>
-                  );
-                })}
+          {/* Right Column - Question Actions */}
+          <aside className="col-span-12 lg:col-span-3">
+            <div className="sticky top-20 space-y-4">
+              <button
+                onClick={() => toggleFlag(currentQuestion.id)}
+                className={`w-full rounded-lg border p-3 text-sm font-medium transition-colors ${
+                  flagged.has(currentQuestion.id)
+                    ? "border-amber-300 bg-amber-50 text-amber-700"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                }`}
+              >
+                {flagged.has(currentQuestion.id) ? "Flagged" : "Flag for review"}
+              </button>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="text-xs font-medium text-slate-600">Domain</div>
+                <div className="mt-1 text-sm text-slate-900">{domainName}</div>
               </div>
             </div>
-          </div>
+          </aside>
         </div>
       </main>
 
-      {/* Sticky bottom action bar */}
-      <footer className="sticky bottom-0 z-40 border-t border-slate-200 bg-white/90 backdrop-blur">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3 justify-end">
-          <button
-            onClick={handleSkip}
-            className="h-10 px-4 rounded-lg border border-slate-300 text-slate-700 hover:border-slate-400 transition-colors"
-          >
-            Skip
-          </button>
-          <button
-            onClick={handleSubmitAnswer}
-            disabled={selectedOptionLabel === null}
-            className={`h-10 px-5 rounded-lg font-medium shadow-sm transition-all ${
-              selectedOptionLabel === null
-                ? "bg-slate-200 text-slate-500 cursor-not-allowed"
-                : "bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-500/30"
-            }`}
-          >
-            {currentQuestionIndex === (sessionData?.questions.length || 0) - 1
-              ? "Submit & Finish"
-              : "Submit answer"}
-          </button>
-        </div>
-      </footer>
+      <TestFooter
+        questionNumber={currentIndex + 1}
+        totalQuestions={sessionData.questions.length}
+        answeredCount={stats.answeredCount}
+        unansweredCount={stats.unansweredCount}
+        flaggedCount={stats.flaggedCount}
+        onPrevious={handlePrevious}
+        onNext={handleNext}
+        onSubmit={handleSubmitTest}
+        isFirstQuestion={currentIndex === 0}
+        isLastQuestion={currentIndex === sessionData.questions.length - 1}
+      />
+
+      <ExitTestModal
+        open={showExitModal}
+        onOpenChange={setShowExitModal}
+        onConfirm={handleExit}
+      />
     </div>
   );
 };
 
 export default PracticeSessionPage;
-

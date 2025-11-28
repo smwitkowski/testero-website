@@ -56,6 +56,62 @@ export async function POST(
       });
     }
 
+    // Parse request body for bulk answers
+    let answers: Record<string, string> = {};
+    try {
+      const body = await req.json();
+      if (body.answers && typeof body.answers === "object") {
+        answers = body.answers;
+      }
+    } catch (error) {
+      // If body parsing fails, continue with empty answers (backward compatibility)
+      console.warn("Failed to parse request body, continuing without answers:", error);
+    }
+
+    // Fetch questions to get correct labels for validation
+    const { data: questions, error: questionsError } = await supabase
+      .from("practice_questions")
+      .select("id, correct_label")
+      .eq("session_id", sessionId);
+
+    if (questionsError) {
+      console.error("Error fetching questions:", questionsError);
+      return NextResponse.json(
+        { error: "Failed to fetch questions" },
+        { status: 500 }
+      );
+    }
+
+    // Create practice_responses for each answer
+    if (Object.keys(answers).length > 0 && questions) {
+      const questionMap = new Map(questions.map((q) => [q.id, q.correct_label]));
+      const responses = Object.entries(answers)
+        .filter(([questionId]) => questionMap.has(questionId))
+        .map(([questionId, selectedLabel]) => {
+          const correctLabel = questionMap.get(questionId);
+          return {
+            session_id: sessionId,
+            question_id: questionId,
+            selected_label: selectedLabel,
+            is_correct: selectedLabel === correctLabel,
+          };
+        });
+
+      if (responses.length > 0) {
+        const { error: insertError } = await supabase
+          .from("practice_responses")
+          .insert(responses);
+
+        if (insertError) {
+          console.error("Error inserting practice responses:", insertError);
+          return NextResponse.json(
+            { error: "Failed to save answers" },
+            { status: 500 }
+          );
+        }
+      }
+    }
+
     // Mark session as completed
     const { error: updateError } = await supabase
       .from("practice_sessions")
