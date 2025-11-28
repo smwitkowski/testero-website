@@ -40,6 +40,17 @@ export async function updateSession(request: NextRequest) {
   const isPublicRoute = isPublicRouteForMiddleware(request.nextUrl.pathname);
   const isAuth = isAuthRoute(request.nextUrl.pathname);
 
+  // Check admin routes
+  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
+  if (isAdminRoute && user) {
+    const { isAdmin } = await import("@/lib/auth/isAdmin");
+    if (!isAdmin(user)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin/forbidden";
+      return NextResponse.redirect(url);
+    }
+  }
+
   // If user is authenticated
   if (user) {
     // If on an auth route, redirect to dashboard
