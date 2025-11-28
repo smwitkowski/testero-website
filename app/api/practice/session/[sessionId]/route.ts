@@ -60,7 +60,7 @@ export async function GET(
     // Fetch snapshotted questions for this session
     const { data: sessionQuestions, error: questionsError } = await supabase
       .from("practice_questions")
-      .select("id, stem, options, correct_label")
+      .select("id, stem, options, correct_label, domain_code")
       .eq("session_id", sessionId)
       .order("created_at", { ascending: true }); // Maintain question order
 
@@ -88,6 +88,7 @@ export async function GET(
         id: q.id, // UUID of the snapshotted question
         stem: q.stem,
         options: q.options, // JSONB options {label, text}
+        domain_code: q.domain_code || null, // Domain code for display
       })),
       startedAt: dbSession.created_at,
       questionCount: dbSession.question_count,
