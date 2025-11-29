@@ -11,11 +11,11 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function AdminQuestionsPage({
-  searchParams,
-}: {
-  searchParams?: Record<string, string | string[] | undefined>;
-}) {
+type AdminQuestionsPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function AdminQuestionsPage({ searchParams }: AdminQuestionsPageProps) {
   const supabase = createServerSupabaseClient();
   const {
     data: { user },
@@ -25,7 +25,8 @@ export default async function AdminQuestionsPage({
     redirect("/admin/forbidden");
   }
 
-  const filters = parseAdminQuestionFilters(searchParams ?? {});
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const filters = parseAdminQuestionFilters(resolvedSearchParams);
   const [listResult, stats] = await Promise.all([
     fetchAdminQuestions(supabase, filters),
     fetchAdminQuestionStats(supabase),
