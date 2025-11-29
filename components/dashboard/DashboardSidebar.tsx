@@ -9,7 +9,7 @@ import { colorComponent } from "@/lib/design-system";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 
 export interface DashboardSidebarProps {
-  activeItem?: "dashboard" | "practice" | "performance" | "study-plan";
+  activeItem?: "dashboard" | "practice" | "performance" | "study-plan" | "admin";
   showUpgradeCTA?: boolean;
   onNavigate?: (item: string) => void;
   onUpgrade?: () => void;
