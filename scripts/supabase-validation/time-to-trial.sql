@@ -28,3 +28,4 @@ GROUP BY DATE_TRUNC('week', u.created_at)
 ORDER BY signup_week DESC;
 
 
+

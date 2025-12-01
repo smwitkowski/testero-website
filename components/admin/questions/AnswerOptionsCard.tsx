@@ -11,7 +11,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
   FormDescription,
 } from "@/components/ui/form";
@@ -20,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import type { QuestionAnswer } from "@/lib/admin/questions/editor-types";
 
 export function AnswerOptionsCard() {
   const form = useFormContext();
@@ -33,7 +32,7 @@ export function AnswerOptionsCard() {
       <CardHeader>
         <CardTitle>Answer options</CardTitle>
         <FormDescription>
-          Provide 4 options (A–D). Mark exactly one as correct. Add explanations for each option explaining why it's correct or incorrect.
+          Provide 4 options (A–D). Mark exactly one as correct. Add explanations for each option explaining why it&apos;s correct or incorrect.
         </FormDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -48,7 +47,7 @@ export function AnswerOptionsCard() {
                   onValueChange={(value) => {
                     const index = Number.parseInt(value, 10);
                     const currentAnswers = form.getValues("answers") || [];
-                    const updatedAnswers = currentAnswers.map((answer: any, i: number) => ({
+                    const updatedAnswers = currentAnswers.map((answer: QuestionAnswer, i: number) => ({
                       ...answer,
                       is_correct: i === index,
                     }));

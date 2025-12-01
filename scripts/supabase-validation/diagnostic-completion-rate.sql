@@ -50,3 +50,4 @@ GROUP BY user_type
 ORDER BY completion_rate_pct DESC;
 
 
+

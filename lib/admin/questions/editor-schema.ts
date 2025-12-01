@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { AdminQuestionReviewStatus, AdminQuestionStatus } from "./filter-utils";
 
 const AnswerSchema = z.object({
   id: z.string().uuid().optional(),

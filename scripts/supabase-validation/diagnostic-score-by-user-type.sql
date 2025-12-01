@@ -25,3 +25,4 @@ GROUP BY user_type, s.exam_type
 ORDER BY user_type, avg_score_pct DESC;
 
 
+

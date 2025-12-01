@@ -20,3 +20,4 @@ GROUP BY u.id, u.email, s.updated_at, s.stripe_subscription_id, s.created_at, s.
 ORDER BY churned_at DESC;
 
 
+

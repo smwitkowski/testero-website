@@ -41,7 +41,7 @@ export function ReviewWorkflowCard({
       <CardHeader>
         <CardTitle>Review status</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Use this to track where you are in the audit workflow. Only "Good + Active" questions are shown to learners.
+          Use this to track where you are in the audit workflow. Only &quot;Good + Active&quot; questions are shown to learners.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
