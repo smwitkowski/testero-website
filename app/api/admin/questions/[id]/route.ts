@@ -103,34 +103,24 @@ export async function PUT(
       return NextResponse.json({ error: "Update failed" }, { status: 500 });
     }
 
-    // Upsert answers (delete existing and insert new)
-    const { error: deleteAnswersError } = await serviceSupabase
-      .from("answers")
-      .delete()
-      .eq("question_id", resolvedParams.id);
+    // Upsert answers atomically using database function
+    // This ensures deletion and insertion happen in a single transaction
+    const answersJson = payload.answers.map((answer) => ({
+      choice_label: answer.choice_label,
+      choice_text: answer.choice_text,
+      is_correct: answer.is_correct,
+      explanation_text: answer.explanation_text || null,
+    }));
 
-    if (deleteAnswersError) {
-      console.error("[AdminQuestionDetail] Failed to delete answers:", deleteAnswersError);
+    const { error: upsertError } = await serviceSupabase
+      .rpc("upsert_question_answers", {
+        p_question_id: resolvedParams.id,
+        p_answers: answersJson,
+      });
+
+    if (upsertError) {
+      console.error("[AdminQuestionDetail] Failed to upsert answers:", upsertError);
       return NextResponse.json({ error: "Update failed" }, { status: 500 });
-    }
-
-    if (payload.answers.length > 0) {
-      const answersToInsert = payload.answers.map((answer) => ({
-        question_id: resolvedParams.id,
-        choice_label: answer.choice_label,
-        choice_text: answer.choice_text,
-        is_correct: answer.is_correct,
-        explanation_text: answer.explanation_text || null,
-      }));
-
-      const { error: insertAnswersError } = await serviceSupabase
-        .from("answers")
-        .insert(answersToInsert);
-
-      if (insertAnswersError) {
-        console.error("[AdminQuestionDetail] Failed to insert answers:", insertAnswersError);
-        return NextResponse.json({ error: "Update failed" }, { status: 500 });
-      }
     }
 
     // Fetch updated question

@@ -20,7 +20,9 @@ export function deriveTestStats(
 ): TestStats {
   const answeredCount = Object.values(answers).filter((answer) => answer !== null).length;
   const unansweredCount = totalQuestions - answeredCount;
-  const progressPercent = Math.round(((currentIndex + 1) / totalQuestions) * 100);
+  const progressPercent = totalQuestions > 0
+    ? Math.round(((currentIndex + 1) / totalQuestions) * 100)
+    : 0;
 
   return {
     answeredCount,
@@ -119,10 +121,10 @@ export function usePracticeTestState({
   questionIds,
 }: UsePracticeTestStateOptions): UsePracticeTestStateReturn {
   const [answers, setAnswers] = useState<Record<string, string | null>>({});
-  const [flagged, setFlagged] = useState<Set<string>>(() => loadFlagsFromStorage(sessionId));
+  const [flagged, setFlagged] = useState<Set<string>>(new Set());
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Load flags from storage on mount
+  // Load flags from storage when sessionId changes
   useEffect(() => {
     const storedFlags = loadFlagsFromStorage(sessionId);
     setFlagged(storedFlags);
