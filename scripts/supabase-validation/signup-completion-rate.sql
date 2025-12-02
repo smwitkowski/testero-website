@@ -23,3 +23,4 @@ WHERE u.created_at >= NOW() - INTERVAL '30 days'
   AND u.email_confirmed_at IS NOT NULL;
 
 
+

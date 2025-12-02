@@ -360,3 +360,4 @@ WHERE u.created_at >= NOW() - INTERVAL '90 days';
 - **Validation Frequency:** Run validation queries weekly to ensure PostHog and Supabase remain in sync. Document any discrepancies >5% in the data dictionary.
 
 
+

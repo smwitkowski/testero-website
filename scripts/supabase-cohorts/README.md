@@ -124,3 +124,4 @@ This directory contains SQL queries to create user cohorts that can be exported 
 - Export smaller batches (1000 users) if PostHog import fails
 
 
+
