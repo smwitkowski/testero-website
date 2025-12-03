@@ -169,9 +169,11 @@ describe('selectPracticeQuestionsByDomains', () => {
                 select: jest.fn().mockReturnValue({
                   eq: jest.fn().mockReturnValue({
                     eq: jest.fn().mockReturnValue({
-                      in: jest.fn().mockResolvedValue({
-                        data: domainCounts,
-                        error: null,
+                      eq: jest.fn().mockReturnValue({
+                        in: jest.fn().mockResolvedValue({
+                          data: domainCounts,
+                          error: null,
+                        }),
                       }),
                     }),
                   }),
@@ -187,9 +189,11 @@ describe('selectPracticeQuestionsByDomains', () => {
                   eq: jest.fn().mockReturnValue({
                     eq: jest.fn().mockReturnValue({
                       eq: jest.fn().mockReturnValue({
-                        limit: jest.fn().mockResolvedValue({
-                          data: questions,
-                          error: null,
+                        eq: jest.fn().mockReturnValue({
+                          limit: jest.fn().mockResolvedValue({
+                            data: questions,
+                            error: null,
+                          }),
                         }),
                       }),
                     }),
@@ -265,9 +269,11 @@ describe('selectPracticeQuestionsByDomains', () => {
                 select: jest.fn().mockReturnValue({
                   eq: jest.fn().mockReturnValue({
                     eq: jest.fn().mockReturnValue({
-                      in: jest.fn().mockResolvedValue({
-                        data: domainCounts,
-                        error: null,
+                      eq: jest.fn().mockReturnValue({
+                        in: jest.fn().mockResolvedValue({
+                          data: domainCounts,
+                          error: null,
+                        }),
                       }),
                     }),
                   }),
@@ -282,9 +288,11 @@ describe('selectPracticeQuestionsByDomains', () => {
                   eq: jest.fn().mockReturnValue({
                     eq: jest.fn().mockReturnValue({
                       eq: jest.fn().mockReturnValue({
-                        limit: jest.fn().mockResolvedValue({
-                          data: questions,
-                          error: null,
+                        eq: jest.fn().mockReturnValue({
+                          limit: jest.fn().mockResolvedValue({
+                            data: questions,
+                            error: null,
+                          }),
                         }),
                       }),
                     }),
@@ -359,9 +367,11 @@ describe('selectPracticeQuestionsByDomains', () => {
                 select: jest.fn().mockReturnValue({
                   eq: jest.fn().mockReturnValue({
                     eq: jest.fn().mockReturnValue({
-                      in: jest.fn().mockResolvedValue({
-                        data: domainCounts,
-                        error: null,
+                      eq: jest.fn().mockReturnValue({
+                        in: jest.fn().mockResolvedValue({
+                          data: domainCounts,
+                          error: null,
+                        }),
                       }),
                     }),
                   }),
@@ -373,9 +383,11 @@ describe('selectPracticeQuestionsByDomains', () => {
                   eq: jest.fn().mockReturnValue({
                     eq: jest.fn().mockReturnValue({
                       eq: jest.fn().mockReturnValue({
-                        limit: jest.fn().mockResolvedValue({
-                          data: domain1Questions,
-                          error: null,
+                        eq: jest.fn().mockReturnValue({
+                          limit: jest.fn().mockResolvedValue({
+                            data: domain1Questions,
+                            error: null,
+                          }),
                         }),
                       }),
                     }),
@@ -404,6 +416,191 @@ describe('selectPracticeQuestionsByDomains', () => {
       expect(d1Dist?.selectedCount).toBeGreaterThan(0);
       expect(d2Dist?.selectedCount).toBe(0);
       expect(d2Dist?.availableCount).toBe(0);
+    });
+
+    it('should filter questions by review_status=GOOD in domain count query', async () => {
+      const reviewStatusCalls: string[] = [];
+      const domainMetadata = [
+        { id: 'domain-1-id', code: 'D1', name: 'Domain 1' },
+      ];
+
+      let questionsCallCount = 0;
+      const mockSupabase = createMockSupabase({
+        from: jest.fn((table: string) => {
+          if (table === 'exam_domains') {
+            return {
+              select: jest.fn().mockReturnValue({
+                in: jest.fn().mockResolvedValue({
+                  data: domainMetadata,
+                  error: null,
+                }),
+              }),
+            };
+          }
+          if (table === 'questions') {
+            questionsCallCount++;
+            if (questionsCallCount === 1) {
+              // Domain count query - should have review_status filter
+              return {
+                select: jest.fn().mockReturnValue({
+                  eq: jest.fn((field: string, value: string) => {
+                    if (field === 'exam') {
+                      expect(value).toBe('GCP_PM_ML_ENG');
+                      return {
+                        eq: jest.fn((statusField: string, statusValue: string) => {
+                          expect(statusField).toBe('status');
+                          expect(statusValue).toBe('ACTIVE');
+                          return {
+                            eq: jest.fn((reviewStatusField: string, reviewStatusValue: string) => {
+                              expect(reviewStatusField).toBe('review_status');
+                              reviewStatusCalls.push(reviewStatusValue);
+                              expect(reviewStatusValue).toBe('GOOD');
+                              return {
+                                in: jest.fn().mockResolvedValue({
+                                  data: [
+                                    {
+                                      domain_id: 'domain-1-id',
+                                      exam_domains: { code: 'D1', name: 'Domain 1' },
+                                    },
+                                  ],
+                                  error: null,
+                                }),
+                              };
+                            }),
+                          };
+                        }),
+                      };
+                    }
+                    return {};
+                  }),
+                }),
+              };
+            } else {
+              // Question fetch query
+              return {
+                select: jest.fn().mockReturnValue({
+                  eq: jest.fn(() => ({
+                    eq: jest.fn(() => ({
+                      eq: jest.fn(() => ({
+                        eq: jest.fn(() => ({
+                          limit: jest.fn().mockResolvedValue({
+                            data: [],
+                            error: null,
+                          }),
+                        })),
+                      })),
+                    })),
+                  })),
+                }),
+              };
+            }
+          }
+          return {};
+        }),
+      });
+
+      await selectPracticeQuestionsByDomains(mockSupabase, 'pmle', ['D1'], 5);
+      
+      expect(reviewStatusCalls).toContain('GOOD');
+    });
+
+    it('should filter questions by review_status=GOOD in question fetch query', async () => {
+      const reviewStatusCalls: string[] = [];
+      const domainMetadata = [
+        { id: 'domain-1-id', code: 'D1', name: 'Domain 1' },
+      ];
+
+      const domainCounts = [
+        {
+          domain_id: 'domain-1-id',
+          exam_domains: { code: 'D1', name: 'Domain 1' },
+        },
+      ];
+
+      const domain1Questions = [
+        {
+          id: 'q1',
+          stem: 'Question 1',
+          answers: [
+            { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
+          ],
+          explanations: [{ id: 'exp1' }],
+        },
+      ];
+
+      let callCount = 0;
+      const mockSupabase = createMockSupabase({
+        from: jest.fn((table: string) => {
+          if (table === 'exam_domains') {
+            return {
+              select: jest.fn().mockReturnValue({
+                in: jest.fn().mockResolvedValue({
+                  data: domainMetadata,
+                  error: null,
+                }),
+              }),
+            };
+          }
+          if (table === 'questions') {
+            callCount++;
+            if (callCount === 1) {
+              // Domain count query
+              return {
+                select: jest.fn().mockReturnValue({
+                  eq: jest.fn(() => ({
+                    eq: jest.fn(() => ({
+                      eq: jest.fn(() => ({
+                        in: jest.fn().mockResolvedValue({
+                          data: domainCounts,
+                          error: null,
+                        }),
+                      })),
+                    })),
+                  })),
+                }),
+              };
+            } else {
+              // Question fetch query - should have review_status filter
+              return {
+                select: jest.fn().mockReturnValue({
+                  eq: jest.fn((field: string, value: string) => {
+                    if (field === 'exam') {
+                      expect(value).toBe('GCP_PM_ML_ENG');
+                      return {
+                        eq: jest.fn((statusField: string, statusValue: string) => {
+                          expect(statusField).toBe('status');
+                          expect(statusValue).toBe('ACTIVE');
+                          return {
+                            eq: jest.fn((reviewStatusField: string, reviewStatusValue: string) => {
+                              expect(reviewStatusField).toBe('review_status');
+                              reviewStatusCalls.push(reviewStatusValue);
+                              expect(reviewStatusValue).toBe('GOOD');
+                              return {
+                                eq: jest.fn(() => ({
+                                  limit: jest.fn().mockResolvedValue({
+                                    data: domain1Questions,
+                                    error: null,
+                                  }),
+                                })),
+                              };
+                            }),
+                          };
+                        }),
+                      };
+                    }
+                    return {};
+                  }),
+                }),
+              };
+            }
+          }
+          return {};
+        }),
+      });
+
+      await selectPracticeQuestionsByDomains(mockSupabase, 'pmle', ['D1'], 1);
+      
+      expect(reviewStatusCalls).toContain('GOOD');
     });
   });
 });

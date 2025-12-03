@@ -40,7 +40,8 @@ describe("GET /api/questions/current", () => {
         { id: "q3", stem: "Question 3", explanations: [{ id: "e3" }] },
       ];
       const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
-      const eqEligibleMock = jest.fn(() => ({ limit: limitMock }));
+      const eqReviewStatusMock = jest.fn(() => ({ limit: limitMock }));
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
@@ -68,6 +69,7 @@ describe("GET /api/questions/current", () => {
       expect(selectMockQ).toHaveBeenCalledWith("id, stem, explanations!inner(id)");
       // Verify status filter is always applied
       expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
+      expect(eqReviewStatusMock).toHaveBeenCalledWith("review_status", "GOOD");
     });
 
     it("never returns questions without explanations", async () => {
@@ -83,7 +85,8 @@ describe("GET /api/questions/current", () => {
         { id: "q2", stem: "Question 2", explanations: [{ id: "e2" }] },
       ];
       const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
-      const eqEligibleMock = jest.fn(() => ({ limit: limitMock }));
+      const eqReviewStatusMock = jest.fn(() => ({ limit: limitMock }));
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
@@ -106,6 +109,7 @@ describe("GET /api/questions/current", () => {
       expect(questionsData.some((q) => q.id === data.id && q.explanations.length > 0)).toBe(true);
       // Verify status filter is always applied
       expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
+      expect(eqReviewStatusMock).toHaveBeenCalledWith("review_status", "GOOD");
     });
   });
 
@@ -119,7 +123,8 @@ describe("GET /api/questions/current", () => {
 
       // Mock questions query returning empty array (no questions with explanations)
       const limitMock = jest.fn().mockResolvedValue({ data: [], error: null });
-      const eqEligibleMock = jest.fn(() => ({ limit: limitMock }));
+      const eqReviewStatusMock = jest.fn(() => ({ limit: limitMock }));
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
@@ -141,7 +146,8 @@ describe("GET /api/questions/current", () => {
       });
 
       const limitMock = jest.fn().mockResolvedValue({ data: [], error: null });
-      const eqEligibleMock = jest.fn(() => ({ limit: limitMock }));
+      const eqReviewStatusMock = jest.fn(() => ({ limit: limitMock }));
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
@@ -162,7 +168,8 @@ describe("GET /api/questions/current", () => {
       });
 
       const limitMock = jest.fn().mockResolvedValue({ data: null, error: null });
-      const eqEligibleMock = jest.fn(() => ({ limit: limitMock }));
+      const eqReviewStatusMock = jest.fn(() => ({ limit: limitMock }));
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
@@ -207,7 +214,8 @@ describe("GET /api/questions/current", () => {
       ];
       const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
       const eqDifficultyMock = jest.fn(() => ({ limit: limitMock }));
-      const eqEligibleMock = jest.fn(() => ({ eq: eqDifficultyMock }));
+      const eqReviewStatusMock = jest.fn(() => ({ eq: eqDifficultyMock }));
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
@@ -240,7 +248,8 @@ describe("GET /api/questions/current", () => {
         { id: "q1", stem: "Question 1", explanations: [] },
       ];
       const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
-      const eqEligibleMock = jest.fn(() => ({ limit: limitMock }));
+      const eqReviewStatusMock = jest.fn(() => ({ limit: limitMock }));
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
@@ -288,7 +297,8 @@ describe("GET /api/questions/current", () => {
       ];
       const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
       const eqDifficultyMock = jest.fn(() => ({ limit: limitMock }));
-      const eqEligibleMock = jest.fn(() => ({ eq: eqDifficultyMock }));
+      const eqReviewStatusMock = jest.fn(() => ({ eq: eqDifficultyMock }));
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
@@ -324,7 +334,8 @@ describe("GET /api/questions/current", () => {
         { id: "q3", stem: "Question 3", explanations: [{ id: "e3" }] },
       ];
       const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
-      const eqEligibleMock = jest.fn(() => ({ limit: limitMock }));
+      const eqReviewStatusMock = jest.fn(() => ({ limit: limitMock }));
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
@@ -353,7 +364,8 @@ describe("GET /api/questions/current", () => {
         { id: "q5", stem: "Question 5", explanations: [{ id: "e5" }] },
       ];
       const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
-      const eqEligibleMock = jest.fn(() => ({ limit: limitMock }));
+      const eqReviewStatusMock = jest.fn(() => ({ limit: limitMock }));
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
@@ -380,7 +392,8 @@ describe("GET /api/questions/current", () => {
         error: null,
       });
       const limitMock2 = jest.fn().mockResolvedValue({ data: questionsData, error: null });
-      const eqEligibleMock2 = jest.fn(() => ({ limit: limitMock2 }));
+      const eqReviewStatusMock2 = jest.fn(() => ({ limit: limitMock2 }));
+      const eqEligibleMock2 = jest.fn(() => ({ eq: eqReviewStatusMock2 }));
       const selectMockQ2 = jest.fn(() => ({ eq: eqEligibleMock2 }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ2 });
       const eqMock2 = jest.fn().mockResolvedValue({
@@ -417,7 +430,8 @@ describe("GET /api/questions/current", () => {
         { id: "q2", stem: "Question 2", explanations: [{ id: "e2" }] },
       ];
       const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
-      const eqEligibleMock = jest.fn(() => ({ limit: limitMock }));
+      const eqReviewStatusMock = jest.fn(() => ({ limit: limitMock }));
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
@@ -440,7 +454,8 @@ describe("GET /api/questions/current", () => {
         error: null,
       });
       const limitMock2 = jest.fn().mockResolvedValue({ data: questionsData, error: null });
-      const eqEligibleMock2 = jest.fn(() => ({ limit: limitMock2 }));
+      const eqReviewStatusMock2 = jest.fn(() => ({ limit: limitMock2 }));
+      const eqEligibleMock2 = jest.fn(() => ({ eq: eqReviewStatusMock2 }));
       const selectMockQ2 = jest.fn(() => ({ eq: eqEligibleMock2 }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ2 });
       const eqMock2 = jest.fn().mockResolvedValue({
@@ -454,6 +469,42 @@ describe("GET /api/questions/current", () => {
       const reqNoParam = new NextRequest("http://localhost/api/questions/current");
       const resNoParam = await GET(reqNoParam);
       expect(resNoParam.status).toBe(200);
+    });
+  });
+
+  describe('review_status filter', () => {
+    it('should filter questions by review_status=GOOD', async () => {
+      const mockUser = { id: "user-review-status" };
+      serverSupabaseMock.auth.getUser.mockResolvedValue({
+        data: { user: mockUser },
+        error: null,
+      });
+
+      const questionsData = [
+        { id: "q1", stem: "Question 1", explanations: [{ id: "e1" }] },
+      ];
+      const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
+      const eqReviewStatusMock = jest.fn(() => ({ limit: limitMock }));
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
+      const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
+
+      const eqAnsMock = jest.fn().mockResolvedValue({
+        data: [{ id: "ans1", choice_label: "A", choice_text: "Option A" }],
+        error: null,
+      });
+      const selectMockA = jest.fn(() => ({ eq: eqAnsMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockA });
+
+      const req = new NextRequest("http://localhost/api/questions/current");
+      const res = await GET(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(data.id).toBeDefined();
+      // Verify both status filters are applied
+      expect(eqEligibleMock).toHaveBeenCalledWith("status", "ACTIVE");
+      expect(eqReviewStatusMock).toHaveBeenCalledWith("review_status", "GOOD");
     });
   });
 });
