@@ -89,11 +89,12 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Build query with filters - always apply status='ACTIVE' (equivalent to is_diagnostic_eligible=true)
+    // Build query with filters - always apply status='ACTIVE' and review_status='GOOD'
     let query = supabase
       .from('questions')
       .select(selectColumns(hasExplanation))
-      .eq('status', 'ACTIVE');
+      .eq('status', 'ACTIVE')
+      .eq('review_status', 'GOOD');
 
     // Apply optional filters with AND semantics
     if (difficulty !== undefined) {

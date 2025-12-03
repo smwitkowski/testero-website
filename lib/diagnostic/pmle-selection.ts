@@ -36,6 +36,9 @@ export interface SelectionResult {
   domainDistribution: DomainSelectionTarget[];
 }
 
+// Minimum pool threshold per domain - log warning if below this
+const MIN_POOL_THRESHOLD = 5;
+
 /**
  * Calculate domain targets from blueprint weights
  * Uses largest remainder method for fair rounding
@@ -134,7 +137,8 @@ export async function selectPmleQuestionsByBlueprint(
       exam_domains!inner(code, name)
     `)
     .eq('exam', 'GCP_PM_ML_ENG')
-    .eq('status', 'ACTIVE');
+    .eq('status', 'ACTIVE')
+    .eq('review_status', 'GOOD');
 
   if (countError) {
     throw new Error(`Failed to fetch domain counts: ${countError.message}`);
@@ -171,6 +175,13 @@ export async function selectPmleQuestionsByBlueprint(
   for (const [domainCode, targetCount] of domainTargets.entries()) {
     const availableCount = domainAvailability.get(domainCode) || 0;
     
+    // Log warning if pool is below threshold
+    if (availableCount > 0 && availableCount < MIN_POOL_THRESHOLD) {
+      console.warn(
+        `[CONTENT] Domain ${domainCode} has low ACTIVE+GOOD question pool: ${availableCount} questions available`
+      );
+    }
+    
     if (targetCount === 0) {
       domainDistribution.push({
         domainCode,
@@ -198,6 +209,7 @@ export async function selectPmleQuestionsByBlueprint(
       `)
       .eq('exam', 'GCP_PM_ML_ENG')
       .eq('status', 'ACTIVE')
+      .eq('review_status', 'GOOD')
       .eq('domain_id', domainId)
       .limit(targetCount * 3); // Fetch more than needed for randomization
 

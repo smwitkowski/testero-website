@@ -196,17 +196,19 @@ describe('PMLE Question Selection', () => {
             return {
               eq: jest.fn(() => ({
                 eq: jest.fn(() => ({
-                  data: [
-                    {
-                      domain_id: 'd1',
-                      exam_domains: { code: 'ARCHITECTING_LOW_CODE_ML_SOLUTIONS', name: 'Domain 1' },
-                    },
-                    {
-                      domain_id: 'd2',
-                      exam_domains: { code: 'COLLABORATING_TO_MANAGE_DATA_AND_MODELS', name: 'Domain 2' },
-                    },
-                  ],
-                  error: null,
+                  eq: jest.fn(() => ({
+                    data: [
+                      {
+                        domain_id: 'd1',
+                        exam_domains: { code: 'ARCHITECTING_LOW_CODE_ML_SOLUTIONS', name: 'Domain 1' },
+                      },
+                      {
+                        domain_id: 'd2',
+                        exam_domains: { code: 'COLLABORATING_TO_MANAGE_DATA_AND_MODELS', name: 'Domain 2' },
+                      },
+                    ],
+                    error: null,
+                  })),
                 })),
               })),
             };
@@ -216,9 +218,11 @@ describe('PMLE Question Selection', () => {
               eq: jest.fn(() => ({
                 eq: jest.fn(() => ({
                   eq: jest.fn(() => ({
-                    limit: jest.fn(() => ({
-                      data: [], // No questions available
-                      error: null,
+                    eq: jest.fn(() => ({
+                      limit: jest.fn(() => ({
+                        data: [], // No questions available
+                        error: null,
+                      })),
                     })),
                   })),
                 })),
@@ -246,13 +250,15 @@ describe('PMLE Question Selection', () => {
             return {
               eq: jest.fn(() => ({
                 eq: jest.fn(() => ({
-                  data: PMLE_BLUEPRINT.flatMap((config, idx) => 
-                    Array(5).fill(null).map((_, i) => ({
-                      domain_id: `d${idx + 1}`,
-                      exam_domains: { code: config.domainCode, name: config.displayName },
-                    }))
-                  ),
-                  error: null,
+                  eq: jest.fn(() => ({
+                    data: PMLE_BLUEPRINT.flatMap((config, idx) => 
+                      Array(5).fill(null).map((_, i) => ({
+                        domain_id: `d${idx + 1}`,
+                        exam_domains: { code: config.domainCode, name: config.displayName },
+                      }))
+                    ),
+                    error: null,
+                  })),
                 })),
               })),
             };
@@ -262,21 +268,23 @@ describe('PMLE Question Selection', () => {
               eq: jest.fn(() => ({
                 eq: jest.fn(() => ({
                   eq: jest.fn(() => ({
-                    limit: jest.fn(() => ({
-                      data: [
-                        {
-                          id: 'q1',
-                          stem: 'Test question stem',
-                          difficulty: 'MEDIUM',
-                          answers: [
-                            { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
-                            { choice_label: 'B', choice_text: 'Answer B', is_correct: false },
-                            { choice_label: 'C', choice_text: 'Answer C', is_correct: false },
-                            { choice_label: 'D', choice_text: 'Answer D', is_correct: false },
-                          ],
-                        },
-                      ],
-                      error: null,
+                    eq: jest.fn(() => ({
+                      limit: jest.fn(() => ({
+                        data: [
+                          {
+                            id: 'q1',
+                            stem: 'Test question stem',
+                            difficulty: 'MEDIUM',
+                            answers: [
+                              { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
+                              { choice_label: 'B', choice_text: 'Answer B', is_correct: false },
+                              { choice_label: 'C', choice_text: 'Answer C', is_correct: false },
+                              { choice_label: 'D', choice_text: 'Answer D', is_correct: false },
+                            ],
+                          },
+                        ],
+                        error: null,
+                      })),
                     })),
                   })),
                 })),
@@ -350,6 +358,134 @@ describe('PMLE Question Selection', () => {
       ).rejects.toThrow();
     });
 
+    it('should filter questions by review_status=GOOD in domain count query', async () => {
+      const reviewStatusCalls: string[] = [];
+      const mockFrom = jest.fn(() => {
+        const mockSelect = jest.fn((columns: string) => {
+          if (columns.includes('exam_domains')) {
+            // Domain count query - should have review_status filter
+            return {
+              eq: jest.fn((field: string, value: string) => {
+                if (field === 'exam') {
+                  expect(value).toBe('GCP_PM_ML_ENG');
+                  return {
+                    eq: jest.fn((statusField: string, statusValue: string) => {
+                      expect(statusField).toBe('status');
+                      expect(statusValue).toBe('ACTIVE');
+                      return {
+                        eq: jest.fn((reviewStatusField: string, reviewStatusValue: string) => {
+                          expect(reviewStatusField).toBe('review_status');
+                          reviewStatusCalls.push(reviewStatusValue);
+                          expect(reviewStatusValue).toBe('GOOD');
+                          return {
+                            data: [
+                              {
+                                domain_id: 'd1',
+                                exam_domains: { code: 'ARCHITECTING_LOW_CODE_ML_SOLUTIONS', name: 'Domain 1' },
+                              },
+                            ],
+                            error: null,
+                          };
+                        }),
+                      };
+                    }),
+                  };
+                }
+                return {};
+              }),
+            };
+          }
+          return {};
+        });
+        return { select: mockSelect };
+      });
+
+      const mockSupabase = {
+        from: mockFrom,
+      } as unknown as SupabaseClient;
+
+      // This will fail due to insufficient questions, but we verify review_status filter was called
+      await expect(
+        selectPmleQuestionsByBlueprint(mockSupabase, 5)
+      ).rejects.toThrow();
+      
+      expect(reviewStatusCalls).toContain('GOOD');
+    });
+
+    it('should filter questions by review_status=GOOD in question fetch query', async () => {
+      const reviewStatusCalls: string[] = [];
+      const mockFrom = jest.fn(() => {
+        const mockSelect = jest.fn((columns: string) => {
+          if (columns.includes('exam_domains')) {
+            // Domain count query
+            return {
+              eq: jest.fn(() => ({
+                eq: jest.fn(() => ({
+                  eq: jest.fn(() => ({
+                    data: PMLE_BLUEPRINT.flatMap((config, idx) => 
+                      Array(10).fill(null).map(() => ({
+                        domain_id: `d${idx + 1}`,
+                        exam_domains: { code: config.domainCode, name: config.displayName },
+                      }))
+                    ),
+                    error: null,
+                  })),
+                })),
+              })),
+            };
+          } else {
+            // Question fetch query - should have review_status filter
+            return {
+              eq: jest.fn((field: string, value: string) => {
+                if (field === 'exam') {
+                  expect(value).toBe('GCP_PM_ML_ENG');
+                  return {
+                    eq: jest.fn((statusField: string, statusValue: string) => {
+                      expect(statusField).toBe('status');
+                      expect(statusValue).toBe('ACTIVE');
+                      return {
+                        eq: jest.fn((reviewStatusField: string, reviewStatusValue: string) => {
+                          expect(reviewStatusField).toBe('review_status');
+                          reviewStatusCalls.push(reviewStatusValue);
+                          expect(reviewStatusValue).toBe('GOOD');
+                          return {
+                            eq: jest.fn(() => ({
+                              limit: jest.fn(() => ({
+                                data: Array(5).fill(null).map((_, i) => ({
+                                  id: `q${i}`,
+                                  stem: `Question ${i}`,
+                                  difficulty: 'MEDIUM',
+                                  answers: [
+                                    { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
+                                    { choice_label: 'B', choice_text: 'Answer B', is_correct: false },
+                                  ],
+                                })),
+                                error: null,
+                              })),
+                            })),
+                          };
+                        }),
+                      };
+                    }),
+                  };
+                }
+                return {};
+              }),
+            };
+          }
+        });
+        return { select: mockSelect };
+      });
+
+      const mockSupabase = {
+        from: mockFrom,
+      } as unknown as SupabaseClient;
+
+      await selectPmleQuestionsByBlueprint(mockSupabase, 5);
+      
+      expect(reviewStatusCalls).toContain('GOOD');
+    });
+
     it('should gate debug logging by environment variable', async () => {
       const originalEnv = process.env.NODE_ENV;
       const originalDebug = process.env.DIAGNOSTIC_BLUEPRINT_DEBUG;
@@ -362,13 +498,15 @@ describe('PMLE Question Selection', () => {
             return {
               eq: jest.fn(() => ({
                 eq: jest.fn(() => ({
-                  data: PMLE_BLUEPRINT.flatMap((config, idx) => 
-                    Array(10).fill(null).map(() => ({
-                      domain_id: `d${idx + 1}`,
-                      exam_domains: { code: config.domainCode, name: config.displayName },
-                    }))
-                  ),
-                  error: null,
+                  eq: jest.fn(() => ({
+                    data: PMLE_BLUEPRINT.flatMap((config, idx) => 
+                      Array(10).fill(null).map(() => ({
+                        domain_id: `d${idx + 1}`,
+                        exam_domains: { code: config.domainCode, name: config.displayName },
+                      }))
+                    ),
+                    error: null,
+                  })),
                 })),
               })),
             };
@@ -377,17 +515,19 @@ describe('PMLE Question Selection', () => {
               eq: jest.fn(() => ({
                 eq: jest.fn(() => ({
                   eq: jest.fn(() => ({
-                    limit: jest.fn(() => ({
-                      data: Array(5).fill(null).map((_, i) => ({
-                        id: `q${i}`,
-                        stem: `Question ${i}`,
-                        difficulty: 'MEDIUM',
-                        answers: [
-                          { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
-                          { choice_label: 'B', choice_text: 'Answer B', is_correct: false },
-                        ],
+                    eq: jest.fn(() => ({
+                      limit: jest.fn(() => ({
+                        data: Array(5).fill(null).map((_, i) => ({
+                          id: `q${i}`,
+                          stem: `Question ${i}`,
+                          difficulty: 'MEDIUM',
+                          answers: [
+                            { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
+                            { choice_label: 'B', choice_text: 'Answer B', is_correct: false },
+                          ],
+                        })),
+                        error: null,
                       })),
-                      error: null,
                     })),
                   })),
                 })),

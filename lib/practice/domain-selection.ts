@@ -34,6 +34,9 @@ export interface PracticeSelectionResult {
   totalSelected: number;
 }
 
+// Minimum pool threshold per domain - log warning if below this
+const MIN_POOL_THRESHOLD = 5;
+
 /**
  * Select practice questions for specified domains with even distribution
  * 
@@ -118,6 +121,7 @@ export async function selectPracticeQuestionsByDomains(
     `)
     .eq('exam', 'GCP_PM_ML_ENG')
     .eq('status', 'ACTIVE')
+    .eq('review_status', 'GOOD')
     .in('domain_id', domainIds);
 
   if (countError) {
@@ -159,6 +163,13 @@ export async function selectPracticeQuestionsByDomains(
     const targetCount = domainTargets.get(domainCode) || 0;
     const availableCount = domainAvailability.get(domainCode) || 0;
 
+    // Log warning if pool is below threshold
+    if (availableCount > 0 && availableCount < MIN_POOL_THRESHOLD) {
+      console.warn(
+        `[CONTENT] Domain ${domainCode} has low ACTIVE+GOOD question pool: ${availableCount} questions available`
+      );
+    }
+
     if (targetCount === 0 || availableCount === 0) {
       domainDistribution.push({
         domainCode,
@@ -192,6 +203,7 @@ export async function selectPracticeQuestionsByDomains(
       `)
       .eq('exam', 'GCP_PM_ML_ENG')
       .eq('status', 'ACTIVE')
+      .eq('review_status', 'GOOD')
       .eq('domain_id', domainId)
       .limit(targetCount * 3); // Fetch more than needed for randomization
 
