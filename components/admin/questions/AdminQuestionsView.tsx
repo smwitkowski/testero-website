@@ -70,7 +70,8 @@ type ButtonTone = NonNullable<ComponentProps<typeof Button>["tone"]>;
 type BulkReviewAction =
   | "review:GOOD"
   | "review:NEEDS_ANSWER_FIX"
-  | "review:NEEDS_EXPLANATION_FIX";
+  | "review:NEEDS_EXPLANATION_FIX"
+  | "review:RETIRED";
 type BulkStatusAction = "status:ACTIVE" | "status:DRAFT" | "status:RETIRED";
 
 const REVIEW_STATUS_LABELS: Record<AdminQuestionReviewStatus, string> = {
@@ -108,6 +109,7 @@ const BULK_REVIEW_ACTIONS: ReadonlyArray<{ label: string; action: BulkReviewActi
   { label: "Mark Good", action: "review:GOOD" },
   { label: "Needs answer fix", action: "review:NEEDS_ANSWER_FIX" },
   { label: "Needs explanation fix", action: "review:NEEDS_EXPLANATION_FIX" },
+  { label: "Mark Retired", action: "review:RETIRED" },
 ];
 
 const BULK_STATUS_ACTIONS: ReadonlyArray<{
