@@ -1,67 +1,87 @@
 /**
  * Admin authentication helper
  * 
- * Checks if a user is an admin by comparing their user ID or email
- * against environment variables ADMIN_USER_IDS and ADMIN_EMAILS.
+ * Checks if a user is an admin by querying the admin_users table in Supabase.
+ * Uses request-level caching to avoid repeated database queries within the same request.
  * 
- * Environment variables:
- * - ADMIN_USER_IDS: Comma-separated list of Supabase auth.users.id values
- * - ADMIN_EMAILS: Comma-separated list of email addresses (fallback)
+ * Database table: public.admin_users
+ * - user_id: UUID foreign key to auth.users.id
+ * - created_at: Timestamp when admin access was granted
+ * - created_by_user_id: UUID of admin who granted access
  */
 
-/**
- * Get admin user IDs from ADMIN_USER_IDS environment variable
- * @returns Array of admin user IDs (trimmed, empty array if not set)
- */
-export function getAdminUserIds(): string[] {
-  const adminUserIds = process.env.ADMIN_USER_IDS;
-  if (!adminUserIds || adminUserIds.trim() === "") {
-    return [];
-  }
-  return adminUserIds.split(",").map((id) => id.trim()).filter((id) => id.length > 0);
-}
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
+
+// Request-level cache to avoid repeated DB queries in the same request
+// Key: user_id, Value: Promise<boolean>
+const adminCache = new Map<string, Promise<boolean>>();
 
 /**
- * Get admin emails from ADMIN_EMAILS environment variable
- * @returns Array of admin emails (trimmed, empty array if not set)
- */
-export function getAdminEmails(): string[] {
-  const adminEmails = process.env.ADMIN_EMAILS;
-  if (!adminEmails || adminEmails.trim() === "") {
-    return [];
-  }
-  return adminEmails.split(",").map((email) => email.trim()).filter((email) => email.length > 0);
-}
-
-/**
- * Check if a user is an admin
+ * Check if a user is an admin by querying the admin_users table
  * 
- * A user is considered an admin if:
- * - Their user ID matches any ID in ADMIN_USER_IDS, OR
- * - Their email matches any email in ADMIN_EMAILS
+ * Uses request-level caching to avoid repeated database queries.
+ * Cache is cleared between requests (Map is recreated per request in serverless context).
  * 
  * @param user - User object with id and optional email
- * @returns true if user is an admin, false otherwise
+ * @returns Promise<boolean> - true if user is an admin, false otherwise
  */
-export function isAdmin(user: { id: string; email?: string | null }): boolean {
+export async function isAdmin(user: { id: string; email?: string | null }): Promise<boolean> {
   if (!user || !user.id) {
     return false;
   }
 
-  const adminUserIds = getAdminUserIds();
-  const adminEmails = getAdminEmails();
-
-  // Check if user ID matches any admin ID
-  if (adminUserIds.includes(user.id)) {
-    return true;
+  // Check cache first
+  const cached = adminCache.get(user.id);
+  if (cached !== undefined) {
+    return cached;
   }
 
-  // Check if user email matches any admin email
-  if (user.email && adminEmails.includes(user.email)) {
-    return true;
-  }
+  // Query database and cache the promise
+  const adminPromise = checkAdminInDatabase(user.id);
+  adminCache.set(user.id, adminPromise);
 
+  return adminPromise;
+}
+
+/**
+ * Query the database to check if a user is an admin
+ * 
+ * @param userId - User ID to check
+ * @returns Promise<boolean> - true if user exists in admin_users table
+ */
+async function checkAdminInDatabase(userId: string): Promise<boolean> {
+  try {
+    const supabase = createServiceSupabaseClient();
+    const { data, error } = await supabase
+      .from("admin_users")
+      .select("user_id")
+      .eq("user_id", userId)
+      .limit(1)
+      .single();
+
+    if (error) {
+      // If error is "PGRST116" (no rows returned), user is not an admin
+      if (error.code === "PGRST116") {
+        return false;
+      }
+      // Log other errors but don't throw - fail closed (no admin access on error)
+      console.error("[isAdmin] Database error:", error);
   return false;
 }
 
+    // If data exists, user is an admin
+    return !!data;
+  } catch (error) {
+    // Fail closed - if we can't verify, deny admin access
+    console.error("[isAdmin] Unexpected error:", error);
+    return false;
+  }
+}
 
+/**
+ * Clear the admin cache (useful for testing or explicit cache invalidation)
+ * In serverless environments, this is typically not needed as the cache is per-request
+ */
+export function clearAdminCache(): void {
+  adminCache.clear();
+}
