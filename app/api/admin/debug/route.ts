@@ -49,18 +49,20 @@ export async function GET() {
         },
         isAdmin: !!data,
       }, { status: 200 });
-    } catch (dbError: any) {
+    } catch (dbError) {
+      const errorMessage = dbError instanceof Error ? dbError.message : 'Unknown database error';
       return NextResponse.json({
         authenticated: true,
         userId: user.id,
         email: user.email,
-        dbError: dbError.message,
+        dbError: errorMessage,
       }, { status: 200 });
     }
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({
       error: 'Unexpected error',
-      message: error.message,
+      message: errorMessage,
     }, { status: 200 });
   }
 }
