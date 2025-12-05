@@ -24,7 +24,7 @@ import { isAdmin } from "@/lib/auth/isAdmin";
 describe("POST /api/admin/questions/bulk-update", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (isAdmin as jest.Mock).mockImplementation((user) => {
+    (isAdmin as jest.Mock).mockImplementation(async (user) => {
       return user?.id === "admin-user" || user?.email === "admin@test.com";
     });
   });

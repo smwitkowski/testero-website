@@ -22,7 +22,7 @@ export async function GET(
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user || !isAdmin(user)) {
+    if (!user || !(await isAdmin(user))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -63,7 +63,7 @@ export async function PUT(
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user || !isAdmin(user)) {
+    if (!user || !(await isAdmin(user))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

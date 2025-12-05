@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user || !isAdmin(user)) {
+    if (!user || !(await isAdmin(user))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
