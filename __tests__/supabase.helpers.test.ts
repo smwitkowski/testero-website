@@ -169,7 +169,7 @@ describe("supabase middleware updateSession", () => {
       };
       createServerClient.mockReturnValue(supabase);
       const { isAdmin } = require("../lib/auth/isAdmin");
-      isAdmin.mockReturnValue(true);
+      isAdmin.mockResolvedValue(true);
       const { updateSession } = require("../lib/supabase/middleware");
       const req = new NextRequest("http://example.com/admin/questions");
       const res = await updateSession(req);
@@ -184,7 +184,7 @@ describe("supabase middleware updateSession", () => {
       };
       createServerClient.mockReturnValue(supabase);
       const { isAdmin } = require("../lib/auth/isAdmin");
-      isAdmin.mockReturnValue(false);
+      isAdmin.mockResolvedValue(false);
       const { updateSession } = require("../lib/supabase/middleware");
       const req = new NextRequest("http://example.com/admin/questions");
       const res = await updateSession(req);

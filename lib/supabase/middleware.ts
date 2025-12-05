@@ -44,7 +44,7 @@ export async function updateSession(request: NextRequest) {
   const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
   if (isAdminRoute && user) {
     const { isAdmin } = await import("@/lib/auth/isAdmin");
-    if (!isAdmin(user)) {
+    if (!(await isAdmin(user))) {
       const url = request.nextUrl.clone();
       url.pathname = "/admin/forbidden";
       return NextResponse.redirect(url);
