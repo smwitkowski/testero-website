@@ -18,12 +18,13 @@ export async function GET() {
       return NextResponse.json({ isAdmin: false }, { status: 200 });
     }
 
-    const adminStatus = isAdmin(user);
+    const adminStatus = await isAdmin(user);
     return NextResponse.json({ isAdmin: adminStatus }, { status: 200 });
   } catch (error) {
     console.error('[Admin Check] Error:', error);
     return NextResponse.json({ isAdmin: false }, { status: 200 });
   }
 }
+
 
 

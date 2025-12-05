@@ -33,7 +33,7 @@ import { isAdmin } from "@/lib/auth/isAdmin";
 describe("GET /api/admin/questions/[id]", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (isAdmin as jest.Mock).mockImplementation((user) => {
+    (isAdmin as jest.Mock).mockImplementation(async (user) => {
       return user?.id === "admin-user" || user?.email === "admin@test.com";
     });
   });
@@ -135,7 +135,7 @@ describe("GET /api/admin/questions/[id]", () => {
 describe("PUT /api/admin/questions/[id]", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (isAdmin as jest.Mock).mockImplementation((user) => {
+    (isAdmin as jest.Mock).mockImplementation(async (user) => {
       return user?.id === "admin-user" || user?.email === "admin@test.com";
     });
   });
@@ -199,6 +199,9 @@ describe("PUT /api/admin/questions/[id]", () => {
         }
         return {};
       }),
+      rpc: jest.fn().mockResolvedValue({
+        error: upsertError,
+      }),
     };
 
     (createServerSupabaseClient as jest.Mock).mockReturnValue(mockSupabase);
@@ -216,12 +219,11 @@ describe("PUT /api/admin/questions/[id]", () => {
     review_notes: "Looks good",
     stem: "This is a test question stem that is long enough",
     answers: [
-      { choice_label: "A" as const, choice_text: "Answer A", is_correct: true },
+      { choice_label: "A" as const, choice_text: "Answer A", is_correct: true, explanation_text: "This is the explanation" },
       { choice_label: "B" as const, choice_text: "Answer B", is_correct: false },
       { choice_label: "C" as const, choice_text: "Answer C", is_correct: false },
       { choice_label: "D" as const, choice_text: "Answer D", is_correct: false },
     ],
-    explanation_text: "This is the explanation",
     doc_links: ["https://example.com/doc"],
   };
 

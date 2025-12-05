@@ -21,7 +21,7 @@ export default async function AdminQuestionsPage({ searchParams }: AdminQuestion
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user || !isAdmin(user)) {
+  if (!user || !(await isAdmin(user))) {
     redirect("/admin/forbidden");
   }
 

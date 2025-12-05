@@ -1,135 +1,180 @@
-import { isAdmin, getAdminUserIds, getAdminEmails } from "@/lib/auth/isAdmin";
+import { isAdmin } from "@/lib/auth/isAdmin";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
+
+// Mock the Supabase service client
+jest.mock("@/lib/supabase/service", () => ({
+  createServiceSupabaseClient: jest.fn(),
+}));
+
+// Mock React's cache function to use a simple memoization for tests
+jest.mock('react', () => ({
+  ...jest.requireActual('react'),
+  cache: (fn: Function) => fn, // In tests, disable caching to make tests independent
+}));
 
 describe("isAdmin", () => {
-  const originalEnv = process.env;
+  let mockSupabaseClient: any;
 
   beforeEach(() => {
-    jest.resetModules();
-    process.env = { ...originalEnv };
+    // Create mock Supabase client
+    mockSupabaseClient = {
+      from: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      single: jest.fn(),
+    };
+
+    (createServiceSupabaseClient as jest.Mock).mockReturnValue(mockSupabaseClient);
   });
 
   afterEach(() => {
-    process.env = originalEnv;
-  });
-
-  describe("getAdminUserIds", () => {
-    it("should parse comma-separated user IDs from ADMIN_USER_IDS", () => {
-      process.env.ADMIN_USER_IDS = "user-1,user-2,user-3";
-      const ids = getAdminUserIds();
-      expect(ids).toEqual(["user-1", "user-2", "user-3"]);
-    });
-
-    it("should handle whitespace in comma-separated list", () => {
-      process.env.ADMIN_USER_IDS = "user-1, user-2 , user-3";
-      const ids = getAdminUserIds();
-      expect(ids).toEqual(["user-1", "user-2", "user-3"]);
-    });
-
-    it("should return empty array when ADMIN_USER_IDS is not set", () => {
-      delete process.env.ADMIN_USER_IDS;
-      const ids = getAdminUserIds();
-      expect(ids).toEqual([]);
-    });
-
-    it("should return empty array when ADMIN_USER_IDS is empty string", () => {
-      process.env.ADMIN_USER_IDS = "";
-      const ids = getAdminUserIds();
-      expect(ids).toEqual([]);
-    });
-  });
-
-  describe("getAdminEmails", () => {
-    it("should parse comma-separated emails from ADMIN_EMAILS", () => {
-      process.env.ADMIN_EMAILS = "admin1@example.com,admin2@example.com";
-      const emails = getAdminEmails();
-      expect(emails).toEqual(["admin1@example.com", "admin2@example.com"]);
-    });
-
-    it("should handle whitespace in comma-separated list", () => {
-      process.env.ADMIN_EMAILS = "admin1@example.com, admin2@example.com ";
-      const emails = getAdminEmails();
-      expect(emails).toEqual(["admin1@example.com", "admin2@example.com"]);
-    });
-
-    it("should return empty array when ADMIN_EMAILS is not set", () => {
-      delete process.env.ADMIN_EMAILS;
-      const emails = getAdminEmails();
-      expect(emails).toEqual([]);
-    });
-
-    it("should return empty array when ADMIN_EMAILS is empty string", () => {
-      process.env.ADMIN_EMAILS = "";
-      const emails = getAdminEmails();
-      expect(emails).toEqual([]);
-    });
+    jest.clearAllMocks();
   });
 
   describe("isAdmin", () => {
-    it("should return true for user ID in ADMIN_USER_IDS", () => {
-      process.env.ADMIN_USER_IDS = "admin-user-1,admin-user-2";
-      const user = { id: "admin-user-1", email: "user@example.com" };
-      expect(isAdmin(user)).toBe(true);
+    it("should return false for null user", async () => {
+      const result = await isAdmin(null as any);
+      expect(result).toBe(false);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
     });
 
-    it("should return true for user email in ADMIN_EMAILS", () => {
-      process.env.ADMIN_EMAILS = "admin1@example.com,admin2@example.com";
-      const user = { id: "regular-user", email: "admin1@example.com" };
-      expect(isAdmin(user)).toBe(true);
+    it("should return false for user without id", async () => {
+      const result = await isAdmin({ email: "test@example.com" } as any);
+      expect(result).toBe(false);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
     });
 
-    it("should return true if user ID matches even when email doesn't", () => {
-      process.env.ADMIN_USER_IDS = "admin-user-1";
-      process.env.ADMIN_EMAILS = "admin@example.com";
-      const user = { id: "admin-user-1", email: "different@example.com" };
-      expect(isAdmin(user)).toBe(true);
+    it("should return true when user exists in admin_users table", async () => {
+      mockSupabaseClient.single.mockResolvedValue({
+        data: { user_id: "admin-user-1" },
+        error: null,
+      });
+
+      const user = { id: "admin-user-1", email: "admin@example.com" };
+      const result = await isAdmin(user);
+
+      expect(result).toBe(true);
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith("admin_users");
+      expect(mockSupabaseClient.select).toHaveBeenCalledWith("user_id");
+      expect(mockSupabaseClient.eq).toHaveBeenCalledWith("user_id", "admin-user-1");
+      expect(mockSupabaseClient.limit).toHaveBeenCalledWith(1);
+      expect(mockSupabaseClient.single).toHaveBeenCalled();
     });
 
-    it("should return true if email matches even when ID doesn't", () => {
-      process.env.ADMIN_USER_IDS = "admin-user-1";
-      process.env.ADMIN_EMAILS = "admin@example.com";
-      const user = { id: "different-user", email: "admin@example.com" };
-      expect(isAdmin(user)).toBe(true);
+    it("should return false when user does not exist in admin_users table", async () => {
+      mockSupabaseClient.single.mockResolvedValue({
+        data: null,
+        error: { code: "PGRST116", message: "No rows returned" },
+      });
+
+      const user = { id: "regular-user", email: "user@example.com" };
+      const result = await isAdmin(user);
+
+      expect(result).toBe(false);
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith("admin_users");
     });
 
-    it("should return false for non-admin users", () => {
-      process.env.ADMIN_USER_IDS = "admin-user-1";
-      process.env.ADMIN_EMAILS = "admin@example.com";
-      const user = { id: "regular-user", email: "regular@example.com" };
-      expect(isAdmin(user)).toBe(false);
+    it("should return false on database error (fail closed)", async () => {
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+      mockSupabaseClient.single.mockResolvedValue({
+        data: null,
+        error: { code: "UNKNOWN_ERROR", message: "Database connection failed" },
+      });
+
+      const user = { id: "any-user", email: "user@example.com" };
+      const result = await isAdmin(user);
+
+      expect(result).toBe(false);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "[isAdmin] Database error:",
+        expect.objectContaining({ code: "UNKNOWN_ERROR" })
+      );
+      consoleErrorSpy.mockRestore();
     });
 
-    it("should return false when no admin env vars are set", () => {
-      delete process.env.ADMIN_USER_IDS;
-      delete process.env.ADMIN_EMAILS;
-      const user = { id: "any-user", email: "any@example.com" };
-      expect(isAdmin(user)).toBe(false);
+    it("should return false on unexpected error (fail closed)", async () => {
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+      mockSupabaseClient.single.mockRejectedValue(new Error("Unexpected error"));
+
+      const user = { id: "any-user", email: "user@example.com" };
+      const result = await isAdmin(user);
+
+      expect(result).toBe(false);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "[isAdmin] Unexpected error:",
+        expect.any(Error)
+      );
+      consoleErrorSpy.mockRestore();
     });
 
-    it("should handle user without email", () => {
-      process.env.ADMIN_USER_IDS = "admin-user-1";
-      process.env.ADMIN_EMAILS = "admin@example.com";
+    it("should query database for each check in test environment", async () => {
+      // Note: React's cache() is disabled in test environment (mocked above)
+      // to ensure test independence, so each call queries the database
+      mockSupabaseClient.single.mockResolvedValue({
+        data: { user_id: "admin-user-1" },
+        error: null,
+      });
+
+      const user = { id: "admin-user-1", email: "admin@example.com" };
+
+      // First call
+      const result1 = await isAdmin(user);
+      expect(result1).toBe(true);
+
+      // Second call also queries database (caching disabled in tests)
+      const result2 = await isAdmin(user);
+      expect(result2).toBe(true);
+
+      // In tests, we disable caching for independence
+      expect(mockSupabaseClient.single).toHaveBeenCalledTimes(2);
+    });
+
+    it("should handle user without email", async () => {
+      mockSupabaseClient.single.mockResolvedValue({
+        data: { user_id: "admin-user-1" },
+        error: null,
+      });
+
       const user = { id: "admin-user-1" };
-      expect(isAdmin(user)).toBe(true);
+      const result = await isAdmin(user);
+
+      expect(result).toBe(true);
+      expect(mockSupabaseClient.eq).toHaveBeenCalledWith("user_id", "admin-user-1");
     });
 
-    it("should handle user with undefined email", () => {
-      process.env.ADMIN_USER_IDS = "admin-user-1";
-      const user = { id: "admin-user-1", email: undefined };
-      expect(isAdmin(user)).toBe(true);
+    it("should handle user with null email", async () => {
+      mockSupabaseClient.single.mockResolvedValue({
+        data: { user_id: "admin-user-1" },
+        error: null,
+      });
+
+      const user = { id: "admin-user-1", email: null };
+      const result = await isAdmin(user);
+
+      expect(result).toBe(true);
     });
 
-    it("should be case-sensitive for user IDs", () => {
-      process.env.ADMIN_USER_IDS = "admin-user-1";
-      const user = { id: "ADMIN-USER-1", email: "user@example.com" };
-      expect(isAdmin(user)).toBe(false);
-    });
+    it("should query different users separately", async () => {
+      mockSupabaseClient.single
+        .mockResolvedValueOnce({
+          data: { user_id: "admin-user-1" },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: null,
+          error: { code: "PGRST116" },
+        });
 
-    it("should be case-sensitive for emails", () => {
-      process.env.ADMIN_EMAILS = "admin@example.com";
-      const user = { id: "user-1", email: "ADMIN@example.com" };
-      expect(isAdmin(user)).toBe(false);
+      const adminUser = { id: "admin-user-1", email: "admin@example.com" };
+      const regularUser = { id: "regular-user", email: "user@example.com" };
+
+      const adminResult = await isAdmin(adminUser);
+      const regularResult = await isAdmin(regularUser);
+
+      expect(adminResult).toBe(true);
+      expect(regularResult).toBe(false);
+      expect(mockSupabaseClient.single).toHaveBeenCalledTimes(2);
     });
   });
 });
-
-
