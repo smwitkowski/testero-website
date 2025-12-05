@@ -2,7 +2,8 @@
  * Admin authentication helper
  * 
  * Checks if a user is an admin by querying the admin_users table in Supabase.
- * Uses request-level caching to avoid repeated database queries within the same request.
+ * Uses React's cache() for true per-request memoization in Next.js.
+ * Cache is automatically cleared between requests.
  * 
  * Database table: public.admin_users
  * - user_id: UUID foreign key to auth.users.id
@@ -10,17 +11,14 @@
  * - created_by_user_id: UUID of admin who granted access
  */
 
+import { cache } from 'react';
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
-
-// Request-level cache to avoid repeated DB queries in the same request
-// Key: user_id, Value: Promise<boolean>
-const adminCache = new Map<string, Promise<boolean>>();
 
 /**
  * Check if a user is an admin by querying the admin_users table
  * 
- * Uses request-level caching to avoid repeated database queries.
- * Cache is cleared between requests (Map is recreated per request in serverless context).
+ * Uses React's cache() for automatic per-request memoization.
+ * The cache is automatically cleared between requests in Next.js.
  * 
  * @param user - User object with id and optional email
  * @returns Promise<boolean> - true if user is an admin, false otherwise
@@ -30,26 +28,19 @@ export async function isAdmin(user: { id: string; email?: string | null }): Prom
     return false;
   }
 
-  // Check cache first
-  const cached = adminCache.get(user.id);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  // Query database and cache the promise
-  const adminPromise = checkAdminInDatabase(user.id);
-  adminCache.set(user.id, adminPromise);
-
-  return adminPromise;
+  return checkAdminCached(user.id);
 }
 
 /**
- * Query the database to check if a user is an admin
+ * Cached database query to check if a user is an admin
+ * 
+ * Wrapped with React's cache() for automatic per-request memoization.
+ * This ensures we only query the database once per user per request.
  * 
  * @param userId - User ID to check
  * @returns Promise<boolean> - true if user exists in admin_users table
  */
-async function checkAdminInDatabase(userId: string): Promise<boolean> {
+const checkAdminCached = cache(async (userId: string): Promise<boolean> => {
   try {
     const supabase = createServiceSupabaseClient();
     const { data, error } = await supabase
@@ -66,8 +57,8 @@ async function checkAdminInDatabase(userId: string): Promise<boolean> {
       }
       // Log other errors but don't throw - fail closed (no admin access on error)
       console.error("[isAdmin] Database error:", error);
-  return false;
-}
+      return false;
+    }
 
     // If data exists, user is an admin
     return !!data;
@@ -76,12 +67,4 @@ async function checkAdminInDatabase(userId: string): Promise<boolean> {
     console.error("[isAdmin] Unexpected error:", error);
     return false;
   }
-}
-
-/**
- * Clear the admin cache (useful for testing or explicit cache invalidation)
- * In serverless environments, this is typically not needed as the cache is per-request
- */
-export function clearAdminCache(): void {
-  adminCache.clear();
-}
+});
