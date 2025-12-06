@@ -13,6 +13,7 @@ type ImageUrls = {
   logo: {
     png: string;
     webp: string;
+    svg: string;
   };
 };
 
@@ -30,7 +31,8 @@ const cdnImageUrls: ImageUrls = {
   },
   logo: {
     png: "/logo.png",
-    webp: "/logo.webp"
+    webp: "/logo.webp",
+    svg: "/logo.svg"
   }
 };
 
@@ -151,8 +153,12 @@ export function generateJsonLd(
   customData: Record<string, unknown> = {}, 
   useCdn: boolean = true
 ): string {
-  // Use CDN URL for logo if available and enabled
-  const logoUrl = (useCdn && cdnImageUrls?.logo?.png) || "https://testero.ai/logo.png";
+  // Use CDN URL for logo if available and enabled (prefer SVG, fallback to PNG)
+  const logoUrl = (useCdn && cdnImageUrls?.logo?.svg) 
+    ? `https://testero.ai${cdnImageUrls.logo.svg}` 
+    : (useCdn && cdnImageUrls?.logo?.png) 
+    ? `https://testero.ai${cdnImageUrls.logo.png}` 
+    : "https://testero.ai/logo.svg";
   
   const defaultData = {
     "@context": "https://schema.org",

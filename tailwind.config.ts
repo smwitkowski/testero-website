@@ -80,6 +80,20 @@ const config = {
         yellow: colorPrimitive.yellow,
         purple: colorPrimitive.purple,
 
+        // Brand colors
+        brand: {
+          teal: {
+            DEFAULT: "#1D9C91",
+            light: "#2BB8AC",
+            dark: "#167A71",
+          },
+          navy: {
+            DEFAULT: "#0E1A33",
+            light: "#1A2D4D",
+            dark: "#070D1A",
+          },
+        },
+
         // Semantic neutral colors
         neutral: colorSemantic.neutral,
 
@@ -171,9 +185,9 @@ const config = {
       // Background images
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-hero": `linear-gradient(135deg, ${colorPrimitive.blue[600]} 0%, ${colorPrimitive.cyan[600]} 100%)`,
-        "gradient-cta": `linear-gradient(45deg, ${colorPrimitive.orange[500]} 0%, ${colorPrimitive.red[500]} 100%)`,
-        "gradient-badge": `linear-gradient(90deg, ${colorPrimitive.blue[600]} 0%, ${colorPrimitive.cyan[600]} 100%)`,
+        "gradient-hero": `linear-gradient(135deg, ${colorPrimitive.brand.teal.DEFAULT} 0%, ${colorPrimitive.brand.teal.light} 100%)`,
+        "gradient-cta": `linear-gradient(45deg, ${colorPrimitive.brand.teal.DEFAULT} 0%, ${colorPrimitive.brand.teal.dark} 100%)`,
+        "gradient-badge": `linear-gradient(90deg, ${colorPrimitive.brand.teal.DEFAULT} 0%, ${colorPrimitive.brand.teal.light} 100%)`,
       },
 
       // Semantic text colors
@@ -258,7 +272,7 @@ const config = {
               fontSize: '2.5rem',
               marginTop: '0',
               marginBottom: '2rem',
-              borderBottom: `3px solid ${theme('colors.blue.500')}`,
+              borderBottom: `3px solid ${theme('colors.brand.teal.DEFAULT')}`,
               paddingBottom: '0.75rem',
               '@screen md': {
                 fontSize: '3rem',
@@ -278,7 +292,7 @@ const config = {
               fontSize: '1.5rem',
               marginTop: '2.5rem',
               marginBottom: '1rem',
-              color: theme('colors.blue.600'),
+              color: theme('colors.brand.teal.DEFAULT'),
               '@screen md': {
                 fontSize: '1.75rem',
               },
@@ -303,13 +317,13 @@ const config = {
             
             // Links
             a: {
-              color: theme('colors.blue.600'),
+              color: theme('colors.brand.teal.DEFAULT'),
               textDecoration: 'none',
-              borderBottom: `1px solid ${theme('colors.blue.200')}`,
+              borderBottom: `1px solid ${theme('colors.brand.teal.light')}`,
               transition: 'all 0.2s ease',
               '&:hover': {
-                color: theme('colors.blue.800'),
-                borderBottomColor: theme('colors.blue.500'),
+                color: theme('colors.brand.teal.dark'),
+                borderBottomColor: theme('colors.brand.teal.DEFAULT'),
                 borderBottomWidth: '2px',
               },
             },
@@ -343,7 +357,7 @@ const config = {
               marginBottom: '0.75rem',
               lineHeight: '1.6',
               '&::marker': {
-                color: theme('colors.blue.500'),
+                color: theme('colors.brand.teal.DEFAULT'),
                 fontWeight: '600',
               },
             },
@@ -355,8 +369,8 @@ const config = {
             
             // Blockquotes
             blockquote: {
-              backgroundColor: theme('colors.blue.50'),
-              borderLeft: `4px solid ${theme('colors.blue.400')}`,
+              backgroundColor: `${theme('colors.brand.teal.DEFAULT')}10`,
+              borderLeft: `4px solid ${theme('colors.brand.teal.DEFAULT')}`,
               borderRadius: theme('borderRadius.lg'),
               padding: '1.5rem',
               margin: '2rem 0',
@@ -371,7 +385,7 @@ const config = {
                 },
               },
               '& strong': {
-                color: theme('colors.blue.800'),
+                color: theme('colors.brand.teal.dark'),
               },
             },
             
@@ -423,7 +437,7 @@ const config = {
               fontWeight: '600',
               padding: '1rem 1.5rem',
               textAlign: 'left',
-              borderBottom: `2px solid ${theme('colors.blue.500')}`,
+              borderBottom: `2px solid ${theme('colors.brand.teal.DEFAULT')}`,
               fontSize: '0.875rem',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
@@ -437,7 +451,7 @@ const config = {
               backgroundColor: theme('colors.gray.50'),
             },
             'tr:hover': {
-              backgroundColor: theme('colors.blue.50'),
+              backgroundColor: `${theme('colors.brand.teal.DEFAULT')}10`,
             },
             
             // Images
@@ -530,22 +544,22 @@ const config = {
         // Color variants
         blue: {
           css: {
-            '--tw-prose-links': theme('colors.blue.600'),
-            '--tw-prose-invert-links': theme('colors.blue.400'),
+            '--tw-prose-links': theme('colors.brand.teal.DEFAULT'),
+            '--tw-prose-invert-links': theme('colors.brand.teal.light'),
             a: {
-              color: theme('colors.blue.600'),
-              borderBottomColor: theme('colors.blue.200'),
+              color: theme('colors.brand.teal.DEFAULT'),
+              borderBottomColor: theme('colors.brand.teal.light'),
             },
             'a:hover': {
-              color: theme('colors.blue.800'),
-              borderBottomColor: theme('colors.blue.500'),
+              color: theme('colors.brand.teal.dark'),
+              borderBottomColor: theme('colors.brand.teal.DEFAULT'),
             },
             blockquote: {
-              backgroundColor: theme('colors.blue.50'),
-              borderLeftColor: theme('colors.blue.400'),
+              backgroundColor: `${theme('colors.brand.teal.DEFAULT')}10`,
+              borderLeftColor: theme('colors.brand.teal.DEFAULT'),
             },
             'blockquote strong': {
-              color: theme('colors.blue.800'),
+              color: theme('colors.brand.teal.dark'),
             },
           },
         },
@@ -558,33 +572,33 @@ const config = {
               color: theme('colors.gray.100'),
             },
             h1: {
-              borderBottomColor: theme('colors.blue.400'),
+              borderBottomColor: theme('colors.brand.teal.light'),
             },
             h2: {
               borderBottomColor: theme('colors.gray.600'),
             },
             h3: {
-              color: theme('colors.blue.400'),
+              color: theme('colors.brand.teal.light'),
             },
             a: {
-              color: theme('colors.blue.400'),
-              borderBottomColor: theme('colors.blue.700'),
+              color: theme('colors.brand.teal.light'),
+              borderBottomColor: theme('colors.brand.teal.DEFAULT'),
             },
             'a:hover': {
-              color: theme('colors.blue.300'),
-              borderBottomColor: theme('colors.blue.400'),
+              color: theme('colors.brand.teal.DEFAULT'),
+              borderBottomColor: theme('colors.brand.teal.light'),
             },
             strong: {
               color: theme('colors.gray.100'),
             },
             blockquote: {
               backgroundColor: theme('colors.gray.800'),
-              borderLeftColor: theme('colors.blue.500'),
+              borderLeftColor: theme('colors.brand.teal.DEFAULT'),
               '& p': {
                 color: theme('colors.gray.300'),
               },
               '& strong': {
-                color: theme('colors.blue.300'),
+                color: theme('colors.brand.teal.light'),
               },
             },
             code: {
@@ -601,7 +615,7 @@ const config = {
             th: {
               backgroundColor: theme('colors.gray.800'),
               color: theme('colors.gray.100'),
-              borderBottomColor: theme('colors.blue.500'),
+              borderBottomColor: theme('colors.brand.teal.DEFAULT'),
             },
             td: {
               borderBottomColor: theme('colors.gray.700'),

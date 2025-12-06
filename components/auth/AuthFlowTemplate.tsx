@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { AuthState } from "@/hooks";
+import { TesteroIcon } from "@/components/brand";
 
 export interface FooterLink {
   text: string;
@@ -75,9 +76,7 @@ export const AuthFlowTemplate: React.FC<AuthFlowTemplateProps> = ({
       <div className={`sm:mx-auto sm:w-full ${maxWidthClasses[maxWidth]}`}>
         {showLogo && (
           <div className="flex justify-center mb-6">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">T</span>
-            </div>
+            <TesteroIcon size={48} />
           </div>
         )}
 
