@@ -37,6 +37,10 @@ export const QuestionUpdateSchema = z
   )
   .refine(
     (data) => {
+      // Skip explanation check for retired questions
+      if (data.status === "RETIRED") {
+        return true;
+      }
       // At least the correct answer should have an explanation
       const correctAnswer = data.answers.find((a) => a.is_correct);
       return correctAnswer?.explanation_text && correctAnswer.explanation_text.trim().length > 0;

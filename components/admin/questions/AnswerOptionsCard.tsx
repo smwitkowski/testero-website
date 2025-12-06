@@ -14,7 +14,6 @@ import {
   FormMessage,
   FormDescription,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -61,8 +60,8 @@ export function AnswerOptionsCard() {
                       name={`answers.${index}`}
                       render={({ field }) => (
                         <FormItem>
-                          <div className="flex items-start gap-3 rounded-lg border border-border/60 p-3">
-                            <div className="flex items-center gap-2 pt-1">
+                          <div className="flex items-start gap-3 rounded-lg border border-border/60 p-3 min-w-0">
+                            <div className="flex items-center gap-2 pt-1 flex-shrink-0">
                               <RadioGroupItem
                                 value={String(index)}
                                 id={`answer-${index}`}
@@ -74,10 +73,9 @@ export function AnswerOptionsCard() {
                                 {label}
                               </Label>
                             </div>
-                            <div className="flex-1 space-y-2">
+                            <div className="flex-1 min-w-0 space-y-2">
                               <FormControl>
-                                <Input
-                                  {...field}
+                                <Textarea
                                   value={field.value?.choice_text || ""}
                                   onChange={(e) => {
                                     const currentAnswers = form.getValues("answers") || [];
@@ -91,7 +89,11 @@ export function AnswerOptionsCard() {
                                     };
                                     form.setValue("answers", updatedAnswers, { shouldValidate: true, shouldDirty: true });
                                   }}
+                                  onBlur={field.onBlur}
+                                  name={field.name}
                                   placeholder={`Option ${label}`}
+                                  rows={2}
+                                  className="text-sm break-words resize-none"
                                 />
                               </FormControl>
                               {field.value?.is_correct && (
@@ -120,7 +122,7 @@ export function AnswerOptionsCard() {
                                       : "Explain why this option is incorrect..."
                                   }
                                   rows={3}
-                                  className="text-sm"
+                                  className="text-sm break-words"
                                 />
                               </FormControl>
                             </div>
@@ -134,7 +136,7 @@ export function AnswerOptionsCard() {
               <FormMessage />
               {form.formState.errors.answers && (
                 <p className="text-sm text-destructive">
-                  {form.formState.errors.answers.message as string}
+                  {(form.formState.errors.answers.root?.message || form.formState.errors.answers.message) as string}
                 </p>
               )}
             </FormItem>
