@@ -6,9 +6,8 @@ import { usePostHog } from "posthog-js/react";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { StaggeredText } from "@/components/marketing/effects/staggered-text";
 import { BenefitsSectionSkeleton } from "@/components/marketing/sections/benefits-section";
-import { LampContainer } from "@/components/marketing/effects/lamp-effect";
+import { HeroSection } from "@/components/marketing/sections/hero-section";
 import { TestimonialCarousel } from "@/components/marketing/sections/testimonial-carousel";
 import { Button } from "@/components/ui/button";
 import { JsonLd } from "./page.metadata";
@@ -20,7 +19,6 @@ import {
   Star,
   Zap,
   ArrowRight,
-  Users,
   Award,
 } from "lucide-react";
 import { SUBSCRIPTION_TIERS } from "@/lib/pricing/constants";
@@ -80,91 +78,8 @@ export default function Home() {
       {/* Add JSON-LD structured data */}
       <JsonLd />
 
-      {/* Hero Section with Enhanced Value Proposition */}
-      <LampContainer>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
-          <StaggeredText className="space-y-6" delay={0.2}>
-            {/* Urgency Badge */}
-            <div className="inline-flex items-center gap-2 bg-yellow-400/20 backdrop-blur-sm border border-yellow-400/40 rounded-full px-4 py-2 mb-4">
-              <Zap className="h-4 w-4 text-yellow-300" />
-              <span className="text-sm font-semibold text-yellow-100">
-                Updated for October 2024 PMLE Exam Changes
-              </span>
-            </div>
-
-            <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-extrabold text-white">
-              <span className="block">Pass PMLE in 30 Days</span>
-              <span className="relative inline-block bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
-                Or Your Money Back
-                <span className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-red-500 rounded-full"></span>
-              </span>
-            </h1>
-
-            {/* Enhanced Sub-headline with Value Props */}
-            <h2 className="text-lg sm:text-xl md:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed">
-              Stop wasting $200 on failed attempts. The PMLE has a 70% fail rate—but our students pass 
-              on their first try with AI-powered practice questions updated for October 2024.
-            </h2>
-
-            {/* Social Proof Stats */}
-            <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm sm:text-base mb-6">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-400" />
-                <span className="text-white font-semibold">New in 2025</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-blue-400" />
-                <span className="text-white font-semibold">PMLE-Focused</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-purple-400" />
-                <span className="text-white font-semibold">30-Day Program</span>
-              </div>
-            </div>
-
-            {/* Pricing Teaser */}
-            <div className="bg-gradient-to-r from-blue-600/20 to-cyan-600/20 backdrop-blur-sm border border-blue-400/40 rounded-lg px-4 sm:px-6 py-4 max-w-3xl mx-auto">
-              <p className="text-lg md:text-xl text-white font-medium mb-2">
-                Start your journey for as low as{" "}
-                <span className="text-2xl font-bold text-yellow-300">$39/month</span>
-              </p>
-              <p className="text-sm text-blue-200">
-                Free diagnostic test • 7-day money-back guarantee • Cancel anytime
-              </p>
-            </div>
-
-            {/* Enhanced CTAs */}
-            <div className="pt-6 w-full max-w-lg mx-auto">
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button
-                  asChild
-                  size="lg"
-                  tone="accent"
-                  className="w-full sm:w-auto text-lg"
-                  aria-label="Try free diagnostic test to assess your readiness"
-                >
-                  <Link href="/diagnostic">Try Free Diagnostic</Link>
-                </Button>
-                <Button 
-                  asChild 
-                  variant="outline" 
-                  tone="accent" 
-                  size="lg" 
-                  className="w-full sm:w-auto text-lg"
-                  iconRight={<ArrowRight className="h-5 w-5" />}
-                  onClick={() => handlePricingClick("hero_secondary")}
-                  aria-label="View pricing plans for Testero"
-                >
-                  <Link href="/pricing">View Pricing Plans</Link>
-                </Button>
-              </div>
-              <p className="text-sm text-white/80 mt-4 text-center">
-                ✓ No credit card required ✓ Instant access ✓ Cancel anytime
-              </p>
-            </div>
-          </StaggeredText>
-        </div>
-      </LampContainer>
+      {/* Hero Section */}
+      <HeroSection />
 
       {/* Main content sections */}
       <div role="main" id="main-content" className="w-full overflow-x-hidden">
