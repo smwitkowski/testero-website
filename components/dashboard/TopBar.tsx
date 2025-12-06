@@ -6,6 +6,7 @@ import { UserDropdown } from "./UserDropdown";
 import { Bell, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { colorComponent } from "@/lib/design-system";
+import { TesteroIcon } from "@/components/brand";
 
 export interface TopBarProps {
   onMenuToggle?: () => void;
@@ -43,9 +44,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuToggle, className }) => {
           className="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm"
           aria-label="Testero Dashboard"
         >
-          <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-            <span className="text-accent-foreground font-bold text-sm">T</span>
-          </div>
+          <TesteroIcon size={32} />
           <span className="text-xl font-bold text-foreground hidden sm:inline">Testero</span>
         </Link>
       </div>

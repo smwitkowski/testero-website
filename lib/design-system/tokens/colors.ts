@@ -130,6 +130,20 @@ export const primitive = {
     900: "#3b0764",
   },
 
+  // Brand colors (Testero identity)
+  brand: {
+    teal: {
+      DEFAULT: "#1D9C91",
+      light: "#2BB8AC",    // Lighter variant for hover
+      dark: "#167A71",     // Darker variant for active
+    },
+    navy: {
+      DEFAULT: "#0E1A33",
+      light: "#1A2D4D",    // Lighter variant
+      dark: "#070D1A",     // Darker variant
+    },
+  },
+
   // Pure colors
   white: "#ffffff",
   black: "#000000",
@@ -153,16 +167,16 @@ export const semantic = {
   },
 
   accent: {
-    50: primitive.blue[50],
-    100: primitive.blue[100],
-    200: primitive.blue[200],
-    300: primitive.blue[300],
-    400: primitive.blue[400],
-    500: primitive.blue[500],
-    600: primitive.blue[600],
-    700: primitive.blue[700],
-    800: primitive.blue[800],
-    900: primitive.blue[900],
+    50: "#E6F7F5",    // Light teal tints
+    100: "#CCEFEB",
+    200: "#99DFD7",
+    300: "#66CFC3",
+    400: "#33BFAF",
+    500: primitive.brand.teal.DEFAULT,   // #1D9C91 - Brand teal
+    600: "#177D74",
+    700: "#125E57",
+    800: "#0C3E3A",
+    900: "#061F1D",
   },
 
   // Neutral colors (for gray UI elements)
@@ -225,6 +239,14 @@ export const semantic = {
     inverse: primitive.white,
     accent: primitive.orange[500],
   },
+
+  // Brand colors
+  brand: {
+    primary: "#1D9C91",      // Teal
+    secondary: "#0E1A33",    // Navy
+    primaryForeground: "#FFFFFF",
+    secondaryForeground: "#FFFFFF",
+  },
 };
 
 // COMPONENT TOKENS (Context-specific)
@@ -232,19 +254,19 @@ export const component = {
   // Hero section
   hero: {
     background: {
-      // Dark gradient for hero sections
-      dark: `linear-gradient(180deg, ${primitive.slate[900]} 0%, ${primitive.slate[800]} 50%, ${primitive.slate[900]} 100%)`,
+      // Dark gradient for hero sections using navy
+      dark: `linear-gradient(180deg, ${primitive.brand.navy.DEFAULT} 0%, ${primitive.brand.navy.dark} 50%, ${primitive.brand.navy.DEFAULT} 100%)`,
       light: `linear-gradient(180deg, ${primitive.slate[50]} 0%, ${primitive.slate[100]} 100%)`,
     },
     text: {
       primary: primitive.white,
       secondary: `${primitive.white}90`, // 90% opacity
-      accent: `linear-gradient(45deg, ${primitive.orange[400]}, ${primitive.red[500]})`,
+      accent: `linear-gradient(45deg, ${primitive.brand.teal.light}, ${primitive.brand.teal.DEFAULT})`,
     },
     spotlight: {
-      primary: `${primitive.orange[500]}40`, // 40% opacity
-      secondary: `${primitive.red[500]}30`, // 30% opacity
-      accent: `${primitive.orange[400]}30`, // 30% opacity
+      primary: `${primitive.brand.teal.DEFAULT}40`, // 40% opacity
+      secondary: `${primitive.brand.teal.light}30`, // 30% opacity
+      accent: `${primitive.brand.teal.DEFAULT}30`, // 30% opacity
     },
   },
 
@@ -252,25 +274,25 @@ export const component = {
   button: {
     // Gradient variants for GradientButton component
     gradient: {
-      hero: `linear-gradient(135deg, ${primitive.blue[600]} 0%, ${primitive.cyan[600]} 100%)`,
-      cta: `linear-gradient(45deg, ${primitive.orange[500]} 0%, ${primitive.red[500]} 100%)`,
-      badge: `linear-gradient(90deg, ${primitive.blue[600]} 0%, ${primitive.cyan[600]} 100%)`,
+      hero: `linear-gradient(135deg, ${primitive.brand.teal.DEFAULT} 0%, ${primitive.brand.teal.light} 100%)`,
+      cta: `linear-gradient(45deg, ${primitive.brand.teal.DEFAULT} 0%, ${primitive.brand.teal.dark} 100%)`,
+      badge: `linear-gradient(90deg, ${primitive.brand.teal.DEFAULT} 0%, ${primitive.brand.teal.light} 100%)`,
     },
     // Solid color variants
     primary: {
-      bg: primitive.blue[600],
+      bg: primitive.brand.teal.DEFAULT,
       text: primitive.white,
-      hover: primitive.blue[700],
-      focus: primitive.blue[800],
-      background: `linear-gradient(45deg, ${primitive.orange[500]}, ${primitive.orange[600]})`,
-      backgroundHover: `linear-gradient(45deg, ${primitive.orange[600]}, ${primitive.orange[700]})`,
+      hover: primitive.brand.teal.dark,
+      focus: primitive.brand.teal.dark,
+      background: `linear-gradient(45deg, ${primitive.brand.teal.DEFAULT}, ${primitive.brand.teal.light})`,
+      backgroundHover: `linear-gradient(45deg, ${primitive.brand.teal.dark}, ${primitive.brand.teal.DEFAULT})`,
       border: primitive.transparent,
     },
     secondary: {
       bg: primitive.white,
-      text: primitive.blue[600],
-      border: primitive.blue[600],
-      hover: primitive.blue[50],
+      text: primitive.brand.teal.DEFAULT,
+      border: primitive.brand.teal.DEFAULT,
+      hover: semantic.accent[50],
       background: primitive.white,
       backgroundHover: primitive.slate[50],
     },
@@ -318,7 +340,7 @@ export const component = {
       background: primitive.white,
       border: primitive.slate[100],
       text: primitive.slate[800],
-      accent: primitive.blue[600], // For icons
+      accent: primitive.brand.teal.DEFAULT, // For icons
     },
     marquee: {
       background: primitive.slate[50],
@@ -346,7 +368,7 @@ export const component = {
     resumeBg: semantic.info.light,
     resumeBorder: semantic.info.base,
     inputBorder: "#ccc",
-    buttonPrimary: "#0070f3",
+    buttonPrimary: primitive.brand.teal.DEFAULT,
     // Error states
     errorText: semantic.error.dark,
     errorBg: semantic.error.light,
@@ -370,9 +392,9 @@ export const component = {
   content: {
     background: semantic.surface.default,
     tag: {
-      bg: primitive.blue[50],
-      text: primitive.blue[700],
-      border: primitive.blue[200],
+      bg: `${primitive.brand.teal.DEFAULT}10`,
+      text: primitive.brand.teal.dark,
+      border: primitive.brand.teal.light,
     },
     prose: {
       heading: semantic.text.primary,
@@ -384,7 +406,7 @@ export const component = {
   form: {
     input: {
       default: semantic.border.default,
-      focus: primitive.blue[500],
+      focus: primitive.brand.teal.DEFAULT,
       error: semantic.error.base,
       success: semantic.success.base,
     },
@@ -424,11 +446,11 @@ export const component = {
         border: primitive.slate[200],
       },
       recommended: {
-        border: primitive.blue[500],
+        border: primitive.brand.teal.DEFAULT,
       },
     },
     badge: {
-      bg: `linear-gradient(45deg, ${primitive.blue[600]}, ${primitive.cyan[600]})`,
+      bg: `linear-gradient(45deg, ${primitive.brand.teal.DEFAULT}, ${primitive.brand.teal.light})`,
       text: primitive.white,
     },
   },
@@ -437,13 +459,13 @@ export const component = {
   dashboard: {
     sidebar: {
       background: primitive.white,
-      activeItem: semantic.accent[500],
-      activeItemBg: `${semantic.accent[500]}10`,
+      activeItem: primitive.brand.teal.DEFAULT,
+      activeItemBg: `${primitive.brand.teal.DEFAULT}10`,
       hoverBg: primitive.slate[50],
     },
     blueprintTable: {
       masteredBg: `${semantic.success.base}10`,
-      practiceBg: `${semantic.accent[500]}10`,
+      practiceBg: `${primitive.brand.teal.DEFAULT}10`,
     },
     topBar: {
       background: primitive.white,

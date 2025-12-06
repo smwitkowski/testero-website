@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { TesteroLogo } from '@/components/brand';
 
 const navigationItems = [
   { name: 'Home', href: '/' },
@@ -68,12 +69,9 @@ const Navbar = () => {
       }`}
     >
       <div className="container mx-auto px-4 h-full flex items-center justify-between md:justify-start">
-        {/* Logo Placeholder */}
+        {/* Logo */}
         <div className="flex-shrink-0 md:mr-6">
-          {/* Replace with actual logo component */}
-          <Link href="/" aria-label="Testero Home">
-            <span className="text-xl font-bold text-foreground transition-colors">Testero</span> {/* Replace with actual logo */}
-          </Link>
+          <TesteroLogo size="md" href="/" />
         </div>
 
         {/* Mobile Menu Button */}
