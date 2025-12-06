@@ -208,6 +208,7 @@ export const HeroSection: React.FC<HeroSectionProps> = () => {
             </h1>
 
             {/* Subheadline */}
+            {/* eslint-disable-next-line design/no-tailwind-arbitrary-values */}
             <p className="text-[0.9375rem] md:text-base lg:text-lg font-normal text-muted-foreground max-w-[22.5rem] md:max-w-lg lg:max-w-2xl mx-auto lg:mx-0">
               {heroContent.subheadline}
             </p>
@@ -219,7 +220,7 @@ export const HeroSection: React.FC<HeroSectionProps> = () => {
                 size="lg"
                 tone="accent"
                 variant="solid"
-                className="w-full sm:w-auto min-h-[3rem] rounded-lg sm:rounded-xl"
+                className="w-full sm:w-auto h-12 rounded-lg sm:rounded-xl"
                 onClick={handlePrimaryCtaClick}
                 aria-label="Start free readiness check to assess your exam readiness"
               >
@@ -229,7 +230,7 @@ export const HeroSection: React.FC<HeroSectionProps> = () => {
               </Button>
               <Link
                 href={heroContent.secondaryCta.href}
-                className="inline-flex items-center justify-center min-h-[2.75rem] text-[color:var(--tone-accent)] hover:text-[color:var(--tone-accent)]/80 hover:underline font-medium text-base transition-colors"
+                className="inline-flex items-center justify-center h-11 text-[color:var(--tone-accent)] hover:text-[color:var(--tone-accent)]/80 hover:underline font-medium text-base transition-colors"
               >
                 {heroContent.secondaryCta.text}
               </Link>
