@@ -153,16 +153,16 @@ export const semantic = {
   },
 
   accent: {
-    50: primitive.orange[50],
-    100: primitive.orange[100],
-    200: primitive.orange[200],
-    300: primitive.orange[300],
-    400: primitive.orange[400],
-    500: primitive.orange[500],
-    600: primitive.orange[600],
-    700: primitive.orange[700],
-    800: primitive.orange[800],
-    900: primitive.orange[900],
+    50: primitive.blue[50],
+    100: primitive.blue[100],
+    200: primitive.blue[200],
+    300: primitive.blue[300],
+    400: primitive.blue[400],
+    500: primitive.blue[500],
+    600: primitive.blue[600],
+    700: primitive.blue[700],
+    800: primitive.blue[800],
+    900: primitive.blue[900],
   },
 
   // Neutral colors (for gray UI elements)

@@ -37,8 +37,8 @@
   --tone-warning: var(--chart-4);
   --tone-danger: var(--chart-5);
   --tone-info: var(--chart-3);
-  --tone-accent: oklch(0.646 0.222 41.116); /* orange-500 for light mode - strong contrast on white */
-  --tone-accent-foreground: oklch(0.985 0 0); /* white - high contrast text on orange */
+  --tone-accent: oklch(0.546 0.245 262.881); /* blue-600 for light mode - calmer blue for professional feel */
+  --tone-accent-foreground: oklch(0.985 0 0); /* white - high contrast text on blue */
   --tone-success-surface: color-mix(in oklch, var(--tone-success) 22%, transparent);
   --tone-warning-surface: color-mix(in oklch, var(--tone-warning) 22%, transparent);
   --tone-danger-surface: color-mix(in oklch, var(--tone-danger) 22%, transparent);
@@ -61,9 +61,9 @@
   --surface-brand: color-mix(in oklch, var(--accent) 10%, transparent);
   --divider-color: color-mix(in oklch, var(--foreground) 18%, transparent);
   
-  /* Tone accent for dark mode - lighter orange for readability on dark backgrounds */
-  --tone-accent: oklch(0.696 0.212 41); /* orange-400 equivalent */
-  --tone-accent-foreground: oklch(0.985 0 0); /* white - high contrast text on orange */
+  /* Tone accent for dark mode - lighter blue for readability on dark backgrounds */
+  --tone-accent: oklch(0.623 0.214 259.815); /* blue-500 equivalent */
+  --tone-accent-foreground: oklch(0.985 0 0); /* white - high contrast text on blue */
 
   /* Card spacing tokens */
   --space-card-x-sm: 0.75rem; /* 12px */
