@@ -24,7 +24,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
         {/* Main content area */}
         <div className="flex-1 min-w-0 overflow-y-auto">
-          <div className="mx-auto px-4 py-8 lg:px-8" style={{ maxWidth: "var(--main-content-max-width, 1200px)" }}>
+          <div className="mx-auto px-4 py-8 lg:px-8" style={{ maxWidth: "var(--main-content-max-width, 1920px)" }}>
             {main}
           </div>
         </div>

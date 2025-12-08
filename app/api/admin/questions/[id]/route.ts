@@ -103,6 +103,27 @@ export async function PUT(
       return NextResponse.json({ error: "Update failed" }, { status: 500 });
     }
 
+    // Upsert explanation if provided
+    if (payload.explanation_text !== undefined) {
+      const { error: explanationError } = await serviceSupabase
+        .from("explanations")
+        .upsert(
+          {
+            question_id: resolvedParams.id,
+            explanation_text: payload.explanation_text || "",
+            doc_links: payload.doc_links || null,
+          },
+          {
+            onConflict: "question_id",
+          }
+        );
+
+      if (explanationError) {
+        console.error("[AdminQuestionDetail] Failed to upsert explanation:", explanationError);
+        // Don't fail the request if explanation update fails
+      }
+    }
+
     // Upsert answers atomically using database function
     // This ensures deletion and insertion happen in a single transaction
     const answersJson = payload.answers.map((answer) => ({

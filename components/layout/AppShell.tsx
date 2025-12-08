@@ -129,7 +129,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, className }) => {
 
         {/* Main Content */}
         <main className="flex-1 min-w-0">
-          <div className="mx-auto px-4 py-8 lg:px-8" style={{ maxWidth: "var(--main-content-max-width, 1200px)" }}>
+          <div className="mx-auto px-4 py-8 lg:px-8" style={{ maxWidth: "var(--main-content-max-width, 1600px)" }}>
             {children}
           </div>
         </main>

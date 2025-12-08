@@ -2,23 +2,16 @@
 
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface EditorHeaderProps {
   questionId: string;
   questionStem: string;
-  onSave: () => void;
-  onSaveAndMarkGood?: () => void;
-  isSaving?: boolean;
   hasUnsavedChanges?: boolean;
 }
 
 export function EditorHeader({
   questionId,
   questionStem,
-  onSave,
-  onSaveAndMarkGood,
-  isSaving = false,
   hasUnsavedChanges = false,
 }: EditorHeaderProps) {
   const truncatedStem = questionStem.length > 80
@@ -55,25 +48,6 @@ export function EditorHeader({
             <span className="text-xs text-muted-foreground">Unsaved changes</span>
           )}
         </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {onSaveAndMarkGood && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onSaveAndMarkGood}
-            disabled={isSaving}
-          >
-            Save & mark as Good
-          </Button>
-        )}
-        <Button
-          type="button"
-          onClick={onSave}
-          loading={isSaving}
-        >
-          Save changes
-        </Button>
       </div>
     </div>
   );

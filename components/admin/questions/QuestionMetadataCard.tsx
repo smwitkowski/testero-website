@@ -22,41 +22,28 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { DomainOption } from "@/lib/admin/questions/editor-types";
 
 interface QuestionMetadataCardProps {
-  exam: string;
   domainOptions: DomainOption[];
   sourceRef?: string | null;
 }
 
 export function QuestionMetadataCard({
-  exam,
   domainOptions,
   sourceRef,
 }: QuestionMetadataCardProps) {
   const form = useFormContext();
+  const difficulty = form.watch("difficulty") || "MEDIUM";
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Question metadata</CardTitle>
+        <CardTitle>Metadata</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <FormField
-          control={form.control}
-          name="exam"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Exam</FormLabel>
-              <FormControl>
-                <Input {...field} value={exam} disabled />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         <FormField
           control={form.control}
           name="domain_id"
@@ -88,41 +75,58 @@ export function QuestionMetadataCard({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Difficulty</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select difficulty" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="EASY">Easy</SelectItem>
-                  <SelectItem value="MEDIUM">Medium</SelectItem>
-                  <SelectItem value="HARD">Hard</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Delivery status</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="DRAFT">Draft</SelectItem>
-                  <SelectItem value="RETIRED">Retired</SelectItem>
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <div className="inline-flex rounded-md border border-border bg-background p-1" role="group">
+                  <Button
+                    type="button"
+                    variant={difficulty === "EASY" ? "solid" : "ghost"}
+                    tone={difficulty === "EASY" ? "accent" : "neutral"}
+                    size="sm"
+                    className={cn(
+                      "rounded-md",
+                      difficulty !== "EASY" && "hover:bg-muted"
+                    )}
+                    onClick={() => {
+                      field.onChange("EASY");
+                      form.setValue("difficulty", "EASY", { shouldDirty: true });
+                    }}
+                  >
+                    Easy
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={difficulty === "MEDIUM" ? "solid" : "ghost"}
+                    tone={difficulty === "MEDIUM" ? "accent" : "neutral"}
+                    size="sm"
+                    className={cn(
+                      "rounded-md",
+                      difficulty !== "MEDIUM" && "hover:bg-muted"
+                    )}
+                    onClick={() => {
+                      field.onChange("MEDIUM");
+                      form.setValue("difficulty", "MEDIUM", { shouldDirty: true });
+                    }}
+                  >
+                    Medium
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={difficulty === "HARD" ? "solid" : "ghost"}
+                    tone={difficulty === "HARD" ? "accent" : "neutral"}
+                    size="sm"
+                    className={cn(
+                      "rounded-md",
+                      difficulty !== "HARD" && "hover:bg-muted"
+                    )}
+                    onClick={() => {
+                      field.onChange("HARD");
+                      form.setValue("difficulty", "HARD", { shouldDirty: true });
+                    }}
+                  >
+                    Hard
+                  </Button>
+                </div>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -130,8 +134,8 @@ export function QuestionMetadataCard({
 
         {sourceRef && (
           <FormItem>
-            <FormLabel>Source reference</FormLabel>
-            <Input value={sourceRef} disabled />
+            <FormLabel>Source</FormLabel>
+            <Input value={sourceRef} disabled readOnly />
           </FormItem>
         )}
       </CardContent>
