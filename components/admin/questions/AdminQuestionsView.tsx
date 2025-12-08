@@ -10,7 +10,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Filter, Search, ChevronDown, Loader2, MoreHorizontal, User } from "lucide-react";
+import { Filter, Search, ChevronDown, Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,6 @@ import {
   type QuickFilterKey,
 } from "@/lib/admin/questions/filter-utils";
 import {
-  type AdminQuestionListItem,
   type AdminQuestionListResult,
   type AdminQuestionStats,
 } from "@/lib/admin/questions/query";
@@ -96,21 +95,6 @@ const QUESTION_STATUS_TONES: Record<NonNullable<AdminQuestionStatus>, "success" 
   RETIRED: "danger",
 };
 
-const DIFFICULTY_TONES: Record<
-  Exclude<AdminQuestionListItem["difficulty"], null>,
-  "success" | "warning" | "danger"
-> = {
-  EASY: "success",
-  MEDIUM: "warning",
-  HARD: "danger",
-};
-
-const BULK_REVIEW_ACTIONS: ReadonlyArray<{ label: string; action: BulkReviewAction }> = [
-  { label: "Mark Good", action: "review:GOOD" },
-  { label: "Needs answer fix", action: "review:NEEDS_ANSWER_FIX" },
-  { label: "Needs explanation fix", action: "review:NEEDS_EXPLANATION_FIX" },
-  { label: "Mark Retired", action: "review:RETIRED" },
-];
 
 const BULK_STATUS_ACTIONS: ReadonlyArray<{
   label: string;

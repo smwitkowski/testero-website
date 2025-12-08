@@ -16,7 +16,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Bold, Italic, Code } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface QuestionStemCardProps {
   questionId: string;
