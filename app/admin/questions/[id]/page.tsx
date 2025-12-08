@@ -6,6 +6,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import {
   fetchQuestionForEditor,
   fetchDomainOptions,
+  fetchAdjacentQuestionIds,
 } from "@/lib/admin/questions/editor-query";
 
 export const dynamic = "force-dynamic";
@@ -37,9 +38,12 @@ export default async function AdminQuestionDetailPage({
   }
 
   try {
-    const [question, domains] = await Promise.all([
+    const [question, domains, adjacentIds] = await Promise.all([
       fetchQuestionForEditor(supabase, questionId),
       fetchDomainOptions(supabase),
+      fetchQuestionForEditor(supabase, questionId).then((q) =>
+        q ? fetchAdjacentQuestionIds(supabase, questionId, q.exam) : { previousId: null, nextId: null }
+      ),
     ]);
 
     if (!question) {
@@ -48,7 +52,12 @@ export default async function AdminQuestionDetailPage({
 
     return (
       <AppShell>
-        <QuestionEditor question={question} domainOptions={domains} />
+        <QuestionEditor
+          question={question}
+          domainOptions={domains}
+          previousQuestionId={adjacentIds.previousId}
+          nextQuestionId={adjacentIds.nextId}
+        />
       </AppShell>
     );
   } catch (error) {
