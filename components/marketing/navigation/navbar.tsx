@@ -57,6 +57,30 @@ const Navbar = () => {
   }, [isMobileMenuOpen]);
 
 
+  // Prevent background scroll when the menu is open
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isMobileMenuOpen]);
+
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  const getMobileNavLinkClasses = (isActive: boolean) =>
+    [
+      'flex items-center rounded-lg px-3 py-2 text-base transition-colors duration-200 min-h-[44px]',
+      isActive ? 'text-foreground font-semibold bg-muted/40' : 'text-muted-foreground font-medium',
+      'hover:text-foreground hover:bg-muted/30 active:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+    ].join(' ');
+
   // Removed unused click handler for dropdown toggle
   // const handleResourcesClick = () => {
   //   setIsResourcesDropdownOpen(!isResourcesDropdownOpen);
@@ -156,73 +180,113 @@ const Navbar = () => {
 
       {/* Mobile Menu (Collapsible) */}
       {isMobileMenuOpen && (
-        <div id="mobile-menu" className="md:hidden fixed inset-0 top-[72px] bg-background text-foreground shadow-md transition-transform transform ease-in-out duration-300 translate-x-0">
-          <nav className="flex flex-col space-y-4 px-4 py-6" aria-label="Mobile navigation">
-            {navigationItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`relative text-base font-medium transition-colors duration-200 ${
-                  pathname === item.href ? 'text-foreground' : 'text-muted-foreground'
-                } hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`}
-                onClick={() => setIsMobileMenuOpen(false)} // Close menu on link click
-                aria-current={pathname === item.href ? 'page' : undefined}
-              >
-                {item.name}
-              </Link>
-            ))}
-            {/* Action elements (Mobile) */}
-            <div className="flex flex-col space-y-4 mt-4 pt-4 border-t border-border/60">
-              <ThemeToggle />
-              {session ? (
-                <>
-                  <Link
-                    href="/dashboard"
-                    className="text-base font-medium text-center text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    onClick={() => setIsMobileMenuOpen(false)}
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] md:hidden"
+            aria-hidden="true"
+            onClick={closeMobileMenu}
+          />
+          <div
+            id="mobile-menu"
+            className="md:hidden fixed inset-x-0 top-[72px] bottom-0 z-50 bg-background text-foreground border-t border-border/60 shadow-xl transition-transform duration-300"
+          >
+            <nav className="flex h-full flex-col justify-between" aria-label="Mobile navigation">
+              <div className="flex-1 overflow-y-auto py-6 space-y-8">
+                <section className="space-y-5 px-6" aria-labelledby="mobile-primary-nav-label">
+                  <p id="mobile-primary-nav-label" className="sr-only">
+                    Primary navigation
+                  </p>
+                  {navigationItems.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={getMobileNavLinkClasses(pathname === item.href)}
+                      onClick={closeMobileMenu}
+                      aria-current={pathname === item.href ? 'page' : undefined}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
+                </section>
+
+                {session && (
+                  <section
+                    className="space-y-5 border-t border-border/60 pt-6 px-6"
+                    aria-labelledby="mobile-account-nav-label"
                   >
-                    Dashboard
-                  </Link>
-                  <Link
-                    href="/practice/question"
-                    className="text-base font-medium text-center text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Practice
-                  </Link>
-                  <button
-                    onClick={() => {
-                      signOut();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="text-base font-medium text-center text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  >
-                    Sign Out
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/signup"
-                    className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    aria-label="Get started with Testero - Sign up for an account"
-                  >
-                    Get Started
-                  </Link>
-                  <Link
-                    href="/login"
-                    className="text-base font-medium text-center text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    aria-label="Login to your Testero account"
-                  >
-                    Login
-                  </Link>
-                </>
-              )}
-            </div>
-          </nav>
-        </div>
+                    <p id="mobile-account-nav-label" className="sr-only">
+                      Account navigation
+                    </p>
+                    <Link
+                      href="/dashboard"
+                      className={getMobileNavLinkClasses(pathname === '/dashboard')}
+                      onClick={closeMobileMenu}
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/practice/question"
+                      className={getMobileNavLinkClasses(pathname.startsWith('/practice'))}
+                      onClick={closeMobileMenu}
+                    >
+                      Practice
+                    </Link>
+                    <button
+                      onClick={() => {
+                        signOut();
+                        closeMobileMenu();
+                      }}
+                      className={getMobileNavLinkClasses(false)}
+                    >
+                      Sign Out
+                    </button>
+                  </section>
+                )}
+
+                {!session && (
+                  <section className="space-y-4 border-t border-border/60 pt-6 px-6">
+                    <Link
+                      href="/signup"
+                      className="inline-flex w-full items-center justify-center rounded-full bg-primary px-4 py-3 text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      onClick={closeMobileMenu}
+                      aria-label="Get started with Testero - Sign up for an account"
+                    >
+                      Get Started
+                    </Link>
+                    <Link
+                      href="/login"
+                      className={getMobileNavLinkClasses(pathname === '/login')}
+                      onClick={closeMobileMenu}
+                      aria-label="Login to your Testero account"
+                    >
+                      Login
+                    </Link>
+                  </section>
+                )}
+
+                <section
+                  className="border-t border-border/60 pt-6 px-6"
+                  aria-labelledby="mobile-appearance-label"
+                >
+                  <p id="mobile-appearance-label" className="sr-only">
+                    Appearance
+                  </p>
+                  <div className="flex items-center justify-between rounded-lg px-3 py-3 hover:bg-muted/30 transition-colors duration-200">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Appearance</p>
+                      <p className="text-xs text-muted-foreground">Light / Dark</p>
+                    </div>
+                    <ThemeToggle />
+                  </div>
+                </section>
+              </div>
+
+              <div className="border-t border-border/60 px-6 py-5 text-sm text-muted-foreground">
+                testero.ai
+              </div>
+            </nav>
+          </div>
+        </>
       )}
     </header>
   );
