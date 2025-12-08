@@ -10,7 +10,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Filter, Search, ChevronDown, Loader2, MoreHorizontal } from "lucide-react";
+import { Filter, Search, ChevronDown, Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,6 @@ import {
   type QuickFilterKey,
 } from "@/lib/admin/questions/filter-utils";
 import {
-  type AdminQuestionListItem,
   type AdminQuestionListResult,
   type AdminQuestionStats,
 } from "@/lib/admin/questions/query";
@@ -96,21 +95,6 @@ const QUESTION_STATUS_TONES: Record<NonNullable<AdminQuestionStatus>, "success" 
   RETIRED: "danger",
 };
 
-const DIFFICULTY_TONES: Record<
-  Exclude<AdminQuestionListItem["difficulty"], null>,
-  "success" | "warning" | "danger"
-> = {
-  EASY: "success",
-  MEDIUM: "warning",
-  HARD: "danger",
-};
-
-const BULK_REVIEW_ACTIONS: ReadonlyArray<{ label: string; action: BulkReviewAction }> = [
-  { label: "Mark Good", action: "review:GOOD" },
-  { label: "Needs answer fix", action: "review:NEEDS_ANSWER_FIX" },
-  { label: "Needs explanation fix", action: "review:NEEDS_EXPLANATION_FIX" },
-  { label: "Mark Retired", action: "review:RETIRED" },
-];
 
 const BULK_STATUS_ACTIONS: ReadonlyArray<{
   label: string;
@@ -347,35 +331,31 @@ export function AdminQuestionsView({ filters, list, stats, domainOptions }: Admi
   }, [domainOptions, filters.domain, filters.reviewStatuses, filters.search, filters.status]);
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-4 rounded-3xl border border-border/60 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-semibold tracking-tight">Question Review</h1>
-              <Badge tone="neutral" variant="soft" className="uppercase">
-                Admin-only
-              </Badge>
-            </div>
-            <p className="max-w-3xl text-base text-muted-foreground">
-              Manage and review PMLE questions before they go live. Only Active + Good questions
-              are used in diagnostics and practice.
-            </p>
+    <div className="space-y-6 pb-24">
+      {/* Progress Pulse Section */}
+      <section className="space-y-3 rounded-3xl border border-border/60 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold">Progress Pulse</h2>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
+            <span>Review Progress: {reviewedPercent}%</span>
           </div>
-          <div
-            className="space-y-2 rounded-2xl border border-dashed border-border/70 bg-muted/30 p-4"
-            style={{ minWidth: "14rem" }}
-          >
-            <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
-              <span>Reviewed</span>
-              <span>
-                {stats.reviewedGoodCount} / {stats.totalExamCount} ({reviewedPercent}%)
-              </span>
-            </div>
-            <Progress value={reviewedPercent} className="h-2 rounded-full bg-muted" />
-          </div>
+          <Progress value={reviewedPercent} className="h-3 rounded-full" />
         </div>
-      </header>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline" className="px-3 py-1">
+            Total: {stats.totalExamCount}
+          </Badge>
+          <Badge tone="success" variant="soft" className="px-3 py-1">
+            Good: {stats.reviewedGoodCount}
+          </Badge>
+          <Badge variant="outline" className="px-3 py-1">
+            Unreviewed: {stats.unreviewedCount}
+          </Badge>
+          <Badge variant="outline" className="px-3 py-1">
+            Needs Fix: {stats.needsFixCount}
+          </Badge>
+        </div>
+      </section>
 
       <div className="sticky top-4 z-30 space-y-3 rounded-3xl border border-border/70 bg-white/95 p-4 shadow-sm backdrop-blur">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -442,14 +422,6 @@ export function AdminQuestionsView({ filters, list, stats, domainOptions }: Admi
         ) : null}
       </div>
 
-      {selectedIds.length > 0 ? (
-        <BulkActionBar
-          count={selectedIds.length}
-          isLoading={isBulkUpdating}
-          onAction={handleBulkAction}
-          onClear={() => setSelectedIds([])}
-        />
-      ) : null}
 
       <section className="space-y-4 rounded-3xl border border-border/70 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -486,19 +458,18 @@ export function AdminQuestionsView({ filters, list, stats, domainOptions }: Admi
                     aria-label="Select all questions on this page"
                   />
                 </th>
-                <th className="px-4 py-3">Question</th>
+                <th className="px-4 py-3">ID</th>
+                <th className="px-4 py-3">Question Snippet</th>
                 <th className="px-4 py-3">Domain</th>
-                <th className="px-4 py-3">Difficulty</th>
+                <th className="px-4 py-3">Review Status</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Review</th>
-                <th className="px-4 py-3">Updated</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3">Last Updated</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/70 bg-white text-sm">
               {list.items.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-12 text-center text-muted-foreground" colSpan={8}>
+                  <td className="px-4 py-12 text-center text-muted-foreground" colSpan={7}>
                     No questions match your filters yet.
                   </td>
                 </tr>
@@ -524,43 +495,16 @@ export function AdminQuestionsView({ filters, list, stats, domainOptions }: Admi
                           aria-label={`Select question ${question.id}`}
                         />
                       </td>
+                      <td className="px-4 py-3 align-top text-sm font-mono text-muted-foreground">
+                        #{truncateId(question.id)}
+                      </td>
                       <td className="px-4 py-3 align-top">
                         <p className="line-clamp-2 font-medium text-foreground">{question.stem}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          ID: {truncateId(question.id)}{" "}
-                          {question.sourceRef ? `• Source: ${question.sourceRef}` : ""}
-                        </p>
                       </td>
                       <td className="px-4 py-3 align-top">
                         {question.domainName ? (
                           <Badge tone="neutral" size="sm">
                             {question.domainName}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        {question.difficulty ? (
-                          <Badge
-                            tone={DIFFICULTY_TONES[question.difficulty]}
-                            variant="soft"
-                            size="sm"
-                          >
-                            {question.difficulty}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        {question.status ? (
-                          <Badge
-                            tone={QUESTION_STATUS_TONES[question.status]}
-                            variant="soft"
-                            size="sm"
-                          >
-                            {question.status}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground">—</span>
@@ -575,44 +519,21 @@ export function AdminQuestionsView({ filters, list, stats, domainOptions }: Admi
                           {REVIEW_STATUS_LABELS[question.reviewStatus]}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 align-top text-sm text-muted-foreground">
-                        <span title={new Date(question.updatedAt).toLocaleString()}>
-                          {formatRelativeTime(question.updatedAt)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 align-top text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            asChild
+                      <td className="px-4 py-3 align-top">
+                        {question.status ? (
+                          <Badge
+                            tone={QUESTION_STATUS_TONES[question.status]}
+                            variant="soft"
                             size="sm"
-                            variant="ghost"
-                            className="text-xs"
-                            onClick={(event) => event.stopPropagation()}
                           >
-                            <Link href={`/admin/questions/${question.id}`}>Edit</Link>
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                onClick={(event) => event.stopPropagation()}
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Open actions menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild>
-                                <Link href={`/admin/questions/${question.id}`}>Edit</Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem disabled>
-                                Preview in app (coming soon)
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                            {question.status}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 align-top text-sm text-muted-foreground">
+                        {formatDate(question.updatedAt)}
                       </td>
                     </tr>
                   );
@@ -631,6 +552,86 @@ export function AdminQuestionsView({ filters, list, stats, domainOptions }: Admi
           wrap
         />
       </section>
+
+      {/* Floating Bulk Action Bar */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white p-4 shadow-lg">
+          <div className="mx-auto flex max-w-7xl items-center gap-4">
+            <span className="text-sm text-muted-foreground">floating</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={isBulkUpdating}>
+                  Set Status to... <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {BULK_STATUS_ACTIONS.map((action) => (
+                  <DropdownMenuItem
+                    key={action.action}
+                    onClick={() => handleBulkAction(action.action)}
+                  >
+                    {action.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={isBulkUpdating}>
+                  Set Visibility to... <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem
+                  onClick={() => handleBulkAction("status:ACTIVE")}
+                >
+                  Visible
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleBulkAction("status:DRAFT")}
+                >
+                  Hidden
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={isBulkUpdating}>
+                  Assign Domain <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {domainOptions.map((domain) => (
+                  <DropdownMenuItem
+                    key={domain.code}
+                    onClick={() => {
+                      // TODO: Implement domain assignment bulk action
+                      addToast({
+                        title: "Domain assignment",
+                        description: `Assigning ${selectedIds.length} questions to ${domain.name}...`,
+                        tone: "success",
+                      });
+                    }}
+                  >
+                    {domain.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="ml-auto text-sm font-medium text-foreground">
+              {selectedIds.length} question{selectedIds.length === 1 ? "" : "s"} selected
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedIds([])}
+              disabled={isBulkUpdating}
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="fixed bottom-6 right-6 flex flex-col gap-3">
         {toasts.map((toast) => (
@@ -656,7 +657,7 @@ function SearchInput({
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="Search by stem or explanation..."
+        placeholder="Search Keywords (Stem/Explanation)..."
         className="w-72 pl-9"
       />
       {isLoading ? (
@@ -783,55 +784,6 @@ function QuickFilterPill({
   );
 }
 
-function BulkActionBar({
-  count,
-  isLoading,
-  onAction,
-  onClear,
-}: {
-  count: number;
-  isLoading: boolean;
-  onAction: (action: BulkReviewAction | BulkStatusAction) => void;
-  onClear: () => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/80 bg-white p-4 shadow-sm">
-      <div className="flex-1 text-sm font-medium text-foreground">
-        {count} question{count === 1 ? "" : "s"} selected
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {BULK_REVIEW_ACTIONS.map((action) => (
-          <Button
-            key={action.action}
-            size="sm"
-            variant="soft"
-            tone="accent"
-            loading={isLoading}
-            onClick={() => onAction(action.action)}
-          >
-            {action.label}
-          </Button>
-        ))}
-        <span className="mx-2 h-6 w-px bg-border/80" aria-hidden />
-        {BULK_STATUS_ACTIONS.map((action) => (
-          <Button
-            key={action.action}
-            size="sm"
-            variant="outline"
-            tone={action.tone ?? "neutral"}
-            loading={isLoading}
-            onClick={() => onAction(action.action)}
-          >
-            {action.label}
-          </Button>
-        ))}
-        <Button size="sm" variant="ghost" onClick={onClear}>
-          Clear
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 function PaginationControls({
   page,
@@ -914,35 +866,14 @@ function truncateId(id: string) {
   return `${id.slice(0, 4)}…${id.slice(-4)}`;
 }
 
-function formatRelativeTime(date: string) {
+function formatDate(date: string): string {
   const timestamp = new Date(date).getTime();
   if (Number.isNaN(timestamp)) {
     return "—";
   }
-  const diffSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
-  if (diffSeconds < 60) {
-    return `${diffSeconds}s ago`;
-  }
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  if (diffMinutes < 60) {
-    return `${diffMinutes}m ago`;
-  }
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) {
-    return `${diffHours}h ago`;
-  }
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) {
-    return `${diffDays}d ago`;
-  }
-  const diffWeeks = Math.floor(diffDays / 7);
-  if (diffWeeks < 4) {
-    return `${diffWeeks}w ago`;
-  }
-  const diffMonths = Math.floor(diffDays / 30);
-  if (diffMonths < 12) {
-    return `${diffMonths}mo ago`;
-  }
-  const diffYears = Math.floor(diffDays / 365);
-  return `${diffYears}y ago`;
+  const d = new Date(date);
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const year = String(d.getFullYear()).slice(-2);
+  return `${month}/${day}/${year}`;
 }

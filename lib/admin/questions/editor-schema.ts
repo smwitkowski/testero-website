@@ -23,6 +23,7 @@ export const QuestionUpdateSchema = z
     review_notes: z.string().nullable(),
     stem: z.string().min(10, "Question stem must be at least 10 characters"),
     answers: z.array(AnswerSchema).length(4, "Exactly 4 answers required"),
+    explanation_text: z.string().optional(),
     doc_links: z.array(z.string().url("Invalid URL")).optional(),
   })
   .refine(

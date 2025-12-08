@@ -8,29 +8,27 @@ import { QuestionUpdateSchema, type QuestionUpdateInput } from "@/lib/admin/ques
 import type { QuestionEditorData, DomainOption } from "@/lib/admin/questions/editor-types";
 import { Form } from "@/components/ui/form";
 import { QuestionMetadataCard } from "./QuestionMetadataCard";
-import { ReviewWorkflowCard } from "./ReviewWorkflowCard";
+import { DecisionMatrixCard } from "./DecisionMatrixCard";
+import { ReviewNotesCard } from "./ReviewWorkflowCard";
 import { AnswerOptionsCard } from "./AnswerOptionsCard";
+import { QuestionStemCard } from "./QuestionStemCard";
+import { GeneralExplanationCard } from "./GeneralExplanationCard";
 import { EditorHeader } from "./EditorHeader";
 import { Toast, useToastQueue } from "@/components/ui/toast";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface QuestionEditorProps {
   question: QuestionEditorData;
   domainOptions: DomainOption[];
+  previousQuestionId?: string | null;
+  nextQuestionId?: string | null;
   onSave?: (data: QuestionUpdateInput) => Promise<void>;
 }
 
 export function QuestionEditor({
   question,
   domainOptions,
+  previousQuestionId,
+  nextQuestionId,
   onSave,
 }: QuestionEditorProps) {
   const router = useRouter();
@@ -46,6 +44,7 @@ export function QuestionEditor({
       review_status: question.review_status,
       review_notes: question.review_notes,
       stem: question.stem,
+      explanation_text: question.explanation?.explanation_text || "",
       answers: question.answers.length === 4
         ? question.answers.map((a) => ({
             ...a,
@@ -57,13 +56,13 @@ export function QuestionEditor({
             { choice_label: "C", choice_text: "", is_correct: false, explanation_text: "" },
             { choice_label: "D", choice_text: "", is_correct: false, explanation_text: "" },
           ],
-      doc_links: [],
+      doc_links: question.explanation?.doc_links || [],
     },
   });
 
   const hasUnsavedChanges = form.formState.isDirty;
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<boolean> => {
     const isValid = await form.trigger();
     if (!isValid) {
       addToast({
@@ -71,113 +70,107 @@ export function QuestionEditor({
         description: "Please fix the errors before saving.",
         tone: "danger",
       });
-      return;
+      return false;
     }
 
     const data = form.getValues();
-    startTransition(async () => {
-      try {
-        if (onSave) {
-          await onSave(data);
-        } else {
-          const response = await fetch(`/api/admin/questions/${question.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data),
-          });
+    return new Promise((resolve) => {
+      startTransition(async () => {
+        try {
+          if (onSave) {
+            await onSave(data);
+          } else {
+            const response = await fetch(`/api/admin/questions/${question.id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data),
+            });
 
-          if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.error || "Failed to save question");
+            if (!response.ok) {
+              const error = await response.json().catch(() => ({}));
+              throw new Error(error.error || "Failed to save question");
+            }
+
+            form.reset(data);
+            addToast({
+              title: "Question saved",
+              description: "Your changes have been saved successfully.",
+              tone: "success",
+            });
+            router.refresh();
           }
-
-          form.reset(data);
+          resolve(true);
+        } catch (error) {
+          console.error("Save error:", error);
           addToast({
-            title: "Question saved",
-            description: "Your changes have been saved successfully.",
-            tone: "success",
+            title: "Save failed",
+            description: error instanceof Error ? error.message : "Failed to save question. Please try again.",
+            tone: "danger",
           });
-          router.refresh();
+          resolve(false);
         }
-      } catch (error) {
-        console.error("Save error:", error);
-        addToast({
-          title: "Save failed",
-          description: error instanceof Error ? error.message : "Failed to save question. Please try again.",
-          tone: "danger",
-        });
-      }
+      });
     });
   };
 
-  const handleSaveAndMarkGood = async () => {
+  const handleMarkGoodAndNext = async () => {
     form.setValue("review_status", "GOOD");
     form.setValue("status", "ACTIVE");
-    await handleSave();
+    const success = await handleSave();
+    if (success && nextQuestionId) {
+      router.push(`/admin/questions/${nextQuestionId}`);
+    }
   };
 
-  const handleMarkRetired = () => {
+  const handleMarkBadAndNext = async () => {
     form.setValue("review_status", "RETIRED");
     form.setValue("status", "RETIRED");
+    const success = await handleSave();
+    if (success && nextQuestionId) {
+      router.push(`/admin/questions/${nextQuestionId}`);
+    }
+  };
+
+  const handleSaveAndNext = async () => {
+    const success = await handleSave();
+    if (success && nextQuestionId) {
+      router.push(`/admin/questions/${nextQuestionId}`);
+    }
   };
 
   return (
     <Form {...form}>
-      <div className="flex min-h-screen flex-col">
+      <div className="flex min-h-screen flex-col -mx-4 lg:-mx-8">
         <EditorHeader
           questionId={question.id}
           questionStem={question.stem}
-          onSave={handleSave}
-          onSaveAndMarkGood={handleSaveAndMarkGood}
-          isSaving={isPending}
           hasUnsavedChanges={hasUnsavedChanges}
         />
 
-        <div className="flex-1 p-6">
-          <div className="mx-auto max-w-7xl">
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_2fr]">
-              <aside className="space-y-6">
+        <div className="flex-1 px-4 py-6 lg:px-8">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
+              <main className="space-y-6">
+                <QuestionStemCard questionId={question.id} />
+                <AnswerOptionsCard />
+                <GeneralExplanationCard />
+              </main>
+
+              <aside className="space-y-6 lg:sticky lg:top-[calc(var(--topbar-height,56px)+1px)] lg:self-start lg:max-h-[calc(100vh-var(--topbar-height,56px)-1px)] lg:overflow-y-auto">
                 <QuestionMetadataCard
-                  exam={question.exam}
                   domainOptions={domainOptions}
                   sourceRef={question.source_ref}
                 />
-                <ReviewWorkflowCard
-                  onMarkGoodAndActive={handleSaveAndMarkGood}
-                  onMarkRetired={handleMarkRetired}
+                <DecisionMatrixCard
+                  previousQuestionId={previousQuestionId}
+                  nextQuestionId={nextQuestionId}
+                  onMarkGoodAndNext={handleMarkGoodAndNext}
+                  onMarkBadAndNext={handleMarkBadAndNext}
+                  onSaveAndNext={handleSaveAndNext}
+                  isSaving={isPending}
                 />
+                <ReviewNotesCard />
               </aside>
-
-              <main className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Question</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <FormField
-                      control={form.control}
-                      name="stem"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Question stem</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              {...field}
-                              placeholder="Write a clear, scenario-based question stem. Avoid trivia; focus on PMLE-style decisions."
-                              rows={6}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-
-                <AnswerOptionsCard />
-              </main>
             </div>
-          </div>
         </div>
       </div>
 

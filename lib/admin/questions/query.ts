@@ -29,6 +29,8 @@ export interface AdminQuestionListResult {
 export interface AdminQuestionStats {
   totalExamCount: number;
   reviewedGoodCount: number;
+  unreviewedCount: number;
+  needsFixCount: number;
 }
 
 type AdminQuestionDifficulty = "EASY" | "MEDIUM" | "HARD";
@@ -128,7 +130,7 @@ export async function fetchAdminQuestions(
 export async function fetchAdminQuestionStats(
   supabase: SupabaseClient
 ): Promise<AdminQuestionStats> {
-  const [totalResult, reviewedResult] = await Promise.all([
+  const [totalResult, reviewedResult, unreviewedResult, needsFixResult] = await Promise.all([
     supabase
       .from("questions")
       .select("id", { count: "exact", head: true })
@@ -138,6 +140,16 @@ export async function fetchAdminQuestionStats(
       .select("id", { count: "exact", head: true })
       .eq("exam", CANONICAL_EXAM_ID)
       .eq("review_status", "GOOD"),
+    supabase
+      .from("questions")
+      .select("id", { count: "exact", head: true })
+      .eq("exam", CANONICAL_EXAM_ID)
+      .eq("review_status", "UNREVIEWED"),
+    supabase
+      .from("questions")
+      .select("id", { count: "exact", head: true })
+      .eq("exam", CANONICAL_EXAM_ID)
+      .in("review_status", ["NEEDS_ANSWER_FIX", "NEEDS_EXPLANATION_FIX"]),
   ]);
 
   if (totalResult.error) {
@@ -150,9 +162,23 @@ export async function fetchAdminQuestionStats(
     );
   }
 
+  if (unreviewedResult.error) {
+    throw new Error(
+      `Failed to fetch unreviewed question count: ${unreviewedResult.error.message}`
+    );
+  }
+
+  if (needsFixResult.error) {
+    throw new Error(
+      `Failed to fetch needs fix question count: ${needsFixResult.error.message}`
+    );
+  }
+
   return {
     totalExamCount: totalResult.count ?? 0,
     reviewedGoodCount: reviewedResult.count ?? 0,
+    unreviewedCount: unreviewedResult.count ?? 0,
+    needsFixCount: needsFixResult.count ?? 0,
   };
 }
 

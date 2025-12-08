@@ -26,6 +26,10 @@ interface QuestionRow {
     is_correct: boolean;
     explanation_text: string | null;
   }> | null;
+  explanations: Array<{
+    explanation_text: string;
+    doc_links: string[] | null;
+  }> | null;
 }
 
 export async function fetchQuestionForEditor(
@@ -48,7 +52,8 @@ export async function fetchQuestionForEditor(
       created_at,
       updated_at,
       exam_domains!inner(id, code, name),
-      answers(id, choice_label, choice_text, is_correct, explanation_text)
+      answers(id, choice_label, choice_text, is_correct, explanation_text),
+      explanations(explanation_text, doc_links)
     `
     )
     .eq("id", questionId)
@@ -100,6 +105,8 @@ export async function fetchQuestionForEditor(
     );
   });
 
+  const explanationData = row.explanations?.[0];
+
   return {
     id: row.id,
     exam: row.exam,
@@ -113,7 +120,10 @@ export async function fetchQuestionForEditor(
     review_notes: row.review_notes,
     source_ref: row.source_ref,
     answers: allAnswers,
-    explanation: null, // No longer using question-level explanations
+    explanation: explanationData ? {
+      explanation_text: explanationData.explanation_text,
+      doc_links: explanationData.doc_links || undefined,
+    } : null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -136,4 +146,34 @@ export async function fetchDomainOptions(
     code: domain.code,
     name: domain.name,
   }));
+}
+
+export async function fetchAdjacentQuestionIds(
+  supabase: SupabaseClient,
+  currentQuestionId: string,
+  exam: string
+): Promise<{ previousId: string | null; nextId: string | null }> {
+  // Fetch all question IDs for the exam, ordered by ID
+  const { data: allQuestions, error } = await supabase
+    .from("questions")
+    .select("id")
+    .eq("exam", exam)
+    .order("id", { ascending: true });
+
+  if (error || !allQuestions) {
+    console.error("Failed to fetch adjacent questions:", error);
+    return { previousId: null, nextId: null };
+  }
+
+  const questionIds = allQuestions.map((q) => q.id);
+  const currentIndex = questionIds.indexOf(currentQuestionId);
+
+  if (currentIndex === -1) {
+    return { previousId: null, nextId: null };
+  }
+
+  return {
+    previousId: currentIndex > 0 ? questionIds[currentIndex - 1] : null,
+    nextId: currentIndex < questionIds.length - 1 ? questionIds[currentIndex + 1] : null,
+  };
 }
