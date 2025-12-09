@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { QuestionUpdateSchema, type QuestionUpdateInput } from "@/lib/admin/questions/editor-schema";
 import type { QuestionEditorData, DomainOption } from "@/lib/admin/questions/editor-types";
+import type { ReviewQueueMetadata } from "@/lib/admin/questions/editor-query";
 import { Form } from "@/components/ui/form";
 import { QuestionMetadataCard } from "./QuestionMetadataCard";
 import { DecisionMatrixCard } from "./DecisionMatrixCard";
@@ -13,6 +15,9 @@ import { ReviewNotesCard } from "./ReviewWorkflowCard";
 import { AnswerOptionsCard } from "./AnswerOptionsCard";
 import { QuestionStemCard } from "./QuestionStemCard";
 import { GeneralExplanationCard } from "./GeneralExplanationCard";
+import { RenderedQuestionStem } from "./RenderedQuestionStem";
+import { RenderedAnswerOptions } from "./RenderedAnswerOptions";
+import { RenderedExplanation } from "./RenderedExplanation";
 import { EditorHeader } from "./EditorHeader";
 import { Toast, useToastQueue } from "@/components/ui/toast";
 
@@ -21,6 +26,7 @@ interface QuestionEditorProps {
   domainOptions: DomainOption[];
   previousQuestionId?: string | null;
   nextQuestionId?: string | null;
+  queueMetadata?: ReviewQueueMetadata;
   onSave?: (data: QuestionUpdateInput) => Promise<void>;
 }
 
@@ -29,10 +35,12 @@ export function QuestionEditor({
   domainOptions,
   previousQuestionId,
   nextQuestionId,
+  queueMetadata,
   onSave,
 }: QuestionEditorProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [viewMode, setViewMode] = useState<"review" | "edit">("review");
   const { toasts, addToast, dismissToast } = useToastQueue();
 
   const form = useForm<QuestionUpdateInput>({
@@ -117,8 +125,12 @@ export function QuestionEditor({
     form.setValue("review_status", "GOOD");
     form.setValue("status", "ACTIVE");
     const success = await handleSave();
-    if (success && nextQuestionId) {
-      router.push(`/admin/questions/${nextQuestionId}`);
+    if (success) {
+      // Use queue next ID if available, otherwise fall back to regular next
+      const targetId = queueMetadata?.nextId || nextQuestionId;
+      if (targetId) {
+        router.push(`/admin/questions/${targetId}`);
+      }
     }
   };
 
@@ -126,15 +138,23 @@ export function QuestionEditor({
     form.setValue("review_status", "RETIRED");
     form.setValue("status", "RETIRED");
     const success = await handleSave();
-    if (success && nextQuestionId) {
-      router.push(`/admin/questions/${nextQuestionId}`);
+    if (success) {
+      // Use queue next ID if available, otherwise fall back to regular next
+      const targetId = queueMetadata?.nextId || nextQuestionId;
+      if (targetId) {
+        router.push(`/admin/questions/${targetId}`);
+      }
     }
   };
 
   const handleSaveAndNext = async () => {
     const success = await handleSave();
-    if (success && nextQuestionId) {
-      router.push(`/admin/questions/${nextQuestionId}`);
+    if (success) {
+      // Use queue next ID if available, otherwise fall back to regular next
+      const targetId = queueMetadata?.nextId || nextQuestionId;
+      if (targetId) {
+        router.push(`/admin/questions/${targetId}`);
+      }
     }
   };
 
@@ -150,9 +170,19 @@ export function QuestionEditor({
         <div className="flex-1 px-4 py-6 lg:px-8">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
               <main className="space-y-6">
-                <QuestionStemCard questionId={question.id} />
-                <AnswerOptionsCard />
-                <GeneralExplanationCard />
+                {viewMode === "review" ? (
+                  <>
+                    <RenderedQuestionStem stem={question.stem} questionId={question.id} />
+                    <RenderedAnswerOptions />
+                    <RenderedExplanation />
+                  </>
+                ) : (
+                  <>
+                    <QuestionStemCard questionId={question.id} />
+                    <AnswerOptionsCard />
+                    <GeneralExplanationCard />
+                  </>
+                )}
               </main>
 
               <aside className="space-y-6 lg:sticky lg:top-[calc(var(--topbar-height,56px)+1px)] lg:self-start lg:max-h-[calc(100vh-var(--topbar-height,56px)-1px)] lg:overflow-y-auto">
@@ -161,8 +191,11 @@ export function QuestionEditor({
                   sourceRef={question.source_ref}
                 />
                 <DecisionMatrixCard
-                  previousQuestionId={previousQuestionId}
-                  nextQuestionId={nextQuestionId}
+                  previousQuestionId={queueMetadata?.previousId || previousQuestionId}
+                  nextQuestionId={queueMetadata?.nextId || nextQuestionId}
+                  queueMetadata={queueMetadata}
+                  viewMode={viewMode}
+                  onViewModeChange={setViewMode}
                   onMarkGoodAndNext={handleMarkGoodAndNext}
                   onMarkBadAndNext={handleMarkBadAndNext}
                   onSaveAndNext={handleSaveAndNext}

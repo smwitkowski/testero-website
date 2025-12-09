@@ -7,6 +7,7 @@ import {
   fetchQuestionForEditor,
   fetchDomainOptions,
   fetchAdjacentQuestionIds,
+  fetchReviewQueueIds,
 } from "@/lib/admin/questions/editor-query";
 
 export const dynamic = "force-dynamic";
@@ -38,11 +39,14 @@ export default async function AdminQuestionDetailPage({
   }
 
   try {
-    const [question, domains, adjacentIds] = await Promise.all([
+    const [question, domains, adjacentIds, queueMetadata] = await Promise.all([
       fetchQuestionForEditor(supabase, questionId),
       fetchDomainOptions(supabase),
       fetchQuestionForEditor(supabase, questionId).then((q) =>
         q ? fetchAdjacentQuestionIds(supabase, questionId, q.exam) : { previousId: null, nextId: null }
+      ),
+      fetchQuestionForEditor(supabase, questionId).then((q) =>
+        q ? fetchReviewQueueIds(supabase, questionId, q.exam) : { previousId: null, nextId: null, position: 0, total: 0 }
       ),
     ]);
 
@@ -55,8 +59,9 @@ export default async function AdminQuestionDetailPage({
         <QuestionEditor
           question={question}
           domainOptions={domains}
-          previousQuestionId={adjacentIds.previousId}
-          nextQuestionId={adjacentIds.nextId}
+          previousQuestionId={queueMetadata.nextId ? queueMetadata.previousId : adjacentIds.previousId}
+          nextQuestionId={queueMetadata.nextId || adjacentIds.nextId}
+          queueMetadata={queueMetadata.total > 0 ? queueMetadata : undefined}
         />
       </AppShell>
     );

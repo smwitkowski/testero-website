@@ -23,8 +23,9 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Eye, Edit } from "lucide-react";
 import type { AdminQuestionReviewStatus } from "@/lib/admin/questions/filter-utils";
+import type { ReviewQueueMetadata } from "@/lib/admin/questions/editor-query";
 
 const REVIEW_STATUS_LABELS: Record<AdminQuestionReviewStatus, string> = {
   UNREVIEWED: "Unreviewed",
@@ -45,6 +46,9 @@ const REVIEW_STATUS_TONES: Record<AdminQuestionReviewStatus, "neutral" | "succes
 interface DecisionMatrixCardProps {
   previousQuestionId?: string | null;
   nextQuestionId?: string | null;
+  queueMetadata?: ReviewQueueMetadata;
+  viewMode?: "review" | "edit";
+  onViewModeChange?: (mode: "review" | "edit") => void;
   onMarkGoodAndNext?: () => Promise<void>;
   onMarkBadAndNext?: () => Promise<void>;
   onSaveAndNext?: () => Promise<void>;
@@ -54,6 +58,9 @@ interface DecisionMatrixCardProps {
 export function DecisionMatrixCard({
   previousQuestionId,
   nextQuestionId,
+  queueMetadata,
+  viewMode = "review",
+  onViewModeChange,
   onMarkGoodAndNext,
   onMarkBadAndNext,
   onSaveAndNext,
@@ -81,6 +88,38 @@ export function DecisionMatrixCard({
         <CardTitle>Decision Matrix</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {queueMetadata && queueMetadata.total > 0 && (
+          <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-center">
+            <div className="text-xs text-muted-foreground">Review Queue</div>
+            <div className="text-lg font-semibold text-foreground">
+              {queueMetadata.position} of {queueMetadata.total}
+            </div>
+          </div>
+        )}
+        {onViewModeChange && (
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={viewMode === "review" ? "solid" : "outline"}
+              size="sm"
+              className="flex-1"
+              onClick={() => onViewModeChange("review")}
+              icon={<Eye className="h-4 w-4" />}
+            >
+              Review
+            </Button>
+            <Button
+              type="button"
+              variant={viewMode === "edit" ? "solid" : "outline"}
+              size="sm"
+              className="flex-1"
+              onClick={() => onViewModeChange("edit")}
+              icon={<Edit className="h-4 w-4" />}
+            >
+              Edit
+            </Button>
+          </div>
+        )}
         <div className="space-y-2">
           <div className="text-sm font-medium text-muted-foreground">Current Status:</div>
           <Badge
