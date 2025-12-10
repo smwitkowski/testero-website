@@ -33,12 +33,12 @@ describe("price-utils", () => {
   });
 
   describe("getTierNameFromPriceId", () => {
-    it("should return 'Basic' for Basic monthly price ID", () => {
-      expect(getTierNameFromPriceId("price_basic_monthly")).toBe("Basic");
+    it("should return 'PMLE Readiness' for Basic monthly price ID", () => {
+      expect(getTierNameFromPriceId("price_basic_monthly")).toBe("PMLE Readiness");
     });
 
-    it("should return 'Basic' for Basic annual price ID", () => {
-      expect(getTierNameFromPriceId("price_basic_annual")).toBe("Basic");
+    it("should return 'PMLE Readiness' for Basic annual price ID", () => {
+      expect(getTierNameFromPriceId("price_basic_annual")).toBe("PMLE Readiness");
     });
 
     it("should return 'Pro' for Pro monthly price ID", () => {

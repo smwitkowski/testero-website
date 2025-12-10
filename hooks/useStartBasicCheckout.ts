@@ -56,7 +56,7 @@ export function useStartBasicCheckout() {
         source,
         price_id: BASIC_MONTHLY_PRICE_ID,
         billing_interval: "monthly",
-        plan_name: "Basic",
+        plan_name: "PMLE Readiness",
         user_id: user.id,
       });
 
@@ -79,7 +79,7 @@ export function useStartBasicCheckout() {
           source,
           price_id: BASIC_MONTHLY_PRICE_ID,
           billing_interval: "monthly",
-          plan_name: "Basic",
+          plan_name: "PMLE Readiness",
           user_id: user.id,
         });
 
