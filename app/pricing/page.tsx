@@ -185,7 +185,7 @@ export default function PricingPage() {
             </div>
 
             {/* Guarantees */}
-            <div className="flex flex-wrap justify-center gap-6 text-sm sm:text-base">
+            <div className="flex flex-wrap justify-center gap-6 text-sm sm:text-base mb-8">
               {VALUE_PROPS.guarantees.map((guarantee) => (
                 <div key={guarantee} className="flex items-center gap-2">
                   <Shield className="h-5 w-5 text-yellow-400" />
@@ -211,7 +211,7 @@ export default function PricingPage() {
       )}
 
       {/* Billing Toggle */}
-      <Container className="-mt-8 relative z-10">
+      <Container className="mt-8 mb-10 relative z-10">
         <div className="flex justify-center">
           <div className="inline-flex items-center bg-white rounded-full shadow-lg p-1">
             <button
@@ -248,7 +248,7 @@ export default function PricingPage() {
       {/* Main Pricing Cards */}
       <Section
         id="pricing-cards"
-        size="xl"
+        size="lg"
         surface="subtle"
         divider="both"
       >
@@ -403,19 +403,19 @@ export default function PricingPage() {
 
           {showComparison && (
             <ComparisonTable
-              categories={FEATURE_COMPARISON}
-              onSelectPlan={(planId) => {
-                const element = document.getElementById("pricing-cards");
-                element?.scrollIntoView({ behavior: "smooth" });
-                // Find the matching tier and trigger checkout
-                const tier = SUBSCRIPTION_TIERS.find((t) => t.id === planId);
-                if (tier) {
-                  const priceId =
-                    billingInterval === "monthly" ? tier.monthlyPriceId : tier.annualPriceId;
-                  if (priceId) handleCheckout(priceId, tier.name);
-                }
-              }}
-            />
+                categories={FEATURE_COMPARISON}
+                onSelectPlan={(planId) => {
+                  const element = document.getElementById("pricing-cards");
+                  element?.scrollIntoView({ behavior: "smooth" });
+                  // Find the matching tier and trigger checkout
+                  const tier = SUBSCRIPTION_TIERS.find((t) => t.id === planId);
+                  if (tier) {
+                    const priceId =
+                      billingInterval === "monthly" ? tier.monthlyPriceId : tier.annualPriceId;
+                    if (priceId) handleCheckout(priceId, tier.name);
+                  }
+                }}
+              />
           )}
       </Section>
 

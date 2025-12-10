@@ -30,9 +30,9 @@ describe("Card", () => {
       </div>
     )
 
-    expect(screen.getByTestId("card-sm")).toHaveClass("px-card-x-sm", "py-card-y-sm", "gap-card-sm")
-    expect(screen.getByTestId("card-md")).toHaveClass("px-card-x-md", "py-card-y-md", "gap-card-md")
-    expect(screen.getByTestId("card-lg")).toHaveClass("px-card-x-lg", "py-card-y-lg", "gap-card-lg")
+    expect(screen.getByTestId("card-sm")).toHaveClass("px-3", "py-3", "gap-2")
+    expect(screen.getByTestId("card-md")).toHaveClass("px-4", "py-4", "gap-3")
+    expect(screen.getByTestId("card-lg")).toHaveClass("px-6", "py-6", "gap-4")
   })
 
   it("reduces vertical rhythm when compact", () => {
@@ -46,8 +46,8 @@ describe("Card", () => {
     )
 
     const card = screen.getByTestId("card-compact")
-    expect(card).toHaveClass("px-card-x-lg", "py-card-y-md", "gap-card-md")
-    expect(card).not.toHaveClass("py-card-y-lg")
+    expect(card).toHaveClass("px-6", "py-4", "gap-3")
+    expect(card).not.toHaveClass("py-6")
   })
 
   it("shares inset spacing with content", () => {
@@ -58,7 +58,7 @@ describe("Card", () => {
     )
 
     const content = screen.getByTestId("card-inset-content")
-    expect(content.className).toContain("-mx-card-x-md")
-    expect(content.className).toContain("px-card-x-md")
+    expect(content.className).toContain("-mx-4")
+    expect(content.className).toContain("px-4")
   })
 })
