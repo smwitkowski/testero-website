@@ -77,7 +77,10 @@ export function PricingCard({
       ) : null}
 
       {billingInterval === "annual" && tier.savingsPercentage ? (
-        <div className="absolute right-6 top-6">
+        <div className={cn(
+          "absolute right-6",
+          tier.recommended ? "top-12" : "top-6"
+        )}>
           <Badge
             tone="success"
             variant="soft"

@@ -61,57 +61,57 @@ function useCardContext() {
 }
 
 const horizontalPadding: Record<CardSize, string> = {
-  sm: "px-card-x-sm",
-  md: "px-card-x-md md:px-card-x-lg", // Responsive: 16px mobile, 24px desktop
-  lg: "px-card-x-lg",
+  sm: "px-3",           // 12px
+  md: "px-4 md:px-6",   // 16px mobile, 24px desktop
+  lg: "px-6",           // 24px
 }
 
 const verticalPadding: Record<CardSize, string> = {
-  sm: "py-card-y-sm",
-  md: "py-card-y-md md:py-card-y-lg", // Responsive: 16px mobile, 24px desktop
-  lg: "py-card-y-lg",
+  sm: "py-3",           // 12px
+  md: "py-4 md:py-6",   // 16px mobile, 24px desktop
+  lg: "py-6",           // 24px
 }
 
 const compactVerticalPadding: Record<CardSize, string> = {
-  sm: "py-card-y-sm",
-  md: "py-card-y-sm",
-  lg: "py-card-y-md",
+  sm: "py-3",           // 12px
+  md: "py-3",           // 12px
+  lg: "py-4",           // 16px
 }
 
 const gapSpacing: Record<CardSize, string> = {
-  sm: "gap-card-sm",
-  md: "gap-card-md",
-  lg: "gap-card-lg",
+  sm: "gap-2",          // 8px
+  md: "gap-3",          // 12px
+  lg: "gap-4",          // 16px
 }
 
 const compactGapSpacing: Record<CardSize, string> = {
-  sm: "gap-card-sm",
-  md: "gap-card-sm",
-  lg: "gap-card-md",
+  sm: "gap-2",
+  md: "gap-2",
+  lg: "gap-3",
 }
 
 const sectionGapSpacing: Record<CardSize, string> = {
-  sm: "gap-card-sm",
-  md: "gap-card-md",
-  lg: "gap-card-lg",
+  sm: "gap-2",
+  md: "gap-3",
+  lg: "gap-4",
 }
 
 const footerPaddingTop: Record<CardSize, { regular: string; compact: string }> = {
-  sm: { regular: "pt-card-y-sm", compact: "pt-card-y-sm" },
-  md: { regular: "pt-card-y-md", compact: "pt-card-y-sm" },
-  lg: { regular: "pt-card-y-lg", compact: "pt-card-y-md" },
+  sm: { regular: "pt-3", compact: "pt-3" },
+  md: { regular: "pt-4", compact: "pt-3" },
+  lg: { regular: "pt-6", compact: "pt-4" },
 }
 
 const actionGapSpacing: Record<CardSize, string> = {
-  sm: "gap-card-sm",
-  md: "gap-card-md",
-  lg: "gap-card-lg",
+  sm: "gap-2",
+  md: "gap-3",
+  lg: "gap-4",
 }
 
 const horizontalInsetSpacing: Record<CardSize, { negative: string; padding: string }> = {
-  sm: { negative: "-mx-card-x-sm", padding: "px-card-x-sm" },
-  md: { negative: "-mx-card-x-md", padding: "px-card-x-md" },
-  lg: { negative: "-mx-card-x-lg", padding: "px-card-x-lg" },
+  sm: { negative: "-mx-3", padding: "px-3" },
+  md: { negative: "-mx-4", padding: "px-4" },
+  lg: { negative: "-mx-6", padding: "px-6" },
 }
 
 const disallowedSpacingPattern = /\b(p[trblxy]?|px|py|gap|space-[xy])(-|\[)/
