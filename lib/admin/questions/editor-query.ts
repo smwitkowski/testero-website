@@ -177,3 +177,49 @@ export async function fetchAdjacentQuestionIds(
     nextId: currentIndex < questionIds.length - 1 ? questionIds[currentIndex + 1] : null,
   };
 }
+
+export interface ReviewQueueMetadata {
+  previousId: string | null;
+  nextId: string | null;
+  position: number;
+  total: number;
+}
+
+export async function fetchReviewQueueIds(
+  supabase: SupabaseClient,
+  currentQuestionId: string,
+  exam: string
+): Promise<ReviewQueueMetadata> {
+  // Fetch only questions that need review (unreviewed or need fixes)
+  const { data: reviewQueue, error } = await supabase
+    .from("questions")
+    .select("id")
+    .eq("exam", exam)
+    .in("review_status", ["UNREVIEWED", "NEEDS_ANSWER_FIX", "NEEDS_EXPLANATION_FIX"])
+    .order("id", { ascending: true });
+
+  if (error || !reviewQueue) {
+    console.error("Failed to fetch review queue:", error);
+    return { previousId: null, nextId: null, position: 0, total: 0 };
+  }
+
+  const queueIds = reviewQueue.map((q) => q.id);
+  const currentIndex = queueIds.indexOf(currentQuestionId);
+
+  // If current question is not in review queue, return empty metadata
+  if (currentIndex === -1) {
+    return {
+      previousId: null,
+      nextId: null,
+      position: 0,
+      total: queueIds.length,
+    };
+  }
+
+  return {
+    previousId: currentIndex > 0 ? queueIds[currentIndex - 1] : null,
+    nextId: currentIndex < queueIds.length - 1 ? queueIds[currentIndex + 1] : null,
+    position: currentIndex + 1,
+    total: queueIds.length,
+  };
+}
