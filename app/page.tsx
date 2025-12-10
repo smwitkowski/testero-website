@@ -275,7 +275,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* AI Credits Explainer */}
+        {/* Practice Explainer */}
         {/* eslint-disable-next-line no-restricted-syntax */}
         <section className="w-full py-16 px-4 sm:px-6 bg-white">
           <div className="max-w-4xl mx-auto text-center">

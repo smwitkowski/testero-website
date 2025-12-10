@@ -34,9 +34,26 @@ import {
   FEATURE_COMPARISON,
   PRICING_FAQ,
   PRICING_TESTIMONIALS,
-  AI_CREDIT_USAGE,
 } from "@/lib/pricing/constants";
 import { cn } from "@/lib/utils";
+
+const PLAN_HIGHLIGHTS = [
+  {
+    icon: Zap,
+    title: "Adaptive Practice Exams",
+    description: "Unlimited full-length simulations that mirror the real exam and update with each release.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Targeted Domain Drills",
+    description: "Focus on weak domains with auto-generated question sets and readiness scoring.",
+  },
+  {
+    icon: Award,
+    title: "Detailed AI Explanations",
+    description: "Step-by-step rationales for every answer so you understand the why—not just the what.",
+  },
+];
 
 export default function PricingPage() {
   const [billingInterval, setBillingInterval] = useState<"monthly" | "annual">("annual");
@@ -311,50 +328,30 @@ export default function PricingPage() {
         )}
       </Section>
 
-      {/* AI Credits Explanation */}
+      {/* Plan Highlights */}
       <Section size="lg" surface="subtle" divider="bottom">
         <div className="mx-auto max-w-4xl">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-4">How AI Credits Work</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-4">Everything You Need to Pass</h2>
             <p className="text-gray-600 dark:text-slate-300">
-              AI credits power our adaptive learning engine. Use them for personalized practice
-              exams and detailed explanations.
+              Every plan includes unlimited practice, diagnostic insights, and the AI explanations our learners love.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            <div
-              className="rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            >
-              <Zap className="mx-auto mb-3 h-10 w-10 text-blue-600 dark:text-sky-200" />
-              <h3 className="mb-2 font-semibold text-gray-900 dark:text-slate-100">Full Practice Exam</h3>
-              <p className="text-2xl font-bold text-blue-600 dark:text-sky-200">{AI_CREDIT_USAGE.fullExam} Credit</p>
-              <p className="mt-2 text-sm text-gray-600 dark:text-slate-300">Complete 60-question adaptive exam</p>
-            </div>
-            <div
-              className="rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            >
-              <TrendingUp className="mx-auto mb-3 h-10 w-10 text-blue-600 dark:text-sky-200" />
-              <h3 className="mb-2 font-semibold text-gray-900 dark:text-slate-100">Domain Quiz</h3>
-              <p className="text-2xl font-bold text-blue-600 dark:text-sky-200">
-                {AI_CREDIT_USAGE.domainQuiz} Credit
-              </p>
-              <p className="mt-2 text-sm text-gray-600 dark:text-slate-300">25-question focused practice</p>
-            </div>
-            <div
-              className="rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            >
-              <Award className="mx-auto mb-3 h-10 w-10 text-blue-600 dark:text-sky-200" />
-              <h3 className="mb-2 font-semibold text-gray-900 dark:text-slate-100">AI Explanation</h3>
-              <p className="text-2xl font-bold text-blue-600 dark:text-sky-200">
-                {AI_CREDIT_USAGE.explanation} Credit
-              </p>
-              <p className="mt-2 text-sm text-gray-600 dark:text-slate-300">Detailed answer explanation</p>
-            </div>
+            {PLAN_HIGHLIGHTS.map((highlight) => {
+              const Icon = highlight.icon;
+              return (
+                <div
+                  key={highlight.title}
+                  className="rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                >
+                  <Icon className="mx-auto mb-3 h-10 w-10 text-blue-600 dark:text-sky-200" />
+                  <h3 className="mb-2 font-semibold text-gray-900 dark:text-slate-100">{highlight.title}</h3>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-slate-300">{highlight.description}</p>
+                </div>
+              );
+            })}
           </div>
-          <p className="text-center text-sm text-gray-600 dark:text-slate-300 mt-6">
-            Need more credits? Purchase additional at ${AI_CREDIT_USAGE.additionalCreditPrice}
-            /credit or upgrade your plan
-          </p>
         </div>
       </Section>
 

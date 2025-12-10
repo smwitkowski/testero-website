@@ -10,7 +10,6 @@ const baseTier = {
   annualPrice: 290,
   monthlyPriceId: "price_monthly",
   annualPriceId: "price_annual",
-  aiCredits: 200,
   features: [
     "Adaptive practice exams",
     "Weekly study plan",
@@ -27,7 +26,6 @@ const recommendedTier = {
   name: "Pro",
   monthlyPrice: 59,
   annualPrice: 590,
-  aiCredits: 500,
   highlighted: ["1:1 readiness review", "Priority question support"],
   features: [...baseTier.features, "Live cohort workshops"],
   recommended: true,
