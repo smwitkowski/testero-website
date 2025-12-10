@@ -36,15 +36,15 @@ export function getPlanType(priceId: string): "subscription" | "exam_package" {
  * Maps price IDs to human-readable tier names for analytics tracking
  *
  * @param priceId - The Stripe price ID to look up
- * @returns Tier name string (Basic, Pro, All-Access, or exam package name, or "Unknown")
+ * @returns Tier name string (PMLE Readiness, Pro, All-Access, or exam package name, or "Unknown")
  */
 export function getTierNameFromPriceId(priceId: string): string {
-  // Basic tier
+  // PMLE Readiness tier (formerly Basic)
   if (
     priceId === process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY ||
     priceId === process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL
   ) {
-    return "Basic";
+    return "PMLE Readiness";
   }
 
   // Pro tier
