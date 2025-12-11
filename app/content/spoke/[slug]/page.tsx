@@ -159,7 +159,7 @@ export default async function SpokePage({ params }: { params: Promise<{ slug: st
               href="/" 
               className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium text-center hover:bg-blue-700 transition-colors"
             >
-              Get Started with Testero
+              Start Preparing with Testero
             </Link>
             <Link 
               href="/" 

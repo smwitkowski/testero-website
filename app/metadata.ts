@@ -61,7 +61,7 @@ export const getJsonLd = () => generateJsonLd({
           "name": "What is Testero's PMLE exam prep?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Testero is an AI-powered PMLE exam preparation platform with 500+ practice questions updated for October 2024 exam changes. We offer a 30-day pass guarantee - pass your PMLE on the first attempt or get your money back."
+            "text": "Testero is an AI-powered PMLE exam preparation platform with 200+ realistic practice questions updated for October 2024 exam changes. We offer a 7-day money-back guarantee - try Testero risk-free or get your money back."
           }
         },
         {
@@ -77,7 +77,7 @@ export const getJsonLd = () => generateJsonLd({
           "name": "How does Testero guarantee PMLE success?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Our AI-powered system provides 500+ PMLE-specific questions updated for October 2024 changes. Take our free diagnostic to see your exact readiness level, follow our 30-day study plan, and pass on your first attempt - or get your money back."
+            "text": "Our AI-powered system provides 200+ realistic PMLE-specific questions updated for October 2024 changes. Take our free diagnostic to see your exact readiness level, get personalized practice recommendations, and accelerate your preparation - or get your money back within 7 days."
           }
         },
         {
@@ -85,7 +85,7 @@ export const getJsonLd = () => generateJsonLd({
           "name": "What's included in Testero's PMLE prep?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "All plans include: 500+ PMLE practice questions, AI-powered explanations, free diagnostic test, personalized 30-day study plan, October 2024 exam updates, progress tracking, and our money-back guarantee. Plans start at $39/month."
+            "text": "The PMLE Readiness plan includes: unlimited PMLE practice questions, detailed explanations, free diagnostic test, personalized study plan, October 2024 exam updates, progress tracking, and our 7-day money-back guarantee. Plan starts at $39/month."
           }
         }
       ]

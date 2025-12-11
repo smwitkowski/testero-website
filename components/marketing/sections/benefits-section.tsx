@@ -325,7 +325,7 @@ export function BenefitsSection() {
           }}
         >
           <div className="text-center">
-            <h3 className="mb-4 text-2xl font-bold text-foreground">Ready to Get Started?</h3>
+            <h3 className="mb-4 text-2xl font-bold text-foreground">Ready to Start Preparing?</h3>
             <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground">
               Join hundreds of cloud professionals already using Testero to accelerate their certification journey.
             </p>

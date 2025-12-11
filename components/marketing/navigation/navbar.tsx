@@ -162,9 +162,9 @@ const Navbar = () => {
               <Link
                 href="/signup"
                 className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                aria-label="Get started with Testero - Sign up for an account"
+                aria-label="Start preparing with Testero - Sign up for an account"
               >
-                Get Started
+                Start Preparing
               </Link>
               <Link
                 href="/login"

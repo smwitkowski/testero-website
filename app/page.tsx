@@ -131,7 +131,7 @@ export default function Home() {
             <div className="max-w-7xl mx-auto">
               <div className="text-center mb-12">
                 <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-                  Choose Your PMLE Success Plan
+                  Choose Your PMLE Readiness Plan
                 </h2>
                 <p className="text-xl text-gray-600 max-w-3xl mx-auto">
                   Everything you need to pass PMLE — unlimited practice, personalized diagnostics, and expert-level explanations.
@@ -139,8 +139,9 @@ export default function Home() {
               </div>
 
               {/* Pricing Cards Preview */}
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 mb-12">
-                {SUBSCRIPTION_TIERS.map((tier) => (
+              <div className="flex justify-center mb-12">
+                <div className="w-full max-w-md">
+                {SUBSCRIPTION_TIERS.filter((tier) => !tier.isHidden).map((tier) => (
                   <div
                     key={tier.id}
                     className={cn(
@@ -150,13 +151,6 @@ export default function Home() {
                         : "border-gray-200 hover:border-gray-300 hover:shadow-lg"
                     )}
                   >
-                    {tier.recommended && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                        <span className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                          MOST POPULAR
-                        </span>
-                      </div>
-                    )}
 
                     <div className="text-center mb-6 space-y-2">
                       <h3 className="text-2xl font-bold text-gray-900">{tier.name}</h3>
@@ -187,10 +181,11 @@ export default function Home() {
                       className="text-base font-semibold h-12"
                       onClick={() => handlePricingClick(`preview_${tier.id}`)}
                     >
-                      <Link href="/pricing">Get Started</Link>
+                      <Link href="/pricing">Start Preparing</Link>
                     </Button>
                   </div>
                 ))}
+                </div>
               </div>
 
               <div className="text-center">
@@ -327,22 +322,11 @@ export default function Home() {
                 <span className="text-lg font-semibold">Limited Time Offer</span>
               </div>
               <p className="text-blue-100 mb-4">
-                New in 2025 • 30-day money-back guarantee • Cancel anytime
+                New in 2025 • 7-day money-back guarantee • Cancel anytime
               </p>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold">$39</div>
-                  <div className="text-sm text-blue-200">Basic/month</div>
-                </div>
-                <div className="border-2 border-yellow-400 rounded-lg p-2">
-                  <div className="text-2xl font-bold text-yellow-300">$59</div>
-                  <div className="text-sm text-blue-200">Pro/month</div>
-                  <div className="text-xs text-yellow-300">POPULAR</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">$79</div>
-                  <div className="text-sm text-blue-200">All-Access</div>
-                </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">$39</div>
+                <div className="text-sm text-blue-200">PMLE Readiness/month</div>
               </div>
             </div>
 
@@ -394,7 +378,7 @@ export default function Home() {
               className="text-blue-600 hover:underline text-lg font-semibold"
               onClick={() => handlePricingClick("footer_link")}
             >
-              View All Pricing Options →
+                  View Pricing →
             </Link>
             <Link
               href="/content/hub/pmle-exam-study-guide"
