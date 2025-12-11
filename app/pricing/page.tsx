@@ -38,18 +38,18 @@ import { cn } from "@/lib/utils";
 const PLAN_HIGHLIGHTS = [
   {
     icon: Zap,
-    title: "Full PMLE Question Bank",
-    description: "200+ realistic questions covering all exam domains, updated to match the latest blueprint.",
+    title: "Unlimited PMLE Practice",
+    description: "Unlimited practice questions aligned with the exam blueprint, updated as the exam evolves.",
   },
   {
     icon: TrendingUp,
-    title: "Domain Readiness Insights",
-    description: "See exactly where you stand in each PMLE domain and focus your study time effectively.",
+    title: "Domain-Targeted Drills",
+    description: "Focus your study time on your weakest areas with personalized domain-level practice.",
   },
   {
     icon: Award,
-    title: "Detailed Explanations",
-    description: "Learn the why behind every answer with explanations grounded in Google Cloud documentation.",
+    title: "Full Diagnostic + Readiness Score",
+    description: "Get instant personalized readiness insights that pinpoint exactly what to study next.",
   },
 ];
 
@@ -392,9 +392,9 @@ export default function PricingPage() {
         className="bg-gradient-to-r from-blue-600 to-cyan-600"
       >
         <Container className="max-w-4xl text-center text-white">
-          <h2 className="text-3xl font-bold text-white mb-4">Ready to Pass Your Certification?</h2>
+          <h2 className="text-3xl font-bold text-white mb-4">Ready to Pass Your PMLE?</h2>
           <p className="text-xl text-blue-100 mb-8">
-            Start your PMLE preparation journey today
+            Start with a free diagnostic, then unlock full practice when you&apos;re ready
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button

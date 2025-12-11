@@ -51,6 +51,16 @@ const COMPARISON_FEATURES: ComparisonFeature[] = [
     free: false,
     paid: true,
   },
+  {
+    name: "No explanations",
+    free: true,
+    paid: false,
+  },
+  {
+    name: "No personalized plan",
+    free: true,
+    paid: false,
+  },
 ];
 
 export function FreeVsPaidComparison() {

@@ -112,10 +112,9 @@ export default function Home() {
                 <div className="bg-purple-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                   <Shield className="h-8 w-8 text-purple-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">30-Day Pass Guarantee</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">7-Day Money-Back Guarantee</h3>
                 <p className="text-gray-600">
-                  Follow our 30-day PMLE study plan and pass on your first attempt—or get your 
-                  money back. No questions asked.
+                  Try Testero risk-free. If you&apos;re not satisfied within 7 days, get a full refund—no questions asked.
                 </p>
               </div>
             </div>
@@ -135,8 +134,7 @@ export default function Home() {
                   Choose Your PMLE Success Plan
                 </h2>
                 <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                  All plans include 500+ PMLE-specific questions, AI explanations, and our 
-                  30-day pass guarantee.
+                  Everything you need to pass PMLE — unlimited practice, personalized diagnostics, and expert-level explanations.
                 </p>
               </div>
 
