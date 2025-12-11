@@ -29,7 +29,6 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
   SUBSCRIPTION_TIERS,
-  EXAM_PACKAGES,
   VALUE_PROPS,
   FEATURE_COMPARISON,
   PRICING_FAQ,
@@ -59,12 +58,14 @@ export default function PricingPage() {
   const [billingInterval, setBillingInterval] = useState<"monthly" | "annual">("annual");
   const [showComparison, setShowComparison] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
-  const [showExamPackages, setShowExamPackages] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const router = useRouter();
   const posthog = usePostHog();
+
+  // Filter out hidden tiers to show only visible plans
+  const visibleTiers = SUBSCRIPTION_TIERS.filter((tier) => !tier.isHidden);
 
   // Track page view
   useEffect(() => {
@@ -269,63 +270,20 @@ export default function PricingPage() {
         surface="subtle"
         divider="both"
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-10">
-          {SUBSCRIPTION_TIERS.map((tier) => (
-            <PricingCard
-              key={tier.id}
-              tier={tier}
-              billingInterval={billingInterval}
-              onCheckout={handleCheckout}
-              loading={!!loading}
-              loadingId={loading}
-            />
-          ))}
-        </div>
-
-        {/* One-Time Exam Packages Toggle */}
-        <div className="mt-16 text-center">
-          <button
-            onClick={() => setShowExamPackages(!showExamPackages)}
-            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
-          >
-            <span>Prefer a one-time purchase? View exam packages</span>
-            {showExamPackages ? (
-              <ChevronUp className="h-5 w-5" />
-            ) : (
-              <ChevronDown className="h-5 w-5" />
-            )}
-          </button>
-        </div>
-
-        {/* Exam Packages Section */}
-        {showExamPackages && (
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            {EXAM_PACKAGES.map((pkg) => (
-              <div
-                key={pkg.id}
-                className="border border-gray-200 rounded-lg p-6 bg-white hover:shadow-lg transition-shadow"
-              >
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{pkg.duration}</h3>
-                <div className="text-3xl font-bold text-gray-900 mb-4">${pkg.price}</div>
-                <ul className="space-y-2 mb-6">
-                  {pkg.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-600">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={() => pkg.priceId && handleCheckout(pkg.priceId, pkg.duration)}
-                  disabled={!!loading || !pkg.priceId}
-                  className="w-full rounded-lg bg-gray-900 px-4 py-2 text-white font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Get Started
-                </button>
-              </div>
+        <div className="flex justify-center">
+          <div className="w-full max-w-md">
+            {visibleTiers.map((tier) => (
+              <PricingCard
+                key={tier.id}
+                tier={tier}
+                billingInterval={billingInterval}
+                onCheckout={handleCheckout}
+                loading={!!loading}
+                loadingId={loading}
+              />
             ))}
           </div>
-        )}
+        </div>
       </Section>
 
       {/* Plan Highlights */}
@@ -400,19 +358,19 @@ export default function PricingPage() {
 
           {showComparison && (
             <ComparisonTable
-                categories={FEATURE_COMPARISON}
-                onSelectPlan={(planId) => {
-                  const element = document.getElementById("pricing-cards");
-                  element?.scrollIntoView({ behavior: "smooth" });
-                  // Find the matching tier and trigger checkout
-                  const tier = SUBSCRIPTION_TIERS.find((t) => t.id === planId);
-                  if (tier) {
-                    const priceId =
-                      billingInterval === "monthly" ? tier.monthlyPriceId : tier.annualPriceId;
-                    if (priceId) handleCheckout(priceId, tier.name);
-                  }
-                }}
-              />
+              categories={FEATURE_COMPARISON}
+              onSelectPlan={(planId) => {
+                const element = document.getElementById("pricing-cards");
+                element?.scrollIntoView({ behavior: "smooth" });
+                // Find the matching tier and trigger checkout
+                const tier = SUBSCRIPTION_TIERS.find((t) => t.id === planId);
+                if (tier) {
+                  const priceId =
+                    billingInterval === "monthly" ? tier.monthlyPriceId : tier.annualPriceId;
+                  if (priceId) handleCheckout(priceId, tier.name);
+                }
+              }}
+            />
           )}
       </Section>
 

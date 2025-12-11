@@ -2,7 +2,7 @@
 export const SUBSCRIPTION_TIERS = [
   {
     id: "basic",
-    name: "Basic",
+    name: "PMLE Readiness",
     monthlyPriceId: "price_basic_monthly",
     annualPriceId: "price_basic_yearly",
   },
@@ -11,12 +11,14 @@ export const SUBSCRIPTION_TIERS = [
     name: "Pro",
     monthlyPriceId: "price_monthly",
     annualPriceId: "price_yearly",
+    isHidden: true,
   },
   {
     id: "all-access",
     name: "All-Access",
     monthlyPriceId: "price_all_monthly",
     annualPriceId: "price_all_yearly",
+    isHidden: true,
   },
 ];
 

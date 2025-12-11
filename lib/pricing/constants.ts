@@ -52,6 +52,7 @@ export interface PricingTier {
   highlighted?: string[];
   recommended?: boolean;
   savingsPercentage?: number;
+  isHidden?: boolean;
 }
 
 export interface ExamPackage {
@@ -67,8 +68,8 @@ export interface ExamPackage {
 export const SUBSCRIPTION_TIERS: PricingTier[] = [
   {
     id: "basic",
-    name: "Basic",
-    description: "Perfect for focused certification prep",
+    name: "PMLE Readiness",
+    description: "Everything you need to pass the Google PMLE exam",
     monthlyPrice: 39,
     annualPrice: 349,
     monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY,
@@ -106,6 +107,7 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
     highlighted: ["3 certification tracks", "Adaptive practice modes", "Advanced analytics"],
     recommended: true,
     savingsPercentage: 23,
+    isHidden: true,
   },
   {
     id: "all-access",
@@ -129,6 +131,7 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
     ],
     highlighted: ["All certifications", "Unlimited practice modes", "Team features"],
     savingsPercentage: 21,
+    isHidden: true,
   },
 ];
 
@@ -234,9 +237,9 @@ export const FEATURE_COMPARISON = [
 // FAQ data for pricing page
 export const PRICING_FAQ = [
   {
-    question: "Can I switch between plans?",
+    question: "Can I change my subscription?",
     answer:
-      "Yes! You can upgrade or downgrade your plan at any time. Changes are prorated, so you only pay for what you use.",
+      "Yes! You can cancel or modify your subscription at any time. Changes are prorated, so you only pay for what you use.",
   },
   {
     question: "How many practice exams can I take?",
@@ -279,26 +282,26 @@ export const PRICING_FAQ = [
 export const PRICING_TESTIMONIALS = [
   {
     quote:
-      "The Pro plan paid for itself when I passed PMLE on my first try. The adaptive learning saved me at least 40 hours of study time.",
+      "PMLE Readiness paid for itself when I passed PMLE on my first try. The adaptive learning saved me at least 40 hours of study time.",
     author: "Sarah Chen",
     role: "ML Engineer at Google",
     certification: "Google PMLE",
-    tier: "Pro",
+    tier: "PMLE Readiness",
   },
   {
     quote:
-      "Started with Basic for my PCA cert, upgraded to All-Access and passed 3 certs in 6 months. Best career investment I've made.",
+      "PMLE Readiness gave me everything I needed to pass on my first attempt. Best career investment I've made.",
     author: "Michael Rodriguez",
     role: "Cloud Architect",
-    certification: "Multiple GCP Certs",
-    tier: "All-Access",
+    certification: "Google PMLE",
+    tier: "PMLE Readiness",
   },
   {
     quote:
-      "The 6-month exam package was perfect. Unlimited practice exams plus the readiness tracker kept me on pace for my deadline.",
+      "The structured approach and practice questions in PMLE Readiness were exactly what I needed to feel confident on exam day.",
     author: "Jennifer Park",
     role: "DevOps Engineer",
-    certification: "Google ACE",
-    tier: "6-Month Package",
+    certification: "Google PMLE",
+    tier: "PMLE Readiness",
   },
 ];
