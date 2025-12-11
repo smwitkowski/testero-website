@@ -75,14 +75,14 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
     monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY,
     annualPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL,
     features: [
-      "1 certification track",
-      "Core practice questions",
-      "Basic analytics dashboard",
+      "Full PMLE question bank (200+ questions)",
+      "Realistic scenario-based questions",
+      "Detailed explanations for every answer",
+      "Domain-level readiness breakdown",
+      "Practice on your weak areas",
       "Progress tracking",
-      "Mobile access",
-      "Email support",
     ],
-    highlighted: ["1 certification track", "Core practice questions"],
+    highlighted: ["Full PMLE question bank", "Domain-level readiness breakdown"],
     savingsPercentage: 25,
   },
   {
@@ -178,25 +178,24 @@ export const EXAM_PACKAGES: ExamPackage[] = [
 
 // Value propositions for pricing page
 export const VALUE_PROPS = {
-  mainHeadline: "Pass Your Certification 15% Faster—Guaranteed",
+  mainHeadline: "Upgrade your PMLE prep with full practice and explanations",
   subHeadline:
-    "Join 5,000+ professionals who passed on their first attempt with AI-powered adaptive learning",
+    "Start with a free diagnostic, then unlock full access to realistic questions, explanations, and readiness insights when you're ready.",
   guarantees: [
     "7-day money-back guarantee",
-    "Pass guarantee or get 3 months free",
-    "Content updated within 14 days of exam changes",
+    "Content regularly updated to match exam blueprint",
   ],
   trustBadges: [
-    "5,000+ Professionals Certified",
-    "92% First-Attempt Pass Rate",
-    "4.8/5 Average Rating",
-    "Updated Weekly",
+    "PMLE-Focused",
+    "Diagnostic-First",
+    "Detailed Explanations",
+    "Domain Readiness",
   ],
   valueAnchors: {
     examCost: "Invest $149 to protect your $300 exam fee",
     salary: "PMLE-certified professionals earn $150k+ on average",
-    time: "Save 40% study time with AI-personalized paths",
-    success: "Join 5,000+ professionals who passed on first attempt",
+    time: "Diagnostic test identifies your weak areas for focused study",
+    success: "Start with a free diagnostic to assess your readiness",
   },
 };
 
@@ -205,31 +204,20 @@ export const FEATURE_COMPARISON = [
   {
     category: "Core Features",
     features: [
-      { name: "Practice Questions", basic: "500+", pro: "2,000+", allAccess: "Unlimited" },
-      { name: "Certification Tracks", basic: "1", pro: "3", allAccess: "All" },
-      { name: "Practice Exams", basic: "Unlimited core", pro: "Adaptive + domain", allAccess: "All modes" },
-      { name: "Diagnostic Tests", basic: true, pro: true, allAccess: true },
-      { name: "Progress Tracking", basic: true, pro: true, allAccess: true },
+      { name: "PMLE Question Bank", basic: "200+ questions" },
+      { name: "Realistic Scenario Questions", basic: true },
+      { name: "Detailed Explanations", basic: true },
+      { name: "Diagnostic Tests", basic: true },
+      { name: "Domain-Level Readiness", basic: true },
+      { name: "Progress Tracking", basic: true },
     ],
   },
   {
-    category: "Advanced Features",
+    category: "Practice & Study",
     features: [
-      { name: "Adaptive Learning", basic: false, pro: true, allAccess: true },
-      { name: "Spaced Repetition", basic: false, pro: true, allAccess: true },
-      { name: "Performance Analytics", basic: "Basic", pro: "Advanced", allAccess: "Premium" },
-      { name: "Custom Study Plans", basic: false, pro: false, allAccess: true },
-      { name: "Team Features", basic: false, pro: false, allAccess: true },
-    ],
-  },
-  {
-    category: "Support & Resources",
-    features: [
-      { name: "Support", basic: "Email", pro: "Priority", allAccess: "White-glove" },
-      { name: "Response Time", basic: "48h", pro: "24h", allAccess: "2h" },
-      { name: "1-on-1 Coaching", basic: false, pro: false, allAccess: "1 session" },
-      { name: "Exclusive Content", basic: false, pro: "Early access", allAccess: true },
-      { name: "API Access", basic: false, pro: false, allAccess: true },
+      { name: "Practice on Weak Areas", basic: true },
+      { name: "Scenario-Based Questions", basic: true },
+      { name: "Documentation-Grounded Explanations", basic: true },
     ],
   },
 ];
@@ -244,22 +232,12 @@ export const PRICING_FAQ = [
   {
     question: "How many practice exams can I take?",
     answer:
-      "Every plan includes unlimited practice sessions. Pro unlocks adaptive and domain-specific drills, while All-Access gives you every mode plus team readiness reporting.",
+      "Free users get access to a diagnostic test and limited practice questions. Paid plans include unlimited practice questions with detailed explanations.",
   },
   {
     question: "Do you offer refunds?",
     answer:
       "Absolutely. We offer a 7-day money-back guarantee. If you're not satisfied, contact us within 7 days for a full refund, no questions asked.",
-  },
-  {
-    question: "What's included in the pass guarantee?",
-    answer:
-      "If you complete 80% of your personalized study plan and don't pass your exam, we'll give you 3 additional months free to prepare for your retake.",
-  },
-  {
-    question: "Can I pause my subscription?",
-    answer:
-      "Yes, you can pause your subscription for up to 3 months if you need to take a break. Your progress and study history will be saved.",
   },
   {
     question: "Is there a free trial?",
@@ -269,39 +247,15 @@ export const PRICING_FAQ = [
   {
     question: "How often is the content updated?",
     answer:
-      "We update our content within 14 days of any exam blueprint changes. Our AI continuously generates new questions to keep your practice fresh.",
-  },
-  {
-    question: "Can my company purchase team licenses?",
-    answer:
-      "Yes! Contact us for enterprise pricing. We offer volume discounts, admin dashboards, and custom integration options for teams of 5+.",
+      "We regularly update our content to match the latest PMLE exam blueprint and ensure our questions reflect current Google Cloud documentation.",
   },
 ];
 
 // Testimonials for pricing page
-export const PRICING_TESTIMONIALS = [
-  {
-    quote:
-      "PMLE Readiness paid for itself when I passed PMLE on my first try. The adaptive learning saved me at least 40 hours of study time.",
-    author: "Sarah Chen",
-    role: "ML Engineer at Google",
-    certification: "Google PMLE",
-    tier: "PMLE Readiness",
-  },
-  {
-    quote:
-      "PMLE Readiness gave me everything I needed to pass on my first attempt. Best career investment I've made.",
-    author: "Michael Rodriguez",
-    role: "Cloud Architect",
-    certification: "Google PMLE",
-    tier: "PMLE Readiness",
-  },
-  {
-    quote:
-      "The structured approach and practice questions in PMLE Readiness were exactly what I needed to feel confident on exam day.",
-    author: "Jennifer Park",
-    role: "DevOps Engineer",
-    certification: "Google PMLE",
-    tier: "PMLE Readiness",
-  },
-];
+export const PRICING_TESTIMONIALS: Array<{
+  quote: string;
+  author: string;
+  role: string;
+  certification: string;
+  tier: string;
+}> = [];
