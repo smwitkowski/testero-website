@@ -320,7 +320,7 @@ const DiagnosticStartPage = () => {
                 <Info className="inline w-4 h-4 mr-1 -mt-0.5" aria-hidden="true" />
                 <span className="sr-only">Information: </span>
                 <strong>No signup required!</strong> Take the diagnostic anonymously and get instant results.
-                Create an account later to save your progress and access personalized study plans.
+                Create an account later to save your progress and access your personalized study plan.
               </p>
             </div>
           )}
