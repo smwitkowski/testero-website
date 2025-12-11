@@ -147,7 +147,7 @@ export function PricingCard({
           data-checkout-configured={isCheckoutConfigured ? "true" : "false"}
           onClick={() => onCheckout(checkoutPriceId, tier.name)}
         >
-          Get started
+          Start Preparing
         </Button>
 
         {tier.recommended ? (

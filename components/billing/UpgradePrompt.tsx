@@ -68,7 +68,7 @@ export function UpgradePrompt({ featureName }: UpgradePromptProps) {
             Unlock Full PMLE Practice
           </DialogTitle>
           <DialogDescription className="text-base mt-2">
-            Upgrade to PMLE Readiness for unlimited practice questions and detailed explanations.
+            Unlock unlimited PMLE practice and expert explanations to accelerate your readiness.
           </DialogDescription>
         </DialogHeader>
 

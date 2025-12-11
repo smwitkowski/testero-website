@@ -178,9 +178,9 @@ export const EXAM_PACKAGES: ExamPackage[] = [
 
 // Value propositions for pricing page
 export const VALUE_PROPS = {
-  mainHeadline: "Upgrade your PMLE prep with full practice and explanations",
+  mainHeadline: "Pass your PMLE with confidence. Start preparing the smart way.",
   subHeadline:
-    "Start with a free diagnostic, then unlock full access to realistic questions, explanations, and readiness insights when you're ready.",
+    "Testero gives you personalized diagnostics, unlimited realistic practice, and expert explanations that help you learn 5× faster.",
   guarantees: [
     "7-day money-back guarantee",
     "Content regularly updated to match exam blueprint",
@@ -225,29 +225,29 @@ export const FEATURE_COMPARISON = [
 // FAQ data for pricing page
 export const PRICING_FAQ = [
   {
+    question: "Do you offer refunds?",
+    answer:
+      "Yes — 7-day no-questions-asked refund.",
+  },
+  {
+    question: "Why is Testero better than free practice questions?",
+    answer:
+      "Because free questions are outdated, don't follow the blueprint, and don't tell you what to study next. Testero does.",
+  },
+  {
+    question: "Will the questions match the real PMLE exam?",
+    answer:
+      "Yes. All content is aligned with the latest published exam blueprint and regularly updated using our AI-powered blueprint tracker.",
+  },
+  {
+    question: "Is this an official Google product?",
+    answer:
+      "No — Testero is independent.",
+  },
+  {
     question: "Can I change my subscription?",
     answer:
       "Yes! You can cancel or modify your subscription at any time. Changes are prorated, so you only pay for what you use.",
-  },
-  {
-    question: "How many practice exams can I take?",
-    answer:
-      "Free users get access to a diagnostic test and limited practice questions. Paid plans include unlimited practice questions with detailed explanations.",
-  },
-  {
-    question: "Do you offer refunds?",
-    answer:
-      "Absolutely. We offer a 7-day money-back guarantee. If you're not satisfied, contact us within 7 days for a full refund, no questions asked.",
-  },
-  {
-    question: "Is there a free trial?",
-    answer:
-      "We offer a free diagnostic test and limited practice questions. This lets you experience our platform before committing to a paid plan.",
-  },
-  {
-    question: "How often is the content updated?",
-    answer:
-      "We regularly update our content to match the latest PMLE exam blueprint and ensure our questions reflect current Google Cloud documentation.",
   },
 ];
 

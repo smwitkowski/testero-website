@@ -89,15 +89,15 @@ export function TrialConversionModal({
               <Zap className="h-5 w-5 text-yellow-500 mt-0.5" />
               <div>
                 <p className="font-medium">Unlimited Practice Questions</p>
-                <p className="text-sm text-gray-600">2,000+ questions updated weekly</p>
+                <p className="text-sm text-gray-600">200+ realistic PMLE questions</p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
               <TrendingUp className="h-5 w-5 text-blue-500 mt-0.5" />
               <div>
-                <p className="font-medium">Pass Rate Guarantee</p>
-                <p className="text-sm text-gray-600">92% first-attempt pass rate</p>
+                <p className="font-medium">Blueprint-Aligned Practice</p>
+                <p className="text-sm text-gray-600">Questions that evolve as the exam does</p>
               </div>
             </div>
           </div>

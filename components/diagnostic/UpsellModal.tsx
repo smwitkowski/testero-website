@@ -32,7 +32,7 @@ const variantConfigs: Record<UpsellVariant, VariantConfig> = {
   },
   quota_exceeded: {
     title: 'Weekly Free Limit Reached',
-    promo: 'Upgrade for unlimited practice',
+    promo: "You've reached your free question limit. Upgrade to unlock unlimited, blueprint-aligned practice.",
   },
 };
 
@@ -175,7 +175,7 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
             <Target className="mt-0.5 h-5 w-5 flex-shrink-0 text-[color:var(--tone-info)]" />
             <div>
               <div className="font-medium text-foreground">Unlimited Practice Questions</div>
-              <div className="text-sm text-muted-foreground">Comprehensive PMLE question bank</div>
+              <div className="text-sm text-muted-foreground">Blueprint-aligned PMLE practice that evolves as the exam does</div>
             </div>
           </div>
 

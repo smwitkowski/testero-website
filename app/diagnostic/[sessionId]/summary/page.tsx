@@ -680,10 +680,10 @@ const QuestionReview = ({
                     ) : !canAccessExplanations ? (
                       <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                         <p className="text-sm text-blue-700 mb-2">
-                          <strong>Explanations are available with PMLE Readiness.</strong>
+                          <strong>Explanations are available on the PMLE Readiness plan.</strong>
                         </p>
                         <p className="text-sm text-blue-600">
-                          Upgrade to PMLE Readiness to unlock detailed explanations for all questions and improve your understanding.
+                          They&apos;re the fastest way to understand concepts deeply and avoid repeated mistakes.
                         </p>
                         <Button
                           size="sm"
@@ -1445,7 +1445,7 @@ const DiagnosticSummaryPage = () => {
               <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 md:p-6 shadow-sm">
                 <h3 className="font-semibold text-slate-900 mb-2">Ready to Pass?</h3>
                 <p className="text-sm text-slate-600 mb-4">
-                  Get personalized study plans and unlimited practice
+                  To improve these weak areas, unlock personalized practice and expert explanations.
                 </p>
                 <Button
                   onClick={() => {
