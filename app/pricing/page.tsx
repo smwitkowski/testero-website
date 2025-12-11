@@ -22,6 +22,7 @@ import {
 } from "@/lib/pricing/price-utils";
 import { PricingCard } from "@/components/pricing/PricingCard";
 import { ComparisonTable } from "@/components/pricing/ComparisonTable";
+import { FreeVsPaidComparison } from "@/components/pricing/FreeVsPaidComparison";
 import { Container, Section } from "@/components/patterns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -311,6 +312,10 @@ export default function PricingPage() {
         </div>
       </Section>
 
+      {/* Free vs Paid Comparison */}
+      <Section size="lg" surface="subtle" divider="bottom">
+        <FreeVsPaidComparison />
+      </Section>
 
       {/* Feature Comparison */}
       <Section size="lg" surface="subtle" divider="bottom">
