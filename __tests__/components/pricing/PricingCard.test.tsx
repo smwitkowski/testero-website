@@ -12,7 +12,6 @@ describe("PricingCard", () => {
     annualPrice: 490,
     monthlyPriceId: "price_monthly_pro",
     annualPriceId: "price_annual_pro",
-    aiCredits: 250,
     features: ["Feature A", "Feature B"],
   } as const;
 

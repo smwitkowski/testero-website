@@ -48,7 +48,6 @@ export interface PricingTier {
   annualPrice: number;
   monthlyPriceId?: string;
   annualPriceId?: string;
-  aiCredits: number;
   features: string[];
   highlighted?: string[];
   recommended?: boolean;
@@ -62,7 +61,6 @@ export interface ExamPackage {
   months: number;
   price: number;
   priceId?: string;
-  aiCredits: number;
   features: string[];
 }
 
@@ -76,7 +74,6 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
     annualPrice: 349,
     monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY,
     annualPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL,
-    aiCredits: 5,
     features: [
       "1 certification track",
       "Core practice questions",
@@ -85,7 +82,7 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
       "Mobile access",
       "Email support",
     ],
-    highlighted: ["1 certification track", "5 AI credits/month"],
+    highlighted: ["1 certification track", "Core practice questions"],
     savingsPercentage: 25,
   },
   {
@@ -96,7 +93,6 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
     annualPrice: 549,
     monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY,
     annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL,
-    aiCredits: 20,
     features: [
       "3 certification tracks",
       "All practice modes",
@@ -108,7 +104,7 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
       "Detailed explanations",
       "Performance insights",
     ],
-    highlighted: ["3 certification tracks", "20 AI credits/month", "Advanced analytics"],
+    highlighted: ["3 certification tracks", "Adaptive practice modes", "Advanced analytics"],
     recommended: true,
     savingsPercentage: 23,
     isHidden: true,
@@ -121,7 +117,6 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
     annualPrice: 749,
     monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY,
     annualPriceId: process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL,
-    aiCredits: 50,
     features: [
       "All certifications",
       "Unlimited tracks",
@@ -134,7 +129,7 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
       "Bulk question generation",
       "Export capabilities",
     ],
-    highlighted: ["All certifications", "50 AI credits/month", "Team features"],
+    highlighted: ["All certifications", "Unlimited practice modes", "Team features"],
     savingsPercentage: 21,
     isHidden: true,
   },
@@ -148,8 +143,7 @@ export const EXAM_PACKAGES: ExamPackage[] = [
     months: 3,
     price: 99,
     priceId: process.env.NEXT_PUBLIC_STRIPE_EXAM_3MONTH,
-    aiCredits: 10,
-    features: ["Full exam content", "10 AI practice exams", "Progress tracking", "Basic analytics"],
+    features: ["Full exam content", "Unlimited core practice exams", "Progress tracking", "Basic analytics"],
   },
   {
     id: "6-month",
@@ -157,10 +151,9 @@ export const EXAM_PACKAGES: ExamPackage[] = [
     months: 6,
     price: 149,
     priceId: process.env.NEXT_PUBLIC_STRIPE_EXAM_6MONTH,
-    aiCredits: 25,
     features: [
       "Full exam content",
-      "25 AI practice exams",
+      "Adaptive practice and domain drills",
       "Progress tracking",
       "Advanced analytics",
       "Priority support",
@@ -172,10 +165,9 @@ export const EXAM_PACKAGES: ExamPackage[] = [
     months: 12,
     price: 199,
     priceId: process.env.NEXT_PUBLIC_STRIPE_EXAM_12MONTH,
-    aiCredits: 50,
     features: [
       "Full exam content",
-      "50 AI practice exams",
+      "Unlimited practice modes",
       "Progress tracking",
       "Advanced analytics",
       "Priority support",
@@ -183,19 +175,6 @@ export const EXAM_PACKAGES: ExamPackage[] = [
     ],
   },
 ];
-
-// AI Credit pricing and usage
-export const AI_CREDIT_USAGE = {
-  fullExam: 1,
-  domainQuiz: 0.5,
-  explanation: 0.2,
-  additionalCreditPrice: 2,
-  bulkDiscounts: [
-    { credits: 10, price: 18, discount: 10 },
-    { credits: 25, price: 40, discount: 20 },
-    { credits: 50, price: 75, discount: 25 },
-  ],
-};
 
 // Value propositions for pricing page
 export const VALUE_PROPS = {
@@ -228,7 +207,7 @@ export const FEATURE_COMPARISON = [
     features: [
       { name: "Practice Questions", basic: "500+", pro: "2,000+", allAccess: "Unlimited" },
       { name: "Certification Tracks", basic: "1", pro: "3", allAccess: "All" },
-      { name: "AI Credits/Month", basic: "5", pro: "20", allAccess: "50" },
+      { name: "Practice Exams", basic: "Unlimited core", pro: "Adaptive + domain", allAccess: "All modes" },
       { name: "Diagnostic Tests", basic: true, pro: true, allAccess: true },
       { name: "Progress Tracking", basic: true, pro: true, allAccess: true },
     ],
@@ -263,9 +242,9 @@ export const PRICING_FAQ = [
       "Yes! You can cancel or modify your subscription at any time. Changes are prorated, so you only pay for what you use.",
   },
   {
-    question: "What happens when I run out of AI credits?",
+    question: "How many practice exams can I take?",
     answer:
-      "You can purchase additional credits at $2 per credit. Basic practice questions don't require credits.",
+      "Every plan includes unlimited practice sessions. Pro unlocks adaptive and domain-specific drills, while All-Access gives you every mode plus team readiness reporting.",
   },
   {
     question: "Do you offer refunds?",
@@ -280,7 +259,7 @@ export const PRICING_FAQ = [
   {
     question: "Can I pause my subscription?",
     answer:
-      "Yes, you can pause your subscription for up to 3 months if you need to take a break. Your progress and credits will be saved.",
+      "Yes, you can pause your subscription for up to 3 months if you need to take a break. Your progress and study history will be saved.",
   },
   {
     question: "Is there a free trial?",

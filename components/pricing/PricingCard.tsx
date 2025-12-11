@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CheckCircle, Sparkles, TrendingUp } from "lucide-react";
+import { CheckCircle, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,7 +24,6 @@ interface PricingCardProps {
     annualPrice: number;
     monthlyPriceId?: string;
     annualPriceId?: string;
-    aiCredits: number;
     features: string[];
     highlighted?: string[];
     recommended?: boolean;
@@ -114,10 +113,6 @@ export function PricingCard({
               That&apos;s only ${monthlyEquivalent}/month
             </p>
           ) : null}
-          <div className="flex items-center gap-2 text-sm font-medium text-accent-foreground">
-            <TrendingUp className="h-4 w-4" aria-hidden="true" />
-            {tier.aiCredits} AI credits included monthly
-          </div>
         </div>
 
         {tier.highlighted && tier.highlighted.length > 0 ? (
