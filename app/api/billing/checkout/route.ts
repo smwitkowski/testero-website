@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { StripeService } from "@/lib/stripe/stripe-service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
-import { SUBSCRIPTION_TIERS, EXAM_PACKAGES } from "@/lib/pricing/constants";
+import { SUBSCRIPTION_TIERS } from "@/lib/pricing/constants";
 import { z } from "zod";
 
 interface CheckoutSessionResponse {
@@ -61,11 +61,6 @@ export async function POST(
     for (const tier of SUBSCRIPTION_TIERS) {
       if (tier.monthlyPriceId) validPrices.push(tier.monthlyPriceId);
       if (tier.annualPriceId) validPrices.push(tier.annualPriceId);
-    }
-
-    // Add exam package price IDs
-    for (const pkg of EXAM_PACKAGES) {
-      if (pkg.priceId) validPrices.push(pkg.priceId);
     }
 
     // Validate price ID against our configured prices
