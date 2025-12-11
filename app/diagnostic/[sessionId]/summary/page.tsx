@@ -624,7 +624,7 @@ const QuestionReview = ({
                       }}
                       className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
                     >
-                      View explanation (Premium)
+                      View explanation (PMLE Readiness)
                     </button>
                   )}
                   <button className="text-sm text-slate-500 hover:text-slate-700">
@@ -680,10 +680,10 @@ const QuestionReview = ({
                     ) : !canAccessExplanations ? (
                       <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                         <p className="text-sm text-blue-700 mb-2">
-                          <strong>Explanations are available for subscribers.</strong>
+                          <strong>Explanations are available with PMLE Readiness.</strong>
                         </p>
                         <p className="text-sm text-blue-600">
-                          Upgrade to unlock detailed explanations for all questions and improve your understanding.
+                          Upgrade to PMLE Readiness to unlock detailed explanations for all questions and improve your understanding.
                         </p>
                         <Button
                           size="sm"
@@ -691,7 +691,7 @@ const QuestionReview = ({
                           className="mt-3"
                           onClick={() => onUpgrade?.()}
                         >
-                          Upgrade for explanations
+                          Upgrade to PMLE Readiness
                         </Button>
                       </div>
                     ) : null}
@@ -1455,7 +1455,7 @@ const DiagnosticSummaryPage = () => {
                   size="sm"
                   fullWidth
                 >
-                  Upgrade to Premium
+                  Upgrade to PMLE Readiness
                 </Button>
                 <p className="text-xs text-slate-500 mt-2 text-center">7-day money-back guarantee</p>
               </div>
