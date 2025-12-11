@@ -10,7 +10,6 @@ import {
   Award,
   ChevronDown,
   ChevronUp,
-  Star,
   Zap,
   RefreshCw,
 } from "lucide-react";
@@ -32,7 +31,6 @@ import {
   VALUE_PROPS,
   FEATURE_COMPARISON,
   PRICING_FAQ,
-  PRICING_TESTIMONIALS,
 } from "@/lib/pricing/constants";
 import { cn } from "@/lib/utils";
 
@@ -313,31 +311,6 @@ export default function PricingPage() {
         </div>
       </Section>
 
-      {/* Social Proof Section */}
-      <Section size="lg" surface="default">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-            Trusted by Cloud Professionals Worldwide
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {PRICING_TESTIMONIALS.map((testimonial, index) => (
-              <div key={index} className="bg-gray-50 rounded-lg p-6">
-                <div className="flex mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-gray-700 mb-4 italic">&ldquo;{testimonial.quote}&rdquo;</p>
-                <div className="border-t pt-4">
-                  <p className="font-semibold text-gray-900">{testimonial.author}</p>
-                  <p className="text-sm text-gray-600">{testimonial.role}</p>
-                  <p className="text-sm text-blue-600 font-medium mt-1">
-                    {testimonial.tier} Customer
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-      </Section>
 
       {/* Feature Comparison */}
       <Section size="lg" surface="subtle" divider="bottom">
@@ -416,7 +389,7 @@ export default function PricingPage() {
         <Container className="max-w-4xl text-center text-white">
           <h2 className="text-3xl font-bold text-white mb-4">Ready to Pass Your Certification?</h2>
           <p className="text-xl text-blue-100 mb-8">
-            Join thousands of professionals who achieved their certification goals with Testero
+            Start your PMLE preparation journey today
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
@@ -442,7 +415,7 @@ export default function PricingPage() {
           </div>
           <div className="mt-8 flex items-center justify-center gap-2 text-white">
             <RefreshCw className="h-5 w-5" />
-            <span>30-day money-back guarantee on all plans</span>
+            <span>7-day money-back guarantee on all plans</span>
           </div>
         </Container>
       </Section>

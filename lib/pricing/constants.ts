@@ -178,25 +178,24 @@ export const EXAM_PACKAGES: ExamPackage[] = [
 
 // Value propositions for pricing page
 export const VALUE_PROPS = {
-  mainHeadline: "Pass Your Certification 15% Faster—Guaranteed",
+  mainHeadline: "Master the Google PMLE Exam",
   subHeadline:
-    "Join 5,000+ professionals who passed on their first attempt with AI-powered adaptive learning",
+    "Diagnostic-first readiness assessment with documentation-grounded explanations to help you pass the Professional Machine Learning Engineer certification",
   guarantees: [
     "7-day money-back guarantee",
-    "Pass guarantee or get 3 months free",
-    "Content updated within 14 days of exam changes",
+    "Content regularly updated to match exam blueprint",
   ],
   trustBadges: [
-    "5,000+ Professionals Certified",
-    "92% First-Attempt Pass Rate",
-    "4.8/5 Average Rating",
-    "Updated Weekly",
+    "PMLE-Focused",
+    "Diagnostic-First",
+    "Detailed Explanations",
+    "Mobile Access",
   ],
   valueAnchors: {
     examCost: "Invest $149 to protect your $300 exam fee",
     salary: "PMLE-certified professionals earn $150k+ on average",
-    time: "Save 40% study time with AI-personalized paths",
-    success: "Join 5,000+ professionals who passed on first attempt",
+    time: "Diagnostic test identifies your weak areas for focused study",
+    success: "Start with a free diagnostic to assess your readiness",
   },
 };
 
@@ -244,22 +243,12 @@ export const PRICING_FAQ = [
   {
     question: "How many practice exams can I take?",
     answer:
-      "Every plan includes unlimited practice sessions. Pro unlocks adaptive and domain-specific drills, while All-Access gives you every mode plus team readiness reporting.",
+      "Free users get access to a diagnostic test and limited practice questions. Paid plans include unlimited practice questions with detailed explanations.",
   },
   {
     question: "Do you offer refunds?",
     answer:
       "Absolutely. We offer a 7-day money-back guarantee. If you're not satisfied, contact us within 7 days for a full refund, no questions asked.",
-  },
-  {
-    question: "What's included in the pass guarantee?",
-    answer:
-      "If you complete 80% of your personalized study plan and don't pass your exam, we'll give you 3 additional months free to prepare for your retake.",
-  },
-  {
-    question: "Can I pause my subscription?",
-    answer:
-      "Yes, you can pause your subscription for up to 3 months if you need to take a break. Your progress and study history will be saved.",
   },
   {
     question: "Is there a free trial?",
@@ -269,39 +258,15 @@ export const PRICING_FAQ = [
   {
     question: "How often is the content updated?",
     answer:
-      "We update our content within 14 days of any exam blueprint changes. Our AI continuously generates new questions to keep your practice fresh.",
-  },
-  {
-    question: "Can my company purchase team licenses?",
-    answer:
-      "Yes! Contact us for enterprise pricing. We offer volume discounts, admin dashboards, and custom integration options for teams of 5+.",
+      "We regularly update our content to match the latest PMLE exam blueprint and ensure our questions reflect current Google Cloud documentation.",
   },
 ];
 
 // Testimonials for pricing page
-export const PRICING_TESTIMONIALS = [
-  {
-    quote:
-      "PMLE Readiness paid for itself when I passed PMLE on my first try. The adaptive learning saved me at least 40 hours of study time.",
-    author: "Sarah Chen",
-    role: "ML Engineer at Google",
-    certification: "Google PMLE",
-    tier: "PMLE Readiness",
-  },
-  {
-    quote:
-      "PMLE Readiness gave me everything I needed to pass on my first attempt. Best career investment I've made.",
-    author: "Michael Rodriguez",
-    role: "Cloud Architect",
-    certification: "Google PMLE",
-    tier: "PMLE Readiness",
-  },
-  {
-    quote:
-      "The structured approach and practice questions in PMLE Readiness were exactly what I needed to feel confident on exam day.",
-    author: "Jennifer Park",
-    role: "DevOps Engineer",
-    certification: "Google PMLE",
-    tier: "PMLE Readiness",
-  },
-];
+export const PRICING_TESTIMONIALS: Array<{
+  quote: string;
+  author: string;
+  role: string;
+  certification: string;
+  tier: string;
+}> = [];
