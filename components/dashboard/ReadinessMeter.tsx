@@ -131,7 +131,7 @@ export const ReadinessMeter: React.FC<ReadinessMeterProps> = ({
 
         {showUpgradeCTA && onUpgrade && (
           <Button onClick={onUpgrade} size="sm" tone="accent" variant="outline" className="w-full max-w-sm">
-            Upgrade to Premium
+            Upgrade to PMLE Readiness
           </Button>
         )}
 

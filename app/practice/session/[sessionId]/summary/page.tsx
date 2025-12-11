@@ -394,7 +394,7 @@ const PracticeSummaryPage = () => {
                         ) : (
                           <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                             <p className="text-sm text-blue-700">
-                              Explanation not available. Upgrade to Premium for detailed explanations.
+                              Explanation not available. Upgrade to PMLE Readiness for detailed explanations.
                             </p>
                           </div>
                         )}

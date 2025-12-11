@@ -153,7 +153,7 @@ export const ReadinessSnapshotCard: React.FC<ReadinessSnapshotCardProps> = ({
         {showUpgradeCTA && onUpgrade && (
           <div className="pt-4 border-t border-border/60">
             <Button onClick={onUpgrade} variant="outline" tone="accent" className="w-full">
-              Upgrade to Premium
+              Upgrade to PMLE Readiness
             </Button>
           </div>
         )}

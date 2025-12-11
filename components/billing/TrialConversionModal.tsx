@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { usePostHog } from "posthog-js/react";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Zap, TrendingUp } from "lucide-react";
+import { useStartBasicCheckout } from "@/hooks/useStartBasicCheckout";
 
 interface TrialConversionModalProps {
   open: boolean;
@@ -30,54 +31,24 @@ export function TrialConversionModal({
   const router = useRouter();
   const { user } = useAuth();
   const posthog = usePostHog();
-  const [isLoading, setIsLoading] = useState(false);
+  const { startBasicCheckout } = useStartBasicCheckout();
 
-  const handleStartTrial = async () => {
-    try {
-      setIsLoading(true);
+  const handleUpgrade = () => {
+    // Track upgrade CTA click
+    posthog?.capture("upgrade_cta_clicked", {
+      source: "diagnostic_summary_modal",
+      diagnostic_score: diagnosticScore,
+      weak_areas: weakAreas,
+    });
 
-      // Track trial CTA click
-      posthog?.capture("trial_cta_clicked", {
-        source: "diagnostic_summary_modal",
-        diagnostic_score: diagnosticScore,
-        weak_areas: weakAreas,
-      });
-
-      // If not logged in, redirect to signup
-      if (!user) {
-        router.push("/signup?redirect=/api/billing/trial&source=diagnostic");
-        return;
-      }
-
-      // Start trial via API
-      const response = await fetch("/api/billing/trial", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error("Trial API error:", data);
-        throw new Error(data.error || "Failed to start trial");
-      }
-
-      // Track successful trial start
-      posthog?.capture("trial_started_from_modal", {
-        trial_ends_at: data.trialEndsAt,
-        subscription_id: data.subscriptionId,
-      });
-
-      // Redirect to dashboard
-      router.push("/dashboard?trial=started");
-    } catch (error) {
-      console.error("Error starting trial:", error);
-      // Could show error toast here
-    } finally {
-      setIsLoading(false);
+    // If not logged in, redirect to signup with pricing redirect
+    if (!user) {
+      router.push("/signup?redirect=/pricing&source=diagnostic");
+      return;
     }
+
+    // Start checkout flow
+    startBasicCheckout("diagnostic_summary_modal");
   };
 
   // Personalized headline based on score
@@ -97,7 +68,7 @@ export function TrialConversionModal({
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">{getHeadline()}</DialogTitle>
           <DialogDescription className="text-base mt-2">
-            Start your 14-day free trial and unlock your personalized study path
+            Upgrade now to unlock your personalized study path
           </DialogDescription>
         </DialogHeader>
 
@@ -131,24 +102,15 @@ export function TrialConversionModal({
             </div>
           </div>
 
-          {/* Urgency Element */}
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <p className="text-sm text-amber-800">
-              <strong>Limited time offer:</strong> Start today and get 30% off your first month
-              after trial
-            </p>
-          </div>
-
           {/* CTAs */}
           <div className="flex flex-col gap-2">
             <Button
-              onClick={handleStartTrial}
-              disabled={isLoading}
+              onClick={handleUpgrade}
               size="lg"
               tone="accent"
               fullWidth
             >
-              {isLoading ? "Starting..." : "Start 14-Day Free Trial"}
+              Upgrade to PMLE Readiness
             </Button>
             <Button onClick={onClose} variant="ghost" tone="neutral" size="sm" fullWidth>
               Maybe later
@@ -157,7 +119,7 @@ export function TrialConversionModal({
 
           {/* Trust Signal */}
           <p className="text-xs text-center text-gray-500">
-            No credit card required • Cancel anytime
+            Cancel anytime • 7-day money-back guarantee
           </p>
         </div>
       </DialogContent>

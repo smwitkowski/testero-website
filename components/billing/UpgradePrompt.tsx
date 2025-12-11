@@ -65,11 +65,10 @@ export function UpgradePrompt({ featureName }: UpgradePromptProps) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">
-            Unlock premium features
+            Unlock Full PMLE Practice
           </DialogTitle>
           <DialogDescription className="text-base mt-2">
-            A paid plan is required to use this feature. Choose a plan to
-            continue.
+            Upgrade to PMLE Readiness for unlimited practice questions and detailed explanations.
           </DialogDescription>
         </DialogHeader>
 
@@ -80,7 +79,7 @@ export function UpgradePrompt({ featureName }: UpgradePromptProps) {
             tone="accent"
             fullWidth
           >
-            Choose a plan
+            Upgrade to PMLE Readiness
           </Button>
           <Button
             onClick={handleDismiss}

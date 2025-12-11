@@ -203,7 +203,7 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
           fullWidth
           className="mt-5 rounded-xl"
         >
-          Upgrade to Premium
+          Upgrade to PMLE Readiness
         </Button>
 
         {/* Secondary Action */}

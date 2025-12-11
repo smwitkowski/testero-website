@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { UpgradePrompt } from "@/components/billing/UpgradePrompt";
 import { ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import { resetMockRouter } from "@/__tests__/test-utils/mockNextNavigation";
+import { useStartBasicCheckout } from "@/hooks/useStartBasicCheckout";
 
 // Mock PostHog
 jest.mock("posthog-js/react", () => ({
@@ -18,6 +19,11 @@ jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
 }));
 
+// Mock useStartBasicCheckout
+jest.mock("@/hooks/useStartBasicCheckout", () => ({
+  useStartBasicCheckout: jest.fn(),
+}));
+
 const mockPostHog = {
   capture: jest.fn(),
   get_distinct_id: jest.fn(() => "did-123"),
@@ -27,22 +33,27 @@ const mockRouter = {
   push: jest.fn(),
 };
 
+const mockStartBasicCheckout = jest.fn();
+
 describe("UpgradePrompt", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (usePostHog as jest.Mock).mockReturnValue(mockPostHog);
     (usePathname as jest.Mock).mockReturnValue("/practice");
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
+    (useStartBasicCheckout as jest.Mock).mockReturnValue({
+      startBasicCheckout: mockStartBasicCheckout,
+    });
     resetMockRouter({ pathname: "/practice" });
   });
 
   it("renders a Dialog open by default with correct title and body", () => {
     render(<UpgradePrompt featureName="practice" />);
 
-    expect(screen.getByText("Unlock premium features")).toBeInTheDocument();
+    expect(screen.getByText("Unlock Full PMLE Practice")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "A paid plan is required to use this feature. Choose a plan to continue."
+        "Upgrade to PMLE Readiness for unlimited practice questions and detailed explanations."
       )
     ).toBeInTheDocument();
   });
@@ -85,12 +96,12 @@ describe("UpgradePrompt", () => {
     expect(mockPostHog.capture).toHaveBeenCalledTimes(1);
   });
 
-  it("captures gate_cta_clicked and navigates to /pricing when primary CTA is clicked", async () => {
+  it("captures gate_cta_clicked and starts checkout when primary CTA is clicked", async () => {
     const user = userEvent.setup();
     render(<UpgradePrompt featureName="practice" />);
 
     const primaryButton = screen.getByRole("button", {
-      name: /choose a plan/i,
+      name: /upgrade to pmle readiness/i,
     });
     await user.click(primaryButton);
 
@@ -102,7 +113,7 @@ describe("UpgradePrompt", () => {
         feature: "practice",
       })
     );
-    expect(mockRouter.push).toHaveBeenCalledWith("/pricing");
+    expect(mockStartBasicCheckout).toHaveBeenCalledWith("upgrade_prompt_practice");
   });
 
   it("captures gate_dismissed and closes modal when secondary CTA is clicked", async () => {
@@ -137,7 +148,7 @@ describe("UpgradePrompt", () => {
 
     // Check gate_cta_clicked includes feature
     const primaryButton = screen.getByRole("button", {
-      name: /choose a plan/i,
+      name: /upgrade to pmle readiness/i,
     });
     await user.click(primaryButton);
 
@@ -171,7 +182,7 @@ describe("UpgradePrompt", () => {
       render(<UpgradePrompt featureName="practice" />);
     }).not.toThrow();
 
-    expect(screen.getByText("Unlock premium features")).toBeInTheDocument();
+    expect(screen.getByText("Unlock Full PMLE Practice")).toBeInTheDocument();
   });
 });
 
