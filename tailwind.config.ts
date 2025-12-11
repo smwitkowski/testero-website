@@ -147,10 +147,10 @@ const config = {
         'card-sm': 'var(--gap-card-sm)',
         'card-md': 'var(--gap-card-md)',
         'card-lg': 'var(--gap-card-lg)',
-        section_sm: "var(--section-sm)",
-        section_md: "var(--section-md)",
-        section_lg: "var(--section-lg)",
-        section_xl: "var(--section-xl)",
+        'section-sm': "var(--section-sm)",
+        'section-md': "var(--section-md)",
+        'section-lg': "var(--section-lg)",
+        'section-xl': "var(--section-xl)",
       },
 
       // Typography

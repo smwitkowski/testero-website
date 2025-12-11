@@ -27,10 +27,10 @@ const outer = cva("relative w-full", {
 const inner = cva("w-full", {
   variants: {
     size: {
-      sm: "py-section_sm",
-      md: "py-section_md",
-      lg: "py-section_lg",
-      xl: "py-section_xl",
+      sm: "py-section-sm",
+      md: "py-section-md",
+      lg: "py-section-lg",
+      xl: "py-section-xl",
     },
   },
   defaultVariants: { size: "lg" },

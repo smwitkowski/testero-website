@@ -228,7 +228,7 @@ export default function PricingPage() {
       )}
 
       {/* Billing Toggle */}
-      <Container className="mt-8 mb-10 relative z-10">
+      <Container className="py-8 relative z-10">
         <div className="flex justify-center">
           <div className="inline-flex items-center bg-white rounded-full shadow-lg p-1">
             <button
@@ -265,7 +265,7 @@ export default function PricingPage() {
       {/* Main Pricing Cards */}
       <Section
         id="pricing-cards"
-        size="lg"
+        size="xl"
         surface="subtle"
         divider="both"
       >
@@ -286,7 +286,7 @@ export default function PricingPage() {
       </Section>
 
       {/* Plan Highlights */}
-      <Section size="lg" surface="subtle" divider="bottom">
+      <Section size="xl" surface="subtle" divider="bottom">
         <div className="mx-auto max-w-4xl">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-4">Everything You Need to Pass the PMLE</h2>
@@ -313,12 +313,12 @@ export default function PricingPage() {
       </Section>
 
       {/* Free vs Paid Comparison */}
-      <Section size="lg" surface="subtle" divider="bottom">
+      <Section size="xl" surface="subtle" divider="bottom">
         <FreeVsPaidComparison />
       </Section>
 
       {/* Feature Comparison */}
-      <Section size="lg" surface="subtle" divider="bottom">
+      <Section size="xl" surface="subtle" divider="bottom">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Compare Plans in Detail</h2>
             <button
@@ -353,7 +353,7 @@ export default function PricingPage() {
       </Section>
 
       {/* FAQ Section */}
-      <Section size="lg" surface="default" divider="bottom">
+      <Section size="xl" surface="default" divider="bottom">
         <div className="mx-auto max-w-3xl">
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
             Frequently Asked Questions
@@ -401,15 +401,13 @@ export default function PricingPage() {
               asChild
               size="lg"
               tone="accent"
-              className="text-lg"
             >
               <Link href="/signup">Start Free Diagnostic</Link>
             </Button>
             <Button
               size="lg"
-              variant="outline"
+              variant="soft"
               tone="accent"
-              className="text-lg"
               onClick={() => {
                 const element = document.getElementById("pricing-cards");
                 element?.scrollIntoView({ behavior: "smooth" });

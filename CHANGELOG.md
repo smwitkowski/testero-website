@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Pricing Page Section Spacing**: Fixed inadequate vertical spacing between sections on the pricing page by correcting Tailwind v4 spacing utility generation. Updated `tailwind.config.ts` to use kebab-case spacing keys (`'section-sm'`, `'section-md'`, etc.) instead of snake_case, ensuring utilities like `py-section-lg` are properly generated. Updated `components/patterns/section.tsx` to use proper Tailwind utilities instead of arbitrary values. Increased section sizes on pricing page from `lg` (48px) to `xl` (64px) for better visual breathing room. Fixed button styling in final CTA section by removing custom className overrides and changing outline variant to soft variant for better contrast on gradient backgrounds. All pages using the Section component now inherit proper spacing automatically.
+
 ### Changed
 - **Mobile Navigation Redesign**: Rebuilt the marketing navbar’s mobile drawer (`components/marketing/navigation/navbar.tsx`) with structured primary/account sections, consistent left-aligned spacing, backdrop overlay with scroll locking, improved hover/tap states, a dedicated appearance row for the theme toggle, and updated footer styling for a more polished SaaS-grade experience.
 - **Global Accent Color**: Changed accent color from orange to blue across the entire design system for a more professional, calmer aesthetic. Updated `--tone-accent` CSS variable in `styles/tokens.css` (light mode: blue-600, dark mode: blue-500) and semantic accent tokens in `lib/design-system/tokens/colors.ts` to use blue scale instead of orange. This affects all CTAs site-wide including hero, pricing cards, and benefits section buttons.
