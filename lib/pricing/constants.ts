@@ -75,14 +75,14 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
     monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY,
     annualPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL,
     features: [
-      "1 certification track",
-      "Core practice questions",
-      "Basic analytics dashboard",
+      "Full PMLE question bank (200+ questions)",
+      "Realistic scenario-based questions",
+      "Detailed explanations for every answer",
+      "Domain-level readiness breakdown",
+      "Practice on your weak areas",
       "Progress tracking",
-      "Mobile access",
-      "Email support",
     ],
-    highlighted: ["1 certification track", "Core practice questions"],
+    highlighted: ["Full PMLE question bank", "Domain-level readiness breakdown"],
     savingsPercentage: 25,
   },
   {
@@ -178,9 +178,9 @@ export const EXAM_PACKAGES: ExamPackage[] = [
 
 // Value propositions for pricing page
 export const VALUE_PROPS = {
-  mainHeadline: "Master the Google PMLE Exam",
+  mainHeadline: "Upgrade your PMLE prep with full practice and explanations",
   subHeadline:
-    "Diagnostic-first readiness assessment with documentation-grounded explanations to help you pass the Professional Machine Learning Engineer certification",
+    "Start with a free diagnostic, then unlock full access to realistic questions, explanations, and readiness insights when you're ready.",
   guarantees: [
     "7-day money-back guarantee",
     "Content regularly updated to match exam blueprint",
@@ -189,7 +189,7 @@ export const VALUE_PROPS = {
     "PMLE-Focused",
     "Diagnostic-First",
     "Detailed Explanations",
-    "Mobile Access",
+    "Domain Readiness",
   ],
   valueAnchors: {
     examCost: "Invest $149 to protect your $300 exam fee",
@@ -204,31 +204,20 @@ export const FEATURE_COMPARISON = [
   {
     category: "Core Features",
     features: [
-      { name: "Practice Questions", basic: "500+", pro: "2,000+", allAccess: "Unlimited" },
-      { name: "Certification Tracks", basic: "1", pro: "3", allAccess: "All" },
-      { name: "Practice Exams", basic: "Unlimited core", pro: "Adaptive + domain", allAccess: "All modes" },
-      { name: "Diagnostic Tests", basic: true, pro: true, allAccess: true },
-      { name: "Progress Tracking", basic: true, pro: true, allAccess: true },
+      { name: "PMLE Question Bank", basic: "200+ questions" },
+      { name: "Realistic Scenario Questions", basic: true },
+      { name: "Detailed Explanations", basic: true },
+      { name: "Diagnostic Tests", basic: true },
+      { name: "Domain-Level Readiness", basic: true },
+      { name: "Progress Tracking", basic: true },
     ],
   },
   {
-    category: "Advanced Features",
+    category: "Practice & Study",
     features: [
-      { name: "Adaptive Learning", basic: false, pro: true, allAccess: true },
-      { name: "Spaced Repetition", basic: false, pro: true, allAccess: true },
-      { name: "Performance Analytics", basic: "Basic", pro: "Advanced", allAccess: "Premium" },
-      { name: "Custom Study Plans", basic: false, pro: false, allAccess: true },
-      { name: "Team Features", basic: false, pro: false, allAccess: true },
-    ],
-  },
-  {
-    category: "Support & Resources",
-    features: [
-      { name: "Support", basic: "Email", pro: "Priority", allAccess: "White-glove" },
-      { name: "Response Time", basic: "48h", pro: "24h", allAccess: "2h" },
-      { name: "1-on-1 Coaching", basic: false, pro: false, allAccess: "1 session" },
-      { name: "Exclusive Content", basic: false, pro: "Early access", allAccess: true },
-      { name: "API Access", basic: false, pro: false, allAccess: true },
+      { name: "Practice on Weak Areas", basic: true },
+      { name: "Scenario-Based Questions", basic: true },
+      { name: "Documentation-Grounded Explanations", basic: true },
     ],
   },
 ];

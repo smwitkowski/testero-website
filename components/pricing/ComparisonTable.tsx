@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 interface Feature {
   name: string;
   basic: string | boolean;
-  pro: string | boolean;
-  allAccess: string | boolean;
+  pro?: string | boolean;
+  allAccess?: string | boolean;
 }
 
 interface FeatureCategory {
@@ -43,47 +43,14 @@ export function ComparisonTable({ categories, onSelectPlan }: ComparisonTablePro
               <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Features</th>
               <th className="px-6 py-4 text-center">
                 <div className="space-y-1">
-                  <div className="text-lg font-bold text-gray-900">Basic</div>
+                  <div className="text-lg font-bold text-gray-900">PMLE Readiness</div>
                   <div className="text-sm text-gray-600">$39/month</div>
                   {onSelectPlan && (
                     <button
                       onClick={() => onSelectPlan("basic")}
-                      className="mt-2 rounded-md bg-gray-100 px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
-                    >
-                      Select Basic
-                    </button>
-                  )}
-                </div>
-              </th>
-              <th className="px-6 py-4 text-center bg-blue-50">
-                <div className="space-y-1">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="text-lg font-bold text-gray-900">Pro</div>
-                    <span className="rounded-full bg-blue-500 px-2 py-0.5 text-xs font-semibold text-white">
-                      POPULAR
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-600">$59/month</div>
-                  {onSelectPlan && (
-                    <button
-                      onClick={() => onSelectPlan("pro")}
                       className="mt-2 rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
                     >
-                      Select Pro
-                    </button>
-                  )}
-                </div>
-              </th>
-              <th className="px-6 py-4 text-center">
-                <div className="space-y-1">
-                  <div className="text-lg font-bold text-gray-900">All-Access</div>
-                  <div className="text-sm text-gray-600">$79/month</div>
-                  {onSelectPlan && (
-                    <button
-                      onClick={() => onSelectPlan("all-access")}
-                      className="mt-2 rounded-md bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
-                    >
-                      Select All-Access
+                      Get Started
                     </button>
                   )}
                 </div>
@@ -95,7 +62,7 @@ export function ComparisonTable({ categories, onSelectPlan }: ComparisonTablePro
               <React.Fragment key={category.category}>
                 <tr className="border-t-2 border-gray-200">
                   <td
-                    colSpan={4}
+                    colSpan={2}
                     className="bg-gray-50 px-6 py-3 text-sm font-semibold text-gray-900"
                   >
                     {category.category}
@@ -111,12 +78,6 @@ export function ComparisonTable({ categories, onSelectPlan }: ComparisonTablePro
                   >
                     <td className="px-6 py-4 text-sm text-gray-700">{feature.name}</td>
                     <td className="px-6 py-4 text-center">{renderFeatureValue(feature.basic)}</td>
-                    <td className="px-6 py-4 text-center bg-blue-50/30">
-                      {renderFeatureValue(feature.pro)}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {renderFeatureValue(feature.allAccess)}
-                    </td>
                   </tr>
                 ))}
               </React.Fragment>
@@ -137,19 +98,9 @@ export function ComparisonTable({ categories, onSelectPlan }: ComparisonTablePro
               {category.features.map((feature) => (
                 <div key={feature.name} className="mb-4 last:mb-0">
                   <div className="mb-2 text-sm font-medium text-gray-700">{feature.name}</div>
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-lg bg-gray-50 p-2">
-                      <div className="text-xs font-medium text-gray-600 mb-1">Basic</div>
-                      {renderFeatureValue(feature.basic)}
-                    </div>
-                    <div className="rounded-lg bg-blue-50 p-2">
-                      <div className="text-xs font-medium text-blue-600 mb-1">Pro</div>
-                      {renderFeatureValue(feature.pro)}
-                    </div>
-                    <div className="rounded-lg bg-gray-50 p-2">
-                      <div className="text-xs font-medium text-gray-600 mb-1">All-Access</div>
-                      {renderFeatureValue(feature.allAccess)}
-                    </div>
+                  <div className="rounded-lg bg-blue-50 p-3 text-center">
+                    <div className="text-xs font-medium text-blue-600 mb-1">PMLE Readiness</div>
+                    {renderFeatureValue(feature.basic)}
                   </div>
                 </div>
               ))}

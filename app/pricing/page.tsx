@@ -37,18 +37,18 @@ import { cn } from "@/lib/utils";
 const PLAN_HIGHLIGHTS = [
   {
     icon: Zap,
-    title: "Adaptive Practice Exams",
-    description: "Unlimited full-length simulations that mirror the real exam and update with each release.",
+    title: "Full PMLE Question Bank",
+    description: "200+ realistic questions covering all exam domains, updated to match the latest blueprint.",
   },
   {
     icon: TrendingUp,
-    title: "Targeted Domain Drills",
-    description: "Focus on weak domains with auto-generated question sets and readiness scoring.",
+    title: "Domain Readiness Insights",
+    description: "See exactly where you stand in each PMLE domain and focus your study time effectively.",
   },
   {
     icon: Award,
-    title: "Detailed AI Explanations",
-    description: "Step-by-step rationales for every answer so you understand the why—not just the what.",
+    title: "Detailed Explanations",
+    description: "Learn the why behind every answer with explanations grounded in Google Cloud documentation.",
   },
 ];
 
@@ -288,9 +288,9 @@ export default function PricingPage() {
       <Section size="lg" surface="subtle" divider="bottom">
         <div className="mx-auto max-w-4xl">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-4">Everything You Need to Pass</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-4">Everything You Need to Pass the PMLE</h2>
             <p className="text-gray-600 dark:text-slate-300">
-              Every plan includes unlimited practice, diagnostic insights, and the AI explanations our learners love.
+              Full access to realistic PMLE questions, detailed explanations, and domain-level readiness insights.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
