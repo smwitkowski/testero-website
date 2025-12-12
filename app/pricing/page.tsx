@@ -12,6 +12,8 @@ import {
   ChevronUp,
   Zap,
   RefreshCw,
+  X,
+  AlertCircle,
 } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
@@ -59,6 +61,7 @@ export default function PricingPage() {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const errorTimeoutRef = React.useRef<number | null>(null);
   const { user } = useAuth();
   const router = useRouter();
   const posthog = usePostHog();
@@ -76,6 +79,17 @@ export default function PricingPage() {
 
   const handleCheckout = async (priceId: string, planName: string) => {
     try {
+      // Validate price ID format (Stripe price IDs start with price_)
+      // If it's a fallback ID (tier-billing format), redirect to signup
+      if (!priceId.startsWith("price_")) {
+        trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_ATTEMPT, {
+          plan_name: planName,
+          source: "pricing_checkout_missing_price_id",
+        });
+        router.push("/signup?redirect=/pricing");
+        return;
+      }
+
       // Calculate analytics properties
       const tierName = getTierNameFromPriceId(priceId);
       const paymentMode = getPaymentMode(priceId);
@@ -134,6 +148,8 @@ export default function PricingPage() {
       // Redirect to Stripe Checkout
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned from server");
       }
     } catch (error) {
       console.error("Checkout error:", error);
@@ -142,8 +158,10 @@ export default function PricingPage() {
       const paymentMode = getPaymentMode(priceId);
       const planType = getPlanType(priceId);
 
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
       trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_ERROR, {
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: errorMessage,
         plan_name: planName,
         tier_name: tierName,
         billing_interval: billingInterval,
@@ -152,8 +170,21 @@ export default function PricingPage() {
         plan_type: planType,
         user_id: user?.id,
       });
-      setError("Failed to start checkout. Please try again.");
-      setTimeout(() => setError(null), 5000);
+
+      // Provide more specific error messages
+      let userFriendlyError = "Failed to start checkout. Please try again.";
+      if (errorMessage.includes("price") || errorMessage.includes("Price")) {
+        userFriendlyError = "This plan is temporarily unavailable. Please contact support or try a different plan.";
+      } else if (errorMessage.includes("session") || errorMessage.includes("Session")) {
+        userFriendlyError = "Unable to create checkout session. Please refresh the page and try again.";
+      } else if (errorMessage.includes("network") || errorMessage.includes("fetch")) {
+        userFriendlyError = "Network error. Please check your connection and try again.";
+      }
+
+      setError(userFriendlyError);
+      // Error persists longer (10 seconds) and can be manually dismissed
+      if (errorTimeoutRef.current) window.clearTimeout(errorTimeoutRef.current);
+      errorTimeoutRef.current = window.setTimeout(() => setError(null), 10000);
     } finally {
       setLoading(null);
     }
@@ -169,6 +200,13 @@ export default function PricingPage() {
     });
   };
 
+  // Clean up error timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (errorTimeoutRef.current) window.clearTimeout(errorTimeoutRef.current);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section with Value Proposition */}
@@ -176,7 +214,7 @@ export default function PricingPage() {
         contained={false}
         size="xl"
         surface="brand"
-        className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-cyan-600 text-white"
+        className="relative overflow-hidden bg-gradient-to-br from-[color:var(--tone-accent)] via-[color:var(--tone-accent)]/95 to-[color:var(--tone-accent)]/90 text-white"
       >
         <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,transparent,rgba(255,255,255,0.1))]" />
         <Container className="relative">
@@ -184,7 +222,7 @@ export default function PricingPage() {
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
               {VALUE_PROPS.mainHeadline}
             </h1>
-            <p className="text-xl sm:text-2xl mb-8 text-blue-100 max-w-3xl mx-auto">
+            <p className="text-xl sm:text-2xl mb-8 text-white/90 max-w-3xl mx-auto">
               {VALUE_PROPS.subHeadline}
             </p>
 
@@ -195,7 +233,7 @@ export default function PricingPage() {
                   key={badge}
                   className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2"
                 >
-                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <CheckCircle className="h-5 w-5 text-[color:var(--tone-success)]" />
                   <span className="text-sm sm:text-base font-medium">{badge}</span>
                 </div>
               ))}
@@ -217,11 +255,27 @@ export default function PricingPage() {
       {/* Error Alert */}
       {error && (
         <Container className="mt-6">
-          <div className="rounded-md bg-red-50 p-4">
-            <div className="flex">
-              <div className="ml-3">
+          <div className="rounded-md bg-red-50 border border-red-200 p-4" role="alert">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="flex-1">
                 <p className="text-sm font-medium text-red-800">{error}</p>
+                <p className="text-xs text-red-600 mt-1">
+                  If this problem persists, please{" "}
+                  <a href="mailto:support@testero.ai" className="underline font-medium">
+                    contact support
+                  </a>
+                  .
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="text-red-600 hover:text-red-800 flex-shrink-0"
+                aria-label="Dismiss error"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </Container>
@@ -236,7 +290,7 @@ export default function PricingPage() {
               className={cn(
                 "px-6 py-3 rounded-full text-sm font-semibold transition-all duration-200",
                 billingInterval === "monthly"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-[color:var(--tone-accent)] text-white"
                   : "text-gray-600 hover:text-gray-900"
               )}
             >
@@ -247,7 +301,7 @@ export default function PricingPage() {
               className={cn(
                 "px-6 py-3 rounded-full text-sm font-semibold transition-all duration-200 flex items-center gap-2",
                 billingInterval === "annual"
-                  ? "bg-blue-600 text-white"
+                  ? "bg-[color:var(--tone-accent)] text-white"
                   : "text-gray-600 hover:text-gray-900"
               )}
             >
@@ -302,7 +356,7 @@ export default function PricingPage() {
                   key={highlight.title}
                   className="rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 >
-                  <Icon className="mx-auto mb-3 h-10 w-10 text-blue-600 dark:text-sky-200" />
+                  <Icon className="mx-auto mb-3 h-10 w-10 text-[color:var(--tone-accent)] dark:text-[color:var(--tone-accent)]" />
                   <h3 className="mb-2 font-semibold text-gray-900 dark:text-slate-100">{highlight.title}</h3>
                   <p className="mt-2 text-sm text-gray-600 dark:text-slate-300">{highlight.description}</p>
                 </div>
@@ -323,7 +377,7 @@ export default function PricingPage() {
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Compare Plans in Detail</h2>
             <button
               onClick={() => setShowComparison(!showComparison)}
-              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
+              className="inline-flex items-center gap-2 text-[color:var(--tone-accent)] hover:text-[color:var(--tone-accent)]/80 font-semibold"
             >
               {showComparison ? "Hide" : "Show"} detailed comparison
               {showComparison ? (
@@ -345,7 +399,16 @@ export default function PricingPage() {
                 if (tier) {
                   const priceId =
                     billingInterval === "monthly" ? tier.monthlyPriceId : tier.annualPriceId;
-                  if (priceId) handleCheckout(priceId, tier.name);
+                  if (priceId) {
+                    handleCheckout(priceId, tier.name);
+                  } else {
+                    // Fallback: if no price ID, redirect to signup
+                    trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_ATTEMPT, {
+                      plan_name: tier.name,
+                      source: "comparison_table_checkout",
+                    });
+                    router.push("/signup?redirect=/pricing");
+                  }
                 }
               }}
             />
@@ -389,11 +452,11 @@ export default function PricingPage() {
         size="xl"
         surface="brand"
         divider="top"
-        className="bg-gradient-to-r from-blue-600 to-cyan-600"
+        className="bg-gradient-to-r from-[color:var(--tone-accent)] via-[color:var(--tone-accent)]/90 to-[color:var(--tone-accent)]/80"
       >
         <Container className="max-w-4xl text-center text-white">
           <h2 className="text-3xl font-bold text-white mb-4">Ready to Pass Your PMLE?</h2>
-          <p className="text-xl text-blue-100 mb-8">
+          <p className="text-xl text-white/90 mb-8">
             Start with a free diagnostic, then unlock full practice when you&apos;re ready
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

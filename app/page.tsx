@@ -89,8 +89,8 @@ export default function Home() {
           <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="text-center">
-                <div className="bg-green-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                  <TrendingUp className="h-8 w-8 text-green-600" />
+                <div className="bg-[color:var(--tone-accent-surface)] rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                  <TrendingUp className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Protect Your $200 Exam Fee</h3>
                 <p className="text-gray-600">
@@ -99,8 +99,8 @@ export default function Home() {
                 </p>
               </div>
               <div className="text-center">
-                <div className="bg-blue-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                  <Clock className="h-8 w-8 text-blue-600" />
+                <div className="bg-[color:var(--tone-accent-surface)] rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                  <Clock className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">October 2024 Exam Updated</h3>
                 <p className="text-gray-600">
@@ -109,8 +109,8 @@ export default function Home() {
                 </p>
               </div>
               <div className="text-center">
-                <div className="bg-purple-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                  <Shield className="h-8 w-8 text-purple-600" />
+                <div className="bg-[color:var(--tone-accent-surface)] rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                  <Shield className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">7-Day Money-Back Guarantee</h3>
                 <p className="text-gray-600">
@@ -125,7 +125,7 @@ export default function Home() {
         <section
           ref={pricingPreviewRef}
           // eslint-disable-next-line no-restricted-syntax
-          className="w-full py-16 sm:py-20 px-4 sm:px-6 bg-gradient-to-b from-blue-50 to-white"
+          className="w-full py-16 sm:py-20 px-4 sm:px-6 bg-gradient-to-b from-[color:var(--tone-accent-surface)]/20 to-white"
         >
           {loadPricingPreview && (
             <div className="max-w-7xl mx-auto">
@@ -147,7 +147,7 @@ export default function Home() {
                     className={cn(
                       "relative rounded-2xl p-5 sm:p-6 bg-white border-2 transition-all",
                       tier.recommended
-                        ? "border-blue-500 shadow-xl md:scale-105"
+                        ? "border-[color:var(--tone-accent)] shadow-xl md:scale-105"
                         : "border-gray-200 hover:border-gray-300 hover:shadow-lg"
                     )}
                   >
@@ -166,7 +166,7 @@ export default function Home() {
                     <ul className="space-y-3 mb-6 text-left">
                       {tier.highlighted?.slice(0, 3).map((feature) => (
                         <li key={feature} className="flex items-start gap-2">
-                          <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                          <CheckCircle className="h-5 w-5 text-[color:var(--tone-success)] flex-shrink-0" />
                           <span className="text-sm sm:text-base text-gray-700">{feature}</span>
                         </li>
                       ))}
@@ -191,7 +191,7 @@ export default function Home() {
               <div className="text-center">
                 <Link
                   href="/pricing"
-                  className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold text-lg"
+                  className="inline-flex items-center gap-2 text-[color:var(--tone-accent)] hover:text-[color:var(--tone-accent)]/80 font-semibold text-lg"
                   onClick={() => handlePricingClick("preview_compare")}
                 >
                   Compare all features
@@ -249,19 +249,19 @@ export default function Home() {
             {/* Success Metrics */}
             <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
               <div>
-                <div className="text-3xl font-bold text-blue-600">70%</div>
+                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">70%</div>
                 <div className="text-sm text-gray-600">PMLE Fail Rate</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-green-600">$200</div>
+                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">$200</div>
                 <div className="text-sm text-gray-600">Exam Cost at Risk</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-purple-600">30</div>
+                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">30</div>
                 <div className="text-sm text-gray-600">Days to Pass</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-orange-600">Oct 2024</div>
+                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">Oct 2024</div>
                 <div className="text-sm text-gray-600">Content Updated</div>
               </div>
             </div>
@@ -277,21 +277,21 @@ export default function Home() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-6">
-                <Zap className="h-10 w-10 text-blue-600 mx-auto mb-4" />
+                <Zap className="h-10 w-10 text-[color:var(--tone-accent)] mx-auto mb-4" />
                 <h3 className="font-semibold text-lg mb-2">ML Concept Mastery</h3>
                 <p className="text-gray-600">
                   Deep coverage of TensorFlow, Vertex AI, BigQuery ML, and MLOps practices
                 </p>
               </div>
               <div className="p-6">
-                <Award className="h-10 w-10 text-green-600 mx-auto mb-4" />
+                <Award className="h-10 w-10 text-[color:var(--tone-accent)] mx-auto mb-4" />
                 <h3 className="font-semibold text-lg mb-2">October 2024 Updates</h3>
                 <p className="text-gray-600">
                   500+ questions covering new Gemini, GenAI, and Vertex AI features
                 </p>
               </div>
               <div className="p-6">
-                <TrendingUp className="h-10 w-10 text-purple-600 mx-auto mb-4" />
+                <TrendingUp className="h-10 w-10 text-[color:var(--tone-accent)] mx-auto mb-4" />
                 <h3 className="font-semibold text-lg mb-2">Readiness Score</h3>
                 <p className="text-gray-600">
                   Know your exact PMLE readiness percentage before booking your $200 exam
@@ -305,13 +305,13 @@ export default function Home() {
         <section
           ref={finalCtaRef}
           // eslint-disable-next-line no-restricted-syntax
-          className="w-full py-20 bg-gradient-to-r from-blue-600 to-cyan-600"
+          className="w-full py-20 bg-gradient-to-r from-[color:var(--tone-accent)] via-[color:var(--tone-accent)]/90 to-[color:var(--tone-accent)]/80"
         >
           <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
             <h2 className="text-3xl sm:text-4xl font-bold mb-6">
               Pass PMLE in 30 Days—Guaranteed
             </h2>
-            <p className="text-xl mb-8 text-blue-100">
+            <p className="text-xl mb-8 text-white/90">
               Don&apos;t waste $200 on a failed attempt. Start with our free diagnostic to know exactly where you stand.
             </p>
 
@@ -321,12 +321,12 @@ export default function Home() {
                 <Clock className="h-6 w-6 text-yellow-300" />
                 <span className="text-lg font-semibold">Limited Time Offer</span>
               </div>
-              <p className="text-blue-100 mb-4">
+              <p className="text-white/80 mb-4">
                 New in 2025 • 7-day money-back guarantee • Cancel anytime
               </p>
               <div className="text-center">
                 <div className="text-2xl font-bold">$39</div>
-                <div className="text-sm text-blue-200">PMLE Readiness/month</div>
+                <div className="text-sm text-white/70">PMLE Readiness/month</div>
               </div>
             </div>
 
@@ -349,11 +349,11 @@ export default function Home() {
             {/* Trust Signals */}
             <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm">
               <div className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-green-400" />
+                <Shield className="h-5 w-5 text-[color:var(--tone-success)]" />
                 <span>7-day money-back guarantee</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-400" />
+                <CheckCircle className="h-5 w-5 text-[color:var(--tone-success)]" />
                 <span>Cancel anytime</span>
               </div>
               <div className="flex items-center gap-2">
@@ -375,24 +375,24 @@ export default function Home() {
           <div className="flex flex-wrap justify-center gap-6">
             <Link
               href="/pricing"
-              className="text-blue-600 hover:underline text-lg font-semibold"
+              className="text-[color:var(--tone-accent)] hover:underline text-lg font-semibold"
               onClick={() => handlePricingClick("footer_link")}
             >
                   View Pricing →
             </Link>
             <Link
               href="/content/hub/pmle-exam-study-guide"
-              className="text-blue-600 hover:underline text-lg"
+              className="text-[color:var(--tone-accent)] hover:underline text-lg"
             >
               Complete PMLE Study Guide 2025
             </Link>
             <Link
               href="/content/hub/google-professional-machine-learning-engineer-certification-roadmap-2025"
-              className="text-blue-600 hover:underline text-lg"
+              className="text-[color:var(--tone-accent)] hover:underline text-lg"
             >
               PMLE Certification Roadmap
             </Link>
-            <Link href="/faq" className="text-blue-600 hover:underline text-lg">
+            <Link href="/faq" className="text-[color:var(--tone-accent)] hover:underline text-lg">
               Frequently Asked Questions
             </Link>
           </div>
