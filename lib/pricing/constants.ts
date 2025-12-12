@@ -176,7 +176,7 @@ export const EXAM_PACKAGES: ExamPackage[] = [
   },
 ];
 
-import { CORE_POSITIONING, VOCABULARY, MICROCOPY, TRUST_SIGNALS } from "@/lib/copy/message-house";
+import { VOCABULARY, MICROCOPY, TRUST_SIGNALS } from "@/lib/copy/message-house";
 
 // Value propositions for pricing page
 export const VALUE_PROPS = {

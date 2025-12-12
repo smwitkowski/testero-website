@@ -11,7 +11,7 @@ interface HeroSectionProps {
   // Add props if needed for future flexibility
 }
 
-import { CORE_POSITIONING, CTAS, MICROCOPY, VOCABULARY } from "@/lib/copy/message-house";
+import { CORE_POSITIONING, CTAS, MICROCOPY } from "@/lib/copy/message-house";
 
 const heroContent = {
   eyebrow: "GOOGLE CLOUD PMLE READINESS",
