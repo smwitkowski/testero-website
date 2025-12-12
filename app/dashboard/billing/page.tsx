@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
-import { CheckCircleIcon, XCircleIcon, ClockIcon } from "@heroicons/react/24/outline";
+import { CheckCircle2, XCircle, Clock } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 
 interface Subscription {
@@ -145,27 +145,27 @@ function BillingDashboardContent() {
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       active: {
-        icon: CheckCircleIcon,
+        icon: CheckCircle2,
         text: "Active",
         className: "bg-green-100 text-green-800",
       },
       trialing: {
-        icon: ClockIcon,
+        icon: Clock,
         text: "Trial",
         className: "bg-blue-100 text-blue-800",
       },
       past_due: {
-        icon: XCircleIcon,
+        icon: XCircle,
         text: "Past Due",
         className: "bg-red-100 text-red-800",
       },
       canceled: {
-        icon: XCircleIcon,
+        icon: XCircle,
         text: "Canceled",
         className: "bg-gray-100 text-gray-800",
       },
       incomplete: {
-        icon: ClockIcon,
+        icon: Clock,
         text: "Incomplete",
         className: "bg-yellow-100 text-yellow-800",
       },
@@ -227,7 +227,7 @@ function BillingDashboardContent() {
         {showSuccessBanner && (
           <div className="mb-6 rounded-md bg-green-50 p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
-              <CheckCircleIcon className="h-5 w-5 text-green-500" />
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
               <div>
                 <p className="text-sm font-medium text-green-800">
                   Payment successful! Your subscription is now active.
@@ -239,7 +239,7 @@ function BillingDashboardContent() {
             </div>
             <button
               onClick={() => router.push("/dashboard")}
-              className="inline-flex w-full sm:w-auto justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="inline-flex w-full sm:w-auto justify-center rounded-md bg-[color:var(--tone-accent)] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[color:var(--tone-accent)]/90 focus:outline-none focus:ring-2 focus:ring-[color:var(--tone-accent)] focus:ring-offset-2"
             >
               Back to your PMLE study plan
             </button>
@@ -333,7 +333,7 @@ function BillingDashboardContent() {
               <p className="text-gray-600 mb-4">You don&apos;t have an active subscription.</p>
               <button
                 onClick={() => router.push("/pricing")}
-                className="px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors"
+                className="px-6 py-3 bg-[color:var(--tone-accent)] text-white font-medium rounded-md hover:bg-[color:var(--tone-accent)]/90 transition-colors"
               >
                 View Plans
               </button>
@@ -400,7 +400,7 @@ export default function BillingDashboard() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--tone-accent)]"></div>
         </div>
       }
     >
