@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { duration, easing } from '@/lib/design-system';
 import { Button } from '@/components/ui/button';
 import { FileText, Sparkles, BarChart3, Cloud } from 'lucide-react';
+import { SCOPE_CLAIMS, VALUE_PILLARS } from "@/lib/copy/message-house";
 
 type BenefitTone = 'accent' | 'success' | 'info' | 'primary';
 
@@ -247,7 +248,7 @@ export function BenefitsSection() {
             animationDelay: `${duration.fast}ms`
           }}
         >
-          Powerful Features to <span className="text-[color:var(--tone-accent)]">Accelerate</span> Your Certification Journey
+          {SCOPE_CLAIMS.pmleOnly.description}
         </h2>
         
         <p
@@ -257,45 +258,45 @@ export function BenefitsSection() {
             animationDelay: `${duration.fast * 2}ms`
           }}
         >
-          Everything you need to master Google Cloud, AWS, and Azure certifications - available now, completely free to start:
+          Start free with a diagnostic. Upgrade for explanations and unlimited targeted practice.
         </p>
         
         <div 
           className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 text-left"
           role="list"
         >
-          {/* Feature 1 - Smart Diagnostics */}
+          {/* Feature 1 - Blueprint Alignment */}
           <BenefitCard
             icon={<FileText className="w-6 h-6" />}
-            title="Never Study Outdated Content"
-            description="Automatically updated within 14 days of official blueprint changes?while competitors take months. Always practice with the latest exam topics."
+            title={VALUE_PILLARS.blueprint.title}
+            description={VALUE_PILLARS.blueprint.description}
             tone="accent"
             delay={duration.fast * 3}
           />
           
-          {/* Feature 2 - Practice Questions */}
+          {/* Feature 2 - Readiness Clarity */}
           <BenefitCard
             icon={<Sparkles className="w-6 h-6" />}
-            title="Know Your Exact Readiness"
-            description="15-minute diagnostic reveals your percentile score and exact gaps. No more guessing if you're ready?know with data-driven confidence."
+            title={VALUE_PILLARS.readiness.title}
+            description={VALUE_PILLARS.readiness.description}
             tone="success"
             delay={duration.fast * 4}
           />
           
-          {/* Feature 3 - Progress Tracking */}
+          {/* Feature 3 - Targeted Practice */}
           <BenefitCard
             icon={<BarChart3 className="w-6 h-6" />}
-            title="Study 40% More Efficiently"
-            description="Adaptive engine eliminates redundant practice, focusing only on your weak areas. Save 40+ hours compared to traditional study methods."
+            title="Focus on Your Weakest Domains"
+            description="Practice questions automatically target your weakest areas based on your diagnostic results—so you spend time where it matters most."
             tone="info"
             delay={duration.fast * 5}
           />
           
-          {/* Feature 4 - Multi-Cloud Support */}
+          {/* Feature 4 - Explanations */}
           <BenefitCard
             icon={<Cloud className="w-6 h-6" />}
-            title="Pass With Confidence"
-            description="Join the 85% who pass on their first attempt (industry average: 70%). Built by ex-Google Cloud PSO experts who know what it takes."
+            title={VALUE_PILLARS.explanations.title}
+            description={VALUE_PILLARS.explanations.description}
             tone="accent"
             delay={duration.fast * 6}
           />
@@ -322,7 +323,7 @@ export function BenefitsSection() {
                 <Link href="/diagnostic">Take Diagnostic Test</Link>
               </Button>
             </div>
-            <p className="mt-4 text-sm text-muted-foreground">? Free forever tier ? No credit card required ? Instant access</p>
+            <p className="mt-4 text-sm text-muted-foreground">Free diagnostic • No credit card • Instant access</p>
           </div>
         </div>
       </div>

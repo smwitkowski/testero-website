@@ -176,25 +176,21 @@ export const EXAM_PACKAGES: ExamPackage[] = [
   },
 ];
 
+import { CORE_POSITIONING, VOCABULARY, MICROCOPY, TRUST_SIGNALS } from "@/lib/copy/message-house";
+
 // Value propositions for pricing page
 export const VALUE_PROPS = {
-  mainHeadline: "Pass your PMLE with confidence. Start preparing the smart way.",
+  mainHeadline: "Know Your PMLE Readiness Before You Book",
   subHeadline:
-    "Testero gives you personalized diagnostics, unlimited realistic practice, and expert explanations that help you learn 5× faster.",
+    "Start with a free diagnostic. Upgrade when you want step-by-step explanations and unlimited targeted practice on your weakest domains.",
   guarantees: [
-    "7-day money-back guarantee",
-    "Content regularly updated to match exam blueprint",
+    MICROCOPY.moneyBackGuarantee,
+    "Content aligned to current PMLE blueprint",
   ],
-  trustBadges: [
-    "PMLE-Focused",
-    "Diagnostic-First",
-    "Detailed Explanations",
-    "Domain Readiness",
-  ],
+  trustBadges: TRUST_SIGNALS,
   valueAnchors: {
-    examCost: "Invest $149 to protect your $300 exam fee",
-    salary: "PMLE-certified professionals earn $150k+ on average",
-    time: "Diagnostic test identifies your weak areas for focused study",
+    examCost: `De-risk your ${VOCABULARY.examFee} exam fee`,
+    time: "Diagnostic identifies your weak areas for focused study",
     success: "Start with a free diagnostic to assess your readiness",
   },
 };
@@ -234,11 +230,11 @@ export const PRICING_FAQ = [
     answer:
       "Because free questions are outdated, don't follow the blueprint, and don't tell you what to study next. Testero does.",
   },
-  {
-    question: "Will the questions match the real PMLE exam?",
-    answer:
-      "Yes. All content is aligned with the latest published exam blueprint and regularly updated using our AI-powered blueprint tracker.",
-  },
+    {
+      question: "Will the questions match the real PMLE exam?",
+      answer:
+        "Yes. All content is aligned with the current PMLE exam blueprint. Questions are designed to reflect the exam format and topics that actually appear on the test.",
+    },
   {
     question: "Is this an official Google product?",
     answer:

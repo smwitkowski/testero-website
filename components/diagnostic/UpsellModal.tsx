@@ -174,16 +174,16 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
           <div className="flex items-start gap-3">
             <Target className="mt-0.5 h-5 w-5 flex-shrink-0 text-[color:var(--tone-info)]" />
             <div>
-              <div className="font-medium text-foreground">Unlimited Practice Questions</div>
-              <div className="text-sm text-muted-foreground">Blueprint-aligned PMLE practice that evolves as the exam does</div>
+            <div className="font-medium text-foreground">Unlimited Targeted Practice</div>
+            <div className="text-sm text-muted-foreground">Blueprint-aligned PMLE practice focused on your weakest domains</div>
             </div>
           </div>
 
           <div className="flex items-start gap-3">
             <Award className="mt-0.5 h-5 w-5 flex-shrink-0 text-[color:var(--tone-info)]" />
             <div>
-              <div className="font-medium text-foreground">Documentation-Grounded</div>
-              <div className="text-sm text-muted-foreground">Explanations reference official Google docs</div>
+            <div className="font-medium text-foreground">Step-by-Step Explanations</div>
+            <div className="text-sm text-muted-foreground">Explanations that help you understand concepts deeply</div>
             </div>
           </div>
         </div>

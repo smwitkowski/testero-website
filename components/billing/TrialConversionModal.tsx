@@ -88,16 +88,16 @@ export function TrialConversionModal({
             <div className="flex items-start gap-3">
               <Zap className="h-5 w-5 text-yellow-500 mt-0.5" />
               <div>
-                <p className="font-medium">Unlimited Practice Questions</p>
-                <p className="text-sm text-gray-600">200+ realistic PMLE questions</p>
+                <p className="font-medium">Unlimited Targeted Practice</p>
+                <p className="text-sm text-gray-600">Blueprint-aligned PMLE practice focused on your weakest domains</p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
               <TrendingUp className="h-5 w-5 text-blue-500 mt-0.5" />
               <div>
-                <p className="font-medium">Blueprint-Aligned Practice</p>
-                <p className="text-sm text-gray-600">Questions that evolve as the exam does</p>
+                <p className="font-medium">Step-by-Step Explanations</p>
+                <p className="text-sm text-gray-600">Explanations that help you understand concepts deeply</p>
               </div>
             </div>
           </div>

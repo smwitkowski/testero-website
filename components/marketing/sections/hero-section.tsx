@@ -11,20 +11,21 @@ interface HeroSectionProps {
   // Add props if needed for future flexibility
 }
 
+import { CORE_POSITIONING, CTAS, MICROCOPY, VOCABULARY } from "@/lib/copy/message-house";
+
 const heroContent = {
-  eyebrow: "AI-POWERED CERTIFICATION READINESS",
-  headline: "Know if you're ready before you book your exam.",
-  subheadline:
-    "Testero uses realistic, blueprint-aligned questions to benchmark your readiness and show exactly where to focus.",
+  eyebrow: "GOOGLE CLOUD PMLE READINESS",
+  headline: CORE_POSITIONING.headline,
+  subheadline: CORE_POSITIONING.subheadline,
   primaryCta: {
-    text: "Start free readiness check",
+    text: CTAS.primary.diagnostic,
     href: "/diagnostic",
   },
   secondaryCta: {
-    text: "View example questions",
+    text: CTAS.secondary.viewExamples,
     href: "/practice",
   },
-  microcopy: "Takes 5–7 minutes · No credit card required",
+  microcopy: `${MICROCOPY.diagnosticTime} · ${MICROCOPY.noCreditCard} · ${MICROCOPY.instantResults}`,
 };
 
 // Readiness Dashboard Card Component

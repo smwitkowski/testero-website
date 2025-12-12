@@ -683,7 +683,7 @@ const QuestionReview = ({
                           <strong>Explanations are available on the PMLE Readiness plan.</strong>
                         </p>
                         <p className="text-sm text-blue-600">
-                          They&apos;re the fastest way to understand concepts deeply and avoid repeated mistakes.
+                          Step-by-step explanations help you understand concepts deeply, not just memorize answers.
                         </p>
                         <Button
                           size="sm"
