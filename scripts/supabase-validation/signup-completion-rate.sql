@@ -24,3 +24,4 @@ WHERE u.created_at >= NOW() - INTERVAL '30 days'
 
 
 
+

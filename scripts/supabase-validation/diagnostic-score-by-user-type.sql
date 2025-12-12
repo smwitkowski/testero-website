@@ -26,3 +26,4 @@ ORDER BY user_type, avg_score_pct DESC;
 
 
 
+

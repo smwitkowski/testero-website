@@ -31,3 +31,4 @@ COMMENT ON COLUMN practice_responses.is_correct IS 'Whether the selected answer 
 COMMENT ON COLUMN practice_responses.responded_at IS 'Timestamp when the response was submitted';
 
 
+
