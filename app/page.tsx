@@ -90,7 +90,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="text-center">
                 <div className="bg-[color:var(--tone-accent-surface)] rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                  <TrendingUp className="h-8 w-8 text-[color:var(--tone-accent)]" />
+                  <TrendingUp className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Protect Your $200 Exam Fee</h3>
                 <p className="text-gray-600">
@@ -100,7 +100,7 @@ export default function Home() {
               </div>
               <div className="text-center">
                 <div className="bg-[color:var(--tone-accent-surface)] rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                  <Clock className="h-8 w-8 text-[color:var(--tone-accent)]" />
+                  <Clock className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">October 2024 Exam Updated</h3>
                 <p className="text-gray-600">
@@ -110,7 +110,7 @@ export default function Home() {
               </div>
               <div className="text-center">
                 <div className="bg-[color:var(--tone-accent-surface)] rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                  <Shield className="h-8 w-8 text-[color:var(--tone-accent)]" />
+                  <Shield className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">7-Day Money-Back Guarantee</h3>
                 <p className="text-gray-600">

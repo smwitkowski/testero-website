@@ -172,7 +172,7 @@ export function PricingCard({
               Get Started
             </Button>
             <div className="flex items-start gap-2 rounded-md bg-yellow-50 p-3 border border-yellow-200">
-              <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
               <p className="text-xs text-yellow-800">
                 Payment processing is being set up. Click to create your account and we&apos;ll notify you when checkout is ready.
               </p>

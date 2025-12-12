@@ -61,6 +61,7 @@ export default function PricingPage() {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const errorTimeoutRef = React.useRef<number | null>(null);
   const { user } = useAuth();
   const router = useRouter();
   const posthog = usePostHog();
@@ -182,7 +183,8 @@ export default function PricingPage() {
 
       setError(userFriendlyError);
       // Error persists longer (10 seconds) and can be manually dismissed
-      setTimeout(() => setError(null), 10000);
+      if (errorTimeoutRef.current) window.clearTimeout(errorTimeoutRef.current);
+      errorTimeoutRef.current = window.setTimeout(() => setError(null), 10000);
     } finally {
       setLoading(null);
     }
@@ -197,6 +199,13 @@ export default function PricingPage() {
       action: "toggle_billing",
     });
   };
+
+  // Clean up error timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (errorTimeoutRef.current) window.clearTimeout(errorTimeoutRef.current);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
@@ -246,9 +255,9 @@ export default function PricingPage() {
       {/* Error Alert */}
       {error && (
         <Container className="mt-6">
-          <div className="rounded-md bg-red-50 border border-red-200 p-4">
+          <div className="rounded-md bg-red-50 border border-red-200 p-4" role="alert">
             <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-red-800">{error}</p>
                 <p className="text-xs text-red-600 mt-1">
@@ -260,6 +269,7 @@ export default function PricingPage() {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setError(null)}
                 className="text-red-600 hover:text-red-800 flex-shrink-0"
                 aria-label="Dismiss error"
