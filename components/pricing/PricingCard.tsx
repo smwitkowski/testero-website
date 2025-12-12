@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { CheckCircle, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CheckCircle, Sparkles, AlertCircle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -42,12 +43,22 @@ export function PricingCard({
   loading = false,
   loadingId = null,
 }: PricingCardProps) {
+  const router = useRouter();
   const price = billingInterval === "monthly" ? tier.monthlyPrice : tier.annualPrice;
   const priceId = billingInterval === "monthly" ? tier.monthlyPriceId : tier.annualPriceId;
   const checkoutPriceId = priceId ?? `${tier.id}-${billingInterval}`;
   const isCheckoutConfigured = Boolean(priceId);
   const isLoading = loading && loadingId === priceId;
   const monthlyEquivalent = billingInterval === "annual" ? Math.round(tier.annualPrice / 12) : null;
+
+  const handleButtonClick = () => {
+    if (!isCheckoutConfigured) {
+      // Fallback: redirect to signup if checkout isn't configured
+      router.push("/signup?redirect=/pricing");
+      return;
+    }
+    onCheckout(checkoutPriceId, tier.name);
+  };
 
   return (
     <Card
@@ -137,18 +148,37 @@ export function PricingCard({
       </CardContent>
 
       <CardFooter className="flex-col items-stretch gap-3 border-0 pt-0">
-        <Button
-          fullWidth
-          tone={tier.recommended ? "accent" : "neutral"}
-          variant="solid"
-          size="lg"
-          loading={isLoading}
-          disabled={isLoading || !isCheckoutConfigured}
-          data-checkout-configured={isCheckoutConfigured ? "true" : "false"}
-          onClick={() => onCheckout(checkoutPriceId, tier.name)}
-        >
-          Start Preparing
-        </Button>
+        {isCheckoutConfigured ? (
+          <Button
+            fullWidth
+            tone={tier.recommended ? "accent" : "neutral"}
+            variant="solid"
+            size="lg"
+            loading={isLoading}
+            disabled={isLoading}
+            onClick={handleButtonClick}
+          >
+            Start Preparing
+          </Button>
+        ) : (
+          <>
+            <Button
+              fullWidth
+              tone={tier.recommended ? "accent" : "neutral"}
+              variant="solid"
+              size="lg"
+              onClick={handleButtonClick}
+            >
+              Get Started
+            </Button>
+            <div className="flex items-start gap-2 rounded-md bg-yellow-50 p-3 border border-yellow-200">
+              <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-yellow-800">
+                Payment processing is being set up. Click to create your account and we&apos;ll notify you when checkout is ready.
+              </p>
+            </div>
+          </>
+        )}
 
         {tier.recommended ? (
           <p className="text-center text-xs text-muted-foreground">
