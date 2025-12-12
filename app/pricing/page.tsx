@@ -343,7 +343,7 @@ export default function PricingPage() {
       <Section size="xl" surface="subtle" divider="bottom">
         <div className="mx-auto max-w-4xl">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-4">Everything You Need to Pass the PMLE</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-4">Everything You Need for PMLE Readiness</h2>
             <p className="text-gray-600 dark:text-slate-300">
               Full access to realistic PMLE questions, detailed explanations, and domain-level readiness insights.
             </p>
@@ -455,9 +455,9 @@ export default function PricingPage() {
         className="bg-gradient-to-r from-[color:var(--tone-accent)] via-[color:var(--tone-accent)]/90 to-[color:var(--tone-accent)]/80"
       >
         <Container className="max-w-4xl text-center text-white">
-          <h2 className="text-3xl font-bold text-white mb-4">Ready to Pass Your PMLE?</h2>
+          <h2 className="text-3xl font-bold text-white mb-4">Ready to Know Your Readiness?</h2>
           <p className="text-xl text-white/90 mb-8">
-            Start with a free diagnostic, then unlock full practice when you&apos;re ready
+            Start with a free diagnostic. Upgrade when you want explanations and unlimited targeted practice.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
@@ -480,8 +480,8 @@ export default function PricingPage() {
             </Button>
           </div>
           <div className="mt-8 flex items-center justify-center gap-2 text-white">
-            <RefreshCw className="h-5 w-5" />
-            <span>7-day money-back guarantee on all plans</span>
+              <RefreshCw className="h-5 w-5" />
+            <span>7-day money-back guarantee • Cancel anytime</span>
           </div>
         </Container>
       </Section>

@@ -33,8 +33,8 @@ const socialProofBadges: SocialProofBadge[] = [
   },
   {
     icon: <BarChart3 className="h-4 w-4" />,
-    title: "85% Pass Rate",
-    subtitle: "vs 70% Average",
+    title: "Readiness Score",
+    subtitle: "Know Before You Book",
     tone: "accent",
   },
   {
@@ -45,13 +45,13 @@ const socialProofBadges: SocialProofBadge[] = [
   },
   {
     icon: <Clock className="h-4 w-4" />,
-    title: "40+ Hours Saved",
-    subtitle: "Study Efficiently",
+    title: "Targeted Practice",
+    subtitle: "Focus on Weak Domains",
     tone: "accent",
   },
   {
     icon: <Gift className="h-4 w-4" />,
-    title: "Free Forever",
+    title: "Free Diagnostic",
     subtitle: "No Credit Card",
     tone: "success",
   },

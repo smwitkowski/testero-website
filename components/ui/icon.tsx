@@ -41,3 +41,4 @@ export const Icon = React.forwardRef<SVGSVGElement, IconProps>(
   }
 )
 Icon.displayName = "Icon"
+

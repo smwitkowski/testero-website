@@ -262,14 +262,14 @@ const DiagnosticStartPage = () => {
         <CardHeader>
           <div className="flex justify-end mb-4">
             <Badge variant="soft" tone="accent" size="sm">
-              Updated Oct 2024 exam changes
+              Aligned to Current Blueprint
             </Badge>
           </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
             PMLE Diagnostic
           </h1>
           <p className="text-lg text-slate-600 mb-4">
-            10-minute readiness check. Updated for Oct &apos;24 changes.
+            10-minute readiness check. Aligned to current PMLE blueprint.
           </p>
           <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 text-slate-700 text-sm">

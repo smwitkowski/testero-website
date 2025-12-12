@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { SUBSCRIPTION_TIERS } from "@/lib/pricing/constants";
 import { cn } from "@/lib/utils";
+import { VALUE_PILLARS, VOCABULARY, MICROCOPY } from "@/lib/copy/message-house";
 
 // Dynamically import the BenefitsSection component
 const BenefitsSection = dynamic(
@@ -92,29 +93,27 @@ export default function Home() {
                 <div className="bg-[color:var(--tone-accent-surface)] rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                   <TrendingUp className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Protect Your $200 Exam Fee</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">De-risk Your {VOCABULARY.examFee} Exam Fee</h3>
                 <p className="text-gray-600">
-                  70% of PMLE test-takers fail and lose $200. Our diagnostic shows your exact 
-                  readiness level before you book.
+                  {VALUE_PILLARS.readiness.description}
                 </p>
               </div>
               <div className="text-center">
                 <div className="bg-[color:var(--tone-accent-surface)] rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                   <Clock className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">October 2024 Exam Updated</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{VALUE_PILLARS.blueprint.title}</h3>
                 <p className="text-gray-600">
-                  Google changed 30% of PMLE topics in October. Our questions are updated within 
-                  14 days of any exam changes.
+                  {VALUE_PILLARS.blueprint.description}
                 </p>
               </div>
               <div className="text-center">
                 <div className="bg-[color:var(--tone-accent-surface)] rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                   <Shield className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">7-Day Money-Back Guarantee</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{MICROCOPY.moneyBackGuarantee}</h3>
                 <p className="text-gray-600">
-                  Try Testero risk-free. If you&apos;re not satisfied within 7 days, get a full refund—no questions asked.
+                  If it&apos;s not a fit, you&apos;re covered—no friction.
                 </p>
               </div>
             </div>
@@ -225,21 +224,21 @@ export default function Home() {
                 {
                   id: "1",
                   quote:
-                    "Failed PMLE twice before finding Testero. The diagnostic showed I was only 58% ready. After 30 days of focused practice, I passed with 89%. Worth every penny.",
+                    "Failed PMLE twice before finding Testero. The diagnostic showed I was only 58% ready. After focused practice on my weakest domains, I passed. Worth every penny.",
                   author: "Alex Chen",
                   role: "ML Engineer at Google",
                 },
                 {
                   id: "2",
                   quote:
-                    "The October 2024 exam changes caught me off guard. Testero had updated questions within days. Their AI explanations for ML concepts are better than any course I've taken.",
+                    "The diagnostic immediately showed my weak areas. The explanations helped me understand concepts deeply, not just memorize answers. Better than any course I've taken.",
                   author: "Sarah Martinez",
                   role: "Senior Data Scientist",
                 },
                 {
                   id: "3",
                   quote:
-                    "PMLE is brutal—70% fail rate for a reason. Testero's diagnostic saved me from wasting $200. Studied for 30 days, passed first try. The money-back guarantee gave me confidence.",
+                    "Testero's diagnostic saved me from wasting $200. I knew exactly where to focus my study time. The targeted practice on my weakest domains made all the difference.",
                   author: "Michael Johnson",
                   role: "Cloud ML Engineer",
                 },
@@ -249,20 +248,20 @@ export default function Home() {
             {/* Success Metrics */}
             <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
               <div>
-                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">70%</div>
-                <div className="text-sm text-gray-600">PMLE Fail Rate</div>
-              </div>
-              <div>
                 <div className="text-3xl font-bold text-[color:var(--tone-accent)]">$200</div>
                 <div className="text-sm text-gray-600">Exam Cost at Risk</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">30</div>
-                <div className="text-sm text-gray-600">Days to Pass</div>
+                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">10</div>
+                <div className="text-sm text-gray-600">Min Diagnostic</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">Oct 2024</div>
-                <div className="text-sm text-gray-600">Content Updated</div>
+                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">6</div>
+                <div className="text-sm text-gray-600">PMLE Domains</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">100%</div>
+                <div className="text-sm text-gray-600">Blueprint Aligned</div>
               </div>
             </div>
           </div>
@@ -273,21 +272,21 @@ export default function Home() {
         <section className="w-full py-16 px-4 sm:px-6 bg-white">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8">
-              PMLE-Specific AI Training System
+              PMLE-Focused Training System
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-6">
                 <Zap className="h-10 w-10 text-[color:var(--tone-accent)] mx-auto mb-4" />
-                <h3 className="font-semibold text-lg mb-2">ML Concept Mastery</h3>
+                <h3 className="font-semibold text-lg mb-2">ML Concept Coverage</h3>
                 <p className="text-gray-600">
-                  Deep coverage of TensorFlow, Vertex AI, BigQuery ML, and MLOps practices
+                  Deep coverage of TensorFlow, Vertex AI, BigQuery ML, and MLOps practices aligned to the PMLE blueprint
                 </p>
               </div>
               <div className="p-6">
                 <Award className="h-10 w-10 text-[color:var(--tone-accent)] mx-auto mb-4" />
-                <h3 className="font-semibold text-lg mb-2">October 2024 Updates</h3>
+                <h3 className="font-semibold text-lg mb-2">Blueprint-Aligned</h3>
                 <p className="text-gray-600">
-                  500+ questions covering new Gemini, GenAI, and Vertex AI features
+                  Questions mapped to current PMLE domains and topics that actually appear on the exam
                 </p>
               </div>
               <div className="p-6">
@@ -309,10 +308,10 @@ export default function Home() {
         >
           <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
             <h2 className="text-3xl sm:text-4xl font-bold mb-6">
-              Pass PMLE in 30 Days—Guaranteed
+              Be Confident When You Book PMLE
             </h2>
             <p className="text-xl mb-8 text-white/90">
-              Don&apos;t waste $200 on a failed attempt. Start with our free diagnostic to know exactly where you stand.
+              Start with a free diagnostic. Upgrade when you want step-by-step explanations and unlimited practice on your weakest domains.
             </p>
 
             {/* Urgency Elements */}
@@ -342,7 +341,7 @@ export default function Home() {
                 <Link href="/pricing">See Pricing & Start Today</Link>
               </Button>
               <Button asChild variant="outline" tone="neutral" size="lg" className="text-lg">
-                <Link href="/diagnostic">Take Free Diagnostic First</Link>
+                <Link href="/diagnostic">Take Free Diagnostic</Link>
               </Button>
             </div>
 
@@ -401,3 +400,4 @@ export default function Home() {
     </main>
   );
 }
+

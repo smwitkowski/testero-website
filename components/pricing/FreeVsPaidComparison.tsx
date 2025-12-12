@@ -22,7 +22,7 @@ const COMPARISON_FEATURES: ComparisonFeature[] = [
     paid: true,
   },
   {
-    name: "Full PMLE question bank (200+ questions)",
+    name: "Full PMLE question bank",
     free: false,
     paid: true,
   },
