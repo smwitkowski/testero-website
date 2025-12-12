@@ -58,6 +58,12 @@
   --spacing-card-x: var(--space-card-x);
   --spacing-card-y: var(--space-card-y);
   --spacing-card-gap: var(--gap-card);
+  
+  /* Section spacing tokens for Tailwind v4 */
+  --spacing-section-sm: var(--section-sm);
+  --spacing-section-md: var(--section-md);
+  --spacing-section-lg: var(--section-lg);
+  --spacing-section-xl: var(--section-xl);
 }
 
 :root {
