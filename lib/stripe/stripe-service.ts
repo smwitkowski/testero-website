@@ -71,6 +71,7 @@ export class StripeService {
     cancelUrl,
     userId,
     mode,
+    idempotencyKey,
   }: {
     customerId: string;
     priceId: string;
@@ -78,6 +79,7 @@ export class StripeService {
     cancelUrl: string;
     userId: string;
     mode?: "subscription" | "payment";
+    idempotencyKey?: string;
   }): Promise<Stripe.Checkout.Session> {
     try {
       // Determine mode if not provided
@@ -110,7 +112,9 @@ export class StripeService {
         };
       }
 
-      const session = await this.stripe.checkout.sessions.create(sessionParams);
+      const session = idempotencyKey
+        ? await this.stripe.checkout.sessions.create(sessionParams, { idempotencyKey })
+        : await this.stripe.checkout.sessions.create(sessionParams);
 
       return session;
     } catch (error) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -12,9 +12,14 @@ export function useStartBasicCheckout() {
   const router = useRouter();
   const posthog = usePostHog();
   const { user } = useAuth();
+  const inFlightRef = useRef(false);
+  const idempotencyKeyRef = useRef<string | null>(null);
 
   const startBasicCheckout = useCallback(
     async (source: string) => {
+      // Prevent accidental double-submit (e.g., double-click, repeated modal CTA taps).
+      if (inFlightRef.current) return;
+
       posthog?.capture(ANALYTICS_EVENTS.UPGRADE_CTA_CLICKED, {
         source,
         user_id: user?.id,
@@ -52,6 +57,12 @@ export function useStartBasicCheckout() {
         return;
       }
 
+      // Set in-flight flag after all validation/early-return branches to avoid stuck CTA
+      inFlightRef.current = true;
+      if (!idempotencyKeyRef.current) {
+        idempotencyKeyRef.current = crypto.randomUUID();
+      }
+
       trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_INITIATED, {
         source,
         price_id: BASIC_MONTHLY_PRICE_ID,
@@ -65,8 +76,12 @@ export function useStartBasicCheckout() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "x-idempotency-key": idempotencyKeyRef.current,
           },
-          body: JSON.stringify({ priceId: BASIC_MONTHLY_PRICE_ID }),
+          body: JSON.stringify({
+            priceId: BASIC_MONTHLY_PRICE_ID,
+            idempotencyKey: idempotencyKeyRef.current,
+          }),
         });
 
         const data = (await response.json()) as { error?: string; url?: string };
@@ -85,14 +100,19 @@ export function useStartBasicCheckout() {
 
         if (data.url) {
           window.location.href = data.url;
+          // Clear idempotency key only on confirmed success/redirect
+          idempotencyKeyRef.current = null;
         }
       } catch (error) {
         console.error("Error starting checkout:", error);
+        // Keep idempotency key on error for safe retries
         trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_ERROR, {
           source,
           price_id: BASIC_MONTHLY_PRICE_ID,
           error: error instanceof Error ? error.message : "Unknown error",
         });
+      } finally {
+        inFlightRef.current = false;
       }
     },
     [posthog, router, user]

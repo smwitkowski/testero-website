@@ -118,6 +118,7 @@ describe("StripeService", () => {
         successUrl,
         cancelUrl,
         userId,
+        mode: "subscription",
       });
 
       expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith({
@@ -170,6 +171,7 @@ describe("StripeService", () => {
         successUrl,
         cancelUrl,
         userId,
+        mode: "subscription",
       });
 
       expect(mockStripe.checkout.sessions.create).toHaveBeenCalled();

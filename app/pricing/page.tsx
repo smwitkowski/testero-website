@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import {
@@ -62,6 +62,8 @@ export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const errorTimeoutRef = React.useRef<number | null>(null);
+  const checkoutInFlightRef = useRef<Set<string>>(new Set());
+  const checkoutIdempotencyKeyRef = useRef<Map<string, string>>(new Map());
   const { user } = useAuth();
   const router = useRouter();
   const posthog = usePostHog();
@@ -78,53 +80,68 @@ export default function PricingPage() {
   }, [posthog, user, billingInterval]);
 
   const handleCheckout = async (priceId: string, planName: string) => {
-    try {
-      // Validate price ID format (Stripe price IDs start with price_)
-      // If it's a fallback ID (tier-billing format), redirect to signup
-      if (!priceId.startsWith("price_")) {
-        trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_ATTEMPT, {
-          plan_name: planName,
-          source: "pricing_checkout_missing_price_id",
-        });
-        router.push("/signup?redirect=/pricing");
-        return;
-      }
-
-      // Calculate analytics properties
-      const tierName = getTierNameFromPriceId(priceId);
-      const paymentMode = getPaymentMode(priceId);
-      const planType = getPlanType(priceId);
-
-      // Track checkout intent
-      trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_INITIATED, {
+    // Validate price ID format (Stripe price IDs start with price_)
+    // If it's a fallback ID (tier-billing format), redirect to signup
+    if (!priceId.startsWith("price_")) {
+      trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_ATTEMPT, {
         plan_name: planName,
-        tier_name: tierName,
-        billing_interval: billingInterval,
-        price_id: priceId,
-        payment_mode: paymentMode,
-        plan_type: planType,
-        user_id: user?.id,
+        source: "pricing_checkout_missing_price_id",
       });
+      router.push("/signup?redirect=/pricing");
+      return;
+    }
 
-      // Require authentication
-      if (!user) {
-        trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_ATTEMPT, {
-          plan_name: planName,
-          source: "pricing_checkout_redirect",
-        });
-        router.push("/signup?redirect=/pricing");
-        return;
-      }
+    // Calculate analytics properties
+    const tierName = getTierNameFromPriceId(priceId);
+    const paymentMode = getPaymentMode(priceId);
+    const planType = getPlanType(priceId);
 
-      setLoading(priceId);
+    // Track checkout intent
+    trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_INITIATED, {
+      plan_name: planName,
+      tier_name: tierName,
+      billing_interval: billingInterval,
+      price_id: priceId,
+      payment_mode: paymentMode,
+      plan_type: planType,
+      user_id: user?.id,
+    });
 
+    // Require authentication
+    if (!user) {
+      trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_ATTEMPT, {
+        plan_name: planName,
+        source: "pricing_checkout_redirect",
+      });
+      router.push("/signup?redirect=/pricing");
+      return;
+    }
+
+    // Guard against double-submits (double click / repeated taps) before state updates land.
+    // Must check and acquire lock BEFORE try block to prevent concurrent finally blocks from clearing refs prematurely.
+    if (checkoutInFlightRef.current.has(priceId)) {
+      return;
+    }
+    checkoutInFlightRef.current.add(priceId);
+    const acquiredLock = true;
+
+    if (!checkoutIdempotencyKeyRef.current.has(priceId)) {
+      checkoutIdempotencyKeyRef.current.set(priceId, crypto.randomUUID());
+    }
+    const idempotencyKey = checkoutIdempotencyKeyRef.current.get(priceId)!;
+
+    setLoading(priceId);
+
+    try {
       const response = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-idempotency-key": idempotencyKey,
         },
         body: JSON.stringify({
           priceId,
+          idempotencyKey,
         }),
       });
 
@@ -148,15 +165,13 @@ export default function PricingPage() {
       // Redirect to Stripe Checkout
       if (data.url) {
         window.location.href = data.url;
+        // Clear idempotency key only on confirmed success/redirect
+        checkoutIdempotencyKeyRef.current.delete(priceId);
       } else {
         throw new Error("No checkout URL returned from server");
       }
     } catch (error) {
       console.error("Checkout error:", error);
-      // Calculate analytics properties for error tracking
-      const tierName = getTierNameFromPriceId(priceId);
-      const paymentMode = getPaymentMode(priceId);
-      const planType = getPlanType(priceId);
 
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       
@@ -185,8 +200,14 @@ export default function PricingPage() {
       // Error persists longer (10 seconds) and can be manually dismissed
       if (errorTimeoutRef.current) window.clearTimeout(errorTimeoutRef.current);
       errorTimeoutRef.current = window.setTimeout(() => setError(null), 10000);
+      
+      // Keep idempotency key on error for safe retries
     } finally {
       setLoading(null);
+      // Only release lock if this invocation actually acquired it
+      if (acquiredLock) {
+        checkoutInFlightRef.current.delete(priceId);
+      }
     }
   };
 
