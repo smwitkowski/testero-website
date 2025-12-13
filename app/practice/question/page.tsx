@@ -21,7 +21,7 @@ const PracticeQuestionPage = () => {
   const [feedback, setFeedback] = useState<FeedbackType | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
-  // Track last 7 question IDs to avoid immediate repeats
+  // Track last 3 question IDs as a small anti-race safeguard (server-side tracking is primary)
   const recentQuestionIds = useRef<string[]>([]);
   const posthog = usePostHog();
   const { user } = useAuth();
@@ -60,16 +60,19 @@ const PracticeQuestionPage = () => {
         setQuestionStartTime(new Date());
         setLoading(false);
 
-        // Update recent question IDs: add new ID to front, remove duplicates, keep last 7
+        // Update recent question IDs: add new ID to front, remove duplicates, keep last 3
+        // This is a small anti-race safeguard; server-side tracking in practice_question_attempts_v2
+        // is the primary mechanism for preventing repeats
         recentQuestionIds.current = [
           data.id,
           ...recentQuestionIds.current.filter((id) => id !== data.id),
-        ].slice(0, 7);
+        ].slice(0, 3);
 
-        // Track question loaded
+        // Track question loaded with UUID property for reliable analytics
         captureWithDeduplication(posthog, "practice_question_loaded", {
           user_id: user?.id,
-          question_id: data.id,
+          question_id: data.id, // Keep for backward compatibility
+          question_uuid: data.id, // String-typed UUID for reliable analysis
         });
       })
       .catch((error) => {
@@ -107,16 +110,19 @@ const PracticeQuestionPage = () => {
       setQuestion(data);
       setQuestionStartTime(new Date());
 
-      // Update recent question IDs: add new ID to front, remove duplicates, keep last 7
+      // Update recent question IDs: add new ID to front, remove duplicates, keep last 3
+      // This is a small anti-race safeguard; server-side tracking in practice_question_attempts_v2
+      // is the primary mechanism for preventing repeats
       recentQuestionIds.current = [
         data.id,
         ...recentQuestionIds.current.filter((id) => id !== data.id),
-      ].slice(0, 7);
+      ].slice(0, 3);
 
-      // Track new question loaded
+      // Track new question loaded with UUID property for reliable analytics
       captureWithDeduplication(posthog, "practice_question_loaded", {
         user_id: user?.id,
-        question_id: data.id,
+        question_id: data.id, // Keep for backward compatibility
+        question_uuid: data.id, // String-typed UUID for reliable analysis
         is_next_question: true,
       });
     } catch (error) {
@@ -163,7 +169,8 @@ const PracticeQuestionPage = () => {
       // Track question answered (force track for critical business metric)
       captureWithDeduplication(posthog, "practice_question_answered", {
         user_id: user?.id,
-        question_id: question.id,
+        question_id: question.id, // Keep for backward compatibility
+        question_uuid: question.id, // String-typed UUID for reliable analysis
         is_correct: data.isCorrect,
         time_spent_seconds: timeSpent,
         selected_option: selectedOptionKey,

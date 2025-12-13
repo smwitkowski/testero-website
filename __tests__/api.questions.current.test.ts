@@ -507,5 +507,205 @@ describe("GET /api/questions/current", () => {
       expect(eqReviewStatusMock).toHaveBeenCalledWith("review_status", "GOOD");
     });
   });
+
+  describe('no-repeat-until-exhausted behavior', () => {
+    it('should exclude previously seen questions for authenticated users', async () => {
+      const mockUser = { id: "user-seen-tracking" };
+      serverSupabaseMock.auth.getUser.mockResolvedValue({
+        data: { user: mockUser },
+        error: null,
+      });
+
+      // Mock seen attempts query
+      const seenAttemptsData = [{ question_id: "q1" }, { question_id: "q2" }];
+      const eqSeenMock = jest.fn().mockResolvedValue({ data: seenAttemptsData, error: null });
+      const selectSeenMock = jest.fn(() => ({ eq: eqSeenMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectSeenMock });
+
+      // Mock eligible questions query (no limit for authenticated users)
+      const questionsData = [
+        { id: "q1", stem: "Question 1", explanations: [{ id: "e1" }] },
+        { id: "q2", stem: "Question 2", explanations: [{ id: "e2" }] },
+        { id: "q3", stem: "Question 3", explanations: [{ id: "e3" }] },
+        { id: "q4", stem: "Question 4", explanations: [{ id: "e4" }] },
+      ];
+      const eqReviewStatusMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
+      const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
+
+      // Mock insert for "seen" tracking
+      const insertMock = jest.fn().mockResolvedValue({ data: null, error: null });
+      const selectInsertMock = jest.fn(() => ({ single: jest.fn().mockResolvedValue({ then: jest.fn(), catch: jest.fn() }) }));
+      const fromInsertMock = jest.fn(() => ({ insert: jest.fn(() => ({ select: selectInsertMock })) }));
+      serverSupabaseMock.from.mockReturnValueOnce(fromInsertMock());
+
+      // Mock answers query
+      const eqAnsMock = jest.fn().mockResolvedValue({
+        data: [{ id: "ans1", choice_label: "A", choice_text: "Option A" }],
+        error: null,
+      });
+      const selectMockA = jest.fn(() => ({ eq: eqAnsMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockA });
+
+      const req = new NextRequest("http://localhost/api/questions/current");
+      const res = await GET(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(data.id).toBeDefined();
+      // Should not return q1 or q2 (already seen)
+      expect(["q1", "q2"]).not.toContain(data.id);
+      // Should return q3 or q4 (not seen)
+      expect(["q3", "q4"]).toContain(data.id);
+      // Verify seen attempts query was called
+      expect(selectSeenMock).toHaveBeenCalledWith("question_id");
+      expect(eqSeenMock).toHaveBeenCalledWith("user_id", mockUser.id);
+    });
+
+    it('should auto-reset when pool is exhausted (all questions seen)', async () => {
+      const mockUser = { id: "user-exhausted" };
+      serverSupabaseMock.auth.getUser.mockResolvedValue({
+        data: { user: mockUser },
+        error: null,
+      });
+
+      // Mock seen attempts query - user has seen all questions
+      const seenAttemptsData = [
+        { question_id: "q1" },
+        { question_id: "q2" },
+        { question_id: "q3" },
+      ];
+      const eqSeenMock = jest.fn().mockResolvedValue({ data: seenAttemptsData, error: null });
+      const selectSeenMock = jest.fn(() => ({ eq: eqSeenMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectSeenMock });
+
+      // Mock eligible questions query
+      const questionsData = [
+        { id: "q1", stem: "Question 1", explanations: [{ id: "e1" }] },
+        { id: "q2", stem: "Question 2", explanations: [{ id: "e2" }] },
+        { id: "q3", stem: "Question 3", explanations: [{ id: "e3" }] },
+      ];
+      const eqReviewStatusMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
+      const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
+
+      // Mock insert for "seen" tracking (reset case)
+      const selectInsertMock = jest.fn(() => ({ single: jest.fn().mockResolvedValue({ then: jest.fn(), catch: jest.fn() }) }));
+      const fromInsertMock = jest.fn(() => ({ insert: jest.fn(() => ({ select: selectInsertMock })) }));
+      serverSupabaseMock.from.mockReturnValueOnce(fromInsertMock());
+
+      // Mock answers query
+      const eqAnsMock = jest.fn().mockResolvedValue({
+        data: [{ id: "ans1", choice_label: "A", choice_text: "Option A" }],
+        error: null,
+      });
+      const selectMockA = jest.fn(() => ({ eq: eqAnsMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockA });
+
+      const req = new NextRequest("http://localhost/api/questions/current");
+      const res = await GET(req);
+      const data = await res.json();
+
+      // Should return 200 (auto-reset allows repeats)
+      expect(res.status).toBe(200);
+      expect(data.id).toBeDefined();
+      // Should return one of the eligible questions (even if seen before)
+      expect(["q1", "q2", "q3"]).toContain(data.id);
+    });
+
+    it('should work for anonymous users without seen tracking', async () => {
+      // No user (anonymous/grace cookie)
+      serverSupabaseMock.auth.getUser.mockResolvedValue({
+        data: { user: null },
+        error: null,
+      });
+
+      // Mock eligible questions query (with limit for anonymous)
+      const questionsData = [
+        { id: "q1", stem: "Question 1", explanations: [{ id: "e1" }] },
+        { id: "q2", stem: "Question 2", explanations: [{ id: "e2" }] },
+      ];
+      const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
+      const eqReviewStatusMock = jest.fn(() => ({ limit: limitMock }));
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
+      const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
+
+      // Mock answers query
+      const eqAnsMock = jest.fn().mockResolvedValue({
+        data: [{ id: "ans1", choice_label: "A", choice_text: "Option A" }],
+        error: null,
+      });
+      const selectMockA = jest.fn(() => ({ eq: eqAnsMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockA });
+
+      const req = new NextRequest("http://localhost/api/questions/current");
+      const res = await GET(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(data.id).toBeDefined();
+      // Should not query practice_question_attempts_v2 for anonymous users
+      // (no seen attempts query should be made)
+      const seenQueries = serverSupabaseMock.from.mock.calls.filter(
+        (call) => call[0] === "practice_question_attempts_v2"
+      );
+      expect(seenQueries.length).toBe(0);
+    });
+
+    it('should record question as seen immediately for authenticated users', async () => {
+      const mockUser = { id: "user-immediate-seen" };
+      serverSupabaseMock.auth.getUser.mockResolvedValue({
+        data: { user: mockUser },
+        error: null,
+      });
+
+      // Mock seen attempts query (empty - no previous attempts)
+      const eqSeenMock = jest.fn().mockResolvedValue({ data: [], error: null });
+      const selectSeenMock = jest.fn(() => ({ eq: eqSeenMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectSeenMock });
+
+      // Mock eligible questions query
+      const questionsData = [
+        { id: "q1", stem: "Question 1", explanations: [{ id: "e1" }] },
+      ];
+      const eqReviewStatusMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
+      const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
+
+      // Mock insert for "seen" tracking
+      const insertData = { user_id: mockUser.id, question_id: "q1" };
+      const selectInsertMock = jest.fn(() => ({
+        single: jest.fn().mockResolvedValue({
+          then: jest.fn((cb) => cb()),
+          catch: jest.fn(),
+        }),
+      }));
+      const insertFn = jest.fn(() => ({ select: selectInsertMock }));
+      const fromInsertMock = jest.fn(() => ({ insert: insertFn }));
+      serverSupabaseMock.from.mockReturnValueOnce(fromInsertMock());
+
+      // Mock answers query
+      const eqAnsMock = jest.fn().mockResolvedValue({
+        data: [{ id: "ans1", choice_label: "A", choice_text: "Option A" }],
+        error: null,
+      });
+      const selectMockA = jest.fn(() => ({ eq: eqAnsMock }));
+      serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockA });
+
+      const req = new NextRequest("http://localhost/api/questions/current");
+      const res = await GET(req);
+
+      expect(res.status).toBe(200);
+      // Verify insert was called to record question as seen
+      expect(insertFn).toHaveBeenCalledWith(expect.objectContaining({
+        user_id: mockUser.id,
+        question_id: expect.any(String),
+      }));
+    });
+  });
 });
 
