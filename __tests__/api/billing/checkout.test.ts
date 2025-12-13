@@ -4,7 +4,13 @@ jest.mock("next/server", () => ({
     headers: {
       get: jest.fn((name) => init?.headers?.[name]),
     },
-    json: jest.fn().mockResolvedValue(init?.body),
+    json: jest.fn().mockImplementation(async () => {
+      const body = init?.body;
+      if (typeof body === "string") {
+        return JSON.parse(body);
+      }
+      return body;
+    }),
   })),
   NextResponse: {
     json: jest.fn((data, init) => ({

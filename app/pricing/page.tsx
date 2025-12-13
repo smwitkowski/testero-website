@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import {
@@ -62,6 +62,8 @@ export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const errorTimeoutRef = React.useRef<number | null>(null);
+  const checkoutInFlightRef = useRef<Set<string>>(new Set());
+  const checkoutIdempotencyKeyRef = useRef<Map<string, string>>(new Map());
   const { user } = useAuth();
   const router = useRouter();
   const posthog = usePostHog();
@@ -116,15 +118,27 @@ export default function PricingPage() {
         return;
       }
 
+      // Guard against double-submits (double click / repeated taps) before state updates land.
+      if (checkoutInFlightRef.current.has(priceId)) {
+        return;
+      }
+      checkoutInFlightRef.current.add(priceId);
+      if (!checkoutIdempotencyKeyRef.current.has(priceId)) {
+        checkoutIdempotencyKeyRef.current.set(priceId, crypto.randomUUID());
+      }
+      const idempotencyKey = checkoutIdempotencyKeyRef.current.get(priceId)!;
+
       setLoading(priceId);
 
       const response = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-idempotency-key": idempotencyKey,
         },
         body: JSON.stringify({
           priceId,
+          idempotencyKey,
         }),
       });
 
@@ -187,6 +201,8 @@ export default function PricingPage() {
       errorTimeoutRef.current = window.setTimeout(() => setError(null), 10000);
     } finally {
       setLoading(null);
+      checkoutInFlightRef.current.delete(priceId);
+      checkoutIdempotencyKeyRef.current.delete(priceId);
     }
   };
 

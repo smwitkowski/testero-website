@@ -15,6 +15,9 @@ interface ErrorResponse {
 
 const checkoutSchema = z.object({
   priceId: z.string().min(1),
+  // Client-provided key to make checkout session creation idempotent across retries/double-clicks.
+  // Should be stable for the *same* user action (e.g. a UUID stored in a ref).
+  idempotencyKey: z.string().min(8).max(128).optional(),
 });
 
 export async function POST(
@@ -52,7 +55,7 @@ export async function POST(
       return NextResponse.json({ error: "Invalid price ID" }, { status: 400 });
     }
 
-    const { priceId } = parse.data;
+    const { priceId, idempotencyKey } = parse.data;
 
     // Build list of all valid price IDs from pricing constants
     const validPrices: string[] = [];
@@ -96,12 +99,18 @@ export async function POST(
 
     // Create checkout session
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const headerIdempotencyKey = request.headers.get("x-idempotency-key") || undefined;
+    const mergedIdempotencyKey = headerIdempotencyKey || idempotencyKey;
+    const stripeIdempotencyKey = mergedIdempotencyKey
+      ? `${user.id}:${priceId}:${mergedIdempotencyKey}`
+      : undefined;
     const session = await stripeService.createCheckoutSession({
       customerId: customer.id,
       priceId,
       successUrl: `${siteUrl}/api/billing/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${siteUrl}/pricing`,
       userId: user.id,
+      idempotencyKey: stripeIdempotencyKey,
     });
 
     return NextResponse.json({ url: session.url || "" }, { status: 200 });
