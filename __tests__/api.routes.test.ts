@@ -172,22 +172,27 @@ describe("API routes", () => {
       serverSupabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: "user-123" } }, error: null });
       const eqOptMock = jest.fn().mockResolvedValue({
         data: [
-          { id: 1, label: "A", is_correct: false },
-          { id: 2, label: "B", is_correct: true },
+          { id: 1, choice_label: "A", is_correct: false, explanation_text: "A explanation" },
+          { id: 2, choice_label: "B", is_correct: true, explanation_text: "B explanation" },
         ],
         error: null,
       });
       const selectMockO = jest.fn(() => ({ eq: eqOptMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
 
-      const singleExpMock = jest.fn().mockResolvedValue({ data: { text: "exp" }, error: null });
-      const selectExpMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleExpMock })) }));
-      serverSupabaseMock.from.mockReturnValueOnce({ select: selectExpMock });
-
       // Mock question metadata fetch for practice_attempts
-      const singleQuestionMock = jest.fn().mockResolvedValue({ data: { topic: "Cardiology", difficulty: 3 }, error: null });
+      const singleQuestionMock = jest.fn().mockResolvedValue({ data: { topic: "Cardiology", difficulty: "MEDIUM" }, error: null });
       const selectQuestionMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleQuestionMock })) }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectQuestionMock });
+
+      // Mock practice_question_attempts_v2 upsert
+      const upsertV2Mock = jest.fn().mockResolvedValue({ data: [{ id: 1 }], error: null });
+      const upsertV2FromMock = {
+        upsert: jest.fn().mockReturnValue({
+          onConflict: jest.fn().mockReturnValue(upsertV2Mock),
+        }),
+      };
+      serverSupabaseMock.from.mockReturnValueOnce(upsertV2FromMock);
 
       // Mock practice_attempts insert
       const insertMock = jest.fn().mockResolvedValue({ data: [{ id: 1 }], error: null });
@@ -202,16 +207,20 @@ describe("API routes", () => {
       const json = await res.json();
       expect(res.status).toBe(200);
       expect(json.isCorrect).toBe(true);
-      expect(json.explanationText).toBe("exp");
+      expect(json.explanationsByOptionKey).toEqual({
+        A: "A explanation",
+        B: "B explanation",
+      });
 
       // Verify practice_attempts insert was called with correct data
+      // Note: question_id is converted from UUID string to number, topic is null in canonical schema, difficulty converted from string
       expect(insertMock).toHaveBeenCalledWith({
         user_id: "user-123",
-        question_id: 123,
+        question_id: expect.any(Number), // UUID converted to number
         selected_label: "B",
         is_correct: true,
-        topic: "Cardiology",
-        difficulty: 3,
+        topic: null, // topic column doesn't exist in canonical schema
+        difficulty: 3, // "MEDIUM" converted to 3
       });
     });
 
@@ -219,22 +228,27 @@ describe("API routes", () => {
       serverSupabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: "user-456" } }, error: null });
       const eqOptMock = jest.fn().mockResolvedValue({
         data: [
-          { id: 1, label: "A", is_correct: true },
-          { id: 2, label: "B", is_correct: false },
+          { id: 1, choice_label: "A", is_correct: true, explanation_text: "A explanation" },
+          { id: 2, choice_label: "B", is_correct: false, explanation_text: "B explanation" },
         ],
         error: null,
       });
       const selectMockO = jest.fn(() => ({ eq: eqOptMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
 
-      const singleExpMock = jest.fn().mockResolvedValue({ data: { text: "explanation" }, error: null });
-      const selectExpMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleExpMock })) }));
-      serverSupabaseMock.from.mockReturnValueOnce({ select: selectExpMock });
-
       // Mock question metadata fetch
-      const singleQuestionMock = jest.fn().mockResolvedValue({ data: { topic: "Neurology", difficulty: 5 }, error: null });
+      const singleQuestionMock = jest.fn().mockResolvedValue({ data: { topic: "Neurology", difficulty: "HARD" }, error: null });
       const selectQuestionMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleQuestionMock })) }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectQuestionMock });
+
+      // Mock practice_question_attempts_v2 upsert
+      const upsertV2Mock = jest.fn().mockResolvedValue({ data: [{ id: 1 }], error: null });
+      const upsertV2FromMock = {
+        upsert: jest.fn().mockReturnValue({
+          onConflict: jest.fn().mockReturnValue(upsertV2Mock),
+        }),
+      };
+      serverSupabaseMock.from.mockReturnValueOnce(upsertV2FromMock);
 
       // Mock practice_attempts insert
       const insertMock = jest.fn().mockResolvedValue({ data: [{ id: 2 }], error: null });
@@ -249,15 +263,20 @@ describe("API routes", () => {
       const json = await res.json();
       expect(res.status).toBe(200);
       expect(json.isCorrect).toBe(false);
+      expect(json.explanationsByOptionKey).toEqual({
+        A: "A explanation",
+        B: "B explanation",
+      });
 
       // Verify practice_attempts insert was called with incorrect answer
+      // Note: question_id is converted from UUID string to number, topic is null in canonical schema, difficulty converted from string
       expect(insertMock).toHaveBeenCalledWith({
         user_id: "user-456",
-        question_id: 456,
+        question_id: expect.any(Number), // UUID converted to number
         selected_label: "B",
         is_correct: false,
-        topic: "Neurology",
-        difficulty: 5,
+        topic: null, // topic column doesn't exist in canonical schema
+        difficulty: 5, // "HARD" converted to 5
       });
     });
 
@@ -265,22 +284,27 @@ describe("API routes", () => {
       serverSupabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: "user-789" } }, error: null });
       const eqOptMock = jest.fn().mockResolvedValue({
         data: [
-          { id: 1, label: "A", is_correct: false },
-          { id: 2, label: "B", is_correct: true },
+          { id: 1, choice_label: "A", is_correct: false, explanation_text: "A explanation" },
+          { id: 2, choice_label: "B", is_correct: true, explanation_text: "B explanation" },
         ],
         error: null,
       });
       const selectMockO = jest.fn(() => ({ eq: eqOptMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
 
-      const singleExpMock = jest.fn().mockResolvedValue({ data: { text: "exp" }, error: null });
-      const selectExpMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleExpMock })) }));
-      serverSupabaseMock.from.mockReturnValueOnce({ select: selectExpMock });
-
       // Mock question metadata fetch
-      const singleQuestionMock = jest.fn().mockResolvedValue({ data: { topic: "Pulmonology", difficulty: 2 }, error: null });
+      const singleQuestionMock = jest.fn().mockResolvedValue({ data: { topic: "Pulmonology", difficulty: "EASY" }, error: null });
       const selectQuestionMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleQuestionMock })) }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectQuestionMock });
+
+      // Mock practice_question_attempts_v2 upsert
+      const upsertV2Mock = jest.fn().mockResolvedValue({ data: [{ id: 1 }], error: null });
+      const upsertV2FromMock = {
+        upsert: jest.fn().mockReturnValue({
+          onConflict: jest.fn().mockReturnValue(upsertV2Mock),
+        }),
+      };
+      serverSupabaseMock.from.mockReturnValueOnce(upsertV2FromMock);
 
       // Mock practice_attempts insert failure
       const insertMock = jest.fn().mockResolvedValue({ 
@@ -298,28 +322,36 @@ describe("API routes", () => {
       const json = await res.json();
       expect(res.status).toBe(200);
       expect(json.isCorrect).toBe(true);
-      expect(json.explanationText).toBe("exp");
+      expect(json.explanationsByOptionKey).toEqual({
+        A: "A explanation",
+        B: "B explanation",
+      });
     });
 
     it("handles missing question metadata gracefully", async () => {
       serverSupabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: "user-999" } }, error: null });
       const eqOptMock = jest.fn().mockResolvedValue({
         data: [
-          { id: 1, label: "A", is_correct: true },
+          { id: 1, choice_label: "A", is_correct: true, explanation_text: "A explanation" },
         ],
         error: null,
       });
       const selectMockO = jest.fn(() => ({ eq: eqOptMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockO });
 
-      const singleExpMock = jest.fn().mockResolvedValue({ data: null, error: null });
-      const selectExpMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleExpMock })) }));
-      serverSupabaseMock.from.mockReturnValueOnce({ select: selectExpMock });
-
       // Mock question metadata fetch returning null
       const singleQuestionMock = jest.fn().mockResolvedValue({ data: null, error: null });
       const selectQuestionMock = jest.fn(() => ({ eq: jest.fn(() => ({ single: singleQuestionMock })) }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectQuestionMock });
+
+      // Mock practice_question_attempts_v2 upsert
+      const upsertV2Mock = jest.fn().mockResolvedValue({ data: [{ id: 1 }], error: null });
+      const upsertV2FromMock = {
+        upsert: jest.fn().mockReturnValue({
+          onConflict: jest.fn().mockReturnValue(upsertV2Mock),
+        }),
+      };
+      serverSupabaseMock.from.mockReturnValueOnce(upsertV2FromMock);
 
       // Mock practice_attempts insert
       const insertMock = jest.fn().mockResolvedValue({ data: [{ id: 3 }], error: null });
@@ -334,11 +366,15 @@ describe("API routes", () => {
       const json = await res.json();
       expect(res.status).toBe(200);
       expect(json.isCorrect).toBe(true);
+      expect(json.explanationsByOptionKey).toEqual({
+        A: "A explanation",
+      });
 
       // Verify practice_attempts insert with null topic/difficulty
+      // Note: question_id is converted from UUID string to number
       expect(insertMock).toHaveBeenCalledWith({
         user_id: "user-999",
-        question_id: 999,
+        question_id: expect.any(Number), // UUID converted to number
         selected_label: "A",
         is_correct: true,
         topic: null,
