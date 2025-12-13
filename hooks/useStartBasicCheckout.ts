@@ -19,10 +19,6 @@ export function useStartBasicCheckout() {
     async (source: string) => {
       // Prevent accidental double-submit (e.g., double-click, repeated modal CTA taps).
       if (inFlightRef.current) return;
-      inFlightRef.current = true;
-      if (!idempotencyKeyRef.current) {
-        idempotencyKeyRef.current = crypto.randomUUID();
-      }
 
       posthog?.capture(ANALYTICS_EVENTS.UPGRADE_CTA_CLICKED, {
         source,
@@ -59,6 +55,12 @@ export function useStartBasicCheckout() {
         // Redirect to pricing page as fallback instead of silent failure
         router.push("/pricing");
         return;
+      }
+
+      // Set in-flight flag after all validation/early-return branches to avoid stuck CTA
+      inFlightRef.current = true;
+      if (!idempotencyKeyRef.current) {
+        idempotencyKeyRef.current = crypto.randomUUID();
       }
 
       trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_INITIATED, {
@@ -98,11 +100,12 @@ export function useStartBasicCheckout() {
 
         if (data.url) {
           window.location.href = data.url;
+          // Clear idempotency key only on confirmed success/redirect
+          idempotencyKeyRef.current = null;
         }
       } catch (error) {
         console.error("Error starting checkout:", error);
-        // Allow retries after a failure
-        idempotencyKeyRef.current = null;
+        // Keep idempotency key on error for safe retries
         trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_ERROR, {
           source,
           price_id: BASIC_MONTHLY_PRICE_ID,
