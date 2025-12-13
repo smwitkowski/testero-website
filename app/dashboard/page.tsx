@@ -380,85 +380,80 @@ const DashboardPage = () => {
       {/* Header */}
       <DashboardHeader />
 
-      {/* Next Best Step Card - Promoted */}
-      {weakestDomain && (
-        <NextBestStepCard
-          domain={weakestDomain.displayName}
-          questionCount={25}
-          estimatedTime="30 mins"
-          onStartSession={async () => {
-            try {
-              // Get domain code from display name
-              const domainCode = weakestDomain.domainCode;
-              if (!domainCode) {
-                console.error("Domain code not found for:", weakestDomain.displayName);
-                window.location.href = '/practice/question';
-                return;
-              }
+      {/* Two-column section: Next Best Step + Readiness Snapshot */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Next Best Step Card */}
+        {weakestDomain && (
+          <NextBestStepCard
+            domain={weakestDomain.displayName}
+            questionCount={25}
+            estimatedTime="30 mins"
+            onStartSession={async () => {
+              try {
+                // Get domain code from display name
+                const domainCode = weakestDomain.domainCode;
+                if (!domainCode) {
+                  console.error("Domain code not found for:", weakestDomain.displayName);
+                  window.location.href = '/practice/question';
+                  return;
+                }
 
-              // Create practice session via API
-              const response = await fetch('/api/practice/session', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  examKey: 'pmle',
-                  domainCodes: [domainCode],
-                  questionCount: 10,
-                  source: 'dashboard_next_best_step',
-                }),
-              });
+                // Create practice session via API
+                const response = await fetch('/api/practice/session', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    examKey: 'pmle',
+                    domainCodes: [domainCode],
+                    questionCount: 10,
+                    source: 'dashboard_next_best_step',
+                  }),
+                });
 
-              if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-                console.error('Failed to create practice session:', errorData);
+                if (!response.ok) {
+                  const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                  console.error('Failed to create practice session:', errorData);
+                  // Fallback to old practice question page
+                  window.location.href = `/practice/question?domain=${encodeURIComponent(weakestDomain.displayName)}`;
+                  return;
+                }
+
+                const data = await response.json() as { route?: string; sessionId?: string };
+                if (data.route) {
+                  window.location.href = data.route;
+                } else if (data.sessionId) {
+                  window.location.href = `/practice/session/${data.sessionId}`;
+                } else {
+                  window.location.href = '/practice/question';
+                }
+              } catch (error) {
+                console.error('Error creating practice session:', error);
                 // Fallback to old practice question page
                 window.location.href = `/practice/question?domain=${encodeURIComponent(weakestDomain.displayName)}`;
-                return;
               }
+            }}
+            onChooseAnotherMode={() => {
+              window.location.href = '/practice/question';
+            }}
+          />
+        )}
 
-              const data = await response.json() as { route?: string; sessionId?: string };
-              if (data.route) {
-                window.location.href = data.route;
-              } else if (data.sessionId) {
-                window.location.href = `/practice/session/${data.sessionId}`;
-              } else {
-                window.location.href = '/practice/question';
-              }
-            } catch (error) {
-              console.error('Error creating practice session:', error);
-              // Fallback to old practice question page
-              window.location.href = `/practice/question?domain=${encodeURIComponent(weakestDomain.displayName)}`;
-            }
-          }}
-          onChooseAnotherMode={() => {
-            window.location.href = '/practice/question';
-          }}
-        />
-      )}
-
-      {/* Two-column section: Readiness + Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Readiness Snapshot Card */}
         <ReadinessSnapshotCard
           score={examReadiness?.currentReadinessScore ?? 0}
           hasCompletedDiagnostic={examReadiness?.hasCompletedDiagnostic ?? false}
           overallAccuracy={dashboardData.practice.accuracyPercentage}
           blueprintCoverage={blueprintCoverage}
-          weakestDomain={weakestDomain?.displayName}
-          weakestDomainWeight={weakestDomain ? (() => {
-            const domain = PMLE_BLUEPRINT.find((d) => d.domainCode === weakestDomain.domainCode);
-            return domain ? Math.round(domain.weight * 100) : undefined;
-          })() : undefined}
           onStartDiagnostic={handleStartDiagnostic}
           onUpgrade={() => startBasicCheckout("dashboard_readiness_card")}
           showUpgradeCTA={accessLevel !== "SUBSCRIBER"}
         />
-
-        {/* Recent Activity List */}
-        <RecentActivityList activities={mockActivities} />
       </div>
+
+      {/* Recent Activity List - Full Width */}
+      <RecentActivityList activities={mockActivities} />
 
       {/* Exam Blueprint Table */}
       <ExamBlueprintTable domainStats={mockDomainStats} />
