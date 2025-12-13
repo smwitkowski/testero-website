@@ -68,7 +68,33 @@ export async function POST(req: Request) {
       .eq("id", questionId)
       .single();
 
-    // Best-effort insert to practice_attempts (only if user is authenticated)
+    // Record attempt in practice_question_attempts_v2 (canonical UUID-based table)
+    // This is the primary tracking table for "no-repeat-until-exhausted" question rotation
+    if (user) {
+      const { error: v2InsertError } = await supabase
+        .from("practice_question_attempts_v2")
+        .upsert(
+          {
+            user_id: user.id,
+            question_id: questionId,
+            selected_label: selectedOptionKey,
+            is_correct: isCorrect,
+          },
+          {
+            onConflict: "user_id,question_id",
+            ignoreDuplicates: false, // Update existing record with new answer if user retries
+          }
+        );
+
+      if (v2InsertError) {
+        console.error("practice_question_attempts_v2 upsert failed:", {
+          error: v2InsertError,
+          context: { questionId, userId: user.id },
+        });
+      }
+    }
+
+    // Legacy practice_attempts insert (kept for backward compatibility with existing analytics)
     // Note: practice_attempts.question_id is bigint (legacy), but canonical questions use UUID
     // This insert may fail if question_id doesn't exist in legacy questions_legacy table
     if (user) {
@@ -99,7 +125,8 @@ export async function POST(req: Request) {
         });
 
       if (insertError) {
-        console.error("practice_attempts insert failed:", {
+        // Log but don't fail - legacy table insert is best-effort
+        console.error("practice_attempts insert failed (legacy, non-blocking):", {
           error: insertError,
           data: insertData,
           context: { questionId: questionIdNum, userId: user.id },

@@ -204,8 +204,11 @@ export async function selectPracticeQuestionsByDomains(
       .eq('exam', 'GCP_PM_ML_ENG')
       .eq('status', 'ACTIVE')
       .eq('review_status', 'GOOD')
-      .eq('domain_id', domainId)
-      .limit(targetCount * 3); // Fetch more than needed for randomization
+      .eq('domain_id', domainId);
+    // NOTE:
+    // Avoid small `.limit()` sampling without DB-side random ordering.
+    // Otherwise we repeatedly pull the same top-N rows and users see the same
+    // few questions across sessions ("recycling").
 
     if (fetchError) {
       console.error(`Error fetching questions for domain ${domainCode}:`, fetchError);

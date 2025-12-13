@@ -210,8 +210,15 @@ export async function selectPmleQuestionsByBlueprint(
       .eq('exam', 'GCP_PM_ML_ENG')
       .eq('status', 'ACTIVE')
       .eq('review_status', 'GOOD')
-      .eq('domain_id', domainId)
-      .limit(targetCount * 3); // Fetch more than needed for randomization
+      .eq('domain_id', domainId);
+    // NOTE:
+    // We intentionally do NOT apply a small `.limit()` here.
+    // PostgREST/Supabase results are typically stable in practice, so doing a small limit
+    // without a true randomized DB order causes the app to repeatedly sample from the same
+    // tiny subset of questions (which users experience as "only ~10 questions that recycle").
+    //
+    // Current PMLE pool size is small enough that fetching the full domain pool is acceptable,
+    // and we randomize in-memory below before slicing to `targetCount`.
 
     if (fetchError) {
       console.error(`Error fetching questions for domain ${domainCode}:`, fetchError);
