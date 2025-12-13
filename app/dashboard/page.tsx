@@ -386,10 +386,6 @@ const DashboardPage = () => {
         {weakestDomain && (
           <NextBestStepCard
             domain={weakestDomain.displayName}
-            domainWeight={weakestDomain ? (() => {
-              const domain = PMLE_BLUEPRINT.find((d) => d.domainCode === weakestDomain.domainCode);
-              return domain ? Math.round(domain.weight * 100) : undefined;
-            })() : undefined}
             questionCount={25}
             estimatedTime="30 mins"
             onStartSession={async () => {
@@ -437,9 +433,6 @@ const DashboardPage = () => {
                 // Fallback to old practice question page
                 window.location.href = `/practice/question?domain=${encodeURIComponent(weakestDomain.displayName)}`;
               }
-            }}
-            onTakeMoreQuestions={() => {
-              window.location.href = '/practice/question';
             }}
             onChooseAnotherMode={() => {
               window.location.href = '/practice/question';
