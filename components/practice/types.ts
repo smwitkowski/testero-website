@@ -13,5 +13,5 @@ export interface QuestionData {
 export interface QuestionFeedback {
   isCorrect: boolean;
   correctOptionKey: string;
-  explanationText: string;
+  explanationsByOptionKey: Record<string, string | null>;
 }

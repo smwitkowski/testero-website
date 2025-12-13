@@ -21,10 +21,6 @@ export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
       `}>
         {feedback.isCorrect ? "Correct!" : "Incorrect."}
       </div>
-      <div className="mb-3">
-        <strong className="font-semibold">Explanation:</strong>
-        <div className="mt-1">{feedback.explanationText || "No explanation provided."}</div>
-      </div>
       <button
         onClick={onNextAction}
         className="mt-4 px-7 py-2.5 rounded-md bg-gray-100 text-gray-800 border border-gray-300 font-semibold hover:bg-gray-200 transition-colors cursor-pointer"

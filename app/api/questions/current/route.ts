@@ -14,6 +14,18 @@ type QuestionWithExplanation = {
 const QUESTION_SAMPLE_SIZE = 50;
 
 /**
+ * Shuffles an array in place using Fisher-Yates algorithm
+ */
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+/**
  * Parse and validate difficulty parameter from query string.
  * Returns undefined if not provided, or throws validation error.
  * Accepts text values: 'EASY', 'MEDIUM', 'HARD' (canonical schema)
@@ -162,7 +174,10 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Error fetching answers.' }, { status: 500 });
       }
 
-      return NextResponse.json(serializeQuestion(question, answers || []));
+      // Shuffle answers to randomize option order
+      const shuffledAnswers = shuffleArray(answers || []);
+
+      return NextResponse.json(serializeQuestion(question, shuffledAnswers));
     }
 
     // If no remaining questions after filtering (shouldn't happen for anonymous, but handle gracefully)
@@ -203,8 +218,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Error fetching answers.' }, { status: 500 });
     }
 
+    // Shuffle answers to randomize option order
+    const shuffledAnswers = shuffleArray(answers || []);
+
     // Shape the response (serializeQuestion will map choice_label->label, choice_text->text)
-    return NextResponse.json(serializeQuestion(question, answers || []));
+    return NextResponse.json(serializeQuestion(question, shuffledAnswers));
   } catch (error) {
     console.error('Current question API error:', error);
     return NextResponse.json({ 

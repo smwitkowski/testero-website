@@ -30,10 +30,10 @@ export async function POST(req: Request) {
     // Note: requireSubscriber ensures user is authenticated OR has valid grace cookie
     // If user is null (grace cookie), we skip practice_attempts tracking
 
-    // Fetch answers for the question (canonical schema uses 'answers' table)
+    // Fetch answers for the question with per-option explanations (canonical schema uses 'answers' table)
     const { data: answers, error: answersError } = await supabase
       .from("answers")
-      .select("id, choice_label, is_correct")
+      .select("id, choice_label, is_correct, explanation_text")
       .eq("question_id", questionId);
 
     if (answersError || !answers || answers.length === 0) {
@@ -52,13 +52,11 @@ export async function POST(req: Request) {
     // Compare selectedOptionKey with correct answer's choice_label
     const isCorrect = selectedOptionKey === correctAnswer.choice_label;
 
-    // Fetch explanation (if available) - canonical schema uses explanation_text column
-    const { data: explanationRow } = await supabase
-      .from("explanations")
-      .select("explanation_text")
-      .eq("question_id", questionId)
-      .single();
-    const explanationText = explanationRow?.explanation_text || "";
+    // Build explanations lookup map by option label (choice_label -> explanation_text)
+    const explanationsByOptionKey: Record<string, string | null> = {};
+    answers.forEach((answer) => {
+      explanationsByOptionKey[answer.choice_label] = answer.explanation_text || null;
+    });
 
     // Fetch question metadata for practice_attempts snapshot
     // Note: topic column doesn't exist in canonical schema, so we skip it
@@ -137,7 +135,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       isCorrect,
       correctOptionKey: correctAnswer.choice_label,
-      explanationText,
+      explanationsByOptionKey,
     });
   } catch (error) {
     console.error("Question submit API error:", error);
