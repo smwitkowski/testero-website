@@ -16,11 +16,10 @@ export interface AppShellProps {
 // Map pathname to active sidebar item
 const getActiveItem = (
   pathname: string
-): "dashboard" | "practice" | "performance" | "study-plan" | "admin" => {
+): "dashboard" | "practice" | "study-plan" | "performance" | "admin" => {
   if (pathname.startsWith("/admin")) {
     return "admin";
   }
-  // Check more specific paths first
   if (pathname.startsWith("/dashboard/performance")) {
     return "performance";
   }

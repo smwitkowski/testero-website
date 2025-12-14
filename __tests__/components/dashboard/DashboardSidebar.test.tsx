@@ -68,7 +68,7 @@ describe("DashboardSidebar", () => {
     expect(onNavigate).toHaveBeenCalledWith("practice");
   });
 
-  it("renders exactly 4 navigation items (no Settings)", () => {
+  it("renders exactly 4 navigation items (Dashboard, Practice Exams, Performance, Study Plan)", () => {
     render(<DashboardSidebar activeItem="dashboard" />);
 
     expect(screen.getByRole("link", { name: /Dashboard/i })).toBeInTheDocument();
@@ -90,6 +90,25 @@ describe("DashboardSidebar", () => {
     await user.click(upgradeButton);
 
     expect(onUpgrade).toHaveBeenCalledTimes(1);
+  });
+
+  it("highlights Performance navigation item when active", () => {
+    render(<DashboardSidebar activeItem="performance" />);
+
+    const performanceLink = screen.getByRole("link", { name: /Performance/i });
+    expect(performanceLink).toHaveAttribute("aria-current", "page");
+  });
+
+  it("calls onNavigate when Performance nav item clicked", async () => {
+    const user = userEvent.setup();
+    const onNavigate = jest.fn();
+
+    render(<DashboardSidebar activeItem="dashboard" onNavigate={onNavigate} />);
+
+    const performanceLink = screen.getByRole("link", { name: /Performance/i });
+    await user.click(performanceLink);
+
+    expect(onNavigate).toHaveBeenCalledWith("performance");
   });
 });
 
