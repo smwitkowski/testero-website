@@ -120,6 +120,13 @@ export const ANALYTICS_EVENTS = {
   EMAIL_CAMPAIGN_LANDING: "email_campaign_landing",
   CAMPAIGN_ATTRIBUTION_SET: "campaign_attribution_set",
   EMAIL_CAMPAIGN_TRACKING_PIXEL_LOADED: "email_campaign_tracking_pixel_loaded",
+
+  // Settings
+  SETTINGS_VIEWED: "settings_viewed",
+  SETTINGS_SECTION_CLICKED: "settings_section_clicked",
+  SETTINGS_ACCOUNT_NAME_UPDATED: "settings_account_name_updated",
+  SETTINGS_BILLING_CLICKED: "settings_billing_clicked",
+  SETTINGS_DELETE_ACCOUNT_CLICKED: "settings_delete_account_clicked",
 } as const;
 
 // User property keys for consistency
