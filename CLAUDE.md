@@ -230,6 +230,38 @@ export const QuestionDisplay: React.FC<{
 - Prevents mixing of marketing UI with core application components
 - Maintains clear separation between landing page and app functionality
 
+#### UI Composition Rules & Anti-Patterns
+
+**Card Component Structure:**
+
+- **Cards with actions MUST use `CardFooter`**: Never hand-roll divider + padding inside `CardContent` to create a "fake footer"
+  - ✅ Good: `<CardContent>...</CardContent><CardFooter><Button>...</Button></CardFooter>`
+  - ❌ Bad: `<CardContent><div className="pt-4 border-t">...</div></CardContent>`
+- **Single primary action per card**: Cards should have one clear CTA. If multiple actions exist, prioritize the primary one and demote/remove secondary actions
+- **CTA width consistency**: Use `w-full` for full-width CTAs in footers, or `w-full max-w-md` for constrained-width CTAs to avoid "giant slab" appearance on wide layouts
+
+**Interactive Elements:**
+
+- **No clickable `div` elements**: If something is meant to be clicked, use a real `Button`, `Link`, or semantic HTML (`<button>`, `<a>`)
+  - ✅ Good: `<Button onClick={...}>Action</Button>`
+  - ❌ Bad: `<div onClick={...} className="cursor-pointer">Action</div>`
+- **Accessibility first**: All interactive elements must be keyboard-navigable, have proper focus states, and include appropriate ARIA labels
+
+**Copy/Behavior Alignment:**
+
+- **Never show mismatched promises**: If UI displays "X questions / Y minutes", ensure the actual action payload matches exactly
+  - Example: If button says "25 questions, 30 mins" but creates a 10-question session, this creates a trust gap
+  - Solution: Either align the UI to match reality, or remove time estimates until you can compute them reliably
+
+**Quick Checklist for Card Components:**
+
+- [ ] Actions are in `CardFooter` (not manually created dividers in `CardContent`)
+- [ ] Only one primary CTA per card
+- [ ] Interactive elements use semantic HTML (`Button`, `Link`, not `div` with `onClick`)
+- [ ] Copy matches actual behavior (question counts, time estimates align with API payloads)
+- [ ] Keyboard navigation works (Tab to focus, Enter/Space to activate)
+- [ ] Screen reader labels are present (`aria-label` for complex buttons)
+
 ### Styling Guidelines
 
 #### Tailwind CSS Best Practices
