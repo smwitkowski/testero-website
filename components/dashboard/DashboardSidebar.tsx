@@ -3,13 +3,13 @@
 import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Home, HelpCircle, BarChart3, Calendar, Shield } from "lucide-react";
+import { Home, HelpCircle, Calendar, Shield, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { colorComponent } from "@/lib/design-system";
 import { useAdminStatus } from "@/hooks/useAdminStatus";
 
 export interface DashboardSidebarProps {
-  activeItem?: "dashboard" | "practice" | "performance" | "study-plan" | "admin";
+  activeItem?: "dashboard" | "practice" | "study-plan" | "performance" | "admin";
   showUpgradeCTA?: boolean;
   onNavigate?: (item: string) => void;
   onUpgrade?: () => void;
