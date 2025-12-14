@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { colorSemantic } from "@/lib/design-system";
 import { usePostHog } from "posthog-js/react";
 import { X } from "lucide-react";
-import { useStartBasicCheckout } from "@/hooks/useStartBasicCheckout";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
 import type { DomainStat } from "@/components/dashboard/ExamBlueprintTable";
 
@@ -37,7 +36,6 @@ const DashboardPage = () => {
   const [betaVariant, setBetaVariant] = useState<'A' | 'B'>('A');
   const [accessLevel, setAccessLevel] = useState<AccessLevel>("ANONYMOUS");
   const posthog = usePostHog();
-  const { startBasicCheckout } = useStartBasicCheckout();
 
   // Fetch billing status to compute access level
   useEffect(() => {
@@ -380,15 +378,27 @@ const DashboardPage = () => {
       {/* Header */}
       <DashboardHeader />
 
-      {/* Two-column section: Next Best Step + Readiness Snapshot */}
+      {/* Two-column section: Readiness Snapshot + Next Best Step */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Readiness Snapshot Card */}
+        <ReadinessSnapshotCard
+          score={examReadiness?.currentReadinessScore ?? 0}
+          hasCompletedDiagnostic={examReadiness?.hasCompletedDiagnostic ?? false}
+          overallAccuracy={dashboardData.practice.accuracyPercentage}
+          blueprintCoverage={blueprintCoverage}
+          onStartDiagnostic={handleStartDiagnostic}
+        />
+
         {/* Next Best Step Card */}
         {weakestDomain && (
           <NextBestStepCard
             domain={weakestDomain.displayName}
-            questionCount={25}
-            estimatedTime="30 mins"
-            onStartSession={async () => {
+            questionCount={10}
+            domainWeight={weakestDomain ? (() => {
+              const domain = PMLE_BLUEPRINT.find(d => d.domainCode === weakestDomain.domainCode);
+              return domain ? Math.round(domain.weight * 100) : undefined;
+            })() : undefined}
+            onDomainCardClick={async () => {
               try {
                 // Get domain code from display name
                 const domainCode = weakestDomain.domainCode;
@@ -434,22 +444,8 @@ const DashboardPage = () => {
                 window.location.href = `/practice/question?domain=${encodeURIComponent(weakestDomain.displayName)}`;
               }
             }}
-            onChooseAnotherMode={() => {
-              window.location.href = '/practice/question';
-            }}
           />
         )}
-
-        {/* Readiness Snapshot Card */}
-        <ReadinessSnapshotCard
-          score={examReadiness?.currentReadinessScore ?? 0}
-          hasCompletedDiagnostic={examReadiness?.hasCompletedDiagnostic ?? false}
-          overallAccuracy={dashboardData.practice.accuracyPercentage}
-          blueprintCoverage={blueprintCoverage}
-          onStartDiagnostic={handleStartDiagnostic}
-          onUpgrade={() => startBasicCheckout("dashboard_readiness_card")}
-          showUpgradeCTA={accessLevel !== "SUBSCRIBER"}
-        />
       </div>
 
       {/* Recent Activity List - Full Width */}

@@ -1,31 +1,33 @@
 "use client";
 
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle } from "lucide-react";
+import { Target, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface NextBestStepCardProps {
   domain: string;
   questionCount: number;
-  estimatedTime: string;
-  onStartSession?: () => void;
-  onChooseAnotherMode?: () => void;
+  estimatedTime?: string;
+  domainWeight?: number;
+  onDomainCardClick?: () => void;
+  onTakeMoreQuestions?: () => void;
   className?: string;
 }
 
 export const NextBestStepCard: React.FC<NextBestStepCardProps> = ({
   domain,
   questionCount,
-  estimatedTime,
-  onStartSession,
-  onChooseAnotherMode,
+  domainWeight,
+  onDomainCardClick,
   className,
+  // estimatedTime and onTakeMoreQuestions kept in interface for backward compatibility
+  // but not used in current single-purpose card implementation
 }) => {
   return (
-    <Card className={cn("h-full", className)}>
+    <Card className={cn("h-full hover:translate-y-0 hover:shadow-sm", className)}>
       <CardHeader>
         <div className="flex items-center justify-between mb-2">
           <CardTitle>Next Best Step</CardTitle>
@@ -35,36 +37,33 @@ export const NextBestStepCard: React.FC<NextBestStepCardProps> = ({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Targeted Practice: Strengthen your weakest area based on recent performance.
-        </p>
-
-        <div className="p-4 rounded-lg border border-border/60 bg-muted/30">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-foreground mb-1">{domain}</div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span>{questionCount} Questions</span>
-                <span>{estimatedTime}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Button onClick={onStartSession} tone="accent" className="w-full">
-            Start Session
-          </Button>
-          <Button
-            onClick={onChooseAnotherMode}
-            variant="outline"
-            className="w-full"
-          >
-            Choose another mode
-          </Button>
-        </div>
+        {/* Insight Text */}
+        {domainWeight && (
+          <p className="text-sm text-foreground">
+            You&apos;re strong in Project Initiation but underweight on{" "}
+            <strong>{domain}</strong>, which carries {domainWeight}% of the exam.
+          </p>
+        )}
       </CardContent>
+
+      {/* Primary CTA Button */}
+      {onDomainCardClick && (
+        <CardFooter className="justify-start">
+          <Button
+            onClick={onDomainCardClick}
+            tone="accent"
+            className="h-auto py-4 w-full max-w-md"
+            icon={<Target className="w-5 h-5" />}
+            iconRight={<ArrowRight className="w-5 h-5" />}
+            aria-label={`Start recommended practice set for ${domain}`}
+          >
+            <span className="flex flex-col items-start text-left flex-1">
+              <span className="font-semibold">Practice {domain}</span>
+              <span className="text-sm opacity-80 font-normal">{questionCount} questions</span>
+            </span>
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 };
