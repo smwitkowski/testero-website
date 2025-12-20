@@ -33,6 +33,9 @@ jest.mock("@/lib/analytics/funnels", () => ({
   trackActivationFunnel: jest.fn(),
 }));
 
+// Mock fetch for session endpoint
+global.fetch = jest.fn();
+
 const mockRouter = {
   push: jest.fn(),
 };
@@ -46,6 +49,7 @@ describe("VerifyEmailPage", () => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
     (usePostHog as jest.Mock).mockReturnValue(mockPostHog);
+    (global.fetch as jest.Mock).mockClear();
 
     // Mock window.location.hash
     Object.defineProperty(window, "location", {
@@ -86,9 +90,15 @@ describe("VerifyEmailPage", () => {
     });
   });
 
-  test("shows error state when no access token in URL", async () => {
+  test("shows error state when no access token in URL and no authenticated session", async () => {
     const { trackEvent, trackError } = require("@/lib/analytics/analytics");
     window.location.hash = "";
+
+    // Mock session endpoint to return no user
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ user: null }),
+    });
 
     render(<VerifyEmailPage />);
 
@@ -102,6 +112,7 @@ describe("VerifyEmailPage", () => {
     expect(screen.getByText("No verification token found in URL")).toBeInTheDocument();
     expect(trackEvent).toHaveBeenCalled();
     expect(trackError).toHaveBeenCalled();
+    expect(global.fetch).toHaveBeenCalledWith("/api/auth/session");
   });
 
   test("shows error state when Supabase setSession fails", async () => {
@@ -195,5 +206,77 @@ describe("VerifyEmailPage", () => {
       access_token: "valid_token",
       refresh_token: "",
     });
+  });
+
+  test("shows success state for PKCE flow when session endpoint returns authenticated user", async () => {
+    const { trackEvent, identifyUser } = require("@/lib/analytics/analytics");
+    const { trackActivationFunnel } = require("@/lib/analytics/funnels");
+
+    window.location.hash = "";
+
+    // Mock session endpoint to return authenticated user (PKCE flow)
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        user: {
+          id: "user123",
+          email: "test@example.com",
+          email_confirmed_at: "2025-12-16T13:09:44.290183Z",
+        },
+      }),
+    });
+
+    render(<VerifyEmailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Email Verified!")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Your account has been successfully verified")).toBeInTheDocument();
+    expect(screen.getByText("Welcome to Testero!")).toBeInTheDocument();
+    expect(screen.getByText("Continue to Dashboard")).toBeInTheDocument();
+
+    expect(trackEvent).toHaveBeenCalled();
+    expect(identifyUser).toHaveBeenCalledWith(
+      mockPostHog,
+      "user123",
+      expect.objectContaining({
+        email: "test@example.com",
+        email_verified: true,
+      })
+    );
+    expect(trackActivationFunnel).toHaveBeenCalled();
+    expect(global.fetch).toHaveBeenCalledWith("/api/auth/session");
+  });
+
+  test("shows error state for PKCE flow when session endpoint returns unconfirmed user", async () => {
+    const { trackEvent, trackError } = require("@/lib/analytics/analytics");
+
+    window.location.hash = "";
+
+    // Mock session endpoint to return user without email_confirmed_at
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        user: {
+          id: "user123",
+          email: "test@example.com",
+          email_confirmed_at: null,
+        },
+      }),
+    });
+
+    render(<VerifyEmailPage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Verification Failed" })
+      ).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("There was a problem verifying your email")).toBeInTheDocument();
+    expect(screen.getByText("No verification token found in URL")).toBeInTheDocument();
+    expect(trackEvent).toHaveBeenCalled();
+    expect(trackError).toHaveBeenCalled();
   });
 });
