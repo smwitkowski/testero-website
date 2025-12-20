@@ -36,12 +36,12 @@ export const SYSTEM_ROUTES = [
 ] as const;
 
 // Auth-specific routes that should redirect authenticated users to dashboard
+// Note: /verify-email is excluded to allow authenticated users to see the success screen
 export const AUTH_ROUTES = [
   "/login", 
   "/signup", 
   "/forgot-password", 
-  "/reset-password", 
-  "/verify-email"
+  "/reset-password"
 ] as const;
 
 // All public routes combined for middleware usage

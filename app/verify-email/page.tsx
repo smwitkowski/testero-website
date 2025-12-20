@@ -27,46 +27,88 @@ const VerifyEmailPage = () => {
         // Track page view
         trackEvent(posthog, ANALYTICS_EVENTS.EMAIL_VERIFICATION_PAGE_VIEWED);
 
-        // Check if there's a hash in the URL containing the access token
+        // Check if there's a hash in the URL containing the access token (hash-token flow)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const accessToken = hashParams.get("access_token");
         const refreshToken = hashParams.get("refresh_token");
 
-        if (!accessToken) {
-          throw new Error("No verification token found in URL");
-        }
+        if (accessToken) {
+          // Hash-token flow: Set the session using the tokens from the URL
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || "",
+          });
 
-        // Set the session using the tokens from the URL
-        const { data, error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken || "",
-        });
-
-        if (error) {
-          throw error;
-        }
-
-        if (data.session && data.user) {
-          // Store user email for potential resend functionality
-          if (data.user.email) {
-            setUserEmail(data.user.email);
+          if (error) {
+            throw error;
           }
+
+          if (data.session && data.user) {
+            // Store user email for potential resend functionality
+            if (data.user.email) {
+              setUserEmail(data.user.email);
+            }
+
+            // Track successful email confirmation
+            trackEvent(posthog, ANALYTICS_EVENTS.EMAIL_CONFIRMED, {
+              user_id: data.user.id,
+              email: data.user.email,
+            });
+
+            // Track activation funnel progression
+            trackActivationFunnel(posthog, "EMAIL_VERIFY", {
+              user_id: data.user.id,
+              email: data.user.email,
+            });
+
+            // Identify user for future tracking
+            identifyUser(posthog, data.user.id, {
+              email: data.user.email,
+              email_verified: true,
+            });
+
+            setVerificationState("success");
+
+            // Auto-redirect to dashboard after 3 seconds
+            setTimeout(() => {
+              setIsRedirecting(true);
+              router.push("/dashboard");
+            }, 3000);
+            return;
+          } else {
+            throw new Error("Failed to establish session after verification");
+          }
+        }
+
+        // PKCE flow: Check if user is already authenticated via cookies (from /auth/confirm)
+        const sessionResponse = await fetch("/api/auth/session");
+        if (!sessionResponse.ok) {
+          throw new Error("Failed to check session status");
+        }
+
+        const sessionData = (await sessionResponse.json()) as {
+          user: { id: string; email: string; email_confirmed_at: string | null } | null;
+        };
+
+        if (sessionData.user && sessionData.user.email_confirmed_at) {
+          // User is authenticated and email is confirmed (PKCE flow succeeded)
+          setUserEmail(sessionData.user.email);
 
           // Track successful email confirmation
           trackEvent(posthog, ANALYTICS_EVENTS.EMAIL_CONFIRMED, {
-            user_id: data.user.id,
-            email: data.user.email,
+            user_id: sessionData.user.id,
+            email: sessionData.user.email,
           });
 
           // Track activation funnel progression
           trackActivationFunnel(posthog, "EMAIL_VERIFY", {
-            user_id: data.user.id,
-            email: data.user.email,
+            user_id: sessionData.user.id,
+            email: sessionData.user.email,
           });
 
           // Identify user for future tracking
-          identifyUser(posthog, data.user.id, {
-            email: data.user.email,
+          identifyUser(posthog, sessionData.user.id, {
+            email: sessionData.user.email,
             email_verified: true,
           });
 
@@ -77,9 +119,11 @@ const VerifyEmailPage = () => {
             setIsRedirecting(true);
             router.push("/dashboard");
           }, 3000);
-        } else {
-          throw new Error("Failed to establish session after verification");
+          return;
         }
+
+        // No hash token and no authenticated session - show error
+        throw new Error("No verification token found in URL");
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Email verification failed";
         setError(errorMessage);

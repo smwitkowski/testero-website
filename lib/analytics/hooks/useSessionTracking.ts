@@ -19,6 +19,59 @@ const SESSION_STORAGE_KEY = "testero_session_metrics";
 const IDLE_THRESHOLD = 30000; // 30 seconds of inactivity = idle
 const SCROLL_DEBOUNCE = 500; // Debounce scroll tracking
 
+// In-memory fallback storage when sessionStorage is blocked
+const memoryStorage: Record<string, string> = {};
+
+/**
+ * Safe sessionStorage wrapper that falls back to in-memory storage
+ * when sessionStorage access is blocked (e.g., SecurityError in some browsers)
+ */
+function safeSessionStorage(): {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+} {
+  // Test if sessionStorage is accessible
+  let storageAvailable = false;
+  try {
+    const testKey = "__storage_test__";
+    sessionStorage.setItem(testKey, testKey);
+    sessionStorage.removeItem(testKey);
+    storageAvailable = true;
+  } catch {
+    // sessionStorage is blocked or unavailable
+    storageAvailable = false;
+  }
+
+  if (storageAvailable) {
+    return {
+      getItem: (key: string) => {
+        try {
+          return sessionStorage.getItem(key);
+        } catch {
+          // Fallback to memory if access fails
+          return memoryStorage[key] || null;
+        }
+      },
+      setItem: (key: string, value: string) => {
+        try {
+          sessionStorage.setItem(key, value);
+        } catch {
+          // Fallback to memory if write fails
+          memoryStorage[key] = value;
+        }
+      },
+    };
+  } else {
+    // Use in-memory storage only
+    return {
+      getItem: (key: string) => memoryStorage[key] || null,
+      setItem: (key: string, value: string) => {
+        memoryStorage[key] = value;
+      },
+    };
+  }
+}
+
 export function useSessionTracking(userId?: string) {
   const posthog = usePostHog();
   const pathname = usePathname();
@@ -29,21 +82,35 @@ export function useSessionTracking(userId?: string) {
 
   // Initialize or retrieve session metrics
   const initializeMetrics = useCallback(() => {
-    const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    const storage = safeSessionStorage();
+    const stored = storage.getItem(SESSION_STORAGE_KEY);
     const now = Date.now();
 
     if (stored) {
-      const parsed = JSON.parse(stored) as SessionMetrics;
-      // Check if session is still valid (less than 30 min old)
-      if (now - parsed.sessionStartTime < 30 * 60 * 1000) {
-        metricsRef.current = {
-          ...parsed,
-          pageStartTime: now,
-          totalPageViews: parsed.totalPageViews + 1,
-          maxScrollDepth: 0,
-        };
-      } else {
-        // Start new session
+      try {
+        const parsed = JSON.parse(stored) as SessionMetrics;
+        // Check if session is still valid (less than 30 min old)
+        if (now - parsed.sessionStartTime < 30 * 60 * 1000) {
+          metricsRef.current = {
+            ...parsed,
+            pageStartTime: now,
+            totalPageViews: parsed.totalPageViews + 1,
+            maxScrollDepth: 0,
+          };
+        } else {
+          // Start new session
+          metricsRef.current = {
+            sessionStartTime: now,
+            pageStartTime: now,
+            totalPageViews: 1,
+            totalScrollDepth: 0,
+            maxScrollDepth: 0,
+            idleTime: 0,
+            lastActivityTime: now,
+          };
+        }
+      } catch {
+        // Invalid stored data, start fresh
         metricsRef.current = {
           sessionStartTime: now,
           pageStartTime: now,
@@ -67,7 +134,9 @@ export function useSessionTracking(userId?: string) {
       };
     }
 
-    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(metricsRef.current));
+    if (metricsRef.current) {
+      storage.setItem(SESSION_STORAGE_KEY, JSON.stringify(metricsRef.current));
+    }
   }, []);
 
   // Track scroll depth
@@ -95,7 +164,10 @@ export function useSessionTracking(userId?: string) {
       }
     }
 
-    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(metricsRef.current));
+    if (metricsRef.current) {
+      const storage = safeSessionStorage();
+      storage.setItem(SESSION_STORAGE_KEY, JSON.stringify(metricsRef.current));
+    }
   }, [pathname, posthog, userId]);
 
   // Handle scroll with debouncing
@@ -121,7 +193,10 @@ export function useSessionTracking(userId?: string) {
     }
 
     metricsRef.current.lastActivityTime = now;
-    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(metricsRef.current));
+    if (metricsRef.current) {
+      const storage = safeSessionStorage();
+      storage.setItem(SESSION_STORAGE_KEY, JSON.stringify(metricsRef.current));
+    }
 
     // Reset idle timer
     if (idleTimeoutRef.current) {
