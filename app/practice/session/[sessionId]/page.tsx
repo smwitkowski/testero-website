@@ -27,6 +27,90 @@ interface PracticeSessionData {
   sourceSessionId?: string;
 }
 
+/**
+ * Storage key for practice session progress
+ */
+function getProgressStorageKey(sessionId: string): string {
+  return `testero_practice_progress_${sessionId}`;
+}
+
+/**
+ * Storage key for tracking if session started event was fired
+ */
+function getStartedEventStorageKey(sessionId: string): string {
+  return `testero_practice_started_${sessionId}`;
+}
+
+/**
+ * Load progress from localStorage for a given session
+ */
+function loadProgress(sessionId: string): number | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const key = getProgressStorageKey(sessionId);
+    const stored = localStorage.getItem(key);
+    if (!stored) {
+      return null;
+    }
+    const index = parseInt(stored, 10);
+    return isNaN(index) ? null : index;
+  } catch (error) {
+    console.error("Failed to load progress from storage:", error);
+    return null;
+  }
+}
+
+/**
+ * Save progress to localStorage for a given session
+ */
+function saveProgress(sessionId: string, index: number): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    const key = getProgressStorageKey(sessionId);
+    localStorage.setItem(key, index.toString());
+  } catch (error) {
+    console.error("Failed to save progress to storage:", error);
+  }
+}
+
+/**
+ * Check if session started event was already fired
+ */
+function hasStartedEventFired(sessionId: string): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    const key = getStartedEventStorageKey(sessionId);
+    return localStorage.getItem(key) === "true";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Mark session started event as fired
+ */
+function markStartedEventFired(sessionId: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    const key = getStartedEventStorageKey(sessionId);
+    localStorage.setItem(key, "true");
+  } catch (error) {
+    console.error("Failed to mark started event as fired:", error);
+  }
+}
+
 const PracticeSessionPage = () => {
   const params = useParams();
   const router = useRouter();
@@ -84,17 +168,30 @@ const PracticeSessionPage = () => {
         }
         if (data.session) {
           setSessionData(data.session);
+
+          // Restore progress from localStorage if available
+          const savedIndex = loadProgress(sessionId);
+          if (savedIndex !== null && data.session.questions.length > 0) {
+            // Clamp to valid range
+            const validIndex = Math.min(savedIndex, data.session.questions.length - 1);
+            setCurrentQuestionIndex(Math.max(0, validIndex));
+          } else {
+            // No saved progress, start at beginning
+            setCurrentQuestionIndex(0);
+          }
+
+          // Track session started event only once per session
+          if (!hasStartedEventFired(sessionId)) {
+            trackEvent(posthog, ANALYTICS_EVENTS.PRACTICE_SESSION_STARTED, {
+              sessionId: sessionId,
+              exam: data.session.exam || "unknown",
+              questionCount: data.session.questions.length || 0,
+              userId: user.id || null,
+              source: data.session.source,
+            });
+            markStartedEventFired(sessionId);
+          }
         }
-
-        trackEvent(posthog, ANALYTICS_EVENTS.PRACTICE_SESSION_STARTED, {
-          sessionId: sessionId,
-          exam: data.session?.exam || "unknown",
-          questionCount: data.session?.questions?.length || 0,
-          userId: user?.id || null,
-          source: data.session?.source,
-        });
-
-        setCurrentQuestionIndex(0);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "An error occurred while fetching session.");
       } finally {
@@ -103,7 +200,16 @@ const PracticeSessionPage = () => {
     };
 
     fetchSession();
-  }, [sessionId, user, isAuthLoading, posthog]);
+    // Using user?.id instead of user to avoid re-fetches when user object reference changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, user?.id, isAuthLoading, posthog]);
+
+  // Save progress to localStorage whenever currentQuestionIndex changes
+  useEffect(() => {
+    if (sessionId && sessionData) {
+      saveProgress(sessionId, currentQuestionIndex);
+    }
+  }, [sessionId, currentQuestionIndex, sessionData]);
 
   const currentQuestion = sessionData?.questions[currentQuestionIndex];
 
