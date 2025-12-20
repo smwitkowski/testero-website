@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { User, CreditCard, Shield, ArrowRight, Settings as SettingsIcon } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 import { useEffect } from "react";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 
 export default function SettingsOverviewPage() {
   const { user } = useAuth();
@@ -15,7 +16,7 @@ export default function SettingsOverviewPage() {
 
   useEffect(() => {
     if (user && posthog) {
-      posthog.capture("settings_viewed", {
+      posthog.capture(ANALYTICS_EVENTS.SETTINGS_VIEWED, {
         user_id: user.id,
         section: "overview",
       });
@@ -48,7 +49,7 @@ export default function SettingsOverviewPage() {
 
   const handleSectionClick = (sectionId: string) => {
     if (posthog) {
-      posthog.capture("settings_section_clicked", {
+      posthog.capture(ANALYTICS_EVENTS.SETTINGS_SECTION_CLICKED, {
         user_id: user?.id,
         section: sectionId,
       });

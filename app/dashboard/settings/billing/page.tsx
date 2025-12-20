@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { usePostHog } from "posthog-js/react";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 
 export default function BillingSettingsPage() {
   const router = useRouter();
@@ -11,13 +12,17 @@ export default function BillingSettingsPage() {
   const posthog = usePostHog();
 
   useEffect(() => {
-    if (user && posthog) {
-      posthog.capture("settings_billing_clicked", {
-        user_id: user.id,
-      });
-    }
-    // Redirect to the main billing page
-    router.replace("/dashboard/billing");
+    const redirect = async () => {
+      if (user && posthog) {
+        posthog.capture(ANALYTICS_EVENTS.SETTINGS_BILLING_CLICKED, {
+          user_id: user.id,
+        });
+        // Small delay to ensure event is sent
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      router.replace("/dashboard/billing");
+    };
+    redirect();
   }, [router, user, posthog]);
 
   // Show loading state while redirecting

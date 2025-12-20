@@ -50,7 +50,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Update user metadata
     const { error: updateError } = await supabase.auth.updateUser({
       data: {
-        ...user.user_metadata,
         full_name: fullName.trim(),
       },
     });

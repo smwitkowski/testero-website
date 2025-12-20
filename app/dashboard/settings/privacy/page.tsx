@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Shield, Trash2, AlertTriangle, Mail } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +26,7 @@ export default function PrivacySettingsPage() {
 
   useEffect(() => {
     if (user && posthog) {
-      posthog.capture("settings_viewed", {
+      posthog.capture(ANALYTICS_EVENTS.SETTINGS_VIEWED, {
         user_id: user.id,
         section: "privacy",
       });
@@ -34,7 +35,7 @@ export default function PrivacySettingsPage() {
 
   const handleDeleteAccountClick = () => {
     if (posthog && user) {
-      posthog.capture("settings_delete_account_clicked", {
+      posthog.capture(ANALYTICS_EVENTS.SETTINGS_DELETE_ACCOUNT_CLICKED, {
         user_id: user.id,
       });
     }
@@ -52,7 +53,13 @@ export default function PrivacySettingsPage() {
     );
 
     const mailtoLink = `mailto:support@testero.com?subject=${subject}&body=${body}`;
-    window.open(mailtoLink, "_blank");
+    const newWindow = window.open(mailtoLink, "_blank", "noopener,noreferrer");
+    if (newWindow) {
+      newWindow.opener = null;
+    } else {
+      // Fallback if popup is blocked
+      window.location.href = mailtoLink;
+    }
 
     setDeleteDialogOpen(false);
   };

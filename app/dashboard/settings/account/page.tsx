@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { User, Mail, Lock, CheckCircle2, AlertCircle } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 import Link from "next/link";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 
 const accountFormSchema = z.object({
   fullName: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -44,7 +45,7 @@ export default function AccountSettingsPage() {
 
   useEffect(() => {
     if (user && posthog) {
-      posthog.capture("settings_viewed", {
+      posthog.capture(ANALYTICS_EVENTS.SETTINGS_VIEWED, {
         user_id: user.id,
         section: "account",
       });
@@ -78,7 +79,7 @@ export default function AccountSettingsPage() {
 
       // Track analytics
       if (posthog) {
-        posthog.capture("settings_account_name_updated", {
+        posthog.capture(ANALYTICS_EVENTS.SETTINGS_ACCOUNT_NAME_UPDATED, {
           user_id: user?.id,
         });
       }
@@ -92,10 +93,11 @@ export default function AccountSettingsPage() {
       setSubmitError(errorMessage);
       
       if (posthog) {
-        posthog.capture("settings_error", {
+        posthog.capture(ANALYTICS_EVENTS.UNHANDLED_ERROR, {
           user_id: user?.id,
           error: errorMessage,
           section: "account",
+          context: "settings",
         });
       }
     } finally {
