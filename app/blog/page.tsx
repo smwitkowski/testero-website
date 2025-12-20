@@ -28,8 +28,12 @@ const BlogCard = ({ post }: BlogCardProps) => {
   const { meta } = post;
   
   return (
-    <article className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 bg-white">
-      <div className="p-6">
+    <Link 
+      href={`/blog/${meta.slug}`} 
+      className="block border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 bg-white group"
+      aria-label={`Read article: ${meta.title}`}
+    >
+      <article className="p-6">
         <div className="flex items-center space-x-4 text-sm text-gray-500 mb-4">
           <div className="flex items-center space-x-1">
             <Calendar className="w-4 h-4" />
@@ -49,11 +53,9 @@ const BlogCard = ({ post }: BlogCardProps) => {
           )}
         </div>
 
-        <Link href={`/blog/${meta.slug}`} className="block hover:no-underline group">
-          <h2 className="text-2xl font-bold mb-3 text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
-            {meta.title}
-          </h2>
-        </Link>
+        <h2 className="text-2xl font-bold mb-3 text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
+          {meta.title}
+        </h2>
 
         <p className="text-gray-700 mb-4 line-clamp-3 leading-relaxed">
           {meta.description}
@@ -94,8 +96,8 @@ const BlogCard = ({ post }: BlogCardProps) => {
             )}
           </div>
         )}
-      </div>
-    </article>
+      </article>
+    </Link>
   );
 };
 

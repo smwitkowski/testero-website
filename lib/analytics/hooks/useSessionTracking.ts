@@ -322,7 +322,8 @@ export function useSessionTracking(userId?: string) {
         clearTimeout(idleTimeoutRef.current);
       }
     };
-  }, [initializeMetrics, handleScroll, trackActivity, trackPageExit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount to avoid infinite loops
 
   // Track page changes
   useEffect(() => {
@@ -331,7 +332,8 @@ export function useSessionTracking(userId?: string) {
       initializeMetrics();
     }
     lastPathRef.current = pathname;
-  }, [pathname, trackPageExit, initializeMetrics]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]); // Only depend on pathname to avoid infinite loops
 
   return {
     sessionMetrics: metricsRef.current,

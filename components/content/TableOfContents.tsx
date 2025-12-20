@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { TableOfContentsProps, Heading } from './types';
 
@@ -15,8 +15,22 @@ function TableOfContents({
 }: TableOfContentsProps) {
   const [headings, setHeadings] = useState<Heading[]>([]);
   const [activeId, setActiveId] = useState<string>('');
+  const processedRef = useRef<string>(''); // Track processed content to avoid reprocessing
+  const headingsRef = useRef<Heading[]>([]); // Track current headings to avoid unnecessary updates
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  // Create stable keys for dependencies
+  const contentKey = contentId || (typeof content === 'string' ? content.substring(0, 200) : String(content));
+  const headingLevelsKey = headingLevels.join(',');
+  const observerOptionsKey = JSON.stringify(observerOptions);
 
   useEffect(() => {
+    // Clean up previous observer
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+
     let contentElement: Element | null = null;
     
     if (contentId) {
@@ -28,30 +42,67 @@ function TableOfContents({
       contentElement = document.querySelector('article') || document.querySelector('.blog-content') || document.querySelector('main');
     }
     
-    if (!contentElement) return;
+    if (!contentElement) {
+      setHeadings([]);
+      headingsRef.current = [];
+      return;
+    }
+
+    // Create a content signature to avoid reprocessing the same content
+    const contentSignature = `${contentKey}-${headingLevelsKey}`;
+    if (processedRef.current === contentSignature) {
+      return; // Already processed this content
+    }
 
     // Extract headings based on configured levels
     const headingSelector = headingLevels.map(level => `h${level}`).join(', ');
     const elements = Array.from(contentElement.querySelectorAll(headingSelector));
     
-    const headingsData = elements.map((element) => {
+    // Track used IDs to ensure uniqueness
+    const usedIds = new Set<string>();
+    
+    const headingsData = elements.map((element, index) => {
       // Make sure all headings have IDs for scrolling
-      if (!element.id) {
-        const id = element.textContent
+      let id = element.id;
+      if (!id) {
+        id = element.textContent
           ?.toLowerCase()
           .replace(/[^\w\s]/g, '')
-          .replace(/\s+/g, '-') || `heading-${Math.random().toString(36).substr(2, 9)}`;
-        element.id = id;
+          .replace(/\s+/g, '-') || `heading-${index}`;
+      }
+      
+      // Ensure ID is unique by appending index if needed
+      let uniqueId = id;
+      let counter = 0;
+      while (usedIds.has(uniqueId)) {
+        counter++;
+        uniqueId = `${id}-${counter}`;
+      }
+      usedIds.add(uniqueId);
+      
+      // Update element ID if it was changed (only if not already set)
+      if (!element.id || element.id !== uniqueId) {
+        element.id = uniqueId;
       }
       
       return {
-        id: element.id,
+        id: uniqueId,
         text: element.textContent || '',
         level: parseInt(element.tagName.substring(1)),
       };
     });
     
-    setHeadings(headingsData);
+    // Only update if headings actually changed (compare by IDs and text)
+    const currentIds = headingsRef.current.map(h => h.id).join('|');
+    const newIds = headingsData.map(h => h.id).join('|');
+    const currentTexts = headingsRef.current.map(h => h.text).join('|');
+    const newTexts = headingsData.map(h => h.text).join('|');
+    
+    if (currentIds !== newIds || currentTexts !== newTexts) {
+      headingsRef.current = headingsData;
+      processedRef.current = contentSignature;
+      setHeadings(headingsData);
+    }
     
     // Setup intersection observer for active heading highlighting
     const callback = (entries: IntersectionObserverEntry[]) => {
@@ -67,10 +118,18 @@ function TableOfContents({
       ...observerOptions
     });
     
+    observerRef.current = observer;
     elements.forEach(element => observer.observe(element));
     
-    return () => observer.disconnect();
-  }, [contentId, content, headingLevels, observerOptions]);
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+    };
+    // Use stable keys instead of objects/arrays to prevent infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contentKey, headingLevelsKey, observerOptionsKey]);
   
   if (headings.length === 0) return null;
   
