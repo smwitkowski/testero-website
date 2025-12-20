@@ -93,7 +93,7 @@ export async function GET(
         )
       `)
       .eq("session_id", sessionId)
-      .order("created_at", { ascending: true });
+      .order("id", { ascending: true });
 
     if (questionsError) {
       console.error("Error fetching questions with responses:", questionsError);
