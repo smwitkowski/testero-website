@@ -23,31 +23,45 @@ const PracticeQuestionPage = () => {
   const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
   // Track last 3 question IDs as a small anti-race safeguard (server-side tracking is primary)
   const recentQuestionIds = useRef<string[]>([]);
+  // Deduplication ref to prevent duplicate fetches
+  const lastFetchKeyRef = useRef<string | null>(null);
   const posthog = usePostHog();
   const { user } = useAuth();
+  const userId = user?.id;
 
   // Track page view for authenticated users (middleware ensures auth)
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     
     captureWithDeduplication(posthog, "practice_page_viewed", {
-      user_id: user.id,
+      user_id: userId,
     });
-  }, [user, posthog]);
+  }, [userId, posthog]);
 
+  // Initial question fetch effect - keyed on userId to prevent re-fetches when user object identity changes
   useEffect(() => {
-    // Middleware ensures user is authenticated, so we can fetch directly
-    if (!user) return; // Wait for user session to load
+    // Wait for user session to load
+    if (!userId) return;
 
-    setLoading(true);
-    setError(null);
-    
     // Build URL with excludeIds if we have recent question IDs
     const url = recentQuestionIds.current.length
       ? `/api/questions/current?excludeIds=${recentQuestionIds.current.join(",")}`
       : "/api/questions/current";
     
-    fetch(url)
+    // Deduplication: skip if we've already fetched this exact combination
+    const fetchKey = `${userId}:${url}`;
+    if (lastFetchKeyRef.current === fetchKey) {
+      return;
+    }
+    lastFetchKeyRef.current = fetchKey;
+
+    setLoading(true);
+    setError(null);
+    
+    // AbortController for cleanup
+    const controller = new AbortController();
+    
+    fetch(url, { signal: controller.signal })
       .then(async (res) => {
         if (!res.ok) {
           const errorMessage = await getApiErrorMessage(res);
@@ -56,6 +70,9 @@ const PracticeQuestionPage = () => {
         return res.json() as Promise<QuestionData>;
       })
       .then((data) => {
+        // Only update state if request wasn't aborted
+        if (controller.signal.aborted) return;
+        
         setQuestion(data);
         setQuestionStartTime(new Date());
         setLoading(false);
@@ -67,26 +84,45 @@ const PracticeQuestionPage = () => {
           data.id,
           ...recentQuestionIds.current.filter((id) => id !== data.id),
         ].slice(0, 3);
-
-        // Track question loaded with UUID property for reliable analytics
-        captureWithDeduplication(posthog, "practice_question_loaded", {
-          user_id: user?.id,
-          question_id: data.id, // Keep for backward compatibility
-          question_uuid: data.id, // String-typed UUID for reliable analysis
-        });
       })
       .catch((error) => {
+        // Ignore AbortError - request was cancelled intentionally
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+        
+        // Only update error state if request wasn't aborted
+        if (controller.signal.aborted) return;
+        
         const errorMessage = getErrorMessage(error, "Failed to load question");
         setError(errorMessage);
         setLoading(false);
 
         // Track error
         trackError(posthog, error, "practice_question_error", {
-          userId: user?.id,
+          userId: userId,
           errorType: "load_error",
         });
       });
-  }, [user, posthog]);
+
+    // Cleanup: abort in-flight request if effect re-runs or component unmounts
+    return () => {
+      controller.abort();
+    };
+  }, [userId, posthog]);
+
+  // Separate effect for analytics tracking - decoupled from fetch to prevent re-fetches
+  useEffect(() => {
+    if (!question || !userId) return;
+
+    // Track question loaded with UUID property for reliable analytics
+    captureWithDeduplication(posthog, "practice_question_loaded", {
+      user_id: userId,
+      question_id: question.id, // Keep for backward compatibility
+      question_uuid: question.id, // String-typed UUID for reliable analysis
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [question?.id, userId, posthog]);
 
   const fetchNewQuestion = async () => {
     setLoading(true);
@@ -119,8 +155,9 @@ const PracticeQuestionPage = () => {
       ].slice(0, 3);
 
       // Track new question loaded with UUID property for reliable analytics
+      // Note: The separate analytics effect will also fire, but this adds is_next_question context
       captureWithDeduplication(posthog, "practice_question_loaded", {
-        user_id: user?.id,
+        user_id: userId,
         question_id: data.id, // Keep for backward compatibility
         question_uuid: data.id, // String-typed UUID for reliable analysis
         is_next_question: true,
@@ -131,7 +168,7 @@ const PracticeQuestionPage = () => {
 
       // Track error
       trackError(posthog, error, "practice_question_error", {
-        userId: user?.id,
+        userId: userId,
         errorType: "load_error",
       });
     } finally {
@@ -168,7 +205,7 @@ const PracticeQuestionPage = () => {
 
       // Track question answered (force track for critical business metric)
       captureWithDeduplication(posthog, "practice_question_answered", {
-        user_id: user?.id,
+        user_id: userId,
         question_id: question.id, // Keep for backward compatibility
         question_uuid: question.id, // String-typed UUID for reliable analysis
         is_correct: data.isCorrect,
@@ -181,7 +218,7 @@ const PracticeQuestionPage = () => {
 
       // Track submission error
       trackError(posthog, error, "practice_question_error", {
-        userId: user?.id,
+        userId: userId,
         errorType: "submit_error",
         context: { question_id: question?.id },
       });
