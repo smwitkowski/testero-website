@@ -62,7 +62,7 @@ export async function GET(
       .from("practice_questions")
       .select("id, stem, options, correct_label")
       .eq("session_id", sessionId)
-      .order("created_at", { ascending: true }); // Maintain question order
+      .order("id", { ascending: true }); // Maintain question order
 
     if (questionsError) {
       console.error("Error fetching session questions:", questionsError);
