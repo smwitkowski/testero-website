@@ -29,8 +29,8 @@ export async function getCurrentSession(): Promise<SessionResponse> {
     return {
       user: {
         id: user.id,
-        email: user.email,
-        email_confirmed_at: user.email_confirmed_at,
+        email: user.email ?? "",
+        email_confirmed_at: user.email_confirmed_at ?? null,
       },
     };
   } catch (error) {

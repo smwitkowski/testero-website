@@ -112,4 +112,31 @@ describe("getCurrentSession", () => {
       expect(result.user.email_confirmed_at).toBeNull();
     }
   });
+
+  test("handles undefined email and email_confirmed_at with fallback values", async () => {
+    const mockUser = {
+      id: "user789",
+      email: undefined,
+      email_confirmed_at: undefined,
+    };
+
+    (createServerSupabaseClient as jest.Mock).mockReturnValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: mockUser },
+          error: null,
+        }),
+      },
+    });
+
+    const result = await getCurrentSession();
+
+    expect(result).toEqual({
+      user: {
+        id: "user789",
+        email: "",
+        email_confirmed_at: null,
+      },
+    });
+  });
 });
