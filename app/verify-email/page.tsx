@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
 import { trackEvent, identifyUser, trackError, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import { trackActivationFunnel } from "@/lib/analytics/funnels";
+import type { SessionResponse } from "@/lib/auth/session-handler";
 
 type VerificationState = "loading" | "success" | "error";
 
@@ -86,9 +87,7 @@ const VerifyEmailPage = () => {
           throw new Error("Failed to check session status");
         }
 
-        const sessionData = (await sessionResponse.json()) as {
-          user: { id: string; email: string; email_confirmed_at: string | null } | null;
-        };
+        const sessionData = (await sessionResponse.json()) as SessionResponse;
 
         if (sessionData.user && sessionData.user.email_confirmed_at) {
           // User is authenticated and email is confirmed (PKCE flow succeeded)
