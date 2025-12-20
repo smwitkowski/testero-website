@@ -9,6 +9,7 @@ import {
   TableOfContents, 
   ContentMetadata 
 } from '@/components/content';
+import { BlogDiagnosticCtaLink } from '@/components/blog/BlogDiagnosticCtaLink';
 
 type BlogPostPageProps = {
   params: Promise<{ slug: string }>;
@@ -207,13 +208,13 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                     Take our comprehensive diagnostic assessment to identify your strengths 
                     and focus areas for the PMLE exam.
                   </p>
-                  <Link 
-                    href="/diagnostic" 
+                  <BlogDiagnosticCtaLink
+                    href="/diagnostic"
                     className="inline-flex items-center space-x-2 bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
                   >
                     <span>Start Free Diagnostic</span>
                     <span>→</span>
-                  </Link>
+                  </BlogDiagnosticCtaLink>
                 </div>
               </div>
             </div>
