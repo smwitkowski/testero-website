@@ -180,11 +180,6 @@ export function PricingCard({
           </>
         )}
 
-        {tier.recommended ? (
-          <p className="text-center text-xs text-muted-foreground">
-            Chosen by 73% of our users
-          </p>
-        ) : null}
       </CardFooter>
     </Card>
   );

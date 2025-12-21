@@ -23,7 +23,6 @@ import {
   getPlanType,
 } from "@/lib/pricing/price-utils";
 import { PricingCard } from "@/components/pricing/PricingCard";
-import { ComparisonTable } from "@/components/pricing/ComparisonTable";
 import { FreeVsPaidComparison } from "@/components/pricing/FreeVsPaidComparison";
 import { Container, Section } from "@/components/patterns";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +31,6 @@ import Link from "next/link";
 import {
   SUBSCRIPTION_TIERS,
   VALUE_PROPS,
-  FEATURE_COMPARISON,
   PRICING_FAQ,
 } from "@/lib/pricing/constants";
 import { cn } from "@/lib/utils";
@@ -41,23 +39,22 @@ const PLAN_HIGHLIGHTS = [
   {
     icon: Zap,
     title: "Unlimited PMLE Practice",
-    description: "Unlimited practice questions aligned with the exam blueprint, updated as the exam evolves.",
+    description: "Practice questions aligned with the exam guide, updated as the exam evolves.",
   },
   {
     icon: TrendingUp,
-    title: "Domain-Targeted Drills",
-    description: "Focus your study time on your weakest areas with personalized domain-level practice.",
+    title: "Focus on Weak Areas",
+    description: "Practice questions surface your weakest exam guide sections for focused study.",
   },
   {
     icon: Award,
-    title: "Full Diagnostic + Readiness Score",
-    description: "Get instant personalized readiness insights that pinpoint exactly what to study next.",
+    title: "Diagnostic + Readiness Score",
+    description: "Get personalized readiness insights that show exactly where you stand.",
   },
 ];
 
 export default function PricingPage() {
   const [billingInterval, setBillingInterval] = useState<"monthly" | "annual">("annual");
-  const [showComparison, setShowComparison] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,8 +65,8 @@ export default function PricingPage() {
   const router = useRouter();
   const posthog = usePostHog();
 
-  // Filter out hidden tiers to show only visible plans
-  const visibleTiers = SUBSCRIPTION_TIERS.filter((tier) => !tier.isHidden);
+  // Show only the basic (PMLE Readiness) tier for go-live simplicity
+  const visibleTiers = SUBSCRIPTION_TIERS.filter((tier) => tier.id === "basic");
 
   // Track page view
   useEffect(() => {
@@ -364,9 +361,9 @@ export default function PricingPage() {
       <Section size="xl" surface="subtle" divider="bottom">
         <div className="mx-auto max-w-4xl">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-4">Everything You Need for PMLE Readiness</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-4">What&apos;s Included</h2>
             <p className="text-gray-600 dark:text-slate-300">
-              Full access to realistic PMLE questions, detailed explanations, and domain-level readiness insights.
+              Realistic PMLE questions, detailed explanations, and readiness insights aligned to the exam guide.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -392,49 +389,6 @@ export default function PricingPage() {
         <FreeVsPaidComparison />
       </Section>
 
-      {/* Feature Comparison */}
-      <Section size="xl" surface="subtle" divider="bottom">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Compare Plans in Detail</h2>
-            <button
-              onClick={() => setShowComparison(!showComparison)}
-              className="inline-flex items-center gap-2 text-[color:var(--tone-accent)] hover:text-[color:var(--tone-accent)]/80 font-semibold"
-            >
-              {showComparison ? "Hide" : "Show"} detailed comparison
-              {showComparison ? (
-                <ChevronUp className="h-5 w-5" />
-              ) : (
-                <ChevronDown className="h-5 w-5" />
-              )}
-            </button>
-          </div>
-
-          {showComparison && (
-            <ComparisonTable
-              categories={FEATURE_COMPARISON}
-              onSelectPlan={(planId) => {
-                const element = document.getElementById("pricing-cards");
-                element?.scrollIntoView({ behavior: "smooth" });
-                // Find the matching tier and trigger checkout
-                const tier = SUBSCRIPTION_TIERS.find((t) => t.id === planId);
-                if (tier) {
-                  const priceId =
-                    billingInterval === "monthly" ? tier.monthlyPriceId : tier.annualPriceId;
-                  if (priceId) {
-                    handleCheckout(priceId, tier.name);
-                  } else {
-                    // Fallback: if no price ID, redirect to signup
-                    trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_ATTEMPT, {
-                      plan_name: tier.name,
-                      source: "comparison_table_checkout",
-                    });
-                    router.push("/signup?redirect=/pricing");
-                  }
-                }
-              }}
-            />
-          )}
-      </Section>
 
       {/* FAQ Section */}
       <Section size="xl" surface="default" divider="bottom">
@@ -476,9 +430,9 @@ export default function PricingPage() {
         className="bg-gradient-to-r from-[color:var(--tone-accent)] via-[color:var(--tone-accent)]/90 to-[color:var(--tone-accent)]/80"
       >
         <Container className="max-w-4xl text-center text-white">
-          <h2 className="text-3xl font-bold text-white mb-4">Ready to Know Your Readiness?</h2>
+          <h2 className="text-3xl font-bold text-white mb-4">Know When You&apos;re Ready</h2>
           <p className="text-xl text-white/90 mb-8">
-            Start with a free diagnostic. Upgrade when you want explanations and unlimited targeted practice.
+            Start without an account. Create a free account to view and save results. Paid unlocks explanations and more practice.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
@@ -486,7 +440,7 @@ export default function PricingPage() {
               size="lg"
               tone="accent"
             >
-              <Link href="/signup">Start Free Diagnostic</Link>
+              <Link href="/diagnostic">Start Free Diagnostic</Link>
             </Button>
             <Button
               size="lg"
@@ -497,7 +451,7 @@ export default function PricingPage() {
                 element?.scrollIntoView({ behavior: "smooth" });
               }}
             >
-              View Pricing Plans
+              See Plan Details
             </Button>
           </div>
           <div className="mt-8 flex items-center justify-center gap-2 text-white">

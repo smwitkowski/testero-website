@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { duration, easing } from '@/lib/design-system';
 import { Button } from '@/components/ui/button';
-import { FileText, Sparkles, BarChart3, Cloud } from 'lucide-react';
+import { Sparkles, BarChart3, Cloud } from 'lucide-react';
 import { SCOPE_CLAIMS, VALUE_PILLARS } from "@/lib/copy/message-house";
 
 type BenefitTone = 'accent' | 'success' | 'info' | 'primary';
@@ -265,40 +265,31 @@ export function BenefitsSection() {
           className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 text-left"
           role="list"
         >
-          {/* Feature 1 - Blueprint Alignment */}
-          <BenefitCard
-            icon={<FileText className="w-6 h-6" />}
-            title={VALUE_PILLARS.blueprint.title}
-            description={VALUE_PILLARS.blueprint.description}
-            tone="accent"
-            delay={duration.fast * 3}
-          />
-          
-          {/* Feature 2 - Readiness Clarity */}
+          {/* Feature 1 - Readiness Baseline */}
           <BenefitCard
             icon={<Sparkles className="w-6 h-6" />}
             title={VALUE_PILLARS.readiness.title}
             description={VALUE_PILLARS.readiness.description}
             tone="success"
+            delay={duration.fast * 3}
+          />
+          
+          {/* Feature 2 - Study Right Topics */}
+          <BenefitCard
+            icon={<BarChart3 className="w-6 h-6" />}
+            title={VALUE_PILLARS.blueprint.title}
+            description={VALUE_PILLARS.blueprint.description}
+            tone="info"
             delay={duration.fast * 4}
           />
           
-          {/* Feature 3 - Targeted Practice */}
-          <BenefitCard
-            icon={<BarChart3 className="w-6 h-6" />}
-            title="Focus on Your Weakest Domains"
-            description="Practice questions automatically target your weakest areas based on your diagnostic results—so you spend time where it matters most."
-            tone="info"
-            delay={duration.fast * 5}
-          />
-          
-          {/* Feature 4 - Explanations */}
+          {/* Feature 3 - Explanations */}
           <BenefitCard
             icon={<Cloud className="w-6 h-6" />}
             title={VALUE_PILLARS.explanations.title}
             description={VALUE_PILLARS.explanations.description}
             tone="accent"
-            delay={duration.fast * 6}
+            delay={duration.fast * 5}
           />
         </div>
         

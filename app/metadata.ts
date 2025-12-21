@@ -58,34 +58,34 @@ export const getJsonLd = () => generateJsonLd({
       "mainEntity": [
         {
           "@type": "Question",
-          "name": "What is Testero's PMLE exam prep?",
+          "name": "What is Testero?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Testero is an AI-powered PMLE exam preparation platform with 200+ realistic practice questions updated for October 2024 exam changes. We offer a 7-day money-back guarantee - try Testero risk-free or get your money back."
+            "text": "Testero is a PMLE exam preparation platform with realistic practice questions aligned to the current exam blueprint. Start with a free diagnostic to see your readiness, then upgrade for detailed explanations and unlimited practice."
           }
         },
         {
           "@type": "Question",
-          "name": "Why is the PMLE exam so difficult?",
+          "name": "What's included for free?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "The PMLE exam has a 70% fail rate because it tests deep ML knowledge across TensorFlow, Vertex AI, BigQuery ML, and MLOps. Google updated 30% of topics in October 2024, making outdated study materials dangerous. Most people waste $200 on failed attempts."
+            "text": "Free users get one PMLE diagnostic test, a basic readiness summary with score and domain breakdown, and limited practice (5 questions per week). Explanations and unlimited practice require a paid subscription."
           }
         },
         {
           "@type": "Question",
-          "name": "How does Testero guarantee PMLE success?",
+          "name": "How does billing work?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Our AI-powered system provides 200+ realistic PMLE-specific questions updated for October 2024 changes. Take our free diagnostic to see your exact readiness level, get personalized practice recommendations, and accelerate your preparation - or get your money back within 7 days."
+            "text": "Testero offers monthly and annual subscription plans. You can cancel anytime. We offer a 7-day money-back guarantee if you're not satisfied."
           }
         },
         {
           "@type": "Question",
-          "name": "What's included in Testero's PMLE prep?",
+          "name": "Is Testero affiliated with Google?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "The PMLE Readiness plan includes: unlimited PMLE practice questions, detailed explanations, free diagnostic test, personalized study plan, October 2024 exam updates, progress tracking, and our 7-day money-back guarantee. Plan starts at $39/month."
+            "text": "No — Testero is an independent exam preparation platform. We are not affiliated with Google or any certification body."
           }
         }
       ]

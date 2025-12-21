@@ -4,15 +4,15 @@
  * Single source of truth for all marketing and product copy.
  * Aligned to: PMLE-first, readiness-first, balanced claims posture.
  * 
- * Last Updated: 2025-12-11
+ * Last Updated: 2025-12-28
  */
 
 /**
  * Core positioning statement (one-liner)
  */
 export const CORE_POSITIONING = {
-  headline: "Know your PMLE readiness—before you pay $200 to find out.",
-  subheadline: "Take a fast diagnostic to see your readiness score and the exact domains to prioritize. Upgrade when you want explanations and unlimited targeted practice.",
+  headline: "Know your certification readiness. Fast.",
+  subheadline: "Take a short diagnostic, see your weak areas, and get a focused plan for what to study next.",
 };
 
 /**
@@ -20,18 +20,18 @@ export const CORE_POSITIONING = {
  */
 export const VALUE_PILLARS = {
   readiness: {
-    title: "Know Your Exact Readiness",
-    description: "Get a clear readiness signal before you schedule—so you know whether to book now or focus your study time first.",
+    title: "Get a readiness baseline",
+    description: "Know where you stand across the exam guide sections.",
     icon: "Target",
   },
   blueprint: {
-    title: "Aligned to the Current PMLE Blueprint",
-    description: "Practice with exam-style questions mapped to the blueprint—so your time goes to the topics that actually show up.",
+    title: "Study the right topics",
+    description: "Focus practice on your weakest areas instead of studying random questions.",
     icon: "FileText",
   },
   explanations: {
-    title: "Explanations That Teach",
-    description: "Step-by-step explanations that help you understand concepts deeply, not just memorize answers.",
+    title: "Learn from explanations (paid)",
+    description: "Understand why an answer is correct, so you can transfer the skill on exam day.",
     icon: "BookOpen",
   },
 };
@@ -152,7 +152,7 @@ export const CLAIM_REGISTER: Claim[] = [
 export const SCOPE_CLAIMS = {
   pmleOnly: {
     primary: "PMLE-focused",
-    description: "Everything you need for PMLE readiness—without wasted study time.",
+    description: "Everything you need for Cloud certification readiness, without wasted study time.",
   },
   multiCloud: {
     // Remove until actually supported
@@ -180,6 +180,7 @@ export const MICROCOPY = {
   instantResults: "Results instantly",
   cancelAnytime: "Cancel anytime",
   moneyBackGuarantee: "7-day money-back guarantee",
+  heroMicrocopy: "Start without an account",
 };
 
 /**

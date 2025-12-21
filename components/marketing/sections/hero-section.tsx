@@ -22,10 +22,10 @@ const heroContent = {
     href: "/diagnostic",
   },
   secondaryCta: {
-    text: CTAS.secondary.viewExamples,
-    href: "/practice",
+    text: CTAS.secondary.viewPricing,
+    href: "/pricing",
   },
-  microcopy: `${MICROCOPY.diagnosticTime} · ${MICROCOPY.noCreditCard} · ${MICROCOPY.instantResults}`,
+  microcopy: MICROCOPY.heroMicrocopy,
 };
 
 // Readiness Dashboard Card Component

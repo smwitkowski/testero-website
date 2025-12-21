@@ -68,8 +68,8 @@ export interface ExamPackage {
 export const SUBSCRIPTION_TIERS: PricingTier[] = [
   {
     id: "basic",
-    name: "PMLE Readiness",
-    description: "Everything you need to pass the Google PMLE exam",
+    name: "PMLE Prep",
+    description: "Focused preparation for the Google PMLE exam",
     monthlyPrice: 39,
     annualPrice: 349,
     monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY,
@@ -176,22 +176,22 @@ export const EXAM_PACKAGES: ExamPackage[] = [
   },
 ];
 
-import { VOCABULARY, MICROCOPY, TRUST_SIGNALS } from "@/lib/copy/message-house";
+import { MICROCOPY, TRUST_SIGNALS } from "@/lib/copy/message-house";
 
 // Value propositions for pricing page
 export const VALUE_PROPS = {
-  mainHeadline: "Know Your PMLE Readiness Before You Book",
+  mainHeadline: "Know Your Readiness Before You Book",
   subHeadline:
-    "Start with a free diagnostic. Upgrade when you want step-by-step explanations and unlimited targeted practice on your weakest domains.",
+    "Start without an account. Create a free account to view and save results. Paid unlocks explanations and more practice.",
   guarantees: [
     MICROCOPY.moneyBackGuarantee,
-    "Content aligned to current PMLE blueprint",
+    "Content aligned to current exam guide",
   ],
   trustBadges: TRUST_SIGNALS,
   valueAnchors: {
-    examCost: `De-risk your ${VOCABULARY.examFee} exam fee`,
-    time: "Diagnostic identifies your weak areas for focused study",
-    success: "Start with a free diagnostic to assess your readiness",
+    examCost: `Know your readiness before you pay the exam fee`,
+    time: "Stop wasting study time on the wrong topics",
+    success: "Start with a free diagnostic to see where you stand",
   },
 };
 
@@ -241,9 +241,9 @@ export const PRICING_FAQ = [
       "No — Testero is independent.",
   },
   {
-    question: "Can I change my subscription?",
+    question: "Can I cancel my subscription?",
     answer:
-      "Yes! You can cancel or modify your subscription at any time. Changes are prorated, so you only pay for what you use.",
+      "Yes! You can cancel your subscription at any time. Your access will continue until the end of your current billing period.",
   },
 ];
 

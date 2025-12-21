@@ -8,7 +8,6 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { BenefitsSectionSkeleton } from "@/components/marketing/sections/benefits-section";
 import { HeroSection } from "@/components/marketing/sections/hero-section";
-import { TestimonialCarousel } from "@/components/marketing/sections/testimonial-carousel";
 import { Button } from "@/components/ui/button";
 import { JsonLd } from "./page.metadata";
 import {
@@ -23,7 +22,7 @@ import {
 } from "lucide-react";
 import { SUBSCRIPTION_TIERS } from "@/lib/pricing/constants";
 import { cn } from "@/lib/utils";
-import { VALUE_PILLARS, VOCABULARY, MICROCOPY } from "@/lib/copy/message-house";
+import { VALUE_PILLARS } from "@/lib/copy/message-house";
 
 // Dynamically import the BenefitsSection component
 const BenefitsSection = dynamic(
@@ -88,33 +87,23 @@ export default function Home() {
         {/* eslint-disable-next-line no-restricted-syntax */}
         <section className="w-full py-16 px-4 sm:px-6 bg-white">
           <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <div className="bg-[color:var(--tone-accent-surface)] rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                  <TrendingUp className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">De-risk Your {VOCABULARY.examFee} Exam Fee</h3>
-                <p className="text-gray-600">
-                  {VALUE_PILLARS.readiness.description}
-                </p>
-              </div>
+            <div className="text-center mb-12">
+              <p className="text-xl text-gray-700 font-medium">
+                Built for serious candidates who want signal, not noise.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               <div className="text-center">
                 <div className="bg-[color:var(--tone-accent-surface)] rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                   <Clock className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{VALUE_PILLARS.blueprint.title}</h3>
-                <p className="text-gray-600">
-                  {VALUE_PILLARS.blueprint.description}
-                </p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Stop wasting study time on the wrong topics.</h3>
               </div>
               <div className="text-center">
                 <div className="bg-[color:var(--tone-accent-surface)] rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                  <Shield className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
+                  <TrendingUp className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{MICROCOPY.moneyBackGuarantee}</h3>
-                <p className="text-gray-600">
-                  If it&apos;s not a fit, you&apos;re covered—no friction.
-                </p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Know your readiness before you pay the exam fee.</h3>
               </div>
             </div>
           </div>
@@ -130,10 +119,10 @@ export default function Home() {
             <div className="max-w-7xl mx-auto">
               <div className="text-center mb-12">
                 <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-                  Choose Your PMLE Readiness Plan
+                  Start Free. Upgrade When Ready.
                 </h2>
                 <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                  Everything you need to pass PMLE — unlimited practice, personalized diagnostics, and expert-level explanations.
+                  Take a diagnostic, see your weak areas, and get focused practice with explanations.
                 </p>
               </div>
 
@@ -206,94 +195,34 @@ export default function Home() {
           {loadBenefits ? <BenefitsSection /> : <BenefitsSectionSkeleton />}
         </section>
 
-        {/* Enhanced Testimonials Section with Pricing Context */}
-        {/* eslint-disable-next-line no-restricted-syntax */}
-        <section className="w-full py-10 sm:py-16 md:py-24 px-4 sm:px-6 bg-slate-50">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800 mb-4">
-                Real Success Stories from Our Students
-              </h2>
-              <p className="text-lg text-gray-600">
-                See how professionals like you achieved their certification goals
-              </p>
-            </div>
-
-            <TestimonialCarousel
-              testimonials={[
-                {
-                  id: "1",
-                  quote:
-                    "Failed PMLE twice before finding Testero. The diagnostic showed I was only 58% ready. After focused practice on my weakest domains, I passed. Worth every penny.",
-                  author: "Alex Chen",
-                  role: "ML Engineer at Google",
-                },
-                {
-                  id: "2",
-                  quote:
-                    "The diagnostic immediately showed my weak areas. The explanations helped me understand concepts deeply, not just memorize answers. Better than any course I've taken.",
-                  author: "Sarah Martinez",
-                  role: "Senior Data Scientist",
-                },
-                {
-                  id: "3",
-                  quote:
-                    "Testero's diagnostic saved me from wasting $200. I knew exactly where to focus my study time. The targeted practice on my weakest domains made all the difference.",
-                  author: "Michael Johnson",
-                  role: "Cloud ML Engineer",
-                },
-              ]}
-            />
-
-            {/* Success Metrics */}
-            <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-              <div>
-                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">$200</div>
-                <div className="text-sm text-gray-600">Exam Cost at Risk</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">10</div>
-                <div className="text-sm text-gray-600">Min Diagnostic</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">6</div>
-                <div className="text-sm text-gray-600">PMLE Domains</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">100%</div>
-                <div className="text-sm text-gray-600">Blueprint Aligned</div>
-              </div>
-            </div>
-          </div>
-        </section>
 
         {/* Practice Explainer */}
         {/* eslint-disable-next-line no-restricted-syntax */}
         <section className="w-full py-16 px-4 sm:px-6 bg-white">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8">
-              PMLE-Focused Training System
+              How It Works
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-6">
-                <Zap className="h-10 w-10 text-[color:var(--tone-accent)] mx-auto mb-4" />
-                <h3 className="font-semibold text-lg mb-2">ML Concept Coverage</h3>
+                <TrendingUp className="h-10 w-10 text-[color:var(--tone-accent)] mx-auto mb-4" />
+                <h3 className="font-semibold text-lg mb-2">{VALUE_PILLARS.readiness.title}</h3>
                 <p className="text-gray-600">
-                  Deep coverage of TensorFlow, Vertex AI, BigQuery ML, and MLOps practices aligned to the PMLE blueprint
+                  {VALUE_PILLARS.readiness.description}
                 </p>
               </div>
               <div className="p-6">
                 <Award className="h-10 w-10 text-[color:var(--tone-accent)] mx-auto mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Blueprint-Aligned</h3>
+                <h3 className="font-semibold text-lg mb-2">{VALUE_PILLARS.blueprint.title}</h3>
                 <p className="text-gray-600">
-                  Questions mapped to current PMLE domains and topics that actually appear on the exam
+                  {VALUE_PILLARS.blueprint.description}
                 </p>
               </div>
               <div className="p-6">
-                <TrendingUp className="h-10 w-10 text-[color:var(--tone-accent)] mx-auto mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Readiness Score</h3>
+                <Zap className="h-10 w-10 text-[color:var(--tone-accent)] mx-auto mb-4" />
+                <h3 className="font-semibold text-lg mb-2">{VALUE_PILLARS.explanations.title}</h3>
                 <p className="text-gray-600">
-                  Know your exact PMLE readiness percentage before booking your $200 exam
+                  {VALUE_PILLARS.explanations.description}
                 </p>
               </div>
             </div>
@@ -308,26 +237,11 @@ export default function Home() {
         >
           <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
             <h2 className="text-3xl sm:text-4xl font-bold mb-6">
-              Be Confident When You Book PMLE
+              Know When You&apos;re Ready
             </h2>
             <p className="text-xl mb-8 text-white/90">
-              Start with a free diagnostic. Upgrade when you want step-by-step explanations and unlimited practice on your weakest domains.
+              Start without an account. Create a free account to view and save results. Paid unlocks explanations and more practice.
             </p>
-
-            {/* Urgency Elements */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 mb-8 max-w-2xl mx-auto">
-              <div className="flex items-center justify-center gap-4 mb-4">
-                <Clock className="h-6 w-6 text-yellow-300" />
-                <span className="text-lg font-semibold">Limited Time Offer</span>
-              </div>
-              <p className="text-white/80 mb-4">
-                New in 2025 • 7-day money-back guarantee • Cancel anytime
-              </p>
-              <div className="text-center">
-                <div className="text-2xl font-bold">$39</div>
-                <div className="text-sm text-white/70">PMLE Readiness/month</div>
-              </div>
-            </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
@@ -335,13 +249,12 @@ export default function Home() {
                 size="lg"
                 tone="accent"
                 className="text-lg"
-                iconRight={<ArrowRight className="h-5 w-5" />}
                 onClick={() => handlePricingClick("final_cta_primary")}
               >
-                <Link href="/pricing">See Pricing & Start Today</Link>
+                <Link href="/diagnostic">Start Free Diagnostic</Link>
               </Button>
               <Button asChild variant="outline" tone="neutral" size="lg" className="text-lg">
-                <Link href="/diagnostic">Take Free Diagnostic</Link>
+                <Link href="/pricing">See Pricing</Link>
               </Button>
             </div>
 
@@ -357,7 +270,7 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2">
                 <Star className="h-5 w-5 text-yellow-400" />
-                <span>PMLE-focused</span>
+                <span>Blueprint-aligned</span>
               </div>
             </div>
           </div>
