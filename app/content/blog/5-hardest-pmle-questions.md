@@ -8,6 +8,7 @@ tags: ["PMLE", "practice questions", "exam prep", "difficult questions", "BigQue
 author: "Testero Team"
 featured: false
 excerpt: "Our analysis of thousands of practice attempts shows that these 5 questions trip up nearly 70% of test-takers – even those with years of ML experience. The reason? These questions don't just test your knowledge of individual services."
+coverImage: "/images/blog/5-hardest-pmle-questions.jpg"
 ---
 
 # The 5 Hardest PMLE Questions That Trip Up 70% of Test-Takers (+ Expert Solutions)

@@ -158,7 +158,206 @@
   }
 }
 
-/* Legacy content styles have been unified into Tailwind Typography configuration */
+/* Custom prose styles for blog content (Tailwind v4 compatible) */
+.prose {
+  max-width: none;
+  line-height: 1.7;
+  font-size: 1.125rem;
+  color: theme('colors.gray.700');
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  color: theme('colors.gray.900');
+  font-weight: 700;
+  line-height: 1.3;
+  scroll-margin-top: 5rem;
+}
+
+.prose h1 {
+  font-size: 2.5rem;
+  margin-top: 0;
+  margin-bottom: 2rem;
+  border-bottom: 3px solid #1D9C91;
+  padding-bottom: 0.75rem;
+}
+
+.prose h2 {
+  font-size: 2rem;
+  margin-top: 3rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid theme('colors.gray.200');
+  padding-bottom: 0.5rem;
+}
+
+.prose h3 {
+  font-size: 1.5rem;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  color: #1D9C91;
+}
+
+.prose h4 {
+  font-size: 1.25rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  color: theme('colors.gray.800');
+}
+
+.prose p {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.7;
+}
+
+.prose a {
+  color: #1D9C91;
+  text-decoration: none;
+  border-bottom: 1px solid #2BB8AC;
+  transition: all 0.2s ease;
+}
+
+.prose a:hover {
+  color: #167A71;
+  border-bottom-color: #1D9C91;
+  border-bottom-width: 2px;
+}
+
+.prose strong {
+  color: theme('colors.gray.900');
+  font-weight: 700;
+}
+
+.prose em {
+  font-style: italic;
+  color: theme('colors.gray.600');
+}
+
+.prose ul,
+.prose ol {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-left: 2rem;
+}
+
+.prose ul {
+  list-style-type: disc;
+}
+
+.prose ol {
+  list-style-type: decimal;
+}
+
+.prose li {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose blockquote {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  padding-left: 1.5rem;
+  border-left: 4px solid #1D9C91;
+  font-style: italic;
+  color: theme('colors.gray.600');
+}
+
+.prose code {
+  font-family: 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
+  font-size: 0.875em;
+  background-color: theme('colors.gray.100');
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+}
+
+.prose pre {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: theme('colors.gray.900');
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
+.prose pre code {
+  background-color: transparent;
+  padding: 0;
+  color: theme('colors.gray.100');
+}
+
+/* Dark mode support */
+.dark .prose {
+  color: theme('colors.gray.300');
+}
+
+.dark .prose h1,
+.dark .prose h2,
+.dark .prose h3,
+.dark .prose h4,
+.dark .prose h5,
+.dark .prose h6 {
+  color: theme('colors.white');
+}
+
+.dark .prose h2 {
+  border-bottom-color: theme('colors.gray.700');
+}
+
+.dark .prose a {
+  color: #2BB8AC;
+  border-bottom-color: #1D9C91;
+}
+
+.dark .prose a:hover {
+  color: #2BB8AC;
+  border-bottom-color: #2BB8AC;
+}
+
+.dark .prose strong {
+  color: theme('colors.white');
+}
+
+.dark .prose em {
+  color: theme('colors.gray.400');
+}
+
+.dark .prose blockquote {
+  color: theme('colors.gray.400');
+  border-left-color: #2BB8AC;
+}
+
+.dark .prose code {
+  background-color: theme('colors.gray.800');
+  color: theme('colors.gray.200');
+}
+
+.dark .prose pre {
+  background-color: theme('colors.gray.800');
+}
+
+/* Responsive typography */
+@media (min-width: 768px) {
+  .prose h1 {
+    font-size: 3rem;
+  }
+  
+  .prose h2 {
+    font-size: 2.25rem;
+  }
+  
+  .prose h3 {
+    font-size: 1.75rem;
+  }
+  
+  .prose h4 {
+    font-size: 1.375rem;
+  }
+}
 
 /* Marquee animations */
 @keyframes marquee {

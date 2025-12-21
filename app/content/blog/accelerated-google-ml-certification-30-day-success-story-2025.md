@@ -21,6 +21,7 @@ tags:
 featured: false
 excerpt: >-
   Through analysis of successful rapid certification journeys, we've identified a proven framework that has enabled motivated candidates to pass this challenging exam on accelerated timelines.
+coverImage: "/images/blog/accelerated-google-ml-certification-30-day-success-story-2025.jpg"
 ---
 
 ## Accelerated Google ML Certification: 30-Day Success Case Study

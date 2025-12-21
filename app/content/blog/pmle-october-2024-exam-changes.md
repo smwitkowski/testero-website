@@ -8,6 +8,7 @@ tags: ["PMLE", "Google Cloud", "Machine Learning", "Exam Updates", "Vertex AI", 
 author: "Testero Team"
 featured: true
 excerpt: "The Google Professional Machine Learning Engineer (PMLE) certification underwent its most significant transformation in October 2024, fundamentally reshaping what candidates need to master. These changes represent approximately 30% new content."
+coverImage: "/images/blog/pmle-october-2024-exam-changes.jpg"
 ---
 
 # PMLE October 2024 Exam Changes: Complete Guide to What's New

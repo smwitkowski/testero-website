@@ -139,43 +139,44 @@ function TableOfContents({
 
   return (
     <nav className={`table-of-contents ${navClassName}`} aria-label="Table of Contents">
-      <h3 className="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Table of Contents</h3>
-      <ul className="space-y-1">
-        {headings.map((heading, index) => (
-          <li
-            key={heading.id}
-            className={`${
-              heading.level === 2 
-                ? 'mb-2' 
-                : heading.level === 3 
-                  ? 'ml-3 mb-1' 
-                  : 'ml-6 text-sm'
-            }`}
-          >
-            <Link
-              href={`#${heading.id}`}
-              className={`
-                block py-1.5 pl-3 rounded-md transition-all duration-200
-                ${heading.level === 2 ? 'font-medium' : ''}
-                ${activeId === heading.id
-                  ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600 font-medium'
-                  : 'border-l-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
-                }
-              `}
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById(heading.id)?.scrollIntoView({
-                  behavior: 'smooth',
-                });
-                setActiveId(heading.id); // Immediately set active for better feedback
-              }}
-            >
-              <span className={`${heading.level > 2 ? 'text-sm' : ''}`}>
-                {showNumbers && `${index + 1}. `}{heading.text}
-              </span>
-            </Link>
-          </li>
-        ))}
+      <ul className="text-base">
+        {headings.map((heading, index) => {
+          const isH2 = heading.level === 2;
+          const isH3 = heading.level === 3;
+          
+          return (
+            <li key={heading.id} className="py-1">
+              <Link
+                href={`#${heading.id}`}
+                data-level={isH2 ? 'two' : 'three'}
+                className={`
+                  flex items-center justify-start
+                  ${isH2 ? 'pl-0 pt-2 border-t border-solid border-gray-900/40 dark:border-gray-100/40' : ''}
+                  ${isH3 ? 'pl-4 sm:pl-6' : ''}
+                  ${activeId === heading.id 
+                    ? 'text-blue-600 dark:text-blue-400 font-medium' 
+                    : 'text-gray-900 dark:text-white hover:underline'
+                  }
+                  transition-colors duration-200
+                `}
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById(heading.id)?.scrollIntoView({
+                    behavior: 'smooth',
+                  });
+                  setActiveId(heading.id);
+                }}
+              >
+                {isH3 && (
+                  <span className="flex w-1 h-1 rounded-full bg-gray-900 dark:bg-gray-100 mr-2 flex-shrink-0">&nbsp;</span>
+                )}
+                <span className="hover:underline">
+                  {showNumbers && `${index + 1}. `}{heading.text}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </nav>
   );

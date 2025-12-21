@@ -8,6 +8,7 @@ category: "certification-guides"
 tags: ["Google Cloud", "Cloud Digital Leader", "Certification", "Career Development", "cloud fundamentals", "business cloud strategy"]
 featured: false
 excerpt: "As the most accessible certification in Google's portfolio, the Cloud Digital Leader is designed for professionals who need to understand cloud concepts without necessarily diving into the technical implementation details."
+coverImage: "/images/blog/google-cloud-digital-leader-certification.jpg"
 ---
 
 # Google Cloud Digital Leader Certification: The Complete 2025 Guide

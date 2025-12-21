@@ -22,6 +22,7 @@ export interface BlogMeta {
   readingTime: string;
   featured?: boolean;
   excerpt?: string;
+  coverImage?: string;
 }
 
 export interface BlogPost {
@@ -148,6 +149,7 @@ const parseBlogFile = async (
     readingTime,
     featured: Boolean(data.featured),
     excerpt,
+    coverImage: data.coverImage || undefined,
   };
 
   const result: BlogPost = {
