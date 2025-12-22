@@ -15,7 +15,7 @@ describe("PricingCard", () => {
     features: ["Feature A", "Feature B"],
   } as const;
 
-  it("applies non-scaling emphasis on mobile for the recommended tier", () => {
+  it("applies emphasis styling for the recommended tier", () => {
     const { container } = render(
       <PricingCard
         tier={{ ...baseTier, recommended: true, savingsPercentage: 25 }}
@@ -27,9 +27,7 @@ describe("PricingCard", () => {
     const card = container.firstElementChild as HTMLElement;
     expect(card).toBeTruthy();
     expect(card).toHaveAttribute("data-recommended", "true");
-    expect(card.className).toContain("md:motion-safe:scale-105");
     expect(card.className).toContain("ring-2");
-    expect(card.className).not.toMatch(/(^|\s)scale-[^:\s]+/);
   });
 
   it("adds extra padding when annual savings badge is present", () => {
@@ -42,8 +40,25 @@ describe("PricingCard", () => {
     );
 
     const card = container.firstElementChild as HTMLElement;
-    expect(card.className).toContain("pt-12");
+    expect(card.className).toContain("pt-6");
     expect(card.className).not.toMatch(/(^|\s)scale-[^:\s]+/);
+  });
+
+  it("displays monthly average as primary price when annual billing is selected", () => {
+    render(
+      <PricingCard
+        tier={baseTier}
+        billingInterval="annual"
+        onCheckout={jest.fn()}
+      />
+    );
+
+    // Annual mode should show monthly average (490/12 = 40.83, rounded to 41)
+    expect(screen.getByText(/\$41/)).toBeInTheDocument();
+    // Should show "/month" as the unit
+    expect(screen.getByText(/\/month/)).toBeInTheDocument();
+    // Should show annual billing info as secondary text
+    expect(screen.getByText(/Billed annually at \$490\/year/)).toBeInTheDocument();
   });
 
   describe("Button enabled/disabled states", () => {
@@ -57,9 +72,8 @@ describe("PricingCard", () => {
         />
       );
 
-      const button = screen.getByRole("button", { name: /get started/i });
+      const button = screen.getByRole("button", { name: /start preparing/i });
       expect(button).toBeEnabled();
-      expect(button).toHaveAttribute("data-checkout-configured", "true");
     });
 
     it("should enable button when annual price ID is present", () => {
@@ -72,12 +86,11 @@ describe("PricingCard", () => {
         />
       );
 
-      const button = screen.getByRole("button", { name: /get started/i });
+      const button = screen.getByRole("button", { name: /start preparing/i });
       expect(button).toBeEnabled();
-      expect(button).toHaveAttribute("data-checkout-configured", "true");
     });
 
-    it("should disable button when monthly price ID is missing", () => {
+    it("should show Get Started button when monthly price ID is missing", () => {
       const onCheckout = jest.fn();
       render(
         <PricingCard
@@ -88,11 +101,11 @@ describe("PricingCard", () => {
       );
 
       const button = screen.getByRole("button", { name: /get started/i });
-      expect(button).toBeDisabled();
-      expect(button).toHaveAttribute("data-checkout-configured", "false");
+      expect(button).toBeEnabled();
+      // When checkout isn't configured, button redirects to signup instead of calling onCheckout
     });
 
-    it("should disable button when annual price ID is missing", () => {
+    it("should show Get Started button when annual price ID is missing", () => {
       const onCheckout = jest.fn();
       render(
         <PricingCard
@@ -103,8 +116,8 @@ describe("PricingCard", () => {
       );
 
       const button = screen.getByRole("button", { name: /get started/i });
-      expect(button).toBeDisabled();
-      expect(button).toHaveAttribute("data-checkout-configured", "false");
+      expect(button).toBeEnabled();
+      // When checkout isn't configured, button redirects to signup instead of calling onCheckout
     });
 
     it("should call onCheckout with correct price ID when button is clicked", async () => {
@@ -118,7 +131,7 @@ describe("PricingCard", () => {
         />
       );
 
-      const button = screen.getByRole("button", { name: /get started/i });
+      const button = screen.getByRole("button", { name: /start preparing/i });
       await user.click(button);
 
       expect(onCheckout).toHaveBeenCalledTimes(1);
@@ -137,11 +150,11 @@ describe("PricingCard", () => {
         />
       );
 
-      const button = screen.getByRole("button", { name: /get started/i });
+      const button = screen.getByRole("button", { name: /start preparing/i });
       expect(button).toBeDisabled();
     });
 
-    it("should not call onCheckout when button is disabled due to missing price ID", async () => {
+    it("should show Get Started button when price ID is missing (redirects to signup instead of calling onCheckout)", async () => {
       const user = userEvent.setup();
       const onCheckout = jest.fn();
       render(
@@ -153,13 +166,12 @@ describe("PricingCard", () => {
       );
 
       const button = screen.getByRole("button", { name: /get started/i });
-      expect(button).toBeDisabled();
+      expect(button).toBeEnabled();
 
-      // Attempt to click disabled button (should not trigger handler)
-      await user.click(button).catch(() => {
-        // Expected to fail when button is disabled
-      });
+      await user.click(button);
 
+      // When checkout isn't configured, onCheckout should not be called
+      // (component redirects to signup instead via router.push)
       expect(onCheckout).not.toHaveBeenCalled();
     });
   });

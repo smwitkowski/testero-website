@@ -44,12 +44,13 @@ export function PricingCard({
   loadingId = null,
 }: PricingCardProps) {
   const router = useRouter();
-  const price = billingInterval === "monthly" ? tier.monthlyPrice : tier.annualPrice;
+  // Calculate displayed price: monthly average when annual, otherwise monthly price
+  const annualMonthlyAverage = billingInterval === "annual" ? Math.round(tier.annualPrice / 12) : null;
+  const displayedPrice = billingInterval === "monthly" ? tier.monthlyPrice : annualMonthlyAverage!;
   const priceId = billingInterval === "monthly" ? tier.monthlyPriceId : tier.annualPriceId;
   const checkoutPriceId = priceId ?? `${tier.id}-${billingInterval}`;
   const isCheckoutConfigured = Boolean(priceId);
   const isLoading = loading && loadingId === priceId;
-  const monthlyEquivalent = billingInterval === "annual" ? Math.round(tier.annualPrice / 12) : null;
 
   const handleButtonClick = () => {
     if (!isCheckoutConfigured) {
@@ -113,15 +114,15 @@ export function PricingCard({
         <div className="space-y-3">
           <div className="flex items-baseline gap-2">
             <span className="text-5xl font-semibold tracking-tight text-foreground">
-              ${price}
+              ${displayedPrice}
             </span>
             <span className="text-lg text-muted-foreground">
-              /{billingInterval === "monthly" ? "month" : "year"}
+              /month
             </span>
           </div>
-          {monthlyEquivalent ? (
+          {billingInterval === "annual" ? (
             <p className="text-sm text-muted-foreground">
-              That&apos;s only ${monthlyEquivalent}/month
+              Billed annually at ${tier.annualPrice}/year
             </p>
           ) : null}
         </div>
