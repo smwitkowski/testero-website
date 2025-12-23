@@ -7,16 +7,16 @@ const validatePriceIds = () => {
       key: "NEXT_PUBLIC_STRIPE_BASIC_MONTHLY",
       value: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY,
     },
-    { key: "NEXT_PUBLIC_STRIPE_BASIC_ANNUAL", value: process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL },
+    { key: "NEXT_PUBLIC_STRIPE_BASIC_3MONTH", value: process.env.NEXT_PUBLIC_STRIPE_BASIC_3MONTH },
     { key: "NEXT_PUBLIC_STRIPE_PRO_MONTHLY", value: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY },
-    { key: "NEXT_PUBLIC_STRIPE_PRO_ANNUAL", value: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL },
+    { key: "NEXT_PUBLIC_STRIPE_PRO_3MONTH", value: process.env.NEXT_PUBLIC_STRIPE_PRO_3MONTH },
     {
       key: "NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY",
       value: process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY,
     },
     {
-      key: "NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL",
-      value: process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL,
+      key: "NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH",
+      value: process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH,
     },
     // Exam package price IDs
     { key: "NEXT_PUBLIC_STRIPE_EXAM_3MONTH", value: process.env.NEXT_PUBLIC_STRIPE_EXAM_3MONTH },
@@ -45,9 +45,9 @@ export interface PricingTier {
   name: string;
   description: string;
   monthlyPrice: number;
-  annualPrice: number;
+  threeMonthPrice: number;
   monthlyPriceId?: string;
-  annualPriceId?: string;
+  threeMonthPriceId?: string;
   features: string[];
   highlighted?: string[];
   recommended?: boolean;
@@ -70,10 +70,10 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
     id: "basic",
     name: "PMLE Prep",
     description: "Focused preparation for the Google PMLE exam",
-    monthlyPrice: 39,
-    annualPrice: 349,
+    monthlyPrice: 14.99,
+    threeMonthPrice: 39.99,
     monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY,
-    annualPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL,
+    threeMonthPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_3MONTH,
     features: [
       "Full PMLE question bank (200+ questions)",
       "Realistic scenario-based questions",
@@ -83,16 +83,17 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
       "Progress tracking",
     ],
     highlighted: ["Full PMLE question bank", "Domain-level readiness breakdown"],
-    savingsPercentage: 25,
+    // 14.99 * 3 = 44.97 vs 39.99 => ~11% savings
+    savingsPercentage: 11,
   },
   {
     id: "pro",
     name: "Pro",
     description: "Most popular for serious learners",
     monthlyPrice: 59,
-    annualPrice: 549,
+    threeMonthPrice: 549 / 4, // placeholder; adjust when Pro is re-enabled
     monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY,
-    annualPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL,
+    threeMonthPriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_3MONTH,
     features: [
       "3 certification tracks",
       "All practice modes",
@@ -106,7 +107,8 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
     ],
     highlighted: ["3 certification tracks", "Adaptive practice modes", "Advanced analytics"],
     recommended: true,
-    savingsPercentage: 23,
+    // Hidden tier; savings not relevant, but keep structure consistent
+    savingsPercentage: 0,
     isHidden: true,
   },
   {
@@ -114,9 +116,9 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
     name: "All-Access",
     description: "Ultimate learning experience",
     monthlyPrice: 79,
-    annualPrice: 749,
+    threeMonthPrice: 749 / 4, // placeholder; adjust when All-Access is re-enabled
     monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY,
-    annualPriceId: process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL,
+    threeMonthPriceId: process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH,
     features: [
       "All certifications",
       "Unlimited tracks",
@@ -130,7 +132,7 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
       "Export capabilities",
     ],
     highlighted: ["All certifications", "Unlimited practice modes", "Team features"],
-    savingsPercentage: 21,
+    savingsPercentage: 0,
     isHidden: true,
   },
 ];

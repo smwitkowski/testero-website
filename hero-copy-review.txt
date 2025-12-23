@@ -1,0 +1,1408 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files, combined into a single document by Repomix.
+
+# File Summary
+
+## Purpose
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+
+## File Format
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  a. A header with the file path (## File: path/to/file)
+  b. The full contents of the file in a code block
+
+## Usage Guidelines
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+
+## Notes
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: lib/copy/message-house.ts, components/marketing/sections/hero-section.tsx, app/page.tsx, HERO_IMPLEMENTATION_REQUEST.md
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+
+# Directory Structure
+```
+app/
+  page.tsx
+components/
+  marketing/
+    sections/
+      hero-section.tsx
+lib/
+  copy/
+    message-house.ts
+HERO_IMPLEMENTATION_REQUEST.md
+```
+
+# Files
+
+## File: lib/copy/message-house.ts
+````typescript
+/**
+ * Testero 2026 Message House & Copy Constants
+ * 
+ * Single source of truth for all marketing and product copy.
+ * Aligned to: PMLE-first, readiness-first, balanced claims posture.
+ * 
+ * Last Updated: 2025-12-11
+ */
+
+/**
+ * Core positioning statement (one-liner)
+ */
+export const CORE_POSITIONING = {
+  headline: "Know your PMLE readiness—before you pay $200 to find out.",
+  subheadline: "Take a fast diagnostic to see your readiness score and the exact domains to prioritize. Upgrade when you want explanations and unlimited targeted practice.",
+};
+
+/**
+ * Three core value pillars
+ */
+export const VALUE_PILLARS = {
+  readiness: {
+    title: "Know Your Exact Readiness",
+    description: "Get a clear readiness signal before you schedule—so you know whether to book now or focus your study time first.",
+    icon: "Target",
+  },
+  blueprint: {
+    title: "Aligned to the Current PMLE Blueprint",
+    description: "Practice with exam-style questions mapped to the blueprint—so your time goes to the topics that actually show up.",
+    icon: "FileText",
+  },
+  explanations: {
+    title: "Explanations That Teach",
+    description: "Step-by-step explanations that help you understand concepts deeply, not just memorize answers.",
+    icon: "BookOpen",
+  },
+};
+
+/**
+ * Approved vocabulary (use consistently across all surfaces)
+ */
+export const VOCABULARY = {
+  diagnostic: "diagnostic" as const, // Never "test" or "exam" for the free entry
+  readinessScore: "readiness score" as const,
+  domainBreakdown: "domain breakdown" as const,
+  explanations: "explanations" as const, // Paid feature
+  targetedPractice: "targeted practice" as const, // Paid feature
+  unlimitedPractice: "unlimited practice" as const, // Paid feature
+  pmle: "PMLE" as const, // Always uppercase
+  examFee: "$200" as const, // Standardized exam fee anchor
+};
+
+/**
+ * CTA hierarchy (primary vs secondary)
+ */
+export const CTAS = {
+  primary: {
+    diagnostic: "Start free diagnostic",
+    signup: "Sign up free",
+    upgrade: "Upgrade to PMLE Readiness",
+  },
+  secondary: {
+    viewPricing: "See pricing",
+    viewExamples: "See example questions",
+    maybeLater: "Maybe later",
+  },
+};
+
+/**
+ * Free vs Paid boundaries (must match entitlements)
+ */
+export const FREE_FEATURES = {
+  diagnostic: "1 diagnostic per exam (PMLE)",
+  basicSummary: "Basic readiness summary (score + domain breakdown)",
+  limitedPractice: "Limited practice quota (5 questions/week)",
+  noExplanations: true, // Explicitly no explanations
+} as const;
+
+export const PAID_FEATURES = {
+  explanations: "Detailed explanations for every answer",
+  unlimitedPractice: "Unlimited practice within PMLE",
+  diagnosticRetakes: "Diagnostic retakes",
+  readinessHistory: "Readiness history and progress tracking",
+  domainTargeted: "Domain-targeted practice loops",
+} as const;
+
+/**
+ * Claim register: Numeric claims, guarantees, SLAs
+ * Each claim maps to: source, where used, qualification needed
+ */
+export interface Claim {
+  claim: string;
+  source: "provable" | "needs-qualifier" | "remove" | "blog-only";
+  qualification?: string; // Required qualifier text if source is "needs-qualifier"
+  usedIn: string[]; // File paths where this claim appears
+}
+
+export const CLAIM_REGISTER: Claim[] = [
+  {
+    claim: "14 days update SLA",
+    source: "needs-qualifier",
+    qualification: "Questions are designed to align with the current blueprint and are updated as the exam evolves.",
+    usedIn: ["app/page.tsx", "components/marketing/sections/benefits-section.tsx"],
+  },
+  {
+    claim: "85% pass rate",
+    source: "remove",
+    usedIn: ["components/marketing/sections/enhanced-social-proof.tsx", "components/marketing/sections/benefits-section.tsx"],
+  },
+  {
+    claim: "70% fail rate",
+    source: "blog-only",
+    usedIn: ["app/page.tsx"],
+  },
+  {
+    claim: "40+ hours saved",
+    source: "remove",
+    usedIn: ["components/marketing/sections/enhanced-social-proof.tsx", "components/marketing/sections/benefits-section.tsx"],
+  },
+  {
+    claim: "Pass PMLE in 30 Days—Guaranteed",
+    source: "remove",
+    usedIn: ["app/page.tsx"],
+  },
+  {
+    claim: "7-day money-back guarantee",
+    source: "provable",
+    usedIn: ["app/page.tsx", "app/pricing/page.tsx", "lib/pricing/constants.ts"],
+  },
+  {
+    claim: "Free forever",
+    source: "needs-qualifier",
+    qualification: "Free diagnostic and limited practice. Explanations and unlimited practice require a subscription.",
+    usedIn: ["components/marketing/sections/final-cta-section.tsx", "components/marketing/sections/benefits-section.tsx"],
+  },
+  {
+    claim: "$200 exam fee",
+    source: "provable",
+    usedIn: ["app/page.tsx", "lib/pricing/constants.ts"],
+  },
+  {
+    claim: "October 2024 exam updated",
+    source: "needs-qualifier",
+    qualification: "Aligned to October 2024 blueprint changes.",
+    usedIn: ["app/page.tsx", "app/diagnostic/page.tsx"],
+  },
+];
+
+/**
+ * Scope claims (PMLE-only vs multi-cloud)
+ */
+export const SCOPE_CLAIMS = {
+  pmleOnly: {
+    primary: "PMLE-focused",
+    description: "Everything you need for PMLE readiness—without wasted study time.",
+  },
+  multiCloud: {
+    // Remove until actually supported
+    description: "Supporting Google Cloud, AWS, and Azure certifications",
+    status: "remove" as const,
+  },
+};
+
+/**
+ * Trust signals (provable, no qualifiers needed)
+ */
+export const TRUST_SIGNALS = [
+  "PMLE-focused",
+  "Diagnostic-first",
+  "Blueprint-aligned",
+  "Cancel anytime",
+];
+
+/**
+ * Microcopy patterns
+ */
+export const MICROCOPY = {
+  diagnosticTime: "5–10 minutes",
+  noCreditCard: "No credit card required",
+  instantResults: "Results instantly",
+  cancelAnytime: "Cancel anytime",
+  moneyBackGuarantee: "7-day money-back guarantee",
+};
+
+/**
+ * Error/empty states
+ */
+export const EMPTY_STATES = {
+  noDiagnostic: "Take your first diagnostic to see your readiness score.",
+  noPractice: "Start practicing to track your progress.",
+  noResults: "Complete a diagnostic to see your results.",
+};
+
+/**
+ * Helper: Get qualified claim text
+ */
+export function getQualifiedClaim(claimText: string): string {
+  const claim = CLAIM_REGISTER.find((c) => claimText.includes(c.claim));
+  if (!claim || claim.source !== "needs-qualifier") {
+    return claimText;
+  }
+  return `${claimText} ${claim.qualification || ""}`;
+}
+
+/**
+ * Helper: Check if claim should be removed
+ */
+export function shouldRemoveClaim(claimText: string): boolean {
+  const claim = CLAIM_REGISTER.find((c) => claimText.includes(c.claim));
+  return claim?.source === "remove";
+}
+````
+
+## File: HERO_IMPLEMENTATION_REQUEST.md
+````markdown
+# Implementation Request: Testero Hero Section (Homepage)
+
+*Reference: final hero mock image*
+
+This request describes the implementation of the new Testero hero section. The goal is to match the design **pixel-close** while keeping the code clean, responsive, and ready for future iteration.
+
+---
+
+## 1. Overview
+
+Implement the **homepage hero section** exactly as shown in the attached mock.
+
+**Primary Goals:**
+- Communicate value above the fold
+- Strong diagnostic-first CTA
+- Clean, professional aesthetic
+- Responsive layout that preserves design intent
+- Reusable components for future sections
+
+**Business Context:**
+- This is a **diagnostic-first** conversion tool
+- Primary CTA should drive users to `/diagnostic`
+- Secondary CTA can link to example questions or pricing
+- Measure conversion rate: diagnostic starts from hero CTA
+
+---
+
+## 2. Component Architecture
+
+### File Structure
+
+Create the hero section as a standalone component following our marketing component patterns:
+
+```
+components/marketing/sections/
+└── hero-section.tsx          # Main hero component
+```
+
+### Component Pattern
+
+Follow the same pattern as `benefits-section.tsx`:
+- TypeScript with explicit prop interfaces
+- Tailwind CSS utility classes only (no inline styles)
+- Export component and any related types
+- Use existing Button component from `@/components/ui/button`
+- Use existing design tokens where applicable
+
+### Integration Point
+
+Replace the current `LampContainer` hero in `app/page.tsx` (lines 84-167) with the new `<HeroSection />` component.
+
+---
+
+## 3. Layout Requirements
+
+### Structure
+
+- **Two-column layout:**
+  - **Left column:** text content, CTAs, microcopy
+  - **Right column:** layered product mock cards
+- Constrain hero container to `max-w-7xl` (matches our existing pattern)
+- Center content horizontally with `mx-auto`
+- Top padding: `pt-24` (96px) - use Tailwind spacing tokens
+- Horizontal gap between columns: `gap-12` to `gap-16` (48-64px)
+- Vertical spacing: Use Tailwind spacing scale (`space-y-4`, `space-y-6`, etc.)
+
+### Responsiveness
+
+- **Desktop (≥1024px):** Two-column layout with `grid-cols-2`, layered cards on right
+- **Tablet (768-1023px):** Stack vertically with `flex-col`, mock centered under text
+- **Mobile (≤767px):**
+  - Text center-aligned with `text-center`
+  - Product mock becomes single centered image
+  - CTAs stacked vertically with `flex-col gap-4`
+  - Spacing tightened but not collapsed
+
+---
+
+## 4. Typography
+
+Use **Inter** font family (already configured in the project).
+
+### Sizes & Weights
+
+- **Eyebrow label:** `text-xs` or `text-sm`, `font-medium`, `tracking-wide`
+- **H1:** `text-4xl md:text-5xl lg:text-6xl`, `font-bold` (700), `leading-tight`
+- **Body text:** `text-base md:text-lg`, `font-normal` (400) or `font-medium` (500)
+- **CTA button:** `font-semibold` (600)
+- **Microcopy:** `text-sm`, `text-muted-foreground`
+
+### Colors (Use Design Tokens)
+
+- **Heavy text:** `text-foreground` or `text-slate-900`
+- **Secondary text:** `text-muted-foreground` or `text-slate-600`
+- **Microcopy:** `text-slate-500` or `text-muted-foreground`
+
+---
+
+## 5. Content (Literal Text)
+
+**Do not alter text without checking back with us.**
+
+### Eyebrow:
+```
+AI-POWERED CERTIFICATION READINESS
+```
+
+### Headline:
+```
+Know if you're ready before you book your exam.
+```
+
+### Subheadline:
+```
+Testero uses realistic, blueprint-aligned questions to benchmark your readiness and show exactly where to focus.
+```
+
+### Primary CTA:
+```
+Start free readiness check
+```
+
+### Secondary CTA (text link):
+```
+View example questions
+```
+
+### Microcopy:
+```
+Takes 5–7 minutes · No credit card required
+```
+
+---
+
+## 6. CTA Button Requirements
+
+### Primary CTA Button
+
+Use our existing `Button` component from `@/components/ui/button`:
+
+```tsx
+<Button
+  asChild
+  size="lg"
+  tone="accent"
+  variant="solid"
+  className="w-full sm:w-auto"
+>
+  <Link href="/diagnostic">Start free readiness check</Link>
+</Button>
+```
+
+**Styling:**
+- Size: `lg` (already configured in Button component)
+- Tone: `accent` (uses our design system blue gradient)
+- Hover: Handled by Button component (slightly darker, soft elevation)
+- Active: Handled by Button component
+- Rounded corners: Already configured in Button (8-12px)
+- Full width on mobile: `w-full sm:w-auto`
+
+### Secondary CTA
+
+Use a simple text link with hover underline:
+
+```tsx
+<Link
+  href="/practice"
+  className="text-blue-600 hover:text-blue-700 hover:underline font-semibold"
+>
+  View example questions
+</Link>
+```
+
+---
+
+## 7. Product Mock Implementation
+
+We **do not** need real components; these can be static assets or lightweight markup.
+
+### Requirements
+
+#### A. Readiness Dashboard Card
+
+- Card container: `rounded-xl` or `rounded-2xl` (12-16px)
+- Border: `border border-slate-200` or `border-slate-300`
+- Shadow: `shadow-lg` or `shadow-xl`
+- Background: `bg-white`
+- Elements included:
+  - Circular readiness score (78%) - use SVG or CSS
+  - Domain Breakdown list - simple list with Tailwind styling
+  - Light-blue highlight on one selected domain - `bg-blue-50` or `bg-blue-100`
+
+Use vector-based assets (SVG) if possible for crisp scaling.
+
+#### B. Example Question Card
+
+- Slight overlap with dashboard card using `absolute` positioning
+- Z-index: `z-10` above dashboard (`z-0`)
+- Checkbox styles: Use Tailwind checkbox utilities or custom styled checkboxes
+- "Explanation" button: Use our Button component with `variant="outline"` and `tone="neutral"`
+
+### Layering / Positioning
+
+- Implement via `relative` container on right column
+- Use `absolute` positioning for overlapping cards
+- Maintain responsiveness:
+  - On tablet: Cards reduce size proportionally
+  - On mobile: Cards collapse into one centered static image or simplified layout
+
+---
+
+## 8. Background & Section Styling
+
+### Background
+
+- Very light neutral: `bg-slate-50` or `bg-white`
+- Right-side subtle background block: Use CSS with `bg-slate-100` or `bg-slate-200`
+- Rounded corner: `rounded-l-3xl` or similar on one side
+- Position: Absolute positioned behind product mock
+
+### Implementation
+
+Use Tailwind classes only:
+```tsx
+<section className="w-full bg-slate-50 py-24">
+  {/* Content */}
+</section>
+```
+
+---
+
+## 9. Navigation Alignment
+
+Ensure nav bar matches mock styling:
+
+- Right-side "Start Free" button: Use Button with `variant="outline"` and `tone="accent"`
+- Slightly rounded borders: Already handled by Button component
+- Text color: Primary blue (handled by `tone="accent"`)
+- Hover: Soft background tint (handled by Button component)
+
+Nav should sit on transparent or very light background (already implemented in `navbar.tsx`).
+
+---
+
+## 10. Accessibility Requirements
+
+- All buttons must be keyboard accessible (handled by Button component)
+- Text-to-background contrast ratio ≥ 4.5:1 (verify with Tailwind color tokens)
+- Add alt text for product mock region:
+  ```tsx
+  <div role="img" aria-label="Readiness dashboard and example exam question preview showing Testero's question format.">
+    {/* Product mock */}
+  </div>
+  ```
+- Semantic HTML: Use `<section>`, `<h1>`, `<p>` tags appropriately
+- ARIA labels on CTAs: Already handled by Button component with `aria-label` prop
+
+---
+
+## 11. Performance Requirements
+
+- Avoid large PNG screenshots; use SVGs or WebP if possible
+- Lazy-load mock images if using `<Image>` component from Next.js
+- Minimize layout shift: Reserve image space with `aspect-ratio` utilities
+- Use Next.js `Image` component if using actual images (optimization built-in)
+
+---
+
+## 12. Code Implementation Notes
+
+### Component Structure
+
+```tsx
+"use client";
+
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+interface HeroSectionProps {
+  // Add props if needed for future flexibility
+}
+
+export const HeroSection: React.FC<HeroSectionProps> = () => {
+  return (
+    <section className="w-full bg-slate-50 py-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+          {/* Left column: Text content */}
+          <div className="space-y-6">
+            {/* Eyebrow, Headline, Subheadline, CTAs, Microcopy */}
+          </div>
+          
+          {/* Right column: Product mock */}
+          <div className="relative">
+            {/* Layered cards */}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+```
+
+### Text Content Management
+
+All text should live in a config object for easy marketing updates:
+
+```tsx
+const heroContent = {
+  eyebrow: "AI-POWERED CERTIFICATION READINESS",
+  headline: "Know if you're ready before you book your exam.",
+  subheadline: "Testero uses realistic, blueprint-aligned questions to benchmark your readiness and show exactly where to focus.",
+  primaryCta: {
+    text: "Start free readiness check",
+    href: "/diagnostic",
+  },
+  secondaryCta: {
+    text: "View example questions",
+    href: "/practice",
+  },
+  microcopy: "Takes 5–7 minutes · No credit card required",
+};
+```
+
+### Product Mock Cards
+
+If creating as components (not images), structure them as:
+
+```tsx
+// components/marketing/sections/hero-section.tsx
+
+const ReadinessDashboardCard = () => (
+  <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-lg">
+    {/* Dashboard content */}
+  </div>
+);
+
+const ExampleQuestionCard = () => (
+  <div className="absolute top-8 left-8 rounded-xl border border-slate-200 bg-white p-6 shadow-xl z-10">
+    {/* Question content */}
+  </div>
+);
+```
+
+---
+
+## 13. Acceptance Criteria
+
+- [ ] Desktop view matches design within reasonable pixel tolerance
+- [ ] Text hierarchy & contrast match design
+- [ ] CTA button states implemented (using our Button component)
+- [ ] Right-side mock layered exactly as in reference
+- [ ] Fully responsive down to 320px wide
+- [ ] No layout shift above 50ms (use `aspect-ratio` utilities)
+- [ ] Accessible (labels, alt text, tab order, contrast)
+- [ ] Hero loads in under ~100ms on average connection
+- [ ] Uses only Tailwind utility classes (no inline styles)
+- [ ] Follows our component architecture patterns
+- [ ] Integrates cleanly with existing `app/page.tsx`
+
+---
+
+## 14. Optional Enhancements (If Easy)
+
+Only implement if trivial (< 30 minutes):
+
+- Add subtle hover animation to product cards: `hover:-translate-y-1 transition-transform`
+- Reduce opacity of right-side background block on scroll (requires intersection observer)
+- Add fade-in on initial load: Use `animate-fade-in` if we have it, or simple opacity transition
+
+**Note:** These are optional. Ship the core implementation first, measure conversion, then iterate.
+
+---
+
+## 15. Testing Checklist
+
+Before marking complete:
+
+- [ ] Test on Chrome, Firefox, Safari (webkit)
+- [ ] Test responsive breakpoints: 320px, 768px, 1024px, 1280px
+- [ ] Verify CTA links work correctly
+- [ ] Check keyboard navigation (Tab through all interactive elements)
+- [ ] Verify contrast ratios meet WCAG AA standards
+- [ ] Test with browser zoom at 200%
+- [ ] Verify no console errors
+- [ ] Check Lighthouse score (aim for 90+ Performance)
+
+---
+
+## 16. Integration with Analytics
+
+Add PostHog tracking to primary CTA:
+
+```tsx
+import { usePostHog } from "posthog-js/react";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
+
+const posthog = usePostHog();
+
+<Button
+  asChild
+  onClick={() => {
+    trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_STARTED, {
+      source: "hero_cta",
+      referrer: "homepage",
+    });
+  }}
+>
+  <Link href="/diagnostic">Start free readiness check</Link>
+</Button>
+```
+
+---
+
+## 17. Design Token Reference
+
+Use existing design tokens from `lib/design-system` where applicable:
+
+- Colors: `@/lib/design-system/tokens/colors`
+- Spacing: `@/lib/design-system/tokens/spacing`
+- Typography: `@/lib/design-system/tokens/typography`
+- Effects: `@/lib/design-system/tokens/effects`
+
+If a token doesn't exist, use Tailwind's default scale and note it for future design system expansion.
+
+---
+
+## Questions or Clarifications?
+
+If anything is unclear:
+1. Check existing marketing components for patterns
+2. Reference `components/marketing/sections/benefits-section.tsx` for structure
+3. Use `components/ui/button.tsx` as reference for button implementation
+4. Follow Tailwind-first approach - no custom CSS unless absolutely necessary
+
+**Priority:** High - This is the primary conversion point on the homepage.
+
+**ICE Score Estimate:** Impact(8) × Confidence(9) × Effort(3) = **216** ✅ Build immediately
+````
+
+## File: components/marketing/sections/hero-section.tsx
+````typescript
+"use client";
+
+import React from "react";
+import Link from "next/link";
+import { usePostHog } from "posthog-js/react";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
+import { Button } from "@/components/ui/button";
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface HeroSectionProps {
+  // Add props if needed for future flexibility
+}
+
+import { CORE_POSITIONING, CTAS, MICROCOPY } from "@/lib/copy/message-house";
+
+const heroContent = {
+  eyebrow: "GOOGLE CLOUD PMLE READINESS",
+  headline: CORE_POSITIONING.headline,
+  subheadline: CORE_POSITIONING.subheadline,
+  primaryCta: {
+    text: CTAS.primary.diagnostic,
+    href: "/diagnostic",
+  },
+  secondaryCta: {
+    text: CTAS.secondary.viewExamples,
+    href: "/practice",
+  },
+  microcopy: `${MICROCOPY.diagnosticTime} · ${MICROCOPY.noCreditCard} · ${MICROCOPY.instantResults}`,
+};
+
+// Readiness Dashboard Card Component
+const ReadinessDashboardCard: React.FC = () => {
+  return (
+    <div className="rounded-xl lg:rounded-2xl border border-black/[0.06] lg:border-black/[0.08] bg-white p-4 sm:p-6 lg:p-8 shadow-md">
+      <h3 className="text-lg font-medium text-slate-800 mb-4">Readiness Dashboard</h3>
+      
+      {/* Circular Progress Indicator */}
+      <div className="flex items-center justify-center mb-6">
+        <div className="relative w-32 h-32">
+          <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+            {/* Background circle */}
+            <circle
+              cx="50"
+              cy="50"
+              r="45"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="8"
+              className="text-slate-200"
+            />
+            {/* Progress circle (78%) */}
+            <circle
+              cx="50"
+              cy="50"
+              r="45"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="8"
+              strokeDasharray={`${2 * Math.PI * 45}`}
+              strokeDashoffset={`${2 * Math.PI * 45 * (1 - 0.78)}`}
+              strokeLinecap="round"
+              className="text-blue-600"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-slate-800">78%</div>
+              <div className="text-xs text-slate-500">Score</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Domain Breakdown */}
+      <div>
+        <h4 className="text-sm font-medium text-slate-800 mb-3">Domain Breakdown</h4>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between p-2 rounded-md bg-blue-50">
+            <span className="text-sm text-slate-700">Domain Content</span>
+            <div className="flex items-center gap-2">
+              <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div className="w-3/4 h-full bg-blue-600 rounded-full" />
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2 rounded-md">
+            <span className="text-sm text-slate-700">Domain Developer</span>
+            <div className="flex items-center gap-2">
+              <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div className="w-1/2 h-full bg-slate-400 rounded-full" />
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2 rounded-md">
+            <span className="text-sm text-slate-700">Domain Law</span>
+            <div className="flex items-center gap-2">
+              <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div className="w-4/5 h-full bg-slate-400 rounded-full" />
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2 rounded-md">
+            <span className="text-sm text-slate-700">Domain Solutions</span>
+            <div className="flex items-center gap-2">
+              <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div className="w-2/3 h-full bg-slate-400 rounded-full" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Example Question Card Component
+const ExampleQuestionCard: React.FC = () => {
+  return (
+    <div className="rounded-xl lg:rounded-2xl border border-black/[0.06] lg:border-black/[0.08] bg-white p-4 sm:p-6 lg:p-8 shadow-lg w-full max-w-sm lg:max-w-sm">
+      <h3 className="text-lg font-medium text-slate-800 mb-4">Example Question</h3>
+      
+      {/* Scenario Prompt */}
+      <div className="mb-4">
+        <p className="text-sm text-slate-600 leading-relaxed">
+          You are building a machine learning model to predict customer churn. You have a dataset with
+          10,000 samples and 50 features. Which approach would be most appropriate for feature selection?
+        </p>
+      </div>
+
+      {/* Checkbox Options */}
+      <div className="space-y-3 mb-4">
+        <label className="flex items-start gap-3 cursor-pointer group">
+          <input
+            type="checkbox"
+            checked
+            readOnly
+            className="mt-1 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
+          />
+          <span className="text-sm text-slate-700 group-hover:text-slate-900">
+            Use Principal Component Analysis (PCA) to reduce dimensionality
+          </span>
+        </label>
+        <label className="flex items-start gap-3 cursor-pointer group">
+          <input
+            type="checkbox"
+            readOnly
+            className="mt-1 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
+          />
+          <span className="text-sm text-slate-700 group-hover:text-slate-900">
+            Use recursive feature elimination with cross-validation
+          </span>
+        </label>
+        <label className="flex items-start gap-3 cursor-pointer group">
+          <input
+            type="checkbox"
+            readOnly
+            className="mt-1 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
+          />
+          <span className="text-sm text-slate-700 group-hover:text-slate-900">
+            Use all features and let the model learn automatically
+          </span>
+        </label>
+        <label className="flex items-start gap-3 cursor-pointer group">
+          <input
+            type="checkbox"
+            readOnly
+            className="mt-1 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
+          />
+          <span className="text-sm text-slate-700 group-hover:text-slate-900">
+            Use correlation matrix to remove highly correlated features
+          </span>
+        </label>
+      </div>
+
+      {/* Explanation Button */}
+      <Button variant="outline" tone="neutral" size="sm" className="w-full">
+        Explanation
+      </Button>
+    </div>
+  );
+};
+
+export const HeroSection: React.FC<HeroSectionProps> = () => {
+  const posthog = usePostHog();
+
+  const handlePrimaryCtaClick = () => {
+    trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_STARTED, {
+      source: "hero_cta",
+      referrer: "homepage",
+    });
+  };
+
+  return (
+    // eslint-disable-next-line no-restricted-syntax
+    <section className="w-full bg-slate-50 py-12 md:py-16 lg:py-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 lg:gap-16 items-center lg:items-start">
+          {/* Left Column: Text Content */}
+          <div className="space-y-4 md:space-y-5 lg:space-y-6 text-center lg:text-left">
+            {/* Eyebrow */}
+            <span className="inline-block text-[0.6875rem] sm:text-xs font-medium tracking-wide uppercase text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
+              {heroContent.eyebrow}
+            </span>
+
+            {/* Headline */}
+            {/* eslint-disable-next-line design/no-tailwind-arbitrary-values */}
+            <h1 className="text-[1.75rem] sm:text-[2rem] md:text-4xl lg:text-5xl font-bold leading-[1.15] tracking-tight text-foreground">
+              {heroContent.headline}
+            </h1>
+
+            {/* Subheadline */}
+            {/* eslint-disable-next-line design/no-tailwind-arbitrary-values */}
+            <p className="text-[0.9375rem] md:text-base lg:text-lg font-normal text-muted-foreground max-w-[22.5rem] md:max-w-lg lg:max-w-2xl mx-auto lg:mx-0">
+              {heroContent.subheadline}
+            </p>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-center lg:justify-start">
+              <Button
+                asChild
+                size="lg"
+                tone="accent"
+                variant="solid"
+                className="w-full sm:w-auto h-12 rounded-lg sm:rounded-xl"
+                onClick={handlePrimaryCtaClick}
+                aria-label="Start free readiness check to assess your exam readiness"
+              >
+                <Link href={heroContent.primaryCta.href}>
+                  {heroContent.primaryCta.text}
+                </Link>
+              </Button>
+              <Link
+                href={heroContent.secondaryCta.href}
+                className="inline-flex items-center justify-center h-11 text-[color:var(--tone-accent)] hover:text-[color:var(--tone-accent)]/80 hover:underline font-medium text-base transition-colors"
+              >
+                {heroContent.secondaryCta.text}
+              </Link>
+            </div>
+
+            {/* Microcopy */}
+            <p className="text-[0.8125rem] sm:text-sm text-slate-500">{heroContent.microcopy}</p>
+          </div>
+
+          {/* Right Column: Product Mock */}
+          <div className="relative mt-10 md:mt-8 lg:mt-0 w-full max-w-md mx-auto lg:max-w-none lg:mx-0">
+            {/* Background Decorative Block - Hidden on mobile */}
+            <div
+              className="hidden lg:block absolute right-0 top-0 bottom-0 w-3/4 bg-slate-100 rounded-l-3xl -z-10"
+              aria-hidden="true"
+            />
+
+            {/* Product Mock Cards */}
+            <div
+              role="img"
+              aria-label="Readiness dashboard and example exam question preview showing Testero's question format."
+              className="relative"
+            >
+              {/* Mobile: Stacked with transforms, Desktop: Absolute overlay */}
+              <div className="relative">
+                {/* Dashboard card - base layer */}
+                <div className="relative z-0 transform lg:transform-none translate-y-8 lg:translate-y-0 scale-95 lg:scale-100">
+                  <ReadinessDashboardCard />
+                </div>
+
+                {/* Question card - overlay */}
+                <div className="relative lg:absolute lg:top-16 lg:right-0 lg:-right-4 z-10 -mt-16 lg:mt-0 mx-4 lg:mx-0">
+                  <ExampleQuestionCard />
+                </div>
+              </div>
+
+              {/* Decorative Diamond Shape */}
+              <div
+                className="absolute -bottom-4 -right-4 w-16 h-16 opacity-10"
+                aria-hidden="true"
+              >
+                <svg viewBox="0 0 100 100" className="w-full h-full">
+                  <path
+                    d="M50 0 L100 50 L50 100 L0 50 Z"
+                    fill="currentColor"
+                    className="text-slate-400"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+````
+
+## File: app/page.tsx
+````typescript
+"use client";
+
+import { useEffect, useState } from "react";
+import { useInView } from "react-intersection-observer";
+import { usePostHog } from "posthog-js/react";
+import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { BenefitsSectionSkeleton } from "@/components/marketing/sections/benefits-section";
+import { HeroSection } from "@/components/marketing/sections/hero-section";
+import { TestimonialCarousel } from "@/components/marketing/sections/testimonial-carousel";
+import { Button } from "@/components/ui/button";
+import { JsonLd } from "./page.metadata";
+import {
+  CheckCircle,
+  TrendingUp,
+  Clock,
+  Shield,
+  Star,
+  Zap,
+  ArrowRight,
+  Award,
+} from "lucide-react";
+import { SUBSCRIPTION_TIERS } from "@/lib/pricing/constants";
+import { cn } from "@/lib/utils";
+import { VALUE_PILLARS, VOCABULARY, MICROCOPY } from "@/lib/copy/message-house";
+
+// Dynamically import the BenefitsSection component
+const BenefitsSection = dynamic(
+  () =>
+    import("@/components/marketing/sections/benefits-section").then((mod) => mod.BenefitsSection),
+  {
+    loading: () => <BenefitsSectionSkeleton />,
+    ssr: false,
+  }
+);
+
+// Helper hook for tracking section views and lazy loading
+function useTrackSectionView(sectionName: string, loadThreshold = 0.1) {
+  const posthog = usePostHog();
+  const [shouldLoad, setShouldLoad] = useState(false);
+  const { ref, inView } = useInView({
+    triggerOnce: true,
+    threshold: loadThreshold,
+    rootMargin: "200px 0px",
+  });
+
+  useEffect(() => {
+    if (inView) {
+      if (posthog) {
+        trackEvent(posthog, ANALYTICS_EVENTS.FEATURE_DISCOVERED, {
+          feature_name: sectionName,
+          discovery_type: "scroll_view",
+        });
+      }
+      setShouldLoad(true);
+    }
+  }, [inView, sectionName, posthog]);
+
+  return { ref, shouldLoad, inView };
+}
+
+export default function Home() {
+  const { ref: benefitsRef, shouldLoad: loadBenefits } = useTrackSectionView("benefits");
+  const { ref: pricingPreviewRef, shouldLoad: loadPricingPreview } =
+    useTrackSectionView("pricing_preview");
+  const { ref: finalCtaRef } = useTrackSectionView("final_cta");
+  const posthog = usePostHog();
+
+  const handlePricingClick = (source: string) => {
+    trackEvent(posthog, ANALYTICS_EVENTS.PRICING_PAGE_VIEWED, {
+      source: `homepage_${source}`,
+      referrer: "homepage",
+    });
+  };
+
+  return (
+    <main className="flex min-h-screen flex-col items-stretch justify-start bg-gradient-to-b from-slate-50 to-white">
+      {/* Add JSON-LD structured data */}
+      <JsonLd />
+
+      {/* Hero Section */}
+      <HeroSection />
+
+      {/* Main content sections */}
+      <div role="main" id="main-content" className="w-full overflow-x-hidden">
+        {/* Value Anchors Section */}
+        {/* eslint-disable-next-line no-restricted-syntax */}
+        <section className="w-full py-16 px-4 sm:px-6 bg-white">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="text-center">
+                <div className="bg-[color:var(--tone-accent-surface)] rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                  <TrendingUp className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">De-risk Your {VOCABULARY.examFee} Exam Fee</h3>
+                <p className="text-gray-600">
+                  {VALUE_PILLARS.readiness.description}
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="bg-[color:var(--tone-accent-surface)] rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                  <Clock className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{VALUE_PILLARS.blueprint.title}</h3>
+                <p className="text-gray-600">
+                  {VALUE_PILLARS.blueprint.description}
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="bg-[color:var(--tone-accent-surface)] rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                  <Shield className="h-8 w-8 text-[color:var(--tone-accent)]" aria-hidden="true" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{MICROCOPY.moneyBackGuarantee}</h3>
+                <p className="text-gray-600">
+                  If it&apos;s not a fit, you&apos;re covered—no friction.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing Preview Section */}
+        <section
+          ref={pricingPreviewRef}
+          // eslint-disable-next-line no-restricted-syntax
+          className="w-full py-16 sm:py-20 px-4 sm:px-6 bg-gradient-to-b from-[color:var(--tone-accent-surface)]/20 to-white"
+        >
+          {loadPricingPreview && (
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+                  Choose Your PMLE Readiness Plan
+                </h2>
+                <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                  Everything you need to pass PMLE — unlimited practice, personalized diagnostics, and expert-level explanations.
+                </p>
+              </div>
+
+              {/* Pricing Cards Preview */}
+              <div className="flex justify-center mb-12">
+                <div className="w-full max-w-md">
+                {SUBSCRIPTION_TIERS.filter((tier) => !tier.isHidden).map((tier) => (
+                  <div
+                    key={tier.id}
+                    className={cn(
+                      "relative rounded-2xl p-5 sm:p-6 bg-white border-2 transition-all",
+                      tier.recommended
+                        ? "border-[color:var(--tone-accent)] shadow-xl md:scale-105"
+                        : "border-gray-200 hover:border-gray-300 hover:shadow-lg"
+                    )}
+                  >
+
+                    <div className="text-center mb-6 space-y-2">
+                      <h3 className="text-2xl font-bold text-gray-900">{tier.name}</h3>
+                      <div className="flex items-baseline justify-center">
+                        <span className="text-3xl sm:text-4xl font-bold">${tier.monthlyPrice}</span>
+                        <span className="text-sm text-gray-500 ml-2">/month</span>
+                      </div>
+                      <p className="text-sm sm:text-base text-green-600 font-medium">
+                        Save {tier.savingsPercentage}% with annual billing
+                      </p>
+                    </div>
+
+                    <ul className="space-y-3 mb-6 text-left">
+                      {tier.highlighted?.slice(0, 3).map((feature) => (
+                        <li key={feature} className="flex items-start gap-2">
+                          <CheckCircle className="h-5 w-5 text-[color:var(--tone-success)] flex-shrink-0" />
+                          <span className="text-sm sm:text-base text-gray-700">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <Button
+                      asChild
+                      size="md"
+                      fullWidth
+                      tone={tier.recommended ? "accent" : "neutral"}
+                      variant={tier.recommended ? "solid" : "outline"}
+                      className="text-base font-semibold h-12"
+                      onClick={() => handlePricingClick(`preview_${tier.id}`)}
+                    >
+                      <Link href="/pricing">Start Preparing</Link>
+                    </Button>
+                  </div>
+                ))}
+                </div>
+              </div>
+
+              <div className="text-center">
+                <Link
+                  href="/pricing"
+                  className="inline-flex items-center gap-2 text-[color:var(--tone-accent)] hover:text-[color:var(--tone-accent)]/80 font-semibold text-lg"
+                  onClick={() => handlePricingClick("preview_compare")}
+                >
+                  Compare all features
+                  <ArrowRight className="h-5 w-5" />
+                </Link>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* Benefits Section - Lazy loaded */}
+        <section ref={benefitsRef} aria-labelledby="benefits-heading">
+          {loadBenefits ? <BenefitsSection /> : <BenefitsSectionSkeleton />}
+        </section>
+
+        {/* Enhanced Testimonials Section with Pricing Context */}
+        {/* eslint-disable-next-line no-restricted-syntax */}
+        <section className="w-full py-10 sm:py-16 md:py-24 px-4 sm:px-6 bg-slate-50">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800 mb-4">
+                Real Success Stories from Our Students
+              </h2>
+              <p className="text-lg text-gray-600">
+                See how professionals like you achieved their certification goals
+              </p>
+            </div>
+
+            <TestimonialCarousel
+              testimonials={[
+                {
+                  id: "1",
+                  quote:
+                    "Failed PMLE twice before finding Testero. The diagnostic showed I was only 58% ready. After focused practice on my weakest domains, I passed. Worth every penny.",
+                  author: "Alex Chen",
+                  role: "ML Engineer at Google",
+                },
+                {
+                  id: "2",
+                  quote:
+                    "The diagnostic immediately showed my weak areas. The explanations helped me understand concepts deeply, not just memorize answers. Better than any course I've taken.",
+                  author: "Sarah Martinez",
+                  role: "Senior Data Scientist",
+                },
+                {
+                  id: "3",
+                  quote:
+                    "Testero's diagnostic saved me from wasting $200. I knew exactly where to focus my study time. The targeted practice on my weakest domains made all the difference.",
+                  author: "Michael Johnson",
+                  role: "Cloud ML Engineer",
+                },
+              ]}
+            />
+
+            {/* Success Metrics */}
+            <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+              <div>
+                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">$200</div>
+                <div className="text-sm text-gray-600">Exam Cost at Risk</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">10</div>
+                <div className="text-sm text-gray-600">Min Diagnostic</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">6</div>
+                <div className="text-sm text-gray-600">PMLE Domains</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-[color:var(--tone-accent)]">100%</div>
+                <div className="text-sm text-gray-600">Blueprint Aligned</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Practice Explainer */}
+        {/* eslint-disable-next-line no-restricted-syntax */}
+        <section className="w-full py-16 px-4 sm:px-6 bg-white">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8">
+              PMLE-Focused Training System
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-6">
+                <Zap className="h-10 w-10 text-[color:var(--tone-accent)] mx-auto mb-4" />
+                <h3 className="font-semibold text-lg mb-2">ML Concept Coverage</h3>
+                <p className="text-gray-600">
+                  Deep coverage of TensorFlow, Vertex AI, BigQuery ML, and MLOps practices aligned to the PMLE blueprint
+                </p>
+              </div>
+              <div className="p-6">
+                <Award className="h-10 w-10 text-[color:var(--tone-accent)] mx-auto mb-4" />
+                <h3 className="font-semibold text-lg mb-2">Blueprint-Aligned</h3>
+                <p className="text-gray-600">
+                  Questions mapped to current PMLE domains and topics that actually appear on the exam
+                </p>
+              </div>
+              <div className="p-6">
+                <TrendingUp className="h-10 w-10 text-[color:var(--tone-accent)] mx-auto mb-4" />
+                <h3 className="font-semibold text-lg mb-2">Readiness Score</h3>
+                <p className="text-gray-600">
+                  Know your exact PMLE readiness percentage before booking your $200 exam
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Enhanced Final CTA Section */}
+        <section
+          ref={finalCtaRef}
+          // eslint-disable-next-line no-restricted-syntax
+          className="w-full py-20 bg-gradient-to-r from-[color:var(--tone-accent)] via-[color:var(--tone-accent)]/90 to-[color:var(--tone-accent)]/80"
+        >
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center text-white">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-6">
+              Be Confident When You Book PMLE
+            </h2>
+            <p className="text-xl mb-8 text-white/90">
+              Start with a free diagnostic. Upgrade when you want step-by-step explanations and unlimited practice on your weakest domains.
+            </p>
+
+            {/* Urgency Elements */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 mb-8 max-w-2xl mx-auto">
+              <div className="flex items-center justify-center gap-4 mb-4">
+                <Clock className="h-6 w-6 text-yellow-300" />
+                <span className="text-lg font-semibold">Limited Time Offer</span>
+              </div>
+              <p className="text-white/80 mb-4">
+                New in 2025 • 7-day money-back guarantee • Cancel anytime
+              </p>
+              <div className="text-center">
+                <div className="text-2xl font-bold">$39</div>
+                <div className="text-sm text-white/70">PMLE Readiness/month</div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                asChild
+                size="lg"
+                tone="accent"
+                className="text-lg"
+                iconRight={<ArrowRight className="h-5 w-5" />}
+                onClick={() => handlePricingClick("final_cta_primary")}
+              >
+                <Link href="/pricing">See Pricing & Start Today</Link>
+              </Button>
+              <Button asChild variant="outline" tone="neutral" size="lg" className="text-lg">
+                <Link href="/diagnostic">Take Free Diagnostic</Link>
+              </Button>
+            </div>
+
+            {/* Trust Signals */}
+            <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-[color:var(--tone-success)]" />
+                <span>7-day money-back guarantee</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-[color:var(--tone-success)]" />
+                <span>Cancel anytime</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-yellow-400" />
+                <span>PMLE-focused</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* Related Content Links - Now with Pricing Focus */}
+      {/* eslint-disable-next-line no-restricted-syntax */}
+      <section className="w-full py-12 md:py-20 px-6 bg-slate-50">
+        <div className="max-w-5xl mx-auto text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-8">
+            PMLE Resources & Study Guides
+          </h2>
+          <div className="flex flex-wrap justify-center gap-6">
+            <Link
+              href="/pricing"
+              className="text-[color:var(--tone-accent)] hover:underline text-lg font-semibold"
+              onClick={() => handlePricingClick("footer_link")}
+            >
+                  View Pricing →
+            </Link>
+            <Link
+              href="/content/hub/pmle-exam-study-guide"
+              className="text-[color:var(--tone-accent)] hover:underline text-lg"
+            >
+              Complete PMLE Study Guide 2025
+            </Link>
+            <Link
+              href="/content/hub/google-professional-machine-learning-engineer-certification-roadmap-2025"
+              className="text-[color:var(--tone-accent)] hover:underline text-lg"
+            >
+              PMLE Certification Roadmap
+            </Link>
+            <Link href="/faq" className="text-[color:var(--tone-accent)] hover:underline text-lg">
+              Frequently Asked Questions
+            </Link>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+````

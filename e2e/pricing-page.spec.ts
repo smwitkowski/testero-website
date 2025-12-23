@@ -30,47 +30,35 @@ test.describe("Pricing Page", () => {
     });
   });
 
-  test("should load pricing page with annual billing as default", async ({ page }) => {
+  test("should load pricing page with 3-month billing as default", async ({ page }) => {
     await page.goto("/pricing");
 
     // Verify page loads
     await expect(page).toHaveTitle(/pricing/i);
 
-    // Verify annual billing is selected by default
-    const annualButton = page.getByRole("button", { name: /annual/i });
-    await expect(annualButton).toBeVisible();
-    await expect(annualButton).toHaveClass(/bg-blue-600/);
-
-    // Verify "SAVE 25%" badge is visible on annual button
-    await expect(page.getByText(/save 25%/i)).toBeVisible();
+    // Verify 3-month billing is selected by default
+    const threeMonthButton = page.getByRole("button", { name: /3-month/i });
+    await expect(threeMonthButton).toBeVisible();
+    await expect(threeMonthButton).toHaveClass(/bg-blue-600/);
   });
 
-  test("should display all three subscription tiers with enabled buttons", async ({ page }) => {
+  test("should display basic subscription tier with enabled button", async ({ page }) => {
     await page.goto("/pricing");
 
-    // Verify all three tiers are visible
+    // Verify basic tier is visible
     await expect(page.getByText(/basic/i)).toBeVisible();
-    await expect(page.getByText(/pro/i)).toBeVisible();
-    await expect(page.getByText(/all-access/i)).toBeVisible();
 
-    // Verify all "Get started" buttons are enabled (with price IDs from env fallbacks)
+    // Verify "Get started" button is enabled (with price IDs from env fallbacks)
     const buttons = page.getByRole("button", { name: /get started/i });
-    const count = await buttons.count();
-    expect(count).toBeGreaterThanOrEqual(3);
-
-    // Verify buttons are enabled (not disabled)
-    for (let i = 0; i < 3; i++) {
-      const button = buttons.nth(i);
-      await expect(button).toBeEnabled();
-    }
+    await expect(buttons.first()).toBeEnabled();
   });
 
-  test("should toggle between monthly and annual billing", async ({ page }) => {
+  test("should toggle between monthly and 3-month billing", async ({ page }) => {
     await page.goto("/pricing");
 
-    // Verify annual is selected initially
-    const annualButton = page.getByRole("button", { name: /annual/i });
-    await expect(annualButton).toHaveClass(/bg-blue-600/);
+    // Verify 3-month is selected initially
+    const threeMonthButton = page.getByRole("button", { name: /3-month/i });
+    await expect(threeMonthButton).toHaveClass(/bg-blue-600/);
 
     // Click monthly toggle
     const monthlyButton = page.getByRole("button", { name: /monthly/i });
@@ -78,15 +66,15 @@ test.describe("Pricing Page", () => {
 
     // Verify monthly is now selected
     await expect(monthlyButton).toHaveClass(/bg-blue-600/);
-    await expect(annualButton).not.toHaveClass(/bg-blue-600/);
+    await expect(threeMonthButton).not.toHaveClass(/bg-blue-600/);
 
     // Verify prices update (should show monthly prices)
-    await expect(page.getByText(/\$39/i)).toBeVisible(); // Basic monthly
+    await expect(page.getByText(/\$14\.99/i)).toBeVisible(); // Basic monthly
 
-    // Toggle back to annual
-    await annualButton.click();
-    await expect(annualButton).toHaveClass(/bg-blue-600/);
-    await expect(page.getByText(/\$349/i)).toBeVisible(); // Basic annual
+    // Toggle back to 3-month
+    await threeMonthButton.click();
+    await expect(threeMonthButton).toHaveClass(/bg-blue-600/);
+    await expect(page.getByText(/\$39\.99/i)).toBeVisible(); // Basic 3-month
   });
 
   test("should expand and display exam packages when clicked", async ({ page }) => {

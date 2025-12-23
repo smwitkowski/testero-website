@@ -22,6 +22,7 @@ interface Subscription {
     name: string;
     price_monthly: number;
     price_yearly: number;
+    price_three_month: number;
   };
 }
 
@@ -259,14 +260,24 @@ function BillingDashboardContent() {
                   </p>
                   <p className="text-sm text-gray-600 mt-1">
                     {subscription.plan && (
-                      <>
-                        {subscription.current_period_end &&
-                        new Date(subscription.current_period_end).getTime() -
-                          new Date(subscription.current_period_start).getTime() >
-                          31 * 24 * 60 * 60 * 1000
-                          ? formatAmount(subscription.plan.price_yearly) + "/year"
-                          : formatAmount(subscription.plan.price_monthly) + "/month"}
-                      </>
+                      (() => {
+                        const startMs = subscription.current_period_start
+                          ? new Date(subscription.current_period_start).getTime()
+                          : 0;
+                        const endMs = subscription.current_period_end
+                          ? new Date(subscription.current_period_end).getTime()
+                          : 0;
+                        const periodDays = (endMs - startMs) / (24 * 60 * 60 * 1000);
+
+                        if (periodDays >= 85 && periodDays <= 100) {
+                          return formatAmount(subscription.plan.price_three_month) + "/3 months";
+                        }
+                        if (periodDays >= 360 && periodDays <= 370) {
+                          return formatAmount(subscription.plan.price_yearly) + "/year";
+                        }
+                        // Default to monthly if the range is unclear
+                        return formatAmount(subscription.plan.price_monthly) + "/month";
+                      })()
                     )}
                   </p>
                 </div>

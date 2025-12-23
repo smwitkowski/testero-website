@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the Stripe payment integration for Testero, enabling subscription-based billing with monthly and yearly plans.
+This document describes the Stripe payment integration for Testero, enabling subscription-based billing with monthly and 3-month plans.
 
 ## Architecture
 
@@ -40,8 +40,8 @@ Copy `.env.example` to `.env.local` and fill in:
 # Required Stripe Keys
 STRIPE_SECRET_KEY=sk_test_... # From Stripe Dashboard > API Keys
 STRIPE_WEBHOOK_SECRET=whsec_... # From Stripe Dashboard > Webhooks
-STRIPE_PRICE_ID_MONTHLY=price_... # Created in Stripe Dashboard
-STRIPE_PRICE_ID_YEARLY=price_... # Created in Stripe Dashboard
+STRIPE_PRICE_ID_MONTHLY=price_... # (legacy) Created in Stripe Dashboard
+STRIPE_PRICE_ID_3MONTH=price_...  # (new) Created in Stripe Dashboard
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 
 # Grace Cookie Signing Secret (for checkout success grace window)
@@ -58,8 +58,8 @@ RESEND_API_KEY=re_... # From Resend Dashboard
 
    - Go to Stripe Dashboard > Products
    - Create "Testero Subscription" product
-   - Add Monthly price ($29/month)
-   - Add Yearly price ($290/year)
+   - Add Monthly price ($14.99/month for Basic; adjust for other tiers)
+   - Add 3-Month price ($39.99 every 3 months for Basic; interval=month, interval_count=3)
    - Copy price IDs to `.env.local`
 
 2. **Configure Webhook Endpoint**
@@ -96,11 +96,12 @@ supabase db push
 -- Insert subscription plans
 -- Replace the price IDs below with your actual Stripe price IDs from environment variables:
 -- STRIPE_PRICE_ID_MONTHLY and STRIPE_PRICE_ID_YEARLY
-INSERT INTO subscription_plans (name, price_monthly, price_yearly, stripe_price_id_monthly, stripe_price_id_yearly, features)
+INSERT INTO subscription_plans (name, price_monthly, price_three_month, price_yearly, stripe_price_id_monthly, stripe_price_id_three_month, stripe_price_id_yearly, features)
 VALUES
-  ('Pro', 2900, 29000,
-   'YOUR_STRIPE_PRICE_ID_MONTHLY', -- Replace with actual price ID from Stripe Dashboard
-   'YOUR_STRIPE_PRICE_ID_YEARLY',  -- Replace with actual price ID from Stripe Dashboard
+  ('Pro', 1499, 3999, 29000,
+   'YOUR_STRIPE_PRICE_ID_MONTHLY',        -- Replace with actual price ID from Stripe Dashboard
+   'YOUR_STRIPE_PRICE_ID_3MONTH',         -- Replace with actual price ID from Stripe Dashboard
+   'YOUR_STRIPE_PRICE_ID_YEARLY',         -- Legacy / grandfathered
    '["Unlimited practice questions", "Full diagnostic assessments", "Personalized study plans", "Performance analytics", "Email support"]'::jsonb);
 ```
 

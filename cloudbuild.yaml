@@ -10,7 +10,7 @@ steps:
       # '--build-arg', 'NEXT_PUBLIC_SUPABASE_URL=${_SUPABASE_URL}',
       # '--build-arg', 'NEXT_PUBLIC_SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY}',
       # '--build-arg', 'NEXT_PUBLIC_STRIPE_BASIC_MONTHLY=${_STRIPE_BASIC_MONTHLY}',
-      # '--build-arg', 'NEXT_PUBLIC_STRIPE_BASIC_ANNUAL=${_STRIPE_BASIC_ANNUAL}',
+      # '--build-arg', 'NEXT_PUBLIC_STRIPE_BASIC_3MONTH=${_STRIPE_BASIC_3MONTH}',
       '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/testero/frontend:$COMMIT_SHA',
       '.'
     ]
@@ -37,7 +37,7 @@ steps:
       - '--port=3000'
       - '--set-env-vars=NODE_ENV=production'
       # Note: Add Stripe price IDs via substitution variables or Cloud Run env vars:
-      # '--set-env-vars=NEXT_PUBLIC_STRIPE_BASIC_MONTHLY=${_STRIPE_BASIC_MONTHLY},NEXT_PUBLIC_STRIPE_BASIC_ANNUAL=${_STRIPE_BASIC_ANNUAL}'
+      # '--set-env-vars=NEXT_PUBLIC_STRIPE_BASIC_MONTHLY=${_STRIPE_BASIC_MONTHLY},NEXT_PUBLIC_STRIPE_BASIC_3MONTH=${_STRIPE_BASIC_3MONTH}'
 
 # Store images in Google Artifact Registry
 images:

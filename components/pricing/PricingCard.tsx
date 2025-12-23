@@ -22,15 +22,15 @@ interface PricingCardProps {
     name: string;
     description: string;
     monthlyPrice: number;
-    annualPrice: number;
+    threeMonthPrice: number;
     monthlyPriceId?: string;
-    annualPriceId?: string;
+    threeMonthPriceId?: string;
     features: string[];
     highlighted?: string[];
     recommended?: boolean;
     savingsPercentage?: number;
   };
-  billingInterval: "monthly" | "annual";
+  billingInterval: "monthly" | "three_month";
   onCheckout: (priceId: string, tierName: string) => void;
   loading?: boolean;
   loadingId?: string | null;
@@ -44,12 +44,13 @@ export function PricingCard({
   loadingId = null,
 }: PricingCardProps) {
   const router = useRouter();
-  const price = billingInterval === "monthly" ? tier.monthlyPrice : tier.annualPrice;
-  const priceId = billingInterval === "monthly" ? tier.monthlyPriceId : tier.annualPriceId;
+  const price = billingInterval === "monthly" ? tier.monthlyPrice : tier.threeMonthPrice;
+  const priceId = billingInterval === "monthly" ? tier.monthlyPriceId : tier.threeMonthPriceId;
   const checkoutPriceId = priceId ?? `${tier.id}-${billingInterval}`;
   const isCheckoutConfigured = Boolean(priceId);
   const isLoading = loading && loadingId === priceId;
-  const monthlyEquivalent = billingInterval === "annual" ? Math.round(tier.annualPrice / 12) : null;
+  const monthlyEquivalent =
+    billingInterval === "three_month" ? Math.round((tier.threeMonthPrice / 3) * 100) / 100 : null;
 
   const handleButtonClick = () => {
     if (!isCheckoutConfigured) {
@@ -70,7 +71,7 @@ export function PricingCard({
         tier.recommended
           ? "border-accent/50 ring-2 ring-accent/25"
           : "border-border/60",
-        billingInterval === "annual" && tier.savingsPercentage ? "pt-6" : ""
+        billingInterval === "three_month" && tier.savingsPercentage ? "pt-6" : ""
       )}
     >
       {tier.recommended ? (
@@ -86,7 +87,7 @@ export function PricingCard({
         </div>
       ) : null}
 
-      {billingInterval === "annual" && tier.savingsPercentage ? (
+      {billingInterval === "three_month" && tier.savingsPercentage ? (
         <div className={cn(
           "absolute right-6",
           tier.recommended ? "top-12" : "top-6"
@@ -116,7 +117,7 @@ export function PricingCard({
               ${price}
             </span>
             <span className="text-lg text-muted-foreground">
-              /{billingInterval === "monthly" ? "month" : "year"}
+              /{billingInterval === "monthly" ? "month" : "3 months"}
             </span>
           </div>
           {monthlyEquivalent ? (

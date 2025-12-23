@@ -70,11 +70,11 @@ describe("Checkout Session API", () => {
     process.env.STRIPE_SECRET_KEY = "sk_test_key";
     process.env.NEXT_PUBLIC_SITE_URL = "https://testero.ai";
     process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY = "price_monthly";
-    process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL = "price_yearly";
+    process.env.NEXT_PUBLIC_STRIPE_PRO_3MONTH = "price_3month";
     process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY = "price_basic_monthly";
-    process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL = "price_basic_yearly";
+    process.env.NEXT_PUBLIC_STRIPE_BASIC_3MONTH = "price_basic_3month";
     process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY = "price_all_monthly";
-    process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL = "price_all_yearly";
+    process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH = "price_all_3month";
     process.env.NEXT_PUBLIC_STRIPE_EXAM_3MONTH = "price_exam_3month";
     process.env.NEXT_PUBLIC_STRIPE_EXAM_6MONTH = "price_exam_6month";
     process.env.NEXT_PUBLIC_STRIPE_EXAM_12MONTH = "price_exam_12month";
@@ -84,11 +84,11 @@ describe("Checkout Session API", () => {
     delete process.env.STRIPE_SECRET_KEY;
     delete process.env.NEXT_PUBLIC_SITE_URL;
     delete process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY;
-    delete process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL;
+    delete process.env.NEXT_PUBLIC_STRIPE_PRO_3MONTH;
     delete process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY;
-    delete process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL;
+    delete process.env.NEXT_PUBLIC_STRIPE_BASIC_3MONTH;
     delete process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY;
-    delete process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL;
+    delete process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH;
     delete process.env.NEXT_PUBLIC_STRIPE_EXAM_3MONTH;
     delete process.env.NEXT_PUBLIC_STRIPE_EXAM_6MONTH;
     delete process.env.NEXT_PUBLIC_STRIPE_EXAM_12MONTH;
@@ -238,7 +238,7 @@ describe("Checkout Session API", () => {
       expect(responseData.url).toBe(mockSession.url);
     });
 
-    test("should create checkout session for yearly subscription", async () => {
+    test("should create checkout session for 3-month subscription", async () => {
       const mockUser = {
         id: "user_123",
         email: "test@example.com",
@@ -255,8 +255,8 @@ describe("Checkout Session API", () => {
       } as Stripe.Customer;
 
       const mockSession = {
-        id: "cs_test_yearly",
-        url: "https://checkout.stripe.com/pay/cs_test_yearly",
+        id: "cs_test_three_month",
+        url: "https://checkout.stripe.com/pay/cs_test_three_month",
       } as Stripe.Checkout.Session;
 
       mockStripeService.createOrRetrieveCustomer.mockResolvedValue(mockCustomer);
@@ -267,7 +267,7 @@ describe("Checkout Session API", () => {
 
       mockRequest = new NextRequest("http://localhost:3000/api/billing/checkout", {
         method: "POST",
-        body: JSON.stringify({ priceId: "price_yearly" }),
+        body: JSON.stringify({ priceId: "price_basic_3month" }),
       });
 
       const response = await POST(mockRequest);
@@ -275,7 +275,7 @@ describe("Checkout Session API", () => {
 
       expect(mockStripeService.createCheckoutSession).toHaveBeenCalledWith({
         customerId: mockCustomer.id,
-        priceId: "price_yearly",
+        priceId: "price_basic_3month",
         successUrl: "https://testero.ai/api/billing/checkout/success?session_id={CHECKOUT_SESSION_ID}",
         cancelUrl: "https://testero.ai/pricing",
         userId: mockUser.id,

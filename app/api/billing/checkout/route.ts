@@ -63,7 +63,7 @@ export async function POST(
     // Add subscription tier price IDs
     for (const tier of SUBSCRIPTION_TIERS) {
       if (tier.monthlyPriceId) validPrices.push(tier.monthlyPriceId);
-      if (tier.annualPriceId) validPrices.push(tier.annualPriceId);
+      if (tier.threeMonthPriceId) validPrices.push(tier.threeMonthPriceId);
     }
 
     // Validate price ID against our configured prices

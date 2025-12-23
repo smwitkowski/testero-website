@@ -17,11 +17,11 @@ describe("price-utils", () => {
     process.env = {
       ...originalEnv,
       NEXT_PUBLIC_STRIPE_BASIC_MONTHLY: "price_basic_monthly",
-      NEXT_PUBLIC_STRIPE_BASIC_ANNUAL: "price_basic_annual",
+      NEXT_PUBLIC_STRIPE_BASIC_3MONTH: "price_basic_3month",
       NEXT_PUBLIC_STRIPE_PRO_MONTHLY: "price_pro_monthly",
-      NEXT_PUBLIC_STRIPE_PRO_ANNUAL: "price_pro_annual",
+      NEXT_PUBLIC_STRIPE_PRO_3MONTH: "price_pro_3month",
       NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY: "price_all_access_monthly",
-      NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL: "price_all_access_annual",
+      NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH: "price_all_access_3month",
       NEXT_PUBLIC_STRIPE_EXAM_3MONTH: "price_exam_3month",
       NEXT_PUBLIC_STRIPE_EXAM_6MONTH: "price_exam_6month",
       NEXT_PUBLIC_STRIPE_EXAM_12MONTH: "price_exam_12month",
@@ -37,24 +37,24 @@ describe("price-utils", () => {
       expect(getTierNameFromPriceId("price_basic_monthly")).toBe("PMLE Readiness");
     });
 
-    it("should return 'PMLE Readiness' for Basic annual price ID", () => {
-      expect(getTierNameFromPriceId("price_basic_annual")).toBe("PMLE Readiness");
+    it("should return 'PMLE Readiness' for Basic 3-month price ID", () => {
+      expect(getTierNameFromPriceId("price_basic_3month")).toBe("PMLE Readiness");
     });
 
     it("should return 'Pro' for Pro monthly price ID", () => {
       expect(getTierNameFromPriceId("price_pro_monthly")).toBe("Pro");
     });
 
-    it("should return 'Pro' for Pro annual price ID", () => {
-      expect(getTierNameFromPriceId("price_pro_annual")).toBe("Pro");
+    it("should return 'Pro' for Pro 3-month price ID", () => {
+      expect(getTierNameFromPriceId("price_pro_3month")).toBe("Pro");
     });
 
     it("should return 'All-Access' for All-Access monthly price ID", () => {
       expect(getTierNameFromPriceId("price_all_access_monthly")).toBe("All-Access");
     });
 
-    it("should return 'All-Access' for All-Access annual price ID", () => {
-      expect(getTierNameFromPriceId("price_all_access_annual")).toBe("All-Access");
+    it("should return 'All-Access' for All-Access 3-month price ID", () => {
+      expect(getTierNameFromPriceId("price_all_access_3month")).toBe("All-Access");
     });
 
     it("should return '3-Month Package' for 3-month exam package price ID", () => {
@@ -95,8 +95,8 @@ describe("price-utils", () => {
       expect(isExamPackagePrice("price_basic_monthly")).toBe(false);
     });
 
-    it("should return false for Pro annual price ID", () => {
-      expect(isExamPackagePrice("price_pro_annual")).toBe(false);
+    it("should return false for Pro 3-month price ID", () => {
+      expect(isExamPackagePrice("price_pro_3month")).toBe(false);
     });
 
     it("should return false for All-Access monthly price ID", () => {
@@ -117,11 +117,11 @@ describe("price-utils", () => {
 
     it("should return 'subscription' for subscription tier price IDs", () => {
       expect(getPaymentMode("price_basic_monthly")).toBe("subscription");
-      expect(getPaymentMode("price_basic_annual")).toBe("subscription");
+      expect(getPaymentMode("price_basic_3month")).toBe("subscription");
       expect(getPaymentMode("price_pro_monthly")).toBe("subscription");
-      expect(getPaymentMode("price_pro_annual")).toBe("subscription");
+      expect(getPaymentMode("price_pro_3month")).toBe("subscription");
       expect(getPaymentMode("price_all_access_monthly")).toBe("subscription");
-      expect(getPaymentMode("price_all_access_annual")).toBe("subscription");
+      expect(getPaymentMode("price_all_access_3month")).toBe("subscription");
     });
 
     it("should return 'subscription' for unknown price ID", () => {
@@ -138,11 +138,11 @@ describe("price-utils", () => {
 
     it("should return 'subscription' for subscription tier price IDs", () => {
       expect(getPlanType("price_basic_monthly")).toBe("subscription");
-      expect(getPlanType("price_basic_annual")).toBe("subscription");
+      expect(getPlanType("price_basic_3month")).toBe("subscription");
       expect(getPlanType("price_pro_monthly")).toBe("subscription");
-      expect(getPlanType("price_pro_annual")).toBe("subscription");
+      expect(getPlanType("price_pro_3month")).toBe("subscription");
       expect(getPlanType("price_all_access_monthly")).toBe("subscription");
-      expect(getPlanType("price_all_access_annual")).toBe("subscription");
+      expect(getPlanType("price_all_access_3month")).toBe("subscription");
     });
 
     it("should return 'subscription' for unknown price ID", () => {

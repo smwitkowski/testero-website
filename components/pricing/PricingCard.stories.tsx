@@ -7,9 +7,9 @@ const baseTier = {
   name: "Starter",
   description: "Essentials for individual learners preparing for Testero exams.",
   monthlyPrice: 29,
-  annualPrice: 290,
+  threeMonthPrice: 75,
   monthlyPriceId: "price_monthly",
-  annualPriceId: "price_annual",
+  threeMonthPriceId: "price_3month",
   features: [
     "Adaptive practice exams",
     "Weekly study plan",
@@ -17,7 +17,7 @@ const baseTier = {
   ],
   highlighted: ["Exam-day readiness checklist"],
   recommended: false,
-  savingsPercentage: 20,
+  savingsPercentage: 15,
 }
 
 const recommendedTier = {
@@ -25,11 +25,11 @@ const recommendedTier = {
   id: "pro",
   name: "Pro",
   monthlyPrice: 59,
-  annualPrice: 590,
+  threeMonthPrice: 150,
   highlighted: ["1:1 readiness review", "Priority question support"],
   features: [...baseTier.features, "Live cohort workshops"],
   recommended: true,
-  savingsPercentage: 25,
+  savingsPercentage: 10,
 }
 
 const meta: Meta<typeof PricingCard> = {
@@ -46,7 +46,7 @@ const meta: Meta<typeof PricingCard> = {
   argTypes: {
     billingInterval: {
       control: { type: "inline-radio" },
-      options: ["monthly", "annual"],
+      options: ["monthly", "three_month"],
     },
   },
 }
@@ -64,6 +64,6 @@ export const Monthly: Story = {
 export const AnnualRecommended: Story = {
   args: {
     tier: recommendedTier,
-    billingInterval: "annual",
+    billingInterval: "three_month",
   },
 }

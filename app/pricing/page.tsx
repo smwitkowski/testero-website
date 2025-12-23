@@ -54,7 +54,7 @@ const PLAN_HIGHLIGHTS = [
 ];
 
 export default function PricingPage() {
-  const [billingInterval, setBillingInterval] = useState<"monthly" | "annual">("annual");
+  const [billingInterval, setBillingInterval] = useState<"monthly" | "three_month">("three_month");
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -209,7 +209,7 @@ export default function PricingPage() {
   };
 
   const toggleBillingInterval = () => {
-    const newInterval = billingInterval === "monthly" ? "annual" : "monthly";
+    const newInterval = billingInterval === "monthly" ? "three_month" : "monthly";
     setBillingInterval(newInterval);
     trackEvent(posthog, ANALYTICS_EVENTS.PRICING_PLAN_SELECTED, {
       from_interval: billingInterval,
@@ -304,7 +304,7 @@ export default function PricingPage() {
         <div className="flex justify-center">
           <div className="inline-flex items-center bg-white rounded-full shadow-lg p-1">
             <button
-              onClick={() => billingInterval === "annual" && toggleBillingInterval()}
+              onClick={() => billingInterval === "three_month" && toggleBillingInterval()}
               className={cn(
                 "px-6 py-3 rounded-full text-sm font-semibold transition-all duration-200",
                 billingInterval === "monthly"
@@ -318,15 +318,15 @@ export default function PricingPage() {
               onClick={() => billingInterval === "monthly" && toggleBillingInterval()}
               className={cn(
                 "px-6 py-3 rounded-full text-sm font-semibold transition-all duration-200 flex items-center gap-2",
-                billingInterval === "annual"
+                billingInterval === "three_month"
                   ? "bg-[color:var(--tone-accent)] text-white"
                   : "text-gray-600 hover:text-gray-900"
               )}
             >
-              Annual
-              {billingInterval === "annual" && (
+              3-Month
+              {billingInterval === "three_month" && (
                 <Badge tone="success" variant="soft" size="sm" className="bg-emerald-700 text-white">
-                  SAVE 25%
+                  SAVE 11%
                 </Badge>
               )}
             </button>

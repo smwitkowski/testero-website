@@ -33,7 +33,9 @@
     "codemod:ds:run": "tsx scripts/codemods/ds/run-all.ts",
     "codemod:ds:dry": "tsx scripts/codemods/ds/run-all.ts --dry",
     "lint:design": "node scripts/guards/design-lints.js",
-    "prepare": "node scripts/setup-tailwindcss-eslint-shim.js"
+    "prepare": "node scripts/setup-tailwindcss-eslint-shim.js",
+    "stripe:create-prices": "tsx scripts/create-new-stripe-prices.ts",
+    "stripe:archive-legacy": "tsx scripts/archive-legacy-stripe-products.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.22",

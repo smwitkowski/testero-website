@@ -111,11 +111,13 @@ export async function POST(request: NextRequest) {
 
               // Get the plan from our database
               const priceId = subscription.items.data[0]?.price.id;
-              const { data: plan } = await supabase
-                .from("subscription_plans")
-                .select("*")
-                .or(`stripe_price_id_monthly.eq.${priceId},stripe_price_id_yearly.eq.${priceId}`)
-                .single();
+            const { data: plan } = await supabase
+              .from("subscription_plans")
+              .select("*")
+              .or(
+                `stripe_price_id_monthly.eq.${priceId},stripe_price_id_yearly.eq.${priceId},stripe_price_id_three_month.eq.${priceId}`
+              )
+              .single();
 
               // Create or update user subscription
               const { error: subError } = await supabase.from("user_subscriptions").upsert({
@@ -189,7 +191,12 @@ export async function POST(request: NextRequest) {
                   price_id: priceId,
                   amount: fullSession.amount_total || 0,
                   currency: fullSession.currency || "usd",
-                  billing_interval: priceId === plan?.stripe_price_id_monthly ? "monthly" : "yearly",
+                  billing_interval:
+                    priceId === plan?.stripe_price_id_monthly
+                      ? "monthly"
+                      : priceId === plan?.stripe_price_id_three_month
+                        ? "three_month"
+                        : "yearly",
                   stripe_customer_id: fullSession.customer as string,
                   stripe_subscription_id: subscription.id,
                   subscription_status: subscription.status,
@@ -374,7 +381,9 @@ export async function POST(request: NextRequest) {
           const { data: plan } = await supabase
             .from("subscription_plans")
             .select("*")
-            .or(`stripe_price_id_monthly.eq.${priceId},stripe_price_id_yearly.eq.${priceId}`)
+        .or(
+          `stripe_price_id_monthly.eq.${priceId},stripe_price_id_yearly.eq.${priceId},stripe_price_id_three_month.eq.${priceId}`
+        )
             .single();
 
           // Create subscription record (but don't mark as active until payment completes)
