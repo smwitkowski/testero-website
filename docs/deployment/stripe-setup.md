@@ -1,4 +1,4 @@
-# Stripe Setup for Trial Conversion
+# Stripe Setup for Trial Conversion (Monthly + 3-Month)
 
 ## Required Environment Variables
 
@@ -12,12 +12,12 @@ STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_publishable_key
 
 # Stripe Price IDs (see docs/deployment/stripe-price-ids.md for actual values)
-NEXT_PUBLIC_STRIPE_BASIC_MONTHLY=price_1SNkDtRqq8mPUhEry3BHJl1K
-NEXT_PUBLIC_STRIPE_BASIC_ANNUAL=price_1SNkDvRqq8mPUhErb1atjbrv
-NEXT_PUBLIC_STRIPE_PRO_MONTHLY=price_1SNkE1Rqq8mPUhErlkNKsMpA
-NEXT_PUBLIC_STRIPE_PRO_ANNUAL=price_1SNkE2Rqq8mPUhEr22dHvDgC
-NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY=price_1SNkE6Rqq8mPUhErJyWYqzQM
-NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL=price_1SNkE7Rqq8mPUhErRL63Fu3d
+NEXT_PUBLIC_STRIPE_BASIC_MONTHLY=price_basic_monthly   # $14.99
+NEXT_PUBLIC_STRIPE_BASIC_3MONTH=price_basic_3month    # $39.99 every 3 months
+NEXT_PUBLIC_STRIPE_PRO_MONTHLY=price_pro_monthly
+NEXT_PUBLIC_STRIPE_PRO_3MONTH=price_pro_3month
+NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY=price_all_access_monthly
+NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH=price_all_access_3month
 
 # Webhook Secret (for production - get from webhook endpoint settings)
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
@@ -36,7 +36,7 @@ The `NEXT_PUBLIC_STRIPE_*` environment variables are wired through the CI/CD pip
    - They are also set as Cloud Run environment variables at deployment time
    - Ensure GitHub repository secrets are configured:
      - `NEXT_PUBLIC_STRIPE_BASIC_MONTHLY`
-     - `NEXT_PUBLIC_STRIPE_BASIC_ANNUAL`
+     - `NEXT_PUBLIC_STRIPE_BASIC_3MONTH`
      - (and other Stripe price IDs as needed)
 
 2. **Verifying Cloud Run Environment Variables**:
@@ -76,8 +76,8 @@ The `NEXT_PUBLIC_STRIPE_*` environment variables are wired through the CI/CD pip
 3. **Create Products and Prices**
 
    - Go to Products → Add product
-   - Create a "Pro" subscription product
-   - Add monthly and yearly pricing
+   - Create subscription products
+   - Add monthly and 3-month recurring prices (interval=month, interval_count=3)
    - Copy the price IDs (starts with `price_`)
 
 4. **Configure Environment**

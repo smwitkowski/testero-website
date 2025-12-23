@@ -38,13 +38,13 @@ export default defineConfig({
         timeout: 120000,
         env: {
           NEXT_PUBLIC_STRIPE_BASIC_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY ?? "price_test_basic_monthly",
-          NEXT_PUBLIC_STRIPE_BASIC_ANNUAL: process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL ?? "price_test_basic_annual",
+          NEXT_PUBLIC_STRIPE_BASIC_3MONTH: process.env.NEXT_PUBLIC_STRIPE_BASIC_3MONTH ?? "price_test_basic_3month",
           NEXT_PUBLIC_STRIPE_PRO_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY ?? "price_test_pro_monthly",
-          NEXT_PUBLIC_STRIPE_PRO_ANNUAL: process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL ?? "price_test_pro_annual",
+          NEXT_PUBLIC_STRIPE_PRO_3MONTH: process.env.NEXT_PUBLIC_STRIPE_PRO_3MONTH ?? "price_test_pro_3month",
           NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY:
             process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY ?? "price_test_all_access_monthly",
-          NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL:
-            process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL ?? "price_test_all_access_annual",
+          NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH:
+            process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH ?? "price_test_all_access_3month",
           NEXT_PUBLIC_STRIPE_EXAM_3MONTH: process.env.NEXT_PUBLIC_STRIPE_EXAM_3MONTH ?? "price_test_exam_3m",
           NEXT_PUBLIC_STRIPE_EXAM_6MONTH: process.env.NEXT_PUBLIC_STRIPE_EXAM_6MONTH ?? "price_test_exam_6m",
           NEXT_PUBLIC_STRIPE_EXAM_12MONTH: process.env.NEXT_PUBLIC_STRIPE_EXAM_12MONTH ?? "price_test_exam_12m",

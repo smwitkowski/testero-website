@@ -1,0 +1,109 @@
+# Landing Page & Pricing Page Copy Review - Repomix Command
+
+Run this command to gather all code related to landing page and pricing page copy for review:
+
+```bash
+npx repomix --include "lib/copy/message-house.ts,components/marketing/sections/hero-section.tsx,components/marketing/sections/benefits-section.tsx,app/page.tsx,app/metadata.ts,app/page.metadata.tsx,lib/pricing/constants.ts,app/pricing/page.tsx,components/pricing/PricingCard.tsx,components/pricing/ComparisonTable.tsx,components/pricing/FreeVsPaidComparison.tsx,HERO_IMPLEMENTATION_REQUEST.md" --output landing-pricing-copy-review.txt --style markdown
+```
+
+## Files Included
+
+This command gathers all copy-related files used on the landing page and pricing page to ensure messaging consistency:
+
+### Core Copy Files
+1. **lib/copy/message-house.ts** - The message house file containing all copy constants:
+   - CORE_POSITIONING (headlines, subheadlines)
+   - CTAS (primary and secondary call-to-action text)
+   - MICROCOPY (diagnostic time, guarantees, etc.)
+   - VOCABULARY (approved terminology)
+   - VALUE_PILLARS (readiness, blueprint, explanations)
+   - SCOPE_CLAIMS (PMLE-focused messaging)
+   - TRUST_SIGNALS (trust badges)
+   - FREE_FEATURES and PAID_FEATURES (feature boundaries)
+   - CLAIM_REGISTER (claims validation)
+
+### Landing Page Files
+2. **components/marketing/sections/hero-section.tsx** - Hero section component with headline, subheadline, CTAs, and microcopy
+3. **components/marketing/sections/benefits-section.tsx** - Benefits section with feature descriptions and CTAs
+4. **app/page.tsx** - Main landing page containing:
+   - Value anchors section copy
+   - Pricing preview section copy
+   - Testimonials (inline)
+   - Practice explainer section
+   - Final CTA section copy
+   - Related content links section
+5. **app/metadata.ts** - Landing page SEO metadata, page title, description, keywords, and JSON-LD structured data with FAQ content
+6. **app/page.metadata.tsx** - Landing page metadata wrapper component
+
+### Pricing Page Files
+7. **app/pricing/page.tsx** - Pricing page containing:
+   - Hero/value proposition section
+   - Plan highlights section (inline copy)
+   - Billing toggle copy
+   - Final CTA section
+   - All section headings and descriptions
+8. **components/pricing/PricingCard.tsx** - Pricing card component with:
+   - Badge text ("Most popular", "Save X%")
+   - Button labels ("Start Preparing", "Get Started")
+   - Feature list rendering
+   - Status messages
+9. **components/pricing/ComparisonTable.tsx** - Feature comparison table component with:
+   - Column headers ("PMLE Readiness", pricing)
+   - Button labels ("Start Preparing")
+   - Category and feature names
+10. **components/pricing/FreeVsPaidComparison.tsx** - Free vs Paid comparison component with:
+    - Section headings and descriptions
+    - Feature comparison list (COMPARISON_FEATURES constant)
+    - Column headers ("Free", "PMLE Prep (Paid)")
+
+### Shared Pricing Data
+11. **lib/pricing/constants.ts** - Pricing configuration and copy constants:
+    - SUBSCRIPTION_TIERS (tier names, descriptions, features, highlighted features)
+    - VALUE_PROPS (main headline, subheadline, guarantees, trust badges, value anchors)
+    - FEATURE_COMPARISON (detailed feature comparison table data)
+    - PRICING_FAQ (frequently asked questions and answers)
+    - EXAM_PACKAGES (one-time package descriptions and features)
+
+### Documentation
+12. **HERO_IMPLEMENTATION_REQUEST.md** - Documentation describing hero section implementation and copy requirements
+
+## Alternative Output Options
+
+### Output to stdout (for immediate viewing or piping)
+```bash
+npx repomix --include "lib/copy/message-house.ts,components/marketing/sections/hero-section.tsx,components/marketing/sections/benefits-section.tsx,app/page.tsx,app/metadata.ts,app/page.metadata.tsx,lib/pricing/constants.ts,app/pricing/page.tsx,components/pricing/PricingCard.tsx,components/pricing/ComparisonTable.tsx,components/pricing/FreeVsPaidComparison.tsx,HERO_IMPLEMENTATION_REQUEST.md" --stdout --style markdown
+```
+
+### XML format (default)
+```bash
+npx repomix --include "lib/copy/message-house.ts,components/marketing/sections/hero-section.tsx,components/marketing/sections/benefits-section.tsx,app/page.tsx,app/metadata.ts,app/page.metadata.tsx,lib/pricing/constants.ts,app/pricing/page.tsx,components/pricing/PricingCard.tsx,components/pricing/ComparisonTable.tsx,components/pricing/FreeVsPaidComparison.tsx,HERO_IMPLEMENTATION_REQUEST.md" --output landing-pricing-copy-review.xml
+```
+
+### Copy to clipboard
+```bash
+npx repomix --include "lib/copy/message-house.ts,components/marketing/sections/hero-section.tsx,components/marketing/sections/benefits-section.tsx,app/page.tsx,app/metadata.ts,app/page.metadata.tsx,lib/pricing/constants.ts,app/pricing/page.tsx,components/pricing/PricingCard.tsx,components/pricing/ComparisonTable.tsx,components/pricing/FreeVsPaidComparison.tsx,HERO_IMPLEMENTATION_REQUEST.md" --copy --style markdown
+```
+
+## Notes
+
+### What's Included
+- All copy from the message house (`lib/copy/message-house.ts`) - the single source of truth for marketing copy
+- All inline copy from landing page (`app/page.tsx`) including testimonials, section headings, CTAs, etc.
+- All pricing page copy including value props, feature descriptions, FAQs, and comparison tables
+- All component-level copy (badges, button labels, feature lists, etc.)
+- SEO metadata and structured data with FAQ content
+
+### What's Not Included
+- The testimonial carousel component (`components/marketing/sections/testimonial-carousel.tsx`) - testimonials are passed as props from `app/page.tsx` where the actual copy is defined
+- Pricing utility functions (`lib/pricing/price-utils.ts`) - contains business logic, not copy
+- Component styling and layout code - only copy/text content is included
+
+### Use Case
+This output is designed for marketing teams to review messaging consistency across:
+- Landing page value propositions
+- Pricing page feature descriptions
+- CTA button text
+- Feature comparisons (free vs paid)
+- FAQ content
+- Trust signals and guarantees
+- SEO metadata and structured data

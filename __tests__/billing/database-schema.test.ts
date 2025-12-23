@@ -17,8 +17,10 @@ describe("Billing Database Schema", () => {
       const plan1 = {
         name: "Test Plan 1",
         price_monthly: 2900,
+        price_three_month: 7900,
         price_yearly: 29000,
         stripe_price_id_monthly: "price_test_monthly_1",
+        stripe_price_id_three_month: "price_test_3month_1",
         stripe_price_id_yearly: "price_test_yearly_1",
         features: { tests: 100, support: "email" },
       };
@@ -26,8 +28,10 @@ describe("Billing Database Schema", () => {
       const plan2 = {
         name: "Test Plan 2",
         price_monthly: 4900,
+        price_three_month: 11900,
         price_yearly: 49000,
         stripe_price_id_monthly: "price_test_monthly_1", // Duplicate
+        stripe_price_id_three_month: "price_test_3month_2",
         stripe_price_id_yearly: "price_test_yearly_2",
         features: { tests: 500, support: "priority" },
       };

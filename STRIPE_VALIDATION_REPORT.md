@@ -4,9 +4,15 @@ Generated: $(date)
 
 ## Executive Summary
 
-✅ **Overall Status: ALIGNED** - Stripe configuration matches codebase expectations
+⚠️ **Overall Status: ACTION REQUIRED** - Stripe prices need to be created/updated to match new pricing model
 
-All 9 required price IDs exist in Stripe and match the amounts defined in the codebase. Documentation is consistent with actual Stripe configuration.
+**Required Actions:**
+1. Create new Basic monthly price: $14.99/month (replace old $39/month price)
+2. Create new Basic 3-month price: $39.99 every 3 months (recurring, `interval=month`, `interval_count=3`)
+3. Archive old annual prices (keep for grandfathered subscriptions)
+4. Update environment variables with new price IDs once created
+
+The codebase has been updated to support the new pricing model ($14.99/month, $39.99/3 months), but Stripe prices need to be created manually in the Stripe Dashboard.
 
 ---
 
@@ -50,16 +56,19 @@ The following products exist but are not referenced in the codebase:
 
 ## 3. Price IDs Validation
 
-### ✅ Subscription Prices (All Match Codebase)
+### ⚠️ Subscription Prices (Need Updates in Stripe)
 
-| Tier | Interval | Expected Amount | Stripe Price ID | Stripe Amount | Status |
+| Tier | Interval | Expected Amount | Current Stripe Price ID | Current Stripe Amount | Status |
 |------|----------|----------------|-----------------|---------------|--------|
-| Basic | Monthly | $39 (3900¢) | `price_1SNkDtRqq8mPUhEry3BHJl1K` | 3900¢ | ✅ Match |
-| Basic | Annual | $349 (34900¢) | `price_1SNkDvRqq8mPUhErb1atjbrv` | 34900¢ | ✅ Match |
+| Basic | Monthly | $14.99 (1499¢) | `price_1SNkDtRqq8mPUhEry3BHJl1K` | 3900¢ | ⚠️ **NEEDS NEW PRICE** |
+| Basic | 3-Month | $39.99 (3999¢) | (none) | N/A | ⚠️ **NEEDS CREATION** |
+| Basic | ~~Annual~~ | ~~$349~~ | `price_1SNkDvRqq8mPUhErb1atjbrv` | 34900¢ | ✅ Grandfathered (archive) |
 | Pro | Monthly | $59 (5900¢) | `price_1SNkE1Rqq8mPUhErlkNKsMpA` | 5900¢ | ✅ Match |
-| Pro | Annual | $549 (54900¢) | `price_1SNkE2Rqq8mPUhEr22dHvDgC` | 54900¢ | ✅ Match |
+| Pro | 3-Month | (TBD) | (none) | N/A | ⚠️ **NEEDS CREATION** (hidden tier) |
+| Pro | ~~Annual~~ | ~~$549~~ | `price_1SNkE2Rqq8mPUhEr22dHvDgC` | 54900¢ | ✅ Grandfathered (archive) |
 | All-Access | Monthly | $79 (7900¢) | `price_1SNkE6Rqq8mPUhErJyWYqzQM` | 7900¢ | ✅ Match |
-| All-Access | Annual | $749 (74900¢) | `price_1SNkE7Rqq8mPUhErRL63Fu3d` | 74900¢ | ✅ Match |
+| All-Access | 3-Month | (TBD) | (none) | N/A | ⚠️ **NEEDS CREATION** (hidden tier) |
+| All-Access | ~~Annual~~ | ~~$749~~ | `price_1SNkE7Rqq8mPUhErRL63Fu3d` | 74900¢ | ✅ Grandfathered (archive) |
 
 ### ✅ Exam Package Prices (All Match Codebase)
 
@@ -73,25 +82,25 @@ The following products exist but are not referenced in the codebase:
 
 ## 4. Codebase Alignment
 
-### ✅ Environment Variable Configuration
+### ✅ Environment Variable Configuration (Updated)
 
 **File**: `lib/pricing/constants.ts`
 
 All required environment variables are defined:
 - ✅ `NEXT_PUBLIC_STRIPE_BASIC_MONTHLY`
-- ✅ `NEXT_PUBLIC_STRIPE_BASIC_ANNUAL`
+- ✅ `NEXT_PUBLIC_STRIPE_BASIC_3MONTH`
 - ✅ `NEXT_PUBLIC_STRIPE_PRO_MONTHLY`
-- ✅ `NEXT_PUBLIC_STRIPE_PRO_ANNUAL`
+- ✅ `NEXT_PUBLIC_STRIPE_PRO_3MONTH`
 - ✅ `NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY`
-- ✅ `NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL`
+- ✅ `NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH`
 - ✅ `NEXT_PUBLIC_STRIPE_EXAM_3MONTH`
 - ✅ `NEXT_PUBLIC_STRIPE_EXAM_6MONTH`
 - ✅ `NEXT_PUBLIC_STRIPE_EXAM_12MONTH`
 
-**Price Amounts Match**:
-- ✅ Basic: $39/month, $349/year
-- ✅ Pro: $59/month, $549/year
-- ✅ All-Access: $79/month, $749/year
+**Price Amounts Match (New Pricing)**:
+- ✅ Basic: $14.99/month, $39.99 every 3 months
+- ✅ Pro: $59/month, (3-month price TBD) — hidden tier
+- ✅ All-Access: $79/month, (3-month price TBD) — hidden tier
 - ✅ Exam Packages: $99, $149, $199
 
 ### ✅ API Route Validation
@@ -244,28 +253,39 @@ gcloud logging read "resource.type=cloud_run_revision AND \
 
 ### ✅ What's Working
 
-1. **All 9 required price IDs exist in Stripe** and match codebase expectations
-2. **All amounts match** between Stripe and codebase constants
-3. **Documentation is aligned** with actual Stripe configuration
-4. **Environment variable naming** is consistent (`ANNUAL` not `YEARLY`)
-5. **API routes properly validate** price IDs before creating checkout sessions
-6. **Price types are correct** (recurring vs one-time)
+1. **Codebase updated** to support new pricing model ($14.99/month, $39.99/3 months)
+2. **Environment variable naming** updated (`3MONTH` instead of `ANNUAL`)
+3. **API routes properly validate** price IDs before creating checkout sessions
+4. **Database schema** migration created for 3-month pricing support
+5. **Documentation updated** to reflect new pricing model
 
-### ⚠️ Minor Issues
+### ⚠️ Action Required
 
-1. **Legacy products** exist but are not used (low priority cleanup)
+1. **Create new Stripe prices**:
+   - Basic monthly: $14.99/month (new price, archive old $39/month)
+   - Basic 3-month: $39.99 every 3 months (`interval=month`, `interval_count=3`)
+   - Pro 3-month: (if needed for hidden tier)
+   - All-Access 3-month: (if needed for hidden tier)
+2. **Archive old annual prices** (keep for grandfathered subscriptions):
+   - `price_1SNkDvRqq8mPUhErb1atjbrv` (Basic annual)
+   - `price_1SNkE2Rqq8mPUhEr22dHvDgC` (Pro annual)
+   - `price_1SNkE7Rqq8mPUhErRL63Fu3d` (All-Access annual)
+3. **Update environment variables** with new price IDs once created
+4. **Apply Supabase migration** `20251223_add_three_month_pricing.sql` when billing tables are created
 
 ### 📋 Action Items
 
-1. ✅ **COMPLETED**: TES-344 - Documentation aligned with pricing model
-2. ⚠️ **OPTIONAL**: Archive legacy products in Stripe Dashboard
-3. ✅ **VERIFIED**: All price IDs match between Stripe and codebase
+1. ✅ **COMPLETED**: Codebase updated for new pricing model
+2. ⚠️ **REQUIRED**: Create new Stripe prices in Dashboard
+3. ⚠️ **REQUIRED**: Update environment variables with new price IDs
+4. ⚠️ **REQUIRED**: Apply Supabase migration for 3-month pricing columns
+5. ⚠️ **OPTIONAL**: Archive legacy products in Stripe Dashboard
 
 ---
 
 ## Conclusion
 
-The Stripe configuration is **fully aligned** with the codebase. All required products and prices exist, amounts match expectations, and documentation is accurate. The only minor cleanup item is archiving unused legacy products, which does not impact functionality.
+The codebase has been **fully updated** to support the new pricing model ($14.99/month, $39.99/3 months). However, **Stripe prices need to be created manually** in the Stripe Dashboard, and environment variables need to be updated with the new price IDs once created.
 
-**Status**: ✅ **PRODUCTION READY** (after setting production environment variables)
+**Status**: ⚠️ **ACTION REQUIRED** - Create Stripe prices and update environment variables before production deployment
 

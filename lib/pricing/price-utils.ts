@@ -42,7 +42,7 @@ export function getTierNameFromPriceId(priceId: string): string {
   // PMLE Readiness tier (formerly Basic)
   if (
     priceId === process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY ||
-    priceId === process.env.NEXT_PUBLIC_STRIPE_BASIC_ANNUAL
+    priceId === process.env.NEXT_PUBLIC_STRIPE_BASIC_3MONTH
   ) {
     return "PMLE Readiness";
   }
@@ -50,7 +50,7 @@ export function getTierNameFromPriceId(priceId: string): string {
   // Pro tier
   if (
     priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY ||
-    priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL
+    priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_3MONTH
   ) {
     return "Pro";
   }
@@ -58,7 +58,7 @@ export function getTierNameFromPriceId(priceId: string): string {
   // All-Access tier
   if (
     priceId === process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY ||
-    priceId === process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_ANNUAL
+    priceId === process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH
   ) {
     return "All-Access";
   }

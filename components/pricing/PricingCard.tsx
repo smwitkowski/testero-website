@@ -22,15 +22,15 @@ interface PricingCardProps {
     name: string;
     description: string;
     monthlyPrice: number;
-    annualPrice: number;
+    threeMonthPrice: number;
     monthlyPriceId?: string;
-    annualPriceId?: string;
+    threeMonthPriceId?: string;
     features: string[];
     highlighted?: string[];
     recommended?: boolean;
     savingsPercentage?: number;
   };
-  billingInterval: "monthly" | "annual";
+  billingInterval: "monthly" | "three_month";
   onCheckout: (priceId: string, tierName: string) => void;
   loading?: boolean;
   loadingId?: string | null;
@@ -44,13 +44,13 @@ export function PricingCard({
   loadingId = null,
 }: PricingCardProps) {
   const router = useRouter();
-  // Calculate displayed price: monthly average when annual, otherwise monthly price
-  const annualMonthlyAverage = billingInterval === "annual" ? Math.round(tier.annualPrice / 12) : null;
-  const displayedPrice = billingInterval === "monthly" ? tier.monthlyPrice : annualMonthlyAverage!;
-  const priceId = billingInterval === "monthly" ? tier.monthlyPriceId : tier.annualPriceId;
+  const price = billingInterval === "monthly" ? tier.monthlyPrice : tier.threeMonthPrice;
+  const priceId = billingInterval === "monthly" ? tier.monthlyPriceId : tier.threeMonthPriceId;
   const checkoutPriceId = priceId ?? `${tier.id}-${billingInterval}`;
   const isCheckoutConfigured = Boolean(priceId);
   const isLoading = loading && loadingId === priceId;
+  const monthlyEquivalent =
+    billingInterval === "three_month" ? Math.round((tier.threeMonthPrice / 3) * 100) / 100 : null;
 
   const handleButtonClick = () => {
     if (!isCheckoutConfigured) {
@@ -71,7 +71,7 @@ export function PricingCard({
         tier.recommended
           ? "border-accent/50 ring-2 ring-accent/25"
           : "border-border/60",
-        billingInterval === "annual" && tier.savingsPercentage ? "pt-6" : ""
+        billingInterval === "three_month" && tier.savingsPercentage ? "pt-6" : ""
       )}
     >
       {tier.recommended ? (
@@ -87,7 +87,7 @@ export function PricingCard({
         </div>
       ) : null}
 
-      {billingInterval === "annual" && tier.savingsPercentage ? (
+      {billingInterval === "three_month" && tier.savingsPercentage ? (
         <div className={cn(
           "absolute right-6",
           tier.recommended ? "top-12" : "top-6"
@@ -114,17 +114,17 @@ export function PricingCard({
         <div className="space-y-3">
           <div className="flex items-baseline gap-2">
             <span className="text-5xl font-semibold tracking-tight text-foreground">
-              ${displayedPrice}
+              ${price}
             </span>
             <span className="text-lg text-muted-foreground">
-              /month
+              /{billingInterval === "monthly" ? "month" : "3 months"}
             </span>
           </div>
-          {billingInterval === "annual" ? (
+          {monthlyEquivalent && (
             <p className="text-sm text-muted-foreground">
-              Billed annually at ${tier.annualPrice}/year
+              ${monthlyEquivalent}/month when billed every 3 months
             </p>
-          ) : null}
+          )}
         </div>
 
         {tier.highlighted && tier.highlighted.length > 0 ? (

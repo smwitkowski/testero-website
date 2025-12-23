@@ -9,9 +9,9 @@ describe("PricingCard", () => {
     name: "Pro",
     description: "For teams that need more",
     monthlyPrice: 49,
-    annualPrice: 490,
+    threeMonthPrice: 135,
     monthlyPriceId: "price_monthly_pro",
-    annualPriceId: "price_annual_pro",
+    threeMonthPriceId: "price_3month_pro",
     features: ["Feature A", "Feature B"],
   } as const;
 
@@ -30,11 +30,11 @@ describe("PricingCard", () => {
     expect(card.className).toContain("ring-2");
   });
 
-  it("adds extra padding when annual savings badge is present", () => {
+  it("adds extra padding when three-month savings badge is present", () => {
     const { container } = render(
       <PricingCard
         tier={{ ...baseTier, savingsPercentage: 20 }}
-        billingInterval="annual"
+        billingInterval="three_month"
         onCheckout={jest.fn()}
       />
     );
@@ -44,22 +44,6 @@ describe("PricingCard", () => {
     expect(card.className).not.toMatch(/(^|\s)scale-[^:\s]+/);
   });
 
-  it("displays monthly average as primary price when annual billing is selected", () => {
-    render(
-      <PricingCard
-        tier={baseTier}
-        billingInterval="annual"
-        onCheckout={jest.fn()}
-      />
-    );
-
-    // Annual mode should show monthly average (490/12 = 40.83, rounded to 41)
-    expect(screen.getByText(/\$41/)).toBeInTheDocument();
-    // Should show "/month" as the unit
-    expect(screen.getByText(/\/month/)).toBeInTheDocument();
-    // Should show annual billing info as secondary text
-    expect(screen.getByText(/Billed annually at \$490\/year/)).toBeInTheDocument();
-  });
 
   describe("Button enabled/disabled states", () => {
     it("should enable button when monthly price ID is present", () => {
@@ -76,12 +60,12 @@ describe("PricingCard", () => {
       expect(button).toBeEnabled();
     });
 
-    it("should enable button when annual price ID is present", () => {
+    it("should enable button when three-month price ID is present", () => {
       const onCheckout = jest.fn();
       render(
         <PricingCard
           tier={baseTier}
-          billingInterval="annual"
+          billingInterval="three_month"
           onCheckout={onCheckout}
         />
       );
@@ -105,12 +89,12 @@ describe("PricingCard", () => {
       // When checkout isn't configured, button redirects to signup instead of calling onCheckout
     });
 
-    it("should show Get Started button when annual price ID is missing", () => {
+    it("should show Get Started button when three-month price ID is missing", () => {
       const onCheckout = jest.fn();
       render(
         <PricingCard
-          tier={{ ...baseTier, annualPriceId: undefined }}
-          billingInterval="annual"
+          tier={{ ...baseTier, threeMonthPriceId: undefined }}
+          billingInterval="three_month"
           onCheckout={onCheckout}
         />
       );

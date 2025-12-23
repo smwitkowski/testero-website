@@ -125,14 +125,17 @@
 
 - **Subscription products (test mode)** — from Stripe MCP + `docs/deployment/stripe-price-ids.md`:
   - **Basic** (`prod_TKP1Qa6MF9RIX9`):
-    - Monthly: `price_1SNkDtRqq8mPUhEry3BHJl1K` — **$39/month**.
-    - Annual: `price_1SNkDvRqq8mPUhErb1atjbrv` — **$349/year**.
+    - Monthly: `price_1SNkDtRqq8mPUhEry3BHJl1K` — **$14.99/month** (needs new price created in Stripe).
+    - 3-Month: **$39.99 every 3 months** (needs new price created in Stripe with `interval=month`, `interval_count=3`).
+    - ~~Annual: `price_1SNkDvRqq8mPUhErb1atjbrv` — **$349/year**~~ (archived, grandfathered for existing subscribers).
   - **Pro** (`prod_TKP2zVCiYtDZcY`):
     - Monthly: `price_1SNkE1Rqq8mPUhErlkNKsMpA` — **$59/month**.
-    - Annual: `price_1SNkE2Rqq8mPUhEr22dHvDgC` — **$549/year**.
+    - 3-Month: (needs new price created in Stripe with `interval=month`, `interval_count=3`).
+    - ~~Annual: `price_1SNkE2Rqq8mPUhEr22dHvDgC` — **$549/year**~~ (archived, grandfathered for existing subscribers).
   - **All-Access** (`prod_TKP2Bog4uwEo6H`):
     - Monthly: `price_1SNkE6Rqq8mPUhErJyWYqzQM` — **$79/month**.
-    - Annual: `price_1SNkE7Rqq8mPUhErRL63Fu3d` — **$749/year**.
+    - 3-Month: (needs new price created in Stripe with `interval=month`, `interval_count=3`).
+    - ~~Annual: `price_1SNkE7Rqq8mPUhErRL63Fu3d` — **$749/year**~~ (archived, grandfathered for existing subscribers).
 
 - **One-time PMLE exam packages (test mode)**:
   - **3-Month Access** (`prod_TKP2DL9Cnf3ftm`):
@@ -143,9 +146,9 @@
     - Price: `price_1SNkEFRqq8mPUhErivTNpT1I` — **$199 one-time**.
 
 - **Environment variables** wired into the app (`lib/pricing/constants.ts`):
-  - `NEXT_PUBLIC_STRIPE_BASIC_MONTHLY/ANNUAL` → Basic plan price IDs.
-  - `NEXT_PUBLIC_STRIPE_PRO_MONTHLY/ANNUAL` → Pro plan price IDs.
-  - `NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY/ANNUAL` → All-Access plan price IDs.
+  - `NEXT_PUBLIC_STRIPE_BASIC_MONTHLY/3MONTH` → Basic plan price IDs ($14.99/month, $39.99/3 months).
+  - `NEXT_PUBLIC_STRIPE_PRO_MONTHLY/3MONTH` → Pro plan price IDs (hidden tiers).
+  - `NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY/3MONTH` → All-Access plan price IDs (hidden tiers).
   - `NEXT_PUBLIC_STRIPE_EXAM_3MONTH/6MONTH/12MONTH` → single-exam package price IDs.
 
 #### 4. Stripe integration code and data flow

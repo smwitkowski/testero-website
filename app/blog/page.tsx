@@ -40,6 +40,7 @@ export default async function BlogPage() {
       {/* Cover Section (no image, but styled like template) */}
       {featuredPost && (
         <div className="w-full inline-block">
+          {/* eslint-disable-next-line design/no-tailwind-arbitrary-values */}
           <article className="flex flex-col items-start justify-end mx-5 sm:mx-10 relative h-[60vh] sm:h-[85vh] bg-gradient-to-br from-blue-600 to-purple-600 rounded-3xl">
             <div className="w-full lg:w-3/4 p-6 sm:p-8 md:p-12 lg:p-16 flex flex-col items-start justify-center z-0 text-white">
               {featuredPost.meta.tags?.[0] && (
