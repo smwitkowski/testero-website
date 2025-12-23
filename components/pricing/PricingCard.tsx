@@ -120,11 +120,11 @@ export function PricingCard({
               /{billingInterval === "monthly" ? "month" : "3 months"}
             </span>
           </div>
-          {monthlyEquivalent ? (
+          {monthlyEquivalent && (
             <p className="text-sm text-muted-foreground">
-              That&apos;s only ${monthlyEquivalent}/month
+              ${monthlyEquivalent}/month when billed every 3 months
             </p>
-          ) : null}
+          )}
         </div>
 
         {tier.highlighted && tier.highlighted.length > 0 ? (

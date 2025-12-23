@@ -1,6 +1,5 @@
 import React from 'react';
 import { Metadata } from 'next';
-import Link from 'next/link';
 import { getAllTags, getAllBlogPosts } from '@/lib/content/blog-loader';
 import { BlogPostCard, BlogCategories } from '@/components/blog';
 

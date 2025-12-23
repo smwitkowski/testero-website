@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
                 stripe_customer_id: fullSession.customer as string,
                 stripe_subscription_id: subscription.id,
                 plan_id: plan?.id,
+                stripe_price_id: priceId,
                 status: subscription.status,
                 current_period_start: new Date(
                   (subscription as ExtendedSubscription).current_period_start * 1000
@@ -392,6 +393,7 @@ export async function POST(request: NextRequest) {
             stripe_customer_id: subscription.customer as string,
             stripe_subscription_id: subscription.id,
             plan_id: plan?.id,
+            stripe_price_id: priceId,
             status: subscription.status,
             current_period_start: new Date(
               (subscription as ExtendedSubscription).current_period_start * 1000
@@ -427,11 +429,15 @@ export async function POST(request: NextRequest) {
             .eq("stripe_subscription_id", subscription.id)
             .single();
 
+          // Get the active price ID from the subscription
+          const priceId = subscription.items.data[0]?.price.id;
+
           // Update subscription status
           await supabase
             .from("user_subscriptions")
             .update({
               status: subscription.status,
+              stripe_price_id: priceId,
               current_period_start: new Date(
                 (subscription as ExtendedSubscription).current_period_start * 1000
               ).toISOString(),

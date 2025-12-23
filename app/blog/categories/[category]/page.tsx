@@ -1,7 +1,7 @@
 import React from 'react';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getAllCategories, getBlogPostsByCategory, getAllBlogPosts } from '@/lib/content/blog-loader';
+import { getAllCategories, getAllBlogPosts } from '@/lib/content/blog-loader';
 import { BlogPostCard, BlogCategories } from '@/components/blog';
 
 type BlogCategoryPageProps = {

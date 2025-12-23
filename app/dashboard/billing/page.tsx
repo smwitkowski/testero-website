@@ -13,6 +13,7 @@ interface Subscription {
   plan_id: string;
   stripe_customer_id: string;
   stripe_subscription_id: string;
+  stripe_price_id: string | null;
   current_period_start: string;
   current_period_end: string;
   cancel_at_period_end: boolean;
@@ -23,6 +24,9 @@ interface Subscription {
     price_monthly: number;
     price_yearly: number;
     price_three_month: number;
+    stripe_price_id_monthly: string | null;
+    stripe_price_id_three_month: string | null;
+    stripe_price_id_yearly: string | null;
   };
 }
 
@@ -56,7 +60,15 @@ function BillingDashboardContent() {
           .select(
             `
             *,
-            plan:subscription_plans(*)
+            plan:subscription_plans(
+              name,
+              price_monthly,
+              price_yearly,
+              price_three_month,
+              stripe_price_id_monthly,
+              stripe_price_id_three_month,
+              stripe_price_id_yearly
+            )
           `
           )
           .eq("user_id", user?.id)
@@ -259,26 +271,26 @@ function BillingDashboardContent() {
                     {subscription.plan?.name || "Subscription"}
                   </p>
                   <p className="text-sm text-gray-600 mt-1">
-                    {subscription.plan && (
-                      (() => {
-                        const startMs = subscription.current_period_start
-                          ? new Date(subscription.current_period_start).getTime()
-                          : 0;
-                        const endMs = subscription.current_period_end
-                          ? new Date(subscription.current_period_end).getTime()
-                          : 0;
-                        const periodDays = (endMs - startMs) / (24 * 60 * 60 * 1000);
+                    {subscription.plan && (() => {
+                      const priceId = subscription.stripe_price_id;
+                      const plan = subscription.plan;
 
-                        if (periodDays >= 85 && periodDays <= 100) {
-                          return formatAmount(subscription.plan.price_three_month) + "/3 months";
+                      // Match the subscription's active Stripe price ID against plan's known price IDs
+                      if (priceId) {
+                        if (priceId === plan.stripe_price_id_three_month) {
+                          return formatAmount(plan.price_three_month) + "/3 months";
                         }
-                        if (periodDays >= 360 && periodDays <= 370) {
-                          return formatAmount(subscription.plan.price_yearly) + "/year";
+                        if (priceId === plan.stripe_price_id_yearly) {
+                          return formatAmount(plan.price_yearly) + "/year";
                         }
-                        // Default to monthly if the range is unclear
-                        return formatAmount(subscription.plan.price_monthly) + "/month";
-                      })()
-                    )}
+                        if (priceId === plan.stripe_price_id_monthly) {
+                          return formatAmount(plan.price_monthly) + "/month";
+                        }
+                      }
+
+                      // Fallback to monthly if no match or price ID not available
+                      return formatAmount(plan.price_monthly) + "/month";
+                    })()}
                   </p>
                 </div>
                 {getStatusBadge(subscription.status)}
