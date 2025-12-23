@@ -86,7 +86,9 @@ test.describe("Pricing Page", () => {
     // Toggle back to annual
     await annualButton.click();
     await expect(annualButton).toHaveClass(/bg-blue-600/);
-    await expect(page.getByText(/\$349/i)).toBeVisible(); // Basic annual
+    // Annual mode now shows monthly average as primary price
+    await expect(page.getByText(/\$29/i)).toBeVisible(); // Basic annual monthly average (349/12 rounded)
+    await expect(page.getByText(/billed annually at \$349\/year/i)).toBeVisible(); // Annual billing info
   });
 
   test("should expand and display exam packages when clicked", async ({ page }) => {
