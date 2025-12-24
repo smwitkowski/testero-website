@@ -22,15 +22,15 @@ interface PricingCardProps {
     name: string;
     description: string;
     monthlyPrice: number;
-    threeMonthPrice: number;
+    threeMonthPrice?: number; // Kept for backward compatibility
     monthlyPriceId?: string;
-    threeMonthPriceId?: string;
+    threeMonthPriceId?: string; // Kept for backward compatibility
     features: string[];
     highlighted?: string[];
     recommended?: boolean;
-    savingsPercentage?: number;
+    savingsPercentage?: number; // Kept for backward compatibility
   };
-  billingInterval: "monthly" | "three_month";
+  billingInterval?: "monthly"; // Always monthly now, optional for backward compatibility
   onCheckout: (priceId: string, tierName: string) => void;
   loading?: boolean;
   loadingId?: string | null;
@@ -38,19 +38,18 @@ interface PricingCardProps {
 
 export function PricingCard({
   tier,
-  billingInterval,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  billingInterval = "monthly", // Unused but kept for interface compatibility
   onCheckout,
   loading = false,
   loadingId = null,
 }: PricingCardProps) {
   const router = useRouter();
-  const price = billingInterval === "monthly" ? tier.monthlyPrice : tier.threeMonthPrice;
-  const priceId = billingInterval === "monthly" ? tier.monthlyPriceId : tier.threeMonthPriceId;
-  const checkoutPriceId = priceId ?? `${tier.id}-${billingInterval}`;
+  const price = tier.monthlyPrice;
+  const priceId = tier.monthlyPriceId;
+  const checkoutPriceId = priceId ?? `${tier.id}-monthly`;
   const isCheckoutConfigured = Boolean(priceId);
   const isLoading = loading && loadingId === priceId;
-  const monthlyEquivalent =
-    billingInterval === "three_month" ? Math.round((tier.threeMonthPrice / 3) * 100) / 100 : null;
 
   const handleButtonClick = () => {
     if (!isCheckoutConfigured) {
@@ -70,8 +69,7 @@ export function PricingCard({
         "relative w-full",
         tier.recommended
           ? "border-accent/50 ring-2 ring-accent/25"
-          : "border-border/60",
-        billingInterval === "three_month" && tier.savingsPercentage ? "pt-6" : ""
+          : "border-border/60"
       )}
     >
       {tier.recommended ? (
@@ -83,22 +81,6 @@ export function PricingCard({
             className="shadow-lg"
           >
             Most popular
-          </Badge>
-        </div>
-      ) : null}
-
-      {billingInterval === "three_month" && tier.savingsPercentage ? (
-        <div className={cn(
-          "absolute right-6",
-          tier.recommended ? "top-12" : "top-6"
-        )}>
-          <Badge
-            tone="success"
-            variant="soft"
-            size="sm"
-            className="shadow-sm bg-emerald-700 text-white"
-          >
-            Save {tier.savingsPercentage}%
           </Badge>
         </div>
       ) : null}
@@ -117,14 +99,9 @@ export function PricingCard({
               ${price}
             </span>
             <span className="text-lg text-muted-foreground">
-              /{billingInterval === "monthly" ? "month" : "3 months"}
+              /month
             </span>
           </div>
-          {monthlyEquivalent && (
-            <p className="text-sm text-muted-foreground">
-              ${monthlyEquivalent}/month when billed every 3 months
-            </p>
-          )}
         </div>
 
         {tier.highlighted && tier.highlighted.length > 0 ? (

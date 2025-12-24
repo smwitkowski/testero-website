@@ -7,16 +7,10 @@ const validatePriceIds = () => {
       key: "NEXT_PUBLIC_STRIPE_BASIC_MONTHLY",
       value: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY,
     },
-    { key: "NEXT_PUBLIC_STRIPE_BASIC_3MONTH", value: process.env.NEXT_PUBLIC_STRIPE_BASIC_3MONTH },
     { key: "NEXT_PUBLIC_STRIPE_PRO_MONTHLY", value: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY },
-    { key: "NEXT_PUBLIC_STRIPE_PRO_3MONTH", value: process.env.NEXT_PUBLIC_STRIPE_PRO_3MONTH },
     {
       key: "NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY",
       value: process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY,
-    },
-    {
-      key: "NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH",
-      value: process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH,
     },
     // Exam package price IDs
     { key: "NEXT_PUBLIC_STRIPE_EXAM_3MONTH", value: process.env.NEXT_PUBLIC_STRIPE_EXAM_3MONTH },
@@ -24,13 +18,29 @@ const validatePriceIds = () => {
     { key: "NEXT_PUBLIC_STRIPE_EXAM_12MONTH", value: process.env.NEXT_PUBLIC_STRIPE_EXAM_12MONTH },
   ];
 
-  const missingIds = requiredPriceIds.filter(({ value }) => !value);
+  // Optional price IDs (for backward compatibility with existing subscriptions)
+  const optionalPriceIds = [
+    { key: "NEXT_PUBLIC_STRIPE_BASIC_3MONTH", value: process.env.NEXT_PUBLIC_STRIPE_BASIC_3MONTH },
+    { key: "NEXT_PUBLIC_STRIPE_PRO_3MONTH", value: process.env.NEXT_PUBLIC_STRIPE_PRO_3MONTH },
+    { key: "NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH", value: process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH },
+  ];
 
-  if (missingIds.length > 0) {
+  const missingRequired = requiredPriceIds.filter(({ value }) => !value);
+  const missingOptional = optionalPriceIds.filter(({ value }) => !value);
+
+  if (missingRequired.length > 0) {
     // Only log warning, never throw during module initialization
     console.warn(
-      `Missing Stripe price IDs:`,
-      missingIds.map(({ key }) => key)
+      `Missing required Stripe price IDs:`,
+      missingRequired.map(({ key }) => key)
+    );
+  }
+
+  if (missingOptional.length > 0) {
+    // Log info about optional price IDs (for backward compatibility)
+    console.info(
+      `Optional Stripe price IDs not set (for backward compatibility):`,
+      missingOptional.map(({ key }) => key)
     );
   }
 };
@@ -70,10 +80,10 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
     id: "basic",
     name: "PMLE Prep",
     description: "Focused preparation for the Google PMLE exam",
-    monthlyPrice: 14.99,
-    threeMonthPrice: 39.99,
+    monthlyPrice: 15,
+    threeMonthPrice: 39.99, // Kept for backward compatibility with existing subscriptions
     monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY,
-    threeMonthPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_3MONTH,
+    threeMonthPriceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_3MONTH, // Kept for backward compatibility
     features: [
       "Full PMLE question bank (200+ questions)",
       "Realistic scenario-based questions",
@@ -83,8 +93,6 @@ export const SUBSCRIPTION_TIERS: PricingTier[] = [
       "Progress tracking",
     ],
     highlighted: ["Full PMLE question bank", "Domain-level readiness breakdown"],
-    // 14.99 * 3 = 44.97 vs 39.99 => ~11% savings
-    savingsPercentage: 11,
   },
   {
     id: "pro",

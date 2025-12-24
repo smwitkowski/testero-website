@@ -146,9 +146,6 @@ export default function Home() {
                         <span className="text-3xl sm:text-4xl font-bold">${tier.monthlyPrice}</span>
                         <span className="text-sm text-gray-500 ml-2">/month</span>
                       </div>
-                      <p className="text-sm sm:text-base text-green-600 font-medium">
-                        Save {tier.savingsPercentage}% with annual billing
-                      </p>
                     </div>
 
                     <ul className="space-y-3 mb-6 text-left">
