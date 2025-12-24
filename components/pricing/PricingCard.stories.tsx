@@ -46,7 +46,7 @@ const meta: Meta<typeof PricingCard> = {
   argTypes: {
     billingInterval: {
       control: { type: "inline-radio" },
-      options: ["monthly", "three_month"],
+      options: ["monthly"],
     },
   },
 }
@@ -61,9 +61,8 @@ export const Monthly: Story = {
   },
 }
 
-export const AnnualRecommended: Story = {
+export const Recommended: Story = {
   args: {
     tier: recommendedTier,
-    billingInterval: "three_month",
   },
 }
