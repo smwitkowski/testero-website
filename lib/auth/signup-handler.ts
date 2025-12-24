@@ -41,7 +41,11 @@ interface Analytics {
  * @param analytics - Analytics instance for tracking
  * @returns Promise<{ transferred: number; error?: string }>
  */
-async function upgradeGuestSessions(
+/**
+ * Upgrades anonymous diagnostic sessions to a registered user
+ * Exported for use in claim-anonymous-sessions endpoint
+ */
+export async function upgradeGuestSessions(
   supabaseClient: SupabaseClient, 
   userId: string, 
   anonymousSessionId: string, 
@@ -120,14 +124,16 @@ async function upgradeGuestSessions(
  * @param {object} args.supabaseClient - Must have .auth.signUp({ email, password, options })
  * @param {object} args.analytics - Must have .capture({ event, properties })
  * @param {string} [args.anonymousSessionId] - Optional anonymous session ID for guest upgrade
+ * @param {string} [args.redirect] - Optional redirect URL to include in verification email
  * @returns {Promise<{ status: number, body: any }>}
  */
-export async function signupBusinessLogic({ email, password, supabaseClient, analytics, anonymousSessionId }: {
+export async function signupBusinessLogic({ email, password, supabaseClient, analytics, anonymousSessionId, redirect }: {
   email: string;
   password: string;
   supabaseClient: SupabaseClient;
   analytics: Analytics;
   anonymousSessionId?: string;
+  redirect?: string;
 }): Promise<SignupResponse> {
   // Validate input
   const parse = signupSchema.safeParse({ email, password });
@@ -140,12 +146,19 @@ export async function signupBusinessLogic({ email, password, supabaseClient, ana
     hasAnonymousSession: !!anonymousSessionId 
   } });
   
+  // Build verification redirect URL with optional redirect param
+  // Email verification is enabled for anti-abuse (prevents throwaway accounts bypassing gates)
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const verifyEmailUrl = redirect 
+    ? `${baseUrl}/verify-email?redirect=${encodeURIComponent(redirect)}`
+    : `${baseUrl}/verify-email`;
+
   const { data, error } = await supabaseClient.auth.signUp({
     email,
     password,
     options: {
       data: { is_early_access: false },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/verify-email`,
+      emailRedirectTo: verifyEmailUrl,
     },
   });
   
@@ -160,11 +173,16 @@ export async function signupBusinessLogic({ email, password, supabaseClient, ana
     return { status: 400, body: { error: 'Request failed. Please try again.' } };
   }
 
-  // Handle guest session upgrade if anonymousSessionId is provided
+  // Handle guest session upgrade only if user has an authenticated session
+  // If email verification is enabled, data.session will be null, so we defer upgrade
+  // until after email verification completes (via /api/auth/claim-anonymous-sessions)
   let guestUpgraded = false;
   let sessionsTransferred = 0;
   
-  if (anonymousSessionId && data.user?.id) {
+  const hasAuthSession = !!data.session;
+  
+  if (anonymousSessionId && data.user?.id && hasAuthSession) {
+    // Only upgrade if we have an authenticated session (email confirmations disabled)
     const upgradeResult = await upgradeGuestSessions(
       supabaseClient,
       data.user.id,
@@ -187,6 +205,10 @@ export async function signupBusinessLogic({ email, password, supabaseClient, ana
       guestUpgraded = upgradeResult.transferred > 0;
       sessionsTransferred = upgradeResult.transferred;
     }
+  } else if (anonymousSessionId && data.user?.id && !hasAuthSession) {
+    // Email verification required - defer upgrade until after verification
+    // This prevents the diagnostic session from being bound to user_id before user is authenticated
+    console.log('Deferring guest session upgrade until email verification completes');
   }
   
   analytics.capture({ 

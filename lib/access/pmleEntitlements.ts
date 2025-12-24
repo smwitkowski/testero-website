@@ -135,14 +135,24 @@ export function canUseFeature(
 /**
  * Client-side helper to get PMLE access level from user and billing status
  * 
+ * Note: Unverified users (user exists but email_confirmed_at is null) are treated
+ * as ANONYMOUS for diagnostic unlock features (DIAGNOSTIC_SUMMARY_FULL, EXPLANATIONS, etc.)
+ * to prevent gate circumvention while preserving smooth onboarding flow.
+ * 
  * @param user - Supabase user object (null if anonymous)
  * @param billingStatus - Billing status from `/api/billing/status` (null if not fetched)
- * @returns AccessLevel - Computed access level
+ * @returns AccessLevel - Computed access level (ANONYMOUS if user is unverified)
  */
 export function getPmleAccessLevelForUser(
   user: User | null,
   billingStatus: BillingStatusResponse | null
 ): AccessLevel {
+  // Treat unverified users as ANONYMOUS for access level purposes
+  // This gates diagnostic unlocks (full summary, explanations, practice) behind email verification
+  if (user && !user.email_confirmed_at) {
+    return "ANONYMOUS";
+  }
+
   const isSubscriber = billingStatus?.isSubscriber ?? false;
   return getAccessLevel({ user, isSubscriber });
 }

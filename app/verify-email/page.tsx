@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
@@ -21,6 +21,8 @@ const VerifyEmailPage = () => {
   const [resendCooldown, setResendCooldown] = useState(0);
   const router = useRouter();
   const posthog = usePostHog();
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams?.get("redirect") || null;
 
   useEffect(() => {
     const handleEmailConfirmation = async () => {
@@ -68,14 +70,41 @@ const VerifyEmailPage = () => {
               email_verified: true,
             });
 
-            setVerificationState("success");
+          setVerificationState("success");
 
-            // Auto-redirect to dashboard after 3 seconds
-            setTimeout(() => {
-              setIsRedirecting(true);
-              router.push("/dashboard");
-            }, 3000);
-            return;
+          // Claim anonymous sessions now that user is verified
+          try {
+            const claimResponse = await fetch("/api/auth/claim-anonymous-sessions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            });
+
+            if (claimResponse.ok) {
+              const claimData = (await claimResponse.json()) as {
+                guestUpgraded?: boolean;
+                sessionsTransferred?: number;
+              };
+              trackEvent(posthog, ANALYTICS_EVENTS.ANONYMOUS_SESSIONS_CLAIMED, {
+                sessionsTransferred: claimData.sessionsTransferred || 0,
+                guestUpgraded: claimData.guestUpgraded || false,
+                redirect_target: redirectParam || "/dashboard",
+              });
+            }
+            // Don't block redirect on claim failure - user is still verified
+          } catch (claimError) {
+            console.error("Error claiming anonymous sessions:", claimError);
+            // Continue to redirect even if claim fails
+          }
+
+          // Auto-redirect to redirect param or dashboard after 3 seconds
+          const redirectTarget = redirectParam || "/dashboard";
+          setTimeout(() => {
+            setIsRedirecting(true);
+            router.push(redirectTarget);
+          }, 3000);
+          return;
           } else {
             throw new Error("Failed to establish session after verification");
           }
@@ -113,10 +142,37 @@ const VerifyEmailPage = () => {
 
           setVerificationState("success");
 
-          // Auto-redirect to dashboard after 3 seconds
+          // Claim anonymous sessions now that user is verified
+          try {
+            const claimResponse = await fetch("/api/auth/claim-anonymous-sessions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            });
+
+            if (claimResponse.ok) {
+              const claimData = (await claimResponse.json()) as {
+                guestUpgraded?: boolean;
+                sessionsTransferred?: number;
+              };
+              trackEvent(posthog, ANALYTICS_EVENTS.ANONYMOUS_SESSIONS_CLAIMED, {
+                sessionsTransferred: claimData.sessionsTransferred || 0,
+                guestUpgraded: claimData.guestUpgraded || false,
+                redirect_target: redirectParam || "/dashboard",
+              });
+            }
+            // Don't block redirect on claim failure - user is still verified
+          } catch (claimError) {
+            console.error("Error claiming anonymous sessions:", claimError);
+            // Continue to redirect even if claim fails
+          }
+
+          // Auto-redirect to redirect param or dashboard after 3 seconds
+          const redirectTarget = redirectParam || "/dashboard";
           setTimeout(() => {
             setIsRedirecting(true);
-            router.push("/dashboard");
+            router.push(redirectTarget);
           }, 3000);
           return;
         }
@@ -223,9 +279,11 @@ const VerifyEmailPage = () => {
     trackEvent(posthog, ANALYTICS_EVENTS.EMAIL_CONFIRMED, {
       action: "manual_redirect",
       email: userEmail,
+      redirect_target: redirectParam || "/dashboard",
     });
     setIsRedirecting(true);
-    router.push("/dashboard");
+    const redirectTarget = redirectParam || "/dashboard";
+    router.push(redirectTarget);
   };
 
   const handleReturnToLogin = () => {
