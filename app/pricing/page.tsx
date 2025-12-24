@@ -25,7 +25,6 @@ import {
 import { PricingCard } from "@/components/pricing/PricingCard";
 import { FreeVsPaidComparison } from "@/components/pricing/FreeVsPaidComparison";
 import { Container, Section } from "@/components/patterns";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
@@ -33,7 +32,6 @@ import {
   VALUE_PROPS,
   PRICING_FAQ,
 } from "@/lib/pricing/constants";
-import { cn } from "@/lib/utils";
 
 const PLAN_HIGHLIGHTS = [
   {
@@ -54,7 +52,7 @@ const PLAN_HIGHLIGHTS = [
 ];
 
 export default function PricingPage() {
-  const [billingInterval, setBillingInterval] = useState<"monthly" | "three_month">("three_month");
+  const billingInterval = "monthly" as const;
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,9 +70,9 @@ export default function PricingPage() {
   useEffect(() => {
     trackEvent(posthog, ANALYTICS_EVENTS.PRICING_PAGE_VIEWED, {
       user_id: user?.id,
-      billing_interval: billingInterval,
+      billing_interval: "monthly",
     });
-  }, [posthog, user, billingInterval]);
+  }, [posthog, user]);
 
   const handleCheckout = async (priceId: string, planName: string) => {
     // Validate price ID format (Stripe price IDs start with price_)
@@ -97,7 +95,7 @@ export default function PricingPage() {
     trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_INITIATED, {
       plan_name: planName,
       tier_name: tierName,
-      billing_interval: billingInterval,
+      billing_interval: "monthly",
       price_id: priceId,
       payment_mode: paymentMode,
       plan_type: planType,
@@ -152,7 +150,7 @@ export default function PricingPage() {
       trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_SESSION_CREATED, {
         plan_name: planName,
         tier_name: tierName,
-        billing_interval: billingInterval,
+        billing_interval: "monthly",
         price_id: priceId,
         payment_mode: paymentMode,
         plan_type: planType,
@@ -176,7 +174,7 @@ export default function PricingPage() {
         error: errorMessage,
         plan_name: planName,
         tier_name: tierName,
-        billing_interval: billingInterval,
+        billing_interval: "monthly",
         price_id: priceId,
         payment_mode: paymentMode,
         plan_type: planType,
@@ -208,15 +206,6 @@ export default function PricingPage() {
     }
   };
 
-  const toggleBillingInterval = () => {
-    const newInterval = billingInterval === "monthly" ? "three_month" : "monthly";
-    setBillingInterval(newInterval);
-    trackEvent(posthog, ANALYTICS_EVENTS.PRICING_PLAN_SELECTED, {
-      from_interval: billingInterval,
-      to_interval: newInterval,
-      action: "toggle_billing",
-    });
-  };
 
   // Clean up error timeout on unmount
   useEffect(() => {
@@ -298,41 +287,6 @@ export default function PricingPage() {
           </div>
         </Container>
       )}
-
-      {/* Billing Toggle */}
-      <Container className="py-8 relative z-10">
-        <div className="flex justify-center">
-          <div className="inline-flex items-center bg-white rounded-full shadow-lg p-1">
-            <button
-              onClick={() => billingInterval === "three_month" && toggleBillingInterval()}
-              className={cn(
-                "px-6 py-3 rounded-full text-sm font-semibold transition-all duration-200",
-                billingInterval === "monthly"
-                  ? "bg-[color:var(--tone-accent)] text-white"
-                  : "text-gray-600 hover:text-gray-900"
-              )}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => billingInterval === "monthly" && toggleBillingInterval()}
-              className={cn(
-                "px-6 py-3 rounded-full text-sm font-semibold transition-all duration-200 flex items-center gap-2",
-                billingInterval === "three_month"
-                  ? "bg-[color:var(--tone-accent)] text-white"
-                  : "text-gray-600 hover:text-gray-900"
-              )}
-            >
-              3-Month
-              {billingInterval === "three_month" && (
-                <Badge tone="success" variant="soft" size="sm" className="bg-emerald-700 text-white">
-                  SAVE 11%
-                </Badge>
-              )}
-            </button>
-          </div>
-        </div>
-      </Container>
 
       {/* Main Pricing Cards */}
       <Section

@@ -60,10 +60,10 @@ export async function POST(
     // Build list of all valid price IDs from pricing constants
     const validPrices: string[] = [];
 
-    // Add subscription tier price IDs
+    // Add subscription tier price IDs (monthly only)
     for (const tier of SUBSCRIPTION_TIERS) {
       if (tier.monthlyPriceId) validPrices.push(tier.monthlyPriceId);
-      if (tier.threeMonthPriceId) validPrices.push(tier.threeMonthPriceId);
+      // threeMonthPriceId removed - only monthly subscriptions are available for new signups
     }
 
     // Validate price ID against our configured prices
