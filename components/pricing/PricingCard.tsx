@@ -30,7 +30,7 @@ interface PricingCardProps {
     recommended?: boolean;
     savingsPercentage?: number; // Kept for backward compatibility
   };
-  billingInterval: "monthly"; // Always monthly now
+  billingInterval?: "monthly"; // Always monthly now, optional for backward compatibility
   onCheckout: (priceId: string, tierName: string) => void;
   loading?: boolean;
   loadingId?: string | null;
@@ -38,13 +38,12 @@ interface PricingCardProps {
 
 export function PricingCard({
   tier,
-  billingInterval, // Unused but kept for interface compatibility
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  billingInterval = "monthly", // Unused but kept for interface compatibility
   onCheckout,
   loading = false,
   loadingId = null,
 }: PricingCardProps) {
-  // billingInterval is always "monthly" now, kept in props for interface compatibility
-  void billingInterval;
   const router = useRouter();
   const price = tier.monthlyPrice;
   const priceId = tier.monthlyPriceId;
