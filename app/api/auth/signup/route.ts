@@ -24,12 +24,14 @@ const signupSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   anonymousSessionId: z.string().optional(),
+  redirect: z.string().optional(),
 });
 
 interface SignupRequestBody {
   email: string;
   password: string;
   anonymousSessionId?: string;
+  redirect?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -47,7 +49,7 @@ export async function POST(req: NextRequest) {
   }
 
   const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
-  const { email, password, anonymousSessionId: requestAnonymousSessionId } = parse.data;
+  const { email, password, anonymousSessionId: requestAnonymousSessionId, redirect } = parse.data;
 
   // Rate limiting with Redis
   if (!(await checkRateLimit(ip))) {
@@ -88,6 +90,7 @@ export async function POST(req: NextRequest) {
     supabaseClient,
     analytics,
     anonymousSessionId: effectiveAnonymousSessionId,
+    redirect,
   });
 
   // Clear anonymous session cookie if signup was successful and we had an anonymous session

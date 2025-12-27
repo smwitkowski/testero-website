@@ -16,7 +16,7 @@ export function useStartBasicCheckout() {
   const idempotencyKeyRef = useRef<string | null>(null);
 
   const startBasicCheckout = useCallback(
-    async (source: string) => {
+    async (source: string, options?: { redirect?: string }) => {
       // Prevent accidental double-submit (e.g., double-click, repeated modal CTA taps).
       if (inFlightRef.current) return;
 
@@ -39,8 +39,10 @@ export function useStartBasicCheckout() {
         }
         trackEvent(posthog, ANALYTICS_EVENTS.UPGRADE_SIGNUP_REDIRECT, {
           source,
+          redirect_target: options?.redirect || "/pricing",
         });
-        router.push("/signup?redirect=/pricing");
+        const redirectUrl = options?.redirect || "/pricing";
+        router.push(`/signup?redirect=${encodeURIComponent(redirectUrl)}`);
         return;
       }
 

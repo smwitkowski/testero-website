@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { usePostHog } from "posthog-js/react";
+import { useSearchParams } from "next/navigation";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import { trackActivationFunnel } from "@/lib/analytics/funnels";
 import { Form } from "@/components/ui/form";
@@ -31,6 +32,8 @@ const SignupPage = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const posthog = usePostHog();
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams?.get("redirect") || null;
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupFormSchema),
@@ -47,6 +50,7 @@ const SignupPage = () => {
     try {
       trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_ATTEMPT, {
         source: "signup_page",
+        redirect_target: redirectParam || undefined,
       });
       trackActivationFunnel(posthog, "SIGNUP_START", {
         source: "signup_page",
@@ -64,6 +68,7 @@ const SignupPage = () => {
           email: data.email,
           password: data.password,
           ...(anonymousSessionId && { anonymousSessionId }),
+          ...(redirectParam && { redirect: redirectParam }),
         }),
       });
 
@@ -78,9 +83,11 @@ const SignupPage = () => {
       }
 
       // Track successful signup with guest upgrade info
+      // Note: guestUpgraded will be false if email verification is enabled (sessions claimed after verification)
       trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_SUCCESS, {
         guestUpgraded: result.guestUpgraded || false,
         sessionsTransferred: result.sessionsTransferred || 0,
+        redirect_target: redirectParam || undefined,
       });
       trackActivationFunnel(posthog, "EMAIL_VERIFY", {
         guestUpgraded: result.guestUpgraded || false,
@@ -170,7 +177,7 @@ const SignupPage = () => {
             <h3 className="text-lg font-medium text-slate-900">Check your email</h3>
             <p className="text-slate-600">
               We&#39;ve sent a confirmation link to {form.getValues().email}. Please follow the
-              instructions to complete your registration.
+              instructions to verify your email and unlock your diagnostic results.
             </p>
           </motion.div>
         )}

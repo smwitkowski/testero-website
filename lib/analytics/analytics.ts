@@ -50,6 +50,8 @@ export const ANALYTICS_EVENTS = {
   DIAGNOSTIC_SUMMARY_VIEWED: "diagnostic_summary_viewed",
   DIAGNOSTIC_SUMMARY_GATED_VIEWED: "diagnostic_summary_gated_viewed",
   DIAGNOSTIC_SUMMARY_SIGNUP_CTA_CLICKED: "diagnostic_summary_signup_cta_clicked",
+  DIAGNOSTIC_LOCKED_OVERLAY_CTA_CLICKED: "diagnostic_locked_overlay_cta_clicked",
+  DIAGNOSTIC_PRACTICE_INTENT_ANONYMOUS_SIGNUP_REDIRECT: "diagnostic_practice_intent_anonymous_signup_redirect",
   DIAGNOSTIC_DOMAIN_CLICKED: "diagnostic_domain_clicked",
   STUDY_PLAN_START_PRACTICE_CLICKED: "study_plan_start_practice_clicked",
 
@@ -99,6 +101,7 @@ export const ANALYTICS_EVENTS = {
   EMAIL_VERIFICATION_PAGE_VIEWED: "email_verification_page_viewed",
   EMAIL_CONFIRMED: "email_confirmed",
   EMAIL_VERIFICATION_ERROR: "email_verification_error",
+  ANONYMOUS_SESSIONS_CLAIMED: "anonymous_sessions_claimed",
 
   // Conversion Events
   TRIAL_STARTED: "trial_started",

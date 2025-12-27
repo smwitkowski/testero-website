@@ -115,9 +115,11 @@ const StatusChip = ({
 const LockedSection = ({
   children,
   isLocked,
+  onUnlockClick,
 }: {
   children: React.ReactNode;
   isLocked: boolean;
+  onUnlockClick?: () => void;
 }) => {
   if (!isLocked) {
     return <>{children}</>;
@@ -150,9 +152,19 @@ const LockedSection = ({
           <h3 className="text-lg font-semibold text-slate-900 mb-2">
             Sign up free to unlock
           </h3>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-600 mb-4">
             Create a free account to see your full breakdown and study plan.
           </p>
+          {onUnlockClick && (
+            <Button
+              onClick={onUnlockClick}
+              tone="accent"
+              size="sm"
+              fullWidth
+            >
+              Create free account to unlock
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -955,6 +967,21 @@ const DiagnosticSummaryPage = () => {
 
   // Event handlers
   const handleStartPractice = useCallback(async (domainCodes?: string[]) => {
+    // For anonymous users, redirect to signup instead of calling practice API
+    if (isAnonymous) {
+      if (summary && posthog) {
+        trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_PRACTICE_INTENT_ANONYMOUS_SIGNUP_REDIRECT, {
+          sessionId: summary.sessionId,
+          examKey: "pmle",
+          examType: summary.examType,
+          redirect_target: `/diagnostic/${summary.sessionId}/summary`,
+        });
+      }
+      const redirectUrl = `/diagnostic/${summary?.sessionId}/summary`;
+      router.push(`/signup?redirect=${encodeURIComponent(redirectUrl)}`);
+      return;
+    }
+
     // Check if should trigger paywall modal (non-subscribers)
     if (accessLevel !== "SUBSCRIBER") {
       const triggered = triggers.checkPaywallTrigger('practice');
@@ -1086,7 +1113,7 @@ const DiagnosticSummaryPage = () => {
     } finally {
       setCreatingPracticeSession(false);
     }
-  }, [posthog, triggers, accessLevel, router, summary, domainBreakdown, addToast, upsell]);
+  }, [posthog, triggers, accessLevel, router, summary, domainBreakdown, addToast, upsell, isAnonymous]);
 
   const handleRetakeDiagnostic = useCallback(() => {
     router.push("/diagnostic");
@@ -1175,11 +1202,28 @@ const DiagnosticSummaryPage = () => {
         examKey: "pmle",
         accessLevel,
         source: "diagnostic_summary_anonymous",
+        redirect_target: `/diagnostic/${summary.sessionId}/summary`,
       });
     }
 
-    startBasicCheckout("diagnostic_summary_anonymous_banner");
+    const redirectUrl = `/diagnostic/${summary?.sessionId}/summary`;
+    startBasicCheckout("diagnostic_summary_anonymous_banner", { redirect: redirectUrl });
   }, [summary, posthog, accessLevel, startBasicCheckout]);
+
+  const handleLockedOverlayCTAClick = useCallback((section: string) => {
+    if (summary && posthog) {
+      trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_LOCKED_OVERLAY_CTA_CLICKED, {
+        sessionId: summary.sessionId,
+        examKey: "pmle",
+        examType: summary.examType,
+        section,
+        redirect_target: `/diagnostic/${summary.sessionId}/summary`,
+      });
+    }
+
+    const redirectUrl = `/diagnostic/${summary?.sessionId}/summary`;
+    startBasicCheckout(`diagnostic_summary_locked_overlay_${section}`, { redirect: redirectUrl });
+  }, [summary, posthog, startBasicCheckout]);
 
   const handleContinueWithoutAccount = useCallback(() => {
     setShowSignupPanel(false);
@@ -1335,7 +1379,10 @@ const DiagnosticSummaryPage = () => {
 
             {/* Domain Performance */}
             {domainBreakdown.length > 0 && (
-              <LockedSection isLocked={isAnonymous}>
+              <LockedSection 
+                isLocked={isAnonymous}
+                onUnlockClick={isAnonymous ? () => handleLockedOverlayCTAClick("domain_performance") : undefined}
+              >
                 <DomainPerformance 
                   domains={domainBreakdown}
                   onDomainClick={handleDomainClick}
@@ -1361,7 +1408,10 @@ const DiagnosticSummaryPage = () => {
 
             {/* Study Plan */}
             <div ref={triggers.setStudyPlanRef}>
-              <LockedSection isLocked={isAnonymous}>
+              <LockedSection 
+                isLocked={isAnonymous}
+                onUnlockClick={isAnonymous ? () => handleLockedOverlayCTAClick("study_plan") : undefined}
+              >
                 <StudyPlan 
                   domains={domainBreakdown}
                   onStartPractice={handleStartPractice}
@@ -1386,7 +1436,10 @@ const DiagnosticSummaryPage = () => {
                 onUpgrade={() => startBasicCheckout("diagnostic_summary_explanations")}
               />
             ) : (
-              <LockedSection isLocked={isAnonymous}>
+              <LockedSection 
+                isLocked={isAnonymous}
+                onUnlockClick={isAnonymous ? () => handleLockedOverlayCTAClick("question_review") : undefined}
+              >
                 <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mb-8">
                   <h2 className="text-xl font-semibold tracking-tight text-slate-900 mb-6">Question Review</h2>
                   <div className="space-y-3">

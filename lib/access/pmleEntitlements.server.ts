@@ -32,6 +32,12 @@ export async function getPmleAccessLevelForRequest(): Promise<{ accessLevel: Acc
     return { accessLevel: "ANONYMOUS", user: null };
   }
 
+  // Treat unverified users as ANONYMOUS for access level purposes
+  // This gates diagnostic unlocks (full summary, explanations, practice) behind email verification
+  if (!user.email_confirmed_at) {
+    return { accessLevel: "ANONYMOUS", user };
+  }
+
   const hasSubscription = await isSubscriber(user.id);
   const accessLevel = getAccessLevel({ user, isSubscriber: hasSubscription });
 
