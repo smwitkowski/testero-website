@@ -44,12 +44,50 @@ const SignupPage = () => {
     setIsSubmitting(true);
     setError(null);
 
+    // Read attribution marker from diagnostic summary page (if present)
+    let attributionSource: string | null = null;
+    let attributionVariant: string | null = null;
+    let attributionSessionId: string | null = null;
+    let attributionTimestamp: string | null = null;
+
+    if (typeof window !== 'undefined') {
+      try {
+        attributionSource = localStorage.getItem('signup_attribution_source');
+        attributionVariant = localStorage.getItem('signup_attribution_variant');
+        attributionSessionId = localStorage.getItem('signup_attribution_sessionId');
+        attributionTimestamp = localStorage.getItem('signup_attribution_timestamp');
+      } catch (err) {
+        // localStorage might be unavailable
+        console.warn('Failed to read signup attribution marker:', err);
+      }
+    }
+
     try {
-      trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_ATTEMPT, {
-        source: "signup_page",
-      });
+      // Build event properties with attribution if present
+      const signupAttemptProps: Record<string, unknown> = {
+        source: attributionSource || "signup_page",
+      };
+
+      if (attributionSource === 'diagnostic_summary') {
+        signupAttemptProps.signup_attribution_source = 'diagnostic_summary';
+        if (attributionVariant) {
+          signupAttemptProps.signup_attribution_variant = attributionVariant;
+          signupAttemptProps.signup_module_copy_variant = attributionVariant; // Same as variant
+        }
+        if (attributionSessionId) {
+          signupAttemptProps.signup_attribution_sessionId = attributionSessionId;
+        }
+        if (attributionTimestamp) {
+          const timestamp = parseInt(attributionTimestamp, 10);
+          if (!isNaN(timestamp)) {
+            signupAttemptProps.ms_since_summary_view = Date.now() - timestamp;
+          }
+        }
+      }
+
+      trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_ATTEMPT, signupAttemptProps);
       trackActivationFunnel(posthog, "SIGNUP_START", {
-        source: "signup_page",
+        source: attributionSource || "signup_page",
       });
 
       // Get anonymous session ID for guest upgrade functionality
@@ -77,14 +115,46 @@ const SignupPage = () => {
         throw new Error(result.error || "Something went wrong. Please try again.");
       }
 
-      // Track successful signup with guest upgrade info
-      trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_SUCCESS, {
+      // Build signup success properties with attribution if present
+      const signupSuccessProps: Record<string, unknown> = {
         guestUpgraded: result.guestUpgraded || false,
         sessionsTransferred: result.sessionsTransferred || 0,
-      });
+      };
+
+      if (attributionSource === 'diagnostic_summary') {
+        signupSuccessProps.signup_attribution_source = 'diagnostic_summary';
+        if (attributionVariant) {
+          signupSuccessProps.signup_attribution_variant = attributionVariant;
+          signupSuccessProps.signup_module_copy_variant = attributionVariant; // Same as variant
+        }
+        if (attributionSessionId) {
+          signupSuccessProps.signup_attribution_sessionId = attributionSessionId;
+        }
+        if (attributionTimestamp) {
+          const timestamp = parseInt(attributionTimestamp, 10);
+          if (!isNaN(timestamp)) {
+            signupSuccessProps.ms_since_summary_view = Date.now() - timestamp;
+          }
+        }
+      }
+
+      // Track successful signup with guest upgrade info and attribution
+      trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_SUCCESS, signupSuccessProps);
       trackActivationFunnel(posthog, "EMAIL_VERIFY", {
         guestUpgraded: result.guestUpgraded || false,
       });
+
+      // Clear attribution marker after successful signup
+      if (typeof window !== 'undefined' && attributionSource === 'diagnostic_summary') {
+        try {
+          localStorage.removeItem('signup_attribution_source');
+          localStorage.removeItem('signup_attribution_variant');
+          localStorage.removeItem('signup_attribution_sessionId');
+          localStorage.removeItem('signup_attribution_timestamp');
+        } catch (err) {
+          console.warn('Failed to clear signup attribution marker:', err);
+        }
+      }
 
       setIsSubmitted(true);
     } catch (err) {

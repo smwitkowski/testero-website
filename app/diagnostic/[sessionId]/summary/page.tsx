@@ -1058,6 +1058,7 @@ const DiagnosticSummaryPage = () => {
     };
 
     fetchSummary();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, user, isAuthLoading, posthog, accessLevel]);
 
   // Track gated summary view for anonymous users
@@ -1299,15 +1300,41 @@ const DiagnosticSummaryPage = () => {
         accessLevel,
         source: "diagnostic_summary_anonymous",
         verdict_copy_variant: verdictCopyVariant,
+        signup_module_copy_variant: verdictCopyVariant, // Same variant controls both
       });
+    }
+
+    // Set attribution marker for signup page to track completion
+    if (summary && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('signup_attribution_source', 'diagnostic_summary');
+        localStorage.setItem('signup_attribution_variant', verdictCopyVariant);
+        localStorage.setItem('signup_attribution_sessionId', summary.sessionId);
+        localStorage.setItem('signup_attribution_timestamp', Date.now().toString());
+      } catch (err) {
+        // localStorage might be unavailable (private browsing, etc.)
+        console.warn('Failed to set signup attribution marker:', err);
+      }
     }
 
     startBasicCheckout("diagnostic_summary_anonymous_banner");
   }, [summary, posthog, accessLevel, startBasicCheckout, verdictCopyVariant]);
 
   const handleContinueWithoutAccount = useCallback(() => {
+    // Track "continue without saving" click for guardrail analysis
+    if (summary && posthog) {
+      trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_SUMMARY_SIGNUP_CTA_CLICKED, {
+        sessionId: summary.sessionId,
+        examKey: "pmle",
+        accessLevel,
+        source: "diagnostic_summary_continue_without",
+        verdict_copy_variant: verdictCopyVariant,
+        signup_module_copy_variant: verdictCopyVariant,
+        action: "continue_without_saving",
+      });
+    }
     setShowSignupPanel(false);
-  }, []);
+  }, [summary, posthog, accessLevel, verdictCopyVariant]);
 
   // Error states (keeping existing error handling)
   if (loading) {
@@ -1530,31 +1557,72 @@ const DiagnosticSummaryPage = () => {
             {/* Signup Panel for Anonymous Users */}
             {isAnonymous && showSignupPanel && (
               <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 md:p-6 shadow-sm">
-                <h3 className="font-semibold text-slate-900 mb-2">
-                  Create a free account to unlock your full breakdown
-                </h3>
-                <p className="text-sm text-slate-600 mb-4">
-                  Sign up to see your domain performance, personalized study plan, and detailed question review.
-                </p>
-                <div className="space-y-2">
-                  <Button
-                    onClick={handleSignupCTAClick}
-                    tone="accent"
-                    size="sm"
-                    fullWidth
-                  >
-                    Sign up free
-                  </Button>
-                  <Button
-                    onClick={handleContinueWithoutAccount}
-                    variant="outline"
-                    tone="neutral"
-                    size="sm"
-                    fullWidth
-                  >
-                    Continue without account
-                  </Button>
-                </div>
+                {verdictCopyVariant === 'risk_qualifier' ? (
+                  // Treatment variant: "Save your results" (loss aversion + continuity)
+                  <>
+                    <h3 className="font-semibold text-slate-900 mb-3">
+                      Save your results (recommended)
+                    </h3>
+                    <ul className="text-sm text-slate-600 mb-4 space-y-1.5 list-disc list-inside">
+                      <li>Keep your domain breakdown + weak topics</li>
+                      <li>Get a personalized study plan</li>
+                      <li>Review missed questions anytime</li>
+                    </ul>
+                    <div className="space-y-2">
+                      <Button
+                        onClick={handleSignupCTAClick}
+                        tone="accent"
+                        size="sm"
+                        fullWidth
+                      >
+                        Save my results
+                      </Button>
+                      <div>
+                        <Button
+                          onClick={handleContinueWithoutAccount}
+                          variant="outline"
+                          tone="neutral"
+                          size="sm"
+                          fullWidth
+                        >
+                          Continue without saving
+                        </Button>
+                        <p className="text-xs text-slate-500 mt-1.5 text-center">
+                          You can&apos;t access this breakdown later without an account.
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  // Control variant: Original "unlock full breakdown" copy
+                  <>
+                    <h3 className="font-semibold text-slate-900 mb-2">
+                      Create a free account to unlock your full breakdown
+                    </h3>
+                    <p className="text-sm text-slate-600 mb-4">
+                      Sign up to see your domain performance, personalized study plan, and detailed question review.
+                    </p>
+                    <div className="space-y-2">
+                      <Button
+                        onClick={handleSignupCTAClick}
+                        tone="accent"
+                        size="sm"
+                        fullWidth
+                      >
+                        Sign up free
+                      </Button>
+                      <Button
+                        onClick={handleContinueWithoutAccount}
+                        variant="outline"
+                        tone="neutral"
+                        size="sm"
+                        fullWidth
+                      >
+                        Continue without account
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
