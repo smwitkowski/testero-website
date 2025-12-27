@@ -37,6 +37,10 @@ const mockPostHog = {
   capture: jest.fn(),
   getFeatureFlag: jest.fn(),
   isFeatureEnabled: jest.fn(),
+  onFeatureFlags: jest.fn((callback) => {
+    // Immediately call callback to simulate flags being loaded
+    callback();
+  }),
 };
 
 const mockUpsell = {
@@ -262,6 +266,7 @@ describe("DiagnosticSummaryPage Integration", () => {
   describe("Analytics tracking", () => {
     it("should track summary view with correct data", async () => {
       (useAuth as jest.Mock).mockReturnValue({ user: null, isLoading: false });
+      mockPostHog.getFeatureFlag.mockReturnValue("control");
 
       render(<DiagnosticSummaryPage />);
 
@@ -275,7 +280,31 @@ describe("DiagnosticSummaryPage Integration", () => {
           correctAnswers: 7,
           domainCount: 2,
           readinessTier: expect.any(String),
+          verdict_copy_variant: expect.any(String),
         });
+      });
+    });
+
+    it("should include verdict_copy_variant in signup CTA click event", async () => {
+      (useAuth as jest.Mock).mockReturnValue({ user: null, isLoading: false });
+      mockPostHog.getFeatureFlag.mockReturnValue("risk_qualifier");
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /sign up free/i })).toBeInTheDocument();
+      });
+
+      const signupButton = screen.getByRole("button", { name: /sign up free/i });
+      fireEvent.click(signupButton);
+
+      await waitFor(() => {
+        expect(mockPostHog.capture).toHaveBeenCalledWith(
+          ANALYTICS_EVENTS.DIAGNOSTIC_SUMMARY_SIGNUP_CTA_CLICKED,
+          expect.objectContaining({
+            verdict_copy_variant: "risk_qualifier",
+          })
+        );
       });
     });
 
@@ -967,6 +996,135 @@ describe("DiagnosticSummaryPage Integration", () => {
 
       // Trial CTA should not be visible for anonymous users
       expect(screen.queryByText(/ready to pass/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("A/B Test: Verdict Copy Variants", () => {
+    beforeEach(() => {
+      (useAuth as jest.Mock).mockReturnValue({ user: null, isLoading: false });
+    });
+
+    it("should render control variant with standard readiness label", async () => {
+      mockPostHog.getFeatureFlag.mockReturnValue("control");
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
+      });
+
+      // Should show standard "Readiness: Building" (score is 70, which maps to "Building" tier)
+      expect(screen.getByText(/readiness: building/i)).toBeInTheDocument();
+      expect(screen.getByText(/pass typically ≥70%/i)).toBeInTheDocument();
+      // Should NOT show risk qualifier
+      expect(screen.queryByText(/with risk/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/but exposed in/i)).not.toBeInTheDocument();
+    });
+
+    it("should render treatment variant with risk qualifier for Ready tier", async () => {
+      mockPostHog.getFeatureFlag.mockReturnValue("risk_qualifier");
+      
+      const readyScoreResponse = {
+        ...mockSuccessResponse,
+        summary: { ...mockSuccessResponse.summary, score: 75 }, // Ready tier (70-84)
+        domainBreakdown: [
+          { domain: "Architecting Low-Code ML Solutions", correct: 2, total: 5, percentage: 40 },
+          { domain: "Collaborating to Manage Data & Models", correct: 3, total: 5, percentage: 60 },
+        ],
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => readyScoreResponse,
+      });
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
+      });
+
+      // Should show "Ready — with risk"
+      expect(screen.getByText(/readiness: ready — with risk/i)).toBeInTheDocument();
+      // Should show risk qualifier with weakest domains
+      expect(screen.getByText(/but exposed in/i)).toBeInTheDocument();
+      expect(screen.getByText(/architecting low-code ml solutions/i)).toBeInTheDocument();
+      // Should show action line
+      expect(screen.getByText(/your biggest score lift is in/i)).toBeInTheDocument();
+    });
+
+    it("should render treatment variant for Borderline tier with action line", async () => {
+      mockPostHog.getFeatureFlag.mockReturnValue("risk_qualifier");
+      
+      const borderlineScoreResponse = {
+        ...mockSuccessResponse,
+        summary: { ...mockSuccessResponse.summary, score: 65 }, // Borderline (60-69)
+        domainBreakdown: [
+          { domain: "Architecting Low-Code ML Solutions", correct: 1, total: 5, percentage: 20 },
+          { domain: "Collaborating to Manage Data & Models", correct: 3, total: 5, percentage: 60 },
+        ],
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => borderlineScoreResponse,
+      });
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
+      });
+
+      // Should show standard "Readiness: Building" (not "Ready — with risk" for Borderline)
+      expect(screen.getByText(/readiness: building/i)).toBeInTheDocument();
+      // Should still show action line
+      expect(screen.getByText(/your biggest score lift is in/i)).toBeInTheDocument();
+      expect(screen.getByText(/architecting low-code ml solutions/i)).toBeInTheDocument();
+    });
+
+    it("should handle missing domain breakdown gracefully in treatment variant", async () => {
+      mockPostHog.getFeatureFlag.mockReturnValue("risk_qualifier");
+      
+      const noDomainResponse = {
+        ...mockSuccessResponse,
+        summary: { ...mockSuccessResponse.summary, score: 75 },
+        domainBreakdown: [], // No domain breakdown
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => noDomainResponse,
+      });
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
+      });
+
+      // Should show "Ready — with risk" but no risk qualifier (no domain data)
+      expect(screen.getByText(/readiness: ready — with risk/i)).toBeInTheDocument();
+      // Should NOT show risk qualifier lines (no domain data)
+      expect(screen.queryByText(/but exposed in/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/your biggest score lift is in/i)).not.toBeInTheDocument();
+    });
+
+    it("should default to control when feature flag returns false", async () => {
+      mockPostHog.getFeatureFlag.mockReturnValue(false);
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
+      });
+
+      // Should show standard label
+      expect(screen.getByText(/readiness: building/i)).toBeInTheDocument();
+      expect(screen.queryByText(/with risk/i)).not.toBeInTheDocument();
     });
   });
 

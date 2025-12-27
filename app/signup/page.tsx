@@ -179,4 +179,7 @@ const SignupPage = () => {
   );
 };
 
+// Mark page as dynamic to prevent static generation issues with search params
+export const dynamic = 'force-dynamic';
+
 export default SignupPage;

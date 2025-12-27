@@ -76,6 +76,41 @@ const selectWeakestDomains = (domainBreakdown: DomainBreakdown[]): string[] => {
   return domainCodes;
 };
 
+// Borderline threshold for 3-state verdict mapping
+const BORDERLINE_THRESHOLD = 60;
+
+/**
+ * Get 3-state primary verdict for A/B test copy
+ * Maps score to: "Ready" (≥70), "Borderline" (60-69), "Not Yet" (<60)
+ */
+const getPrimaryVerdict = (score: number): 'Ready' | 'Borderline' | 'Not Yet' => {
+  if (score >= READINESS_PASS_THRESHOLD) {
+    return 'Ready';
+  }
+  if (score >= BORDERLINE_THRESHOLD) {
+    return 'Borderline';
+  }
+  return 'Not Yet';
+};
+
+/**
+ * Get 1-2 weakest domains for risk qualifier copy
+ * Returns display names (not codes) for use in UI copy
+ */
+const getWeakestDomainsForCopy = (domainBreakdown: DomainBreakdown[]): string[] => {
+  if (domainBreakdown.length === 0) {
+    return [];
+  }
+  
+  // Filter domains with at least 1 attempt and sort by percentage (lowest first)
+  const eligibleDomains = domainBreakdown
+    .filter(d => d.total >= 1)
+    .sort((a, b) => a.percentage - b.percentage);
+  
+  // Select first 1-2 weakest domains (display names)
+  return eligibleDomains.slice(0, 2).map(d => d.domain);
+};
+
 // Components
 const StatusChip = ({ 
   type, 
@@ -163,12 +198,16 @@ const VerdictBlock = ({
   summary, 
   onStartPractice,
   onRetakeDiagnostic,
-  isLoading 
+  isLoading,
+  domainBreakdown,
+  verdictCopyVariant
 }: {
   summary: ExtendedSessionSummary;
   onStartPractice: () => void;
   onRetakeDiagnostic: () => void;
   isLoading?: boolean;
+  domainBreakdown: DomainBreakdown[];
+  verdictCopyVariant: 'control' | 'risk_qualifier' | 'unknown';
 }) => {
   const readinessTier = getExamReadinessTier(summary.score);
   const strokeColorClass = getStrokeColorClass(readinessTier.id);
@@ -181,6 +220,53 @@ const VerdictBlock = ({
   const verdictIntro = isZeroScore 
     ? "This was your first attempt. Here's where to start building your foundation."
     : null;
+
+  // A/B test copy logic
+  const isTreatment = verdictCopyVariant === 'risk_qualifier';
+  const primaryVerdict = getPrimaryVerdict(summary.score);
+  const weakestDomains = getWeakestDomainsForCopy(domainBreakdown);
+  const hasDomainData = weakestDomains.length > 0;
+
+  // Render readiness label based on variant
+  const renderReadinessLabel = () => {
+    if (isTreatment && primaryVerdict === 'Ready' && hasDomainData) {
+      // Treatment: "Ready — with risk"
+      return `Readiness: ${primaryVerdict} — with risk`;
+    }
+    // Control or other states: use standard label
+    return `Readiness: ${readinessTier.label}`;
+  };
+
+  // Render risk qualifier and action line (treatment only)
+  const renderRiskQualifier = () => {
+    if (!isTreatment || !hasDomainData) {
+      return null;
+    }
+
+    const domainText = weakestDomains.length === 1
+      ? weakestDomains[0]
+      : `${weakestDomains[0]} and ${weakestDomains[1]}`;
+
+    if (primaryVerdict === 'Ready') {
+      return (
+        <>
+          <div className="text-sm text-slate-600 mt-1">
+            but exposed in {domainText}
+          </div>
+          <div className="text-sm text-slate-500 mt-1">
+            Your biggest score lift is in {weakestDomains[0]}.
+          </div>
+        </>
+      );
+    }
+
+    // For Borderline/Not Yet, still show the action line
+    return (
+      <div className="text-sm text-slate-500 mt-1">
+        Your biggest score lift is in {weakestDomains[0]}.
+      </div>
+    );
+  };
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-6 shadow-sm mb-8">
@@ -216,11 +302,14 @@ const VerdictBlock = ({
           </div>
           <div>
             <div className="text-2xl font-bold text-slate-900 mb-1">
-              Readiness: {readinessTier.label}
+              {renderReadinessLabel()}
             </div>
-            <div className="text-sm text-slate-500">
-              Pass typically ≥{READINESS_PASS_THRESHOLD}%
-            </div>
+            {isTreatment && renderRiskQualifier()}
+            {!isTreatment && (
+              <div className="text-sm text-slate-500">
+                Pass typically ≥{READINESS_PASS_THRESHOLD}%
+              </div>
+            )}
           </div>
         </div>
 
@@ -808,6 +897,9 @@ const DiagnosticSummaryPage = () => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'incorrect' | 'flagged' | 'low-confidence'>('all');
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   
+  // A/B test variant state
+  const [verdictCopyVariant, setVerdictCopyVariant] = useState<'control' | 'risk_qualifier' | 'unknown'>('unknown');
+  
   // Toast queue for error messages
   const { toasts, addToast, dismissToast } = useToastQueue();
 
@@ -836,6 +928,34 @@ const DiagnosticSummaryPage = () => {
     enableExitIntent: process.env.NODE_ENV !== 'production' || false,
     enableDeepScroll: process.env.NODE_ENV !== 'production' || false,
   });
+
+  // Read feature flag variant for A/B test
+  useEffect(() => {
+    if (!posthog) return;
+
+    // Use onFeatureFlags to ensure flags are loaded before reading
+    const checkVariant = () => {
+      const flagValue = posthog.getFeatureFlag('diagnostic_results_verdict_copy');
+      
+      // Handle multivariate flag: returns string variant name or false/undefined
+      if (flagValue === 'risk_qualifier') {
+        setVerdictCopyVariant('risk_qualifier');
+      } else if (flagValue === 'control' || flagValue === false || flagValue === undefined) {
+        setVerdictCopyVariant('control');
+      } else {
+        // Unknown variant, default to control
+        setVerdictCopyVariant('control');
+      }
+    };
+
+    // Check immediately (flags may already be loaded)
+    checkVariant();
+
+    // Also listen for flag updates
+    posthog.onFeatureFlags(() => {
+      checkVariant();
+    });
+  }, [posthog]);
 
   // Fetch billing status to compute access level
   useEffect(() => {
@@ -922,6 +1042,7 @@ const DiagnosticSummaryPage = () => {
             correctAnswers: data.summary.correctAnswers,
             domainCount: data.domainBreakdown?.length || 0,
             readinessTier: getExamReadinessTier(data.summary.score).id,
+            verdict_copy_variant: verdictCopyVariant,
           });
         }
 
@@ -997,14 +1118,15 @@ const DiagnosticSummaryPage = () => {
       return;
     }
     
-    // Track study plan start practice clicked
-    trackEvent(posthog, ANALYTICS_EVENTS.STUDY_PLAN_START_PRACTICE_CLICKED, {
-      sessionId: summary.sessionId,
-      examKey: "pmle",
-      domainCodes: codesToUse,
-      questionCount: 10,
-      source: domainCodes && domainCodes.length > 0 ? "domain_row" : "weakest",
-    });
+      // Track study plan start practice clicked
+      trackEvent(posthog, ANALYTICS_EVENTS.STUDY_PLAN_START_PRACTICE_CLICKED, {
+        sessionId: summary.sessionId,
+        examKey: "pmle",
+        domainCodes: codesToUse,
+        questionCount: 10,
+        source: domainCodes && domainCodes.length > 0 ? "domain_row" : "weakest",
+        verdict_copy_variant: verdictCopyVariant,
+      });
     
     setCreatingPracticeSession(true);
     
@@ -1063,6 +1185,7 @@ const DiagnosticSummaryPage = () => {
         examKey: "pmle",
         domainCodes: codesToUse,
         questionCount: data.questionCount,
+        verdict_copy_variant: verdictCopyVariant,
       });
       
       // Navigate to practice session
@@ -1086,7 +1209,7 @@ const DiagnosticSummaryPage = () => {
     } finally {
       setCreatingPracticeSession(false);
     }
-  }, [posthog, triggers, accessLevel, router, summary, domainBreakdown, addToast, upsell]);
+  }, [posthog, triggers, accessLevel, router, summary, domainBreakdown, addToast, upsell, verdictCopyVariant]);
 
   const handleRetakeDiagnostic = useCallback(() => {
     router.push("/diagnostic");
@@ -1175,11 +1298,12 @@ const DiagnosticSummaryPage = () => {
         examKey: "pmle",
         accessLevel,
         source: "diagnostic_summary_anonymous",
+        verdict_copy_variant: verdictCopyVariant,
       });
     }
 
     startBasicCheckout("diagnostic_summary_anonymous_banner");
-  }, [summary, posthog, accessLevel, startBasicCheckout]);
+  }, [summary, posthog, accessLevel, startBasicCheckout, verdictCopyVariant]);
 
   const handleContinueWithoutAccount = useCallback(() => {
     setShowSignupPanel(false);
@@ -1331,6 +1455,8 @@ const DiagnosticSummaryPage = () => {
               onStartPractice={() => handleStartPractice()}
               onRetakeDiagnostic={handleRetakeDiagnostic}
               isLoading={creatingPracticeSession}
+              domainBreakdown={domainBreakdown}
+              verdictCopyVariant={verdictCopyVariant}
             />
 
             {/* Domain Performance */}
