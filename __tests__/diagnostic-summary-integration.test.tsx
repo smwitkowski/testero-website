@@ -1128,6 +1128,160 @@ describe("DiagnosticSummaryPage Integration", () => {
     });
   });
 
+  describe("A/B Test: Signup Module Copy Variants", () => {
+    beforeEach(() => {
+      (useAuth as jest.Mock).mockReturnValue({ user: null, isLoading: false });
+    });
+
+    it("should render control variant with original signup module copy", async () => {
+      mockPostHog.getFeatureFlag.mockReturnValue("control");
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
+      });
+
+      // Should show original signup module copy
+      expect(screen.getByText(/create a free account to unlock your full breakdown/i)).toBeInTheDocument();
+      expect(screen.getByText(/sign up to see your domain performance/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /sign up free/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /continue without account/i })).toBeInTheDocument();
+      
+      // Should NOT show treatment copy
+      expect(screen.queryByText(/save your results/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/keep your domain breakdown/i)).not.toBeInTheDocument();
+    });
+
+    it("should render treatment variant with 'Save your results' copy", async () => {
+      mockPostHog.getFeatureFlag.mockReturnValue("risk_qualifier");
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
+      });
+
+      // Should show treatment signup module copy
+      expect(screen.getByText(/save your results \(recommended\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/keep your domain breakdown \+ weak topics/i)).toBeInTheDocument();
+      expect(screen.getByText(/get a personalized study plan/i)).toBeInTheDocument();
+      expect(screen.getByText(/review missed questions anytime/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /save my results/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /continue without saving/i })).toBeInTheDocument();
+      expect(screen.getByText(/you can't access this breakdown later without an account/i)).toBeInTheDocument();
+      
+      // Should NOT show control copy
+      expect(screen.queryByText(/create a free account to unlock/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/sign up free/i)).not.toBeInTheDocument();
+    });
+
+    it("should set attribution marker when signup CTA is clicked (treatment variant)", async () => {
+      mockPostHog.getFeatureFlag.mockReturnValue("risk_qualifier");
+      const localStorageMock = {
+        getItem: jest.fn(),
+        setItem: jest.fn(),
+        removeItem: jest.fn(),
+        clear: jest.fn(),
+      };
+      Object.defineProperty(window, "localStorage", {
+        value: localStorageMock,
+        writable: true,
+      });
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /save my results/i })).toBeInTheDocument();
+      });
+
+      const signupButton = screen.getByRole("button", { name: /save my results/i });
+      fireEvent.click(signupButton);
+
+      await waitFor(() => {
+        // Verify attribution marker was set
+        expect(localStorageMock.setItem).toHaveBeenCalledWith('signup_attribution_source', 'diagnostic_summary');
+        expect(localStorageMock.setItem).toHaveBeenCalledWith('signup_attribution_variant', 'risk_qualifier');
+        expect(localStorageMock.setItem).toHaveBeenCalledWith('signup_attribution_sessionId', 'test-session-123');
+        expect(localStorageMock.setItem).toHaveBeenCalledWith('signup_attribution_timestamp', expect.any(String));
+        
+        // Verify analytics event includes variant
+        expect(mockPostHog.capture).toHaveBeenCalledWith(
+          ANALYTICS_EVENTS.DIAGNOSTIC_SUMMARY_SIGNUP_CTA_CLICKED,
+          expect.objectContaining({
+            signup_module_copy_variant: 'risk_qualifier',
+            verdict_copy_variant: 'risk_qualifier',
+          })
+        );
+      });
+    });
+
+    it("should set attribution marker when signup CTA is clicked (control variant)", async () => {
+      mockPostHog.getFeatureFlag.mockReturnValue("control");
+      const localStorageMock = {
+        getItem: jest.fn(),
+        setItem: jest.fn(),
+        removeItem: jest.fn(),
+        clear: jest.fn(),
+      };
+      Object.defineProperty(window, "localStorage", {
+        value: localStorageMock,
+        writable: true,
+      });
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /sign up free/i })).toBeInTheDocument();
+      });
+
+      const signupButton = screen.getByRole("button", { name: /sign up free/i });
+      fireEvent.click(signupButton);
+
+      await waitFor(() => {
+        // Verify attribution marker was set with control variant
+        expect(localStorageMock.setItem).toHaveBeenCalledWith('signup_attribution_variant', 'control');
+        
+        // Verify analytics event includes variant
+        expect(mockPostHog.capture).toHaveBeenCalledWith(
+          ANALYTICS_EVENTS.DIAGNOSTIC_SUMMARY_SIGNUP_CTA_CLICKED,
+          expect.objectContaining({
+            signup_module_copy_variant: 'control',
+            verdict_copy_variant: 'control',
+          })
+        );
+      });
+    });
+
+    it("should track 'continue without saving' click with variant", async () => {
+      mockPostHog.getFeatureFlag.mockReturnValue("risk_qualifier");
+
+      render(<DiagnosticSummaryPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /continue without saving/i })).toBeInTheDocument();
+      });
+
+      const continueButton = screen.getByRole("button", { name: /continue without saving/i });
+      fireEvent.click(continueButton);
+
+      await waitFor(() => {
+        expect(mockPostHog.capture).toHaveBeenCalledWith(
+          ANALYTICS_EVENTS.DIAGNOSTIC_SUMMARY_SIGNUP_CTA_CLICKED,
+          expect.objectContaining({
+            source: "diagnostic_summary_continue_without",
+            signup_module_copy_variant: 'risk_qualifier',
+            verdict_copy_variant: 'risk_qualifier',
+            action: "continue_without_saving",
+          })
+        );
+      });
+
+      // Panel should be hidden
+      expect(screen.queryByText(/save your results/i)).not.toBeInTheDocument();
+    });
+  });
+
   describe("Logged-in user access (FREE and SUBSCRIBER)", () => {
     it("should show full content for FREE users", async () => {
       (useAuth as jest.Mock).mockReturnValue({ 
