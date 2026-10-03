@@ -151,3 +151,34 @@ def test_review_finalization_scopes_draft_and_run():
     assert chain.eq.call_args_list == [
         (("id", "question"),), (("generation_run_id", RUN_ID),), (("status", "DRAFT"),),
     ]
+
+
+def test_incomplete_explanation_write_never_finalizes_good(generation, monkeypatch):
+    client, _, _ = generation
+    monkeypatch.setattr(generate, "judge_question", lambda *a, **kw: JudgeVerdict(True, 0.9, "Pass", "test"))
+    client.insert_explanation.return_value = None
+    outcome = invoke()
+    assert outcome.exit_code == 1
+    client.update_question_review.assert_not_called()
+
+
+def test_legacy_factual_failure_is_retained_as_non_good_draft(generation, monkeypatch):
+    client, result, _ = generation
+    result.factual_eval = SimpleNamespace(option_results=[SimpleNamespace(verdict="FAIL", option_label="B")])
+    monkeypatch.setattr(generate, "judge_question", lambda *a, **kw: JudgeVerdict(True, 0.9, "Pass", "test"))
+    outcome = invoke()
+    assert outcome.exit_code == 0, outcome.output
+    row = client.insert_question.call_args.args[0]
+    assert row["status"] == "DRAFT"
+    assert row["review_status"] != "GOOD"
+    verdict = json.loads(row["review_notes"])["content_pipeline_judge"]
+    assert verdict["passed"] is False
+    assert "Legacy factual evaluation failed" in verdict["reason"]
+
+
+def test_cli_help_matches_actual_default_model():
+    outcome = CliRunner().invoke(generate.main, ["--help"])
+    assert outcome.exit_code == 0
+    assert "openrouter/google/gemini-2.5-flash" in outcome.output
+    model_option = next(option for option in generate.main.params if option.name == "model")
+    assert model_option.default == "openrouter/google/gemini-2.5-flash"
