@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import catalog from "@/content/catalog.json";
 import { parseFrontmatter, safeHref } from "@/lib/content/markdown";
-import { BLOG_EDITORIAL_NOTICE, BLOG_PUBLICATION_OVERLAYS } from "@/lib/content/editorial";
+import { BLOG_EDITORIAL_NOTICE, BLOG_PUBLICATION_OVERLAYS, FAQ_PUBLICATION_OVERLAYS } from "@/lib/content/editorial";
 
 export interface ContentEntry {
   slug: string;
@@ -42,15 +42,30 @@ export function getBlogEntry(slug: string): ContentEntry | undefined {
   return getBlogEntries().find((item) => item.slug === slug);
 }
 
+export function faqDocumentForPublication(slug: string, source: string): { body: string; editorialNotice?: string } {
+  let body = parseFrontmatter(source).body;
+  const overlay = FAQ_PUBLICATION_OVERLAYS[slug];
+  if (!overlay) return { body };
+  if (createHash("sha256").update(source).digest("hex") !== overlay.sourceSha256) {
+    throw new Error(`FAQ source requires editorial review: ${slug}`);
+  }
+  for (const replacement of overlay.replacements) {
+    if (!body.includes(replacement.original)) throw new Error(`FAQ replacement requires editorial review: ${slug}`);
+    body = body.replace(replacement.original, replacement.replacement);
+  }
+  return { body, editorialNotice: overlay.notice };
+}
+
 export function getFaqEntries(): ContentEntry[] {
   return catalog.faq.map((item) => {
     const document = readDocument("faq", item.slug);
     const sources = document.attributes.citations;
+    const publication = faqDocumentForPublication(item.slug, document.source);
     // Legacy hub routes are not in v2. Point retained Markdown links to the
     // official certification directory rather than silently sending readers to 404.
-    const body = document.body.replace(/\]\(\/content\/[^)]+\)/g, "](https://cloud.google.com/learn/certification)");
+    const body = publication.body.replace(/\]\(\/content\/[^)]+\)/g, "](https://cloud.google.com/learn/certification)");
     const description = body.split("\n\n")[0].replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/[*_`]/g, "").slice(0, 180);
-    return { ...item, description, body,
+    return { ...item, description, body, editorialNotice: publication.editorialNotice,
       citations: Array.isArray(sources) ? sources.filter((value) => typeof value === "string" && safeHref(value)) : [] };
   });
 }

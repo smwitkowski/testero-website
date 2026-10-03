@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { getBlogEntries, getBlogEntry, getFaqEntries, getFaqEntry, getLegalDocument, legalDocumentFromSource } from "@/lib/content/loader";
-import { BLOG_PUBLICATION_OVERLAYS } from "@/lib/content/editorial";
+import { faqDocumentForPublication, getBlogEntries, getBlogEntry, getFaqEntries, getFaqEntry, getLegalDocument, legalDocumentFromSource } from "@/lib/content/loader";
+import { BLOG_PUBLICATION_OVERLAYS, FAQ_PUBLICATION_OVERLAYS } from "@/lib/content/editorial";
 import { parseFrontmatter } from "@/lib/content/markdown";
 import { pageMetadata } from "@/lib/seo";
 
@@ -39,6 +39,38 @@ describe("local content loader", () => {
     for (const slug of ["../terms", "%2e%2e", "unknown", "", "/etc/passwd"]) {
       expect(getBlogEntry(slug)).toBeUndefined();
       expect(getFaqEntry(slug)).toBeUndefined();
+    }
+  });
+  it("applies only the source-hash-locked FAQ paragraph replacement with a visible notice", () => {
+    const slug = "is-google-cloud-certification-worth-it";
+    const source = readFileSync(`content/faq/${slug}.md`, "utf8");
+    const originalBody = parseFrontmatter(source).body;
+    const overlay = FAQ_PUBLICATION_OVERLAYS[slug];
+    const replacement = overlay.replacements[0];
+    const published = faqDocumentForPublication(slug, source);
+    expect(published.body).toBe(originalBody.replace(replacement.original, replacement.replacement));
+    expect(published.body).not.toContain("among the highest earners");
+    expect(published.editorialNotice).toBe(overlay.notice);
+    expect(getFaqEntry(slug)?.editorialNotice).toBe(overlay.notice);
+    expect(() => faqDocumentForPublication(slug, `${source}\n`)).toThrow("FAQ source requires editorial review");
+    const untouchedSlug = "how-long-is-the-google-ml-engineer-exam";
+    const untouchedSource = readFileSync(`content/faq/${untouchedSlug}.md`, "utf8");
+    expect(faqDocumentForPublication(untouchedSlug, untouchedSource)).toEqual({ body: parseFrontmatter(untouchedSource).body });
+  });
+  it("audits exactly three FAQ sources and leaves all text outside each narrow replacement unchanged", () => {
+    expect(Object.keys(FAQ_PUBLICATION_OVERLAYS).sort()).toEqual([
+      "is-google-cloud-certification-worth-it", "is-google-data-analytics-certification-worth-it", "what-is-google-cloud-certification",
+    ]);
+    for (const [slug, overlay] of Object.entries(FAQ_PUBLICATION_OVERLAYS)) {
+      const source = readFileSync(`content/faq/${slug}.md`, "utf8");
+      let expected = parseFrontmatter(source).body;
+      for (const replacement of overlay.replacements) {
+        expect(expected.split(replacement.original)).toHaveLength(2);
+        expected = expected.replace(replacement.original, replacement.replacement);
+      }
+      expect(faqDocumentForPublication(slug, source)).toEqual({ body: expected, editorialNotice: overlay.notice });
+      expect(() => faqDocumentForPublication(slug, source.replace("Google", "Changed"))).toThrow("FAQ source requires editorial review");
+      expect(getFaqEntry(slug)?.editorialNotice).toBe(overlay.notice);
     }
   });
   it("shows FAQ citations while replacing legacy hub destinations", () => {

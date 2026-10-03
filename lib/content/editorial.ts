@@ -49,3 +49,38 @@ export const BLOG_PUBLICATION_OVERLAYS: Record<string, { sourceSha256: string; d
     ]
   }
 };
+
+// Narrow FAQ safety overlays retain all surrounding original Markdown.
+// Each exact replacement is reviewed against a byte-locked archive source.
+export const FAQ_PUBLICATION_OVERLAYS: Record<string, { sourceSha256: string; replacements: { original: string; replacement: string }[]; notice: string }> = {
+  "is-google-cloud-certification-worth-it": {
+    "sourceSha256": "9124be61e57710a0bd91bcbd8770df6726dc87a549d18677199827a57fd24378",
+    "replacements": [
+      {
+        "original": "One of the most significant advantages is the potential for higher salary prospects. According to various reports and studies, professionals holding Google Cloud certifications are among the highest earners in the IT industry, both in the United States and globally. This financial return on investment is a major factor for many pursuing certification.",
+        "replacement": "Consider certification alongside practical experience, the roles you want, and the cost of preparation. A credential does not guarantee a salary increase or a financial return."
+      }
+    ],
+    "notice": "Edited historical answer. An unsupported earnings claim was removed. Certification does not guarantee a salary increase or financial return."
+  },
+  "what-is-google-cloud-certification": {
+    "sourceSha256": "2c6df3ca2884c3834359f4ec1444d3faf80ca28bcd563d6d4d0abd7a5b81c72f",
+    "replacements": [
+      {
+        "original": "According to Google's own data, a significant majority of Google Cloud learners report that having a certification contributes to faster promotion and provides them with the skills needed for in-demand roles. Furthermore, a large percentage of leaders in organizations using Google Cloud express a preference for recruiting and hiring professionals who hold these certifications, highlighting their value in the job market.",
+        "replacement": "Compare the certification objectives with the skills required in the roles you want. A credential does not guarantee promotion or hiring."
+      }
+    ],
+    "notice": "Edited historical answer. Unsupported promotion and hiring statistics were removed. Certification does not guarantee promotion or employment."
+  },
+  "is-google-data-analytics-certification-worth-it": {
+    "sourceSha256": "ab9030bc29a6c56e6c07ac51ce5bf14a586405b68e1ff342bc37b46cae1d96b0",
+    "replacements": [
+      {
+        "original": "While a bachelor's or master's degree can still be advantageous, this certification serves as a strong stepping stone and can significantly increase the chances of getting hired, especially when combined with continuous learning and practical experience.",
+        "replacement": "Consider the certificate alongside education, practical experience, and continued learning. Hiring decisions depend on the employer and role; the certificate does not guarantee employment."
+      }
+    ],
+    "notice": "Edited historical answer. An unsupported hiring-outcome claim was removed. The certificate does not guarantee employment."
+  }
+};
