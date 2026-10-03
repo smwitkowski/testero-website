@@ -70,7 +70,12 @@ console.log("PASS replay, seed inventory, table RLS and browser privilege denial
 
 const owner = randomUUID(), other = randomUUID(), paidOwner = randomUUID(), legacyOwner = randomUUID();
 const strictOwner = randomUUID(), claimOwner = randomUUID(), claimOther = randomUUID();
-const ownerIds = [owner, other, paidOwner, legacyOwner, strictOwner, claimOwner, claimOther];
+const phase3Fixtures = ["race", "refund-first", "grant-first"].map((name) => ({
+  name, owner: randomUUID(), intent: "local-test-" + randomUUID(),
+  checkout: "local-checkout-" + randomUUID(), customer: "local-customer-" + randomUUID(),
+}));
+const ownerIds = [owner, other, paidOwner, legacyOwner, strictOwner, claimOwner, claimOther,
+  ...phase3Fixtures.map((fixture) => fixture.owner)];
 const hash = createHash("sha256").update(randomUUID()).digest("hex");
 const claimHash = createHash("sha256").update(randomUUID()).digest("hex");
 const foreignHash = createHash("sha256").update(randomUUID()).digest("hex");
@@ -176,6 +181,86 @@ try {
   assert.equal(await scalar(`SELECT count(*) FROM pg_policies WHERE schemaname='public' AND tablename='study_sessions' AND policyname=${q(broadPolicy)};`), "0", "fixture policy rolled back");
   console.log("PASS concurrent five-question limit, transactional rollback, owned metadata RLS, legacy broad-policy isolation, browser write denial");
 
+  // Phase 3: independent psql transactions race on the same intent/session.
+  // A non-UTC zone spans DST: the pass is exactly 90 * 24 hours, not 90 calendar days.
+  const phase3PaidAt = "2026-03-07T12:00:00Z", phase3RefundedAt = "2026-03-07T13:00:00Z";
+  const phase3PaidEpoch = Date.parse(phase3PaidAt) / 1000;
+  const phase3RefundedEpoch = Date.parse(phase3RefundedAt) / 1000;
+  const phase3FulfillSQL = (fixture) => `SET LOCAL TIME ZONE 'America/New_York';
+    SELECT id FROM public.fulfill_pmle_pass(${q(fixture.owner)},${q(fixture.checkout)},${q(fixture.intent)},${q(fixture.customer)},${q(phase3PaidAt)}::timestamptz)`;
+  const phase3RefundSQL = (fixture) => `SELECT public.refund_pmle_pass(${q(fixture.intent)},${q(phase3RefundedAt)}::timestamptz)`;
+  // Collect every transaction before asserting, so finally cannot race pending fixture writes.
+  const phase3Replay = (fixture) => Array.from({ length: 8 }, () => run(service(phase3FulfillSQL(fixture)), true));
+  const phase3AssertSuccess = (results, name) => {
+    for (const result of results) assert.equal(result.code, 0, `${name}: RPC must succeed: ${result.error}`);
+  };
+  const phase3Snapshot = async (fixture, expectedId, refunded) => {
+    assert.equal(await scalar(`SELECT count(*) FROM public.pmle_passes
+      WHERE user_id=${q(fixture.owner)} OR stripe_payment_intent_id=${q(fixture.intent)}
+      OR stripe_checkout_session_id=${q(fixture.checkout)};`), "1", `${fixture.name}: exactly one pass row`);
+    const pass = JSON.parse(await scalar(`SELECT row_to_json(p) FROM (
+      SELECT id,user_id,stripe_checkout_session_id,stripe_payment_intent_id,stripe_customer_id,
+        extract(epoch FROM paid_at) AS paid_epoch,extract(epoch FROM expires_at) AS expires_epoch,
+        extract(epoch FROM refunded_at) AS refunded_epoch
+      FROM public.pmle_passes WHERE stripe_payment_intent_id=${q(fixture.intent)}
+    ) p;`));
+    assert.deepEqual(pass, {
+      id: expectedId, user_id: fixture.owner, stripe_checkout_session_id: fixture.checkout,
+      stripe_payment_intent_id: fixture.intent, stripe_customer_id: fixture.customer,
+      paid_epoch: phase3PaidEpoch, expires_epoch: phase3PaidEpoch + 90 * 24 * 60 * 60,
+      refunded_epoch: refunded ? phase3RefundedEpoch : null,
+    }, `${fixture.name}: identity, paid time, exact 2160-hour expiry and refund state`);
+    assert.equal(await scalar(`SELECT count(*) FROM public.pmle_pass_refunds
+      WHERE stripe_payment_intent_id=${q(fixture.intent)};`), refunded ? "1" : "0",
+    `${fixture.name}: refund tombstone count`);
+    if (refunded) {
+      assert.equal(Number(await scalar(`SELECT extract(epoch FROM refunded_at) FROM public.pmle_pass_refunds
+        WHERE stripe_payment_intent_id=${q(fixture.intent)};`)), phase3RefundedEpoch,
+      `${fixture.name}: tombstone timestamp dominates fulfillment`);
+    }
+    return pass;
+  };
+  const phase3ReplayAfterRefund = async (fixture, passId, beforeReplay) => {
+    const completions = await Promise.all(phase3Replay(fixture));
+    phase3AssertSuccess(completions, fixture.name);
+    assert.deepEqual(completions.map((result) => result.output), Array(8).fill(passId),
+      `${fixture.name}: all completion replays retain the same pass ID`);
+    assert.deepEqual(await phase3Snapshot(fixture, passId, true), beforeReplay,
+      `${fixture.name}: completion replay cannot restore access or change expiry`);
+  };
+
+  const [raceFixture, refundFirstFixture, grantFirstFixture] = phase3Fixtures;
+  // Start eight identical fulfillment RPCs and the refund without awaiting either side.
+  const raced = await Promise.all([
+    ...phase3Replay(raceFixture), run(service(phase3RefundSQL(raceFixture)), true),
+  ]);
+  phase3AssertSuccess(raced, raceFixture.name);
+  const racedIds = raced.slice(0, 8).map((result) => result.output);
+  assert.match(racedIds[0], /^[0-9a-f-]{36}$/, "race: fulfillment returns a pass UUID");
+  assert.deepEqual(racedIds, Array(8).fill(racedIds[0]), "race: all fulfillments return one identity");
+  await phase3ReplayAfterRefund(raceFixture, racedIds[0],
+    await phase3Snapshot(raceFixture, racedIds[0], true));
+
+  // Deterministic refund-before-fulfillment exercises the tombstone insert path.
+  await run(service(phase3RefundSQL(refundFirstFixture)));
+  const refundFirstResults = await Promise.all(phase3Replay(refundFirstFixture));
+  phase3AssertSuccess(refundFirstResults, refundFirstFixture.name);
+  const refundFirstId = refundFirstResults[0].output;
+  assert.deepEqual(refundFirstResults.map((result) => result.output), Array(8).fill(refundFirstId),
+    "refund-first: all concurrent fulfillments return one identity");
+  await phase3ReplayAfterRefund(refundFirstFixture, refundFirstId,
+    await phase3Snapshot(refundFirstFixture, refundFirstId, true));
+
+  // Deterministic grant-before-refund exercises revocation of the existing pass.
+  const grantFirstId = await scalar(service(phase3FulfillSQL(grantFirstFixture)));
+  const granted = await phase3Snapshot(grantFirstFixture, grantFirstId, false);
+  await run(service(phase3RefundSQL(grantFirstFixture)));
+  const revoked = await phase3Snapshot(grantFirstFixture, grantFirstId, true);
+  assert.deepEqual(revoked, { ...granted, refunded_epoch: phase3RefundedEpoch },
+    "grant-first: refund changes only refund state, not pass identity or expiry");
+  await phase3ReplayAfterRefund(grantFirstFixture, grantFirstId, revoked);
+  console.log("PASS Phase 3 eight-way fulfillment/refund race, refund-first and grant-first tombstone dominance, immutable completion replay and DST-safe 2160-hour expiry");
+
   const paidAt = "2026-10-03T12:00:00Z", refundedAt = "2026-10-03T13:00:00Z";
   const fulfill = (pi, cs) => `SELECT id FROM public.fulfill_pmle_pass(${q(paidOwner)},${q(cs)},${q(pi)},'local-customer',${q(paidAt)}::timestamptz)`;
   await run(service(`SELECT public.refund_pmle_pass(${q(intent)},${q(refundedAt)}::timestamptz)`));
@@ -207,7 +292,7 @@ try {
 } finally {
   // Only isolated generated owners/anonymous hash and fake payment intents are removed.
   await run(`DELETE FROM public.study_sessions WHERE anonymous_owner_hash IN (${q(hash)},${q(claimHash)},${q(foreignHash)});
-    DELETE FROM public.pmle_pass_refunds WHERE stripe_payment_intent_id IN (${q(intent)},${q(intentAfter)});
+    DELETE FROM public.pmle_pass_refunds WHERE stripe_payment_intent_id IN (${[intent, intentAfter, ...phase3Fixtures.map((fixture) => fixture.intent)].map(q).join(",")});
     DELETE FROM auth.users WHERE id IN (${ownerIds.map(q).join(",")});`);
 }
 console.log("PASS all local DB integration checks; isolated fixtures removed");
