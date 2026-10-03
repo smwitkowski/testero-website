@@ -37,6 +37,9 @@ export async function openBillingPortal(): Promise<string> {
   try {
     const url = new URL(result.href);
     if (url.protocol === "https:" && url.hostname === "billing.stripe.com" && !url.username && !url.password && !url.port) return url.href;
+    // The local Stripe adapter returns to the authenticated account page.
+    if (typeof window !== "undefined" && url.origin === window.location.origin && ["http:", "https:"].includes(url.protocol)
+      && !url.username && !url.password && url.pathname === "/account" && !url.search && !url.hash) return url.href;
   } catch { /* Invalid response; do not navigate. */ }
   throw new Error("Billing management is unavailable. Please retry.");
 }

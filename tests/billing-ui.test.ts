@@ -145,6 +145,16 @@ describe("bounded checkout verification and authoritative focus reload", () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ href })));
     expect(await beginCheckout()).toBe(href); expect(mocks.checkoutEvent).not.toHaveBeenCalled();
   });
+  it("accepts only exact same-origin local portal account return", async () => {
+    browser();
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ href: "http://127.0.0.1:3000/account" })));
+    expect(await openBillingPortal()).toBe("http://127.0.0.1:3000/account");
+    expect(fetch).toHaveBeenCalledWith("/api/billing/portal", expect.objectContaining({ method: "POST", body: "{}", cache: "no-store", credentials: "same-origin" }));
+    for (const href of ["http://127.0.0.1:3000/account?next=https://evil.example", "http://127.0.0.1:3000/account#billing", "http://user:pw@127.0.0.1:3000/account", "http://evil.example/account", "http://127.0.0.1:3001/account", "http://127.0.0.1:3000/account/", "http://127.0.0.1:3000/dashboard", "javascript:alert(1)"]) {
+      vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ href })));
+      await expect(openBillingPortal()).rejects.toThrow("unavailable");
+    }
+  });
   it("stops polling processing after six checks and cleans up focus listeners", async () => {
     const { listeners } = browser(); vi.useFakeTimers();
     vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify({ status: "processing", accessUntil: null })));
