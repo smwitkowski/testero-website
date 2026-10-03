@@ -73,9 +73,10 @@ describe("practice route auth and privacy", () => {
   });
   it.each([404, 409, 410])("preserves safe ownership/incomplete/expiry status %s", async status => { vi.mocked(practiceSummary).mockRejectedValue(new DiagnosticError(status, "Safe error")); const response = await summary(getRequest(), context); expect(response.status).toBe(status); expect(await response.json()).toEqual({ error: "Safe error" }); expect(response.headers.get("Cache-Control")).toBe("private, no-store"); });
   it.each(routes)("sanitizes unexpected SDK failures: %s", async route => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const error = new Error("secret service key / explanation");
     vi.mocked(createPractice).mockRejectedValue(error); vi.mocked(readPractice).mockRejectedValue(error); vi.mocked(answerPractice).mockRejectedValue(error); vi.mocked(practiceSummary).mockRejectedValue(error);
-    const response = await invoke(route); expect(response.status).toBe(500); expect(await response.json()).toEqual({ error: "The diagnostic is unavailable. Please try again." }); expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    const response = await invoke(route); expect(response.status).toBe(500); expect(await response.json()).toEqual({ error: "Practice is unavailable. Please try again." }); expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(log).toHaveBeenCalledWith("Practice request failed");
   });
 });

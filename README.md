@@ -1,9 +1,11 @@
 # Testero v2
 
-A small PMLE readiness app. This branch builds Phase 1 of the fresh app in
-[`../hq/v2-spec.md`](../hq/v2-spec.md). Anonymous users take a 20-question diagnostic
-and see their score, readiness tier, and domain breakdown. Question review,
-accounts, practice, and billing are later phases. No marketing-page test suite.
+A small PMLE readiness app. This branch implements Phases 1 and 2 of the fresh app
+in [`../hq/v2-spec.md`](../hq/v2-spec.md). Anonymous users take a 20-question
+diagnostic and see score, readiness tier, and domains. Confirmed email/password
+accounts claim their own anonymous diagnostics, see question review, and practice
+five questions per week. Billing, paid explanations, and launch content remain
+later phases. No marketing-page test suite.
 
 ## Stack
 
@@ -38,7 +40,17 @@ other than `testero-v2` and API/database endpoints outside loopback ports
 production Supabase, Stripe, or PostHog for tests.
 
 The app listens on `http://127.0.0.1:3000`. Leave `npm run dev:local` running for
-manual use. Placeholder credentials cannot run the diagnostic.
+manual use. Placeholder credentials cannot run diagnostics, auth, or practice.
+Signup and password recovery emails stay in local Mailpit at
+`http://127.0.0.1:56544`. Open its confirmation link to finish signup.
+
+Dashboard, practice, summaries, and account require a confirmed Supabase user.
+Claims use the visitor's httpOnly anonymous cookie hash, never a supplied session
+ID. Free practice reserves all five questions in one database transaction at
+session creation. The allowance resets Monday at 00:00 UTC. Resume an unfinished
+session from the dashboard; new sessions expire after 24 hours. Reviews include
+selected and correct answers, but no explanations. Phase 2 always uses the strict
+free-only RPC, even for existing pass or legacy subscription rows.
 
 ## Checks
 
@@ -51,9 +63,12 @@ npx playwright install chromium
 npm run test:e2e:local
 ```
 
-Run the smoke test in a new terminal. If `npm run dev:local` is already running,
+Run the browser tests in a new terminal. If `npm run dev:local` is already running,
 use `PLAYWRIGHT_MANAGED_SERVER=1 npm run test:e2e:local`. Otherwise the smoke test
-starts and stops its own local Playwright web server.
+starts and stops its own local Playwright web server. The two tests cover the
+anonymous diagnostic and signup, Mailpit confirmation, owned claim/review,
+five-question practice, quota exhaustion, login/logout, and password recovery.
+They create and delete isolated local test users and sessions.
 
 `npm test` runs Vitest's pure server-logic units in Node. It excludes the content
 pipeline, legacy migrations, and browser tests. Playwright runs `e2e/` in Chromium
@@ -86,7 +101,7 @@ Next emits standalone output. The Node 22 multi-stage Dockerfile runs as a non-r
 user. Public Supabase and optional PostHog values are build arguments; the
 service-role key is runtime-only. The workflow runs lint, typecheck, unit tests,
 and build for PRs. Only a push to `main` builds/pushes an image and deploys to the
-existing Cloud Run service. No cloud deployment is part of local Phase 1 checks.
+existing Cloud Run service. No cloud deployment is part of local Phase 1 or 2 checks.
 
 ## Preserved material
 
@@ -101,16 +116,15 @@ D-017 (anonymous results only; no question review), and D-019 (fresh minimal app
 
 ## Click-through preview
 
-The founder skeleton has live diagnostic pages and clearly marked stubs for the
-later account, practice, billing, content, and legal phases. It never presents
-sample account data or successful payments as real. Terms and Privacy are
-"being finalized" placeholders, not the unapproved drafts. Blog and FAQ links
-keep the five and nine preserved URL slugs.
+Public billing, content, and legal routes remain clearly marked Phase 3/4 stubs.
+They never present sample account data or successful payments as real. Terms and
+Privacy are "being finalized" placeholders, not the unapproved drafts. Blog and
+FAQ links keep the five and nine preserved URL slugs. The account route retains
+its Phase 3 access-status placeholder, but has real protection and logout.
 
-The `.claude/launch.json` configuration `v2-dev` runs `npm run dev -- --port 3100`
-with loopback placeholder values. Open `http://127.0.0.1:3100`. The skeleton and
-shared navigation render without Supabase. To take the real diagnostic, use the
-local development commands above (`npm run dev:local` on port 3000), which inject
-the generated local keys without any credential file. Only verified Supabase
-account state switches the header from Sign in to Dashboard; an anonymous
-diagnostic cookie does not.
+The accepted Phase 1 founder preview remains frozen in a separate worktree on
+port 3100. Do not restart it or start `.claude/launch.json`'s `v2-dev` while it
+owns that port. Use `npm run dev:local` on port 3000 for Phase 2. It injects the
+generated local keys without any credential file. Only verified Supabase account
+state switches the header from Sign in to Dashboard; an anonymous diagnostic
+cookie does not.

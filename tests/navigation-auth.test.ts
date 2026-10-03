@@ -13,7 +13,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
 beforeEach(() => {
   mocks.cookies = [];
-  mocks.getUser.mockReset().mockResolvedValue({ data: { user: { id: "verified-user" } }, error: null });
+  mocks.getUser.mockReset().mockResolvedValue({ data: { user: { id: "verified-user", email_confirmed_at: "2026-10-03T12:00:00Z" } }, error: null });
   vi.mocked(createServerSupabaseClient).mockReset().mockResolvedValue({ auth: { getUser: mocks.getUser } } as unknown as Awaited<ReturnType<typeof createServerSupabaseClient>>);
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:56541");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "local-test-key-not-a-real-credential");
@@ -66,6 +66,12 @@ describe("verified account state for navigation", () => {
   it("denies a verification error even if a user object is present", async () => {
     mocks.cookies = [{ name: "sb-local-auth-token", value: "fake-cookie" }];
     mocks.getUser.mockResolvedValue({ data: { user: { id: "unverified-user" } }, error: { message: "verification failed" } });
+    expect(await hasVerifiedNavigationSession()).toBe(false);
+  });
+
+  it("does not advertise protected navigation to an unconfirmed account", async () => {
+    mocks.cookies = [{ name: "sb-local-auth-token", value: "opaque-cookie" }];
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "unconfirmed-user", email_confirmed_at: null } }, error: null });
     expect(await hasVerifiedNavigationSession()).toBe(false);
   });
 

@@ -26,3 +26,10 @@ export function trackPageview(path: string) {
 export function trackDiagnostic(event: "diagnostic_started" | "diagnostic_completed", sessionId: string) {
   if (initialized) posthog.capture(event, { session_id: sessionId });
 }
+
+export function trackSignupCompleted() {
+  if (initialized) posthog.capture("signup_completed");
+}
+export function trackPractice(sessionId: string) {
+  if (initialized) posthog.capture("practice_started", { session_id: sessionId });
+}

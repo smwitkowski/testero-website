@@ -15,6 +15,7 @@ export async function SiteHeader() {
           <Link href="/pricing" className="py-2 hover:text-primary">Pricing</Link>
           <Link href="/faq" className="py-2 hover:text-primary">FAQ</Link>
           <Link href={signedIn ? "/dashboard" : "/login"} className="py-2 text-primary hover:underline">{signedIn ? "Dashboard" : "Sign in"}</Link>
+          {signedIn && <Link href="/account" className="py-2 hover:text-primary">Account</Link>}
         </nav>
       </div>
     </header>

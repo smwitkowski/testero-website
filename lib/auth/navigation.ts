@@ -11,6 +11,6 @@ export async function hasVerifiedNavigationSession(): Promise<boolean> {
   try {
     const supabase = await createServerSupabaseClient();
     const { data: { user }, error } = await supabase.auth.getUser();
-    return !error && !!user;
+    return !error && !!user?.email_confirmed_at;
   } catch { return false; }
 }
