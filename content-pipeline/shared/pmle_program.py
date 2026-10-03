@@ -102,6 +102,13 @@ class PMLEQuestionProgram(dspy.Module):
         self.max_tokens = max_tokens
         self.temperature = temperature
         
+        if not os.environ.get("OPENAI_API_KEY"):
+            logger.warning(
+                "OPENAI_API_KEY is not set: embeddings and semantic duplicate "
+                "detection are unavailable. Generation will continue with lexical "
+                "duplicate checks only."
+            )
+
         # Setup DSPy
         self._setup_dspy()
         
