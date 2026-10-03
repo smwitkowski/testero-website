@@ -1,11 +1,12 @@
 # Testero v2
 
-A small PMLE readiness app. This branch implements Phases 1 and 2 of the fresh app
+A small PMLE readiness app. This branch implements Phases 1–3 of the fresh app
 in [`../hq/v2-spec.md`](../hq/v2-spec.md). Anonymous users take a 20-question
 diagnostic and see score, readiness tier, and domains. Confirmed email/password
 accounts claim their own anonymous diagnostics, see question review, and practice
-five questions per week. Billing, paid explanations, and launch content remain
-later phases. No marketing-page test suite.
+five questions per week. PMLE Pass adds explanations and unlimited five-question
+practice sessions: $39 one-time for 90 days, no auto-renew, 7-day refund window.
+Launch content and approved legal pages remain Phase 4. No marketing-page tests.
 
 ## Stack
 
@@ -48,9 +49,18 @@ Dashboard, practice, summaries, and account require a confirmed Supabase user.
 Claims use the visitor's httpOnly anonymous cookie hash, never a supplied session
 ID. Free practice reserves all five questions in one database transaction at
 session creation. The allowance resets Monday at 00:00 UTC. Resume an unfinished
-session from the dashboard; new sessions expire after 24 hours. Reviews include
-selected and correct answers, but no explanations. Phase 2 always uses the strict
-free-only RPC, even for existing pass or legacy subscription rows.
+session from the dashboard; new sessions expire after 24 hours. Free reviews
+include selected and correct answers, but no explanations. Fresh paid access is an
+unexpired, unrefunded pass OR an active legacy subscription; any read error denies
+paid features and blocks checkout. Paid session creation bypasses the free counter,
+with a database recheck. Refunds immediately redact subsequent paid API responses.
+
+The local runner also starts/reuses a loopback-only Stripe HTTP fixture on port
+56545 and injects deliberately fake Stripe values. It never contacts Stripe.
+Checkout success stays processing until a correctly signed webhook grants access.
+The test-only transport is refused in production. Founder Stripe product/price,
+webhook events, GitHub secrets, and test-mode QA are in
+[`docs/deployment/stripe-setup.md`](docs/deployment/stripe-setup.md).
 
 ## Checks
 
@@ -65,10 +75,11 @@ npm run test:e2e:local
 
 Run the browser tests in a new terminal. If `npm run dev:local` is already running,
 use `PLAYWRIGHT_MANAGED_SERVER=1 npm run test:e2e:local`. Otherwise the smoke test
-starts and stops its own local Playwright web server. The two tests cover the
-anonymous diagnostic and signup, Mailpit confirmation, owned claim/review,
-five-question practice, quota exhaustion, login/logout, and password recovery.
-They create and delete isolated local test users and sessions.
+starts and stops its own local Playwright web server. The three tests cover the
+anonymous diagnostic; signup, Mailpit confirmation, owned claim/review, free
+practice, quota exhaustion, login/logout and recovery; and locally signed pass
+completion/refund/replay, paid explanations, unlimited practice, processing status,
+receipt correctness and legacy portal. They delete isolated test users and rows.
 
 `npm test` runs Vitest's pure server-logic units in Node. It excludes the content
 pipeline, legacy migrations, and browser tests. Playwright runs `e2e/` in Chromium
@@ -101,7 +112,8 @@ Next emits standalone output. The Node 22 multi-stage Dockerfile runs as a non-r
 user. Public Supabase and optional PostHog values are build arguments; the
 service-role key is runtime-only. The workflow runs lint, typecheck, unit tests,
 and build for PRs. Only a push to `main` builds/pushes an image and deploys to the
-existing Cloud Run service. No cloud deployment is part of local Phase 1 or 2 checks.
+existing Cloud Run service. Stripe keys, webhook secret, price, and the Supabase
+service-role key are runtime-only. No cloud deployment is part of local checks.
 
 ## Preserved material
 
@@ -109,22 +121,21 @@ existing Cloud Run service. No cloud deployment is part of local Phase 1 or 2 ch
 - `content/` keeps existing posts and FAQ source for the later content phase.
 - `public/` keeps brand assets.
 - `supabase/migrations_legacy/` keeps the historical SQL, excluded from replay.
-- `docs/deployment/stripe-setup.md` is retained for the later billing phase.
+- `docs/deployment/stripe-setup.md` documents the real v2 billing setup.
 
 Business decisions live in `../hq/decisions.md`: D-014 ($39 PMLE Pass for 90 days),
 D-017 (anonymous results only; no question review), and D-019 (fresh minimal app).
 
 ## Click-through preview
 
-Public billing, content, and legal routes remain clearly marked Phase 3/4 stubs.
-They never present sample account data or successful payments as real. Terms and
-Privacy are "being finalized" placeholders, not the unapproved drafts. Blog and
-FAQ links keep the five and nine preserved URL slugs. The account route retains
-its Phase 3 access-status placeholder, but has real protection and logout.
+Pricing, checkout confirmation, and account access status are real. Confirmation
+never grants access from a redirect alone. Content and legal routes remain Phase 4
+stubs. Terms and Privacy are "being finalized" placeholders, not unapproved drafts.
+Blog and FAQ links keep the five and nine preserved URL slugs.
 
 The accepted Phase 1 founder preview remains frozen in a separate worktree on
 port 3100. Do not restart it or start `.claude/launch.json`'s `v2-dev` while it
-owns that port. Use `npm run dev:local` on port 3000 for Phase 2. It injects the
+owns that port. Use `npm run dev:local` on port 3000 for Phase 3. It injects the
 generated local keys without any credential file. Only verified Supabase account
 state switches the header from Sign in to Dashboard; an anonymous diagnostic
 cookie does not.

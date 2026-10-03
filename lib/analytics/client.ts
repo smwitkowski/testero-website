@@ -33,3 +33,6 @@ export function trackSignupCompleted() {
 export function trackPractice(sessionId: string) {
   if (initialized) posthog.capture("practice_started", { session_id: sessionId });
 }
+export function trackCheckoutStarted() {
+  if (initialized) posthog.capture("checkout_started", { plan_name: "PMLE Pass" });
+}

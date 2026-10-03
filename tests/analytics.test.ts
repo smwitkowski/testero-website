@@ -31,6 +31,11 @@ describe("private analytics event wiring", () => {
     analytics.initializeAnalytics(); analytics.trackPractice("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
     expect(sdk.capture.mock.calls).toEqual([["practice_started", { session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }]]);
   });
+  it("sends checkout start with only the public offer name", async () => {
+    const analytics = await import("@/lib/analytics/client");
+    analytics.initializeAnalytics(); analytics.trackCheckoutStarted();
+    expect(sdk.capture.mock.calls).toEqual([["checkout_started", { plan_name: "PMLE Pass" }]]);
+  });
   it.each(["diagnostic_started", "diagnostic_completed"] as const)("preserves %s without answers or explanations", async event => {
     const analytics = await import("@/lib/analytics/client");
     analytics.initializeAnalytics(); analytics.trackDiagnostic(event, "session");

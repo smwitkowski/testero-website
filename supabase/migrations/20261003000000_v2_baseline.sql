@@ -312,6 +312,9 @@ BEGIN
     UPDATE public.pmle_passes
         SET refunded_at = LEAST(COALESCE(refunded_at, v_refunded_at), v_refunded_at)
         WHERE stripe_payment_intent_id = p_stripe_payment_intent_id;
+    -- Keep receipts and entitlement revocation in the same locked transaction.
+    UPDATE public.payment_history SET status = 'refunded'
+        WHERE stripe_payment_intent_id = p_stripe_payment_intent_id;
 END;
 $$;
 
@@ -324,6 +327,36 @@ REVOKE EXECUTE ON FUNCTION public.refund_pmle_pass(TEXT, TIMESTAMPTZ)
     FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.refund_pmle_pass(TEXT, TIMESTAMPTZ)
     TO service_role;
+
+-- Receipt writes share the pass/refund lock; late completion cannot undo refunds.
+CREATE OR REPLACE FUNCTION public.record_pmle_pass_payment(
+ p_stripe_payment_intent_id TEXT, p_amount INTEGER, p_currency TEXT
+)
+RETURNS VOID LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, pg_temp AS $fn$
+DECLARE v_pass public.pmle_passes%ROWTYPE; v_refunded BOOLEAN;
+BEGIN
+ IF p_stripe_payment_intent_id IS NULL OR p_stripe_payment_intent_id = ''
+    OR p_amount IS NULL OR p_amount < 0 OR p_currency IS NULL OR p_currency !~ '^[a-z]{3}$' THEN
+  RAISE EXCEPTION 'Invalid pass receipt arguments' USING ERRCODE = '22023';
+ END IF;
+ PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_stripe_payment_intent_id, 0));
+ SELECT * INTO v_pass FROM public.pmle_passes WHERE stripe_payment_intent_id = p_stripe_payment_intent_id;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Pass not fulfilled' USING ERRCODE = '22023'; END IF;
+ v_refunded := v_pass.refunded_at IS NOT NULL OR EXISTS (
+  SELECT 1 FROM public.pmle_pass_refunds WHERE stripe_payment_intent_id = p_stripe_payment_intent_id
+ );
+ INSERT INTO public.payment_history (user_id, stripe_payment_intent_id, amount, currency, status, receipt_url)
+ VALUES (v_pass.user_id, p_stripe_payment_intent_id, p_amount, p_currency,
+         CASE WHEN v_refunded THEN 'refunded' ELSE 'succeeded' END, NULL)
+ ON CONFLICT (stripe_payment_intent_id) DO UPDATE
+ SET status = CASE WHEN v_refunded THEN 'refunded' ELSE 'succeeded' END
+ WHERE public.payment_history.user_id = v_pass.user_id
+   AND public.payment_history.amount = p_amount AND public.payment_history.currency = p_currency;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Pass receipt identity mismatch' USING ERRCODE = '22023'; END IF;
+END;
+$fn$;
+REVOKE EXECUTE ON FUNCTION public.record_pmle_pass_payment(TEXT, INTEGER, TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_pmle_pass_payment(TEXT, INTEGER, TEXT) TO service_role;
 
 -- Strict Phase 2 quota: paid/legacy rows never bypass the free allowance.
 CREATE OR REPLACE FUNCTION public.v2_consume_free_practice_quota(p_user_id UUID, p_question_count INTEGER)

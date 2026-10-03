@@ -60,6 +60,12 @@ describe("Supabase proxy preview guard and verified refresh", () => {
     expect(mocks.getSession).not.toHaveBeenCalled();
   });
 
+  it("bypasses browser auth for the signed Stripe webhook", async () => {
+    const response = await proxy(new NextRequest("http://127.0.0.1:3000/api/billing/webhook", { method: "POST", body: "signed-body" }));
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+    expect(mocks.createClient).not.toHaveBeenCalled(); expect(mocks.getUser).not.toHaveBeenCalled();
+  });
+
   it("verifies configured auth with getUser, never trusting getSession", async () => {
     const response = await proxy(request());
     expect(response.headers.get("x-middleware-next")).toBe("1");

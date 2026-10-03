@@ -178,7 +178,8 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     expect(practices.data).toHaveLength(1);
     await page.getByRole("link", { name: "Upgrade to PMLE Pass", exact: true }).click();
     await expect(page).toHaveURL(/\/pricing$/);
-    await expect(page.getByText(/^Coming in phase 3$/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "PMLE Pass", exact: true })).toBeVisible();
+    await expect(page.getByText(/Coming in Phase 3/i)).toHaveCount(0);
 
     await page.getByRole("link", { name: "Account", exact: true }).click();
     await page.getByRole("button", { name: "Sign out", exact: true }).click();

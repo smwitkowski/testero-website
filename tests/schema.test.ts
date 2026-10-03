@@ -57,10 +57,26 @@ describe("v2 baseline security and replay contracts", () => {
     expect(sql).toContain("ON CONFLICT (user_id, week_start) DO UPDATE");
     expect(sql).toContain("public.free_practice_quota.questions_used + EXCLUDED.questions_used <= 5");
     expect(sql).toContain("PERFORM public.consume_free_practice_quota(p_user_id, v_count)");
-    expect(sql.match(/pg_catalog.pg_advisory_xact_lock/g)).toHaveLength(2);
+    expect(sql.match(/pg_catalog.pg_advisory_xact_lock/g)).toHaveLength(3);
     expect(sql).toContain("INTERVAL '2160 hours'");
     expect(sql).toContain("PMLE pass identity or paid date mismatch");
     expect(sql).toContain("to_regprocedure('public.fulfill_pmle_pass(uuid,text,text,text,timestamptz)')");
+  });
+});
+
+describe("Phase 3 atomic pass receipts", () => {
+  it("keeps receipt status under the same payment-intent lock as grants and refunds", () => {
+    const receipt = sql.slice(sql.indexOf("CREATE OR REPLACE FUNCTION public.record_pmle_pass_payment("), sql.indexOf("-- Strict Phase 2 quota:"));
+    expect(receipt).toContain("pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_stripe_payment_intent_id, 0))");
+    expect(receipt).toContain("SELECT * INTO v_pass FROM public.pmle_passes");
+    expect(receipt).toContain("SELECT 1 FROM public.pmle_pass_refunds");
+    expect(receipt).toContain("CASE WHEN v_refunded THEN 'refunded' ELSE 'succeeded' END");
+    expect(receipt).toContain("public.payment_history.user_id = v_pass.user_id");
+    expect(receipt).toContain("Pass receipt identity mismatch");
+    expect(receipt).toContain("FROM PUBLIC, anon, authenticated");
+    expect(receipt).toContain("TO service_role");
+    const refund = sql.slice(sql.indexOf("CREATE OR REPLACE FUNCTION public.refund_pmle_pass("), sql.indexOf("-- PostgreSQL grants PUBLIC execute"));
+    expect(refund).toContain("UPDATE public.payment_history SET status = 'refunded'");
   });
 });
 
