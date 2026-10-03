@@ -12,8 +12,8 @@ if (!urlText) throw new Error("Provide a LOCAL DATABASE_URL explicitly");
 const url = new URL(urlText);
 if (!["postgres:", "postgresql:"].includes(url.protocol)
     || !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
-    || url.port !== "55422" || url.search || url.pathname !== "/postgres") {
-  throw new Error("Only loopback PostgreSQL port55422/database postgres is permitted; no URL query overrides");
+    || url.port !== "56542" || url.search || url.pathname !== "/postgres") {
+  throw new Error("Only loopback PostgreSQL port56542/database postgres is permitted; no URL query overrides");
 }
 const env = { ...process.env, PGHOST: url.hostname.replace(/[\[\]]/g, ""), PGPORT: url.port,
   PGDATABASE: "postgres", PGUSER: decodeURIComponent(url.username),

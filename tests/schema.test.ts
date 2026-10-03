@@ -32,6 +32,7 @@ describe("v2 baseline security and replay contracts", () => {
     }
     const answerBody = sql.slice(sql.indexOf("CREATE OR REPLACE FUNCTION public.answer_study_item"));
     expect(answerBody).toContain("FOR UPDATE");
+    expect(answerBody).toContain("v_session.expires_at <= clock_timestamp()");
     expect(answerBody).toContain("Session owner mismatch");
     expect(answerBody).toContain("Answer the next item in order");
     expect(answerBody).toContain("Answer already recorded");

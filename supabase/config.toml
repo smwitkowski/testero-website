@@ -2,24 +2,24 @@
 project_id = "testero-v2"
 [api]
 enabled = true
-port = 55421
+port = 56541
 schemas = ["public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 [db]
-port = 55422
-shadow_port = 55420
+port = 56542
+shadow_port = 56540
 major_version = 15
 [db.seed]
 enabled = true
 sql_paths = ["./seed.sql"]
 [studio]
 enabled = true
-port = 55423
+port = 56543
 api_url = "http://127.0.0.1"
 [inbucket]
 enabled = true
-port = 55424
+port = 56544
 [storage]
 enabled = false
 [auth]

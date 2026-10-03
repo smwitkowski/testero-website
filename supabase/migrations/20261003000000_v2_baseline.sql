@@ -412,7 +412,8 @@ BEGIN
  OR v_session.anonymous_owner_hash IS DISTINCT FROM p_anonymous_owner_hash THEN
   RAISE EXCEPTION 'Session owner mismatch' USING ERRCODE = '42501';
  END IF;
- IF v_session.expires_at <= now() THEN
+ -- Check wall-clock time after acquiring the session lock, including lock waits.
+ IF v_session.expires_at <= clock_timestamp() THEN
   RAISE EXCEPTION 'Session expired' USING ERRCODE = '22023';
  END IF;
  SELECT * INTO v_item FROM public.session_items WHERE id = p_item_id AND session_id = p_session_id;
