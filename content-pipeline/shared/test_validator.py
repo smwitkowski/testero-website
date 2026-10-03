@@ -93,7 +93,7 @@ def test_validate_question_empty_choice():
     result = validate_question(question_data)
     
     assert result.is_valid is False
-    assert any("B (distractor 1)" in error for error in result.errors)
+    assert "Choice B is empty" in result.errors
     assert result.review_status == "NEEDS_ANSWER_FIX"
 
 
