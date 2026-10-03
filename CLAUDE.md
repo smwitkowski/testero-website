@@ -65,3 +65,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+The whole-app route skeleton is deliberately nonfunctional outside diagnostics.
+Keep its Coming in phase badges, honest copy, preserved content URLs, and next-step
+links. Do not add fake account/payment data or stub APIs. The v2-dev launch config
+uses port 3100 and placeholders; real diagnostics use dev:local and the local DB.
