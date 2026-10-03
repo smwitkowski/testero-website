@@ -186,7 +186,7 @@ const LockedSection = ({
             Sign up free to unlock
           </h3>
           <p className="text-sm text-slate-600">
-            Create a free account to see your full breakdown and study plan.
+            A free account unlocks question review.
           </p>
         </div>
       </div>
@@ -713,7 +713,7 @@ const QuestionReview = ({
                       }}
                       className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
                     >
-                      View explanation (PMLE Readiness)
+                      View explanation (PMLE Pass)
                     </button>
                   )}
                   <button className="text-sm text-slate-500 hover:text-slate-700">
@@ -769,7 +769,7 @@ const QuestionReview = ({
                     ) : !canAccessExplanations ? (
                       <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                         <p className="text-sm text-blue-700 mb-2">
-                          <strong>Explanations are available on the PMLE Readiness plan.</strong>
+                          <strong>Explanations are available with PMLE Pass.</strong>
                         </p>
                         <p className="text-sm text-blue-600">
                           Step-by-step explanations help you understand concepts deeply, not just memorize answers.
@@ -780,7 +780,7 @@ const QuestionReview = ({
                           className="mt-3"
                           onClick={() => onUpgrade?.()}
                         >
-                          Upgrade to PMLE Readiness
+                          Get PMLE Pass — US$39
                         </Button>
                       </div>
                     ) : null}
@@ -1027,7 +1027,7 @@ const DiagnosticSummaryPage = () => {
         }
 
         if (data.summary) {
-          setSummary(data.summary);
+          setSummary({ ...data.summary, questions: data.summary.questions ?? [] });
         }
         setDomainBreakdown(data.domainBreakdown || []);
 
@@ -1077,12 +1077,11 @@ const DiagnosticSummaryPage = () => {
 
   // Event handlers
   const handleStartPractice = useCallback(async (domainCodes?: string[]) => {
-    // Check if should trigger paywall modal (non-subscribers)
-    if (accessLevel !== "SUBSCRIBER") {
-      const triggered = triggers.checkPaywallTrigger('practice');
-      if (triggered) return; // Modal opened, don't proceed
+    if (accessLevel === "ANONYMOUS") {
+      router.push("/signup");
+      return;
     }
-    
+    // Free users may create quota-backed sessions. The API owns quota enforcement.
     if (!summary) {
       addToast({
         tone: "danger",
@@ -1210,7 +1209,7 @@ const DiagnosticSummaryPage = () => {
     } finally {
       setCreatingPracticeSession(false);
     }
-  }, [posthog, triggers, accessLevel, router, summary, domainBreakdown, addToast, upsell, verdictCopyVariant]);
+  }, [posthog, accessLevel, router, summary, domainBreakdown, addToast, upsell, verdictCopyVariant]);
 
   const handleRetakeDiagnostic = useCallback(() => {
     router.push("/diagnostic");
@@ -1257,24 +1256,6 @@ const DiagnosticSummaryPage = () => {
     }
   }, [summary, posthog]);
 
-  // Handle study plan generation with upsell check - currently not used but ready for implementation
-  // const handleGenerateStudyPlan = useCallback(() => {
-  //   // Check if should trigger paywall modal
-  //   if (!user?.user_metadata?.has_subscription) {
-  //     const triggered = triggers.checkPaywallTrigger('study_plan');
-  //     if (triggered) return; // Modal opened, don't proceed
-  //   }
-  //   
-  //   // Implementation for generating study plan
-  //   posthog?.capture("study_plan_generated", { 
-  //     source: "diagnostic_summary",
-  //     score: summary?.score,
-  //   });
-  //   
-  //   // Navigate to study path
-  //   router.push('/study-path');
-  // }, [triggers, user, posthog, summary, router]);
-
   // Upsell modal handlers
   const handleUpsellCTA = useCallback(() => {
     upsell.handleCTAClick();
@@ -1317,8 +1298,8 @@ const DiagnosticSummaryPage = () => {
       }
     }
 
-    startBasicCheckout("diagnostic_summary_anonymous_banner");
-  }, [summary, posthog, accessLevel, startBasicCheckout, verdictCopyVariant]);
+    router.push("/signup");
+  }, [summary, posthog, accessLevel, router, verdictCopyVariant]);
 
   const handleContinueWithoutAccount = useCallback(() => {
     // Track "continue without saving" click for guardrail analysis
@@ -1488,7 +1469,7 @@ const DiagnosticSummaryPage = () => {
 
             {/* Domain Performance */}
             {domainBreakdown.length > 0 && (
-              <LockedSection isLocked={isAnonymous}>
+              <LockedSection isLocked={false}>
                 <DomainPerformance 
                   domains={domainBreakdown}
                   onDomainClick={handleDomainClick}
@@ -1588,7 +1569,7 @@ const DiagnosticSummaryPage = () => {
                           Continue without saving
                         </Button>
                         <p className="text-xs text-slate-500 mt-1.5 text-center">
-                          You can&apos;t access this breakdown later without an account.
+                          An account lets you save results and review your questions.
                         </p>
                       </div>
                     </div>
@@ -1597,10 +1578,10 @@ const DiagnosticSummaryPage = () => {
                   // Control variant: Original "unlock full breakdown" copy
                   <>
                     <h3 className="font-semibold text-slate-900 mb-2">
-                      Create a free account to unlock your full breakdown
+                      Create a free account to review your questions
                     </h3>
                     <p className="text-sm text-slate-600 mb-4">
-                      Sign up to see your domain performance, personalized study plan, and detailed question review.
+                      Your score and domain performance are free. Sign up to save results and review your answers.
                     </p>
                     <div className="space-y-2">
                       <Button
@@ -1649,9 +1630,9 @@ const DiagnosticSummaryPage = () => {
                   size="sm"
                   fullWidth
                 >
-                  Upgrade to PMLE Readiness
+                  Get PMLE Pass — US$39
                 </Button>
-                <p className="text-xs text-slate-500 mt-2 text-center">7-day money-back guarantee</p>
+                <p className="text-xs text-slate-500 mt-2 text-center">90 days. No renewal. 7-day refund revokes access.</p>
               </div>
             )}
           </div>

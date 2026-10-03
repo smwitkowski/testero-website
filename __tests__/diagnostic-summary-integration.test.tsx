@@ -710,42 +710,18 @@ describe("DiagnosticSummaryPage Integration", () => {
       expect(mockRouter.push).not.toHaveBeenCalled();
     });
 
-    it("should not call API when paywall trigger blocks practice", async () => {
+    it("does not let a client paywall trigger block free-quota session creation", async () => {
       mockTriggers.checkPaywallTrigger.mockReturnValue(true);
-
-      (useAuth as jest.Mock).mockReturnValue({ 
-        user: { id: "user-123", user_metadata: { has_subscription: false } }, 
-        isLoading: false 
+      mockSummaryAndPractice(mockSuccessResponse, {
+        ok: true, status: 200, json: async () => ({ sessionId: "quota-session", route: "/practice/session/quota-session" }),
       });
-
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => mockSuccessResponse,
-      });
-
       render(<DiagnosticSummaryPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
-      });
-
-      const practiceButton = screen.getByRole("button", { 
-        name: /start 10-min practice on your weakest topics/i 
+      const practiceButton = await screen.findByRole("button", {
+        name: /start 10-min practice on your weakest topics/i,
       });
       fireEvent.click(practiceButton);
-
-      // Wait a bit to ensure no API call is made
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Should not call practice session API
-      const practiceApiCalls = (global.fetch as jest.Mock).mock.calls.filter(
-        (call) => call[0]?.includes("/api/practice/session")
-      );
-      expect(practiceApiCalls.length).toBe(0);
-
-      // Reset mock for other tests
-      mockTriggers.checkPaywallTrigger.mockReturnValue(false);
+      await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith("/practice/session/quota-session"));
+      expect(mockTriggers.checkPaywallTrigger).not.toHaveBeenCalled();
     });
 
     it("should compute weakest domains correctly from domain breakdown", async () => {
@@ -862,6 +838,19 @@ describe("DiagnosticSummaryPage Integration", () => {
     });
   });
 
+  it("renders anonymous aggregate-only summaries with an account CTA and no questions", async () => {
+    const { questions: _questions, ...basicSummary } = mockSuccessResponse.summary;
+    void _questions;
+    mockSummaryAndPractice({ ...mockSuccessResponse, summary: basicSummary }, {});
+    render(<DiagnosticSummaryPage />);
+    const domainHeading = await screen.findByRole("heading", { name: /^domain performance$/i });
+    expect(domainHeading.closest(".blur-sm")).toBeNull();
+    expect(screen.getByText(/readiness:/i)).toBeInTheDocument();
+    expect(screen.queryByText("What is machine learning?")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /sign up free/i }));
+    expect(mockRouter.push).toHaveBeenCalledWith("/signup");
+  });
+
   describe("Anonymous user gating", () => {
     beforeEach(() => {
       (useAuth as jest.Mock).mockReturnValue({ user: null, isLoading: false });
@@ -895,7 +884,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       });
     });
 
-    it("should show locked sections for Domain Performance, Study Plan, and Question Review", async () => {
+    it("shows unblurred Domain Performance but account-gates question review", async () => {
       render(<DiagnosticSummaryPage />);
 
       await waitFor(() => {
@@ -903,7 +892,10 @@ describe("DiagnosticSummaryPage Integration", () => {
         expect(screen.getByRole("heading", { name: /^study plan$/i })).toBeInTheDocument();
       });
 
-      // Check for lock icon or locked overlay text
+      const domainSection = screen.getByRole("heading", { name: /^domain performance$/i });
+      expect(domainSection.closest(".blur-sm")).toBeNull();
+      expect(screen.queryByText("What is machine learning?")).not.toBeInTheDocument();
+      // Question review and study plan remain account-gated.
       const lockIcons = screen.getAllByText(/sign up free to unlock/i);
       expect(lockIcons.length).toBeGreaterThan(0);
     });
@@ -912,7 +904,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       render(<DiagnosticSummaryPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/create a free account to unlock your full breakdown/i)).toBeInTheDocument();
+        expect(screen.getByText(/create a free account to review your questions/i)).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /sign up free/i })).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /continue without account/i })).toBeInTheDocument();
       });
@@ -935,7 +927,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       });
     });
 
-    it("should track signup CTA click and navigate with redirect", async () => {
+    it("should track signup CTA click and navigate to signup", async () => {
       render(<DiagnosticSummaryPage />);
 
       await waitFor(() => {
@@ -956,7 +948,7 @@ describe("DiagnosticSummaryPage Integration", () => {
           })
         );
         expect(mockRouter.push).toHaveBeenCalledWith(
-          "/signup?redirect=/pricing"
+          "/signup"
         );
       });
     });
@@ -972,7 +964,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       fireEvent.click(continueButton);
 
       await waitFor(() => {
-        expect(screen.queryByText(/create a free account to unlock your full breakdown/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/create a free account to review your questions/i)).not.toBeInTheDocument();
       });
     });
 
@@ -1132,8 +1124,8 @@ describe("DiagnosticSummaryPage Integration", () => {
       });
 
       // Should show original signup module copy
-      expect(screen.getByText(/create a free account to unlock your full breakdown/i)).toBeInTheDocument();
-      expect(screen.getByText(/sign up to see your domain performance/i)).toBeInTheDocument();
+      expect(screen.getByText(/create a free account to review your questions/i)).toBeInTheDocument();
+      expect(screen.getByText(/your score and domain performance are free/i)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /sign up free/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /continue without account/i })).toBeInTheDocument();
       
@@ -1158,7 +1150,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       expect(screen.getByText(/review missed questions anytime/i)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /save my results/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /continue without saving/i })).toBeInTheDocument();
-      expect(screen.getByText(/you can't access this breakdown later without an account/i)).toBeInTheDocument();
+      expect(screen.getByText(/an account lets you save results and review your questions/i)).toBeInTheDocument();
       
       // Should NOT show control copy
       expect(screen.queryByText(/create a free account to unlock/i)).not.toBeInTheDocument();

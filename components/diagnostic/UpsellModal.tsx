@@ -203,7 +203,7 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
           fullWidth
           className="mt-5 rounded-xl"
         >
-          Upgrade to PMLE Readiness
+          Get PMLE Pass — US$39
         </Button>
 
         {/* Secondary Action */}
@@ -220,7 +220,7 @@ export const UpsellModal: React.FC<UpsellModalProps> = ({
 
         {/* Trust Line */}
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          Cancel anytime
+          US$39 once. 90 days. No renewal. 7-day refund revokes access.
         </p>
       </div>
 

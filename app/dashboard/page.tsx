@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { ReadinessSnapshotCard } from "@/components/dashboard/ReadinessSnapshotCard";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
@@ -28,6 +29,7 @@ import type { BillingStatusResponse } from "@/app/api/billing/status/route";
 
 const DashboardPage = () => {
   const { user } = useAuth();
+  const router = useRouter();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [examReadiness, setExamReadiness] = useState<ExamReadinessSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -203,7 +205,7 @@ const DashboardPage = () => {
 
       if (response.ok) {
         const { sessionId } = await response.json();
-        window.location.href = `/diagnostic/${sessionId}`;
+        router.push(`/diagnostic/${sessionId}`);
       }
     } catch (error) {
       console.error('Error starting diagnostic:', error);
@@ -404,7 +406,7 @@ const DashboardPage = () => {
                 const domainCode = weakestDomain.domainCode;
                 if (!domainCode) {
                   console.error("Domain code not found for:", weakestDomain.displayName);
-                  window.location.href = '/practice/question';
+                  router.push('/pricing?gated=1&feature=practice');
                   return;
                 }
 
@@ -425,23 +427,23 @@ const DashboardPage = () => {
                 if (!response.ok) {
                   const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
                   console.error('Failed to create practice session:', errorData);
-                  // Fallback to old practice question page
-                  window.location.href = `/practice/question?domain=${encodeURIComponent(weakestDomain.displayName)}`;
+                  // Never bypass a refused session request through standalone practice.
+                  router.push('/pricing?gated=1&feature=practice');
                   return;
                 }
 
                 const data = await response.json() as { route?: string; sessionId?: string };
                 if (data.route) {
-                  window.location.href = data.route;
+                  router.push(data.route);
                 } else if (data.sessionId) {
-                  window.location.href = `/practice/session/${data.sessionId}`;
+                  router.push(`/practice/session/${data.sessionId}`);
                 } else {
-                  window.location.href = '/practice/question';
+                  router.push('/pricing?gated=1&feature=practice');
                 }
               } catch (error) {
                 console.error('Error creating practice session:', error);
-                // Fallback to old practice question page
-                window.location.href = `/practice/question?domain=${encodeURIComponent(weakestDomain.displayName)}`;
+                // Never bypass a refused session request through standalone practice.
+                router.push('/pricing?gated=1&feature=practice');
               }
             }}
           />
