@@ -190,10 +190,8 @@ describe('selectPracticeQuestionsByDomains', () => {
                     eq: jest.fn().mockReturnValue({
                       eq: jest.fn().mockReturnValue({
                         eq: jest.fn().mockReturnValue({
-                          limit: jest.fn().mockResolvedValue({
-                            data: questions,
-                            error: null,
-                          }),
+                          data: questions,
+                          error: null,
                         }),
                       }),
                     }),
@@ -289,10 +287,8 @@ describe('selectPracticeQuestionsByDomains', () => {
                     eq: jest.fn().mockReturnValue({
                       eq: jest.fn().mockReturnValue({
                         eq: jest.fn().mockReturnValue({
-                          limit: jest.fn().mockResolvedValue({
-                            data: questions,
-                            error: null,
-                          }),
+                          data: questions,
+                          error: null,
                         }),
                       }),
                     }),
@@ -384,10 +380,8 @@ describe('selectPracticeQuestionsByDomains', () => {
                     eq: jest.fn().mockReturnValue({
                       eq: jest.fn().mockReturnValue({
                         eq: jest.fn().mockReturnValue({
-                          limit: jest.fn().mockResolvedValue({
-                            data: domain1Questions,
-                            error: null,
-                          }),
+                          data: domain1Questions,
+                          error: null,
                         }),
                       }),
                     }),
@@ -483,10 +477,8 @@ describe('selectPracticeQuestionsByDomains', () => {
                     eq: jest.fn(() => ({
                       eq: jest.fn(() => ({
                         eq: jest.fn(() => ({
-                          limit: jest.fn().mockResolvedValue({
-                            data: [],
-                            error: null,
-                          }),
+                          data: [],
+                          error: null,
                         })),
                       })),
                     })),
@@ -577,10 +569,8 @@ describe('selectPracticeQuestionsByDomains', () => {
                               expect(reviewStatusValue).toBe('GOOD');
                               return {
                                 eq: jest.fn(() => ({
-                                  limit: jest.fn().mockResolvedValue({
-                                    data: domain1Questions,
-                                    error: null,
-                                  }),
+                                  data: domain1Questions,
+                                  error: null,
                                 })),
                               };
                             }),
