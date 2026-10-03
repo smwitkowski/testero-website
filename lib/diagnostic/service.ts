@@ -5,7 +5,7 @@ import { createAnswerSnapshot } from "@/lib/questions/answer-order";
 import { computeResult } from "@/lib/diagnostic/scoring";
 import { hashAnonymousToken, ownsSession, type OwnerCredentials, type SessionOwner } from "@/lib/diagnostic/ownership";
 import { DiagnosticError } from "@/lib/diagnostic/http";
-import type { DiagnosticAnswerResponse, DiagnosticProgress, DiagnosticResult } from "@/lib/diagnostic/types";
+import { mapReview, type DiagnosticAnswerResponse, type DiagnosticProgress, type DiagnosticResult } from "@/lib/diagnostic/types";
 
 export const DIAGNOSTIC_LENGTH = 20;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -13,14 +13,15 @@ interface StudySession extends SessionOwner { id: string; question_count: number
 interface SessionItem {
   id: string; ordinal: number; stem: string; options: { label: string; text: string }[];
   domain_code: string; domain_name: string; is_correct: boolean | null; answered_at: string | null;
+  correct_label?: string; selected_label?: string | null;
 }
 const SESSION_FIELDS = "id,user_id,anonymous_owner_hash,question_count,expires_at,completed_at";
 const ITEM_FIELDS = "id,ordinal,stem,options,domain_code,domain_name,is_correct,answered_at";
 const unavailable = () => new DiagnosticError(503, "The diagnostic is unavailable. Please try again.");
 
-export async function createDiagnostic(client: SupabaseClient, token: string, now = Date.now()): Promise<string> {
-  const ownerHash = hashAnonymousToken(token);
-  if (!ownerHash) throw new DiagnosticError(400, "Invalid diagnostic owner");
+export async function createDiagnostic(client: SupabaseClient, token: string, now = Date.now(), userId: string | null = null): Promise<string> {
+  const ownerHash = userId === null ? hashAnonymousToken(token) : null;
+  if (userId === null ? !ownerHash : !UUID.test(userId)) throw new DiagnosticError(400, "Invalid diagnostic owner");
   let selected;
   try { selected = await selectPmleQuestionsByBlueprint(client, DIAGNOSTIC_LENGTH); }
   catch { throw unavailable(); }
@@ -31,7 +32,7 @@ export async function createDiagnostic(client: SupabaseClient, token: string, no
     return { question_id: question.id, domain_code: question.domain_code, domain_name: question.domain_name, stem: question.stem, ...snapshot };
   });
   const { data, error } = await client.rpc("create_study_session", {
-    p_kind: "diagnostic", p_user_id: null, p_anonymous_owner_hash: ownerHash,
+    p_kind: "diagnostic", p_user_id: userId, p_anonymous_owner_hash: ownerHash,
     p_items: items, p_expires_at: new Date(now + 24 * 60 * 60 * 1000).toISOString(),
   });
   if (error || typeof data !== "string" || !UUID.test(data)) throw unavailable();
@@ -47,8 +48,11 @@ async function ownedSession(client: SupabaseClient, id: string, credentials: Own
   if (!session.completed_at && !(Date.parse(session.expires_at) > now)) throw new DiagnosticError(410, "This diagnostic has expired. Start a new diagnostic.");
   return session;
 }
-async function sessionItems(client: SupabaseClient, id: string): Promise<SessionItem[]> {
-  const { data, error } = await client.from("session_items").select(ITEM_FIELDS).eq("session_id", id).order("ordinal");
+async function sessionItems(client: SupabaseClient, id: string, includeReview = false): Promise<SessionItem[]> {
+  const query = client.from("session_items");
+  const { data, error } = includeReview
+    ? await query.select("id,ordinal,stem,options,domain_code,domain_name,is_correct,answered_at,correct_label,selected_label").eq("session_id", id).order("ordinal")
+    : await query.select(ITEM_FIELDS).eq("session_id", id).order("ordinal");
   if (error || !Array.isArray(data)) throw unavailable();
   return data as SessionItem[];
 }
@@ -92,7 +96,17 @@ export async function answerDiagnostic(client: SupabaseClient, id: string, crede
 export async function diagnosticResults(client: SupabaseClient, id: string, credentials: OwnerCredentials, now = Date.now()): Promise<DiagnosticResult> {
   const session = await ownedSession(client, id, credentials, now);
   if (!session.completed_at) throw new DiagnosticError(409, "Finish the diagnostic to see your results");
-  const items = await sessionItems(client, id);
+  const includeReview = session.user_id !== null && session.user_id === credentials.userId;
+  const items = await sessionItems(client, id, includeReview);
   if (items.length !== session.question_count || items.some(item => !item.answered_at || typeof item.is_correct !== "boolean")) throw unavailable();
-  return computeResult(session.id, items);
+  const result = computeResult(session.id, items);
+  if (includeReview) {
+    result.review = items.map(item => {
+      if (typeof item.selected_label !== "string" || typeof item.correct_label !== "string" ||
+          !item.options.some(option => option.label === item.selected_label) ||
+          !item.options.some(option => option.label === item.correct_label)) throw unavailable();
+      return mapReview({ ...item, selected_label: item.selected_label, correct_label: item.correct_label, is_correct: item.is_correct! });
+    });
+  }
+  return result;
 }

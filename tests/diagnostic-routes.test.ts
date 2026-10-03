@@ -64,7 +64,7 @@ describe("strict diagnostic creation route", () => {
   it("reuses a valid anonymous cookie", async () => {
     mocks.cookie = token;
     const response = await start(request());
-    expect(createDiagnostic).toHaveBeenCalledWith(mocks.client, token);
+    expect(createDiagnostic).toHaveBeenCalledWith(mocks.client, token, undefined, null);
     expect(response.headers.get("set-cookie")).toContain(`testero_anon=${token}`);
   });
   it.each(["invalid", "A".repeat(64), "a".repeat(63)])("replaces an invalid cookie %# only after success", async (cookie) => {
@@ -208,5 +208,25 @@ describe("diagnostic progress, answer, and aggregate result routes", () => {
     expect(await response.json()).toEqual({ error: "The diagnostic is unavailable. Please try again." });
     expect(response.headers.get("set-cookie")).toBeNull();
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+});
+
+
+describe("verified account diagnostic creation", () => {
+  it("passes only server-verified user identity and retains the anonymous claim cookie", async () => {
+    mocks.cookie = token;
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "verified-user" } }, error: null });
+    const response = await start(request());
+    expect(response.status).toBe(201);
+    expect(mocks.getUser).toHaveBeenCalledOnce();
+    expect(createDiagnostic).toHaveBeenCalledWith(mocks.client, token, undefined, "verified-user");
+    expect(response.headers.get("set-cookie")).toContain(`testero_anon=${token}`);
+    expect(Object.keys(await response.json()).sort()).toEqual(["href", "sessionId"]);
+  });
+  it("does not accept an account identifier from JSON even for a verified user", async () => {
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "verified-user" } }, error: null });
+    expect((await start(request({ userId: "victim" }))).status).toBe(400);
+    expect(mocks.getUser).not.toHaveBeenCalled();
+    expect(createServiceSupabaseClient).not.toHaveBeenCalled();
   });
 });

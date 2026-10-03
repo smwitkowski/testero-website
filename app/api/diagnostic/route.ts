@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { createDiagnostic } from "@/lib/diagnostic/service";
+import { diagnosticCredentials } from "@/lib/diagnostic/request";
 import { ANONYMOUS_COOKIE, ANONYMOUS_COOKIE_MAX_AGE, createAnonymousToken, hashAnonymousToken } from "@/lib/diagnostic/ownership";
 import { DiagnosticError, diagnosticErrorResponse, requireSameOrigin } from "@/lib/diagnostic/http";
 export const runtime = "nodejs";
@@ -14,7 +15,8 @@ export async function POST(request: Request) {
     const cookieStore = await cookies();
     const previous = cookieStore.get(ANONYMOUS_COOKIE)?.value;
     const token = hashAnonymousToken(previous) ? previous! : createAnonymousToken();
-    const sessionId = await createDiagnostic(createServiceSupabaseClient(), token);
+    const credentials = await diagnosticCredentials();
+    const sessionId = await createDiagnostic(createServiceSupabaseClient(), token, undefined, credentials.userId);
     const response = NextResponse.json({ sessionId, href: `/diagnostic/${sessionId}` }, { status: 201 });
     response.cookies.set(ANONYMOUS_COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: ANONYMOUS_COOKIE_MAX_AGE });
     response.headers.set("Cache-Control", "private, no-store");

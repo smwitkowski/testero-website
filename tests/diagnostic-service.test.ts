@@ -11,6 +11,9 @@ vi.mock("@/lib/diagnostic/pmle-selection", async (original) => ({
 const sessionId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const itemId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const token = "a".repeat(64);
+const userId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const otherUserId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+const signedIn = { userId, anonymousToken: token };
 const now = Date.parse("2026-10-03T12:00:00Z");
 const credentials = { userId: null, anonymousToken: token };
 const foreign = { userId: null, anonymousToken: "b".repeat(64) };
@@ -23,7 +26,7 @@ function items() {
     id: index === 0 ? itemId : `item-${index}`, ordinal: index + 1, stem: `Secret stem ${index}`,
     options: [{ label: "A", text: "Display only", is_correct: true, explanation: "secret" }, { label: "B", text: "Other" }],
     domain_code: "A", domain_name: "Domain A", is_correct: null as boolean | null,
-    answered_at: null as string | null, correct_label: "A", explanation: "secret explanation",
+    answered_at: null as string | null, selected_label: "A", correct_label: "A", explanation: "secret explanation",
   }));
 }
 function selected(): SelectionResult {
@@ -205,5 +208,62 @@ describe("ownership-first answer RPC", () => {
   ])("maps RPC error %s/%s to %s", async (code, message, status) => {
     const db = database({ rpcError: { code: String(code), message: String(message) } });
     await expect(answerDiagnostic(db.client, sessionId, credentials, itemId, "A", now)).rejects.toMatchObject({ status });
+  });
+});
+
+
+describe("account-owned diagnostic review", () => {
+  function completedItems() {
+    return items().map((item, index) => ({ ...item, answered_at: "done", is_correct: index !== 0, selected_label: index === 0 ? "B" : "A", source: "secret source", question_id: "secret bank id", document_url: "secret link" }));
+  }
+  function accountSession(overrides = {}) {
+    return session({ user_id: userId, anonymous_owner_hash: null, completed_at: "done", ...overrides });
+  }
+  it("creates a user-owned retake without attaching the retained anonymous cookie", async () => {
+    const db = database();
+    expect(await createDiagnostic(db.client, token, now, userId)).toBe(sessionId);
+    expect(db.rpc).toHaveBeenCalledWith("create_study_session", expect.objectContaining({ p_user_id: userId, p_anonymous_owner_hash: null }));
+  });
+  it("rejects malformed user identity before bank reads", async () => {
+    const db = database();
+    await expect(createDiagnostic(db.client, token, now, "bad-user")).rejects.toMatchObject({ status: 400 });
+    expect(selectPmleQuestionsByBlueprint).not.toHaveBeenCalled();
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
+  it("returns whitelisted review only for a matching verified owner", async () => {
+    const db = database({ session: accountSession(), items: completedItems() });
+    const result = await diagnosticResults(db.client, sessionId, signedIn, now);
+    expect(Object.keys(result)).toHaveLength(7);
+    expect(result.review).toHaveLength(20);
+    expect(result.review?.[0]).toEqual({ itemId, ordinal: 1, stem: "Secret stem 0", options: [{ label: "A", text: "Display only" }, { label: "B", text: "Other" }], selectedLabel: "B", correctLabel: "A", isCorrect: false, domainCode: "A", domainName: "Domain A" });
+    expect(JSON.stringify(result)).not.toMatch(/explanation|is_correct|correct_label|source|document_url|question_id|secret bank/);
+    expect(db.from.mock.results[1].value.select).toHaveBeenCalledWith(expect.stringContaining("correct_label,selected_label"));
+  });
+  it("signed-in visitors to anonymous-owned sessions still receive exactly six aggregate fields", async () => {
+    const db = database({ session: session({ completed_at: "done" }), items: completedItems() });
+    const result = await diagnosticResults(db.client, sessionId, signedIn, now);
+    expect(Object.keys(result).sort()).toEqual(["correctAnswers", "domainBreakdown", "readiness", "score", "sessionId", "totalQuestions"]);
+    expect(JSON.stringify(result)).not.toMatch(/review|stem|options|correctLabel|selectedLabel|explanation/);
+    expect(db.from.mock.results[1].value.select).not.toHaveBeenCalledWith(expect.stringContaining("correct_label"));
+  });
+  it.each([credentials, { userId: otherUserId, anonymousToken: token }, { userId: null, anonymousToken: null }])("blocks foreign/logged-out former anonymous owner before question reads %#", async (owner) => {
+    const db = database({ session: accountSession(), items: completedItems() });
+    await expect(diagnosticResults(db.client, sessionId, owner, now)).rejects.toMatchObject({ status: 404 });
+    expect(db.from.mock.calls).toEqual([["study_sessions"]]);
+  });
+  it("does not reveal correctness or review during account-owned progress", async () => {
+    const db = database({ session: accountSession({ completed_at: null }), items: items() });
+    const progress = await readDiagnostic(db.client, sessionId, signedIn, now);
+    expect(JSON.stringify(progress)).not.toMatch(/review|correctLabel|selectedLabel|isCorrect|correct_label|selected_label|explanation/);
+    expect(db.from.mock.results[1].value.select).not.toHaveBeenCalledWith(expect.stringContaining("correct_label"));
+  });
+  it("does not read question review before completion", async () => {
+    const db = database({ session: accountSession({ completed_at: null }) });
+    await expect(diagnosticResults(db.client, sessionId, signedIn, now)).rejects.toMatchObject({ status: 409 });
+    expect(db.from.mock.calls).toEqual([["study_sessions"]]);
+  });
+  it.each([null, "Z"])('fails closed for missing or invalid review labels: %s', async label => {
+    const rows = completedItems().map(item => ({ ...item, selected_label: label }));
+    await expect(diagnosticResults(database({ session: accountSession(), items: rows }).client, sessionId, signedIn, now)).rejects.toMatchObject({ status: 503 });
   });
 });
