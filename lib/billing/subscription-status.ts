@@ -9,12 +9,3 @@ export type SubscriptionStatus =
   | "incomplete_expired"
   | "unpaid"
   | "paused";
-
-export interface SubscriptionData {
-  status: SubscriptionStatus;
-}
-
-/** Legacy-only status helper. Use getPaidAccess for authorization. */
-export function computeIsSubscriber(data: SubscriptionData | null): boolean {
-  return data?.status === "active";
-}
