@@ -143,9 +143,13 @@ describe("ownership-first reads and results", () => {
   it.each([null, []])("fails closed for missing/inconsistent items %#", async (rows) => {
     await expect(readDiagnostic(database({ items: rows }).client, sessionId, credentials, now)).rejects.toMatchObject({ status: 503 });
   });
-  it("fails closed when there is no current item but completion is missing", async () => {
-    const rows = items().map((i) => ({ ...i, answered_at: "done" }));
-    await expect(readDiagnostic(database({ items: rows }).client, sessionId, credentials, now)).rejects.toMatchObject({ status: 503 });
+  it("returns completed progress when final-answer rows arrive after stale session metadata", async () => {
+    // The session read can precede the final answer transaction, while the item
+    // read follows it. Infer completion from the full answered snapshot.
+    const rows = items().map((i) => ({ ...i, answered_at: "2026-10-03T11:00:00Z", is_correct: true }));
+    const result = await readDiagnostic(database({ session: session({ completed_at: null }), items: rows }).client, sessionId, credentials, now);
+    expect(result).toEqual({ sessionId, status: "completed", totalQuestions: 20, answeredCount: 20, currentQuestion: null });
+    expect(JSON.stringify(result)).not.toMatch(/stem|options|correct_label|is_correct|explanation/);
   });
   it("returns 409 without reading items for an incomplete result", async () => {
     const db = database();

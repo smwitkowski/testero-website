@@ -100,6 +100,37 @@ describe("strict diagnostic creation route", () => {
     expect(response.status).toBe(403); expect(createDiagnostic).not.toHaveBeenCalled();
     expect(createServiceSupabaseClient).not.toHaveBeenCalled();
   });
+  it.each([
+    { host: "127.0.0.1:3000", origin: "http://127.0.0.1:3000", protocol: undefined },
+    { host: "testero.example", origin: "https://testero.example", protocol: "https" },
+    { host: "127.0.0.1:3000", origin: "http://127.0.0.1:3000", protocol: "http" },
+  ])("accepts the browser Host origin despite an internal localhost URL: $origin", async ({ host, origin, protocol }) => {
+    const response = await start(new Request("http://localhost:3000/api/diagnostic", {
+      method: "POST", body: "{}", headers: {
+        Host: host, Origin: origin, "Content-Type": "application/json",
+        ...(protocol ? { "x-forwarded-proto": protocol } : {}),
+      },
+    }));
+    expect(response.status).toBe(201);
+    expect(createDiagnostic).toHaveBeenCalledOnce();
+  });
+  it.each([
+    { host: "127.0.0.1:3000", origin: "http://localhost:3000", protocol: undefined },
+    { host: "127.0.0.1:3000", origin: "http://127.0.0.1:3001", protocol: undefined },
+    { host: "testero.example", origin: "https://evil.example", protocol: "https" },
+    { host: "testero.example", origin: "http://testero.example", protocol: "https" },
+  ])("rejects a foreign or wrong-scheme/port origin when Host is authoritative: $origin", async ({ host, origin, protocol }) => {
+    const response = await start(new Request("http://localhost:3000/api/diagnostic", {
+      method: "POST", body: "{}", headers: {
+        Host: host, Origin: origin, "Content-Type": "application/json",
+        "x-forwarded-host": new URL(origin).host,
+        ...(protocol ? { "x-forwarded-proto": protocol } : {}),
+      },
+    }));
+    expect(response.status).toBe(403);
+    expect(createDiagnostic).not.toHaveBeenCalled();
+    expect(createServiceSupabaseClient).not.toHaveBeenCalled();
+  });
   it("accepts origin-less local requests with valid bodies", async () => {
     expect((await start(request({}, null))).status).toBe(201);
   });
