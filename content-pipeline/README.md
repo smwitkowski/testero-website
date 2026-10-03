@@ -78,21 +78,73 @@ uv run python scripts/generate_pmle_questions.py \
 - `AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES`
 - `MONITORING_ML_SOLUTIONS`
 
-## What It Does
+## Quality gate and founder workflow
 
-1. Connects to Supabase database
-2. Validates the domain code exists and loads domain context
-3. Creates a `question_generation_runs` record
-4. For each question:
-   - Searches for relevant Google Cloud documentation
-   - Generates question using LLM (DSPy with OpenRouter)
-   - Validates question against quality rubric
-   - Inserts question with:
-     - Status: `DRAFT`
-     - Review status: `UNREVIEWED` (if valid) or `NEEDS_ANSWER_FIX` (if validation fails)
-     - 4 answer options (A-D) with one marked correct
-     - Comprehensive explanation text
-5. Updates the generation run with final counts and completion timestamp
+Generation never publishes questions. Every insert is `DRAFT` and linked to
+`question_generation_runs`. The validator runs on the cleaned text that will be
+stored. A separate typed DSPy judge then checks the marked answer, all distractors,
+all four explanations, scenario clarity/relevance, and support in the captured
+Google Cloud documentation. A pass requires explicit `PASS`, all seven checks true,
+and a finite score of at least **0.8 / 1.0**. Missing evidence, uncertainty, malformed
+responses, and judge errors fail closed.
+
+The verdict is JSON text in existing `questions.review_notes`, under
+`content_pipeline_judge` (version 1, passed, score, reason, model). Complete
+judge-passed questions get `review_status=GOOD` but remain `DRAFT`; failures get a
+non-GOOD review status. Partial answer/explanation writes cannot finalize GOOD.
+No schema migration is needed. `--skip-eval` only skips the legacy research evaluator;
+it cannot skip the mandatory quality judge. The judge uses the selected generator
+model through a separate per-call DSPy LM, without changing global generation settings.
+
+From the frontend repository root, with service credentials supplied in your local
+environment (never commit credentials):
+
+```bash
+cd content-pipeline
+uv sync
+uv run python scripts/generate_pmle_questions.py \
+  --domain-code MONITORING_ML_SOLUTIONS \
+  --n-questions 20
+```
+
+Use the **Generation run ID** printed by that command:
+
+```bash
+RUN_ID='<printed-generation-run-UUID>'
+uv run python scripts/review_batch.py "$RUN_ID"
+```
+
+Open `review/<run_id>.md`. Inspect every sampled stem, option, correct flag,
+per-option explanation and judge verdict. The sample is uniform random,
+`ceil(10% of eligible questions)`, minimum 1 for a nonempty pool. Only completed
+runs and complete judge-passed DRAFT/GOOD questions are eligible. If the pool is
+empty, the report contains no questions and approval promotes zero.
+
+If a sampled question has a defect, do **not** approve. Reject/fix that content and
+obtain a fresh judge verdict before exporting and reviewing again. Edits made after
+export invalidate the report fingerprint.
+
+Only after you have reviewed and accepted the sample:
+
+```bash
+uv run python scripts/review_batch.py "$RUN_ID" --approve
+# Or explicitly attest human review without an interactive prompt:
+uv run python scripts/review_batch.py "$RUN_ID" --approve --yes
+```
+
+Approval requires the existing same-run, unchanged spotcheck export; `--yes` is
+an attestation, not a bypass. It promotes only that run's judge-passed DRAFT/GOOD
+rows to `ACTIVE`, prints counts, and is idempotent. Re-running after successful
+approval prints `Promoted: 0`. Review markdown is local and gitignored.
+
+## Offline tests
+
+```bash
+uv run pytest -q
+```
+
+Tests mock Supabase and the LLM, disable dotenv/tracing, and block network sockets.
+The existing `shared/test_validator.py` is included in pytest discovery.
 
 ## Validation
 
@@ -106,10 +158,7 @@ Invalid questions are either skipped (default) or inserted with `review_status='
 
 ## Verification
 
-After running, verify in the admin UI:
-
-1. Navigate to `/admin/questions`
-2. Filter by domain code
-3. Filter by generation_run_id (shown in script output)
-4. Questions should appear with status `DRAFT` and review status `UNREVIEWED`
-5. Questions are NOT served to users (DRAFT status prevents this)
+The generator prints the generation run ID, draft review states, and counts.
+Use `/admin/questions` to inspect the run; successful generation alone never makes
+its questions available to learners. The founder review command above is the
+publication step. Do not use the stub generator as reviewed production content.
