@@ -19,3 +19,7 @@
 Review `supabase/migrations/20261003_create_pmle_passes.sql` and apply it through the approved migration process. RLS permits users to read their own passes and reserves writes for the service role. No migration is applied by the code-writing task.
 
 See [PMLE Pass: Stripe setup](./stripe-setup.md) for the exact founder setup and Stripe test-mode QA checklist. See [Stripe price configuration](./stripe-price-ids.md) for the server-only price variable.
+
+## Validation limits
+
+The implementation checks use mocked services and static SQL contract tests; they do not apply the migration or prove production Stripe delivery. Pass grant/refund writes are serialized. The existing `payment_history` handlers do not share that lock: overlapping payment-success and refund writes can leave a stale receipt status, even though the pass stays revoked. This history-only race does not grant access.
