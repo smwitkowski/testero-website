@@ -35,6 +35,15 @@ The main workflow deploys on push: configure and review its target before mergin
 
 - [ ] Create/review the one-time $39 USD PMLE Pass product/price. Set server-only price ID.
       Bind service-role key, Stripe secret key and webhook secret through Secret Manager.
+- [ ] **Plain value → secret conversion.** The old app's service has `SUPABASE_SERVICE_ROLE_KEY` and
+      `STRIPE_SECRET_KEY` as plain env values. Cloud Run rejects a name that is both a plain value and a
+      secret, so the first workflow deploy would fail. In the manual **no-traffic** candidate deploy,
+      remove the plain values and bind the secrets in the same revision
+      (`--remove-env-vars SUPABASE_SERVICE_ROLE_KEY,STRIPE_SECRET_KEY` plus `--update-secrets …`).
+      Verify the candidate's settings afterwards. Old revisions keep their own settings, so live traffic
+      is unaffected. Never run `--remove-env-vars` alone on the live service, because that rolls out an
+      old-app revision without its keys. `STRIPE_WEBHOOK_SECRET` is already a Secret Manager
+      reference; point `STRIPE_WEBHOOK_SECRET_SECRET` at that same secret.
 - [ ] Configure the exact signed webhook events in Stripe setup. Align test/live keys,
       price and webhook secret. Validate currency/amount. Review support/refund procedure.
 - [ ] Build and deploy a candidate Cloud Run revision with **no traffic** using an
