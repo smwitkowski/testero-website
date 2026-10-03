@@ -36,10 +36,12 @@ export async function POST(request: Request) {
           if (session.id !== delivered.id) throw new Error("Checkout identity mismatch");
           if (!isPaidPassSession(session)) break;
           const { refunded } = await grantPmlePass(stripe, db, session);
-          const { error } = await db.from("payment_history").upsert({
-            user_id: session.metadata!.user_id, stripe_payment_intent_id: stripeId(session.payment_intent),
-            amount: session.amount_total ?? 0, currency: session.currency ?? "usd", status: refunded ? "refunded" : "succeeded", receipt_url: null,
-          }, { onConflict: "stripe_payment_intent_id" });
+          // The RPC shares the fulfillment/refund payment-intent lock and derives
+          // ownership/refund state inside the transaction, never from this snapshot.
+          const { error } = await db.rpc("record_pmle_pass_payment", {
+            p_stripe_payment_intent_id: stripeId(session.payment_intent),
+            p_amount: session.amount_total ?? 0, p_currency: session.currency ?? "usd",
+          });
           if (error) throw error;
           if (!refunded) purchasedSession = session.id;
           break;
@@ -50,8 +52,6 @@ export async function POST(request: Request) {
           if (!intentId) break;
           // Any refund (including partial) revokes access. RPC tombstones survive reordering.
           await refundPmlePass(db, intentId, new Date(event.created * 1000).toISOString());
-          const { error } = await db.from("payment_history").update({ status: "refunded" }).eq("stripe_payment_intent_id", intentId);
-          if (error) throw error;
           break;
         }
         case "customer.subscription.updated":
