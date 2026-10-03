@@ -215,7 +215,7 @@ export default function Home() {
               Know When You&apos;re Ready
             </h2>
             <p className="text-xl mb-8 text-white/90">
-              Start without an account. Create a free account to view and save results. PMLE Pass unlocks explanations and full practice for 90 days.
+              Start without an account. Create a free account for question review and saved results. PMLE Pass unlocks explanations and full practice for 90 days.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">

@@ -53,7 +53,7 @@ export const PRICING_FAQ = [
   },
   {
     question: "Can I try the diagnostic before buying?",
-    answer: "Yes. Start a free diagnostic without an account. Create a free account to view and save your readiness summary. PMLE Pass adds explanations and full practice access.",
+    answer: "Yes. Start a free diagnostic without an account. View your basic readiness summary without an account. Create a free account for question review and saved results. PMLE Pass adds explanations and full practice access.",
   },
   {
     question: "Is this an official Google product?",

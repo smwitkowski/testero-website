@@ -21,7 +21,7 @@ export function useStartBasicCheckout() {
     trackEvent(posthog, ANALYTICS_EVENTS.UPGRADE_CTA_CLICKED, properties);
     if (!user) {
       trackEvent(posthog, ANALYTICS_EVENTS.UPGRADE_SIGNUP_REDIRECT, properties);
-      router.push("/signup?redirect=/pricing");
+      router.push("/signup");
       return;
     }
 

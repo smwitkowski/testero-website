@@ -45,7 +45,7 @@ describe("PricingPage checkout", () => {
     (useAuth as jest.Mock).mockReturnValue({ user: null });
     render(<PricingPage />);
     await userEvent.click(screen.getByRole("button", { name: "Get PMLE Pass" }));
-    expect(mockRouter.push).toHaveBeenCalledWith("/signup?redirect=/pricing");
+    expect(mockRouter.push).toHaveBeenCalledWith("/signup");
     expect(mockFetch).not.toHaveBeenCalled();
   });
 

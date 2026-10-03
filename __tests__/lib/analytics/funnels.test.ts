@@ -10,7 +10,7 @@ import {
   getFunnelMetrics,
   FUNNEL_STEPS,
 } from "@/lib/analytics/funnels";
-import { trackEvent } from "@/lib/analytics/analytics";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics/analytics";
 
 // Mock the analytics module
 jest.mock("@/lib/analytics/analytics");
@@ -41,7 +41,7 @@ Object.defineProperty(window, "sessionStorage", {
 });
 
 describe("Funnel Tracking", () => {
-  let mockPostHog: any;
+  let mockPostHog: { capture: jest.Mock; identify: jest.Mock };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -147,17 +147,17 @@ describe("Funnel Tracking", () => {
       trackFunnelStep(mockPostHog, "PURCHASE", FUNNEL_STEPS.PURCHASE.PRICING_VIEW);
       trackFunnelStep(mockPostHog, "PURCHASE", FUNNEL_STEPS.PURCHASE.CHECKOUT_START);
 
-      trackFunnelComplete(mockPostHog, "PURCHASE", { order_value: 59.99 });
+      trackFunnelComplete(mockPostHog, "PURCHASE", { order_value: 39 });
 
       expect(trackEvent).toHaveBeenLastCalledWith(
         mockPostHog,
-        expect.any(String), // TRIAL_TO_PAID_CONVERSION event
+        ANALYTICS_EVENTS.FUNNEL_COMPLETED,
         expect.objectContaining({
           funnel_name: "PURCHASE",
           total_time: 10000,
           step_count: 2,
           completion_rate: 100,
-          order_value: 59.99,
+          order_value: 39,
         }),
         undefined
       );
@@ -275,7 +275,7 @@ describe("Funnel Tracking", () => {
     });
 
     it("should track purchase funnel steps", () => {
-      trackPurchaseFunnel(mockPostHog, "CHECKOUT_START", { plan: "pro" }, "user-123");
+      trackPurchaseFunnel(mockPostHog, "CHECKOUT_START", { plan_name: "PMLE Pass" }, "user-123");
 
       expect(trackEvent).toHaveBeenCalledWith(
         mockPostHog,
@@ -283,7 +283,7 @@ describe("Funnel Tracking", () => {
         expect.objectContaining({
           funnel_name: "PURCHASE",
           entry_step: FUNNEL_STEPS.PURCHASE.CHECKOUT_START,
-          plan: "pro",
+          plan_name: "PMLE Pass",
         }),
         "user-123"
       );

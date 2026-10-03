@@ -90,7 +90,7 @@ const data: ExperimentRow[] = [
   },
   {
     id: "exp-04",
-    experiment: "Free trial CTA",
+    experiment: "PMLE Pass CTA",
     owner: "Hector Lin",
     status: "Running",
     conversions: 1845,

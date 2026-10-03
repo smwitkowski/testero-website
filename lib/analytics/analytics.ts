@@ -100,9 +100,9 @@ export const ANALYTICS_EVENTS = {
   EMAIL_CONFIRMED: "email_confirmed",
   EMAIL_VERIFICATION_ERROR: "email_verification_error",
 
-  // Conversion Events
-  TRIAL_STARTED: "trial_started",
-  TRIAL_TO_PAID_CONVERSION: "trial_to_paid_conversion",
+  // Generic conversion and funnel completion (not payment/access confirmation).
+  CONVERSION_COMPLETED: "conversion_completed",
+  FUNNEL_COMPLETED: "funnel_completed",
 
   // Feature Discovery
   FEATURE_DISCOVERED: "feature_discovered",
@@ -136,7 +136,6 @@ export const USER_PROPERTIES = {
   SUBSCRIPTION_TIER: "subscription_tier",
   SUBSCRIPTION_STATUS: "subscription_status",
   IS_PAYING_CUSTOMER: "is_paying_customer",
-  IS_TRIAL: "is_trial",
   CUSTOMER_SINCE: "customer_since",
   CHURNED_AT: "churned_at",
   EXAM_TYPE: "exam_type",
@@ -219,7 +218,7 @@ export function trackConversion(
     ...properties,
   };
 
-  trackEvent(posthog, ANALYTICS_EVENTS.TRIAL_TO_PAID_CONVERSION, conversionData, userId);
+  trackEvent(posthog, ANALYTICS_EVENTS.CONVERSION_COMPLETED, conversionData, userId);
 }
 
 // Helper function to track errors consistently

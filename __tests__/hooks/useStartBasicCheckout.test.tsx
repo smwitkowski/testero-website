@@ -21,7 +21,7 @@ describe("useStartBasicCheckout — PMLE Pass compatibility hook", () => {
     (useAuth as jest.Mock).mockReturnValue({ user: null });
     const { result } = renderHook(() => useStartBasicCheckout());
     await act(async () => result.current.startBasicCheckout("test"));
-    expect(mockRouter.push).toHaveBeenCalledWith("/signup?redirect=/pricing");
+    expect(mockRouter.push).toHaveBeenCalledWith("/signup");
     expect(mockFetch).not.toHaveBeenCalled();
   });
 

@@ -14,8 +14,8 @@ import { PostHog } from "posthog-node";
 jest.mock("posthog-node");
 
 describe("Analytics Utilities", () => {
-  let mockClientPostHog: any;
-  let mockServerPostHog: any;
+  let mockClientPostHog: { capture: jest.Mock; identify: jest.Mock };
+  let mockServerPostHog: { capture: jest.Mock; identify: jest.Mock; shutdown: jest.Mock };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -95,7 +95,7 @@ describe("Analytics Utilities", () => {
       const userId = "user-123";
       const properties = {
         email: "test@example.com",
-        plan_tier: "pro",
+        plan_name: "PMLE Pass",
       };
 
       identifyUser(mockServerPostHog, userId, properties);
@@ -115,14 +115,14 @@ describe("Analytics Utilities", () => {
 
   describe("trackConversion", () => {
     it("should track conversion with proper event structure", () => {
-      const conversionType = "trial_to_paid";
-      const value = 59.99;
-      const properties = { plan: "pro" };
+      const conversionType = "pass_purchase";
+      const value = 39;
+      const properties = { plan_name: "PMLE Pass" };
 
       trackConversion(mockClientPostHog, conversionType, value, properties);
 
       expect(mockClientPostHog.capture).toHaveBeenCalledWith(
-        ANALYTICS_EVENTS.TRIAL_TO_PAID_CONVERSION,
+        ANALYTICS_EVENTS.CONVERSION_COMPLETED,
         {
           conversion_type: conversionType,
           conversion_value: value,
@@ -135,7 +135,7 @@ describe("Analytics Utilities", () => {
       trackConversion(mockClientPostHog, "signup", 0);
 
       expect(mockClientPostHog.capture).toHaveBeenCalledWith(
-        ANALYTICS_EVENTS.TRIAL_TO_PAID_CONVERSION,
+        ANALYTICS_EVENTS.CONVERSION_COMPLETED,
         {
           conversion_type: "signup",
           conversion_value: 0,
@@ -281,6 +281,12 @@ describe("Analytics Utilities", () => {
       // Billing events
       expect(ANALYTICS_EVENTS.SUBSCRIPTION_CREATED).toBeDefined();
       expect(ANALYTICS_EVENTS.PAYMENT_FAILED).toBeDefined();
+    });
+
+    it("does not export retired trial events or properties", () => {
+      expect(ANALYTICS_EVENTS).not.toHaveProperty("TRIAL_STARTED");
+      expect(ANALYTICS_EVENTS).not.toHaveProperty("TRIAL_TO_PAID_CONVERSION");
+      expect(USER_PROPERTIES).not.toHaveProperty("IS_TRIAL");
     });
 
     it("should have all required user property constants", () => {

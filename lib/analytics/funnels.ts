@@ -177,7 +177,7 @@ export function trackFunnelComplete<T extends FunnelName>(
   // Track completion event
   trackEvent(
     posthog,
-    ANALYTICS_EVENTS.TRIAL_TO_PAID_CONVERSION,
+    ANALYTICS_EVENTS.FUNNEL_COMPLETED,
     {
       funnel_name: funnelName,
       total_time: totalTime,
