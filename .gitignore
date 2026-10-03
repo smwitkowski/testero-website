@@ -58,3 +58,12 @@ implement/
 
 # Local development files (secrets, keys, etc.)
 .local/
+
+# Root-level LLM context and copy-review dumps
+/repomix-*.txt
+/repomix-*.xml
+/*-repomix.txt
+/*-repomix-command.txt
+/*-copy-review.txt
+/pricing-*-context.xml
+/diagnostic-readiness-week3-code.txt
