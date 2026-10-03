@@ -10,7 +10,7 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Public values are compiled into the browser bundle. Defaults are local placeholders.
-ARG NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:55421
+ARG NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:56541
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY=local-anon-key-placeholder
 ARG NEXT_PUBLIC_POSTHOG_KEY=
 ARG NEXT_PUBLIC_POSTHOG_HOST=

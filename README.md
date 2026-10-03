@@ -23,6 +23,8 @@ supabase start
 supabase db reset --local
 ```
 
+The local API is `http://127.0.0.1:56541`; PostgreSQL listens on
+`127.0.0.1:56542`. Studio uses port 56543 and local mail uses port 56544.
 The reset is **local only** and destroys the local database. It applies the v2
 baseline and seed, not `supabase/migrations_legacy/`. Never use `link`, `--linked`,
 `--project-ref`, a remote database URL, or `db push` for local work.
