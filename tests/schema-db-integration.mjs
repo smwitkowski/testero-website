@@ -62,7 +62,7 @@ for (const role of ["anon", "authenticated"]) {
   for (const table of ["questions", "answers", "explanations", "session_items", "webhook_events", "pmle_pass_refunds"]) {
     await denied(`BEGIN; SET LOCAL ROLE ${role}; SELECT * FROM public.${table}; ROLLBACK;`, `${role} must not read ${table}`);
   }
-  for (const signature of ["create_study_session(text,uuid,text,jsonb,timestamptz)", "answer_study_item(uuid,uuid,text,uuid,text)", "consume_free_practice_quota(uuid,integer)", "fulfill_pmle_pass(uuid,text,text,text,timestamptz)", "refund_pmle_pass(text,timestamptz)", "v2_consume_free_practice_quota(uuid,integer)", "v2_create_study_session(text,uuid,text,jsonb,timestamptz,boolean)", "create_free_practice_session(uuid,jsonb,timestamptz)", "claim_anonymous_diagnostics(uuid,text)"]) {
+  for (const signature of ["create_study_session(text,uuid,text,jsonb,timestamptz)", "answer_study_item(uuid,uuid,text,uuid,text)", "consume_free_practice_quota(uuid,integer)", "fulfill_pmle_pass(uuid,text,text,text,timestamptz)", "refund_pmle_pass(text,timestamptz)", "record_pmle_pass_payment(text,integer,text)", "v2_consume_free_practice_quota(uuid,integer)", "v2_create_study_session(text,uuid,text,jsonb,timestamptz,boolean)", "create_free_practice_session(uuid,jsonb,timestamptz)", "claim_anonymous_diagnostics(uuid,text)"]) {
     assert.equal(await scalar(`SELECT has_function_privilege('${role}', 'public.${signature}', 'EXECUTE');`), "f");
   }
 }
@@ -189,10 +189,29 @@ try {
   const phase3FulfillSQL = (fixture) => `SET LOCAL TIME ZONE 'America/New_York';
     SELECT id FROM public.fulfill_pmle_pass(${q(fixture.owner)},${q(fixture.checkout)},${q(fixture.intent)},${q(fixture.customer)},${q(phase3PaidAt)}::timestamptz)`;
   const phase3RefundSQL = (fixture) => `SELECT public.refund_pmle_pass(${q(fixture.intent)},${q(phase3RefundedAt)}::timestamptz)`;
+  const phase3ReceiptSQL = (fixture, amount = 3900, currency = "usd") =>
+    `SELECT public.record_pmle_pass_payment(${q(fixture.intent)},${amount},${q(currency)})`;
   // Collect every transaction before asserting, so finally cannot race pending fixture writes.
-  const phase3Replay = (fixture) => Array.from({ length: 8 }, () => run(service(phase3FulfillSQL(fixture)), true));
+  // Completion records its receipt only after fulfillment exists in the same transaction.
+  const phase3Replay = (fixture) => Array.from({ length: 8 }, () =>
+    run(service(`${phase3FulfillSQL(fixture)}; ${phase3ReceiptSQL(fixture)}`), true));
   const phase3AssertSuccess = (results, name) => {
     for (const result of results) assert.equal(result.code, 0, `${name}: RPC must succeed: ${result.error}`);
+  };
+  const phase3ReceiptSnapshot = async (fixture, refunded) => {
+    assert.equal(await scalar(`SELECT count(*) FROM public.payment_history
+      WHERE user_id=${q(fixture.owner)} OR stripe_payment_intent_id=${q(fixture.intent)};`), "1",
+    `${fixture.name}: exactly one payment history row`);
+    const receipt = JSON.parse(await scalar(`SELECT row_to_json(p) FROM public.payment_history p
+      WHERE stripe_payment_intent_id=${q(fixture.intent)};`));
+    assert.deepEqual({
+      user_id: receipt.user_id, stripe_payment_intent_id: receipt.stripe_payment_intent_id,
+      amount: receipt.amount, currency: receipt.currency, status: receipt.status,
+    }, {
+      user_id: fixture.owner, stripe_payment_intent_id: fixture.intent,
+      amount: 3900, currency: "usd", status: refunded ? "refunded" : "succeeded",
+    }, `${fixture.name}: receipt derives the pass owner, preserves 3900/usd and follows refund state`);
+    return receipt;
   };
   const phase3Snapshot = async (fixture, expectedId, refunded) => {
     assert.equal(await scalar(`SELECT count(*) FROM public.pmle_passes
@@ -218,15 +237,31 @@ try {
         WHERE stripe_payment_intent_id=${q(fixture.intent)};`)), phase3RefundedEpoch,
       `${fixture.name}: tombstone timestamp dominates fulfillment`);
     }
-    return pass;
+    return { pass, receipt: await phase3ReceiptSnapshot(fixture, refunded) };
+  };
+  const phase3ReceiptRace = async (fixture) => {
+    const receipts = await Promise.all([
+      ...Array.from({ length: 8 }, () => run(service(phase3ReceiptSQL(fixture)), true)),
+      run(service(phase3RefundSQL(fixture)), true),
+    ]);
+    phase3AssertSuccess(receipts, `${fixture.name}: receipt/refund race`);
   };
   const phase3ReplayAfterRefund = async (fixture, passId, beforeReplay) => {
+    await phase3ReceiptRace(fixture);
+    assert.deepEqual(await phase3Snapshot(fixture, passId, true), beforeReplay,
+      `${fixture.name}: eight concurrent receipt writes and refund preserve one refunded receipt`);
     const completions = await Promise.all(phase3Replay(fixture));
     phase3AssertSuccess(completions, fixture.name);
     assert.deepEqual(completions.map((result) => result.output), Array(8).fill(passId),
       `${fixture.name}: all completion replays retain the same pass ID`);
     assert.deepEqual(await phase3Snapshot(fixture, passId, true), beforeReplay,
-      `${fixture.name}: completion replay cannot restore access or change expiry`);
+      `${fixture.name}: completion replay cannot restore access, change expiry or reset receipt status`);
+    for (const [amount, currency] of [[3901, "usd"], [3900, "eur"]]) {
+      await denied(service(phase3ReceiptSQL(fixture, amount, currency)),
+        `${fixture.name}: mismatched receipt amount/currency denied`);
+      assert.deepEqual(await phase3Snapshot(fixture, passId, true), beforeReplay,
+        `${fixture.name}: rejected receipt mismatch cannot mutate pass or payment history`);
+    }
   };
 
   const [raceFixture, refundFirstFixture, grantFirstFixture] = phase3Fixtures;
@@ -253,13 +288,16 @@ try {
 
   // Deterministic grant-before-refund exercises revocation of the existing pass.
   const grantFirstId = await scalar(service(phase3FulfillSQL(grantFirstFixture)));
+  await run(service(phase3ReceiptSQL(grantFirstFixture)));
   const granted = await phase3Snapshot(grantFirstFixture, grantFirstId, false);
-  await run(service(phase3RefundSQL(grantFirstFixture)));
+  await phase3ReceiptRace(grantFirstFixture);
   const revoked = await phase3Snapshot(grantFirstFixture, grantFirstId, true);
-  assert.deepEqual(revoked, { ...granted, refunded_epoch: phase3RefundedEpoch },
-    "grant-first: refund changes only refund state, not pass identity or expiry");
+  assert.deepEqual(revoked, {
+    pass: { ...granted.pass, refunded_epoch: phase3RefundedEpoch },
+    receipt: { ...granted.receipt, status: "refunded" },
+  }, "grant-first: refund changes only pass refund state and receipt status, not identities or expiry");
   await phase3ReplayAfterRefund(grantFirstFixture, grantFirstId, revoked);
-  console.log("PASS Phase 3 eight-way fulfillment/refund race, refund-first and grant-first tombstone dominance, immutable completion replay and DST-safe 2160-hour expiry");
+  console.log("PASS Phase 3 eight-way fulfillment/receipt/refund races, refund-first and grant-first tombstone dominance, immutable completion/receipt replay, receipt mismatch denial and DST-safe 2160-hour expiry");
 
   const paidAt = "2026-10-03T12:00:00Z", refundedAt = "2026-10-03T13:00:00Z";
   const fulfill = (pi, cs) => `SELECT id FROM public.fulfill_pmle_pass(${q(paidOwner)},${q(cs)},${q(pi)},'local-customer',${q(paidAt)}::timestamptz)`;
