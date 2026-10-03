@@ -1,0 +1,25 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "v2-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "3100"
+      ],
+      "port": 3100,
+      "env": {
+        "NEXT_PUBLIC_SUPABASE_URL": "http://127.0.0.1:56541",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY": "placeholder-anon-key",
+        "SUPABASE_SERVICE_ROLE_KEY": "placeholder-service-role-key",
+        "NEXT_PUBLIC_POSTHOG_KEY": "",
+        "NEXT_PUBLIC_POSTHOG_HOST": "",
+        "NEXT_TELEMETRY_DISABLED": "1"
+      }
+    }
+  ]
+}

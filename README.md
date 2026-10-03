@@ -98,3 +98,19 @@ existing Cloud Run service. No cloud deployment is part of local Phase 1 checks.
 
 Business decisions live in `../hq/decisions.md`: D-014 ($39 PMLE Pass for 90 days),
 D-017 (anonymous results only; no question review), and D-019 (fresh minimal app).
+
+## Click-through preview
+
+The founder skeleton has live diagnostic pages and clearly marked stubs for the
+later account, practice, billing, content, and legal phases. It never presents
+sample account data or successful payments as real. Terms and Privacy are
+"being finalized" placeholders, not the unapproved drafts. Blog and FAQ links
+keep the five and nine preserved URL slugs.
+
+The `.claude/launch.json` configuration `v2-dev` runs `npm run dev -- --port 3100`
+with loopback placeholder values. Open `http://127.0.0.1:3100`. The skeleton and
+shared navigation render without Supabase. To take the real diagnostic, use the
+local development commands above (`npm run dev:local` on port 3000), which inject
+the generated local keys without any credential file. Only verified Supabase
+account state switches the header from Sign in to Dashboard; an anonymous
+diagnostic cookie does not.
