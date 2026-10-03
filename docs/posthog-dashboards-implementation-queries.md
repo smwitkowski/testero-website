@@ -2,6 +2,14 @@
 
 This document contains the exact queries needed to build the three strategy dashboards in PostHog. Use these queries to create insights and add them to the respective dashboards.
 
+## PMLE Pass launch update (2026-10-02)
+
+The current offer is **PMLE Pass**: US$39 once, 90-day full access, no automatic renewal. A refund within the 7-day window ends pass access. New checkout properties use the exact `plan_name: "PMLE Pass"`, `payment_mode: "payment"`, and `plan_type: "pass"`; not tier names, price IDs, or billing intervals.
+
+Use the diagnostic → signup → gate → checkout funnel for current conversion analysis. Confirmed server payment data is the paid-conversion source. A browser redirect or `checkout_completed` event does not prove access was granted.
+
+The queries below are a historical dashboard reference. Trial funnels are retired and must not be recreated. Subscription MRR and churn queries apply only to preserved legacy subscriptions; do not apply them to one-time PMLE Pass sales. Current revenue analysis should measure pass purchases, refunds, and expirations.
+
 **Dashboards Created:**
 - Dashboard #2: Readiness & Study Activation (ID: 789819)
 - Dashboard #1: Acquisition & Conversion Funnel (ID: 789820)  
@@ -287,7 +295,7 @@ This document contains the exact queries needed to build the three strategy dash
 ### Insight 4: Trial Funnel
 **Type:** Funnel  
 **Name:** Trial Conversion Funnel  
-**Description:** Trial modal shown → CTA clicked → Trial started → Paid conversion
+**Description:** Historical trial flow (retired; do not use for PMLE Pass)
 
 **Query Structure:**
 ```json

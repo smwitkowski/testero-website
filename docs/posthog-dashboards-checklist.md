@@ -1,6 +1,18 @@
 # PostHog Dashboards Implementation Checklist
 
-Use this checklist to track progress through the implementation.
+## Current PMLE Pass launch checks (2026-10-02)
+
+- [ ] Check pricing and checkout events use `plan_name: "PMLE Pass"`, `payment_mode: "payment"`, and `plan_type: "pass"`.
+- [ ] Measure diagnostic → signup → gate → checkout activity without a trial step.
+- [ ] Reconcile confirmed pass payments with server records. Do not infer payment from checkout redirects.
+- [ ] Track pass refunds and expirations separately from legacy subscription cancellations.
+- [ ] Do not recreate trial cohorts or trial-conversion insights. Runtime trial events have been removed.
+
+PMLE Pass is US$39 once for 90 days of full access, no renewal. A refund within 7 days ends access.
+
+## Superseded 2024 implementation checklist
+
+The items below record the old implementation plan. Its trial/cohort and trial funnel tasks are retired, not remaining launch work. Legacy subscription health metrics apply only to preserved existing subscriptions. Use the current launch checks above instead.
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Document Purpose:** This document details how questions are used and displayed to users from a product perspective. It covers user journeys, UI patterns, interaction flows, and the complete user experience across different question contexts.
 
-**Last Updated:** November 1, 2025
+**Last Updated:** October 2, 2026
 
 **Related Documentation:** See `QUESTION_DATA_MODELS.md` for technical data structures.
 
@@ -103,8 +103,7 @@ View Results
 Conversion Points:
   1. "Start Practice" (requires login)
   2. "Save Results" prompt
-  3. Trial modal (5 seconds after results)
-  4. Exit-intent modal (if enabled)
+  3. PMLE Pass offer at paid explanation and practice boundaries
     ↓
 Signup
     ↓
@@ -507,14 +506,14 @@ Interactive review interface with:
 │ [15m] [30m] [45m]   │
 └──────────────────────┘
 
-{/* For non-subscribed users */}
+{/* For users without paid access */}
 ┌──────────────────────┐
 │ Ready to Pass?       │
 │                      │
 │ Get personalized...  │
 │                      │
-│ [Start Free Trial]   │
-│ No credit card...    │
+│ [Get PMLE Pass]      │
+│ $39 once · 90 days   │
 └──────────────────────┘
 ```
 
@@ -680,57 +679,27 @@ by creating informative input signals from raw data.
 
 ## Monetization & Conversion Points
 
-### Anonymous User Conversion
+### Free entry
 
-**Trigger Points:**
-1. **Immediate** - After diagnostic completion
-2. **Timed** - 5 seconds on results page (trial modal)
-3. **Action-based** - Click "Start Practice" (requires login)
-4. **Engagement-based** - Deep scroll on results (if enabled)
-5. **Exit-intent** - Mouse leaves viewport (if enabled)
+Users can start a PMLE diagnostic without an account. The basic readiness summary is available without an account. Create a free account for question review and saved results. Free registered practice is limited to 5 questions per week, without explanations or domain-targeted practice.
 
-### Upsell Modal Variants
+Do not describe diagnostics as a one-free-run limit or retakes as a paid-only feature. Those restrictions are not enforced.
 
-**Variant A: Goal-Oriented**
-```
-🎯 Ready to Pass on Your First Try?
+### Paid access
 
-You're 70% ready — here's how to get to 100%:
-• Personalized 30-day study plan
-• Unlimited practice questions
-• Track progress across 6 domains
+**PMLE Pass** costs US$39 once for 90 days of full PMLE access. It includes explanations and full practice. There is no subscription or automatic renewal. Users can request a refund within 7 days of purchase. A refund ends pass access.
 
-[Start Free Trial]
-[Continue reviewing results]
-```
+- Anonymous users see signup prompts, not payment trials.
+- Registered free users see the PMLE Pass offer at paid feature boundaries.
+- Active passholders and active legacy subscribers do not see paid feature gates.
+- Expired or refunded passes no longer grant access.
+- Existing active subscriptions keep their access and use the billing page to manage their legacy subscription.
 
-**Variant B: Incentive-Based**
-```
-🎁 Start Your Free Trial & Save 20%
+### Checkout
 
-Limited time: First 100 beta users get:
-• 20% off annual plan
-• Free diagnostic retakes
-• Priority support
+The client sends an optional idempotency key, never a Stripe price ID. The server selects the one-time PMLE Pass offer. Access starts only after confirmed payment, not from a checkout success URL.
 
-[Claim Your Discount]
-[Maybe later]
-```
-
-### Paywall Triggers
-
-**Monitored Actions:**
-1. Click "Generate Study Plan"
-2. Click "Start Practice" (from summary)
-3. Expand 3+ question explanations
-4. Spend 2+ minutes in review section
-5. Interact with domain performance charts
-
-**User Segments:**
-- **Anonymous** - Show signup prompts
-- **Registered, No Trial** - Show trial modal
-- **Active Trial** - Show conversion to paid
-- **Subscribed** - No interruptions
+The billing page shows **Access until &lt;date&gt;** for passholders. Only accounts with legacy subscription metadata have a subscription portal button. Refund requests use support, not subscription cancellation.
 
 ---
 
@@ -940,15 +909,15 @@ Final: Mark as error, continue test
 ### Conversion Funnel
 
 ```
-Landing → Diagnostic → Results → [Paywall] → Practice → [Upgrade] → Subscription
+Landing → Diagnostic → Signup → Summary → Limited practice → PMLE Pass
           (free)        (free)    (convert)   (limited)   (upgrade)
 ```
 
 ### Monetization Points
 
 - ✅ **Free:** Diagnostic test + results view
-- 💰 **Freemium:** Limited practice (10 questions/day)
-- 💎 **Premium:** Unlimited practice + study plans + analytics
+- 💰 **Free registered practice:** 5 questions/week, no explanations
+- 💎 **PMLE Pass:** US$39 once, 90-day full access, no renewal; 7-day refund ends access
 
 ---
 

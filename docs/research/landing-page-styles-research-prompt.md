@@ -24,7 +24,7 @@ Research and analyze landing page design patterns, visual styles, and conversion
   - Trial → Paid: >25%
   - Activation Rate: >40% (complete diagnostic OR generate study plan)
 - **Revenue Goals**: 100 paying users, $5K MRR
-- **Pricing**: $39/month (Basic), $59/month (Pro), $79/month (All-Access)
+- **Pricing**: PMLE Pass, US$39 once for 90 days of full access; no subscription or automatic renewal; 7-day refund ends pass access.
 
 ### Current Landing Page State
 - **Hero Section**: LampContainer effect with animated gradient background
@@ -32,7 +32,7 @@ Research and analyze landing page design patterns, visual styles, and conversion
 - **Secondary CTA**: "View Pricing Plans"
 - **Color Scheme**: Blue/cyan gradients, yellow accent for urgency
 - **Sections**: Value anchors, pricing preview, benefits, testimonials, final CTA
-- **Trust Signals**: Money-back guarantee, no credit card required, cancel anytime
+- **Trust Signals**: 7-day refund window (refund ends access), no credit card for the free diagnostic, no automatic renewal
 - **Urgency Elements**: "Updated for October 2024", "30-Day Pass Guarantee"
 
 ## Research Questions
@@ -50,13 +50,13 @@ Research and analyze landing page design patterns, visual styles, and conversion
 
 **Research Focus Areas**:
 - Analyze top-performing EdTech landing pages (Coursera, Udemy, Pluralsight, Whizlabs)
-- Review SaaS landing pages with similar conversion goals (free trial → paid)
+- Review SaaS landing pages with similar conversion goals (free diagnostic → PMLE Pass)
 - Study certification prep platforms specifically (exam prep, professional certification)
 - Identify 2025 design trends that align with professional/technical audiences
 
 ### 2. Conversion-Optimized Layout Patterns
 
-**Question**: What landing page layout structures and section ordering maximize conversion for free trial → paid SaaS products?
+**Question**: What landing page layout structures and section ordering maximize conversion for free diagnostic → PMLE Pass SaaS products?
 
 **Sub-questions**:
 - What's the optimal section order? (Hero → Value Props → Social Proof → Pricing → CTA?)

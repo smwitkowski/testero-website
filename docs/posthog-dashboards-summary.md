@@ -1,7 +1,9 @@
 # PostHog Strategy Dashboards - Implementation Summary
 
 **Date:** 2024-12-19  
-**Status:** Dashboards Created - Insights Ready for Manual Creation
+**Status:** Historical 2024 dashboard setup summary
+
+**PMLE Pass launch update (2026-10-02):** The new offer is US$39 once for 90 days of full access, no automatic renewal. A refund within 7 days ends access. Use `plan_name: "PMLE Pass"` for new conversion events. The next-step trial and subscription funnel proposals below are superseded. Trial events and trial cohorts are retired; existing subscription reporting remains legacy-only. See the current launch checks in `posthog-dashboards-checklist.md`.
 
 ---
 

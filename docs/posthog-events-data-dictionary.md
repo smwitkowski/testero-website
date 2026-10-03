@@ -8,6 +8,16 @@ This document provides a comprehensive reference for all PostHog analytics event
 
 ---
 
+## Current PMLE Pass analytics contract (2026-10-02)
+
+PMLE Pass is US$39 once for 90 days of full access, with no subscription or automatic renewal. A refund requested within 7 days ends pass access.
+
+New pricing and checkout events use `plan_name: "PMLE Pass"`, `payment_mode: "payment"`, `plan_type: "pass"`, `price: 39`, `currency: "USD"`, and `duration_days: 90`. Do not use public Stripe price IDs, tier names, or billing intervals for the new offer.
+
+Generic conversion tracking now uses `conversion_completed`; generic funnel completion uses `funnel_completed`. Neither event grants access or confirms payment.
+
+The event reference below includes historical subscription and trial events. Trial events and trial funnels are retired. Subscription events only describe existing legacy subscriptions. Do not treat checkout redirects or client `checkout_completed` events as authoritative paid access; use confirmed server payment data for revenue reporting.
+
 ## Table of Contents
 
 1. [Event Categories](#event-categories)
@@ -1222,14 +1232,14 @@ User properties are set via `posthog.identify()` and persist across sessions:
 **Events to Track:**
 1. `waitlist_page_viewed` → `waitlist_joined`
 2. `signup_attempt` → `signup_success` → `email_confirmed`
-3. `trial_started` → `trial_to_paid_conversion`
-4. `checkout_initiated` → `checkout_session_created` → `subscription_created`
+3. `gate_viewed` → `gate_cta_clicked` → `checkout_initiated`
+4. `checkout_initiated` → `checkout_session_created` → confirmed PMLE Pass payment (server data)
 
 **Metrics:**
 - Waitlist conversion rate
 - Signup completion rate
 - Email verification rate
-- Trial-to-paid conversion rate
+- PMLE Pass paid conversion rate
 - Checkout completion rate
 
 ---

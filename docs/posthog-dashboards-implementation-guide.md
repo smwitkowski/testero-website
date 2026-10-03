@@ -3,7 +3,15 @@
 This guide provides step-by-step instructions for building three core PostHog dashboards with Supabase validation.
 
 **Created:** 2024-12-19  
-**Status:** Implementation in progress
+**Status:** Superseded 2024 implementation plan for billing and trial cohorts
+
+## Current PMLE Pass billing analysis (2026-10-02)
+
+PMLE Pass is US$39 once for 90 days of full access, with no subscription or renewal. A refund within 7 days ends access. New pricing/checkout events use `plan_name: "PMLE Pass"`, `payment_mode: "payment"`, and `plan_type: "pass"`.
+
+Build the current conversion funnel from diagnostic/signup to gate and checkout. Reconcile confirmed server payments, refunds, and expirations with pass records. A browser `checkout_completed` event is not payment proof. Generic `conversion_completed` and `funnel_completed` events are not access grants.
+
+Do not execute the trial cohort exports or create the trial insights described in the old plan below. Trial events were removed. Subscription MRR/churn steps apply only to preserved legacy subscriptions.
 
 ---
 
@@ -428,25 +436,9 @@ Run validation queries:
 
 **Naming:** `S2 – Subscription Changes`
 
-### Step 5.4: Trial Conversion Funnel
+### Step 5.4: PMLE Pass Conversion Analysis
 
-**Insight Type:** Funnel
-
-**Configuration:**
-- **Step 1:** Event `trial_started`
-- **Step 2:** Event `trial_to_paid_conversion` OR first `subscription_created` for that user
-
-**Settings:**
-- Conversion window: **30 days**
-- Breakdowns:
-  - `exam_type` (from user properties)
-  - Trial engagement (if you add practice question count property)
-
-**Add to dashboard** second row, left
-
-**Naming:** `S3 – Trial → Paid Funnel`
-
-**Validation:** Run Supabase query `trial-conversion-rate.sql` and compare rates
+Use pricing view → gate CTA → checkout initiated → checkout session created for client intent. Reconcile paid conversions against confirmed server pass purchases. Filter new-offer events by `plan_name: "PMLE Pass"`. Track refunds and access expirations separately. Do not recreate the retired trial funnel or use subscription creation as a pass-purchase proxy.
 
 ### Step 5.5: Churn Insights
 
