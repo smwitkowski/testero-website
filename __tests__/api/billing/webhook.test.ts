@@ -44,7 +44,9 @@ describe("Stripe Webhook Handler", () => {
     mockStripeService = {
       constructWebhookEvent: jest.fn(),
       retrieveCheckoutSession: jest.fn(),
-      retrieveSubscription: jest.fn(),
+      retrieveSubscription: jest.fn(
+        async () => mockStripeService.constructWebhookEvent.mock.results.at(-1)?.value.data.object
+      ),
       retrievePaymentIntent: jest.fn().mockResolvedValue({
         status: "succeeded",
         metadata: { user_id: "user_123", plan_name: "PMLE Pass" },
@@ -55,6 +57,21 @@ describe("Stripe Webhook Handler", () => {
 
     // Mock Supabase
     mockSupabase = {
+      rpc: jest.fn((name, args) =>
+        name === "fulfill_pmle_pass"
+          ? {
+              single: jest.fn().mockResolvedValue({
+                data: {
+                  user_id: args.p_user_id,
+                  stripe_payment_intent_id: args.p_stripe_payment_intent_id,
+                  refunded_at: null,
+                  expires_at: "2099-01-01T00:00:00Z",
+                },
+                error: null,
+              }),
+            }
+          : Promise.resolve({ data: null, error: null })
+      ),
       from: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       insert: jest.fn().mockReturnThis(),
@@ -559,12 +576,10 @@ describe("Stripe Webhook Handler", () => {
 
       const mockExpandedPaymentIntent = {
         ...mockPaymentIntent,
-        charges: {
-          data: [
-            {
-              receipt_url: "https://pay.stripe.com/receipts/test",
-            },
-          ],
+        latest_charge: {
+          receipt_url: "https://pay.stripe.com/receipts/test",
+          refunded: false,
+          amount_refunded: 0,
         },
       };
 
@@ -598,7 +613,7 @@ describe("Stripe Webhook Handler", () => {
       );
 
       expect(mockStripeService.retrievePaymentIntent).toHaveBeenCalledWith("pi_test_123", [
-        "charges",
+        "latest_charge",
       ]);
 
       expect(response.status).toBe(200);
@@ -670,9 +685,7 @@ describe("Stripe Webhook Handler", () => {
 
       const mockExpandedPaymentIntent = {
         ...mockPaymentIntent,
-        charges: {
-          data: [],
-        },
+        latest_charge: null,
       };
 
       const mockEvent = {

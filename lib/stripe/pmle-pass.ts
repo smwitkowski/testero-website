@@ -4,6 +4,18 @@ import { StripeService } from "./stripe-service";
 
 export const PASS_DURATION_MS = 90 * 24 * 60 * 60 * 1000;
 
+interface FulfilledPmlePass {
+  id: string;
+  user_id: string;
+  stripe_checkout_session_id: string;
+  stripe_payment_intent_id: string;
+  stripe_customer_id: string;
+  paid_at: string;
+  expires_at: string;
+  refunded_at: string | null;
+  created_at: string;
+}
+
 export function stripeId(value: string | { id: string } | null | undefined): string | null {
   return typeof value === "string" ? value : value?.id || null;
 }
@@ -52,6 +64,19 @@ export async function getPassPayment(service: StripeService, session: Stripe.Che
   return { intent, charge, refunded: charge.refunded || charge.amount_refunded > 0 };
 }
 
+/** Refunds are durable even when the checkout row does not exist yet. */
+export async function refundPmlePass(
+  supabase: SupabaseClient,
+  paymentIntentId: string,
+  refundedAt: string
+) {
+  const { error } = await supabase.rpc("refund_pmle_pass", {
+    p_stripe_payment_intent_id: paymentIntentId,
+    p_refunded_at: refundedAt,
+  });
+  if (error) throw error;
+}
+
 /** Both the verified success redirect and webhook use the same fulfillment path. */
 export async function grantPmlePass(
   service: StripeService,
@@ -61,36 +86,24 @@ export async function grantPmlePass(
   if (!isPaidPassSession(session)) throw new Error("Invalid paid PMLE Pass checkout");
   const paymentIntentId = stripeId(session.payment_intent)!;
   const payment = await getPassPayment(service, session);
-  // Stripe's successful charge time is stable across event retries and redirects.
-  const paidAt = new Date(payment.charge.created * 1000);
-  const { error: insertError } = await supabase.from("pmle_passes").upsert(
-    {
-      user_id: session.metadata!.user_id,
-      stripe_checkout_session_id: session.id,
-      stripe_payment_intent_id: paymentIntentId,
-      stripe_customer_id: stripeId(session.customer)!,
-      paid_at: paidAt.toISOString(),
-      expires_at: new Date(paidAt.getTime() + PASS_DURATION_MS).toISOString(),
-      refunded_at: payment.refunded ? new Date().toISOString() : null,
-    },
-    { onConflict: "stripe_checkout_session_id", ignoreDuplicates: true }
-  );
-  if (insertError) throw insertError;
-
-  // Close a refund-before-insert race. Duplicate checkouts never update the row.
+  // Finish all fallible Stripe reads before publishing a new entitlement.
   const current = await getPassPayment(service, session);
+  const paidAt = new Date(payment.charge.created * 1000).toISOString();
   if (payment.refunded || current.refunded) {
-    const { error } = await supabase
-      .from("pmle_passes")
-      .update({ refunded_at: new Date().toISOString() })
-      .eq("stripe_payment_intent_id", paymentIntentId);
-    if (error) throw error;
+    await refundPmlePass(supabase, paymentIntentId, new Date().toISOString());
   }
+  // Fulfill and refund share a database transaction lock keyed by payment intent.
+  // A durable tombstone makes refund-before-checkout ordering safe. Duplicate
+  // checkout IDs never change the original expiry or clear revoked access.
   const { data: pass, error } = await supabase
-    .from("pmle_passes")
-    .select("user_id, stripe_payment_intent_id, refunded_at, expires_at")
-    .eq("stripe_checkout_session_id", session.id)
-    .single();
+    .rpc("fulfill_pmle_pass", {
+      p_user_id: session.metadata!.user_id,
+      p_stripe_checkout_session_id: session.id,
+      p_stripe_payment_intent_id: paymentIntentId,
+      p_stripe_customer_id: stripeId(session.customer)!,
+      p_paid_at: paidAt,
+    })
+    .single<FulfilledPmlePass>();
   if (error) throw error;
   if (
     !pass ||

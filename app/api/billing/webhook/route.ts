@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { StripeService } from "@/lib/stripe/stripe-service";
-import { grantPmlePass, isPaidPassSession, stripeId } from "@/lib/stripe/pmle-pass";
+import { grantPmlePass, isPaidPassSession, refundPmlePass, stripeId } from "@/lib/stripe/pmle-pass";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { EmailService } from "@/lib/email/email-service";
 import Stripe from "stripe";
@@ -249,13 +249,17 @@ export async function POST(request: NextRequest) {
           const charge = event.data.object as Stripe.Charge;
           const paymentIntentId = stripeId(charge.payment_intent);
           if (!paymentIntentId) break;
-          // Any refund (including partial refunds) ends pass access. A refund before
-          // checkout is also observed by the current-charge checks during grant.
-          const { error: revokeError } = await supabase
-            .from("pmle_passes")
-            .update({ refunded_at: new Date(event.created * 1000).toISOString() })
+          // Any refund ends pass access, even if it arrives before checkout.
+          await refundPmlePass(
+            supabase,
+            paymentIntentId,
+            new Date(event.created * 1000).toISOString()
+          );
+          const { error: historyError } = await supabase
+            .from("payment_history")
+            .update({ status: "refunded" })
             .eq("stripe_payment_intent_id", paymentIntentId);
-          if (revokeError) throw revokeError;
+          if (historyError) throw historyError;
           break;
         }
 
@@ -275,26 +279,23 @@ export async function POST(request: NextRequest) {
             `[Webhook] Processing payment_intent.succeeded for user ${userId}, payment intent ${paymentIntent.id}`
           );
 
-          // Retrieve payment intent with expanded charges to get receipt URL
+          // Use the current charge, not an old succeeded event snapshot.
           let receiptUrl: string | null = null;
+          let paymentStatus = "succeeded";
           try {
-            const expandedPaymentIntent = await stripeService.retrievePaymentIntent(
-              paymentIntent.id,
-              ["charges"]
-            );
-            // Type assertion for expanded charges - Stripe expands charges as an array
-            interface ExpandedPaymentIntent extends Stripe.PaymentIntent {
-              charges?: Stripe.ApiList<Stripe.Charge>;
-            }
-            const expanded = expandedPaymentIntent as ExpandedPaymentIntent;
-            if (expanded.charges?.data && expanded.charges.data.length > 0) {
-              receiptUrl = expanded.charges.data[0]?.receipt_url || null;
+            const currentIntent = await stripeService.retrievePaymentIntent(paymentIntent.id, [
+              "latest_charge",
+            ]);
+            const charge = currentIntent.latest_charge;
+            if (charge && typeof charge !== "string") {
+              receiptUrl = charge.receipt_url || null;
+              if (charge.refunded || charge.amount_refunded > 0) paymentStatus = "refunded";
             }
           } catch (error) {
-            console.warn(
-              `[Webhook] Could not retrieve expanded payment intent for receipt URL: ${error}`
-            );
-            // Continue without receipt URL
+            // A failed PMLE payment-state read must retry rather than turn a
+            // refunded payment back into a succeeded history entry.
+            if (paymentIntent.metadata?.plan_name === "PMLE Pass") throw error;
+            console.warn(`[Webhook] Could not retrieve current payment intent: ${error}`);
           }
 
           // Upsert payment history with idempotency
@@ -304,7 +305,7 @@ export async function POST(request: NextRequest) {
               stripe_payment_intent_id: paymentIntent.id,
               amount: paymentIntent.amount,
               currency: paymentIntent.currency,
-              status: "succeeded",
+              status: paymentStatus,
               receipt_url: receiptUrl,
             },
             { onConflict: "stripe_payment_intent_id" }
@@ -367,7 +368,7 @@ export async function POST(request: NextRequest) {
             .single();
 
           // Create subscription record (but don't mark as active until payment completes)
-          await supabase.from("user_subscriptions").insert({
+          const { error: subscriptionError } = await supabase.from("user_subscriptions").insert({
             user_id: userId,
             stripe_customer_id: subscription.customer as string,
             stripe_subscription_id: subscription.id,
@@ -384,6 +385,7 @@ export async function POST(request: NextRequest) {
             ).toISOString(),
             cancel_at_period_end: subscription.cancel_at_period_end || false,
           });
+          if (subscriptionError) throw subscriptionError;
 
           // Track subscription creation in PostHog
           posthog?.capture({
@@ -401,7 +403,10 @@ export async function POST(request: NextRequest) {
         }
 
         case "customer.subscription.updated": {
-          const subscription = event.data.object as Stripe.Subscription;
+          const deliveredSubscription = event.data.object as Stripe.Subscription;
+          // Event delivery can be out of order. A delayed active event must not
+          // resurrect a legacy subscription that is now canceled at Stripe.
+          const subscription = await stripeService.retrieveSubscription(deliveredSubscription.id);
 
           // Get user info for tracking
           const { data: userSub } = await supabase
@@ -414,7 +419,7 @@ export async function POST(request: NextRequest) {
           const priceId = subscription.items.data[0]?.price.id;
 
           // Update subscription status
-          await supabase
+          const { error: subscriptionError } = await supabase
             .from("user_subscriptions")
             .update({
               status: subscription.status,
@@ -431,6 +436,7 @@ export async function POST(request: NextRequest) {
               updated_at: new Date().toISOString(),
             })
             .eq("stripe_subscription_id", subscription.id);
+          if (subscriptionError) throw subscriptionError;
 
           // Track subscription update in PostHog
           if (userSub?.user_id) {
@@ -463,7 +469,7 @@ export async function POST(request: NextRequest) {
           const subscription = event.data.object as Stripe.Subscription;
 
           // Mark subscription as cancelled
-          const { data: subData } = await supabase
+          const { data: subData, error: subscriptionError } = await supabase
             .from("user_subscriptions")
             .update({
               status: "canceled",
@@ -472,6 +478,7 @@ export async function POST(request: NextRequest) {
             .eq("stripe_subscription_id", subscription.id)
             .select("user_id")
             .single();
+          if (subscriptionError) throw subscriptionError;
 
           // Send cancellation email
           if (subData?.user_id) {
