@@ -242,6 +242,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
 
   describe("Summary calculation", () => {
     beforeEach(() => {
+      (getPmleAccessLevelForRequest as jest.Mock).mockResolvedValue({ accessLevel: "FREE", user: { id: "free" } });
       // Setup chain for questions query
       const questionsQuery = {
         from: jest.fn().mockReturnThis(),

@@ -1,120 +1,31 @@
 /** @jest-environment node */
-
+import type { User } from "@supabase/supabase-js";
 import React from "react";
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { isBillingEnforcementActive } from "@/lib/billing/enforcement";
-import { isSubscriber } from "@/lib/billing/is-subscriber";
-
-// Mock dependencies
-jest.mock("next/navigation", () => ({
-  redirect: jest.fn(),
-}));
-
-jest.mock("@/lib/supabase/server", () => ({
-  createServerSupabaseClient: jest.fn(),
-}));
-
-jest.mock("@/lib/billing/enforcement", () => ({
-  isBillingEnforcementActive: jest.fn(),
-}));
-
-jest.mock("@/lib/billing/is-subscriber", () => ({
-  isSubscriber: jest.fn(),
-}));
-
-describe("Practice Layout Gating", () => {
-  let mockSupabase: any;
-  let mockLayout: any;
-
-  beforeEach(async () => {
-    jest.clearAllMocks();
-    (redirect as jest.Mock).mockImplementation(() => {
-      throw new Error("REDIRECT"); // Next.js redirect throws
-    });
-
-    mockSupabase = {
-      auth: {
-        getUser: jest.fn(),
-      },
-    };
-
-    (createServerSupabaseClient as jest.Mock).mockReturnValue(mockSupabase);
-
-    // Dynamically import layout to get fresh module
-    delete require.cache[require.resolve("@/app/practice/layout")];
-    mockLayout = (await import("@/app/practice/layout")).default;
-  });
-
-  it("should not redirect when enforcement is off", async () => {
-    (isBillingEnforcementActive as jest.Mock).mockReturnValue(false);
-
-    const children = React.createElement("div", null, "Test Content");
-    const result = await mockLayout({ children });
-
-    expect(redirect).not.toHaveBeenCalled();
-    expect(result).toBe(children);
-  });
-
-  it("should redirect to pricing when enforcement is on and user is not authenticated", async () => {
-    (isBillingEnforcementActive as jest.Mock).mockReturnValue(true);
-    mockSupabase.auth.getUser.mockResolvedValue({
-      data: { user: null },
-      error: null,
-    });
-
-    const children = React.createElement("div", null, "Test Content");
-
-    await expect(mockLayout({ children })).rejects.toThrow("REDIRECT");
-
-    expect(redirect).toHaveBeenCalledWith("/pricing?gated=1&feature=practice");
-  });
-
-  it("should redirect when enforcement is on and user is not a subscriber", async () => {
-    (isBillingEnforcementActive as jest.Mock).mockReturnValue(true);
-    mockSupabase.auth.getUser.mockResolvedValue({
-      data: { user: { id: "user-123" } },
-      error: null,
-    });
-    (isSubscriber as jest.Mock).mockResolvedValue(false);
-
-    const children = React.createElement("div", null, "Test Content");
-
-    await expect(mockLayout({ children })).rejects.toThrow("REDIRECT");
-
-    expect(redirect).toHaveBeenCalledWith("/pricing?gated=1&feature=practice");
-    expect(isSubscriber).toHaveBeenCalledWith("user-123");
-  });
-
-  it("should allow access when enforcement is on and user has active subscription", async () => {
-    (isBillingEnforcementActive as jest.Mock).mockReturnValue(true);
-    mockSupabase.auth.getUser.mockResolvedValue({
-      data: { user: { id: "user-123" } },
-      error: null,
-    });
-    (isSubscriber as jest.Mock).mockResolvedValue(true);
-
-    const children = React.createElement("div", null, "Test Content");
-    const result = await mockLayout({ children });
-
-    expect(redirect).not.toHaveBeenCalled();
-    expect(result).toBe(children);
-    expect(isSubscriber).toHaveBeenCalledWith("user-123");
-  });
-
-  it("should allow access when enforcement is on and user has valid trialing subscription", async () => {
-    (isBillingEnforcementActive as jest.Mock).mockReturnValue(true);
-    mockSupabase.auth.getUser.mockResolvedValue({
-      data: { user: { id: "user-123" } },
-      error: null,
-    });
-    (isSubscriber as jest.Mock).mockResolvedValue(true); // trialing with future date
-
-    const children = React.createElement("div", null, "Test Content");
-    const result = await mockLayout({ children });
-
-    expect(redirect).not.toHaveBeenCalled();
-    expect(result).toBe(children);
-  });
+import Layout from "@/app/practice/question/layout";
+import SessionLayout from "@/app/practice/layout";
+import { getPmleAccessLevelForRequest } from "@/lib/access/pmleEntitlements.server";
+jest.mock("next/navigation", () => ({ redirect: jest.fn(() => { throw new Error("REDIRECT"); }) }));
+jest.mock("@/lib/access/pmleEntitlements.server", () => ({ getPmleAccessLevelForRequest: jest.fn() }));
+const access = jest.mocked(getPmleAccessLevelForRequest);
+const children = React.createElement("div", null, "Practice");
+beforeEach(() => jest.clearAllMocks());
+it.each(["ANONYMOUS", "FREE"] as const)("redirects %s standalone practice to the pass", async (accessLevel) => {
+  access.mockResolvedValue({ accessLevel, user: accessLevel === "FREE" ? { id: "user" } as User : null });
+  await expect(Layout({ children })).rejects.toThrow("REDIRECT");
+  expect(redirect).toHaveBeenCalledWith("/pricing?gated=1&feature=practice");
 });
-
+it("allows authenticated paid practice", async () => {
+  access.mockResolvedValue({ accessLevel: "SUBSCRIBER", user: { id: "user" } as User });
+  expect(await Layout({ children })).toBe(children);
+});
+it("fails closed on lookup errors", async () => {
+  const spy = jest.spyOn(console, "error").mockImplementation(() => {});
+  access.mockRejectedValue(new Error("lookup"));
+  await expect(Layout({ children })).rejects.toThrow("REDIRECT");
+  spy.mockRestore();
+});
+it("keeps quota-backed session routes open", () => {
+  expect(SessionLayout({ children })).toBe(children);
+  expect(access).not.toHaveBeenCalled();
+});

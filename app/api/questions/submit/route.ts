@@ -27,14 +27,13 @@ export async function POST(req: Request) {
     // Note: Canonical schema uses UUIDs for question_id, but practice_attempts still uses bigint
     // For now, we'll accept UUIDs but practice_attempts insert may fail if question_id doesn't exist in legacy table
 
-    // Create server-side Supabase client - user may be null if access via grace cookie
+    // Create server-side Supabase client after the durable paid-access gate
     const supabase = createServerSupabaseClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
     
-    // Note: requireSubscriber ensures user is authenticated OR has valid grace cookie
-    // If user is null (grace cookie), we skip practice_attempts tracking
+    // requireSubscriber requires authenticated, durable paid access.
 
     // Fetch answers for the question with per-option explanations (canonical schema uses 'answers' table)
     const { data: answers, error: answersError } = await supabase

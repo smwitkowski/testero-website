@@ -443,7 +443,7 @@ describe("API routes", () => {
         serverSupabaseMock.from.mockReset();
       });
 
-      it("returns answer with canonical explanation when found", async () => {
+      it("scores an answer without returning correct labels or available explanations", async () => {
         serverSupabaseMock.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
 
         let diagnosticsSessionsCallCount = 0;
@@ -532,18 +532,17 @@ describe("API routes", () => {
 
         expect(res.status).toBe(200);
         expect(json.isCorrect).toBe(true);
-        expect(json.correctAnswer).toBe("A");
-        expect(json.explanation).toBe("Canonical explanation text");
+        expect(json).toEqual({ isCorrect: true });
 
-        // Verify explanations table was queried (not explanations_legacy)
+        // Verify no explanations table is queried during a diagnostic.
         const fromCalls = serverSupabaseMock.from.mock.calls;
         const explanationsCall = fromCalls.find((call) => call[0] === "explanations");
-        expect(explanationsCall).toBeDefined();
+        expect(explanationsCall).toBeUndefined();
         const explanationsLegacyCall = fromCalls.find((call) => call[0] === "explanations_legacy");
         expect(explanationsLegacyCall).toBeUndefined();
       });
 
-      it("returns null explanation when canonical explanation is missing", async () => {
+      it("scores an answer without querying missing explanations", async () => {
         const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
         serverSupabaseMock.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
 
@@ -633,13 +632,8 @@ describe("API routes", () => {
 
         expect(res.status).toBe(200);
         expect(json.isCorrect).toBe(true);
-        expect(json.correctAnswer).toBe("B");
-        expect(json.explanation).toBeNull();
-
-        // Verify warning was logged
-        expect(consoleWarnSpy).toHaveBeenCalledWith(
-          expect.stringContaining("Missing canonical explanation for question canonical-question-uuid-999 (canonical: undefined, original: canonical-question-uuid-999) in session session-456")
-        );
+        expect(json).toEqual({ isCorrect: true });
+        expect(consoleWarnSpy).not.toHaveBeenCalled();
 
         // Verify explanations_legacy was NOT queried
         const fromCalls = serverSupabaseMock.from.mock.calls;

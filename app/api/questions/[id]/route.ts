@@ -18,12 +18,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Question ID is required.' }, { status: 400 });
     }
 
-    // Create server-side Supabase client - user may be null if access via grace cookie
+    // Create server-side Supabase client after the durable paid-access gate
     const supabase = createServerSupabaseClient();
     await supabase.auth.getUser(); // Check auth state (not used but required for Supabase context)
     
-    // Note: requireSubscriber ensures user is authenticated OR has valid grace cookie
-    // This endpoint doesn't require user.id, so we can proceed without it
+    // requireSubscriber requires authenticated, durable paid access.
 
     // Fetch the question by ID
     const { data: question, error: questionError } = await supabase

@@ -237,10 +237,9 @@ export async function GET(req: Request) {
     // If user doesn't have EXPLANATIONS access, explanations will remain null for all questions
 
     // Format questions for client, including explanations (if user has access)
-    // Note: For anonymous users, we may want to restrict to DIAGNOSTIC_SUMMARY_BASIC only
-    // (score + domain breakdown without question-level details) in a future ticket
+    // Anonymous summaries expose only score and aggregate domain performance.
     
-    const questions = typedQuestions.map(q => {
+    const questions = canUseFeature(accessLevel, "DIAGNOSTIC_SUMMARY_FULL") ? typedQuestions.map(q => {
       let explanation: string | null = null;
 
       // Only fetch explanations if user has EXPLANATIONS access
@@ -279,7 +278,7 @@ export async function GET(req: Request) {
         isCorrect: q.diagnostic_responses?.[0]?.is_correct || false,
         explanation
       };
-    });
+    }) : undefined;
 
     const summary = {
       sessionId: dbSession.id,
@@ -289,7 +288,7 @@ export async function GET(req: Request) {
       score,
       startedAt: dbSession.started_at,
       completedAt: dbSession.completed_at,
-      questions
+      ...(questions ? { questions } : {})
     };
 
     return NextResponse.json({

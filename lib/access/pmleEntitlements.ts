@@ -21,8 +21,8 @@ import type { BillingStatusResponse } from "@/app/api/billing/status/route";
 /**
  * Access levels for PMLE users
  * - ANONYMOUS: No account (not logged in)
- * - FREE: Logged in, no active subscription
- * - SUBSCRIBER: Has active or trialing subscription (status in ("active","trialing"))
+ * - FREE: Logged in, no paid access
+ * - SUBSCRIBER: Paid-access alias: valid PMLE Pass or active legacy subscription
  */
 export type AccessLevel = "ANONYMOUS" | "FREE" | "SUBSCRIBER";
 
@@ -44,25 +44,25 @@ export type PmleFeature =
   | "PRACTICE_SESSION_FREE_QUOTA";
 
 /**
- * Feature access matrix encoding Week 4 rules:
+ * Feature access matrix for PMLE Pass:
  * 
  * ANONYMOUS:
- * - ✅ DIAGNOSTIC_RUN: 1 diagnostic run allowed
+ * - ✅ DIAGNOSTIC_RUN: Diagnostics allowed
  * - ✅ DIAGNOSTIC_SUMMARY_BASIC: Can view basic summary (score + domain breakdown)
  * - ❌ DIAGNOSTIC_SUMMARY_FULL: Cannot view full summary with question details
  * - ❌ EXPLANATIONS: No explanations access
  * - ❌ PRACTICE_SESSION: No unlimited practice
  * - ❌ PRACTICE_SESSION_FREE_QUOTA: No free practice quota
  * 
- * FREE (logged in, no subscription):
+ * FREE (logged in, no paid access):
  * - ✅ DIAGNOSTIC_RUN: Can run diagnostics
  * - ✅ DIAGNOSTIC_SUMMARY_BASIC: Can view basic summary
  * - ✅ DIAGNOSTIC_SUMMARY_FULL: Can view full summary with question details
  * - ❌ EXPLANATIONS: No explanations (paid feature)
  * - ❌ PRACTICE_SESSION: No unlimited practice
- * - ✅ PRACTICE_SESSION_FREE_QUOTA: Limited practice quota (e.g., ~5 questions per week)
+ * - ✅ PRACTICE_SESSION_FREE_QUOTA: Limited practice quota enforced by the session creation API
  * 
- * SUBSCRIBER (active or trialing subscription):
+ * SUBSCRIBER (valid PMLE Pass or active legacy subscription):
  * - ✅ All features: Full access to everything
  */
 const FEATURE_MATRIX: Record<AccessLevel, Record<PmleFeature, boolean>> = {
@@ -93,11 +93,11 @@ const FEATURE_MATRIX: Record<AccessLevel, Record<PmleFeature, boolean>> = {
 };
 
 /**
- * Determines access level from user and subscription status
+ * Determines access level from user and durable paid-access status
  * 
- * @param params - Object containing user and subscription status
+ * @param params - Object containing user and paid-access status
  * @param params.user - Supabase user object (null if anonymous)
- * @param params.isSubscriber - Whether user has active/trialing subscription
+ * @param params.isSubscriber - Paid-access alias from the authoritative billing status
  * @returns AccessLevel - "ANONYMOUS", "FREE", or "SUBSCRIBER"
  */
 export function getAccessLevel({

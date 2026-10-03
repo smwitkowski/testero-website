@@ -225,18 +225,21 @@ describe('GET /api/practice/session/[sessionId]/summary', () => {
     expect(body.domainBreakdown[0].percentage).toBe(50);
   });
 
-  it('should return 403 for user without practice session access', async () => {
-    setupMocks({ canAccess: false });
+  it('allows free-quota owners to review results without paid explanations', async () => {
+    const { mockSupabase } = setupMocks({ canAccess: false, accessLevel: 'FREE' });
 
     const { GET } = require('@/app/api/practice/session/[sessionId]/summary/route');
     const req = new NextRequest('http://localhost/api/practice/session/session-123/summary');
     const params = Promise.resolve({ sessionId: 'session-123' });
 
     const res = await GET(req, { params });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body.code).toBe('PAYWALL');
+    expect(body.summary.score).toBe(50);
+    expect(body.summary.questions).toHaveLength(2);
+    expect(body.summary.questions.every((q: any) => q.explanation === null)).toBe(true);
+    expect(mockSupabase.from).not.toHaveBeenCalledWith('explanations');
   });
 
   it('should return 401 for unauthenticated user', async () => {
@@ -269,8 +272,9 @@ describe('GET /api/practice/session/[sessionId]/summary', () => {
     expect(body.error).toBe('Session not found');
   });
 
-  it('should return 403 for session owned by different user', async () => {
+  it('should return 403 for free user viewing a session owned by different user', async () => {
     setupMocks({
+      accessLevel: 'FREE', canAccess: false,
       session: {
         id: 'session-123',
         user_id: 'other-user',

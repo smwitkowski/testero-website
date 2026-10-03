@@ -155,7 +155,11 @@ describe("snapshot scoring and review", () => {
         ? await createDiagnostic(request("/api/diagnostic", { action: "answer", sessionId: "session", data: answerBody }))
         : await answerPractice(request("/api/practice/session/session/answer", answerBody), params("session"));
       expect(answered.status).toBe(200);
-      expect(await answered.json()).toMatchObject({ isCorrect });
+      const answerPayload = await answered.json();
+      expect(answerPayload).toMatchObject({ isCorrect });
+      if (kind === "diagnostic") {
+        expect(answerPayload).toEqual({ isCorrect });
+      }
       tables[sessionTable][0].completed_at = "2026-01-01T00:00:00Z";
       const summaryResponse = kind === "diagnostic"
         ? await diagnosticSummary(request("/api/diagnostic/summary/session"))

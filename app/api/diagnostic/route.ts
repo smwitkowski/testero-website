@@ -7,7 +7,6 @@ import {
 } from "@/lib/auth/anonymous-session-server";
 import { trackDiagnosticCompleteWithCampaign } from "@/lib/analytics/campaign-analytics-integration";
 import { PostHog } from "posthog-node";
-import { requireSubscriber } from "@/lib/auth/require-subscriber";
 import { selectPmleQuestionsByBlueprint } from "@/lib/diagnostic/pmle-selection";
 import { DIAGNOSTIC_CONFIG, getSessionTimeoutMs } from "@/lib/constants/diagnostic-config";
 
@@ -92,9 +91,6 @@ function validateAnswerRequest(
 // Define a type for questions fetched from the database
 
 export async function GET(req: Request) {
-  // Premium gate check
-  const block = await requireSubscriber(req, "/api/diagnostic");
-  if (block) return block;
 
   const supabase = createServerSupabaseClient();
   await cleanExpiredSessions(supabase); // Clean expired sessions
@@ -214,9 +210,6 @@ export async function GET(req: Request) {
  * Legacy exams continue to use exam_versions and legacy question selection.
  */
 export async function POST(req: Request) {
-  // Premium gate check
-  const block = await requireSubscriber(req, "/api/diagnostic");
-  if (block) return block;
 
   const supabase = createServerSupabaseClient();
   await cleanExpiredSessions(supabase); // Clean expired sessions
@@ -597,43 +590,9 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: "Failed to save answer." }, { status: 500 });
         }
 
-        // Fetch explanation from canonical explanations table
-        // Primary path: Use canonical_question_id (UUID) for PMLE canonical sessions
-        // Fallback path: Use original_question_id (bigint) for legacy sessions
-        let explanationText: string | null = null;
-        let questionIdForExplanation: string | number | null = null;
-
-        if (snapQuestion.canonical_question_id) {
-          // Primary path: PMLE canonical sessions
-          questionIdForExplanation = snapQuestion.canonical_question_id;
-        } else if (snapQuestion.original_question_id) {
-          // Fallback path: Legacy sessions
-          questionIdForExplanation = snapQuestion.original_question_id;
-        }
-
-        if (questionIdForExplanation) {
-          const { data: canonicalExplanation, error: canonicalError } = await supabase
-            .from("explanations")
-            .select("explanation_text")
-            .eq("question_id", questionIdForExplanation)
-            .single();
-
-          if (canonicalExplanation && !canonicalError) {
-            explanationText = canonicalExplanation.explanation_text;
-          } else {
-            // Canonical explanation missing - return null and log for cleanup
-            console.warn(
-              `Missing canonical explanation for question ${questionIdForExplanation} (canonical: ${snapQuestion.canonical_question_id}, original: ${snapQuestion.original_question_id}) in session ${sessionId}`
-            );
-            explanationText = null;
-          }
-        }
-
-        return NextResponse.json({
-          isCorrect,
-          correctAnswer: snapQuestion.correct_label,
-          explanation: explanationText,
-        });
+        // Do not reveal answers or explanations during a diagnostic.
+        // Scoring still uses the stored, shuffled snapshot label.
+        return NextResponse.json({ isCorrect });
 
       case "complete":
         if (typeof sessionId !== "string" || !sessionId) {

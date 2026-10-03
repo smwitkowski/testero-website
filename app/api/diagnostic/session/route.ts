@@ -18,7 +18,6 @@ import { PostHog } from "posthog-node";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
 import { DIAGNOSTIC_CONFIG, getSessionTimeoutMs } from "@/lib/constants/diagnostic-config";
-import { requireSubscriber } from "@/lib/auth/require-subscriber";
 import { selectPmleQuestionsByBlueprint } from "@/lib/diagnostic/pmle-selection";
 
 // Zod schema for input validation
@@ -82,10 +81,6 @@ export async function POST(req: Request) {
         { status: 429 }
       );
     }
-
-    // Premium gate check
-    const block = await requireSubscriber(req, "/api/diagnostic/session");
-    if (block) return block;
 
     // Get authenticated user
     const {

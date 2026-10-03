@@ -172,3 +172,16 @@ describe("pmleEntitlements", () => {
 
 
 
+
+// SUBSCRIBER is a paid-access alias, not a purchasable subscription tier.
+describe("PMLE Pass boundaries", () => {
+  it.each(["ANONYMOUS", "FREE"] as const)("never exposes unlimited practice or explanations to %s", (level) => {
+    expect(canUseFeature(level, "PRACTICE_SESSION")).toBe(false);
+    expect(canUseFeature(level, "EXPLANATIONS")).toBe(false);
+    expect(canUseFeature(level, "DIAGNOSTIC_RUN")).toBe(true);
+  });
+  it("keeps authenticated free-quota creation separate from unlimited practice", () => {
+    expect(canUseFeature("FREE", "PRACTICE_SESSION_FREE_QUOTA")).toBe(true);
+    expect(canUseFeature("FREE", "PRACTICE_SESSION")).toBe(false);
+  });
+});

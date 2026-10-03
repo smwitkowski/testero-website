@@ -54,12 +54,11 @@ export async function GET(request: NextRequest) {
         .filter(Boolean)
     );
 
-    // Create server-side Supabase client - user may be null if access via grace cookie
+    // Create server-side Supabase client after the durable paid-access gate
     const supabase = createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
     
-    // Note: requireSubscriber ensures user is authenticated OR has valid grace cookie
-    // If grace cookie allows access, user might be null
+    // requireSubscriber requires authenticated, durable paid access.
 
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams;

@@ -37,10 +37,8 @@ export async function GET(
   // Get PMLE access level for entitlement checks
   const { accessLevel, user } = await getPmleAccessLevelForRequest();
 
-  // Check if user can access practice summary
-  if (!canUseFeature(accessLevel, "PRACTICE_SESSION")) {
-    return NextResponse.json({ code: "PAYWALL" }, { status: 403 });
-  }
+  // Results belong to the session owner, including free-quota sessions.
+  // Paid access gates explanations below, not access to owned results.
 
   try {
     const { sessionId } = await params;
