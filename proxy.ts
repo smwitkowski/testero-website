@@ -12,7 +12,7 @@ export async function proxy(request: NextRequest) {
       setAll(values) {
         values.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
-        values.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        values.forEach(({ name, value, options }) => response.cookies.set(name, value, { ...options, httpOnly: true, sameSite: options?.sameSite ?? "lax", secure: options?.secure ?? process.env.NODE_ENV === "production", path: options?.path ?? "/" }));
       },
     },
   });

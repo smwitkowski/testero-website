@@ -8,10 +8,11 @@ export async function createServerSupabaseClient() {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) throw new Error("Supabase public configuration is missing");
   return createServerClient(url, key, {
+    cookieOptions: { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/" },
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll(values) {
-        try { values.forEach(({ name, value, options }) => cookieStore.set(name, value, options)); }
+        try { values.forEach(({ name, value, options }) => cookieStore.set(name, value, { ...options, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/" })); }
         catch { /* Session refresh is handled by the proxy in read-only Server Components. */ }
       },
     },

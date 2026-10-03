@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { PhasePlaceholder } from "@/components/phase-placeholder";
-
+import { AuthForm } from "@/components/auth-form";
+import { safeNext } from "@/lib/auth/redirects";
 export const metadata: Metadata = { title: "Sign in" };
-export default function LoginPage() {
-  return <PhasePlaceholder phase={2} title="Sign in" description="Email and password sign-in will connect you to your saved readiness and practice. This preview does not sign you in."
-    primary={{ href: "/dashboard", label: "Preview dashboard" }} links={[{ href: "/signup", label: "Preview signup" }, { href: "/forgot-password", label: "Preview password recovery" }]} />;
+export default async function AuthPage({ searchParams }: { searchParams: Promise<{ next?: string; message?: string }> }) {
+  const params = await searchParams;
+  return <section className="space-y-6"><h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Sign in</h1><p className="max-w-xl leading-relaxed text-muted-foreground">Continue your PMLE preparation.</p><AuthForm mode="login" next={safeNext(params.next)} confirmationFailed={params.message === "confirmation-failed"} /></section>;
 }
