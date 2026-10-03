@@ -2,8 +2,8 @@
 """Generate PMLE questions using LLM-backed generation pipeline.
 
 This script creates a generation run and inserts LLM-generated canonical questions
-with validation. Generated questions are marked as DRAFT + UNREVIEWED (or NEEDS_ANSWER_FIX
-if validation fails) and can be reviewed via the admin panel.
+with validation and a mandatory quality judge. All questions remain DRAFT until
+review_batch.py exports a founder spot-check and explicitly approves the run.
 """
 
 import sys
@@ -25,6 +25,7 @@ from shared.pmle_program import PMLEQuestionProgram
 from shared.validator import validate_question, format_validation_errors, ValidationResult
 from shared.dedupe import normalize_stem
 from shared.tracing import traceable_decorator
+from shared.quality_gate import JudgeVerdict, judge_question
 
 # Configure logging
 logging.basicConfig(
@@ -188,7 +189,7 @@ def strip_markdown_from_question_data(question_data: Dict[str, Any]) -> Dict[str
 @click.option(
     '--model',
     default='openrouter/google/gemini-2.5-flash',
-    help='OpenRouter model identifier (default: openai/gpt-5.1). Examples: openai/gpt-5.1, anthropic/claude-3-opus'
+    help='DSPy/OpenRouter model identifier (default: openrouter/google/gemini-2.5-flash)'
 )
 @click.option(
     '--prompt-version',
@@ -219,7 +220,7 @@ def strip_markdown_from_question_data(question_data: Dict[str, Any]) -> Dict[str
 @click.option(
     '--skip-eval',
     is_flag=True,
-    help='Skip factual accuracy evaluation (faster but less accurate)'
+    help='Skip legacy factual evaluation; the publication quality judge is always required'
 )
 @click.option(
     '--jaccard-threshold',
@@ -530,7 +531,15 @@ def main(
                     failed_count += 1
                     continue
                 
-                # Validate question (should already be valid from program, but check for reporting)
+                # Judge and store exactly the same normalized content, not the raw LLM output.
+                raw_output = strip_markdown_from_question_data(raw_output)
+                for field in ("correct_answer", "distractor_1", "distractor_2", "distractor_3"):
+                    raw_output[field] = strip_option_letter(raw_output[field])
+                for field in ("correct_explanation", "distractor_1_explanation",
+                              "distractor_2_explanation", "distractor_3_explanation"):
+                    raw_output[field] = strip_references(raw_output[field])
+                validation = validate_question(raw_output)
+
                 if not validation.is_valid:
                     validation_failed_count += 1
                     error_msg = format_validation_errors(validation)
@@ -543,35 +552,32 @@ def main(
                     else:
                         click.echo(f"   Inserting with review_status={validation.review_status}", err=True)
                 
-                # Process factual evaluation results
-                final_review_status = "GOOD"  # Default to GOOD for valid questions
+                # The legacy factual evaluator can pass UNCERTAIN results. It is not
+                # the publication gate, and --skip-eval cannot bypass this judge.
+                judge = judge_question(
+                    raw_output, prompt_context,
+                    documentation_context=result.documentation_context,
+                    model=model,
+                ) if validation.is_valid else JudgeVerdict(
+                    passed=False, score=0.0,
+                    reason=("Validation failed: " + "; ".join(validation.errors))[:300], model=model,
+                )
                 if eval_result is not None:
-                    # Check for references in explanations
-                    options_with_references = [r for r in eval_result.option_results if r.has_references]
-                    if options_with_references:
-                        ref_labels = [r.option_label for r in options_with_references]
-                        click.echo(f"⚠️  References found in explanations for options: {', '.join(ref_labels)}", err=True)
-                        click.echo(f"   References will be stripped, but flagging for review", err=True)
-                        final_review_status = "NEEDS_ANSWER_FIX"
-                    
-                    # Check for FAIL verdicts - these should have been handled by regeneration loop
-                    # If we still have failures here, it means all regeneration attempts failed
                     failed_options = [r for r in eval_result.option_results if r.verdict == "FAIL"]
                     if failed_options:
-                        eval_failed_count += 1
-                        failed_labels = [r.option_label for r in failed_options]
-                        click.echo(f"⚠️  Factual eval FAILED for question {i} after all regeneration attempts:", err=True)
-                        click.echo(f"   Failed options: {', '.join(failed_labels)}", err=True)
-                        for option_result in failed_options:
-                            click.echo(f"   Option {option_result.option_label}: {option_result.issues}", err=True)
-                        click.echo(f"   Skipping question - all regeneration attempts exhausted", err=True)
-                        failed_count += 1
-                        continue
-                    
-                    # UNCERTAIN verdicts are now treated as PASS after multi-hop search
-                    # No need to flag for manual review - the system handles it automatically
-                    click.echo(f"   ✓ Factual eval passed (all options PASS or UNCERTAIN treated as PASS)")
-                
+                        judge = JudgeVerdict(
+                            passed=False, score=0.0,
+                            reason="Legacy factual evaluation failed for options: " +
+                                   ", ".join(r.option_label for r in failed_options), model=model,
+                        )
+                final_review_status = "GOOD" if judge.passed else (
+                    validation.review_status if not validation.is_valid else "NEEDS_ANSWER_FIX"
+                )
+                if not judge.passed:
+                    eval_failed_count += 1
+                click.echo(f"   Judge: {'PASS' if judge.passed else 'FAIL'} "
+                           f"({judge.score:.2f}) — {judge.reason}")
+
                 # Track normalized stem and embedding for this run
                 if raw_output.get("stem"):
                     run_norm_stems.append(normalize_stem(raw_output["stem"]))
@@ -588,17 +594,10 @@ def main(
                 if not raw_output:
                     continue
                 
-                # Determine final status and review_status
-                # For valid questions: ACTIVE + GOOD (unless references found)
-                # For invalid questions (if skip_invalid=False): DRAFT + validation.review_status
-                if validation.is_valid:
-                    final_status = "ACTIVE"
-                    # final_review_status already set above (GOOD or NEEDS_ANSWER_FIX if references)
-                else:
-                    # Invalid question - keep as DRAFT with validation review_status
-                    final_status = "DRAFT"
-                    final_review_status = validation.review_status
-                
+                # Never publish during generation. GOOD is finalized only after
+                # all four answers and the explanation have been saved successfully.
+                final_status = "DRAFT"
+
                 # 3. Prepare question data
                 question_data = {
                     "exam": exam,
@@ -606,7 +605,8 @@ def main(
                     "stem": strip_markdown(raw_output["stem"]),
                     "difficulty": difficulty,
                     "status": final_status,
-                    "review_status": final_review_status,
+                    "review_status": "UNREVIEWED" if judge.passed else final_review_status,
+                    "review_notes": judge.to_review_notes(),
                     "generation_run_id": run_id
                 }
                 
@@ -681,6 +681,13 @@ def main(
                     failed_count += 1
                     continue
                 
+                if not client.update_question_review(
+                    question_id, run_id, final_review_status, judge.to_review_notes()
+                ):
+                    click.echo(f"⚠️  Failed to finalize review for question {i}; kept DRAFT", err=True)
+                    failed_count += 1
+                    continue
+
                 # 6. Store embedding for future duplicate detection
                 if not skip_semantic_dedup and stem_embedding is not None:
                     try:
@@ -737,9 +744,9 @@ def main(
         
         if not dry_run:
             click.echo("📋 Next steps:")
-            click.echo(f"   1. View questions in admin UI: /admin/questions")
-            click.echo(f"   2. Filter by domain: {domain_code}")
-            click.echo(f"   3. Filter by generation_run_id: {run_id}")
+            click.echo(f"   1. uv run python scripts/review_batch.py {run_id}")
+            click.echo(f"   2. Read review/{run_id}.md and spot-check every sampled question")
+            click.echo(f"   3. uv run python scripts/review_batch.py {run_id} --approve --yes")
             click.echo("")
         
         if generated_count < n_questions:

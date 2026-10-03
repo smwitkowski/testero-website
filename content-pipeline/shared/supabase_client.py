@@ -61,9 +61,12 @@ class SupabaseClient:
             return None
 
     def insert_question(self, question_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Insert a single question into the questions table."""
+        """Insert a run-linked DRAFT; publication only happens in review_batch.py."""
+        if not question_data.get("generation_run_id"):
+            raise ValueError("Generated questions require generation_run_id")
+        draft_data = {**question_data, "status": "DRAFT"}
         try:
-            response = self.client.table('questions').insert(question_data).execute()
+            response = self.client.table('questions').insert(draft_data).execute()
             # Response.data is a list, get first item for single insert
             if response.data and len(response.data) > 0:
                 return response.data[0]
@@ -71,6 +74,24 @@ class SupabaseClient:
         except Exception as e:
             print(f"Error inserting question: {e}")
             return None
+
+    def update_question_review(
+        self, question_id: str, run_id: str, review_status: str, review_notes: str
+    ) -> bool:
+        """Finalize review metadata only after all content for a DRAFT is saved."""
+        try:
+            response = (
+                self.client.table("questions")
+                .update({"review_status": review_status, "review_notes": review_notes})
+                .eq("id", question_id)
+                .eq("generation_run_id", run_id)
+                .eq("status", "DRAFT")
+                .execute()
+            )
+            return bool(response.data)
+        except Exception as e:
+            print(f"Error finalizing question review {question_id}: {e}")
+            return False
 
     def insert_answers_batch(self, answers_data: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
         """Insert a batch of answers into the answers table.
