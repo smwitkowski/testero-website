@@ -86,6 +86,27 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - name: Validate required deployment configuration
+        env:
+          SUPABASE_SERVICE_ROLE_KEY_SECRET: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_SECRET }}
+          STRIPE_SECRET_KEY_SECRET: ${{ secrets.STRIPE_SECRET_KEY_SECRET }}
+          STRIPE_WEBHOOK_SECRET_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET_SECRET }}
+          STRIPE_PRICE_PMLE_PASS: ${{ secrets.STRIPE_PRICE_PMLE_PASS }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+
+          for name in ("SUPABASE_SERVICE_ROLE_KEY_SECRET", "STRIPE_SECRET_KEY_SECRET", "STRIPE_WEBHOOK_SECRET_SECRET"):
+              reference = os.environ.get(name, "")
+              if not re.fullmatch(r"[A-Za-z0-9_-]+:(?:[1-9][0-9]*|latest)", reference):
+                  raise SystemExit(name + " must be a Secret Manager name:version reference, not a credential.")
+          for name in ("STRIPE_PRICE_PMLE_PASS", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"):
+              if not os.environ.get(name):
+                  raise SystemExit("Missing deployment configuration: " + name)
+          PY
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
@@ -95,13 +116,17 @@ jobs:
           region: ${{ secrets.GCP_REGION }}
           image: ${{ needs.build.outputs.image }}
           flags: --allow-unauthenticated --memory=1Gi --cpu=1 --min-instances=0 --max-instances=10 --port=3000
+          # Preserve unrelated runtime configuration and Secret Manager bindings.
+          env_vars_update_strategy: merge
+          secrets_update_strategy: merge
+          secrets: |
+            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY_SECRET }}
+            STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY_SECRET }}
+            STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET_SECRET }}
           env_vars: |
             NODE_ENV=production
             NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
             NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-            STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
-            STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}
             STRIPE_PRICE_PMLE_PASS=${{ secrets.STRIPE_PRICE_PMLE_PASS }}
             NEXT_PUBLIC_POSTHOG_KEY=${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }}
             NEXT_PUBLIC_POSTHOG_HOST=${{ secrets.NEXT_PUBLIC_POSTHOG_HOST }}

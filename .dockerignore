@@ -10,7 +10,6 @@ test-results
 e2e
 content-pipeline
 supabase
-content
 docs
 README.md
 CLAUDE.md

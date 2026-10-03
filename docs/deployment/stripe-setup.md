@@ -21,13 +21,19 @@ supported, but v2 does not create new subscriptions, tiers, or trials.
      refresh existing legacy subscription status; no new subscription creation.
    Configure that endpoint's signing secret as **`STRIPE_WEBHOOK_SECRET`**.
    Checkout accepts cards, so no delayed-payment success event is required.
-4. In GitHub Actions secrets, configure **`STRIPE_SECRET_KEY`**,
-   **`STRIPE_WEBHOOK_SECRET`**, and **`STRIPE_PRICE_PMLE_PASS`**, plus the existing
-   **`SUPABASE_SERVICE_ROLE_KEY`**, **`NEXT_PUBLIC_SUPABASE_URL`**,
-   **`NEXT_PUBLIC_SUPABASE_ANON_KEY`**, and Cloud Run/GCP secrets. Optional
-   **`NEXT_PUBLIC_POSTHOG_KEY`** / **`NEXT_PUBLIC_POSTHOG_HOST`** enable analytics.
-   Stripe and service-role secrets go to server runtime, never Docker build args
-   or browser variables. v2 does **not** use `PAYWALL_SIGNING_SECRET`.
+4. Store the raw **`STRIPE_SECRET_KEY`**, **`STRIPE_WEBHOOK_SECRET`**, and
+   **`SUPABASE_SERVICE_ROLE_KEY`** values in Secret Manager. In GitHub Actions
+   secrets, configure **`STRIPE_SECRET_KEY_SECRET`**,
+   **`STRIPE_WEBHOOK_SECRET_SECRET`**, and **`SUPABASE_SERVICE_ROLE_KEY_SECRET`**
+   as Secret Manager **`name:version` references**, not raw credentials. Also set
+   **`STRIPE_PRICE_PMLE_PASS`**, **`NEXT_PUBLIC_SUPABASE_URL`**,
+   **`NEXT_PUBLIC_SUPABASE_ANON_KEY`**, and the Cloud Run/GCP secrets listed in
+   [v2 runtime configuration](v2-runtime.md). Optional **`NEXT_PUBLIC_POSTHOG_KEY`**
+   / **`NEXT_PUBLIC_POSTHOG_HOST`** enable analytics. The runtime service account
+   needs Secret Manager read access. Deployment merges env values and secret
+   bindings to preserve unrelated settings. Stripe and service-role keys go only
+   to server runtime, never Docker build args or browser variables. v2 does
+   **not** use `PAYWALL_SIGNING_SECRET`.
 5. Review and apply **`supabase/migrations/20261003000000_v2_baseline.sql`** through
    the approved migration process. It already includes `pmle_passes`,
    `pmle_pass_refunds`, and order-safe fulfillment/refund functions. Local checks
