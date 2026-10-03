@@ -26,8 +26,9 @@ describe("strict auth bodies", () => {
   it.each([null, [], "", 42])("rejects non-objects %#", body => expect(signupSchema.safeParse(body).success).toBe(false));
 });
 describe("safe local redirects", () => {
-  it.each([undefined, null, "https://evil.example", "//evil.example", "/\\evil.example", "/%2f%2fevil.example", "/%5cevil.example", "/%255cevil.example", "/%252f%252fevil.example", "/%0aevil", "/%250devil", "/javascript:evil", "/%6aavascript%3aevil", "/path with space", "/bad%", "x".repeat(2049)])("rejects unsafe next %#", value => expect(safeNext(value)).toBe("/dashboard"));
+  it.each([undefined, null, "https://evil.example", "//evil.example", "/\\evil.example", "/%2f%2fevil.example", "/%5cevil.example", "/%255cevil.example", "/%252f%252fevil.example", "/%0aevil", "/%250devil", "/javascript:evil", "/%6aavascript%3aevil", "/path with space", "/bad%", "/a/..//evil.example", "/.//evil.example", "/%2e//evil.example", "/a/%2e%2e//evil.example", "/a/%252e%252e//evil.example", "x".repeat(2049)])("rejects unsafe next %#", value => expect(safeNext(value)).toBe("/dashboard"));
   it.each(["/account", "/practice?domain=ml", "/diagnostic/abc/results#review", "/dashboard?tab=ready"])("keeps internal path %s", value => expect(safeNext(value)).toBe(value));
+  it("does not emit a protocol-relative signup destination after path normalization", () => expect(signupDestination("/a/..//evil.example")).toBe("/dashboard?signup=confirmed"));
   it("adds one verified signup marker without dropping query or fragment", () => expect(signupDestination("/dashboard?tab=ready&signup=other#top")).toBe("/dashboard?tab=ready&signup=confirmed#top"));
 });
 describe("callback validation", () => {

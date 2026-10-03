@@ -5,6 +5,8 @@ export function safeNext(value: unknown, fallback = "/dashboard"): string {
   for (let i = 0; i < 5; i++) {
     if (!decoded.startsWith("/") || decoded.startsWith("//") || /[\\\u0000-\u0020\u007f]/.test(decoded) || /[a-z][a-z0-9+.-]*:/i.test(decoded)) return fallback;
     try {
+      // URL dot-segment normalization must not turn a local path into //host.
+      if (new URL(decoded, "https://internal.invalid").pathname.startsWith("//")) return fallback;
       const next = decodeURIComponent(decoded);
       if (next === decoded) return value;
       decoded = next;
