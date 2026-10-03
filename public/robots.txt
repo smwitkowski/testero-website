@@ -1,6 +1,0 @@
-# robots.txt for Testero.ai
-User-agent: *
-Allow: /
-
-# Sitemap location
-Sitemap: https://testero.ai/sitemap.xml
