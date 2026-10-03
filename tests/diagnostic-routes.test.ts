@@ -139,7 +139,7 @@ describe("strict diagnostic creation route", () => {
 describe("server-verified request credentials", () => {
   it("gets identity from getUser and token from cookie only", async () => {
     mocks.cookie = token;
-    mocks.getUser.mockResolvedValue({ data: { user: { id: "verified-user" } }, error: null });
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "verified-user", email_confirmed_at: "2026-10-03T12:00:00Z" } }, error: null });
     expect(await diagnosticCredentials()).toEqual({ userId: "verified-user", anonymousToken: token });
     expect(mocks.getUser).toHaveBeenCalledOnce();
   });
@@ -215,7 +215,7 @@ describe("diagnostic progress, answer, and aggregate result routes", () => {
 describe("verified account diagnostic creation", () => {
   it("passes only server-verified user identity and retains the anonymous claim cookie", async () => {
     mocks.cookie = token;
-    mocks.getUser.mockResolvedValue({ data: { user: { id: "verified-user" } }, error: null });
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "verified-user", email_confirmed_at: "2026-10-03T12:00:00Z" } }, error: null });
     const response = await start(request());
     expect(response.status).toBe(201);
     expect(mocks.getUser).toHaveBeenCalledOnce();
@@ -224,9 +224,22 @@ describe("verified account diagnostic creation", () => {
     expect(Object.keys(await response.json()).sort()).toEqual(["href", "sessionId"]);
   });
   it("does not accept an account identifier from JSON even for a verified user", async () => {
-    mocks.getUser.mockResolvedValue({ data: { user: { id: "verified-user" } }, error: null });
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "verified-user", email_confirmed_at: "2026-10-03T12:00:00Z" } }, error: null });
     expect((await start(request({ userId: "victim" }))).status).toBe(400);
     expect(mocks.getUser).not.toHaveBeenCalled();
     expect(createServiceSupabaseClient).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("diagnostic confirmed credentials", () => {
+  it("does not accept an unconfirmed getUser response as account identity", async () => {
+    mocks.cookie = token;
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "unconfirmed-user", email_confirmed_at: null } }, error: null });
+    expect(await diagnosticCredentials()).toEqual({ userId: null, anonymousToken: token });
+  });
+  it("does not accept an errored getUser response even if a user object is present", async () => {
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "untrusted-user", email_confirmed_at: "2026-10-03T12:00:00Z" } }, error: { message: "secret auth error" } });
+    expect(await diagnosticCredentials()).toEqual({ userId: null, anonymousToken: null });
   });
 });
