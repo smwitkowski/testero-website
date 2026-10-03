@@ -507,9 +507,8 @@ const DiagnosticSessionPage = () => {
 
               {/* Answer options - Radio group */}
               <div role="radiogroup" aria-label="Answer choices" className="space-y-3 mb-8">
-                {currentQuestion.options.map((option, index) => {
+                {currentQuestion.options.map((option) => {
                   const isSelected = selectedOptionLabel === option.label;
-                  const labels = ['A', 'B', 'C', 'D'];
 
                   return (
                     <label
@@ -535,7 +534,7 @@ const DiagnosticSessionPage = () => {
                           ? 'bg-indigo-600 text-white'
                           : 'bg-slate-100 text-slate-700'
                       }`}>
-                        {labels[index]}
+                        {option.label}
                       </div>
                       
                       {/* Option text */}

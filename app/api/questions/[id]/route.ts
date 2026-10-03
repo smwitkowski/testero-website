@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { serializeQuestion } from '@/lib/practice/serialize';
 import { requireSubscriber } from '@/lib/auth/require-subscriber';
+import { shuffleArray } from '@/lib/questions/answer-order';
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Shape the response (serializeQuestion will map choice_label->label, choice_text->text)
-    return NextResponse.json(serializeQuestion(question, answers || []));
+    return NextResponse.json(serializeQuestion(question, shuffleArray(answers || [])));
   } catch (error) {
     console.error('Question by ID API error:', error);
     return NextResponse.json({ 

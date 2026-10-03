@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireSubscriber } from "@/lib/auth/require-subscriber";
+import { answerLabel, resolveAnswerOrder } from "@/lib/questions/answer-order";
 
 export async function POST(req: Request) {
   try {
@@ -8,8 +9,13 @@ export async function POST(req: Request) {
     const block = await requireSubscriber(req, "/api/questions/submit");
     if (block) return block;
 
-    const body = (await req.json()) as { questionId: string; selectedOptionKey: string };
-    const { questionId, selectedOptionKey } = body;
+    const body = (await req.json()) as {
+      questionId: string;
+      selectedOptionKey: string;
+      selectedOptionId?: string;
+      optionOrder?: unknown;
+    };
+    const { questionId, selectedOptionKey, selectedOptionId, optionOrder } = body;
 
     if (!questionId || !selectedOptionKey) {
       return NextResponse.json(
@@ -49,13 +55,29 @@ export async function POST(req: Request) {
       );
     }
 
-    // Compare selectedOptionKey with correct answer's choice_label
-    const isCorrect = selectedOptionKey === correctAnswer.choice_label;
+    // New clients submit a stable answer ID and the displayed order. Old clients
+    // still submit canonical labels. Never compare a shuffled display label to a
+    // canonical label, or use client-supplied correctness.
+    const hasDisplayOrder = selectedOptionId !== undefined || optionOrder !== undefined;
+    const orderedAnswers = hasDisplayOrder ? resolveAnswerOrder(answers, optionOrder) : answers;
+    const selectedAnswer = hasDisplayOrder
+      ? orderedAnswers?.find((answer, index) =>
+          String(answer.id) === selectedOptionId && answerLabel(index) === selectedOptionKey)
+      : answers.find((answer) => answer.choice_label === selectedOptionKey);
 
-    // Build explanations lookup map by option label (choice_label -> explanation_text)
+    if (!orderedAnswers || !selectedAnswer) {
+      return NextResponse.json({ error: "Invalid selected answer or option order." }, { status: 400 });
+    }
+
+    const isCorrect = String(selectedAnswer.id) === String(correctAnswer.id);
+    const correctOptionKey = hasDisplayOrder
+      ? answerLabel(orderedAnswers.findIndex((answer) => String(answer.id) === String(correctAnswer.id)))
+      : correctAnswer.choice_label;
+
     const explanationsByOptionKey: Record<string, string | null> = {};
-    answers.forEach((answer) => {
-      explanationsByOptionKey[answer.choice_label] = answer.explanation_text || null;
+    orderedAnswers.forEach((answer, index) => {
+      const label = hasDisplayOrder ? answerLabel(index) : answer.choice_label;
+      explanationsByOptionKey[label] = answer.explanation_text || null;
     });
 
     // Fetch question metadata for practice_attempts snapshot
@@ -75,7 +97,7 @@ export async function POST(req: Request) {
           {
             user_id: user.id,
             question_id: questionId,
-            selected_label: selectedOptionKey,
+            selected_label: selectedAnswer.choice_label,
             is_correct: isCorrect,
           },
           {
@@ -116,7 +138,7 @@ export async function POST(req: Request) {
         .insert({
           user_id: user.id,
           question_id: questionIdNum,
-          selected_label: selectedOptionKey,
+          selected_label: selectedAnswer.choice_label,
           is_correct: isCorrect,
           topic: null, // topic column doesn't exist in canonical schema
           difficulty: difficultyNum,
@@ -134,7 +156,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       isCorrect,
-      correctOptionKey: correctAnswer.choice_label,
+      correctOptionKey,
       explanationsByOptionKey,
     });
   } catch (error) {

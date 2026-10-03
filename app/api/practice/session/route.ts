@@ -12,6 +12,7 @@
  * and use sessionId + route from the response to navigate to the practice session.
  */
 import { NextResponse } from "next/server";
+import { createAnswerSnapshot } from "@/lib/questions/answer-order";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
 import { z } from "zod";
@@ -232,11 +233,10 @@ export async function POST(req: Request) {
         session_id: newSession.id,
         canonical_question_id: q.id,
         stem: q.stem,
-        options: q.answers.map((opt) => ({
-          label: opt.choice_label,
+        ...createAnswerSnapshot(q.answers.map((opt) => ({
           text: opt.choice_text,
-        })),
-        correct_label: q.answers.find((opt) => opt.is_correct)?.choice_label || "",
+          is_correct: opt.is_correct,
+        }))),
         domain_code: q.domain_code,
         domain_id: q.domain_id,
       };
