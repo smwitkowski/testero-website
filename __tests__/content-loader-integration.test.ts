@@ -2,15 +2,15 @@ import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
 import * as contentLoader from "@/lib/content/loader";
 import fs from "fs";
 import path from "path";
+import os from "os";
 
 describe("Content Loader Integration Tests", () => {
-  const testContentDir = path.join(process.cwd(), "app/content");
+  const fixtureDir = path.join(process.cwd(), "__tests__/fixtures/content/hub");
+  const testContentDir = fs.mkdtempSync(path.join(os.tmpdir(), "testero-content-fixtures-"));
   const hubDir = path.join(testContentDir, "hub");
   const spokesDir = path.join(testContentDir, "spokes");
-
-  // Store original content for restoration
-  let originalHubContent: string[] = [];
-  let originalSpokeContent: string[] = [];
+  const originalHubDir = contentLoader.CONTENT_DIRECTORIES.hub;
+  const originalSpokeDir = contentLoader.CONTENT_DIRECTORIES.spoke;
 
   // Sample content for testing
   const hubContent = {
@@ -65,12 +65,11 @@ describe("Content Loader Integration Tests", () => {
     fs.mkdirSync(hubDir, { recursive: true });
     fs.mkdirSync(spokesDir, { recursive: true });
 
-    // Save existing content
-    if (fs.existsSync(hubDir)) {
-      originalHubContent = fs.readdirSync(hubDir);
-    }
-    if (fs.existsSync(spokesDir)) {
-      originalSpokeContent = fs.readdirSync(spokesDir);
+    // Redirect only this suite's loader. Never write test content into public routes.
+    contentLoader.CONTENT_DIRECTORIES.hub = hubDir;
+    contentLoader.CONTENT_DIRECTORIES.spoke = spokesDir;
+    for (const filename of fs.readdirSync(fixtureDir)) {
+      fs.copyFileSync(path.join(fixtureDir, filename), path.join(hubDir, filename));
     }
 
     // Create hub content files
@@ -111,20 +110,9 @@ describe("Content Loader Integration Tests", () => {
   });
 
   afterAll(() => {
-    // Clean up only test files
-    Object.keys(hubContent).forEach((slug) => {
-      const testFile = path.join(hubDir, `${slug}.md`);
-      if (fs.existsSync(testFile)) {
-        fs.unlinkSync(testFile);
-      }
-    });
-
-    Object.keys(spokeContent).forEach((slug) => {
-      const testFile = path.join(spokesDir, `${slug}.md`);
-      if (fs.existsSync(testFile)) {
-        fs.unlinkSync(testFile);
-      }
-    });
+    contentLoader.CONTENT_DIRECTORIES.hub = originalHubDir;
+    contentLoader.CONTENT_DIRECTORIES.spoke = originalSpokeDir;
+    fs.rmSync(testContentDir, { recursive: true, force: true });
   });
 
   describe("Content Loading Integration", () => {
@@ -182,38 +170,6 @@ describe("Content Loader Integration Tests", () => {
 
   describe("Markdown Processing", () => {
     it("should process markdown with GFM features", async () => {
-      // Create a file with GitHub Flavored Markdown
-      const gfmContent = [
-        "---",
-        'title: "GFM Test"',
-        'description: "Markdown feature coverage"',
-        'date: "2024-02-01"',
-        'publishedAt: "2024-02-01"',
-        'type: "hub"',
-        "---",
-        "",
-        "# Tables",
-        "",
-        "| Feature | Supported |",
-        "|---------|-----------|",
-        "| Tables  | Yes       |",
-        "| Lists   | Yes       |",
-        "",
-        "## Task Lists",
-        "",
-        "- [x] Completed task",
-        "- [ ] Incomplete task",
-        "",
-        "## Code Blocks",
-        "",
-        "```javascript",
-        "const test = 'hello';",
-        "console.log(test);",
-        "```",
-      ].join("\n");
-
-      fs.writeFileSync(path.join(hubDir, "gfm-test.md"), gfmContent);
-
       const content = await contentLoader.getHubContent("gfm-test");
 
       expect(content?.content).toContain("| Feature | Supported |");
@@ -221,24 +177,6 @@ describe("Content Loader Integration Tests", () => {
     });
 
     it("should handle special characters correctly", async () => {
-      const specialContent = [
-        "---",
-        'title: "Special Characters"',
-        'description: "Validating character normalization"',
-        'date: "2024-02-02"',
-        'publishedAt: "2024-02-02"',
-        'type: "hub"',
-        "---",
-        "",
-        "# Special Characters Test",
-        "",
-        "Non-breaking hyphen: Machine‑Learning",
-        "Regular hyphen: Machine-Learning",
-        "Em dash: Machine—Learning",
-      ].join("\n");
-
-      fs.writeFileSync(path.join(hubDir, "special-chars.md"), specialContent);
-
       const content = await contentLoader.getHubContent("special-chars");
 
       // All hyphens should be normalized to regular hyphens
@@ -247,20 +185,6 @@ describe("Content Loader Integration Tests", () => {
     });
 
     it("should calculate reading time correctly", async () => {
-      const longContent = [
-        "---",
-        'title: "Long Article"',
-        'description: "Measuring reading time"',
-        'date: "2024-02-03"',
-        'publishedAt: "2024-02-03"',
-        'type: "hub"',
-        "---",
-        "",
-        `${"Lorem ipsum dolor sit amet. ".repeat(200)}`,
-      ].join("\n");
-
-      fs.writeFileSync(path.join(hubDir, "long-article.md"), longContent);
-
       const content = await contentLoader.getHubContent("long-article");
 
       // ~1200 words at 200 wpm should yield around 5-6 minutes of reading time
@@ -322,5 +246,13 @@ describe("Content Loader Integration Tests", () => {
         expect(result).toEqual(firstResult);
       });
     });
+  });
+});
+
+// These checks use the restored production directories, not the temporary fixtures.
+describe("Public content excludes test fixtures", () => {
+  it.each(["gfm-test", "long-article", "special-chars"])("does not load %s as a public hub", async (slug) => {
+    expect(await contentLoader.getHubContent(slug)).toBeNull();
+    expect(fs.existsSync(path.join(process.cwd(), "app/content/hub", `${slug}.md`))).toBe(false);
   });
 });

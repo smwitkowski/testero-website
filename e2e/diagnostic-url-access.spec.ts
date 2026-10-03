@@ -3,6 +3,16 @@ import { DiagnosticStartPage } from './helpers/page-objects/DiagnosticStartPage'
 import { DiagnosticSummaryPage } from './helpers/page-objects/DiagnosticSummaryPage';
 import { DiagnosticHelpers } from './helpers/diagnostic-helpers';
 
+// Content-loader fixtures live under __tests__/fixtures/content/hub, not public content.
+test.describe('Test-only content URL access', () => {
+  for (const slug of ['gfm-test', 'long-article', 'special-chars']) {
+    test(`should not publish the ${slug} fixture`, async ({ page }) => {
+      const response = await page.goto(`/content/hub/${slug}`);
+      expect(response?.status()).toBe(404);
+    });
+  }
+});
+
 test.describe('Diagnostic URL Access Scenarios', () => {
   let startPage: DiagnosticStartPage;
   let summaryPage: DiagnosticSummaryPage;
