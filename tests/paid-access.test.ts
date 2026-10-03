@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getPaidAccess, type PmlePass } from "@/lib/billing/paid-access";
+import { getPaidAccess, isActivePass, type PmlePass } from "@/lib/billing/paid-access";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 vi.mock("@/lib/supabase/service", () => ({ createServiceSupabaseClient: vi.fn() }));
 const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -62,5 +62,15 @@ describe("fresh fail-closed paid access", () => {
     vi.mocked(createServiceSupabaseClient).mockImplementation(() => { throw new Error("secret"); });
     expect(await getPaidAccess(userId)).toEqual({ ...free, unavailable: true });
     const db = database(); expect(await getPaidAccess("bad", db.client, now)).toEqual({ ...free, unavailable: true }); expect(db.from).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("authoritative active pass predicate", () => {
+  it("accepts only validated metadata within the exact active window", () => {
+    expect(isActivePass(pass, now)).toBe(true);
+    for (const row of [null, {}, { ...pass, id: "bad" }, { ...pass, expires_at: "bad" }, { ...pass, refunded_at: "2026-10-02T12:00:00Z" }, { ...pass, paid_at: "2026-10-04T00:00:00Z" }]) expect(isActivePass(row, now)).toBe(false);
+    expect(isActivePass(pass, Date.parse(pass.expires_at))).toBe(false);
+    expect(isActivePass(pass, NaN)).toBe(false);
   });
 });

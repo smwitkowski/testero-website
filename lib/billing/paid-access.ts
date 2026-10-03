@@ -34,6 +34,12 @@ function validPass(value: unknown): value is PmlePass {
     && (pass.refunded_at === null || timestamp(pass.refunded_at));
 }
 
+/** Shared predicate for safe, active metadata; malformed rows never grant access. */
+export function isActivePass(pass: unknown, now = Date.now()): pass is PmlePass {
+  return Number.isFinite(now) && validPass(pass) && pass.refunded_at === null
+    && Date.parse(pass.paid_at) <= now && Date.parse(pass.expires_at) > now;
+}
+
 /** Server callers must supply a verified user id. No browser authorization/cache. */
 export async function readPaidAccess(userId: string, client?: SupabaseClient, now = Date.now()): Promise<PaidAccess> {
   noStore();
@@ -47,7 +53,7 @@ export async function readPaidAccess(userId: string, client?: SupabaseClient, no
   if (legacyError || passError || (legacy !== null && (!legacy || typeof legacy !== "object" || legacy.status !== "active" || (legacy.current_period_end !== null && !timestamp(legacy.current_period_end))))
     || !Array.isArray(passes) || !passes.every(validPass)) throw new Error("Paid access unavailable");
   const pass = [...passes].sort((a, b) => Date.parse(b.expires_at) - Date.parse(a.expires_at))
-    .find(row => row.refunded_at === null && Date.parse(row.paid_at) <= now && Date.parse(row.expires_at) > now);
+    .find(row => isActivePass(row, now));
   const access = freeAccess();
   if (legacy) {
     access.hasPaidAccess = true;
