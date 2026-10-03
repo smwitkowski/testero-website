@@ -1,16 +1,28 @@
 import type { Metadata } from "next";
-import { PhasePlaceholder } from "@/components/phase-placeholder";
+import { cookies } from "next/headers";
+import { DashboardPanel, DashboardLoadError } from "@/components/dashboard-panel";
+import { SignupAnalytics } from "@/components/signup-analytics";
+import { requireUser } from "@/lib/auth/require-user";
+import { claimAnonymousDiagnostics } from "@/lib/auth/claim";
+import { ANONYMOUS_COOKIE } from "@/lib/diagnostic/ownership";
+import { loadDashboard } from "@/lib/dashboard/service";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
 
 export const metadata: Metadata = { title: "Dashboard" };
-export default function DashboardPage() {
-  return (
-    <PhasePlaceholder phase={2} title="Your study dashboard" description="Your account will bring your diagnostic and targeted practice together here. This preview shows no personal results or access status."
-      primary={{ href: "/practice/preview", label: "Preview practice" }} links={[{ href: "/account", label: "Preview account" }, { href: "/diagnostic", label: "Start free diagnostic" }]}>
-      <div className="space-y-5 border-y border-border py-5">
-        <section className="space-y-2"><h2 className="text-xl font-semibold">Readiness</h2><p className="text-muted-foreground">Your latest diagnostic readiness will appear here.</p></section>
-        <section className="space-y-2"><h2 className="text-xl font-semibold">Weakest domains</h2><p className="text-muted-foreground">Your domain breakdown will help you choose what to practice next.</p></section>
-        <section className="space-y-2"><h2 className="text-xl font-semibold">Pass status</h2><p className="text-muted-foreground">Your verified PMLE Pass status will appear here when billing is available in Phase 3.</p></section>
-      </div>
-    </PhasePlaceholder>
-  );
+export const dynamic = "force-dynamic";
+
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ signup?: string }> }) {
+  const user = await requireUser("/dashboard");
+  const confirmedSignup = (await searchParams).signup === "confirmed";
+  let data;
+  try {
+    const client = createServiceSupabaseClient();
+    const token = (await cookies()).get(ANONYMOUS_COOKIE)?.value;
+    await claimAnonymousDiagnostics(client, user.id, token);
+    data = await loadDashboard(client, user.id);
+  } catch {
+    // A failed load is not an empty dashboard. Retry repeats the idempotent claim.
+  }
+  if (!data) return <DashboardLoadError />;
+  return <>{confirmedSignup && <SignupAnalytics userId={user.id} />}<DashboardPanel data={data} /></>;
 }
