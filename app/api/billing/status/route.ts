@@ -1,18 +1,26 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { computeIsSubscriber, type SubscriptionStatus } from "@/lib/billing/subscription-status";
+import { getPaidAccess } from "@/lib/billing/paid-access";
+import type { SubscriptionStatus } from "@/lib/billing/subscription-status";
 
 export type BillingStatusResponse = {
+  /** Compatibility alias for paid access, including one-time passes. */
   isSubscriber: boolean;
   status: SubscriptionStatus;
+  accessType: "pass" | "legacy_subscription" | null;
+  accessUntil: string | null;
+  canManageSubscription: boolean;
 };
 
-/**
- * GET /api/billing/status
- * Returns lightweight subscription status for UI decisions only.
- * Server remains authoritative for authorization.
- * No sensitive plan details (plan_id, Stripe IDs, amounts) are returned.
- */
+const noAccess: BillingStatusResponse = {
+  isSubscriber: false,
+  status: "none",
+  accessType: null,
+  accessUntil: null,
+  canManageSubscription: false,
+};
+
+/** UI metadata only. All authorization uses getPaidAccess on the server. */
 export async function GET(): Promise<NextResponse<BillingStatusResponse>> {
   try {
     const supabase = createServerSupabaseClient();
@@ -20,79 +28,43 @@ export async function GET(): Promise<NextResponse<BillingStatusResponse>> {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
+    if (authError || !user) return NextResponse.json(noAccess);
 
-    // Unauthenticated users get default response
-    if (authError || !user) {
-      return NextResponse.json(
-        {
-          isSubscriber: false,
-          status: "none",
-        },
-        { status: 200 }
-      );
+    const access = await getPaidAccess(user.id);
+    // Preserve legacy status for billing UI, without exposing Stripe identifiers.
+    // Even canceled/past_due legacy customers may need to manage existing billing.
+    let legacyStatus: SubscriptionStatus = access.isLegacySubscriber ? "active" : "none";
+    let canManageSubscription = false;
+    try {
+      const { data, error } = await supabase
+        .from("user_subscriptions")
+        .select("status, stripe_customer_id, stripe_subscription_id")
+        .eq("user_id", user.id)
+        .not("stripe_subscription_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!error && data) {
+        if (!access.isLegacySubscriber) legacyStatus = data.status as SubscriptionStatus;
+        canManageSubscription = Boolean(data.stripe_customer_id && data.stripe_subscription_id);
+      }
+    } catch {
+      // Metadata failures never elevate or remove verified paid access.
     }
 
-    // Query subscription with minimal fields - get most recent subscription
-    // First check for active/trialing subscriptions
-    const { data: activeData, error: activeError } = await supabase
-      .from("user_subscriptions")
-      .select("status, trial_ends_at")
-      .eq("user_id", user.id)
-      .in("status", ["active", "trialing"])
-      .limit(1)
-      .maybeSingle();
-
-    // If found active/trialing, use it
-    if (!activeError && activeData) {
-      const isSubscriber = computeIsSubscriber(activeData);
-
-      return NextResponse.json(
-        {
-          isSubscriber,
-          status: activeData.status as BillingStatusResponse["status"],
-        },
-        { status: 200 }
-      );
-    }
-
-    // If no active/trialing, check for any other subscription status
-    const { data: anyData, error: anyError } = await supabase
-      .from("user_subscriptions")
-      .select("status, trial_ends_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    // No subscription found at all
-    if (anyError || !anyData) {
-      return NextResponse.json(
-        {
-          isSubscriber: false,
-          status: "none",
-        },
-        { status: 200 }
-      );
-    }
-
-    // Return the status even if not active/trialing (for past_due, canceled, etc.)
-    return NextResponse.json(
-      {
-        isSubscriber: false, // Non-active/trialing subscriptions are not subscribers
-        status: anyData.status as BillingStatusResponse["status"],
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({
+      isSubscriber: access.hasPaidAccess,
+      status: legacyStatus,
+      accessType: access.isLegacySubscriber
+        ? "legacy_subscription"
+        : access.hasPaidAccess
+          ? "pass"
+          : null,
+      accessUntil: access.accessUntil,
+      canManageSubscription,
+    });
   } catch (error) {
     console.error("Error fetching billing status:", error);
-    // Fail gracefully - return non-subscriber status
-    return NextResponse.json(
-      {
-        isSubscriber: false,
-        status: "none",
-      },
-      { status: 200 }
-    );
+    return NextResponse.json(noAccess);
   }
 }
-

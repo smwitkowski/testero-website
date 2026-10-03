@@ -38,11 +38,14 @@ export async function POST(
     // Get user's subscription
     const { data: subscription, error: subError } = await supabase
       .from("user_subscriptions")
-      .select("stripe_customer_id")
+      .select("stripe_customer_id, stripe_subscription_id")
       .eq("user_id", user.id)
-      .single();
+      .not("stripe_subscription_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (subError || !subscription?.stripe_customer_id) {
+    if (subError || !subscription?.stripe_customer_id || !subscription.stripe_subscription_id) {
       return NextResponse.json({ error: "No subscription found" }, { status: 404 });
     }
 

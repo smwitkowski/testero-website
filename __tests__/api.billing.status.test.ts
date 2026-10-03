@@ -1,239 +1,133 @@
-/**
- * @jest-environment node
- */
-import { NextRequest } from "next/server";
+/** @jest-environment node */
 import { GET } from "@/app/api/billing/status/route";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getPaidAccess } from "@/lib/billing/paid-access";
 
-// Mock the dependencies
-jest.mock("@/lib/supabase/server");
+jest.mock("@/lib/supabase/server", () => ({ createServerSupabaseClient: jest.fn() }));
+jest.mock("@/lib/billing/paid-access", () => ({ getPaidAccess: jest.fn() }));
 
-const mockCreateServerSupabaseClient = createServerSupabaseClient as jest.MockedFunction<
-  typeof createServerSupabaseClient
->;
+const empty = {
+  isSubscriber: false,
+  status: "none",
+  accessType: null,
+  accessUntil: null,
+  canManageSubscription: false,
+};
+const noAccess = { hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null };
 
 describe("GET /api/billing/status", () => {
-  let mockSupabase: any;
-
+  let db: any;
   beforeEach(() => {
     jest.clearAllMocks();
-
-    // Setup default mock implementations
-    mockSupabase = {
+    db = {
       auth: {
-        getUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }),
+        getUser: jest.fn().mockResolvedValue({ data: { user: { id: "user-1" } }, error: null }),
       },
       from: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      in: jest.fn().mockReturnThis(),
+      not: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn(),
+      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
     };
-
-    mockCreateServerSupabaseClient.mockReturnValue(mockSupabase);
+    (createServerSupabaseClient as jest.Mock).mockReturnValue(db);
+    (getPaidAccess as jest.Mock).mockResolvedValue(noAccess);
   });
-
-  describe("Unauthenticated users", () => {
-    it("should return isSubscriber:false and status:none for unauthenticated users", async () => {
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: null },
-        error: null,
-      });
-
-      const req = new NextRequest("http://localhost:3000/api/billing/status");
-      const response = await GET(req);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data).toEqual({
-        isSubscriber: false,
-        status: "none",
-      });
-      // Ensure no sensitive data is leaked
-      expect(Object.keys(data)).toEqual(["isSubscriber", "status"]);
+  it("returns empty metadata for anonymous users", async () => {
+    db.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
+    expect(await (await GET()).json()).toEqual(empty);
+    expect(getPaidAccess).not.toHaveBeenCalled();
+  });
+  it("fails closed on auth errors even if a user object is returned", async () => {
+    db.auth.getUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: new Error("auth"),
+    });
+    expect(await (await GET()).json()).toEqual(empty);
+    expect(getPaidAccess).not.toHaveBeenCalled();
+  });
+  it("returns no access for no purchases", async () => {
+    expect(await (await GET()).json()).toEqual(empty);
+    expect(getPaidAccess).toHaveBeenCalledWith("user-1");
+  });
+  it("returns pass access without subscription management or Stripe IDs", async () => {
+    (getPaidAccess as jest.Mock).mockResolvedValue({
+      ...noAccess,
+      hasPaidAccess: true,
+      accessUntil: "2026-12-30",
+      pass: { id: "pass-1" },
+    });
+    expect(await (await GET()).json()).toEqual({
+      ...empty,
+      isSubscriber: true,
+      accessType: "pass",
+      accessUntil: "2026-12-30",
     });
   });
-
-  describe("Authenticated users", () => {
-    const mockUser = { id: "user-123", email: "test@example.com" };
-
-    beforeEach(() => {
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
+  it.each(["expired", "refunded"])("returns no access for %s pass", async () => {
+    (getPaidAccess as jest.Mock).mockResolvedValue({ ...noAccess, pass: { id: "pass-1" } });
+    expect(await (await GET()).json()).toEqual(empty);
+  });
+  it("preserves active legacy metadata and management", async () => {
+    (getPaidAccess as jest.Mock).mockResolvedValue({
+      ...noAccess,
+      hasPaidAccess: true,
+      isLegacySubscriber: true,
+      accessUntil: "2026-11-03",
     });
-
-    it("should return isSubscriber:false and status:none when user has no subscription", async () => {
-      // Both queries return no results
-      mockSupabase.maybeSingle
-        .mockResolvedValueOnce({
-          data: null,
-          error: null,
-        })
-        .mockResolvedValueOnce({
-          data: null,
-          error: null,
-        });
-
-      const req = new NextRequest("http://localhost:3000/api/billing/status");
-      const response = await GET(req);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data).toEqual({
-        isSubscriber: false,
-        status: "none",
-      });
-      expect(Object.keys(data)).toEqual(["isSubscriber", "status"]);
-    });
-
-    it("should return isSubscriber:true and status:active for active subscription", async () => {
-      mockSupabase.maybeSingle.mockResolvedValue({
-        data: {
-          status: "active",
-          trial_ends_at: null,
-        },
-        error: null,
-      });
-
-      const req = new NextRequest("http://localhost:3000/api/billing/status");
-      const response = await GET(req);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data).toEqual({
-        isSubscriber: true,
+    db.maybeSingle.mockResolvedValue({
+      data: {
         status: "active",
-      });
-      expect(Object.keys(data)).toEqual(["isSubscriber", "status"]);
+        stripe_customer_id: "cus_legacy",
+        stripe_subscription_id: "sub_legacy",
+      },
+      error: null,
     });
-
-    it("should return isSubscriber:true and status:trialing for valid trialing subscription", async () => {
-      const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
-      mockSupabase.maybeSingle.mockResolvedValue({
-        data: {
-          status: "trialing",
-          trial_ends_at: futureDate.toISOString(),
-        },
+    expect(await (await GET()).json()).toEqual({
+      isSubscriber: true,
+      status: "active",
+      accessType: "legacy_subscription",
+      accessUntil: "2026-11-03",
+      canManageSubscription: true,
+    });
+    expect(db.not).toHaveBeenCalledWith("stripe_subscription_id", "is", null);
+  });
+  it.each(["past_due", "canceled", "trialing"])(
+    "retains %s legacy status without granting access",
+    async (status) => {
+      db.maybeSingle.mockResolvedValue({
+        data: { status, stripe_customer_id: "cus_legacy", stripe_subscription_id: "sub_legacy" },
         error: null,
       });
-
-      const req = new NextRequest("http://localhost:3000/api/billing/status");
-      const response = await GET(req);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data).toEqual({
-        isSubscriber: true,
-        status: "trialing",
-      });
-      expect(Object.keys(data)).toEqual(["isSubscriber", "status"]);
+      expect(await (await GET()).json()).toEqual({ ...empty, status, canManageSubscription: true });
+    }
+  );
+  it("does not enable management for a customer without a legacy subscription", async () => {
+    db.maybeSingle.mockResolvedValue({
+      data: { status: "none", stripe_customer_id: "cus_pass", stripe_subscription_id: null },
+      error: null,
     });
-
-    it("should return isSubscriber:false and status:trialing for expired trialing subscription", async () => {
-      const pastDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
-      mockSupabase.maybeSingle.mockResolvedValue({
-        data: {
-          status: "trialing",
-          trial_ends_at: pastDate.toISOString(),
-        },
-        error: null,
-      });
-
-      const req = new NextRequest("http://localhost:3000/api/billing/status");
-      const response = await GET(req);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data).toEqual({
-        isSubscriber: false,
-        status: "trialing",
-      });
-      expect(Object.keys(data)).toEqual(["isSubscriber", "status"]);
+    expect(await (await GET()).json()).toEqual(empty);
+  });
+  it("does not revoke verified paid access on a metadata DB error", async () => {
+    (getPaidAccess as jest.Mock).mockResolvedValue({
+      ...noAccess,
+      hasPaidAccess: true,
+      isLegacySubscriber: true,
     });
-
-    it("should return isSubscriber:false and status:past_due for past_due subscription", async () => {
-      // First query (active/trialing) returns no results
-      mockSupabase.maybeSingle
-        .mockResolvedValueOnce({
-          data: null,
-          error: null,
-        })
-        // Second query (any status) returns past_due
-        .mockResolvedValueOnce({
-          data: {
-            status: "past_due",
-            trial_ends_at: null,
-          },
-          error: null,
-        });
-
-      // Mock order() for the second query
-      mockSupabase.order = jest.fn().mockReturnThis();
-
-      const req = new NextRequest("http://localhost:3000/api/billing/status");
-      const response = await GET(req);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data).toEqual({
-        isSubscriber: false,
-        status: "past_due",
-      });
-      expect(Object.keys(data)).toEqual(["isSubscriber", "status"]);
+    db.maybeSingle.mockRejectedValue(new Error("DB"));
+    expect(await (await GET()).json()).toEqual({
+      ...empty,
+      isSubscriber: true,
+      status: "active",
+      accessType: "legacy_subscription",
     });
-
-    it("should return isSubscriber:false and status:canceled for canceled subscription", async () => {
-      // First query (active/trialing) returns no results
-      mockSupabase.maybeSingle
-        .mockResolvedValueOnce({
-          data: null,
-          error: null,
-        })
-        // Second query (any status) returns canceled
-        .mockResolvedValueOnce({
-          data: {
-            status: "canceled",
-            trial_ends_at: null,
-          },
-          error: null,
-        });
-
-      // Mock order() for the second query
-      mockSupabase.order = jest.fn().mockReturnThis();
-
-      const req = new NextRequest("http://localhost:3000/api/billing/status");
-      const response = await GET(req);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data).toEqual({
-        isSubscriber: false,
-        status: "canceled",
-      });
-      expect(Object.keys(data)).toEqual(["isSubscriber", "status"]);
-    });
-
-    it("should only select status and trial_ends_at fields (no sensitive data)", async () => {
-      mockSupabase.maybeSingle.mockResolvedValue({
-        data: {
-          status: "active",
-          trial_ends_at: null,
-        },
-        error: null,
-      });
-
-      const req = new NextRequest("http://localhost:3000/api/billing/status");
-      await GET(req);
-
-      expect(mockSupabase.select).toHaveBeenCalledWith("status, trial_ends_at");
-      expect(mockSupabase.from).toHaveBeenCalledWith("user_subscriptions");
-      expect(mockSupabase.eq).toHaveBeenCalledWith("user_id", mockUser.id);
-      expect(mockSupabase.in).toHaveBeenCalledWith("status", ["active", "trialing"]);
-    });
+  });
+  it("fails closed on unexpected access errors", async () => {
+    const log = jest.spyOn(console, "error").mockImplementation(() => {});
+    (getPaidAccess as jest.Mock).mockRejectedValue(new Error("DB"));
+    expect(await (await GET()).json()).toEqual(empty);
+    log.mockRestore();
   });
 });
-
