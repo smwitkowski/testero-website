@@ -2,166 +2,50 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PricingCard } from "@/components/pricing/PricingCard";
+import { PMLE_PASS_FEATURES } from "@/lib/pricing/constants";
 
-describe("PricingCard", () => {
-  const baseTier = {
-    id: "pro",
-    name: "Pro",
-    description: "For teams that need more",
-    monthlyPrice: 49,
-    threeMonthPrice: 135,
-    monthlyPriceId: "price_monthly_pro",
-    threeMonthPriceId: "price_3month_pro",
-    features: ["Feature A", "Feature B"],
-  } as const;
-
-  it("applies emphasis styling for the recommended tier", () => {
-    const { container } = render(
-      <PricingCard
-        tier={{ ...baseTier, recommended: true, savingsPercentage: 25 }}
-        billingInterval="monthly"
-        onCheckout={jest.fn()}
-      />
-    );
-
-    const card = container.firstElementChild as HTMLElement;
-    expect(card).toBeTruthy();
-    expect(card).toHaveAttribute("data-recommended", "true");
-    expect(card.className).toContain("ring-2");
+describe("PricingCard — PMLE Pass", () => {
+  it("shows the one-time US$39 offer and 90-day access", () => {
+    render(<PricingCard onCheckout={jest.fn()} />);
+    expect(screen.getByText("PMLE Pass")).toBeInTheDocument();
+    expect(screen.getByText("US$39")).toBeInTheDocument();
+    expect(screen.getByText("one-time")).toBeInTheDocument();
+    expect(screen.getByText("Full PMLE access for 90 days")).toBeInTheDocument();
+    expect(screen.getByText("No subscription. No automatic renewal.")).toBeInTheDocument();
   });
 
-  it("does not advertise retired three-month savings", () => {
-    const { container } = render(
-      <PricingCard
-        tier={{ ...baseTier, savingsPercentage: 20 }}
-        billingInterval="monthly"
-        onCheckout={jest.fn()}
-      />
-    );
-
-    const card = container.firstElementChild as HTMLElement;
-    expect(screen.queryByText(/save 20%/i)).not.toBeInTheDocument();
-    expect(screen.getByText("/month")).toBeInTheDocument();
-    expect(card.className).not.toMatch(/(^|\s)scale-[^:\s]+/);
+  it("does not present retired tiers, savings or billing intervals", () => {
+    const { container } = render(<PricingCard onCheckout={jest.fn()} />);
+    expect(container.textContent).not.toMatch(/monthly|\/month|three.month|\bPro\b|All-Access|trial|save \d+%/i);
+    expect(container.firstElementChild?.className).not.toMatch(/(^|\s)scale-/);
   });
 
+  it("lists full access features and refund revocation clearly", () => {
+    render(<PricingCard onCheckout={jest.fn()} />);
+    for (const feature of PMLE_PASS_FEATURES) expect(screen.getByText(feature)).toBeInTheDocument();
+    expect(screen.getByText("7-day refund window. A refund ends your pass access.")).toBeInTheDocument();
+  });
 
-  describe("Button enabled/disabled states", () => {
-    it("should enable button when monthly price ID is present", () => {
-      const onCheckout = jest.fn();
-      render(
-        <PricingCard
-          tier={baseTier}
-          billingInterval="monthly"
-          onCheckout={onCheckout}
-        />
-      );
+  it("starts checkout without accepting public Stripe configuration", async () => {
+    const onCheckout = jest.fn();
+    render(<PricingCard onCheckout={onCheckout} />);
+    await userEvent.click(screen.getByRole("button", { name: "Get PMLE Pass" }));
+    expect(onCheckout).toHaveBeenCalledTimes(1);
+    expect(onCheckout).toHaveBeenCalledWith();
+  });
 
-      const button = screen.getByRole("button", { name: /start preparing/i });
-      expect(button).toBeEnabled();
-    });
+  it("enables purchase without a public price ID", () => {
+    render(<PricingCard onCheckout={jest.fn()} />);
+    expect(screen.getByRole("button", { name: "Get PMLE Pass" })).toBeEnabled();
+    expect(screen.queryByText(/payment processing is being set up/i)).not.toBeInTheDocument();
+  });
 
-    it("should use monthly checkout even when legacy three-month data is present", async () => {
-      const onCheckout = jest.fn();
-      render(
-        <PricingCard
-          tier={baseTier}
-          billingInterval="monthly"
-          onCheckout={onCheckout}
-        />
-      );
-
-      const button = screen.getByRole("button", { name: /start preparing/i });
-      expect(button).toBeEnabled();
-      await userEvent.click(button);
-      expect(onCheckout).toHaveBeenCalledWith("price_monthly_pro", "Pro");
-    });
-
-    it("should show Get Started button when monthly price ID is missing", () => {
-      const onCheckout = jest.fn();
-      render(
-        <PricingCard
-          tier={{ ...baseTier, monthlyPriceId: undefined }}
-          billingInterval="monthly"
-          onCheckout={onCheckout}
-        />
-      );
-
-      const button = screen.getByRole("button", { name: /get started/i });
-      expect(button).toBeEnabled();
-      // When checkout isn't configured, button redirects to signup instead of calling onCheckout
-    });
-
-    it("should keep monthly checkout available when legacy three-month price ID is missing", async () => {
-      const onCheckout = jest.fn();
-      render(
-        <PricingCard
-          tier={{ ...baseTier, threeMonthPriceId: undefined }}
-          billingInterval="monthly"
-          onCheckout={onCheckout}
-        />
-      );
-
-      const button = screen.getByRole("button", { name: /start preparing/i });
-      expect(button).toBeEnabled();
-      // Three-month configuration no longer controls monthly checkout (9b5d94c).
-      await userEvent.click(button);
-      expect(onCheckout).toHaveBeenCalledWith("price_monthly_pro", "Pro");
-    });
-
-    it("should call onCheckout with correct price ID when button is clicked", async () => {
-      const user = userEvent.setup();
-      const onCheckout = jest.fn();
-      render(
-        <PricingCard
-          tier={baseTier}
-          billingInterval="monthly"
-          onCheckout={onCheckout}
-        />
-      );
-
-      const button = screen.getByRole("button", { name: /start preparing/i });
-      await user.click(button);
-
-      expect(onCheckout).toHaveBeenCalledTimes(1);
-      expect(onCheckout).toHaveBeenCalledWith("price_monthly_pro", "Pro");
-    });
-
-    it("should disable button when loading", () => {
-      const onCheckout = jest.fn();
-      render(
-        <PricingCard
-          tier={baseTier}
-          billingInterval="monthly"
-          onCheckout={onCheckout}
-          loading={true}
-          loadingId="price_monthly_pro"
-        />
-      );
-
-      const button = screen.getByRole("button", { name: /start preparing/i });
-      expect(button).toBeDisabled();
-    });
-
-    it("should show Get Started button when price ID is missing (redirects to signup instead of calling onCheckout)", async () => {
-      const user = userEvent.setup();
-      const onCheckout = jest.fn();
-      render(
-        <PricingCard
-          tier={{ ...baseTier, monthlyPriceId: undefined }}
-          billingInterval="monthly"
-          onCheckout={onCheckout}
-        />
-      );
-
-      const button = screen.getByRole("button", { name: /get started/i });
-      expect(button).toBeEnabled();
-
-      await user.click(button);
-
-      // When checkout isn't configured, onCheckout should not be called
-      // (component redirects to signup instead via router.push)
-      expect(onCheckout).not.toHaveBeenCalled();
-    });
+  it("disables purchase while checkout is loading", async () => {
+    const onCheckout = jest.fn();
+    render(<PricingCard onCheckout={onCheckout} loading />);
+    const button = screen.getByRole("button", { name: /get pmle pass/i });
+    expect(button).toBeDisabled();
+    await userEvent.click(button);
+    expect(onCheckout).not.toHaveBeenCalled();
   });
 });

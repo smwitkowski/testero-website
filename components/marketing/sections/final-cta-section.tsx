@@ -51,7 +51,7 @@ export function FinalCtaSection() {
         
         {/* Value proposition with enhanced highlight */}
         <p className="mx-auto max-w-2xl text-balance text-base leading-relaxed text-muted-foreground sm:text-lg md:text-xl">
-          Get your exact readiness score in minutes. Practice with blueprint-aligned questions and unlock explanations when you&apos;re ready to dive deeper.
+          Get your exact readiness score in minutes. PMLE Pass adds full practice and explanations: US$39 once for 90 days, with no automatic renewal.
         </p>
         
         {/* Feature bullets with icons */}
@@ -110,6 +110,7 @@ export function FinalCtaSection() {
               </Button>
             </div>
 
+            <p className="mt-4 text-sm text-muted-foreground">PMLE Pass has a 7-day refund window. A refund ends pass access.</p>
             {/* Trust indicators */}
             <ul className="mt-6 flex flex-col gap-2" aria-label="Trust guarantees">
               <li className="flex items-center justify-center text-sm text-muted-foreground">

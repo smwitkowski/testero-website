@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
+import { PMLE_PASS } from "@/lib/pricing/constants";
 import { useStartBasicCheckout } from "@/hooks/useStartBasicCheckout";
 
 export interface UpgradePromptProps {
@@ -32,6 +33,7 @@ export function UpgradePrompt({ featureName }: UpgradePromptProps) {
         route: pathname,
         distinct_id: posthog.get_distinct_id?.() || undefined,
         feature: featureName ?? "unknown",
+        plan_name: PMLE_PASS.name,
       });
       hasTrackedView.current = true;
     }
@@ -41,8 +43,9 @@ export function UpgradePrompt({ featureName }: UpgradePromptProps) {
     if (posthog) {
       posthog.capture(ANALYTICS_EVENTS.GATE_CTA_CLICKED, {
         route: pathname,
-        plan_context: "unknown",
+        plan_context: PMLE_PASS.name,
         feature: featureName ?? "unknown",
+        plan_name: PMLE_PASS.name,
         source: "upgrade_prompt",
       });
     }
@@ -55,6 +58,7 @@ export function UpgradePrompt({ featureName }: UpgradePromptProps) {
       posthog.capture(ANALYTICS_EVENTS.GATE_DISMISSED, {
         route: pathname,
         feature: featureName ?? "unknown",
+        plan_name: PMLE_PASS.name,
       });
     }
     setOpen(false);
@@ -65,13 +69,14 @@ export function UpgradePrompt({ featureName }: UpgradePromptProps) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">
-            Unlock Full PMLE Practice
+            Unlock PMLE Pass
           </DialogTitle>
           <DialogDescription className="text-base mt-2">
-            Unlock unlimited PMLE practice and expert explanations to accelerate your readiness.
+            US$39 once for 90 days of full PMLE practice and explanations. No subscription or automatic renewal.
           </DialogDescription>
         </DialogHeader>
 
+        <p className="text-sm text-muted-foreground mt-4">7-day refund window. A refund ends pass access.</p>
         <div className="flex flex-col gap-2 mt-4">
           <Button
             onClick={handlePricingClick}
@@ -79,7 +84,7 @@ export function UpgradePrompt({ featureName }: UpgradePromptProps) {
             tone="accent"
             fullWidth
           >
-            Upgrade to PMLE Readiness
+            Get PMLE Pass
           </Button>
           <Button
             onClick={handleDismiss}

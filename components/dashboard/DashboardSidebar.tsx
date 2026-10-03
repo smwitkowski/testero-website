@@ -109,7 +109,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             className="w-full"
             size="sm"
           >
-            Upgrade to PMLE Readiness
+            Get PMLE Pass
           </Button>
         </div>
       )}

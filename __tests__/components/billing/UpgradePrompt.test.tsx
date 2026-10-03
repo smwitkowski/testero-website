@@ -50,10 +50,10 @@ describe("UpgradePrompt", () => {
   it("renders a Dialog open by default with correct title and body", () => {
     render(<UpgradePrompt featureName="practice" />);
 
-    expect(screen.getByText("Unlock Full PMLE Practice")).toBeInTheDocument();
+    expect(screen.getByText("Unlock PMLE Pass")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Unlock unlimited PMLE practice and expert explanations to accelerate your readiness."
+        "US$39 once for 90 days of full PMLE practice and explanations. No subscription or automatic renewal."
       )
     ).toBeInTheDocument();
   });
@@ -101,7 +101,7 @@ describe("UpgradePrompt", () => {
     render(<UpgradePrompt featureName="practice" />);
 
     const primaryButton = screen.getByRole("button", {
-      name: /upgrade to pmle readiness/i,
+      name: /get pmle pass/i,
     });
     await user.click(primaryButton);
 
@@ -109,7 +109,8 @@ describe("UpgradePrompt", () => {
       ANALYTICS_EVENTS.GATE_CTA_CLICKED,
       expect.objectContaining({
         route: "/practice",
-        plan_context: "unknown",
+        plan_context: "PMLE Pass",
+        plan_name: "PMLE Pass",
         feature: "practice",
       })
     );
@@ -148,7 +149,7 @@ describe("UpgradePrompt", () => {
 
     // Check gate_cta_clicked includes feature
     const primaryButton = screen.getByRole("button", {
-      name: /upgrade to pmle readiness/i,
+      name: /get pmle pass/i,
     });
     await user.click(primaryButton);
 
@@ -175,6 +176,12 @@ describe("UpgradePrompt", () => {
     );
   });
 
+  it("states refund revocation, not a trial or cancel-anytime offer", () => {
+    render(<UpgradePrompt />);
+    expect(screen.getByText("7-day refund window. A refund ends pass access.")).toBeInTheDocument();
+    expect(screen.queryByText(/cancel anytime|trial/i)).not.toBeInTheDocument();
+  });
+
   it("handles missing PostHog gracefully", () => {
     (usePostHog as jest.Mock).mockReturnValue(null);
 
@@ -182,7 +189,7 @@ describe("UpgradePrompt", () => {
       render(<UpgradePrompt featureName="practice" />);
     }).not.toThrow();
 
-    expect(screen.getByText("Unlock Full PMLE Practice")).toBeInTheDocument();
+    expect(screen.getByText("Unlock PMLE Pass")).toBeInTheDocument();
   });
 });
 

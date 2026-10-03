@@ -20,8 +20,7 @@ import {
   ArrowRight,
   Award,
 } from "lucide-react";
-import { SUBSCRIPTION_TIERS } from "@/lib/pricing/constants";
-import { cn } from "@/lib/utils";
+import { PMLE_PASS, PMLE_PASS_FEATURES } from "@/lib/pricing/constants";
 import { VALUE_PILLARS } from "@/lib/copy/message-house";
 
 // Dynamically import the BenefitsSection component
@@ -70,6 +69,7 @@ export default function Home() {
     trackEvent(posthog, ANALYTICS_EVENTS.PRICING_PAGE_VIEWED, {
       source: `homepage_${source}`,
       referrer: "homepage",
+      plan_name: PMLE_PASS.name,
     });
   };
 
@@ -129,47 +129,25 @@ export default function Home() {
               {/* Pricing Cards Preview */}
               <div className="flex justify-center mb-12">
                 <div className="w-full max-w-md">
-                {SUBSCRIPTION_TIERS.filter((tier) => !tier.isHidden).map((tier) => (
-                  <div
-                    key={tier.id}
-                    className={cn(
-                      "relative rounded-2xl p-5 sm:p-6 bg-white border-2 transition-all",
-                      tier.recommended
-                        ? "border-[color:var(--tone-accent)] shadow-xl md:scale-105"
-                        : "border-gray-200 hover:border-gray-300 hover:shadow-lg"
-                    )}
-                  >
-
+                  <div className="rounded-lg p-5 sm:p-6 bg-white border border-gray-200">
                     <div className="text-center mb-6 space-y-2">
-                      <h3 className="text-2xl font-bold text-gray-900">{tier.name}</h3>
-                      <div className="flex items-baseline justify-center">
-                        <span className="text-3xl sm:text-4xl font-bold">${tier.monthlyPrice}</span>
-                        <span className="text-sm text-gray-500 ml-2">/month</span>
-                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900">{PMLE_PASS.name}</h3>
+                      <p className="text-3xl font-bold">US${PMLE_PASS.price} <span className="text-sm font-normal">one-time</span></p>
+                      <p className="text-sm text-gray-600">{PMLE_PASS.durationDays} days of full access. No subscription or renewal.</p>
                     </div>
-
                     <ul className="space-y-3 mb-6 text-left">
-                      {tier.highlighted?.slice(0, 3).map((feature) => (
+                      {PMLE_PASS_FEATURES.slice(0, 3).map((feature) => (
                         <li key={feature} className="flex items-start gap-2">
-                          <CheckCircle className="h-5 w-5 text-[color:var(--tone-success)] flex-shrink-0" />
-                          <span className="text-sm sm:text-base text-gray-700">{feature}</span>
+                          <CheckCircle className="h-5 w-5 text-[color:var(--tone-success)] flex-shrink-0" aria-hidden="true" />
+                          <span className="text-sm text-gray-700">{feature}</span>
                         </li>
                       ))}
                     </ul>
-
-                    <Button
-                      asChild
-                      size="md"
-                      fullWidth
-                      tone={tier.recommended ? "accent" : "neutral"}
-                      variant={tier.recommended ? "solid" : "outline"}
-                      className="text-base font-semibold h-12"
-                      onClick={() => handlePricingClick(`preview_${tier.id}`)}
-                    >
-                      <Link href="/pricing">Start Preparing</Link>
+                    <Button asChild fullWidth tone="accent" onClick={() => handlePricingClick("preview_pass")}>
+                      <Link href="/pricing">Get PMLE Pass</Link>
                     </Button>
+                    <p className="mt-3 text-sm text-gray-600">7-day refund window. A refund ends pass access.</p>
                   </div>
-                ))}
                 </div>
               </div>
 
@@ -237,7 +215,7 @@ export default function Home() {
               Know When You&apos;re Ready
             </h2>
             <p className="text-xl mb-8 text-white/90">
-              Start without an account. Create a free account to view and save results. Paid unlocks explanations and more practice.
+              Start without an account. Create a free account to view and save results. PMLE Pass unlocks explanations and full practice for 90 days.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -259,11 +237,11 @@ export default function Home() {
             <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm">
               <div className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-[color:var(--tone-success)]" />
-                <span>7-day money-back guarantee</span>
+                <span>7-day refund window; a refund ends access</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-[color:var(--tone-success)]" />
-                <span>Cancel anytime</span>
+                <span>No automatic renewal</span>
               </div>
               <div className="flex items-center gap-2">
                 <Star className="h-5 w-5 text-yellow-400" />

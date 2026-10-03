@@ -17,18 +17,14 @@ import {
 } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
-import {
-  getTierNameFromPriceId,
-  getPaymentMode,
-  getPlanType,
-} from "@/lib/pricing/price-utils";
+import { getPassAnalyticsProperties } from "@/lib/pricing/price-utils";
 import { PricingCard } from "@/components/pricing/PricingCard";
 import { FreeVsPaidComparison } from "@/components/pricing/FreeVsPaidComparison";
 import { Container, Section } from "@/components/patterns";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
-  SUBSCRIPTION_TIERS,
+  PMLE_PASS,
   VALUE_PROPS,
   PRICING_FAQ,
 } from "@/lib/pricing/constants";
@@ -52,163 +48,70 @@ const PLAN_HIGHLIGHTS = [
 ];
 
 export default function PricingPage() {
-  const billingInterval = "monthly" as const;
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
-  const [loading, setLoading] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const errorTimeoutRef = React.useRef<number | null>(null);
-  const checkoutInFlightRef = useRef<Set<string>>(new Set());
-  const checkoutIdempotencyKeyRef = useRef<Map<string, string>>(new Map());
+  const checkoutInFlightRef = useRef(false);
+  const checkoutIdempotencyKeyRef = useRef<string | null>(null);
   const { user } = useAuth();
   const router = useRouter();
   const posthog = usePostHog();
 
-  // Show only the basic (PMLE Readiness) tier for go-live simplicity
-  const visibleTiers = SUBSCRIPTION_TIERS.filter((tier) => tier.id === "basic");
-
-  // Track page view
   useEffect(() => {
     trackEvent(posthog, ANALYTICS_EVENTS.PRICING_PAGE_VIEWED, {
+      ...getPassAnalyticsProperties(),
       user_id: user?.id,
-      billing_interval: "monthly",
     });
   }, [posthog, user]);
 
-  const handleCheckout = async (priceId: string, planName: string) => {
-    // Validate price ID format (Stripe price IDs start with price_)
-    // If it's a fallback ID (tier-billing format), redirect to signup
-    if (!priceId.startsWith("price_")) {
-      trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_ATTEMPT, {
-        plan_name: planName,
-        source: "pricing_checkout_missing_price_id",
-      });
-      router.push("/signup?redirect=/pricing");
-      return;
-    }
+  const handleCheckout = async () => {
+    if (checkoutInFlightRef.current) return;
+    const properties = { ...getPassAnalyticsProperties(), user_id: user?.id };
+    trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_INITIATED, properties);
 
-    // Calculate analytics properties
-    const tierName = getTierNameFromPriceId(priceId);
-    const paymentMode = getPaymentMode(priceId);
-    const planType = getPlanType(priceId);
-
-    // Track checkout intent
-    trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_INITIATED, {
-      plan_name: planName,
-      tier_name: tierName,
-      billing_interval: "monthly",
-      price_id: priceId,
-      payment_mode: paymentMode,
-      plan_type: planType,
-      user_id: user?.id,
-    });
-
-    // Require authentication
     if (!user) {
       trackEvent(posthog, ANALYTICS_EVENTS.SIGNUP_ATTEMPT, {
-        plan_name: planName,
+        plan_name: PMLE_PASS.name,
         source: "pricing_checkout_redirect",
       });
       router.push("/signup?redirect=/pricing");
       return;
     }
 
-    // Guard against double-submits (double click / repeated taps) before state updates land.
-    // Must check and acquire lock BEFORE try block to prevent concurrent finally blocks from clearing refs prematurely.
-    if (checkoutInFlightRef.current.has(priceId)) {
-      return;
-    }
-    checkoutInFlightRef.current.add(priceId);
-    const acquiredLock = true;
-
-    if (!checkoutIdempotencyKeyRef.current.has(priceId)) {
-      checkoutIdempotencyKeyRef.current.set(priceId, crypto.randomUUID());
-    }
-    const idempotencyKey = checkoutIdempotencyKeyRef.current.get(priceId)!;
-
-    setLoading(priceId);
-
+    checkoutInFlightRef.current = true;
+    setLoading(true);
+    setError(null);
     try {
+      // Keep this key across failures so retrying cannot create duplicate purchases.
+      checkoutIdempotencyKeyRef.current ??= crypto.randomUUID();
       const response = await fetch("/api/billing/checkout", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-idempotency-key": idempotencyKey,
-        },
-        body: JSON.stringify({
-          priceId,
-          idempotencyKey,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idempotencyKey: checkoutIdempotencyKeyRef.current }),
       });
-
       const data = (await response.json()) as { error?: string; url?: string };
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create checkout session");
-      }
-
-      // Track successful checkout session creation
-      trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_SESSION_CREATED, {
-        plan_name: planName,
-        tier_name: tierName,
-        billing_interval: "monthly",
-        price_id: priceId,
-        payment_mode: paymentMode,
-        plan_type: planType,
-        user_id: user?.id,
-      });
-
-      // Redirect to Stripe Checkout
-      if (data.url) {
-        window.location.href = data.url;
-        // Clear idempotency key only on confirmed success/redirect
-        checkoutIdempotencyKeyRef.current.delete(priceId);
-      } else {
-        throw new Error("No checkout URL returned from server");
-      }
+      if (!response.ok) throw new Error(data.error || "Failed to create checkout session");
+      if (!data.url) throw new Error("No checkout URL returned from server");
+      trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_SESSION_CREATED, properties);
+      window.location.href = data.url;
     } catch (error) {
-      console.error("Checkout error:", error);
-
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      
-      trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_ERROR, {
-        error: errorMessage,
-        plan_name: planName,
-        tier_name: tierName,
-        billing_interval: "monthly",
-        price_id: priceId,
-        payment_mode: paymentMode,
-        plan_type: planType,
-        user_id: user?.id,
-      });
-
-      // Provide more specific error messages
-      let userFriendlyError = "Failed to start checkout. Please try again.";
-      if (errorMessage.includes("price") || errorMessage.includes("Price")) {
-        userFriendlyError = "This plan is temporarily unavailable. Please contact support or try a different plan.";
-      } else if (errorMessage.includes("session") || errorMessage.includes("Session")) {
-        userFriendlyError = "Unable to create checkout session. Please refresh the page and try again.";
-      } else if (errorMessage.includes("network") || errorMessage.includes("fetch")) {
-        userFriendlyError = "Network error. Please check your connection and try again.";
-      }
-
-      setError(userFriendlyError);
-      // Error persists longer (10 seconds) and can be manually dismissed
+      const message = error instanceof Error ? error.message : "Unknown error";
+      trackEvent(posthog, ANALYTICS_EVENTS.CHECKOUT_ERROR, { ...properties, error: message });
+      setError("Unable to start PMLE Pass checkout. Please try again or contact support.");
       if (errorTimeoutRef.current) window.clearTimeout(errorTimeoutRef.current);
       errorTimeoutRef.current = window.setTimeout(() => setError(null), 10000);
-      
-      // Keep idempotency key on error for safe retries
     } finally {
-      setLoading(null);
-      // Only release lock if this invocation actually acquired it
-      if (acquiredLock) {
-        checkoutInFlightRef.current.delete(priceId);
-      }
+      setLoading(false);
+      checkoutInFlightRef.current = false;
     }
   };
 
-
-  // Clean up error timeout on unmount
+  // Surface failures from other checkout entry points without claiming paid access.
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("checkout") === "error") {
+      setError("Unable to start PMLE Pass checkout. Please try again or contact support.");
+    }
     return () => {
       if (errorTimeoutRef.current) window.clearTimeout(errorTimeoutRef.current);
     };
@@ -297,16 +200,7 @@ export default function PricingPage() {
       >
         <div className="flex justify-center">
           <div className="w-full max-w-md">
-            {visibleTiers.map((tier) => (
-              <PricingCard
-                key={tier.id}
-                tier={tier}
-                billingInterval={billingInterval}
-                onCheckout={handleCheckout}
-                loading={!!loading}
-                loadingId={loading}
-              />
-            ))}
+            <PricingCard onCheckout={handleCheckout} loading={loading} />
           </div>
         </div>
       </Section>
@@ -356,6 +250,8 @@ export default function PricingPage() {
                 <button
                   onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
                   className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  aria-expanded={openFaqIndex === index}
+                  aria-controls={`pricing-faq-${index}`}
                 >
                   <span className="font-semibold text-gray-900">{faq.question}</span>
                   {openFaqIndex === index ? (
@@ -365,7 +261,7 @@ export default function PricingPage() {
                   )}
                 </button>
                 {openFaqIndex === index && (
-                  <div className="px-6 pb-4">
+                  <div id={`pricing-faq-${index}`} className="px-6 pb-4">
                     <p className="text-gray-600">{faq.answer}</p>
                   </div>
                 )}
@@ -386,7 +282,7 @@ export default function PricingPage() {
         <Container className="max-w-4xl text-center text-white">
           <h2 className="text-3xl font-bold text-white mb-4">Know When You&apos;re Ready</h2>
           <p className="text-xl text-white/90 mb-8">
-            Start without an account. Create a free account to view and save results. Paid unlocks explanations and more practice.
+            Start without an account. Create a free account to view and save results. PMLE Pass unlocks explanations and full practice for 90 days.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
@@ -410,7 +306,7 @@ export default function PricingPage() {
           </div>
           <div className="mt-8 flex items-center justify-center gap-2 text-white">
               <RefreshCw className="h-5 w-5" />
-            <span>7-day money-back guarantee • Cancel anytime</span>
+            <span>7-day refund window • A refund ends pass access</span>
           </div>
         </Container>
       </Section>

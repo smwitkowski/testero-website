@@ -4,10 +4,18 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import type { User } from "@supabase/supabase-js";
 import { useAuth } from "@/components/providers/AuthProvider";
 
 // Mock the AuthProvider
 jest.mock("@/components/providers/AuthProvider");
+jest.mock("@/hooks/useAdminStatus", () => ({ useAdminStatus: () => ({ isAdmin: false, isLoading: false }) }));
+jest.mock("next/link", () => ({
+  __esModule: true,
+  default: ({ children, href, onClick, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a {...props} href={href} onClick={(event) => { event.preventDefault(); onClick?.(event); }}>{children}</a>
+  ),
+}));
 
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 
@@ -22,7 +30,7 @@ const mockUser = {
 describe("DashboardSidebar", () => {
   beforeEach(() => {
     mockUseAuth.mockReturnValue({
-      user: mockUser as any,
+      user: mockUser as User,
       session: null,
       isLoading: false,
       signOut: jest.fn(),
@@ -47,13 +55,13 @@ describe("DashboardSidebar", () => {
   it("renders upgrade button for non-subscribers", () => {
     render(<DashboardSidebar activeItem="dashboard" showUpgradeCTA={true} />);
 
-    expect(screen.getByRole("button", { name: /Upgrade to PMLE Readiness/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Get PMLE Pass/i })).toBeInTheDocument();
   });
 
   it("hides upgrade button for subscribers", () => {
     render(<DashboardSidebar activeItem="dashboard" showUpgradeCTA={false} />);
 
-    expect(screen.queryByRole("button", { name: /Upgrade to PMLE Readiness/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Get PMLE Pass/i })).not.toBeInTheDocument();
   });
 
   it("calls onNavigate when nav item clicked", async () => {
@@ -86,7 +94,7 @@ describe("DashboardSidebar", () => {
       <DashboardSidebar activeItem="dashboard" showUpgradeCTA={true} onUpgrade={onUpgrade} />
     );
 
-    const upgradeButton = screen.getByRole("button", { name: /Upgrade to PMLE Readiness/i });
+    const upgradeButton = screen.getByRole("button", { name: /Get PMLE Pass/i });
     await user.click(upgradeButton);
 
     expect(onUpgrade).toHaveBeenCalledTimes(1);

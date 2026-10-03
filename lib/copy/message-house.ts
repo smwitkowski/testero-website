@@ -4,7 +4,7 @@
  * Single source of truth for all marketing and product copy.
  * Aligned to: PMLE-first, readiness-first, balanced claims posture.
  * 
- * Last Updated: 2025-12-28
+ * Last Updated: 2026-10-02
  */
 
 /**
@@ -57,7 +57,7 @@ export const CTAS = {
   primary: {
     diagnostic: "Start free diagnostic",
     signup: "Sign up free",
-    upgrade: "Upgrade to PMLE Readiness",
+    upgrade: "Get PMLE Pass",
   },
   secondary: {
     viewPricing: "See pricing",
@@ -70,7 +70,7 @@ export const CTAS = {
  * Free vs Paid boundaries (must match entitlements)
  */
 export const FREE_FEATURES = {
-  diagnostic: "1 diagnostic per exam (PMLE)",
+  diagnostic: "PMLE diagnostic",
   basicSummary: "Basic readiness summary (score + domain breakdown)",
   limitedPractice: "Limited practice quota (5 questions/week)",
   noExplanations: true, // Explicitly no explanations
@@ -79,7 +79,6 @@ export const FREE_FEATURES = {
 export const PAID_FEATURES = {
   explanations: "Detailed explanations for every answer",
   unlimitedPractice: "Unlimited practice within PMLE",
-  diagnosticRetakes: "Diagnostic retakes",
   readinessHistory: "Readiness history and progress tracking",
   domainTargeted: "Domain-targeted practice loops",
 } as const;
@@ -130,7 +129,7 @@ export const CLAIM_REGISTER: Claim[] = [
   {
     claim: "Free forever",
     source: "needs-qualifier",
-    qualification: "Free diagnostic and limited practice. Explanations and unlimited practice require a subscription.",
+    qualification: "Free diagnostic and limited practice. Explanations and unlimited practice require PMLE Pass.",
     usedIn: ["components/marketing/sections/final-cta-section.tsx", "components/marketing/sections/benefits-section.tsx"],
   },
   {
@@ -168,7 +167,7 @@ export const TRUST_SIGNALS = [
   "PMLE-focused",
   "Diagnostic-first",
   "Blueprint-aligned",
-  "Cancel anytime",
+  "No automatic renewal",
 ];
 
 /**
@@ -178,8 +177,8 @@ export const MICROCOPY = {
   diagnosticTime: "5–10 minutes",
   noCreditCard: "No credit card required",
   instantResults: "Results instantly",
-  cancelAnytime: "Cancel anytime",
-  moneyBackGuarantee: "7-day money-back guarantee",
+  noRenewal: "No automatic renewal",
+  moneyBackGuarantee: "7-day refund window. A refund ends pass access.",
   heroMicrocopy: "Start without an account",
 };
 

@@ -12,7 +12,7 @@ interface ComparisonFeature {
 
 const COMPARISON_FEATURES: ComparisonFeature[] = [
   {
-    name: "One PMLE diagnostic test",
+    name: "PMLE diagnostic",
     free: true,
     paid: true,
   },
@@ -42,7 +42,7 @@ const COMPARISON_FEATURES: ComparisonFeature[] = [
     paid: true,
   },
   {
-    name: "Domain-level readiness insights",
+    name: "Domain-targeted practice",
     free: false,
     paid: true,
   },
@@ -50,16 +50,6 @@ const COMPARISON_FEATURES: ComparisonFeature[] = [
     name: "Progress tracking",
     free: false,
     paid: true,
-  },
-  {
-    name: "No explanations",
-    free: true,
-    paid: false,
-  },
-  {
-    name: "No personalized plan",
-    free: true,
-    paid: false,
   },
 ];
 
@@ -71,7 +61,7 @@ export function FreeVsPaidComparison() {
           Free vs Paid: What&apos;s Included
         </h2>
         <p className="text-gray-600 dark:text-slate-300">
-          See exactly what you get with free access versus a paid subscription
+          See exactly what you get with free access versus PMLE Pass
         </p>
       </div>
 
@@ -113,9 +103,9 @@ export function FreeVsPaidComparison() {
         <div className="rounded-lg border-2 border-blue-600 bg-white p-6 shadow-lg dark:bg-slate-900 dark:border-blue-500">
           <div className="mb-6 text-center">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-slate-100 mb-2">
-              PMLE Prep (Paid)
+              PMLE Pass
             </h3>
-            <p className="text-sm text-gray-600 dark:text-slate-300">Full access with subscription</p>
+            <p className="text-sm text-gray-600 dark:text-slate-300">US$39 once · 90 days · No renewal</p>
           </div>
           <ul className="space-y-4">
             {COMPARISON_FEATURES.map((feature) => (
@@ -182,9 +172,9 @@ export function FreeVsPaidComparison() {
         <div className="rounded-lg border-2 border-blue-600 bg-white p-6 shadow-lg dark:bg-slate-900 dark:border-blue-500">
           <div className="mb-6 text-center">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-slate-100 mb-2">
-              PMLE Prep (Paid)
+              PMLE Pass
             </h3>
-            <p className="text-sm text-gray-600 dark:text-slate-300">Full access with subscription</p>
+            <p className="text-sm text-gray-600 dark:text-slate-300">US$39 once · 90 days · No renewal</p>
           </div>
           <ul className="space-y-4">
             {COMPARISON_FEATURES.map((feature) => (

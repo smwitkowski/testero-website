@@ -6,9 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface Feature {
   name: string;
-  basic: string | boolean;
-  pro?: string | boolean;
-  allAccess?: string | boolean;
+  pass: string | boolean;
 }
 
 interface FeatureCategory {
@@ -43,14 +41,14 @@ export function ComparisonTable({ categories, onSelectPlan }: ComparisonTablePro
               <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Features</th>
               <th className="px-6 py-4 text-center">
                 <div className="space-y-1">
-                  <div className="text-lg font-bold text-gray-900">PMLE Readiness</div>
-                  <div className="text-sm text-gray-600">$39/month</div>
+                  <div className="text-lg font-bold text-gray-900">PMLE Pass</div>
+                  <div className="text-sm text-gray-600">US$39 once · 90 days</div>
                   {onSelectPlan && (
                     <button
-                      onClick={() => onSelectPlan("basic")}
+                      onClick={() => onSelectPlan("PMLE Pass")}
                       className="mt-2 rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
                     >
-                      Start Preparing
+                      Get PMLE Pass
                     </button>
                   )}
                 </div>
@@ -77,7 +75,7 @@ export function ComparisonTable({ categories, onSelectPlan }: ComparisonTablePro
                     )}
                   >
                     <td className="px-6 py-4 text-sm text-gray-700">{feature.name}</td>
-                    <td className="px-6 py-4 text-center">{renderFeatureValue(feature.basic)}</td>
+                    <td className="px-6 py-4 text-center">{renderFeatureValue(feature.pass)}</td>
                   </tr>
                 ))}
               </React.Fragment>
@@ -99,8 +97,8 @@ export function ComparisonTable({ categories, onSelectPlan }: ComparisonTablePro
                 <div key={feature.name} className="mb-4 last:mb-0">
                   <div className="mb-2 text-sm font-medium text-gray-700">{feature.name}</div>
                   <div className="rounded-lg bg-blue-50 p-3 text-center">
-                    <div className="text-xs font-medium text-blue-600 mb-1">PMLE Readiness</div>
-                    {renderFeatureValue(feature.basic)}
+                    <div className="text-xs font-medium text-blue-600 mb-1">PMLE Pass</div>
+                    {renderFeatureValue(feature.pass)}
                   </div>
                 </div>
               ))}

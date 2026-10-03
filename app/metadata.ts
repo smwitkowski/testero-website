@@ -39,8 +39,8 @@ export const getJsonLd = () => generateJsonLd({
       },
       "mainEntity": {
         "@type": "Product",
-        "name": "Testero PMLE Exam Preparation Platform",
-        "description": "AI-powered PMLE (Professional Machine Learning Engineer) certification exam preparation with October 2024 updates",
+        "name": "PMLE Pass",
+        "description": "PMLE Pass: US$39 once for 90 days of full PMLE access. No automatic renewal.",
         "brand": {
           "@type": "Brand",
           "name": "Testero"
@@ -69,7 +69,7 @@ export const getJsonLd = () => generateJsonLd({
           "name": "What's included for free?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Free users get one PMLE diagnostic test, a basic readiness summary with score and domain breakdown, and limited practice (5 questions per week). Explanations and unlimited practice require a paid subscription."
+            "text": "Free users get a PMLE diagnostic, a basic readiness summary with score and domain breakdown, and limited practice (5 questions per week). Explanations and unlimited practice require PMLE Pass."
           }
         },
         {
@@ -77,7 +77,7 @@ export const getJsonLd = () => generateJsonLd({
           "name": "How does billing work?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Testero offers monthly and annual subscription plans. You can cancel anytime. We offer a 7-day money-back guarantee if you're not satisfied."
+            "text": "PMLE Pass costs US$39 once for 90 days of full access. There is no subscription or automatic renewal. Request a refund within 7 days of purchase; a refund ends pass access."
           }
         },
         {
