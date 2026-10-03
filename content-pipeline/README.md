@@ -28,7 +28,8 @@ OPENROUTER_API_KEY=your_openrouter_api_key_here
 
 **Required:**
 - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for database access
-- `OPENROUTER_API_KEY` for LLM question generation via OpenRouter
+- `OPENROUTER_API_KEY` for generation and the mandatory judge via OpenRouter
+- `EXA_API_KEY` and `FIRECRAWL_API_KEY` for documentation search and scraping; without usable documentation evidence the judge cannot pass a question
 
 **Optional - semantic duplicate checks:**
 - `OPENAI_API_KEY` enables OpenAI embeddings for semantic duplicate checks. Without it, the program warns and continues without semantic checks. Lexical duplicate checks still run.
