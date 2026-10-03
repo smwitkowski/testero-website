@@ -17,7 +17,7 @@ describe("grace-cookie", () => {
 
   describe("signGraceCookie", () => {
     it("should create a cookie with correct options", () => {
-      const cookie = signGraceCookie();
+      const cookie = signGraceCookie({ userId: "user-123", checkoutSessionId: "cs_pass" });
 
       expect(cookie.name).toBe("checkout_grace");
       expect(cookie.options).toMatchObject({
@@ -32,9 +32,9 @@ describe("grace-cookie", () => {
 
     it("should create different values on each call", () => {
       jest.useFakeTimers();
-      const cookie1 = signGraceCookie();
+      const cookie1 = signGraceCookie({ userId: "user-123", checkoutSessionId: "cs_pass" });
       jest.advanceTimersByTime(1000); // Advance 1 second
-      const cookie2 = signGraceCookie();
+      const cookie2 = signGraceCookie({ userId: "user-123", checkoutSessionId: "cs_pass" });
 
       expect(cookie1.value).not.toBe(cookie2.value);
       jest.useRealTimers();
@@ -43,20 +43,20 @@ describe("grace-cookie", () => {
 
   describe("verifyGraceCookie", () => {
     it("should return true for a valid signed cookie", () => {
-      const cookie = signGraceCookie();
+      const cookie = signGraceCookie({ userId: "user-123", checkoutSessionId: "cs_pass" });
       const req = new NextRequest("https://example.com", {
         headers: {
           cookie: `${cookie.name}=${cookie.value}`,
         },
       });
 
-      const result = verifyGraceCookie(req);
+      const result = verifyGraceCookie(req, "user-123");
       expect(result).toBe(true);
     });
 
     it("should return false for an expired cookie", () => {
       jest.useFakeTimers();
-      const cookie = signGraceCookie();
+      const cookie = signGraceCookie({ userId: "user-123", checkoutSessionId: "cs_pass" });
 
       // Advance time by 16 minutes (past 15 minute TTL)
       jest.advanceTimersByTime(16 * 60 * 1000);
@@ -67,14 +67,14 @@ describe("grace-cookie", () => {
         },
       });
 
-      const result = verifyGraceCookie(req);
+      const result = verifyGraceCookie(req, "user-123");
       expect(result).toBe(false);
 
       jest.useRealTimers();
     });
 
     it("should return false for a tampered cookie", () => {
-      const cookie = signGraceCookie();
+      const cookie = signGraceCookie({ userId: "user-123", checkoutSessionId: "cs_pass" });
       const tamperedValue = cookie.value.slice(0, -5) + "xxxxx";
       const req = new NextRequest("https://example.com", {
         headers: {
@@ -82,19 +82,35 @@ describe("grace-cookie", () => {
         },
       });
 
-      const result = verifyGraceCookie(req);
+      const result = verifyGraceCookie(req, "user-123");
       expect(result).toBe(false);
+    });
+
+    it("does not accept another user's checkout confirmation", () => {
+      const cookie = signGraceCookie({ userId: "user-123", checkoutSessionId: "cs_pass" });
+      const req = new Request("https://example.com", { headers: { cookie: `${cookie.name}=${cookie.value}` } });
+      expect(verifyGraceCookie(req, "other-user")).toBe(false);
+      expect(verifyGraceCookie(req, "")).toBe(false);
+    });
+
+    it("expires at exactly the TTL boundary", () => {
+      jest.useFakeTimers();
+      const cookie = signGraceCookie({ userId: "user-123", checkoutSessionId: "cs_pass" });
+      jest.advanceTimersByTime(900 * 1000);
+      const req = new Request("https://example.com", { headers: { cookie: `${cookie.name}=${cookie.value}` } });
+      expect(verifyGraceCookie(req, "user-123")).toBe(false);
+      jest.useRealTimers();
     });
 
     it("should return false when cookie is missing", () => {
       const req = new NextRequest("https://example.com");
-      const result = verifyGraceCookie(req);
+      const result = verifyGraceCookie(req, "user-123");
       expect(result).toBe(false);
     });
 
     it("should return false when signing secret is missing", () => {
       // Create cookie with secret first
-      const cookie = signGraceCookie();
+      const cookie = signGraceCookie({ userId: "user-123", checkoutSessionId: "cs_pass" });
       
       // Remove secret before verification
       delete process.env.PAYWALL_SIGNING_SECRET;
@@ -105,7 +121,7 @@ describe("grace-cookie", () => {
         },
       });
 
-      const result = verifyGraceCookie(req);
+      const result = verifyGraceCookie(req, "user-123");
       expect(result).toBe(false);
       
       // Restore secret for other tests
@@ -113,14 +129,14 @@ describe("grace-cookie", () => {
     });
 
     it("should work with standard Request object", () => {
-      const cookie = signGraceCookie();
+      const cookie = signGraceCookie({ userId: "user-123", checkoutSessionId: "cs_pass" });
       const req = new Request("https://example.com", {
         headers: {
           cookie: `${cookie.name}=${cookie.value}`,
         },
       });
 
-      const result = verifyGraceCookie(req);
+      const result = verifyGraceCookie(req, "user-123");
       expect(result).toBe(true);
     });
   });

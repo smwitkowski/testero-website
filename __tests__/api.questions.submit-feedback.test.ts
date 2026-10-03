@@ -4,6 +4,10 @@
 import { POST } from "@/app/api/questions/submit/route";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
+// This suite checks paid feedback shape; entitlement refusals are covered separately.
+jest.mock("@/lib/auth/require-subscriber", () => ({
+  requireSubscriber: jest.fn().mockResolvedValue(null),
+}));
 // Mock the dependencies
 jest.mock("@/lib/supabase/server");
 

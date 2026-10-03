@@ -4,13 +4,21 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type { BillingStatusResponse } from "@/app/api/billing/status/route";
 
+const NO_PAID_ACCESS: BillingStatusResponse = {
+  isSubscriber: false,
+  status: "none",
+  accessType: null,
+  accessUntil: null,
+  canManageSubscription: false,
+};
+
 export interface UseSubscriptionStatusOptions {
   /** Initial billing status if provided by SSR */
   initial?: BillingStatusResponse;
 }
 
 export interface UseSubscriptionStatusReturn {
-  /** Whether user is a subscriber (active or valid trialing) */
+  /** Whether user has an active legacy subscription or a valid PMLE Pass (UX only). */
   isSubscriber: boolean;
   /** Current subscription status */
   status: BillingStatusResponse["status"];
@@ -32,7 +40,7 @@ export function useSubscriptionStatus(
 ): UseSubscriptionStatusReturn {
   const { user } = useAuth();
   const [status, setStatus] = useState<BillingStatusResponse>(
-    options?.initial || { isSubscriber: false, status: "none" }
+    options?.initial || NO_PAID_ACCESS
   );
   const [isLoading, setIsLoading] = useState(!options?.initial);
 
@@ -50,7 +58,7 @@ export function useSubscriptionStatus(
     } catch (error) {
       console.error("Error fetching subscription status:", error);
       // Fail gracefully - default to non-subscriber
-      setStatus({ isSubscriber: false, status: "none" });
+      setStatus(NO_PAID_ACCESS);
     } finally {
       setIsLoading(false);
     }
@@ -73,7 +81,7 @@ export function useSubscriptionStatus(
   useEffect(() => {
     // If user logged out (user?.id became undefined), reset to non-subscriber
     if (!user?.id && prevUserIdRef.current) {
-      setStatus({ isSubscriber: false, status: "none" });
+      setStatus(NO_PAID_ACCESS);
       setIsLoading(false);
       hasFetchedRef.current = false;
     }

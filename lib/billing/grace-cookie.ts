@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import type { SerializeOptions } from "cookie";
 
 export const PAYWALL_GRACE_COOKIE = "checkout_grace";
@@ -15,7 +15,10 @@ export interface SignedCookie {
  * Sign a grace cookie indicating successful checkout
  * Cookie expires in 15 minutes
  */
-export function signGraceCookie(): SignedCookie {
+export function signGraceCookie({ userId, checkoutSessionId }: { userId: string; checkoutSessionId: string }): SignedCookie {
+  if (!userId || !checkoutSessionId) {
+    throw new Error("A user and checkout session are required");
+  }
   const secret = process.env.PAYWALL_SIGNING_SECRET;
   if (!secret) {
     throw new Error("PAYWALL_SIGNING_SECRET environment variable is required");
@@ -24,7 +27,7 @@ export function signGraceCookie(): SignedCookie {
   const now = Math.floor(Date.now() / 1000);
   const exp = now + GRACE_COOKIE_TTL_SECONDS;
 
-  const payload = JSON.stringify({ checkoutSuccess: true, exp });
+  const payload = JSON.stringify({ checkoutSuccess: true, userId, checkoutSessionId, exp });
   const signature = createHmac("sha256", secret).update(payload).digest("base64url");
   const value = `${Buffer.from(payload).toString("base64url")}.${signature}`;
 
@@ -43,9 +46,10 @@ export function signGraceCookie(): SignedCookie {
 
 /**
  * Verify a grace cookie from request
- * Returns true if cookie is valid and not expired
+ * Returns true if bound confirmation is valid and not expired.
+ * This is NOT a paid-access authorization; access is decided by paid-access.ts.
  */
-export function verifyGraceCookie(req: NextRequest | Request): boolean {
+export function verifyGraceCookie(req: NextRequest | Request, userId: string): boolean {
   const secret = process.env.PAYWALL_SIGNING_SECRET;
   if (!secret) {
     return false;
@@ -82,17 +86,20 @@ export function verifyGraceCookie(req: NextRequest | Request): boolean {
 
     // Verify signature
     const expectedSignature = createHmac("sha256", secret).update(JSON.stringify(payload)).digest("base64url");
-    if (signature !== expectedSignature) {
+    const actual = Buffer.from(signature);
+    const expected = Buffer.from(expectedSignature);
+    if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) {
       return false;
     }
 
-    // Verify expiration
+    // Old unbound cookies and missing/invalid expiry fail closed.
     const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp < now) {
+    if (!Number.isSafeInteger(payload.exp) || payload.exp <= now || payload.exp > now + GRACE_COOKIE_TTL_SECONDS) {
       return false;
     }
-
-    // Verify checkoutSuccess flag
+    if (!userId || payload.userId !== userId || typeof payload.checkoutSessionId !== "string" || !payload.checkoutSessionId) {
+      return false;
+    }
     if (payload.checkoutSuccess !== true) {
       return false;
     }
