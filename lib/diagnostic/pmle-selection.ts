@@ -321,7 +321,7 @@ export async function selectPmleQuestionsByBlueprint(
   const finalShuffled = shuffleArray(selectedQuestions).slice(0, totalQuestions);
 
   // Log distribution in development
-  if (process.env.NODE_ENV !== 'production' || process.env.DIAGNOSTIC_BLUEPRINT_DEBUG === 'true') {
+  if (process.env.NODE_ENV !== 'production') {
     console.log('📊 PMLE Diagnostic Domain Distribution:');
     domainDistribution.forEach((dist) => {
       const match = dist.targetCount === dist.selectedCount ? '✅' : '⚠️';

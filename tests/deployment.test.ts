@@ -14,6 +14,9 @@ describe("non-destructive deployment configuration", () => {
       expect(deploy).toContain(command);
     expect(deploy.match(/if: github.ref == 'refs\/heads\/main' && github.event_name == 'push'/g)).toHaveLength(2);
   });
+  it("targets the configured project for both authentication and deployment", () => {
+    expect(deploy.match(/project_id: \$\{\{ secrets\.GCP_PROJECT_ID \}\}/g)).toHaveLength(3);
+  });
   it("merges env and secret bindings rather than wiping unrelated runtime values", () => {
     expect(deploy).toContain("env_vars_update_strategy: merge");
     expect(deploy).toContain("secrets_update_strategy: merge");
@@ -24,6 +27,11 @@ describe("non-destructive deployment configuration", () => {
       expect(deploy).not.toContain(`\${{ secrets.${name} }}`);
       expect(docker).not.toContain(`ARG ${name}`);
     }
+  });
+  it("excludes generated Google credential artifacts from Docker and git", () => {
+    expect(deploy).toContain("create_credentials_file: false");
+    expect(read(".dockerignore")).toContain("gha-creds-*.json");
+    expect(read(".gitignore")).toContain("gha-creds-*.json");
   });
   it("uses a non-root standalone runner with markdown runtime assets", () => {
     expect(docker).toContain("/app/.next/standalone ./");

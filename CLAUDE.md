@@ -1,60 +1,46 @@
 # Testero v2 working rules
 
-Read `../hq/v2-spec.md` and D-014, D-017, D-019 in `../hq/decisions.md` first.
-Work on `prime/v2`. Phase 1 covers the foundation, Supabase SSR, anonymous
-diagnostic, results, and analytics. Do not add account UI, practice, billing,
-marketing migrations, or old app features before their phase.
+Read `../hq/v2-spec.md`, `../hq/business.md`, and decisions D-014, D-017,
+D-019 first. Work on `prime/v2`; Phases 1–4 implement the fresh app.
 
 ## Safety
 
-- Read no `.env*` file except `.env.example`. The example contains placeholders.
-- Run Supabase and browser tests against loopback URLs only. Get generated local
-  keys from `supabase status -o json` into process environment, never logs or files.
-- No Supabase `link`, `db push`, `--linked`, `--project-ref`, remote secrets, or
-  function deployments. Use `supabase start` and `supabase db reset --local`.
-- No real Stripe, PostHog, production Supabase, cloud deploy, `gcloud`, `gh`, or
-  git push during local Phase 1 work.
-- Preserve `content-pipeline/` exactly, `content/`, public brand assets,
-  `supabase/migrations_legacy/`, and `docs/deployment/stripe-setup.md`.
-- Never use the old `database.types.ts`. Generate only from the local v2 schema.
+- Preserve `content-pipeline/`, original blog blobs and archived migrations.
+- Never touch main `frontend` or frozen `frontend.v2-preview` / port 3100.
+- Read no `.env*` except `.env.example`. Never print, write or commit credentials.
+- Local Supabase only: project `testero-v2`, API 56541, DB 56542. No `link`,
+  `db push`, `--linked`, `--project-ref`, remote services, cloud calls or git push.
+- Use `scripts/local.mjs` for generated credentials in child memory and fake
+  Stripe SDK transport on 56545. PostHog stays disabled locally.
+- Use root dev port 3000. One owner runs DB/build/dev; stop dev before build.
+- Keep commits small, `v2:` prefix, explicit owned paths with `git commit --only`.
 
-## Architecture and checks
+## Architecture
 
-Keep all product code in TypeScript. Use Next App Router, Tailwind 4, and only
-shadcn components that the app uses. Use local system fonts. Keep at most 25 direct
-runtime dependencies; one worker owns package installation and the lockfile.
+Next App Router/TypeScript, Tailwind 4, used shadcn components, system fonts.
+Supabase SSR verifies `getUser` plus confirmed email; httpOnly cookie hashes
+bind anonymous diagnostics and atomic account claims. Anonymous results are
+aggregate-only. Free review has no explanations. All explanations require fresh,
+fail-closed paid access on the server. The database rechecks paid/free quota at
+session creation. Stripe signed webhooks alone grant passes; refund tombstones
+and payment-intent locks beat replay and out-of-order receipt writes.
 
-Port verified selection, shuffle, readiness, copy, and paid-access logic rather
-than inventing replacements. Money, access, auth, scoring, and selection need unit
-tests. No marketing tests. Keep one local anonymous-diagnostic Playwright smoke.
-Anonymous result responses contain score, readiness tier, and domain breakdown;
-never question review, correctness labels, or explanations.
+Public content is local Markdown rendered as safe React nodes, never raw HTML.
+Original blogs are archived byte-identically; explicit hash-locked editorial
+versions remove prohibited claims. Legal body requires literal `approved: true`
+in the two `content/legal` files. Never read or publish `hq/drafts`.
+No testimonials, invented statistics, pass guarantees or hours-saved claims.
+Keep independent/not affiliated with Google positioning.
 
-Run through this package's native environment:
+## Verification
 
-```sh
-npm run lint
-npm run typecheck
-npm test
-npm run build
-npm run test:db:local
-npm run test:e2e:local
-```
-
-Tests require local generated credentials; builds use loopback placeholders and
-empty PostHog values. Use `npm run dev:local` for manual development.
-`scripts/local.mjs` loads local status keys into process environment only, rejects
-non-`testero-v2` configs and non-loopback API/DB ports 56541/56542, and keeps PostHog
-empty. It never reads or writes `.env` files. Playwright uses `e2e/`, localhost:3000,
-and no server reuse. In a second terminal, `PLAYWRIGHT_MANAGED_SERVER=1 npm run
-test:e2e:local` reuses the managed local server; omit that flag to let Playwright
-start its own server. See README for the placeholder-only build command.
-
-## Shared worktree
-
-Keep commits small. Commit messages start with `v2:`. Use `git commit --only --`
-with an explicit list of your owned paths; never commit a peer's staged work.
-Report files, interfaces, check results, commit hash, and blockers to the parent.
+Use this package environment: `npm run lint`, `npm run typecheck`, `npm test`,
+`npm run test:db:local`, `npm run test:e2e:local`, and placeholder-only `npm run
+build` (README). Verify money/access/auth/scoring/selection/content safety and
+old-URL enumeration. No committed marketing-page suite. Keep the three actual
+local browser flows. Do not infer live Stripe/cloud validation from fixtures.
+Stay at <=25 direct runtime dependencies; one owner updates package/lock files.
+Generate database types from local v2 only, never old `database.types.ts`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
@@ -65,8 +51,3 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
-
-The whole-app route skeleton is deliberately nonfunctional outside diagnostics.
-Keep its Coming in phase badges, honest copy, preserved content URLs, and next-step
-links. Do not add fake account/payment data or stub APIs. The v2-dev launch config
-uses port 3100 and placeholders; real diagnostics use dev:local and the local DB.

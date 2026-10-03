@@ -66,6 +66,16 @@ describe("Supabase proxy preview guard and verified refresh", () => {
     expect(mocks.createClient).not.toHaveBeenCalled(); expect(mocks.getUser).not.toHaveBeenCalled();
   });
 
+  it("bypasses browser auth for public health checks, even with stale cookies", async () => {
+    const response = await proxy(new NextRequest("http://127.0.0.1:3000/api/health", {
+      headers: { Cookie: "sb-local-auth-token.0=stale-token" },
+    }));
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(mocks.createClient).not.toHaveBeenCalled();
+    expect(mocks.getUser).not.toHaveBeenCalled();
+  });
+
   it("verifies configured auth with getUser, never trusting getSession", async () => {
     const response = await proxy(request());
     expect(response.headers.get("x-middleware-next")).toBe("1");

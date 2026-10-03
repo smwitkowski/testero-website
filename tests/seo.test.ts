@@ -33,8 +33,9 @@ describe("SEO function contracts", () => {
     expect(catalog.blog).toHaveLength(5);
     expect(catalog.faq).toHaveLength(9);
     const entries = sitemap();
-    expect(entries.map(entry => entry.url)).toEqual(publicPaths.map(canonicalUrl));
-    expect(entries).toHaveLength(21);
+    const indexable = publicPaths.filter(path => path !== "/terms" && path !== "/privacy");
+    expect(entries.map(entry => entry.url)).toEqual(indexable.map(canonicalUrl));
+    expect(entries).toHaveLength(19);
     expect(new Set(entries.map(entry => entry.url)).size).toBe(entries.length);
     for (const entry of entries) {
       const url = new URL(entry.url);

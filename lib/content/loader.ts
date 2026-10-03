@@ -31,7 +31,7 @@ export function getBlogEntries(): ContentEntry[] {
     if (!overlay || createHash("sha256").update(document.source).digest("hex") !== overlay.sourceSha256) {
       throw new Error(`Blog source requires editorial review: ${item.slug}`);
     }
-    return { ...item, description: overlay.description, body: overlay.body,
+    return { ...item, title: overlay.title, description: overlay.description, body: overlay.body,
       citations: overlay.citations, editorialNotice: BLOG_EDITORIAL_NOTICE,
       publishedAt: typeof document.attributes.publishedAt === "string" ? document.attributes.publishedAt : undefined };
   });
@@ -64,7 +64,9 @@ export function getFaqEntries(): ContentEntry[] {
     // Legacy hub routes are not in v2. Point retained Markdown links to the
     // official certification directory rather than silently sending readers to 404.
     const body = publication.body.replace(/\]\(\/content\/[^)]+\)/g, "](https://cloud.google.com/learn/certification)");
-    const description = body.split("\n\n")[0].replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/[*_`]/g, "").slice(0, 180);
+    const plainDescription = body.split("\n\n")[0].replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/[*_`]/g, "");
+    const description = plainDescription.length > 180
+      ? plainDescription.slice(0, 177).replace(/\s+\S*$/, "") + "…" : plainDescription;
     return { ...item, description, body, editorialNotice: publication.editorialNotice,
       citations: Array.isArray(sources) ? sources.filter((value) => typeof value === "string" && safeHref(value)) : [] };
   });

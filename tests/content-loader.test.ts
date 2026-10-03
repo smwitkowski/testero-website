@@ -23,7 +23,9 @@ describe("local content loader", () => {
       expect(entry.body).toBe(BLOG_PUBLICATION_OVERLAYS[entry.slug].body);
       expect(entry.body + entry.description).not.toMatch(/Sarah|85%|20\+ hours|40\+ hours|50,000|2,000|pass in 30 days|proven blueprint|expert review/i);
       const archive = parseFrontmatter(readFileSync(`content/blog/${entry.slug}.md`, "utf8"));
-      expect(entry.title).toBe(archive.attributes.title);
+      expect(archive.attributes.title).toBeTruthy();
+      expect(entry.title).toBe(BLOG_PUBLICATION_OVERLAYS[entry.slug].title);
+      expect(entry.title).not.toMatch(/success story|expert solutions|hardest|complete guide|complete 2025 guide/i);
     }
   });
   it("passes each entry's safe title, description and path to canonical/social metadata", () => {

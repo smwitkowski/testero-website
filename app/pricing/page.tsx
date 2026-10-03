@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { getVerifiedUser } from "@/lib/auth/session";
 import { CheckoutButton } from "@/components/checkout-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-export const metadata: Metadata = { title: "PMLE Pass pricing" };
+export const metadata = pageMetadata("PMLE Pass pricing", "PMLE Pass: $39 one-time for 90 days of explanations and unlimited five-question practice sessions. No auto-renew; 7-day refund window.", "/pricing");
 export const dynamic = "force-dynamic";
 export default async function PricingPage() {
   const user = await getVerifiedUser();

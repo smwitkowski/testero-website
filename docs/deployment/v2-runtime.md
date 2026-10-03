@@ -34,7 +34,7 @@ the fixed origin `https://testero.ai`.
 
 ## Exact GitHub Actions configuration
 
-Configure these **repository or approved environment secrets** for deployment:
+Configure these **repository secrets** (the jobs do not select a GitHub Environment) for deployment:
 
 | GitHub secret | Value |
 | --- | --- |
