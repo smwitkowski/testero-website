@@ -1,5 +1,6 @@
+import { requestOrigin } from "@/lib/auth/redirects";
 import { getPaidAccess } from "@/lib/billing/paid-access";
-import { billingUser, billingJson, billingErrorResponse, requireEmptyBody, billingOrigin } from "@/lib/billing/http";
+import { billingUser, billingJson, billingErrorResponse, requireEmptyBody } from "@/lib/billing/http";
 import { requireSameOrigin, DiagnosticError } from "@/lib/diagnostic/http";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { StripeService } from "@/lib/stripe/stripe-service";
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
     const { data, error } = await db.from("user_subscriptions").select("stripe_customer_id")
       .eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle();
     if (error || !data?.stripe_customer_id) throw new Error("Unavailable owned subscription customer");
-    const portal = await new StripeService().createPortalSession(data.stripe_customer_id, `${billingOrigin(request)}/account`);
+    const portal = await new StripeService().createPortalSession(data.stripe_customer_id, `${requestOrigin(request)}/account`);
     if (!portal.url) throw new Error("Missing portal URL");
     return billingJson({ href: portal.url });
   } catch (error) { return billingErrorResponse(error); }

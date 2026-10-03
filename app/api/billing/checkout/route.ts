@@ -1,6 +1,7 @@
+import { requestOrigin } from "@/lib/auth/redirects";
 import { createHash } from "node:crypto";
 import { getPaidAccess } from "@/lib/billing/paid-access";
-import { billingUser, billingJson, billingErrorResponse, requireEmptyBody, billingOrigin } from "@/lib/billing/http";
+import { billingUser, billingJson, billingErrorResponse, requireEmptyBody } from "@/lib/billing/http";
 import { requireSameOrigin, DiagnosticError } from "@/lib/diagnostic/http";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { StripeService } from "@/lib/stripe/stripe-service";
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
     if (!price) throw new Error("Missing server pass price");
     const stripe = new StripeService();
     const customer = await stripe.createOrRetrieveCustomer(user.id);
-    const origin = billingOrigin(request);
+    const origin = requestOrigin(request);
     const session = await stripe.createCheckoutSession({ customerId: customer.id, userId: user.id,
       successUrl: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`, cancelUrl: `${origin}/pricing`,
       idempotencyKey: checkoutIdempotencyKey(user.id, price),
