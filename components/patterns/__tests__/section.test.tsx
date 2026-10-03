@@ -11,7 +11,7 @@ describe("Section", () => {
     expect(section).toHaveClass("bg-surface")
 
     const inner = section?.querySelector(":scope > div")
-    expect(inner).toHaveClass("py-section_lg")
+    expect(inner).toHaveClass("py-section-lg")
 
     const contained = inner?.firstElementChild as HTMLElement | null
     expect(contained).toHaveClass("mx-auto")
@@ -37,7 +37,7 @@ describe("Section", () => {
     expect(section).toHaveClass("bg-surface-muted", "border-y", "border-divider", "custom")
 
     const inner = section?.querySelector(":scope > div")
-    expect(inner).toHaveClass("py-section_sm")
+    expect(inner).toHaveClass("py-section-sm")
 
     const contained = inner?.firstElementChild as HTMLElement | null
     expect(contained).not.toHaveClass("mx-auto")

@@ -13,106 +13,104 @@ describe("Badge Component", () => {
 
     test("renders with custom className", () => {
       render(<Badge className="custom-class">Custom</Badge>);
-      const badge = screen.getByText("Custom");
+      const badge = screen.getByText("Custom").closest("[data-slot=badge]")!;
       expect(badge).toHaveClass("custom-class");
     });
   });
 
   describe("Semantic Color Tokens", () => {
     test("success variant uses design system tokens", () => {
-      render(<Badge variant="success">Success</Badge>);
-      const badge = screen.getByText("Success");
+      render(<Badge tone="success">Success</Badge>);
+      const badge = screen.getByText("Success").closest("[data-slot=badge]")!;
 
       // Should use semantic success colors
-      expect(badge).toHaveClass("bg-success-light");
-      expect(badge).toHaveClass("text-success-dark");
-      expect(badge).toHaveClass("border-success/40");
+      expect(badge).toHaveClass("bg-success/10");
+      expect(badge).toHaveClass("text-success");
+      expect(badge).toHaveClass("ring-success/20");
     });
 
     test("error variant uses design system tokens", () => {
-      render(<Badge variant="error">Error</Badge>);
-      const badge = screen.getByText("Error");
+      render(<Badge tone="danger">Error</Badge>);
+      const badge = screen.getByText("Error").closest("[data-slot=badge]")!;
 
       // Should use semantic error colors
-      expect(badge).toHaveClass("bg-error-light");
-      expect(badge).toHaveClass("text-error-dark");
-      expect(badge).toHaveClass("border-error/40");
+      expect(badge).toHaveClass("bg-error/10");
+      expect(badge).toHaveClass("text-error");
+      expect(badge).toHaveClass("ring-error/20");
     });
 
     test("warning variant uses design system tokens", () => {
-      render(<Badge variant="warning">Warning</Badge>);
-      const badge = screen.getByText("Warning");
+      render(<Badge tone="warning">Warning</Badge>);
+      const badge = screen.getByText("Warning").closest("[data-slot=badge]")!;
 
       // Should use semantic warning colors
-      expect(badge).toHaveClass("bg-warning-light");
+      expect(badge).toHaveClass("bg-warning/15");
       expect(badge).toHaveClass("text-warning-dark");
-      expect(badge).toHaveClass("border-warning/40");
+      expect(badge).toHaveClass("ring-warning/30");
     });
 
     test("info variant uses design system tokens", () => {
-      render(<Badge variant="info">Info</Badge>);
-      const badge = screen.getByText("Info");
+      render(<Badge tone="info">Info</Badge>);
+      const badge = screen.getByText("Info").closest("[data-slot=badge]")!;
 
       // Should use semantic info colors
-      expect(badge).toHaveClass("bg-info-light");
-      expect(badge).toHaveClass("text-info-dark");
-      expect(badge).toHaveClass("border-info/40");
+      expect(badge).toHaveClass("bg-info/10");
+      expect(badge).toHaveClass("text-info");
+      expect(badge).toHaveClass("ring-info/20");
     });
 
     test("default variant uses neutral colors", () => {
       render(<Badge>Default</Badge>);
-      const badge = screen.getByText("Default");
+      const badge = screen.getByText("Default").closest("[data-slot=badge]")!;
 
       // Should use neutral colors for default
-      expect(badge).toHaveClass("bg-neutral-100");
-      expect(badge).toHaveClass("text-neutral-700");
-      expect(badge).toHaveClass("border-neutral-200");
+      expect(badge).toHaveClass("bg-muted");
+      expect(badge).toHaveClass("text-foreground");
+      expect(badge).toHaveClass("ring-border/60");
     });
   });
 
   describe("Size Variants", () => {
     test("renders small size", () => {
       render(<Badge size="sm">Small</Badge>);
-      const badge = screen.getByText("Small");
+      const badge = screen.getByText("Small").closest("[data-slot=badge]")!;
       expect(badge).toHaveClass("text-xs");
       expect(badge).toHaveClass("px-2");
-      expect(badge).toHaveClass("py-0.5");
+      expect(badge).toHaveClass("h-6");
     });
 
     test("renders default size", () => {
       render(<Badge>Default Size</Badge>);
-      const badge = screen.getByText("Default Size");
+      const badge = screen.getByText("Default Size").closest("[data-slot=badge]")!;
       expect(badge).toHaveClass("text-sm");
-      expect(badge).toHaveClass("px-3");
-      expect(badge).toHaveClass("py-1");
+      expect(badge).toHaveClass("px-2.5");
+      expect(badge).toHaveClass("h-7");
     });
 
-    test("renders large size", () => {
-      render(<Badge size="lg">Large</Badge>);
-      const badge = screen.getByText("Large");
-      expect(badge).toHaveClass("text-base");
-      expect(badge).toHaveClass("px-4");
-      expect(badge).toHaveClass("py-1.5");
+    test("renders explicit medium size", () => {
+      render(<Badge size="md">Medium</Badge>);
+      const badge = screen.getByText("Medium").closest("[data-slot=badge]")!;
+      expect(badge).toHaveClass("text-sm", "px-2.5", "h-7");
     });
   });
 
   describe("Style Consistency", () => {
     test("applies consistent border radius", () => {
       render(<Badge>Rounded</Badge>);
-      const badge = screen.getByText("Rounded");
-      expect(badge).toHaveClass("rounded-md");
+      const badge = screen.getByText("Rounded").closest("[data-slot=badge]")!;
+      expect(badge).toHaveClass("rounded-full");
     });
 
     test("applies consistent font weight", () => {
       render(<Badge>Font Weight</Badge>);
-      const badge = screen.getByText("Font Weight");
+      const badge = screen.getByText("Font Weight").closest("[data-slot=badge]")!;
       expect(badge).toHaveClass("font-medium");
     });
 
-    test("has border by default", () => {
+    test("has inset ring by default", () => {
       render(<Badge>Border</Badge>);
-      const badge = screen.getByText("Border");
-      expect(badge).toHaveClass("border");
+      const badge = screen.getByText("Border").closest("[data-slot=badge]")!;
+      expect(badge).toHaveClass("ring-1");
     });
   });
 
@@ -124,8 +122,8 @@ describe("Badge Component", () => {
     });
 
     test("can be used as a semantic element", () => {
-      render(<Badge as="span">Span Badge</Badge>);
-      const badge = screen.getByText("Span Badge");
+      render(<Badge >Span Badge</Badge>);
+      const badge = screen.getByText("Span Badge").closest("[data-slot=badge]")!;
       expect(badge.tagName).toBe("SPAN");
     });
   });

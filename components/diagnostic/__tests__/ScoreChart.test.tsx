@@ -9,7 +9,7 @@ describe("ScoreChart", () => {
 
     const getScoreValue = () => screen.getByText(/\d+%/);
     const getStatusText = () =>
-      screen.getByText(/Excellent Performance|Good Progress|Keep Practicing|Needs Improvement/);
+      screen.getByText(/Excellent Performance|Good Progress|Keep Practicing|Needs Improvement/).closest("[data-slot=badge]")!;
     const getProgressCircle = () => screen.getByTestId("progress-circle");
 
     expect(getScoreValue()).toHaveClass("text-error");

@@ -70,15 +70,15 @@ describe("Design System Tokens", () => {
       expect(colorComponent.diagnostic.resumeBg).toBe(colorSemantic.info.light);
       expect(colorComponent.diagnostic.resumeBorder).toBe(colorSemantic.info.base);
       expect(colorComponent.diagnostic.inputBorder).toBe("#ccc");
-      expect(colorComponent.diagnostic.buttonPrimary).toBe("#0070f3");
+      expect(colorComponent.diagnostic.buttonPrimary).toBe(colorPrimitive.brand.teal.DEFAULT);
     });
 
     test("should have content/article-specific tokens", () => {
       expect(colorComponent.content).toBeDefined();
       expect(colorComponent.content.background).toBe(colorSemantic.surface.default);
-      expect(colorComponent.content.tag.bg).toBe(colorPrimitive.blue["50"]);
-      expect(colorComponent.content.tag.text).toBe(colorPrimitive.blue["700"]);
-      expect(colorComponent.content.tag.border).toBe(colorPrimitive.blue["200"]);
+      expect(colorComponent.content.tag.bg).toBe(`${colorPrimitive.brand.teal.DEFAULT}10`);
+      expect(colorComponent.content.tag.text).toBe(colorPrimitive.brand.teal.dark);
+      expect(colorComponent.content.tag.border).toBe(colorPrimitive.brand.teal.light);
       expect(colorComponent.content.prose.heading).toBe(colorSemantic.text.primary);
       expect(colorComponent.content.prose.body).toBe(colorSemantic.text.secondary);
     });
@@ -86,7 +86,7 @@ describe("Design System Tokens", () => {
     test("should have form/input state tokens", () => {
       expect(colorComponent.form).toBeDefined();
       expect(colorComponent.form.input.default).toBe(colorSemantic.border.default);
-      expect(colorComponent.form.input.focus).toBe(colorPrimitive.blue["500"]);
+      expect(colorComponent.form.input.focus).toBe(colorPrimitive.brand.teal.DEFAULT);
       expect(colorComponent.form.input.error).toBe(colorSemantic.error.base);
       expect(colorComponent.form.input.success).toBe(colorSemantic.success.base);
       expect(colorComponent.form.label).toBe(colorSemantic.text.primary);
@@ -121,7 +121,7 @@ describe("Design System Tokens", () => {
       expect(colorComponent.pricing).toBeDefined();
       expect(colorComponent.pricing.card.default.bg).toBe(colorSemantic.surface.default);
       expect(colorComponent.pricing.card.default.border).toBe(colorPrimitive.slate["200"]);
-      expect(colorComponent.pricing.card.recommended.border).toBe(colorPrimitive.blue["500"]);
+      expect(colorComponent.pricing.card.recommended.border).toBe(colorPrimitive.brand.teal.DEFAULT);
       expect(colorComponent.pricing.badge.bg).toBeDefined();
       expect(colorComponent.pricing.badge.text).toBe(colorPrimitive.white);
     });
@@ -199,13 +199,13 @@ describe("Design System Tokens", () => {
       expect(diagnosticBg).toBe(colorSemantic.surface.default);
 
       const contentTagBg = colorComponent.content.tag.bg;
-      expect([colorPrimitive.blue["50"], colorSemantic.primary["50"]]).toContain(contentTagBg);
+      expect(contentTagBg).toBe(`${colorPrimitive.brand.teal.DEFAULT}10`);
     });
 
     test("semantic tokens should only reference primitive tokens", () => {
       // Verify semantic tokens use primitives
       expect(colorSemantic.primary["500"]).toBe(colorPrimitive.slate["500"]);
-      expect(colorSemantic.accent["500"]).toBe(colorPrimitive.orange["500"]);
+      expect(colorSemantic.accent["500"]).toBe(colorPrimitive.brand.teal.DEFAULT);
     });
   });
 });
