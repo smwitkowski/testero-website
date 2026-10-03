@@ -9,7 +9,7 @@ import { trackPractice } from "@/lib/analytics/client";
 import { Button } from "@/components/ui/button";
 import { practiceRequest, practiceError, type PracticeRequestError } from "@/components/practice-resource";
 
-export function PracticeStart({ domains, weakestDomains, remaining }: Pick<DashboardData, "domains" | "weakestDomains"> & { remaining: number }) {
+export function PracticeStart({ domains, weakestDomains, remaining, hasPaidAccess = false }: Pick<DashboardData, "domains" | "weakestDomains"> & { remaining: number; hasPaidAccess?: boolean }) {
   const router = useRouter();
   const [domainCode, setDomainCode] = useState(domains[0]?.domainCode ?? "");
   const [pending, setPending] = useState(false);
@@ -21,7 +21,7 @@ export function PracticeStart({ domains, weakestDomains, remaining }: Pick<Dashb
 
   async function start(code: string) {
     const signal = controller.current?.signal;
-    if (!code || submitting.current || !signal || error || exhausted || remaining < 5) return;
+    if (!code || submitting.current || !signal || error || exhausted || (!hasPaidAccess && remaining < 5)) return;
     submitting.current = true;
     setPending(true);
     try {
@@ -34,7 +34,7 @@ export function PracticeStart({ domains, weakestDomains, remaining }: Pick<Dashb
     } catch (reason) {
       if (signal.aborted) return;
       const failure = practiceError(reason);
-      if (failure.status === 429) setExhausted(true);
+      if (failure.status === 429 && !hasPaidAccess) setExhausted(true);
       else setError(failure);
       submitting.current = false;
       setPending(false);
@@ -44,9 +44,9 @@ export function PracticeStart({ domains, weakestDomains, remaining }: Pick<Dashb
 
   return <section aria-labelledby="practice-start-heading" className="space-y-5">
     <h2 id="practice-start-heading" className="text-xl font-semibold">Targeted practice</h2>
-    <p className="leading-relaxed text-muted-foreground">Free accounts get 5 practice questions each week. Each session focuses on one domain.</p>
-    <p className="text-sm text-muted-foreground">{remaining} free practice questions remaining this week</p>
-    {exhausted || remaining < 5 ? <div className="space-y-3">
+    <p className="leading-relaxed text-muted-foreground">{hasPaidAccess ? "Your paid access includes unlimited practice sessions. Each session has 5 questions and focuses on one domain." : "Free accounts get 5 practice questions each week. Each session focuses on one domain."}</p>
+    {!hasPaidAccess && <p className="text-sm text-muted-foreground">{remaining} free practice questions remaining this week</p>}
+    {exhausted || (!hasPaidAccess && remaining < 5) ? <div className="space-y-3">
       <p role="status">You have used your 5 free practice questions for this week. Your free allowance resets next week.</p>
       <Button asChild><Link href="/pricing">Upgrade to PMLE Pass</Link></Button>
     </div> : error ? <div className="space-y-3">

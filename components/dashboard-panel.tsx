@@ -6,6 +6,7 @@ import type { DashboardData } from "@/lib/dashboard/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PracticeStart } from "@/components/practice-start";
+import { PassStatus, useFreshAccessOnFocus } from "@/components/billing-account";
 
 export function DashboardLoadError() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export function DashboardLoadError() {
 }
 
 export function DashboardPanel({ data }: { data: DashboardData }) {
+  useFreshAccessOnFocus();
   const diagnostic = data.diagnostic;
   return <div className="space-y-8">
     <section className="space-y-3">
@@ -55,11 +57,11 @@ export function DashboardPanel({ data }: { data: DashboardData }) {
       <p className="text-muted-foreground">{data.openPractice.domainName}</p>
       <Button asChild><Link href={`/practice/${encodeURIComponent(data.openPractice.sessionId)}`}>Resume practice</Link></Button>
     </section>}
-    <PracticeStart domains={data.domains} weakestDomains={data.weakestDomains} remaining={data.quota.remaining} />
+    {data.paidAccess.unavailable ? <section className="space-y-3"><p role="alert">Your access status could not be verified. Reload before starting practice.</p><Button onClick={() => window.location.reload()}>Reload dashboard</Button></section> : <PracticeStart domains={data.domains} weakestDomains={data.weakestDomains} remaining={data.quota.remaining} hasPaidAccess={data.paidAccess.hasPaidAccess} />}
     {diagnostic && <Button variant="outline" asChild><Link href="/diagnostic">Retake diagnostic</Link></Button>}
     <section className="space-y-2 border-t border-border pt-5">
       <h2 className="text-xl font-semibold">Pass status</h2>
-      <p className="text-muted-foreground">Your verified PMLE Pass status will appear here when billing is available in Phase 3.</p>
+      <PassStatus access={data.paidAccess} />
     </section>
   </div>;
 }

@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import type { PracticeAnswerResponse, PracticeProgress } from "@/lib/practice/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useFreshAccessOnFocus } from "@/components/billing-account";
 import { PracticeError, PracticeLoading, PracticeRequestError, practiceError, practiceRequest, usePracticeResource } from "@/components/practice-resource";
 
 export function PracticeSession({ sessionId }: { sessionId: string }) {
+  useFreshAccessOnFocus();
   const router = useRouter();
   const nextPath = `/practice/${encodeURIComponent(sessionId)}`;
   const summaryPath = `${nextPath}/summary`;
@@ -85,6 +87,8 @@ export function PracticeSession({ sessionId }: { sessionId: string }) {
           <div role="status" className="space-y-2"><p className="text-xl font-semibold">{answer.feedback.isCorrect ? "Correct" : "Incorrect"}</p>
             <p className="leading-relaxed"><span className="font-medium">Correct answer: {answer.feedback.correctLabel}.</span> {correctOption?.text}</p>
           </div>
+          {answer.feedback.explanation && <section className="space-y-2"><h2 className="font-semibold">Explanation</h2><p className="whitespace-pre-line leading-relaxed">{answer.feedback.explanation}</p></section>}
+          {answer.feedback.optionExplanations && answer.feedback.optionExplanations.length > 0 && <section className="space-y-3"><h2 className="font-semibold">Option explanations</h2><ul className="space-y-3">{answer.feedback.optionExplanations.map(option => <li key={option.label} className="space-y-2"><p className="font-medium">{option.label}. {option.text}</p><p className="whitespace-pre-line leading-relaxed text-muted-foreground">{option.explanation}</p></li>)}</ul></section>}
           {answer.completed ? <Button asChild><Link href={summaryPath}>View summary</Link></Button> : <Button onClick={nextQuestion}>Next question</Button>}
         </div>}
       </CardContent>

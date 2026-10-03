@@ -30,6 +30,13 @@ describe("shared question review", () => {
     expect(html).toContain("Correct answer");
     expect(html).not.toMatch(/explanation|secret|unlock|blur|paywall/i);
   });
+  it("renders only the optional explanation fields received in paid review", () => {
+    const review = { ...mapReview(source), explanation: "Stored question explanation", options: [{ label: "A", text: "First", explanation: "Stored option explanation" }, { label: "B", text: "Second" }] };
+    const html = renderToStaticMarkup(createElement(QuestionReviewList, { review: [review] }));
+    expect(html).toContain("Stored question explanation");
+    expect(html).toContain("Stored option explanation");
+    expect(html).not.toContain("secret link");
+  });
   it("marks a correct selected choice with both accessible text labels", () => {
     const html = renderToStaticMarkup(createElement(QuestionReviewList, { review: [mapReview({ ...source, selected_label: "A", is_correct: true })] }));
     expect(html).toContain("Your answer");

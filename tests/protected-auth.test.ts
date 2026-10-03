@@ -7,7 +7,7 @@ vi.mock("@/lib/auth/session", () => ({ getVerifiedUser: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn((path: string) => { throw new Error(`REDIRECT:${path}`); }) }));
 beforeEach(() => vi.mocked(getVerifiedUser).mockReset().mockResolvedValue(null));
 describe("protected page helper", () => {
-  it.each(["/account", "/dashboard", "/practice", "/reset-password"])("redirects signed-out %s to login with safe next", async path => {
+  it.each(["/account", "/dashboard", "/practice", "/reset-password", "/checkout/success?session_id=cs_test_owned"])("redirects signed-out %s to login with safe next", async path => {
     await expect(requireUser(path)).rejects.toThrow(`REDIRECT:/login?next=${encodeURIComponent(path)}`);
     expect(redirect).toHaveBeenCalledWith(`/login?next=${encodeURIComponent(path)}`);
   });
