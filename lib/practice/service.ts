@@ -1,4 +1,6 @@
 import "server-only";
+import { getPaidAccess } from "@/lib/billing/paid-access";
+import { loadPaidExplanations, addPaidReview } from "@/lib/billing/explanations";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
 import { hasValidAnswers, type CanonicalAnswer } from "@/lib/diagnostic/pmle-selection";
@@ -16,9 +18,9 @@ export class PracticeQuotaError extends DiagnosticError {
   constructor() { super(429, "You have used your five free practice questions this week."); }
 }
 interface Session { id: string; user_id: string | null; anonymous_owner_hash: string | null; question_count: number; completed_at: string | null; expires_at: string }
-interface Item extends Omit<QuestionReviewSource, "selected_label" | "is_correct"> { selected_label: string | null; is_correct: boolean | null; answered_at: string | null }
+interface Item extends Omit<QuestionReviewSource, "selected_label" | "is_correct"> { question_id?: string; selected_label: string | null; is_correct: boolean | null; answered_at: string | null }
 interface Question { id: string; stem: string; answers: CanonicalAnswer[]; exam_domains: { code: string; name: string } }
-const ITEM_FIELDS = "id,ordinal,stem,options,domain_code,domain_name,selected_label,correct_label,is_correct,answered_at";
+const ITEM_FIELDS = "id,question_id,ordinal,stem,options,domain_code,domain_name,selected_label,correct_label,is_correct,answered_at";
 function validAnsweredItem(row: Pick<Item, "options" | "selected_label" | "correct_label" | "is_correct">): boolean {
   if (!Array.isArray(row.options) || row.options.length < 2 || row.options.some(option => !option || typeof option.label !== "string" || !option.label.trim() || typeof option.text !== "string" || !option.text.trim())) return false;
   const labels = row.options.map(option => option.label);
@@ -41,7 +43,8 @@ export async function freePracticeQuota(client: SupabaseClient, userId: string, 
 export async function createPractice(client: SupabaseClient, userId: string, domainCode: string, now = Date.now()): Promise<string> {
   if (!UUID.test(userId)) throw new DiagnosticError(401, "Please sign in to continue");
   if (!PMLE_BLUEPRINT.some(domain => domain.domainCode === domainCode)) throw new DiagnosticError(400, "Choose a valid practice domain");
-  if ((await freePracticeQuota(client, userId, new Date(now))).remaining < FREE_PRACTICE_LENGTH) throw new PracticeQuotaError();
+  const paidAccess = await getPaidAccess(userId, client, now);
+  if (!paidAccess.hasPaidAccess && (await freePracticeQuota(client, userId, new Date(now))).remaining < FREE_PRACTICE_LENGTH) throw new PracticeQuotaError();
   const { data, error } = await client.from("questions")
     .select("id,stem,answers(choice_label,choice_text,is_correct),exam_domains!inner(code,name)")
     .eq("exam", "GCP_PM_ML_ENG").eq("status", "ACTIVE").eq("review_status", "GOOD").eq("exam_domains.code", domainCode);
@@ -53,9 +56,10 @@ export async function createPractice(client: SupabaseClient, userId: string, dom
     question_id: question.id, domain_code: domainCode, domain_name: question.exam_domains.name,
     stem: question.stem, ...createAnswerSnapshot(question.answers.map(answer => ({ text: answer.choice_text, is_correct: answer.is_correct }))),
   }));
-  const { data: id, error: createError } = await client.rpc("create_free_practice_session", {
-    p_user_id: userId, p_items: items, p_expires_at: new Date(now + 24 * 60 * 60 * 1000).toISOString(),
-  });
+  const args = { p_user_id: userId, p_items: items, p_expires_at: new Date(now + 24 * 60 * 60 * 1000).toISOString() };
+  const { data: id, error: createError } = paidAccess.hasPaidAccess
+    ? await client.rpc("create_study_session", { ...args, p_kind: "practice", p_anonymous_owner_hash: null })
+    : await client.rpc("create_free_practice_session", args);
   if (createError?.code === "P0001" && createError.message === "Free practice quota exceeded") throw new PracticeQuotaError();
   if (createError || typeof id !== "string" || !UUID.test(id)) throw unavailable();
   return id;
@@ -95,16 +99,21 @@ export async function answerPractice(client: SupabaseClient, id: string, userId:
   }
   const progress = data as { answeredCount: number; totalQuestions: number; completed: boolean } | null;
   if (!progress || !Number.isInteger(progress.answeredCount) || progress.answeredCount < 1 || progress.answeredCount > session.question_count || progress.totalQuestions !== session.question_count || progress.completed !== (progress.answeredCount === session.question_count)) throw unavailable();
-  const { data: raw, error: feedbackError } = await client.from("session_items").select("id,options,selected_label,correct_label,is_correct,answered_at").eq("session_id", id).eq("id", itemId).maybeSingle();
-  const row = raw as Pick<Item, "id" | "options" | "selected_label" | "correct_label" | "is_correct" | "answered_at"> | null;
+  const { data: raw, error: feedbackError } = await client.from("session_items").select("id,question_id,options,selected_label,correct_label,is_correct,answered_at").eq("session_id", id).eq("id", itemId).maybeSingle();
+  const row = raw as Pick<Item, "id" | "question_id" | "options" | "selected_label" | "correct_label" | "is_correct" | "answered_at"> | null;
   if (feedbackError || !row || row.id !== itemId || !row.answered_at || row.selected_label !== selectedLabel || typeof row.is_correct !== "boolean" || !validAnsweredItem(row)) throw unavailable();
+  // Recheck after the committed answer. A refund must redact retries immediately.
+  const access = await getPaidAccess(userId, client, now);
+  const explanations = access.hasPaidAccess ? await loadPaidExplanations(client, [row]) : null;
   return { answeredCount: progress.answeredCount, totalQuestions: progress.totalQuestions, completed: progress.completed,
-    feedback: { itemId: row.id, selectedLabel, correctLabel: row.correct_label, isCorrect: row.is_correct } };
+    feedback: { itemId: row.id, selectedLabel, correctLabel: row.correct_label, isCorrect: row.is_correct, ...explanations?.get(row.id) } };
 }
 export async function practiceSummary(client: SupabaseClient, id: string, userId: string, now = Date.now()): Promise<PracticeSummary> {
   const session = await ownedPractice(client, id, userId, now);
   if (!session.completed_at) throw new DiagnosticError(409, "Finish practice to see your summary");
   const rows = await items(client, id);
   if (rows.length !== session.question_count || rows.some(row => !row.answered_at || !validAnsweredItem(row))) throw unavailable();
-  return { ...computeResult(id, rows), review: rows.map(row => mapReview(row as QuestionReviewSource)) };
+  const access = await getPaidAccess(userId, client, now);
+  const explanations = access.hasPaidAccess ? await loadPaidExplanations(client, rows) : null;
+  return { ...computeResult(id, rows), review: rows.map(row => addPaidReview(mapReview(row as QuestionReviewSource), explanations?.get(row.id))) };
 }

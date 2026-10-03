@@ -1,8 +1,15 @@
+import { loadPaidExplanations } from "@/lib/billing/explanations";
+import { getPaidAccess } from "@/lib/billing/paid-access";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createDiagnostic, readDiagnostic, answerDiagnostic, diagnosticResults } from "@/lib/diagnostic/service";
 import { hashAnonymousToken } from "@/lib/diagnostic/ownership";
 import { selectPmleQuestionsByBlueprint, type SelectionResult } from "@/lib/diagnostic/pmle-selection";
+
+vi.mock("@/lib/billing/explanations", async original => ({ ...await original<typeof import("@/lib/billing/explanations")>(), loadPaidExplanations: vi.fn() }));
+vi.mock("@/lib/billing/paid-access", () => ({ getPaidAccess: vi.fn() }));
+const freeAccess = { hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null };
+beforeEach(() => { vi.mocked(getPaidAccess).mockReset().mockResolvedValue(freeAccess); vi.mocked(loadPaidExplanations).mockReset().mockResolvedValue(new Map()); });
 
 vi.mock("@/lib/diagnostic/pmle-selection", async (original) => ({
   ...await original<typeof import("@/lib/diagnostic/pmle-selection")>(),
@@ -265,5 +272,35 @@ describe("account-owned diagnostic review", () => {
   it.each([null, "Z"])('fails closed for missing or invalid review labels: %s', async label => {
     const rows = completedItems().map(item => ({ ...item, selected_label: label }));
     await expect(diagnosticResults(database({ session: accountSession(), items: rows }).client, sessionId, signedIn, now)).rejects.toMatchObject({ status: 503 });
+  });
+});
+
+
+describe("paid diagnostic review remains completion- and ownership-gated", () => {
+  const paid = { ...freeAccess, hasPaidAccess: true };
+  const completed = () => items().map(item => ({ ...item, answered_at: "done", is_correct: true, question_id: "bank-secret" }));
+  const owned = () => session({ user_id: userId, anonymous_owner_hash: null, completed_at: "done" });
+  it("paid signed-in owner gets safe review then refund redacts on next read", async () => {
+    vi.mocked(getPaidAccess).mockResolvedValueOnce(paid).mockResolvedValueOnce({ ...freeAccess, unavailable: true });
+    vi.mocked(loadPaidExplanations).mockResolvedValue(new Map([[itemId, { explanation: "Question reason", optionExplanations: [{ label: "A", text: "Display only", explanation: "Option reason" }] }]]));
+    const db = database({ session: owned(), items: completed() });
+    const result = await diagnosticResults(db.client, sessionId, signedIn, now);
+    expect(result.review?.[0].explanation).toBe("Question reason"); expect(result.review?.[0].options[0].explanation).toBe("Option reason");
+    expect(JSON.stringify(result)).not.toMatch(/bank-secret|question_id|document_url|source|is_correct/);
+    expect(JSON.stringify(await diagnosticResults(db.client, sessionId, signedIn, now))).not.toMatch(/explanation|reason/);
+    expect(getPaidAccess).toHaveBeenCalledTimes(2); expect(loadPaidExplanations).toHaveBeenCalledOnce();
+  });
+  it("paid visitors still receive exactly six anonymous aggregate fields", async () => {
+    vi.mocked(getPaidAccess).mockResolvedValue(paid);
+    const result = await diagnosticResults(database({ session: session({ completed_at: "done" }), items: completed() }).client, sessionId, signedIn, now);
+    expect(Object.keys(result).sort()).toEqual(["correctAnswers", "domainBreakdown", "readiness", "score", "sessionId", "totalQuestions"]);
+    expect(getPaidAccess).not.toHaveBeenCalled(); expect(loadPaidExplanations).not.toHaveBeenCalled();
+  });
+  it("paid status never leaks pre-answer correctness, explanations, or review", async () => {
+    vi.mocked(getPaidAccess).mockResolvedValue(paid);
+    const db = database({ session: { ...owned(), completed_at: null }, rpcData: { answeredCount: 1, totalQuestions: 20, completed: false } });
+    expect(JSON.stringify(await readDiagnostic(db.client, sessionId, signedIn, now))).not.toMatch(/correctLabel|explanation|review/);
+    expect(await answerDiagnostic(db.client, sessionId, signedIn, itemId, "A", now)).toEqual({ answeredCount: 1, totalQuestions: 20, completed: false });
+    expect(getPaidAccess).not.toHaveBeenCalled(); expect(loadPaidExplanations).not.toHaveBeenCalled();
   });
 });

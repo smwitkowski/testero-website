@@ -1,7 +1,14 @@
-import { describe, expect, it, vi } from "vitest";
+import { loadPaidExplanations } from "@/lib/billing/explanations";
+import { getPaidAccess } from "@/lib/billing/paid-access";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createPractice, readPractice, answerPractice, practiceSummary, freePracticeQuota, utcWeekStart } from "@/lib/practice/service";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
+
+vi.mock("@/lib/billing/explanations", async original => ({ ...await original<typeof import("@/lib/billing/explanations")>(), loadPaidExplanations: vi.fn() }));
+vi.mock("@/lib/billing/paid-access", () => ({ getPaidAccess: vi.fn() }));
+const freeAccess = { hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null };
+beforeEach(() => { vi.mocked(getPaidAccess).mockReset().mockResolvedValue(freeAccess); vi.mocked(loadPaidExplanations).mockReset().mockResolvedValue(new Map()); });
 
 const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const sessionId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -141,5 +148,57 @@ describe("malformed committed feedback and review fail closed", () => {
   it.each([{ correct_label: undefined }, { correct_label: "Z" }, { selected_label: "Z" }, { is_correct: false }, { options: [{ label: "A", text: 123 }] }])("rejects malformed completed review labels %#", async override => {
     const items = rows().map(row => ({ ...row, selected_label: "A", is_correct: true, answered_at: "done", ...override }));
     await expect(practiceSummary(db({ session: { ...session, completed_at: "done" }, items }).client, sessionId, userId, now)).rejects.toMatchObject({ status: 503 });
+  });
+});
+
+
+describe("paid practice uses fresh access, never charges the free counter", () => {
+  const paid = { ...freeAccess, hasPaidAccess: true };
+  const content = { explanation: "Question reason", optionExplanations: [{ label: "A", text: "Correct", explanation: "Correct reason" }, { label: "B", text: "Wrong", explanation: "Wrong reason" }] };
+  it("allows repeated five-question paid sessions with no quota read", async () => {
+    vi.mocked(getPaidAccess).mockResolvedValue(paid);
+    const database = db({ used: 5 });
+    for (let index = 0; index < 3; index++) expect(await createPractice(database.client, userId, domain, now)).toBe(sessionId);
+    expect(database.from.mock.calls).toEqual([["questions"], ["questions"], ["questions"]]);
+    expect(database.rpc).toHaveBeenCalledTimes(3);
+    expect(getPaidAccess).toHaveBeenCalledTimes(3);
+    expect(database.rpc.mock.calls[0]).toEqual(["create_study_session", expect.objectContaining({ p_kind: "practice", p_user_id: userId, p_anonymous_owner_hash: null, p_items: expect.any(Array) })]);
+    const args = database.rpc.mock.calls[0] as unknown as [string, { p_items: unknown[] }]; expect(args[1].p_items).toHaveLength(5);
+  });
+  it("does not fall back to free RPC after a paid DB recheck rejects access", async () => {
+    vi.mocked(getPaidAccess).mockResolvedValue(paid);
+    const database = db({ rpcError: { code: "42501", message: "Paid practice access required" } });
+    await expect(createPractice(database.client, userId, domain, now)).rejects.toMatchObject({ status: 503 });
+    expect(database.rpc).toHaveBeenCalledOnce(); expect(database.rpc.mock.calls[0]).toEqual(["create_study_session", expect.any(Object)]);
+  });
+  it("access failure takes strict free path without paid fallback", async () => {
+    vi.mocked(getPaidAccess).mockResolvedValue({ ...freeAccess, unavailable: true });
+    const database = db({ used: 5 }); await expect(createPractice(database.client, userId, domain, now)).rejects.toMatchObject({ status: 429 }); expect(database.rpc).not.toHaveBeenCalled();
+  });
+  it("still redacts all progress before an answer, even if paid", async () => {
+    vi.mocked(getPaidAccess).mockResolvedValue(paid);
+    const result = await readPractice(db().client, sessionId, userId, now);
+    expect(JSON.stringify(result)).not.toMatch(/correctLabel|explanation|question_id/);
+    expect(getPaidAccess).not.toHaveBeenCalled(); expect(loadPaidExplanations).not.toHaveBeenCalled();
+  });
+  it("rechecks paid access only after committed feedback, redacting refund/expiry/error on retries", async () => {
+    vi.mocked(getPaidAccess).mockResolvedValueOnce(paid).mockResolvedValueOnce(freeAccess).mockResolvedValueOnce({ ...freeAccess, unavailable: true });
+    vi.mocked(loadPaidExplanations).mockResolvedValue(new Map([[itemId, content]]));
+    const database = db({ rpcData: { answeredCount: 1, totalQuestions: 5, completed: false } });
+    expect((await answerPractice(database.client, sessionId, userId, itemId, "A", now)).feedback).toMatchObject(content);
+    expect(getPaidAccess).toHaveBeenCalledWith(userId, database.client, now);
+    expect(database.from.mock.invocationCallOrder[1]).toBeLessThan(vi.mocked(getPaidAccess).mock.invocationCallOrder[0]);
+    for (let index = 0; index < 2; index++) expect((await answerPractice(database.client, sessionId, userId, itemId, "A", now)).feedback).toEqual({ itemId, selectedLabel: "A", correctLabel: "A", isCorrect: true });
+    expect(loadPaidExplanations).toHaveBeenCalledOnce();
+  });
+  it("fresh completed review attaches safe per-option explanations then redacts after access loss", async () => {
+    vi.mocked(getPaidAccess).mockResolvedValueOnce(paid).mockResolvedValueOnce(freeAccess);
+    vi.mocked(loadPaidExplanations).mockResolvedValue(new Map([[itemId, content]]));
+    const database = db({ session: { ...session, completed_at: "done" }, items: rows().map(row => ({ ...row, selected_label: "A", is_correct: true, answered_at: "done" })) });
+    const result = await practiceSummary(database.client, sessionId, userId, now);
+    expect(result.review[0].explanation).toBe(content.explanation); expect(result.review[0].options[0].explanation).toBe("Correct reason");
+    expect(JSON.stringify(result)).not.toMatch(/question_id|source_url|secret/);
+    expect(JSON.stringify(await practiceSummary(database.client, sessionId, userId, now))).not.toMatch(/explanation|reason/);
+    expect(loadPaidExplanations).toHaveBeenCalledOnce();
   });
 });

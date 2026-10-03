@@ -1,7 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { getPaidAccess } from "@/lib/billing/paid-access";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadDashboard } from "@/lib/dashboard/service";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
+vi.mock("@/lib/billing/paid-access", () => ({ getPaidAccess: vi.fn() }));
+const freeAccess = { hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null };
+beforeEach(() => { vi.mocked(getPaidAccess).mockReset().mockResolvedValue(freeAccess); });
+
 const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const sessionId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const now = Date.parse("2026-10-03T12:00:00Z");
@@ -35,7 +40,7 @@ function db(options: Options = {}) {
 describe("owned dashboard aggregates", () => {
   it("supports an empty account without reading question rows", async () => {
     const database = db(); const result = await loadDashboard(database.client, userId, now);
-    expect(result).toEqual({ diagnostic: null, weakestDomains: [], domains: PMLE_BLUEPRINT.map(domain => ({ domainCode: domain.domainCode, domainName: domain.displayName })), openPractice: null, quota: { remaining: 5, weekStart: "2026-09-28" } });
+    expect(result).toEqual({ diagnostic: null, weakestDomains: [], domains: PMLE_BLUEPRINT.map(domain => ({ domainCode: domain.domainCode, domainName: domain.displayName })), openPractice: null, paidAccess: freeAccess, quota: { remaining: 5, weekStart: "2026-09-28" } });
     expect(database.from.mock.calls.map(([table]) => table)).not.toContain("session_items");
   });
   it("queries only the verified user's latest completed diagnostic and valid open practice", async () => {
@@ -59,7 +64,7 @@ describe("owned dashboard aggregates", () => {
     const result = await loadDashboard(db({ latest: { id: sessionId, question_count: 6 }, items }).client, userId, now);
     expect(result.weakestDomains.map(domain => domain.domainCode)).toEqual(["A", "B"]);
   });
-  it("does not read incomplete diagnostic detail fields or paid-access state", async () => {
+  it("does not read incomplete diagnostic detail fields; access is read fresh", async () => {
     const database = db({ latest: { id: sessionId, question_count: 6 } }); await loadDashboard(database.client, userId, now);
     expect(database.calls.find(call => call.table === "session_items")?.selected).toBe("domain_code,domain_name,is_correct,answered_at");
     expect(database.from.mock.calls.every(([table]) => ["study_sessions", "session_items", "free_practice_quota"].includes(table))).toBe(true);
@@ -69,5 +74,19 @@ describe("owned dashboard aggregates", () => {
   });
   it.each(["latest", "pending", "items", "quota"] as const)("sanitizes DB failure at %s", async errorStage => {
     await expect(loadDashboard(db({ latest: { id: sessionId, question_count: 6 }, errorStage }).client, userId, now)).rejects.toMatchObject({ status: 503 });
+  });
+});
+
+
+describe("dashboard access and real quota", () => {
+  it("reads access fresh and retains actual consumed free quota for paid accounts", async () => {
+    const paid = { ...freeAccess, hasPaidAccess: true };
+    vi.mocked(getPaidAccess).mockResolvedValueOnce(paid).mockResolvedValueOnce({ ...freeAccess, unavailable: true });
+    const database = db({ used: 5 });
+    const first = await loadDashboard(database.client, userId, now);
+    expect(first.paidAccess).toEqual(paid); expect(first.quota.remaining).toBe(0);
+    const next = await loadDashboard(database.client, userId, now);
+    expect(next.paidAccess).toEqual({ ...freeAccess, unavailable: true }); expect(next.quota.remaining).toBe(0);
+    expect(getPaidAccess).toHaveBeenCalledTimes(2); expect(getPaidAccess).toHaveBeenCalledWith(userId, database.client, now);
   });
 });

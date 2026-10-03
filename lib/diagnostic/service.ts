@@ -1,4 +1,6 @@
 import "server-only";
+import { getPaidAccess } from "@/lib/billing/paid-access";
+import { loadPaidExplanations, addPaidReview } from "@/lib/billing/explanations";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { selectPmleQuestionsByBlueprint, hasValidAnswers } from "@/lib/diagnostic/pmle-selection";
 import { createAnswerSnapshot } from "@/lib/questions/answer-order";
@@ -11,7 +13,7 @@ export const DIAGNOSTIC_LENGTH = 20;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 interface StudySession extends SessionOwner { id: string; question_count: number; expires_at: string; completed_at: string | null }
 interface SessionItem {
-  id: string; ordinal: number; stem: string; options: { label: string; text: string }[];
+  id: string; question_id?: string; ordinal: number; stem: string; options: { label: string; text: string }[];
   domain_code: string; domain_name: string; is_correct: boolean | null; answered_at: string | null;
   correct_label?: string; selected_label?: string | null;
 }
@@ -51,7 +53,7 @@ async function ownedSession(client: SupabaseClient, id: string, credentials: Own
 async function sessionItems(client: SupabaseClient, id: string, includeReview = false): Promise<SessionItem[]> {
   const query = client.from("session_items");
   const { data, error } = includeReview
-    ? await query.select("id,ordinal,stem,options,domain_code,domain_name,is_correct,answered_at,correct_label,selected_label").eq("session_id", id).order("ordinal")
+    ? await query.select("id,question_id,ordinal,stem,options,domain_code,domain_name,is_correct,answered_at,correct_label,selected_label").eq("session_id", id).order("ordinal")
     : await query.select(ITEM_FIELDS).eq("session_id", id).order("ordinal");
   if (error || !Array.isArray(data)) throw unavailable();
   return data as SessionItem[];
@@ -101,11 +103,13 @@ export async function diagnosticResults(client: SupabaseClient, id: string, cred
   if (items.length !== session.question_count || items.some(item => !item.answered_at || typeof item.is_correct !== "boolean")) throw unavailable();
   const result = computeResult(session.id, items);
   if (includeReview) {
+    const access = await getPaidAccess(session.user_id!, client, now);
+    const explanations = access.hasPaidAccess ? await loadPaidExplanations(client, items) : null;
     result.review = items.map(item => {
       if (typeof item.selected_label !== "string" || typeof item.correct_label !== "string" ||
           !item.options.some(option => option.label === item.selected_label) ||
           !item.options.some(option => option.label === item.correct_label)) throw unavailable();
-      return mapReview({ ...item, selected_label: item.selected_label, correct_label: item.correct_label, is_correct: item.is_correct! });
+      return addPaidReview(mapReview({ ...item, selected_label: item.selected_label, correct_label: item.correct_label, is_correct: item.is_correct! }), explanations?.get(item.id));
     });
   }
   return result;

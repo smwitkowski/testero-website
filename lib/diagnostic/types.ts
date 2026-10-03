@@ -21,7 +21,7 @@ export interface DiagnosticResult {
   totalQuestions: number;
   correctAnswers: number;
   readiness: ExamReadinessTier;
-  review?: QuestionReview[];
+  review?: PaidQuestionReview[];
   domainBreakdown: {
     domainCode: string;
     domainName: string;
@@ -53,6 +53,12 @@ export interface QuestionReview {
   isCorrect: boolean;
   domainCode: string;
   domainName: string;
+}
+
+/** Paid additions are only emitted on a freshly authorized completed review. */
+export interface PaidQuestionReview extends QuestionReview {
+  explanation?: string;
+  options: { label: string; text: string; explanation?: string }[];
 }
 
 export interface QuestionReviewSource {

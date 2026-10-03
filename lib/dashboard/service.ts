@@ -1,4 +1,5 @@
 import "server-only";
+import { getPaidAccess } from "@/lib/billing/paid-access";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
 import { computeResult } from "@/lib/diagnostic/scoring";
@@ -21,6 +22,7 @@ export async function loadDashboard(client: SupabaseClient, userId: string, now 
   const domains = PMLE_BLUEPRINT.map(domain => ({ domainCode: domain.domainCode, domainName: domain.displayName }));
   const pendingCode = pending?.domain_codes?.[0];
   return {
+    paidAccess: await getPaidAccess(userId, client, now),
     diagnostic,
     weakestDomains: diagnostic ? [...diagnostic.domainBreakdown].sort((a, b) => a.percentage - b.percentage || a.domainCode.localeCompare(b.domainCode)).slice(0, 2) : [],
     domains,
