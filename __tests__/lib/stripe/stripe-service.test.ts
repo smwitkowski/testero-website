@@ -12,6 +12,7 @@ describe("StripeService", () => {
   beforeEach(() => {
     // Set up environment variable for test
     process.env.STRIPE_SECRET_KEY = "sk_test_mock";
+    process.env.STRIPE_PRICE_PMLE_PASS = "price_server_pass";
 
     jest.clearAllMocks();
     mockStripe = new Stripe("sk_test_mock", {
@@ -23,6 +24,7 @@ describe("StripeService", () => {
 
   afterEach(() => {
     delete process.env.STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_PRICE_PMLE_PASS;
   });
 
   describe("createOrRetrieveCustomer", () => {
@@ -94,7 +96,7 @@ describe("StripeService", () => {
   });
 
   describe("createCheckoutSession", () => {
-    test("should create checkout session for monthly subscription", async () => {
+    test("should create payment checkout for the server pass price", async () => {
       const customerId = "cus_test123";
       const priceId = "price_monthly";
       const successUrl = "https://example.com/success";
@@ -118,7 +120,6 @@ describe("StripeService", () => {
         successUrl,
         cancelUrl,
         userId,
-        mode: "subscription",
       });
 
       expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith({
@@ -126,28 +127,21 @@ describe("StripeService", () => {
         payment_method_types: ["card"],
         line_items: [
           {
-            price: priceId,
+            price: "price_server_pass",
             quantity: 1,
           },
         ],
-        mode: "subscription",
+        mode: "payment",
         success_url: successUrl,
         cancel_url: cancelUrl,
-        metadata: {
-          user_id: userId,
-        },
-        subscription_data: {
-          metadata: {
-            user_id: userId,
-          },
-        },
-        allow_promotion_codes: true,
+        metadata: { user_id: userId, plan_name: "PMLE Pass" },
+        payment_intent_data: { metadata: { user_id: userId, plan_name: "PMLE Pass" } },
       });
 
       expect(session).toEqual(mockSession);
     });
 
-    test("should create checkout session for yearly subscription", async () => {
+    test("should ignore a caller price and always use one-time payment", async () => {
       const customerId = "cus_test123";
       const priceId = "price_yearly";
       const successUrl = "https://example.com/success";
@@ -171,11 +165,46 @@ describe("StripeService", () => {
         successUrl,
         cancelUrl,
         userId,
-        mode: "subscription",
       });
 
-      expect(mockStripe.checkout.sessions.create).toHaveBeenCalled();
+      expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mode: "payment",
+          line_items: [{ price: "price_server_pass", quantity: 1 }],
+        })
+      );
       expect(session).toEqual(mockSession);
+    });
+
+    test("should fail closed when server pass price is absent", async () => {
+      delete process.env.STRIPE_PRICE_PMLE_PASS;
+      mockStripe.checkout = { sessions: { create: jest.fn() } } as any;
+      await expect(
+        stripeService.createCheckoutSession({
+          customerId: "cus_1",
+          userId: "user_1",
+          successUrl: "https://example.com/success",
+          cancelUrl: "https://example.com/cancel",
+        })
+      ).rejects.toThrow("STRIPE_PRICE_PMLE_PASS");
+      expect(mockStripe.checkout.sessions.create).not.toHaveBeenCalled();
+    });
+
+    test("should forward an idempotency key to Stripe", async () => {
+      mockStripe.checkout = {
+        sessions: { create: jest.fn().mockResolvedValue({ id: "cs_1" }) },
+      } as any;
+      await stripeService.createCheckoutSession({
+        customerId: "cus_1",
+        userId: "user_1",
+        successUrl: "https://example.com/success",
+        cancelUrl: "https://example.com/cancel",
+        idempotencyKey: "user_1:pass:request",
+      });
+      expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(
+        expect.objectContaining({ mode: "payment" }),
+        { idempotencyKey: "user_1:pass:request" }
+      );
     });
 
     test("should handle checkout session creation errors", async () => {
@@ -281,6 +310,16 @@ describe("StripeService", () => {
       expect(() => {
         stripeService.constructWebhookEvent(payload, signature, secret);
       }).toThrow("Invalid webhook signature");
+    });
+  });
+
+  test("checkout retrieval expands authoritative pass line items", async () => {
+    mockStripe.checkout = {
+      sessions: { retrieve: jest.fn().mockResolvedValue({ id: "cs_1" }) },
+    } as any;
+    await stripeService.retrieveCheckoutSession("cs_1");
+    expect(mockStripe.checkout.sessions.retrieve).toHaveBeenCalledWith("cs_1", {
+      expand: ["subscription", "customer", "line_items.data.price"],
     });
   });
 

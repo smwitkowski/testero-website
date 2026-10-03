@@ -8,12 +8,22 @@ jest.mock("stripe");
 
 describe("Billing Flow Integration", () => {
   let stripeService: StripeService;
-  let mockSupabase: any;
+  let mockSupabase: {
+    from: jest.Mock;
+    select: jest.Mock;
+    insert: jest.Mock;
+    update: jest.Mock;
+    upsert: jest.Mock;
+    eq: jest.Mock;
+    single: jest.Mock;
+    auth: { getUser: jest.Mock };
+  };
   let mockStripe: jest.Mocked<Stripe>;
 
   beforeEach(() => {
     // Set up environment
     process.env.STRIPE_SECRET_KEY = "sk_test_integration";
+    process.env.STRIPE_PRICE_PMLE_PASS = "price_pmle_pass";
     process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_integration";
     process.env.NEXT_PUBLIC_SITE_URL = "https://testero.ai";
 
@@ -44,7 +54,7 @@ describe("Billing Flow Integration", () => {
       prices: {
         retrieve: jest.fn().mockResolvedValue({ type: "recurring" }),
       },
-    } as any;
+    } as unknown as jest.Mocked<Stripe>;
 
     (Stripe as jest.MockedClass<typeof Stripe>).mockImplementation(() => mockStripe);
 
@@ -69,6 +79,7 @@ describe("Billing Flow Integration", () => {
   afterEach(() => {
     jest.clearAllMocks();
     delete process.env.STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_PRICE_PMLE_PASS;
     delete process.env.STRIPE_WEBHOOK_SECRET;
     delete process.env.NEXT_PUBLIC_SITE_URL;
   });
@@ -77,7 +88,7 @@ describe("Billing Flow Integration", () => {
     test("should handle new customer checkout flow end-to-end", async () => {
       const userId = "user_123";
       const email = "test@example.com";
-      const priceId = "price_monthly";
+      const priceId = "price_pmle_pass";
 
       // Step 1: Create or retrieve customer
       (mockStripe.customers.search as jest.Mock).mockResolvedValue({
@@ -111,7 +122,8 @@ describe("Billing Flow Integration", () => {
       const session = await stripeService.createCheckoutSession({
         customerId: customer.id,
         priceId,
-        successUrl: "https://testero.ai/api/billing/checkout/success?session_id={CHECKOUT_SESSION_ID}",
+        successUrl:
+          "https://testero.ai/api/billing/checkout/success?session_id={CHECKOUT_SESSION_ID}",
         cancelUrl: "https://testero.ai/pricing",
         userId,
       });
@@ -162,17 +174,15 @@ describe("Billing Flow Integration", () => {
       });
 
       expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith({
-        mode: "subscription",
+        mode: "payment",
         customer: customer.id,
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: "https://testero.ai/api/billing/checkout/success?session_id={CHECKOUT_SESSION_ID}",
+        success_url:
+          "https://testero.ai/api/billing/checkout/success?session_id={CHECKOUT_SESSION_ID}",
         cancel_url: "https://testero.ai/pricing",
-        metadata: { user_id: userId },
-        subscription_data: {
-          metadata: { user_id: userId },
-        },
+        metadata: { user_id: userId, plan_name: "PMLE Pass" },
+        payment_intent_data: { metadata: { user_id: userId, plan_name: "PMLE Pass" } },
         payment_method_types: ["card"],
-        allow_promotion_codes: true,
       });
     });
 
@@ -294,7 +304,7 @@ describe("Billing Flow Integration", () => {
         data: {
           object: failedInvoice,
         },
-      } as any;
+      } as unknown as Stripe.Event;
 
       // Verify payment failure would be recorded
       expect(webhookEvent.data.object).toHaveProperty("status", "open");
@@ -352,24 +362,22 @@ describe("Billing Flow Integration", () => {
     });
 
     test("should enforce price ID validation", async () => {
-      const invalidPriceId = "price_invalid";
-      const validPriceIds = ["price_monthly", "price_3month"];
-
-      // Mock environment variables for valid price IDs
-      process.env.STRIPE_PRICE_ID_MONTHLY = "price_monthly";
-      process.env.STRIPE_PRICE_ID_3MONTH = "price_3month";
-
-      // Test that invalid price ID would be rejected
-      const isValidPrice = (priceId: string) => {
-        return (
-          priceId === process.env.STRIPE_PRICE_ID_MONTHLY ||
-          priceId === process.env.STRIPE_PRICE_ID_3MONTH
-        );
-      };
-
-      expect(isValidPrice(invalidPriceId)).toBe(false);
-      expect(isValidPrice("price_monthly")).toBe(true);
-      expect(isValidPrice("price_3month")).toBe(true);
+      (mockStripe.checkout.sessions.create as jest.Mock).mockResolvedValue({
+        id: "cs_price_check",
+      });
+      await stripeService.createCheckoutSession({
+        customerId: "cus_1",
+        userId: "user_1",
+        priceId: "price_tampered",
+        successUrl: "https://testero.ai/success",
+        cancelUrl: "https://testero.ai/pricing",
+      });
+      expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mode: "payment",
+          line_items: [{ price: "price_pmle_pass", quantity: 1 }],
+        })
+      );
     });
   });
 
@@ -398,6 +406,7 @@ describe("Billing Flow Integration", () => {
         updated_at: expect.any(String),
       };
 
+      expect(upsertData).toMatchObject(subscriptionData);
       // This would be called in the webhook handler
       expect(subscriptionData).toHaveProperty("user_id", userId);
       expect(subscriptionData).toHaveProperty("status", "active");

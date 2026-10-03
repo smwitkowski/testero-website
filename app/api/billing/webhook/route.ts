@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { StripeService } from "@/lib/stripe/stripe-service";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { grantPmlePass, isPaidPassSession, stripeId } from "@/lib/stripe/pmle-pass";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { EmailService } from "@/lib/email/email-service";
 import Stripe from "stripe";
 import { PostHog } from "posthog-node";
@@ -53,14 +54,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid webhook signature" }, { status: 400 });
     }
 
-    const supabase = createServerSupabaseClient();
+    const supabase = createServiceSupabaseClient();
 
     // Check for duplicate event processing (idempotency)
-    const { data: existingEvent } = await supabase
+    const { data: existingEvent, error: lookupError } = await supabase
       .from("webhook_events")
       .select("*")
       .eq("stripe_event_id", event.id)
       .single();
+
+    if (lookupError && lookupError.code !== "PGRST116") throw lookupError;
 
     if (existingEvent?.processed) {
       return NextResponse.json({ message: "Event already processed" }, { status: 200 });
@@ -68,11 +71,12 @@ export async function POST(request: NextRequest) {
 
     // Insert or update the event record
     if (!existingEvent) {
-      await supabase.from("webhook_events").insert({
+      const { error: eventError } = await supabase.from("webhook_events").insert({
         stripe_event_id: event.id,
         type: event.type,
         processed: false,
       });
+      if (eventError && eventError.code !== "23505") throw eventError;
     }
 
     // Process the event
@@ -106,32 +110,32 @@ export async function POST(request: NextRequest) {
 
               // Get subscription details
               const subscription = await stripeService.retrieveSubscription(
-                fullSession.subscription as string
+                stripeId(fullSession.subscription)!
               );
 
               // Get the plan from our database
               const priceId = subscription.items.data[0]?.price.id;
-            const { data: plan } = await supabase
-              .from("subscription_plans")
-              .select("*")
-              .or(
-                `stripe_price_id_monthly.eq.${priceId},stripe_price_id_yearly.eq.${priceId},stripe_price_id_three_month.eq.${priceId}`
-              )
-              .single();
+              const { data: plan } = await supabase
+                .from("subscription_plans")
+                .select("*")
+                .or(`stripe_price_id_monthly.eq.${priceId},stripe_price_id_yearly.eq.${priceId}`)
+                .single();
 
               // Create or update user subscription
               const { error: subError } = await supabase.from("user_subscriptions").upsert({
                 user_id: userId,
-                stripe_customer_id: fullSession.customer as string,
+                stripe_customer_id: stripeId(fullSession.customer)!,
                 stripe_subscription_id: subscription.id,
                 plan_id: plan?.id,
                 stripe_price_id: priceId,
                 status: subscription.status,
                 current_period_start: new Date(
-                  (subscription as ExtendedSubscription).current_period_start * 1000
+                  ((subscription as ExtendedSubscription).current_period_start ??
+                    subscription.items.data[0]?.current_period_start) * 1000
                 ).toISOString(),
                 current_period_end: new Date(
-                  (subscription as ExtendedSubscription).current_period_end * 1000
+                  ((subscription as ExtendedSubscription).current_period_end ??
+                    subscription.items.data[0]?.current_period_end) * 1000
                 ).toISOString(),
                 cancel_at_period_end: subscription.cancel_at_period_end || false,
               });
@@ -146,19 +150,17 @@ export async function POST(request: NextRequest) {
 
               // Record payment with idempotency
               if (fullSession.payment_intent) {
-                const { error: paymentError } = await supabase
-                  .from("payment_history")
-                  .upsert(
-                    {
-                      user_id: userId,
-                      stripe_payment_intent_id: fullSession.payment_intent as string,
-                      amount: fullSession.amount_total || 0,
-                      currency: fullSession.currency || "usd",
-                      status: "succeeded",
-                      receipt_url: null, // Will be populated by payment_intent.succeeded if available
-                    },
-                    { onConflict: "stripe_payment_intent_id" }
-                  );
+                const { error: paymentError } = await supabase.from("payment_history").upsert(
+                  {
+                    user_id: userId,
+                    stripe_payment_intent_id: fullSession.payment_intent as string,
+                    amount: fullSession.amount_total || 0,
+                    currency: fullSession.currency || "usd",
+                    status: "succeeded",
+                    receipt_url: null, // Will be populated by payment_intent.succeeded if available
+                  },
+                  { onConflict: "stripe_payment_intent_id" }
+                );
 
                 if (paymentError) {
                   console.error(
@@ -193,12 +195,8 @@ export async function POST(request: NextRequest) {
                   amount: fullSession.amount_total || 0,
                   currency: fullSession.currency || "usd",
                   billing_interval:
-                    priceId === plan?.stripe_price_id_monthly
-                      ? "monthly"
-                      : priceId === plan?.stripe_price_id_three_month
-                        ? "three_month"
-                        : "yearly",
-                  stripe_customer_id: fullSession.customer as string,
+                    priceId === plan?.stripe_price_id_monthly ? "monthly" : "yearly",
+                  stripe_customer_id: stripeId(fullSession.customer)!,
                   stripe_subscription_id: subscription.id,
                   subscription_status: subscription.status,
                 },
@@ -210,62 +208,33 @@ export async function POST(request: NextRequest) {
                 properties: {
                   subscription_tier: plan?.tier,
                   subscription_status: subscription.status,
-                  is_paying_customer: true,
+                  is_paying_customer: subscription.status === "active",
                   customer_since: new Date().toISOString(),
                 },
               });
             } else if (fullSession.mode === "payment" && fullSession.payment_intent) {
-              // One-time payment
-              console.log(
-                `[Webhook] Processing one-time payment checkout for user ${userId}, payment intent ${fullSession.payment_intent}`
-              );
+              // Only the server-configured pass price grants one-time access.
+              if (!isPaidPassSession(fullSession) || fullSession.metadata?.user_id !== userId)
+                break;
+              const paymentIntentId = stripeId(fullSession.payment_intent)!;
+              const { refunded } = await grantPmlePass(stripeService, supabase, fullSession);
 
-              // Record payment in payment_history with idempotency
-              const { error: paymentError } = await supabase
-                .from("payment_history")
-                .upsert(
-                  {
-                    user_id: userId,
-                    stripe_payment_intent_id: fullSession.payment_intent as string,
-                    amount: fullSession.amount_total || 0,
-                    currency: fullSession.currency || "usd",
-                    status: "succeeded",
-                    receipt_url: null, // Will be populated by payment_intent.succeeded if available
-                  },
-                  { onConflict: "stripe_payment_intent_id" }
-                );
-
-              if (paymentError) {
-                console.error(
-                  `[Webhook] Error upserting payment history for payment intent ${fullSession.payment_intent}:`,
-                  paymentError
-                );
-              } else {
-                console.log(
-                  `[Webhook] Successfully recorded one-time payment for user ${userId}, payment intent ${fullSession.payment_intent}`
-                );
-              }
-
-              // Send confirmation email
-              const { data: user } = await supabase.auth.admin.getUserById(userId);
-              if (user?.user?.email) {
-                await emailService.sendPaymentConfirmation(
-                  user.user.email,
-                  fullSession.amount_total || 0,
-                  fullSession.currency || "usd"
-                );
-              }
-
-              // Track one-time payment in PostHog
-              posthog?.capture({
-                distinctId: userId,
-                event: "payment_one_time_succeeded",
-                properties: {
+              const { error: paymentError } = await supabase.from("payment_history").upsert(
+                {
+                  user_id: userId,
+                  stripe_payment_intent_id: paymentIntentId,
                   amount: fullSession.amount_total || 0,
                   currency: fullSession.currency || "usd",
-                  stripe_payment_intent_id: fullSession.payment_intent as string,
-                  stripe_checkout_session_id: fullSession.id,
+                  status: refunded ? "refunded" : "succeeded",
+                  receipt_url: null,
                 },
+                { onConflict: "stripe_payment_intent_id" }
+              );
+              if (paymentError) throw paymentError;
+              posthog?.capture({
+                distinctId: userId,
+                event: "pmle_pass_purchased",
+                properties: { plan_name: "PMLE Pass", stripe_checkout_session_id: fullSession.id },
               });
             } else {
               console.warn(
@@ -273,6 +242,20 @@ export async function POST(request: NextRequest) {
               );
             }
           }
+          break;
+        }
+
+        case "charge.refunded": {
+          const charge = event.data.object as Stripe.Charge;
+          const paymentIntentId = stripeId(charge.payment_intent);
+          if (!paymentIntentId) break;
+          // Any refund (including partial refunds) ends pass access. A refund before
+          // checkout is also observed by the current-charge checks during grant.
+          const { error: revokeError } = await supabase
+            .from("pmle_passes")
+            .update({ refunded_at: new Date(event.created * 1000).toISOString() })
+            .eq("stripe_payment_intent_id", paymentIntentId);
+          if (revokeError) throw revokeError;
           break;
         }
 
@@ -315,19 +298,17 @@ export async function POST(request: NextRequest) {
           }
 
           // Upsert payment history with idempotency
-          const { error: paymentError } = await supabase
-            .from("payment_history")
-            .upsert(
-              {
-                user_id: userId,
-                stripe_payment_intent_id: paymentIntent.id,
-                amount: paymentIntent.amount,
-                currency: paymentIntent.currency,
-                status: "succeeded",
-                receipt_url: receiptUrl,
-              },
-              { onConflict: "stripe_payment_intent_id" }
-            );
+          const { error: paymentError } = await supabase.from("payment_history").upsert(
+            {
+              user_id: userId,
+              stripe_payment_intent_id: paymentIntent.id,
+              amount: paymentIntent.amount,
+              currency: paymentIntent.currency,
+              status: "succeeded",
+              receipt_url: receiptUrl,
+            },
+            { onConflict: "stripe_payment_intent_id" }
+          );
 
           if (paymentError) {
             console.error(
@@ -382,9 +363,7 @@ export async function POST(request: NextRequest) {
           const { data: plan } = await supabase
             .from("subscription_plans")
             .select("*")
-        .or(
-          `stripe_price_id_monthly.eq.${priceId},stripe_price_id_yearly.eq.${priceId},stripe_price_id_three_month.eq.${priceId}`
-        )
+            .or(`stripe_price_id_monthly.eq.${priceId},stripe_price_id_yearly.eq.${priceId}`)
             .single();
 
           // Create subscription record (but don't mark as active until payment completes)
@@ -396,10 +375,12 @@ export async function POST(request: NextRequest) {
             stripe_price_id: priceId,
             status: subscription.status,
             current_period_start: new Date(
-              (subscription as ExtendedSubscription).current_period_start * 1000
+              ((subscription as ExtendedSubscription).current_period_start ??
+                subscription.items.data[0]?.current_period_start) * 1000
             ).toISOString(),
             current_period_end: new Date(
-              (subscription as ExtendedSubscription).current_period_end * 1000
+              ((subscription as ExtendedSubscription).current_period_end ??
+                subscription.items.data[0]?.current_period_end) * 1000
             ).toISOString(),
             cancel_at_period_end: subscription.cancel_at_period_end || false,
           });
@@ -439,10 +420,12 @@ export async function POST(request: NextRequest) {
               status: subscription.status,
               stripe_price_id: priceId,
               current_period_start: new Date(
-                (subscription as ExtendedSubscription).current_period_start * 1000
+                ((subscription as ExtendedSubscription).current_period_start ??
+                  subscription.items.data[0]?.current_period_start) * 1000
               ).toISOString(),
               current_period_end: new Date(
-                (subscription as ExtendedSubscription).current_period_end * 1000
+                ((subscription as ExtendedSubscription).current_period_end ??
+                  subscription.items.data[0]?.current_period_end) * 1000
               ).toISOString(),
               cancel_at_period_end: subscription.cancel_at_period_end || false,
               updated_at: new Date().toISOString(),
@@ -543,19 +526,17 @@ export async function POST(request: NextRequest) {
 
           if (subscription?.user_id && invoice.payment_intent) {
             // Record recurring payment in payment_history with idempotency
-            const { error: paymentError } = await supabase
-              .from("payment_history")
-              .upsert(
-                {
-                  user_id: subscription.user_id,
-                  stripe_payment_intent_id: invoice.payment_intent,
-                  amount: invoice.amount_paid ?? invoice.amount_due,
-                  currency: invoice.currency,
-                  status: "succeeded",
-                  receipt_url: null, // Receipt URL not available from invoice
-                },
-                { onConflict: "stripe_payment_intent_id" }
-              );
+            const { error: paymentError } = await supabase.from("payment_history").upsert(
+              {
+                user_id: subscription.user_id,
+                stripe_payment_intent_id: invoice.payment_intent,
+                amount: invoice.amount_paid ?? invoice.amount_due,
+                currency: invoice.currency,
+                status: "succeeded",
+                receipt_url: null, // Receipt URL not available from invoice
+              },
+              { onConflict: "stripe_payment_intent_id" }
+            );
 
             if (paymentError) {
               console.error(
@@ -615,19 +596,17 @@ export async function POST(request: NextRequest) {
 
           if (subscription?.user_id && invoice.payment_intent) {
             // Record failed payment with idempotency
-            const { error: paymentError } = await supabase
-              .from("payment_history")
-              .upsert(
-                {
-                  user_id: subscription.user_id,
-                  stripe_payment_intent_id: invoice.payment_intent,
-                  amount: invoice.amount_due,
-                  currency: invoice.currency,
-                  status: "failed",
-                  receipt_url: null,
-                },
-                { onConflict: "stripe_payment_intent_id" }
-              );
+            const { error: paymentError } = await supabase.from("payment_history").upsert(
+              {
+                user_id: subscription.user_id,
+                stripe_payment_intent_id: invoice.payment_intent,
+                amount: invoice.amount_due,
+                currency: invoice.currency,
+                status: "failed",
+                receipt_url: null,
+              },
+              { onConflict: "stripe_payment_intent_id" }
+            );
 
             if (paymentError) {
               console.error(
@@ -667,14 +646,15 @@ export async function POST(request: NextRequest) {
           console.log(`[Webhook] Unhandled event type: ${event.type} (id: ${event.id})`);
       }
 
-      // Mark event as processed
-      await supabase
+      // Mark processed only after the entitlement writes succeed.
+      const { error: processedError } = await supabase
         .from("webhook_events")
         .update({
           processed: true,
           processed_at: new Date().toISOString(),
         })
         .eq("stripe_event_id", event.id);
+      if (processedError) throw processedError;
 
       return NextResponse.json({ received: true }, { status: 200 });
     } catch (error) {

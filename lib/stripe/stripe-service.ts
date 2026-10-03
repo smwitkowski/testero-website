@@ -49,74 +49,38 @@ export class StripeService {
     }
   }
 
-  /**
-   * Retrieve a price from Stripe and determine if it's a subscription or one-time payment
-   */
-  async getPriceType(priceId: string): Promise<"subscription" | "payment"> {
-    try {
-      const price = await this.stripe.prices.retrieve(priceId);
-      return price.type === "recurring" ? "subscription" : "payment";
-    } catch (error) {
-      console.error("Error retrieving price:", error);
-      throw new Error(
-        `Failed to retrieve price: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
-    }
-  }
-
+  /** New purchases are always the one-time PMLE Pass. */
   async createCheckoutSession({
     customerId,
-    priceId,
     successUrl,
     cancelUrl,
     userId,
-    mode,
     idempotencyKey,
   }: {
     customerId: string;
-    priceId: string;
+    priceId?: string; // Compatibility only; the server price is authoritative.
     successUrl: string;
     cancelUrl: string;
     userId: string;
-    mode?: "subscription" | "payment";
     idempotencyKey?: string;
   }): Promise<Stripe.Checkout.Session> {
     try {
-      // Determine mode if not provided
-      const checkoutMode = mode || (await this.getPriceType(priceId));
-
+      const priceId = process.env.STRIPE_PRICE_PMLE_PASS;
+      if (!priceId) throw new Error("STRIPE_PRICE_PMLE_PASS is not configured");
+      const metadata = { user_id: userId, plan_name: "PMLE Pass" };
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         customer: customerId,
         payment_method_types: ["card"],
-        line_items: [
-          {
-            price: priceId,
-            quantity: 1,
-          },
-        ],
-        mode: checkoutMode,
+        line_items: [{ price: priceId, quantity: 1 }],
+        mode: "payment",
         success_url: successUrl,
         cancel_url: cancelUrl,
-        metadata: {
-          user_id: userId,
-        },
-        allow_promotion_codes: true,
+        metadata,
+        payment_intent_data: { metadata },
       };
-
-      // Only include subscription_data for subscription mode
-      if (checkoutMode === "subscription") {
-        sessionParams.subscription_data = {
-          metadata: {
-            user_id: userId,
-          },
-        };
-      }
-
-      const session = idempotencyKey
+      return idempotencyKey
         ? await this.stripe.checkout.sessions.create(sessionParams, { idempotencyKey })
         : await this.stripe.checkout.sessions.create(sessionParams);
-
-      return session;
     } catch (error) {
       console.error("Error creating checkout session:", error);
       throw new Error(
@@ -186,7 +150,7 @@ export class StripeService {
   async retrieveCheckoutSession(sessionId: string): Promise<Stripe.Checkout.Session> {
     try {
       const session = await this.stripe.checkout.sessions.retrieve(sessionId, {
-        expand: ["subscription", "customer"],
+        expand: ["subscription", "customer", "line_items.data.price"],
       });
 
       return session;
@@ -230,69 +194,6 @@ export class StripeService {
     } catch (error) {
       console.error("Error listing customer subscriptions:", error);
       throw new Error("Failed to list customer subscriptions");
-    }
-  }
-
-  async createTrialSubscription({
-    customerId,
-    priceId,
-    trialDays = 14,
-    userId,
-  }: {
-    customerId: string;
-    priceId: string;
-    trialDays?: number;
-    userId: string;
-    promotionCode?: string; // Reserved for future use with checkout sessions
-  }): Promise<Stripe.Subscription> {
-    try {
-      const subscriptionData: Stripe.SubscriptionCreateParams = {
-        customer: customerId,
-        items: [{ price: priceId }],
-        trial_period_days: trialDays,
-        metadata: {
-          user_id: userId,
-        },
-        payment_settings: {
-          save_default_payment_method: "on_subscription",
-        },
-        trial_settings: {
-          end_behavior: {
-            missing_payment_method: "cancel",
-          },
-        },
-      };
-
-      // Note: Promotion codes can be applied via checkout session or customer portal
-      // but not directly on subscription creation. For trials, we'll skip this for now.
-
-      const subscription = await this.stripe.subscriptions.create(subscriptionData);
-
-      return subscription;
-    } catch (error) {
-      console.error("Error creating trial subscription:", error);
-      throw new Error(
-        `Failed to create trial subscription: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
-    }
-  }
-
-  async convertTrialToPaid(
-    subscriptionId: string,
-    paymentMethodId: string
-  ): Promise<Stripe.Subscription> {
-    try {
-      const subscription = await this.stripe.subscriptions.update(subscriptionId, {
-        default_payment_method: paymentMethodId,
-        trial_end: "now",
-      });
-
-      return subscription;
-    } catch (error) {
-      console.error("Error converting trial to paid:", error);
-      throw new Error(
-        `Failed to convert trial to paid: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
     }
   }
 }

@@ -17,13 +17,16 @@ jest.mock("next/server", () => ({
 import { POST } from "@/app/api/billing/webhook/route";
 import { StripeService } from "@/lib/stripe/stripe-service";
 import { EmailService } from "@/lib/email/email-service";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { NextRequest } from "next/server";
 import Stripe from "stripe";
+jest.mock("posthog-node", () => ({
+  PostHog: jest.fn(() => ({ capture: jest.fn(), identify: jest.fn() })),
+}));
 
 // Mock dependencies
 jest.mock("@/lib/stripe/stripe-service");
-jest.mock("@/lib/supabase/server");
+jest.mock("@/lib/supabase/service");
 jest.mock("@/lib/email/email-service");
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -42,7 +45,11 @@ describe("Stripe Webhook Handler", () => {
       constructWebhookEvent: jest.fn(),
       retrieveCheckoutSession: jest.fn(),
       retrieveSubscription: jest.fn(),
-      retrievePaymentIntent: jest.fn(),
+      retrievePaymentIntent: jest.fn().mockResolvedValue({
+        status: "succeeded",
+        metadata: { user_id: "user_123", plan_name: "PMLE Pass" },
+        latest_charge: { created: 1700000000, refunded: false, amount_refunded: 0 },
+      }),
     } as any;
     (StripeService as jest.Mock).mockImplementation(() => mockStripeService);
 
@@ -62,7 +69,7 @@ describe("Stripe Webhook Handler", () => {
         },
       },
     };
-    (createServerSupabaseClient as jest.Mock).mockReturnValue(mockSupabase);
+    (createServiceSupabaseClient as jest.Mock).mockReturnValue(mockSupabase);
 
     mockEmailService = {
       sendPaymentConfirmation: jest.fn(),
@@ -74,11 +81,13 @@ describe("Stripe Webhook Handler", () => {
     // Set environment variables
     process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_secret";
     process.env.STRIPE_SECRET_KEY = "sk_test_key";
+    process.env.STRIPE_PRICE_PMLE_PASS = "price_pmle_pass";
   });
 
   afterEach(() => {
     delete process.env.STRIPE_WEBHOOK_SECRET;
     delete process.env.STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_PRICE_PMLE_PASS;
   });
 
   describe("Webhook Signature Verification", () => {
@@ -251,7 +260,7 @@ describe("Stripe Webhook Handler", () => {
         mode: "subscription",
         subscription: "sub_test_123",
         payment_intent: "pi_test_123",
-        metadata: { user_id: "user_123" },
+        metadata: { user_id: "user_123", plan_name: "PMLE Pass" },
         amount_total: 2900,
         currency: "usd",
         payment_status: "paid",
@@ -383,8 +392,9 @@ describe("Stripe Webhook Handler", () => {
         id: "cs_test_payment",
         customer: "cus_test_123",
         mode: "payment",
+        line_items: { has_more: false, data: [{ price: { id: "price_pmle_pass" }, quantity: 1 }] },
         payment_intent: "pi_test_123",
-        metadata: { user_id: "user_123" },
+        metadata: { user_id: "user_123", plan_name: "PMLE Pass" },
         amount_total: 5000,
         currency: "usd",
         payment_status: "paid",
@@ -403,7 +413,12 @@ describe("Stripe Webhook Handler", () => {
       mockSupabase.single
         .mockResolvedValueOnce({ data: null, error: null }) // Check for existing event
         .mockResolvedValueOnce({
-          data: { user: { email: "user@example.com" } },
+          data: {
+            user_id: "user_123",
+            stripe_payment_intent_id: "pi_test_123",
+            refunded_at: null,
+            expires_at: "2099-01-01T00:00:00Z",
+          },
           error: null,
         }) // Get user
         .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }); // Update event as processed
@@ -449,7 +464,7 @@ describe("Stripe Webhook Handler", () => {
         mode: "subscription",
         subscription: "sub_test_123",
         payment_intent: "pi_test_123",
-        metadata: { user_id: "user_123" },
+        metadata: { user_id: "user_123", plan_name: "PMLE Pass" },
         amount_total: 2900,
         currency: "usd",
         payment_status: "paid",
@@ -539,7 +554,7 @@ describe("Stripe Webhook Handler", () => {
         id: "pi_test_123",
         amount: 5000,
         currency: "usd",
-        metadata: { user_id: "user_123" },
+        metadata: { user_id: "user_123", plan_name: "PMLE Pass" },
       };
 
       const mockExpandedPaymentIntent = {
@@ -650,7 +665,7 @@ describe("Stripe Webhook Handler", () => {
         id: "pi_test_duplicate",
         amount: 5000,
         currency: "usd",
-        metadata: { user_id: "user_123" },
+        metadata: { user_id: "user_123", plan_name: "PMLE Pass" },
       };
 
       const mockExpandedPaymentIntent = {
@@ -687,17 +702,22 @@ describe("Stripe Webhook Handler", () => {
       // Reset mocks for second call - event is now already processed
       mockSupabase.single.mockReset();
       // Don't reset upsert - we want to verify it wasn't called again
-      
+
       // Ensure constructWebhookEvent still returns the same event
       mockStripeService.constructWebhookEvent.mockReturnValue(mockEvent);
-      
-      // Ensure request.text() still works  
+
+      // Ensure request.text() still works
       mockRequest.text = jest.fn().mockResolvedValue(payload);
 
       // Mock database operations for second call - event already processed
       // When checking for existing event, return it as already processed
       mockSupabase.single.mockResolvedValueOnce({
-        data: { id: "evt_id", stripe_event_id: "evt_pi_duplicate", processed: true, processed_at: new Date().toISOString() },
+        data: {
+          id: "evt_id",
+          stripe_event_id: "evt_pi_duplicate",
+          processed: true,
+          processed_at: new Date().toISOString(),
+        },
         error: null,
       }); // Check for existing event (second time - already processed)
 
@@ -734,8 +754,9 @@ describe("Stripe Webhook Handler", () => {
         id: "cs_test_idempotency",
         customer: "cus_test_123",
         mode: "payment",
+        line_items: { has_more: false, data: [{ price: { id: "price_pmle_pass" }, quantity: 1 }] },
         payment_intent: "pi_test_idempotency",
-        metadata: { user_id: "user_123" },
+        metadata: { user_id: "user_123", plan_name: "PMLE Pass" },
         amount_total: 5000,
         currency: "usd",
         payment_status: "paid",
@@ -753,7 +774,12 @@ describe("Stripe Webhook Handler", () => {
       mockSupabase.single
         .mockResolvedValueOnce({ data: null, error: null }) // Check for existing event
         .mockResolvedValueOnce({
-          data: { user: { email: "user@example.com" } },
+          data: {
+            user_id: "user_123",
+            stripe_payment_intent_id: "pi_test_idempotency",
+            refunded_at: null,
+            expires_at: "2099-01-01T00:00:00Z",
+          },
           error: null,
         }) // Get user
         .mockResolvedValueOnce({ data: { id: "evt_id" }, error: null }); // Update event as processed
@@ -823,6 +849,46 @@ describe("Stripe Webhook Handler", () => {
 
       expect(response.status).toBe(200);
     });
+  });
+
+  test("preserves legacy subscriptions using Stripe item-level billing periods", async () => {
+    const created = 1700000000;
+    mockStripeService.constructWebhookEvent.mockReturnValue({
+      id: "evt_basil_sub",
+      type: "customer.subscription.updated",
+      data: {
+        object: {
+          id: "sub_legacy",
+          status: "active",
+          items: {
+            data: [
+              {
+                price: { id: "price_legacy" },
+                current_period_start: created,
+                current_period_end: created + 2592000,
+              },
+            ],
+          },
+          cancel_at_period_end: false,
+        },
+      },
+    } as any);
+    const response = await POST(
+      new NextRequest("https://testero.ai/api/billing/webhook", {
+        method: "POST",
+        headers: { "stripe-signature": "valid_signature" },
+        body: "mock",
+      })
+    );
+    expect(response.status).toBe(200);
+    expect(mockSupabase.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "active",
+        current_period_start: new Date(created * 1000).toISOString(),
+        current_period_end: new Date((created + 2592000) * 1000).toISOString(),
+      })
+    );
+    expect(mockSupabase.from).not.toHaveBeenCalledWith("pmle_passes");
   });
 
   describe("customer.subscription.deleted Event", () => {

@@ -1,395 +1,131 @@
-// Mock Next.js server runtime
 jest.mock("next/server", () => ({
   NextRequest: jest.fn().mockImplementation((url, init) => ({
-    headers: {
-      get: jest.fn((name) => init?.headers?.[name]),
-    },
-    json: jest.fn().mockImplementation(async () => {
-      const body = init?.body;
-      if (typeof body === "string") {
-        return JSON.parse(body);
-      }
-      return body;
-    }),
+    headers: { get: jest.fn((name) => init?.headers?.[name]) },
+    json: jest.fn(async () => JSON.parse(init?.body)),
   })),
   NextResponse: {
-    json: jest.fn((data, init) => ({
-      json: async () => data,
-      status: init?.status || 200,
-    })),
+    json: jest.fn((data, init) => ({ json: async () => data, status: init?.status || 200 })),
   },
 }));
-
-// Mock dependencies BEFORE importing route (order matters!)
 jest.mock("@/lib/stripe/stripe-service");
 jest.mock("@/lib/supabase/server");
 jest.mock("@/lib/auth/rate-limiter");
-// Manual mock file will be used automatically by Jest
-jest.mock("@/lib/pricing/constants");
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { StripeService } from "@/lib/stripe/stripe-service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rate-limiter";
 import { NextRequest } from "next/server";
-import Stripe from "stripe";
 import { POST } from "@/app/api/billing/checkout/route";
 
-describe("Checkout Session API", () => {
-  let mockStripeService: jest.Mocked<StripeService>;
-  let mockSupabase: any;
-  let mockRequest: NextRequest;
-
-  beforeEach(async () => {
+describe("PMLE Pass checkout API", () => {
+  const getUser = jest.fn();
+  const createCustomer = jest.fn();
+  const createSession = jest.fn();
+  const from = jest.fn();
+  const request = (body: unknown = {}, headers = {}) =>
+    new NextRequest("http://localhost/api/billing/checkout", {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers,
+    });
+  beforeEach(() => {
     jest.clearAllMocks();
-
-    // Mock StripeService
-    mockStripeService = {
-      createOrRetrieveCustomer: jest.fn(),
-      createCheckoutSession: jest.fn(),
-      getPriceType: jest.fn().mockResolvedValue("subscription"),
-    } as any;
-    (StripeService as jest.Mock).mockImplementation(() => mockStripeService);
-
-    // Mock Supabase
-    mockSupabase = {
-      auth: {
-        getUser: jest.fn(),
-      },
-      from: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      single: jest.fn(),
-    };
-    (createServerSupabaseClient as jest.Mock).mockReturnValue(mockSupabase);
-
-    // Mock rate limiter
-    (checkRateLimit as jest.Mock).mockResolvedValue(true);
-
-    // Set environment variables
-    process.env.STRIPE_SECRET_KEY = "sk_test_key";
+    process.env.STRIPE_PRICE_PMLE_PASS = "price_server_pass";
     process.env.NEXT_PUBLIC_SITE_URL = "https://testero.ai";
-    process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY = "price_monthly";
-    process.env.NEXT_PUBLIC_STRIPE_PRO_3MONTH = "price_3month";
-    process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY = "price_basic_monthly";
-    process.env.NEXT_PUBLIC_STRIPE_BASIC_3MONTH = "price_basic_3month";
-    process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY = "price_all_monthly";
-    process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH = "price_all_3month";
-    process.env.NEXT_PUBLIC_STRIPE_EXAM_3MONTH = "price_exam_3month";
-    process.env.NEXT_PUBLIC_STRIPE_EXAM_6MONTH = "price_exam_6month";
-    process.env.NEXT_PUBLIC_STRIPE_EXAM_12MONTH = "price_exam_12month";
+    getUser.mockResolvedValue({
+      data: { user: { id: "user_123", email: "test@example.com" } },
+      error: null,
+    });
+    createCustomer.mockResolvedValue({ id: "cus_123" });
+    createSession.mockResolvedValue({
+      id: "cs_123",
+      url: "https://checkout.stripe.com/pay/cs_123",
+    });
+    (StripeService as jest.Mock).mockImplementation(() => ({
+      createOrRetrieveCustomer: createCustomer,
+      createCheckoutSession: createSession,
+    }));
+    (createServerSupabaseClient as jest.Mock).mockReturnValue({ auth: { getUser }, from });
+    (checkRateLimit as jest.Mock).mockResolvedValue(true);
   });
-
   afterEach(() => {
-    delete process.env.STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_PRICE_PMLE_PASS;
     delete process.env.NEXT_PUBLIC_SITE_URL;
-    delete process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY;
-    delete process.env.NEXT_PUBLIC_STRIPE_PRO_3MONTH;
-    delete process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY;
-    delete process.env.NEXT_PUBLIC_STRIPE_BASIC_3MONTH;
-    delete process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY;
-    delete process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH;
-    delete process.env.NEXT_PUBLIC_STRIPE_EXAM_3MONTH;
-    delete process.env.NEXT_PUBLIC_STRIPE_EXAM_6MONTH;
-    delete process.env.NEXT_PUBLIC_STRIPE_EXAM_12MONTH;
   });
-
-  describe("Authentication", () => {
-    test("should require authentication", async () => {
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: null },
-        error: null,
-      });
-
-      mockRequest = new NextRequest("http://localhost:3000/api/billing/checkout", {
-        method: "POST",
-        body: JSON.stringify({ priceId: "price_monthly" }),
-      });
-
-      const response = await POST(mockRequest);
-      const responseData = await response.json();
-
-      expect(response.status).toBe(401);
-      expect(responseData.error).toContain("authenticated");
+  test("requires authentication", async () => {
+    getUser.mockResolvedValue({ data: { user: null }, error: null });
+    expect((await POST(request())).status).toBe(401);
+    expect(createSession).not.toHaveBeenCalled();
+  });
+  test("rejects authentication errors", async () => {
+    getUser.mockResolvedValue({
+      data: { user: { id: "user_123" } },
+      error: new Error("invalid auth"),
     });
-
-    test("should allow authenticated users", async () => {
-      const mockUser = {
-        id: "user_123",
-        email: "test@example.com",
-      };
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      const mockCustomer = {
-        id: "cus_test_123",
-        email: mockUser.email,
-      } as Stripe.Customer;
-
-      const mockSession = {
-        id: "cs_test_123",
-        url: "https://checkout.stripe.com/pay/cs_test_123",
-      } as Stripe.Checkout.Session;
-
-      mockStripeService.createOrRetrieveCustomer.mockResolvedValue(mockCustomer);
-      mockStripeService.createCheckoutSession.mockResolvedValue(mockSession);
-      // Mock getPriceType and no existing subscription
-      mockStripeService.getPriceType.mockResolvedValue("subscription");
-      mockSupabase.single.mockResolvedValue({ data: null, error: null });
-
-      mockRequest = new NextRequest("http://localhost:3000/api/billing/checkout", {
-        method: "POST",
-        body: JSON.stringify({ priceId: "price_monthly" }),
-      });
-
-      const response = await POST(mockRequest);
-      const responseData = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(responseData.url).toBe(mockSession.url);
+    expect((await POST(request())).status).toBe(401);
+  });
+  test("allows authenticated checkout using only the server price", async () => {
+    const response = await POST(request());
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ url: "https://checkout.stripe.com/pay/cs_123" });
+    expect(createCustomer).toHaveBeenCalledWith("user_123", "test@example.com");
+    expect(createSession).toHaveBeenCalledWith({
+      customerId: "cus_123",
+      priceId: "price_server_pass",
+      userId: "user_123",
+      successUrl:
+        "https://testero.ai/api/billing/checkout/success?session_id={CHECKOUT_SESSION_ID}",
+      cancelUrl: "https://testero.ai/pricing",
+      idempotencyKey: undefined,
     });
   });
-
-  describe("Rate Limiting", () => {
-    test("should enforce rate limiting", async () => {
-      const mockUser = {
-        id: "user_123",
-        email: "test@example.com",
-      };
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      // Re-import rate limiter to get mock and update it
-      const RateLimiterModule = await import("@/lib/auth/rate-limiter");
-      (RateLimiterModule.checkRateLimit as jest.Mock).mockResolvedValue(false);
-
-      mockRequest = new NextRequest("http://localhost:3000/api/billing/checkout", {
-        method: "POST",
-        headers: {
-          "x-forwarded-for": "192.168.1.1",
-        },
-        body: JSON.stringify({ priceId: "price_monthly" }),
-      });
-
-      const response = await POST(mockRequest);
-      const responseData = await response.json();
-
-      expect(response.status).toBe(429);
-      expect(responseData.error).toContain("Too many requests");
-    });
+  test("enforces rate limiting", async () => {
+    (checkRateLimit as jest.Mock).mockResolvedValue(false);
+    expect((await POST(request())).status).toBe(429);
+    expect(createSession).not.toHaveBeenCalled();
   });
-
-  describe("Checkout Session Creation", () => {
-    test("should create checkout session for monthly subscription", async () => {
-      const mockUser = {
-        id: "user_123",
-        email: "test@example.com",
-      };
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      const mockCustomer = {
-        id: "cus_test_123",
-        email: mockUser.email,
-      } as Stripe.Customer;
-
-      const mockSession = {
-        id: "cs_test_monthly",
-        url: "https://checkout.stripe.com/pay/cs_test_monthly",
-      } as Stripe.Checkout.Session;
-
-      mockStripeService.createOrRetrieveCustomer.mockResolvedValue(mockCustomer);
-      mockStripeService.createCheckoutSession.mockResolvedValue(mockSession);
-      // Mock getPriceType and no existing subscription
-      mockStripeService.getPriceType.mockResolvedValue("subscription");
-      mockSupabase.single.mockResolvedValue({ data: null, error: null });
-
-      mockRequest = new NextRequest("http://localhost:3000/api/billing/checkout", {
-        method: "POST",
-        body: JSON.stringify({ priceId: "price_monthly" }),
-      });
-
-      const response = await POST(mockRequest);
-      const responseData = await response.json();
-
-      expect(mockStripeService.createOrRetrieveCustomer).toHaveBeenCalledWith(
-        mockUser.id,
-        mockUser.email
-      );
-
-      expect(mockStripeService.createCheckoutSession).toHaveBeenCalledWith({
-        customerId: mockCustomer.id,
-        priceId: "price_monthly",
-        successUrl: "https://testero.ai/api/billing/checkout/success?session_id={CHECKOUT_SESSION_ID}",
-        cancelUrl: "https://testero.ai/pricing",
-        userId: mockUser.id,
-      });
-
-      expect(response.status).toBe(200);
-      expect(responseData.url).toBe(mockSession.url);
-    });
-
-    test("should reject retired 3-month prices for new checkout sessions", async () => {
-      const mockUser = {
-        id: "user_123",
-        email: "test@example.com",
-      };
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      const mockCustomer = {
-        id: "cus_test_123",
-        email: mockUser.email,
-      } as Stripe.Customer;
-
-      const mockSession = {
-        id: "cs_test_three_month",
-        url: "https://checkout.stripe.com/pay/cs_test_three_month",
-      } as Stripe.Checkout.Session;
-
-      mockStripeService.createOrRetrieveCustomer.mockResolvedValue(mockCustomer);
-      mockStripeService.createCheckoutSession.mockResolvedValue(mockSession);
-      // Mock getPriceType and no existing subscription
-      mockStripeService.getPriceType.mockResolvedValue("subscription");
-      mockSupabase.single.mockResolvedValue({ data: null, error: null });
-
-      mockRequest = new NextRequest("http://localhost:3000/api/billing/checkout", {
-        method: "POST",
-        body: JSON.stringify({ priceId: "price_basic_3month" }),
-      });
-
-      const response = await POST(mockRequest);
-      const responseData = await response.json();
-
-      // New signups are monthly-only; existing 3-month subscriptions remain supported (9b5d94c).
-      expect(response.status).toBe(400);
-      expect(responseData.error).toBe("Invalid price ID");
-      expect(mockStripeService.createOrRetrieveCustomer).not.toHaveBeenCalled();
-      expect(mockStripeService.createCheckoutSession).not.toHaveBeenCalled();
-    });
-
-    test("should reject invalid price ID", async () => {
-      const mockUser = {
-        id: "user_123",
-        email: "test@example.com",
-      };
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      mockRequest = new NextRequest("http://localhost:3000/api/billing/checkout", {
-        method: "POST",
-        body: JSON.stringify({ priceId: "price_invalid" }),
-      });
-
-      const response = await POST(mockRequest);
-      const responseData = await response.json();
-
-      expect(response.status).toBe(400);
-      expect(responseData.error).toContain("Invalid price");
-    });
-
-    test("should not allow checkout if user already has active subscription", async () => {
-      const mockUser = {
-        id: "user_123",
-        email: "test@example.com",
-      };
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      // Mock getPriceType to return "subscription" so subscription check runs
-      mockStripeService.getPriceType.mockResolvedValue("subscription");
-
-      // Mock existing active subscription
-      mockSupabase.single.mockResolvedValue({
-        data: {
-          id: "sub_existing",
-          status: "active",
-        },
-        error: null,
-      });
-
-      mockRequest = new NextRequest("http://localhost:3000/api/billing/checkout", {
-        method: "POST",
-        body: JSON.stringify({ priceId: "price_monthly" }),
-      });
-
-      const response = await POST(mockRequest);
-      const responseData = await response.json();
-
-      expect(response.status).toBe(400);
-      expect(responseData.error).toContain("already have an active subscription");
-    });
+  test.each(["price_tampered", "price_server_pass", "price_retired"])(
+    "rejects client priceId %s",
+    async (priceId) => {
+      expect((await POST(request({ priceId }))).status).toBe(400);
+      expect(createCustomer).not.toHaveBeenCalled();
+    }
+  );
+  test("does not modify or reject an active legacy subscription", async () => {
+    expect((await POST(request())).status).toBe(200);
+    expect(from).not.toHaveBeenCalled();
   });
-
-  describe("Error Handling", () => {
-    test("should handle Stripe API errors", async () => {
-      const mockUser = {
-        id: "user_123",
-        email: "test@example.com",
-      };
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      // Mock getPriceType to return "subscription" and no existing subscription
-      mockStripeService.getPriceType.mockResolvedValue("subscription");
-      mockSupabase.single.mockResolvedValue({ data: null, error: null });
-
-      mockStripeService.createOrRetrieveCustomer.mockRejectedValue(new Error("Stripe API error"));
-
-      mockRequest = new NextRequest("http://localhost:3000/api/billing/checkout", {
-        method: "POST",
-        body: JSON.stringify({ priceId: "price_monthly" }),
-      });
-
-      const response = await POST(mockRequest);
-      const responseData = await response.json();
-
-      expect(response.status).toBe(500);
-      expect(responseData.error).toContain("checkout session");
-    });
-
-    test("should validate request body", async () => {
-      const mockUser = {
-        id: "user_123",
-        email: "test@example.com",
-      };
-
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
-
-      mockRequest = new NextRequest("http://localhost:3000/api/billing/checkout", {
-        method: "POST",
-        body: JSON.stringify({}), // Missing priceId
-      });
-
-      const response = await POST(mockRequest);
-      const responseData = await response.json();
-
-      expect(response.status).toBe(400);
-      expect(responseData.error).toContain("price");
-    });
+  test("handles Stripe API errors", async () => {
+    createCustomer.mockRejectedValueOnce(new Error("Stripe API error"));
+    expect((await POST(request())).status).toBe(500);
+  });
+  test.each([null, { idempotencyKey: "short" }, { mode: "subscription" }])(
+    "validates request body %j",
+    async (body) => {
+      expect((await POST(request(body))).status).toBe(400);
+    }
+  );
+  test("handles malformed JSON", async () => {
+    const req = request();
+    req.json = jest.fn().mockRejectedValue(new SyntaxError("invalid"));
+    expect((await POST(req)).status).toBe(400);
+  });
+  test("fails closed when server price is not configured", async () => {
+    delete process.env.STRIPE_PRICE_PMLE_PASS;
+    expect((await POST(request())).status).toBe(500);
+    expect(createSession).not.toHaveBeenCalled();
+  });
+  test("namespaces the optional body idempotency key by user and server price", async () => {
+    await POST(
+      request({ idempotencyKey: "request-key-123" }, { "x-idempotency-key": "untrusted-header" })
+    );
+    expect(createSession).toHaveBeenCalledWith(
+      expect.objectContaining({ idempotencyKey: "user_123:price_server_pass:request-key-123" })
+    );
+  });
+  test("ignores header-only idempotency keys", async () => {
+    await POST(request({}, { "x-idempotency-key": "untrusted-header" }));
+    expect(createSession).toHaveBeenCalledWith(
+      expect.objectContaining({ idempotencyKey: undefined })
+    );
   });
 });
