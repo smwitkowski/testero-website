@@ -53,7 +53,7 @@ describe("authoritative paid access", () => {
     ["refunded", { ...pass, refunded_at: "2026-10-02T00:00:00.000Z" }],
   ])("denies %s passes", async (_name, record) => {
     passes.order.mockResolvedValue({ data: [record], error: null });
-    expect(await getPaidAccess("user-1")).toEqual({ ...none, pass: record });
+    expect(await getPaidAccess("user-1")).toEqual(none);
   });
   it("preserves an active legacy subscription", async () => {
     legacy.maybeSingle.mockResolvedValue({
@@ -65,6 +65,19 @@ describe("authoritative paid access", () => {
       hasPaidAccess: true,
       isLegacySubscriber: true,
       accessUntil: pass.expires_at,
+    });
+  });
+  it("shows the purchased pass window while preserving active legacy access", async () => {
+    legacy.maybeSingle.mockResolvedValue({
+      data: { status: "active", current_period_end: "2026-11-01T00:00:00.000Z" },
+      error: null,
+    });
+    passes.order.mockResolvedValue({ data: [pass], error: null });
+    expect(await getPaidAccess("user-1")).toEqual({
+      hasPaidAccess: true,
+      isLegacySubscriber: true,
+      accessUntil: pass.expires_at,
+      pass,
     });
   });
   it("returns no access for no purchase", async () => {

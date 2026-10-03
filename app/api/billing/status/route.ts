@@ -33,6 +33,7 @@ export async function GET(): Promise<NextResponse<BillingStatusResponse>> {
     const access = await getPaidAccess(user.id);
     // Preserve legacy status for billing UI, without exposing Stripe identifiers.
     // Even canceled/past_due legacy customers may need to manage existing billing.
+    // Valid pass holders can still manage any separate legacy subscription here.
     let legacyStatus: SubscriptionStatus = access.isLegacySubscriber ? "active" : "none";
     let canManageSubscription = false;
     try {
@@ -55,11 +56,7 @@ export async function GET(): Promise<NextResponse<BillingStatusResponse>> {
     return NextResponse.json({
       isSubscriber: access.hasPaidAccess,
       status: legacyStatus,
-      accessType: access.isLegacySubscriber
-        ? "legacy_subscription"
-        : access.hasPaidAccess
-          ? "pass"
-          : null,
+      accessType: access.pass ? "pass" : access.isLegacySubscriber ? "legacy_subscription" : null,
       accessUntil: access.accessUntil,
       canManageSubscription,
     });

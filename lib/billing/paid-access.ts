@@ -11,6 +11,7 @@ export interface PaidAccess {
   hasPaidAccess: boolean;
   isLegacySubscriber: boolean;
   accessUntil: string | null;
+  /** Only an unexpired, unrefunded pass. Historical rows are not access metadata. */
   pass: PmlePass | null;
 }
 
@@ -56,10 +57,11 @@ export async function getPaidAccess(userId: string): Promise<PaidAccess> {
         const validPass = (data as PmlePass[]).find(
           (pass) => pass.refunded_at === null && Date.parse(pass.expires_at) > now
         );
-        access.pass = validPass ?? data[0] ?? null;
+        access.pass = validPass ?? null;
         if (validPass) {
           access.hasPaidAccess = true;
-          if (!access.isLegacySubscriber) access.accessUntil = validPass.expires_at;
+          // A purchased pass keeps its full access window even for legacy users.
+          access.accessUntil = validPass.expires_at;
         }
       }
     } catch {

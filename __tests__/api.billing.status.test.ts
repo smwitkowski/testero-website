@@ -66,7 +66,7 @@ describe("GET /api/billing/status", () => {
     });
   });
   it.each(["expired", "refunded"])("returns no access for %s pass", async () => {
-    (getPaidAccess as jest.Mock).mockResolvedValue({ ...noAccess, pass: { id: "pass-1" } });
+    (getPaidAccess as jest.Mock).mockResolvedValue(noAccess);
     expect(await (await GET()).json()).toEqual(empty);
   });
   it("preserves active legacy metadata and management", async () => {
@@ -92,6 +92,30 @@ describe("GET /api/billing/status", () => {
       canManageSubscription: true,
     });
     expect(db.not).toHaveBeenCalledWith("stripe_subscription_id", "is", null);
+  });
+  it("shows a valid pass expiry while retaining separate legacy management", async () => {
+    (getPaidAccess as jest.Mock).mockResolvedValue({
+      ...noAccess,
+      hasPaidAccess: true,
+      isLegacySubscriber: true,
+      accessUntil: "2026-12-30",
+      pass: { id: "pass-1", expires_at: "2026-12-30" },
+    });
+    db.maybeSingle.mockResolvedValue({
+      data: {
+        status: "active",
+        stripe_customer_id: "cus_legacy",
+        stripe_subscription_id: "sub_legacy",
+      },
+      error: null,
+    });
+    expect(await (await GET()).json()).toEqual({
+      isSubscriber: true,
+      status: "active",
+      accessType: "pass",
+      accessUntil: "2026-12-30",
+      canManageSubscription: true,
+    });
   });
   it.each(["past_due", "canceled", "trialing"])(
     "retains %s legacy status without granting access",
