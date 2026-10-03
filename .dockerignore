@@ -1,3 +1,6 @@
+# Offline question-authoring tools are not part of the frontend image
+content-pipeline/
+
 # Dependencies
 node_modules
 npm-debug.log

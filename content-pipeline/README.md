@@ -7,7 +7,7 @@ CLI tool for generating LLM-backed PMLE questions for the content pipeline.
 ### 1. Install Dependencies
 
 ```bash
-cd question-generation
+cd content-pipeline
 uv sync
 ```
 
@@ -30,6 +30,9 @@ OPENROUTER_API_KEY=your_openrouter_api_key_here
 - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for database access
 - `OPENROUTER_API_KEY` for LLM question generation via OpenRouter
 
+**Optional - semantic duplicate checks:**
+- `OPENAI_API_KEY` enables OpenAI embeddings for semantic duplicate checks. Without it, the program warns and continues without semantic checks. Lexical duplicate checks still run.
+
 **Optional - LangSmith Observability:**
 - `LANGSMITH_API_KEY` - LangSmith API key for tracing (get from https://smith.langchain.com)
 - `LANGSMITH_PROJECT` - Project name in LangSmith (default: `question-generation`)
@@ -51,7 +54,7 @@ Generate LLM-backed questions:
 uv run python scripts/generate_pmle_questions.py \
   --domain-code MONITORING_ML_SOLUTIONS \
   --n-questions 10 \
-  --model openai/gpt-4o
+  --model openrouter/google/gemini-2.5-flash
 ```
 
 ### Options
@@ -59,7 +62,7 @@ uv run python scripts/generate_pmle_questions.py \
 - `--exam`: Exam identifier (default: `GCP_PM_ML_ENG`)
 - `--domain-code`: Domain code (required, e.g., `MONITORING_ML_SOLUTIONS`)
 - `--n-questions`: Number of questions to generate (default: 10)
-- `--model`: OpenRouter model identifier (default: `openai/gpt-4o`). Examples: `openai/gpt-4o`, `anthropic/claude-3-opus`, `google/gemini-pro-1.5`
+- `--model`: DSPy/OpenRouter model identifier (default: `openrouter/google/gemini-2.5-flash`).
 - `--difficulty`: Difficulty level: `EASY`, `MEDIUM`, or `HARD` (default: `MEDIUM`)
 - `--prompt-version`: Optional prompt version identifier
 - `--notes`: Optional notes about this generation run
