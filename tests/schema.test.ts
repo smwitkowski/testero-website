@@ -36,7 +36,10 @@ describe("v2 baseline security and replay contracts", () => {
     }
     for (const signature of ["create_study_session(TEXT, UUID, TEXT, JSONB, TIMESTAMPTZ)",
       "answer_study_item(UUID, UUID, TEXT, UUID, TEXT)", "consume_free_practice_quota(UUID, INTEGER)",
-      "fulfill_pmle_pass(UUID, TEXT, TEXT, TEXT, TIMESTAMPTZ)", "refund_pmle_pass(TEXT, TIMESTAMPTZ)"]) {
+      "fulfill_pmle_pass(UUID, TEXT, TEXT, TEXT, TIMESTAMPTZ)", "refund_pmle_pass(TEXT, TIMESTAMPTZ)",
+      "v2_consume_free_practice_quota(UUID, INTEGER)",
+      "v2_create_study_session(TEXT, UUID, TEXT, JSONB, TIMESTAMPTZ, BOOLEAN)",
+      "create_free_practice_session(UUID, JSONB, TIMESTAMPTZ)", "claim_anonymous_diagnostics(UUID, TEXT)"]) {
       expect(sql).toContain(`REVOKE EXECUTE ON FUNCTION public.${signature}`);
       expect(sql).toContain(`GRANT EXECUTE ON FUNCTION public.${signature}`);
     }
@@ -58,6 +61,42 @@ describe("v2 baseline security and replay contracts", () => {
     expect(sql).toContain("INTERVAL '2160 hours'");
     expect(sql).toContain("PMLE pass identity or paid date mismatch");
     expect(sql).toContain("to_regprocedure('public.fulfill_pmle_pass(uuid,text,text,text,timestamptz)')");
+  });
+});
+
+describe("Phase 2 strict quota and bulk claim", () => {
+  it("charges the strict free path in the shared creation transaction without paid bypass", () => {
+    const strictQuota = sql.slice(sql.indexOf("CREATE OR REPLACE FUNCTION public.v2_consume_free_practice_quota("),
+      sql.indexOf("CREATE OR REPLACE FUNCTION public.consume_free_practice_quota("));
+    expect(strictQuota).not.toMatch(/user_subscriptions|pmle_passes|status = 'active'/);
+    expect(strictQuota).toContain("ON CONFLICT (user_id, week_start) DO UPDATE");
+    expect(strictQuota).toContain("questions_used + EXCLUDED.questions_used <= 5");
+    expect(sql).toContain("IF p_free_only THEN\n   PERFORM public.v2_consume_free_practice_quota(p_user_id, v_count);");
+    expect(sql).toContain("SELECT public.v2_create_study_session('practice', p_user_id, NULL, p_items, p_expires_at, true)");
+    expect(sql).toContain("SELECT public.v2_create_study_session(p_kind, p_user_id, p_anonymous_owner_hash, p_items, p_expires_at, false)");
+  });
+  it("bulk claims only diagnostics by owner hash, never an ID or already owned row", () => {
+    const claim = sql.slice(sql.indexOf("CREATE OR REPLACE FUNCTION public.claim_anonymous_diagnostics("),
+      sql.indexOf("CREATE OR REPLACE FUNCTION public.answer_study_item("));
+    expect(claim).toContain("p_user_id IS NULL OR p_anonymous_owner_hash IS NULL");
+    expect(claim).toContain("p_anonymous_owner_hash !~ '^[0-9a-f]{64}$'");
+    expect(claim).toContain("SET user_id = p_user_id, anonymous_owner_hash = NULL");
+    expect(claim).toContain("WHERE kind = 'diagnostic' AND user_id IS NULL AND anonymous_owner_hash = p_anonymous_owner_hash");
+    expect(claim).toContain("GET DIAGNOSTICS v_claimed = ROW_COUNT");
+    expect(claim).not.toMatch(/p_session_id|WHERE id\s*=/);
+  });
+  it("uses local confirmed auth and direct token-hash app templates", () => {
+    const config = readFileSync("supabase/config.toml", "utf8");
+    expect(config).toContain('project_id = "testero-v2"');
+    expect(config).toContain('site_url = "http://127.0.0.1:3000"');
+    expect(config).toContain('"http://127.0.0.1:3100/**"');
+    expect(config).toContain("enable_confirmations = true");
+    for (const [template, type] of [["confirmation", "signup"], ["recovery", "recovery"]]) {
+      const html = readFileSync(`supabase/templates/${template}.html`, "utf8");
+      expect(config).toContain(`content_path = "./supabase/templates/${template}.html"`);
+      expect(html).toContain(`{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=${type}`);
+      expect(html).not.toContain(".ConfirmationURL");
+    }
   });
 });
 

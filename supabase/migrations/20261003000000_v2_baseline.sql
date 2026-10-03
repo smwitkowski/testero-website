@@ -325,17 +325,13 @@ REVOKE EXECUTE ON FUNCTION public.refund_pmle_pass(TEXT, TIMESTAMPTZ)
 GRANT EXECUTE ON FUNCTION public.refund_pmle_pass(TEXT, TIMESTAMPTZ)
     TO service_role;
 
--- Atomic UTC week quota. Active legacy status deliberately matches paid-access.ts.
-CREATE OR REPLACE FUNCTION public.consume_free_practice_quota(p_user_id UUID, p_question_count INTEGER)
+-- Strict Phase 2 quota: paid/legacy rows never bypass the free allowance.
+CREATE OR REPLACE FUNCTION public.v2_consume_free_practice_quota(p_user_id UUID, p_question_count INTEGER)
 RETURNS VOID LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, pg_temp AS $fn$
 DECLARE v_week DATE := date_trunc('week', now() AT TIME ZONE 'UTC')::date;
 BEGIN
  IF p_user_id IS NULL OR p_question_count IS NULL OR p_question_count NOT BETWEEN 1 AND 100 THEN
   RAISE EXCEPTION 'Invalid quota arguments' USING ERRCODE = '22023';
- END IF;
- IF EXISTS (SELECT 1 FROM public.user_subscriptions WHERE user_id = p_user_id AND status = 'active')
- OR EXISTS (SELECT 1 FROM public.pmle_passes WHERE user_id = p_user_id AND refunded_at IS NULL AND expires_at > now()) THEN
-  RETURN;
  END IF;
  IF p_question_count > 5 THEN
   RAISE EXCEPTION 'Free practice quota exceeded' USING ERRCODE = 'P0001';
@@ -351,9 +347,24 @@ BEGIN
 END;
 $fn$;
 
-CREATE OR REPLACE FUNCTION public.create_study_session(
+-- Atomic UTC week quota. Active legacy status deliberately matches paid-access.ts.
+CREATE OR REPLACE FUNCTION public.consume_free_practice_quota(p_user_id UUID, p_question_count INTEGER)
+RETURNS VOID LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, pg_temp AS $fn$
+BEGIN
+ IF p_user_id IS NULL OR p_question_count IS NULL OR p_question_count NOT BETWEEN 1 AND 100 THEN
+  RAISE EXCEPTION 'Invalid quota arguments' USING ERRCODE = '22023';
+ END IF;
+ IF EXISTS (SELECT 1 FROM public.user_subscriptions WHERE user_id = p_user_id AND status = 'active')
+ OR EXISTS (SELECT 1 FROM public.pmle_passes WHERE user_id = p_user_id AND refunded_at IS NULL AND expires_at > now()) THEN
+  RETURN;
+ END IF;
+ PERFORM public.v2_consume_free_practice_quota(p_user_id, p_question_count);
+END;
+$fn$;
+
+CREATE OR REPLACE FUNCTION public.v2_create_study_session(
  p_kind TEXT, p_user_id UUID, p_anonymous_owner_hash TEXT,
- p_items JSONB, p_expires_at TIMESTAMPTZ
+ p_items JSONB, p_expires_at TIMESTAMPTZ, p_free_only BOOLEAN
 ) RETURNS UUID LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, pg_temp AS $fn$
 DECLARE
  v_session_id UUID;
@@ -363,7 +374,7 @@ DECLARE
  v_ordinal INTEGER := 0;
  v_labels TEXT[];
 BEGIN
- IF p_kind IS NULL OR p_kind NOT IN ('diagnostic','practice')
+ IF p_free_only IS NULL OR p_kind IS NULL OR p_kind NOT IN ('diagnostic','practice')
  OR (p_user_id IS NULL) = (p_anonymous_owner_hash IS NULL)
  OR (p_anonymous_owner_hash IS NOT NULL AND p_anonymous_owner_hash !~ '^[0-9a-f]{64}$')
  OR (p_kind = 'practice' AND p_user_id IS NULL)
@@ -376,7 +387,11 @@ BEGIN
   RAISE EXCEPTION 'Invalid question count' USING ERRCODE = '22023';
  END IF;
  IF p_kind = 'practice' THEN
-  PERFORM public.consume_free_practice_quota(p_user_id, v_count);
+  IF p_free_only THEN
+   PERFORM public.v2_consume_free_practice_quota(p_user_id, v_count);
+  ELSE
+   PERFORM public.consume_free_practice_quota(p_user_id, v_count);
+  END IF;
  END IF;
  INSERT INTO public.study_sessions (kind,user_id,anonymous_owner_hash,question_count,domain_codes,expires_at)
  VALUES (p_kind,p_user_id,p_anonymous_owner_hash,v_count,
@@ -414,6 +429,40 @@ BEGIN
    v_item->>'domain_name',v_item->>'stem',v_item->'options',v_item->>'correct_label');
  END LOOP;
  RETURN v_session_id;
+END;
+$fn$;
+
+-- Preserve the Phase 1 RPC identity and paid-access behavior for Phase 3.
+CREATE OR REPLACE FUNCTION public.create_study_session(
+ p_kind TEXT, p_user_id UUID, p_anonymous_owner_hash TEXT,
+ p_items JSONB, p_expires_at TIMESTAMPTZ
+) RETURNS UUID LANGUAGE sql SECURITY INVOKER SET search_path = public, pg_temp AS $fn$
+ SELECT public.v2_create_study_session(p_kind, p_user_id, p_anonymous_owner_hash, p_items, p_expires_at, false);
+$fn$;
+
+-- Phase 2 creation charges once, within the same snapshot-insertion transaction.
+CREATE OR REPLACE FUNCTION public.create_free_practice_session(
+ p_user_id UUID, p_items JSONB, p_expires_at TIMESTAMPTZ
+) RETURNS UUID LANGUAGE sql SECURITY INVOKER SET search_path = public, pg_temp AS $fn$
+ SELECT public.v2_create_study_session('practice', p_user_id, NULL, p_items, p_expires_at, true);
+$fn$;
+
+-- Only a verified server user and hashed HttpOnly cookie may reach this RPC.
+-- UPDATE row locks recheck the predicate after waits: concurrent owners cannot reassign.
+CREATE OR REPLACE FUNCTION public.claim_anonymous_diagnostics(
+ p_user_id UUID, p_anonymous_owner_hash TEXT
+) RETURNS INTEGER LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, pg_temp AS $fn$
+DECLARE v_claimed INTEGER;
+BEGIN
+ IF p_user_id IS NULL OR p_anonymous_owner_hash IS NULL
+ OR p_anonymous_owner_hash !~ '^[0-9a-f]{64}$' THEN
+  RAISE EXCEPTION 'Invalid diagnostic claim arguments' USING ERRCODE = '22023';
+ END IF;
+ UPDATE public.study_sessions
+ SET user_id = p_user_id, anonymous_owner_hash = NULL
+ WHERE kind = 'diagnostic' AND user_id IS NULL AND anonymous_owner_hash = p_anonymous_owner_hash;
+ GET DIAGNOSTICS v_claimed = ROW_COUNT;
+ RETURN v_claimed;
 END;
 $fn$;
 
@@ -469,4 +518,12 @@ REVOKE EXECUTE ON FUNCTION public.create_study_session(TEXT, UUID, TEXT, JSONB, 
 GRANT EXECUTE ON FUNCTION public.create_study_session(TEXT, UUID, TEXT, JSONB, TIMESTAMPTZ) TO service_role;
 REVOKE EXECUTE ON FUNCTION public.answer_study_item(UUID, UUID, TEXT, UUID, TEXT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.answer_study_item(UUID, UUID, TEXT, UUID, TEXT) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.v2_consume_free_practice_quota(UUID, INTEGER) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.v2_consume_free_practice_quota(UUID, INTEGER) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.v2_create_study_session(TEXT, UUID, TEXT, JSONB, TIMESTAMPTZ, BOOLEAN) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.v2_create_study_session(TEXT, UUID, TEXT, JSONB, TIMESTAMPTZ, BOOLEAN) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.create_free_practice_session(UUID, JSONB, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.create_free_practice_session(UUID, JSONB, TIMESTAMPTZ) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.claim_anonymous_diagnostics(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_anonymous_diagnostics(UUID, TEXT) TO service_role;
 COMMIT;

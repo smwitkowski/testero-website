@@ -62,15 +62,18 @@ for (const role of ["anon", "authenticated"]) {
   for (const table of ["questions", "answers", "explanations", "session_items", "webhook_events", "pmle_pass_refunds"]) {
     await denied(`BEGIN; SET LOCAL ROLE ${role}; SELECT * FROM public.${table}; ROLLBACK;`, `${role} must not read ${table}`);
   }
-  for (const signature of ["create_study_session(text,uuid,text,jsonb,timestamptz)", "answer_study_item(uuid,uuid,text,uuid,text)", "consume_free_practice_quota(uuid,integer)", "fulfill_pmle_pass(uuid,text,text,text,timestamptz)", "refund_pmle_pass(text,timestamptz)"]) {
+  for (const signature of ["create_study_session(text,uuid,text,jsonb,timestamptz)", "answer_study_item(uuid,uuid,text,uuid,text)", "consume_free_practice_quota(uuid,integer)", "fulfill_pmle_pass(uuid,text,text,text,timestamptz)", "refund_pmle_pass(text,timestamptz)", "v2_consume_free_practice_quota(uuid,integer)", "v2_create_study_session(text,uuid,text,jsonb,timestamptz,boolean)", "create_free_practice_session(uuid,jsonb,timestamptz)", "claim_anonymous_diagnostics(uuid,text)"]) {
     assert.equal(await scalar(`SELECT has_function_privilege('${role}', 'public.${signature}', 'EXECUTE');`), "f");
   }
 }
 console.log("PASS replay, seed inventory, table RLS and browser privilege denial");
 
 const owner = randomUUID(), other = randomUUID(), paidOwner = randomUUID(), legacyOwner = randomUUID();
-const ownerIds = [owner, other, paidOwner, legacyOwner];
+const strictOwner = randomUUID(), claimOwner = randomUUID(), claimOther = randomUUID();
+const ownerIds = [owner, other, paidOwner, legacyOwner, strictOwner, claimOwner, claimOther];
 const hash = createHash("sha256").update(randomUUID()).digest("hex");
+const claimHash = createHash("sha256").update(randomUUID()).digest("hex");
+const foreignHash = createHash("sha256").update(randomUUID()).digest("hex");
 const intent = "local-test-" + randomUUID();
 const intentAfter = "local-test-" + randomUUID();
 const checkout = "local-checkout-" + randomUUID();
@@ -82,6 +85,8 @@ try {
   const items = questions.map((question) => ({ ...question,
     options: [{ label: "A", text: "First" }, { label: "B", text: "Second" }], correct_label: "A" }));
   const createSQL = (kind, user, anonymous, snapshots) => `SELECT public.create_study_session(${q(kind)},${user ? q(user) : "NULL"},${anonymous ? q(anonymous) : "NULL"},${q(JSON.stringify(snapshots))}::jsonb,now()+interval '1 hour')`;
+  const strictSQL = (user, snapshots) => `SELECT public.create_free_practice_session(${q(user)},${q(JSON.stringify(snapshots))}::jsonb,now()+interval '1 hour')`;
+  const claimSQL = (user, digest) => `SELECT public.claim_anonymous_diagnostics(${user ? q(user) : "NULL"},${digest === null ? "NULL" : q(digest)})`;
   sessionId = await scalar(service(createSQL("diagnostic", null, hash, items.slice(0, 2))));
   const rows = JSON.parse(await scalar(`SELECT json_agg(s ORDER BY ordinal) FROM (SELECT id,ordinal FROM public.session_items WHERE session_id=${q(sessionId)}) s;`));
   const answerSQL = (id, label, user = null, anonymous = hash) => `SELECT public.answer_study_item(${q(sessionId)},${q(id)},${q(label)},${user ? q(user) : "NULL"},${anonymous ? q(anonymous) : "NULL"})`;
@@ -111,6 +116,47 @@ try {
   assert.equal(await scalar(`SELECT count(*) FROM public.free_practice_quota WHERE user_id=${q(other)};`), "0");
   await denied(service(createSQL("practice", other, null, items)), "six questions exceed free quota");
   assert.equal(await scalar(`SELECT count(*) FROM public.free_practice_quota WHERE user_id=${q(other)};`), "0");
+  // Phase 2 uses the explicit free-only RPC: eight five-question requests charge exactly once.
+  const strictConcurrent = await Promise.all(Array.from({ length: 8 }, () => run(service(strictSQL(strictOwner, items.slice(0, 5))), true)));
+  assert.equal(strictConcurrent.filter((result) => result.code === 0).length, 1, "one five-question free-only request wins");
+  assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(strictOwner)};`), "5");
+  assert.equal(await scalar(`SELECT count(*) FROM public.study_sessions WHERE user_id=${q(strictOwner)} AND kind='practice';`), "1");
+  assert.equal(await scalar(`SELECT count(*) FROM public.session_items i JOIN public.study_sessions s ON s.id=i.session_id WHERE s.user_id=${q(strictOwner)};`), "5");
+  await denied(service(strictSQL(other, [invalidItem])), "strict snapshot FK failure rolls back charge");
+  assert.equal(await scalar(`SELECT count(*) FROM public.free_practice_quota WHERE user_id=${q(other)};`), "0");
+  assert.equal(await scalar(`SELECT count(*) FROM public.study_sessions WHERE user_id=${q(other)};`), "0");
+  await denied(service(strictSQL(other, items)), "strict path refuses more than five questions");
+  console.log("PASS Phase 2 strict eight-way five-question creation, exact single charge and snapshot FK rollback");
+
+  // Claims attach every diagnostic for the cookie, including completed/expired rows, once only.
+  const claimSessions = await Promise.all(Array.from({ length: 3 }, () => scalar(service(createSQL("diagnostic", null, claimHash, items.slice(0, 1))))));
+  const foreignSession = await scalar(service(createSQL("diagnostic", null, foreignHash, items.slice(0, 1))));
+  const completedClaimItem = await scalar(`SELECT id FROM public.session_items WHERE session_id=${q(claimSessions[1])};`);
+  await run(service(`SELECT public.answer_study_item(${q(claimSessions[1])},${q(completedClaimItem)},'A',NULL,${q(claimHash)})`));
+  await run(`UPDATE public.study_sessions SET created_at=now()-interval '2 hours',expires_at=now()-interval '1 hour' WHERE id IN (${q(claimSessions[1])},${q(claimSessions[2])});`);
+  await denied(service(claimSQL(null, claimHash)), "claim requires a verified user ID");
+  for (const invalid of [null, "", "a".repeat(63), "A".repeat(64)]) {
+    await denied(service(claimSQL(claimOwner, invalid)), "claim requires a lowercase 64-hex hash");
+  }
+  assert.equal(await scalar(service(claimSQL(claimOwner, "0".repeat(64)))), "0", "another cookie cannot claim these sessions");
+  const claims = await Promise.all([claimOwner, claimOther].map((id) => scalar(service(claimSQL(id, claimHash)))));
+  assert.deepEqual(claims.map(Number).sort(), [0, 3], "concurrent users: one claims all rows, one claims none");
+  const winningOwner = claims[0] === "3" ? claimOwner : claimOther;
+  const losingOwner = winningOwner === claimOwner ? claimOther : claimOwner;
+  assert.equal(await scalar(service(claimSQL(winningOwner, claimHash))), "0", "duplicate claim is idempotent");
+  assert.equal(await scalar(service(claimSQL(losingOwner, claimHash))), "0", "already claimed rows cannot be reassigned");
+  assert.equal(await scalar(`SELECT count(*) FROM public.study_sessions WHERE id IN (${claimSessions.map(q).join(",")}) AND user_id=${q(winningOwner)} AND anonymous_owner_hash IS NULL;`), "3");
+  assert.equal(await scalar(`SELECT user_id IS NULL AND anonymous_owner_hash=${q(foreignHash)} FROM public.study_sessions WHERE id=${q(foreignSession)};`), "t", "foreign cookie row untouched");
+  const claimedItem = await scalar(`SELECT id FROM public.session_items WHERE session_id=${q(claimSessions[0])};`);
+  const claimAnswer = (user, digest) => `SELECT public.answer_study_item(${q(claimSessions[0])},${q(claimedItem)},'A',${user ? q(user) : "NULL"},${digest ? q(digest) : "NULL"})`;
+  await denied(service(claimAnswer(null, claimHash)), "old anonymous cookie loses access after claim");
+  await denied(service(claimAnswer(losingOwner, null)), "losing signed user cannot access claimed row");
+  assert.equal(JSON.parse(await scalar(service(claimAnswer(winningOwner, null)))).completed, true, "signed owner can answer claimed row");
+  const claimRead = (user) => `BEGIN; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claim.sub',${q(user)},true); SELECT count(*) FROM public.study_sessions WHERE id IN (${claimSessions.map(q).join(",")}); ROLLBACK;`;
+  assert.equal((await scalar(claimRead(winningOwner))).split("\n").at(-1), "3", "claimed metadata owned RLS");
+  assert.equal((await scalar(claimRead(losingOwner))).split("\n").at(-1), "0", "claimed metadata hidden from foreign signed user");
+  console.log("PASS hash-only bulk claim validation, duplicate/foreign/two-user concurrency, old-cookie denial and signed metadata RLS");
+
   const userSession = await scalar(service(createSQL("diagnostic", owner, null, items.slice(0, 1))));
   const authRead = (id) => `BEGIN; SET LOCAL ROLE authenticated; SELECT set_config('request.jwt.claim.sub',${q(id)},true); SELECT count(*) FROM public.study_sessions WHERE id=${q(userSession)}; ROLLBACK;`;
   assert.equal((await scalar(authRead(owner))).split("\n").at(-1), "1", "owner can read metadata");
@@ -143,15 +189,24 @@ try {
   await run(`UPDATE public.pmle_passes SET paid_at=now()-interval '1 hour',expires_at=now()+interval '90 days' WHERE id=${q(validPassId)};`);
   await run(service(createSQL("practice", paidOwner, null, items)));
   assert.equal(await scalar(`SELECT count(*) FROM public.free_practice_quota WHERE user_id=${q(paidOwner)};`), "0", "valid pass bypasses free counter");
+  await run(service(strictSQL(paidOwner, items.slice(0, 5))));
+  assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(paidOwner)};`), "5", "Phase 2 charges valid pass holder");
+  await denied(service(strictSQL(paidOwner, items.slice(0, 1))), "valid pass cannot bypass Phase 2 exhaustion");
   await run(service(`SELECT public.refund_pmle_pass(${q(intentAfter)},now())`));
   await denied(service(createSQL("practice", paidOwner, null, items)), "refund-after-fulfillment revokes unlimited practice");
   await run(`INSERT INTO public.user_subscriptions(user_id,stripe_customer_id,status,current_period_end) VALUES (${q(legacyOwner)},${q("local-legacy-" + randomUUID())},'active',NULL);`);
   await run(service(createSQL("practice", legacyOwner, null, items)));
   assert.equal(await scalar(`SELECT count(*) FROM public.free_practice_quota WHERE user_id=${q(legacyOwner)};`), "0", "legacy active subscription bypasses quota");
+  await run(service(strictSQL(legacyOwner, items.slice(0, 5))));
+  await denied(service(strictSQL(legacyOwner, items.slice(0, 1))), "legacy active cannot bypass strict Phase 2 exhaustion");
+  await denied(service(strictSQL(paidOwner, items.slice(0, 1))), "refunded pass cannot bypass strict Phase 2 exhaustion");
+  await run(`UPDATE public.pmle_passes SET paid_at=now()-interval '2 days',expires_at=now()-interval '1 day',refunded_at=NULL WHERE id=${q(validPassId)};`);
+  await denied(service(strictSQL(paidOwner, items.slice(0, 1))), "expired pass cannot bypass strict Phase 2 exhaustion");
+  console.log("PASS Phase 2 valid/refunded/expired pass and legacy strict exhaustion");
   console.log("PASS refund-before/after fulfillment, duplicate identity, 2160-hour expiry, paid/legacy practice access");
 } finally {
   // Only isolated generated owners/anonymous hash and fake payment intents are removed.
-  await run(`DELETE FROM public.study_sessions WHERE anonymous_owner_hash=${q(hash)};
+  await run(`DELETE FROM public.study_sessions WHERE anonymous_owner_hash IN (${q(hash)},${q(claimHash)},${q(foreignHash)});
     DELETE FROM public.pmle_pass_refunds WHERE stripe_payment_intent_id IN (${q(intent)},${q(intentAfter)});
     DELETE FROM auth.users WHERE id IN (${ownerIds.map(q).join(",")});`);
 }
