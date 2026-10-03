@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
+import { DEFAULT_DESCRIPTION, pageMetadata, SITE_ORIGIN } from "@/lib/seo";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { AnalyticsProvider } from "@/components/analytics-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://testero.ai"),
+  ...pageMetadata("PMLE readiness diagnostic", DEFAULT_DESCRIPTION, "/"),
+  metadataBase: new URL(SITE_ORIGIN),
   title: { default: "PMLE readiness diagnostic | Testero", template: "%s | Testero" },
-  description: "Take a free 20-question PMLE diagnostic and see your readiness and domain breakdown.",
-  icons: { icon: "/favicon.ico" },
-  openGraph: { images: ["/og-image.jpg"] },
+  // Do not inherit a root canonical on private pages. Public pages set their own.
+  alternates: undefined,
+  icons: { icon: "/logo.svg" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
