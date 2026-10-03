@@ -91,8 +91,8 @@ describe("QuestionReview", () => {
       const correctBadge = screen.getAllByText("CORRECT")[0];
       const incorrectBadge = screen.getAllByText("INCORRECT")[0];
 
-      expect(correctBadge).toHaveClass("bg-green-500");
-      expect(incorrectBadge).toHaveClass("bg-red-500");
+      expect(correctBadge).toHaveClass("bg-[color:var(--tone-success-surface)]");
+      expect(incorrectBadge).toHaveClass("bg-[color:var(--tone-danger-surface)]");
     });
   });
 
@@ -104,7 +104,7 @@ describe("QuestionReview", () => {
       const question1Container = screen.getByTestId("question-1");
       const userAnswerB = within(question1Container).getByTestId("option-B");
 
-      expect(userAnswerB).toHaveClass("border-blue-500");
+      expect(userAnswerB).toHaveClass("border-[color:var(--tone-info)]");
       expect(within(userAnswerB).getByText(/your answer/i)).toBeInTheDocument();
     });
 
@@ -115,7 +115,7 @@ describe("QuestionReview", () => {
       const question1Container = screen.getByTestId("question-1");
       const correctAnswerA = within(question1Container).getByTestId("option-A");
 
-      expect(correctAnswerA).toHaveClass("bg-green-50");
+      expect(correctAnswerA).toHaveClass("bg-[color:var(--tone-success-surface)]");
       expect(within(correctAnswerA).getByText(/correct/i)).toBeInTheDocument();
     });
 
@@ -126,7 +126,7 @@ describe("QuestionReview", () => {
       const question2Container = screen.getByTestId("question-2");
       const correctAnswerC = within(question2Container).getByTestId("option-C");
 
-      expect(correctAnswerC).toHaveClass("bg-green-50");
+      expect(correctAnswerC).toHaveClass("bg-[color:var(--tone-success-surface)]");
       const indicators = within(correctAnswerC).getAllByText(/your answer|correct/i);
       expect(indicators).toHaveLength(1);
     });

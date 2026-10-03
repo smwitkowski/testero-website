@@ -91,8 +91,8 @@ describe("DomainBreakdown", () => {
 
       // Should have different colors for different performance levels
       const colors = cells.map((cell) => cell.getAttribute("data-fill"));
-      expect(colors).toContain("#ef4444"); // Red for < 50%
-      expect(colors).toContain("#22c55e"); // Green for >= 70%
+      expect(colors).toContain("var(--tone-danger)"); // Danger for < 50%
+      expect(colors).toContain("var(--tone-success)"); // Success for >= 70%
     });
   });
 
@@ -113,7 +113,7 @@ describe("DomainBreakdown", () => {
       const domain = screen.getByTestId("domain-MLOps");
       fireEvent.mouseEnter(domain);
 
-      expect(domain).toHaveClass("hover:bg-gray-50");
+      expect(domain).toHaveClass("hover:bg-[color:var(--surface-subtle)]");
     });
 
     it("should show tooltip on hover", () => {
