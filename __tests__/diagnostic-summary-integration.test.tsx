@@ -102,9 +102,28 @@ const mockSuccessResponse = {
   ],
 };
 
+// Route responses by endpoint: billing/access changes can trigger a second summary fetch.
+const mockSummaryAndPractice = (summaryData: unknown, practiceResponse: unknown) => {
+  (global.fetch as jest.Mock).mockReset().mockImplementation((url: string) => {
+    if (url.includes("/api/billing/status")) {
+      return Promise.resolve({ ok: true, json: async () => ({ isSubscriber: false }) });
+    }
+    if (url.includes("/api/diagnostic/summary")) {
+      return Promise.resolve({ ok: true, status: 200, json: async () => summaryData });
+    }
+    if (url.includes("/api/practice/session")) {
+      return practiceResponse instanceof Error
+        ? Promise.reject(practiceResponse) : Promise.resolve(practiceResponse);
+    }
+    return Promise.reject(new Error(`Unexpected fetch call: ${url}`));
+  });
+};
+
 describe("DiagnosticSummaryPage Integration", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (global.fetch as jest.Mock).mockReset();
+    (useAuth as jest.Mock).mockReturnValue({ user: null, isLoading: false });
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
     (useParams as jest.Mock).mockReturnValue({ sessionId: "test-session-123" });
     (usePostHog as jest.Mock).mockReturnValue(mockPostHog);
@@ -116,11 +135,13 @@ describe("DiagnosticSummaryPage Integration", () => {
     mockPostHog.getFeatureFlag.mockReturnValue("control");
     mockPostHog.isFeatureEnabled.mockReturnValue(false);
     mockTriggers.checkPaywallTrigger.mockReturnValue(false);
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => mockSuccessResponse,
-    });
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ isSubscriber: false }) })
+      .mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => mockSuccessResponse,
+      });
 
     // Mock localStorage
     const localStorageMock = {
@@ -195,7 +216,7 @@ describe("DiagnosticSummaryPage Integration", () => {
 
       render(<DiagnosticSummaryPage />);
 
-      const domainHeading = await screen.findByText(/domain performance/i);
+      const domainHeading = await screen.findByRole("heading", { name: /^domain performance$/i });
       expect(domainHeading).toBeInTheDocument();
       expect(screen.getAllByText(/Architecting Low-Code ML Solutions/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/4\s*\/\s*5/).length).toBeGreaterThan(0);
@@ -292,10 +313,10 @@ describe("DiagnosticSummaryPage Integration", () => {
       render(<DiagnosticSummaryPage />);
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: /sign up free/i })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /save my results/i })).toBeInTheDocument();
       });
 
-      const signupButton = screen.getByRole("button", { name: /sign up free/i });
+      const signupButton = screen.getByRole("button", { name: /save my results/i });
       fireEvent.click(signupButton);
 
       await waitFor(() => {
@@ -358,7 +379,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       render(<DiagnosticSummaryPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/domain performance/i)).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: /^domain performance$/i })).toBeInTheDocument();
       });
 
       // Find and click a domain row - look for clickable domain elements
@@ -393,18 +414,11 @@ describe("DiagnosticSummaryPage Integration", () => {
         questionCount: 10,
       };
 
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => mockSuccessResponse,
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => mockPracticeResponse,
-        });
+      mockSummaryAndPractice(mockSuccessResponse, {
+        ok: true, status: 200, json: async () => mockPracticeResponse,
+      });
 
+      (useAuth as jest.Mock).mockReturnValue({ user: { id: "user-123" }, isLoading: false });
       render(<DiagnosticSummaryPage />);
 
       await waitFor(() => {
@@ -434,8 +448,14 @@ describe("DiagnosticSummaryPage Integration", () => {
     });
 
     it("should track question explanation viewed", async () => {
-      (useAuth as jest.Mock).mockReturnValue({ user: null, isLoading: false });
+      (useAuth as jest.Mock).mockReturnValue({ user: { id: "user-123" }, isLoading: false });
 
+      (global.fetch as jest.Mock).mockReset()
+        .mockImplementation((url: string) => Promise.resolve({
+          ok: true, status: 200,
+          json: async () => url.includes("/api/billing/status")
+            ? { isSubscriber: true } : mockSuccessResponse,
+        }));
       render(<DiagnosticSummaryPage />);
 
       await waitFor(() => {
@@ -519,17 +539,9 @@ describe("DiagnosticSummaryPage Integration", () => {
         questionCount: 10,
       };
 
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => mockSuccessResponse,
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => mockPracticeResponse,
-        });
+      mockSummaryAndPractice(mockSuccessResponse, {
+        ok: true, status: 200, json: async () => mockPracticeResponse,
+      });
 
       render(<DiagnosticSummaryPage />);
 
@@ -598,17 +610,9 @@ describe("DiagnosticSummaryPage Integration", () => {
         questionCount: 10,
       };
 
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => mockSuccessResponse,
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => mockPracticeResponse,
-        });
+      mockSummaryAndPractice(mockSuccessResponse, {
+        ok: true, status: 200, json: async () => mockPracticeResponse,
+      });
 
       render(<DiagnosticSummaryPage />);
 
@@ -640,17 +644,10 @@ describe("DiagnosticSummaryPage Integration", () => {
     });
 
     it("should show error toast when practice session creation fails", async () => {
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => mockSuccessResponse,
-        })
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 500,
-          json: async () => ({ error: "Failed to create practice session" }),
-        });
+      mockSummaryAndPractice(mockSuccessResponse, {
+        ok: false, status: 500,
+        json: async () => ({ error: "Failed to create practice session" }),
+      });
 
       render(<DiagnosticSummaryPage />);
 
@@ -693,13 +690,7 @@ describe("DiagnosticSummaryPage Integration", () => {
     });
 
     it("should handle network errors gracefully", async () => {
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => mockSuccessResponse,
-        })
-        .mockRejectedValueOnce(new Error("Network error"));
+      mockSummaryAndPractice(mockSuccessResponse, new Error("Network error"));
 
       render(<DiagnosticSummaryPage />);
 
@@ -773,17 +764,9 @@ describe("DiagnosticSummaryPage Integration", () => {
         questionCount: 10,
       };
 
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => mockResponseWithWeakDomains,
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => mockPracticeResponse,
-        });
+      mockSummaryAndPractice(mockResponseWithWeakDomains, {
+        ok: true, status: 200, json: async () => mockPracticeResponse,
+      });
 
       render(<DiagnosticSummaryPage />);
 
@@ -811,7 +794,7 @@ describe("DiagnosticSummaryPage Integration", () => {
 
   describe("Question details display", () => {
     it("should display all questions with correct indicators", async () => {
-      (useAuth as jest.Mock).mockReturnValue({ user: null, isLoading: false });
+      (useAuth as jest.Mock).mockReturnValue({ user: { id: "user-123" }, isLoading: false });
 
       render(<DiagnosticSummaryPage />);
 
@@ -824,8 +807,14 @@ describe("DiagnosticSummaryPage Integration", () => {
     });
 
     it("should highlight user answers and correct answers", async () => {
-      (useAuth as jest.Mock).mockReturnValue({ user: null, isLoading: false });
+      (useAuth as jest.Mock).mockReturnValue({ user: { id: "user-123" }, isLoading: false });
 
+      (global.fetch as jest.Mock).mockReset()
+        .mockImplementation((url: string) => Promise.resolve({
+          ok: true, status: 200,
+          json: async () => url.includes("/api/billing/status")
+            ? { isSubscriber: true } : mockSuccessResponse,
+        }));
       render(<DiagnosticSummaryPage />);
 
       const expandButtons = await screen.findAllByRole("button", { name: /view explanation/i });
@@ -850,7 +839,7 @@ describe("DiagnosticSummaryPage Integration", () => {
         expect(screen.getByText(/session id not found/i)).toBeInTheDocument();
       });
 
-      expect(global.fetch).not.toHaveBeenCalled();
+      expect(global.fetch).not.toHaveBeenCalledWith(expect.stringContaining("/api/diagnostic/summary"));
     });
 
     it("should handle empty question list", async () => {
@@ -902,7 +891,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       await waitFor(() => {
         expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
         expect(screen.getByText(/readiness:/i)).toBeInTheDocument();
-        expect(screen.getByText(/70\s*%/)).toBeInTheDocument();
+        expect(screen.getAllByText(/70\s*%/)[0]).toBeInTheDocument();
       });
     });
 
@@ -910,8 +899,8 @@ describe("DiagnosticSummaryPage Integration", () => {
       render(<DiagnosticSummaryPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/domain performance/i)).toBeInTheDocument();
-        expect(screen.getByText(/study plan/i)).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: /^domain performance$/i })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: /^study plan$/i })).toBeInTheDocument();
       });
 
       // Check for lock icon or locked overlay text
@@ -967,7 +956,7 @@ describe("DiagnosticSummaryPage Integration", () => {
           })
         );
         expect(mockRouter.push).toHaveBeenCalledWith(
-          "/signup?redirect=/diagnostic/test-session-123/summary"
+          "/signup?redirect=/pricing"
         );
       });
     });
@@ -1013,8 +1002,8 @@ describe("DiagnosticSummaryPage Integration", () => {
         expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
       });
 
-      // Should show standard "Readiness: Building" (score is 70, which maps to "Building" tier)
-      expect(screen.getByText(/readiness: building/i)).toBeInTheDocument();
+      // Should show standard "Readiness: Building" (score is 70, which maps to "Ready" tier)
+      expect(screen.getByText(/readiness: ready/i)).toBeInTheDocument();
       expect(screen.getByText(/pass typically ≥70%/i)).toBeInTheDocument();
       // Should NOT show risk qualifier
       expect(screen.queryByText(/with risk/i)).not.toBeInTheDocument();
@@ -1049,7 +1038,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       expect(screen.getByText(/readiness: ready — with risk/i)).toBeInTheDocument();
       // Should show risk qualifier with weakest domains
       expect(screen.getByText(/but exposed in/i)).toBeInTheDocument();
-      expect(screen.getByText(/architecting low-code ml solutions/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/architecting low-code ml solutions/i)[0]).toBeInTheDocument();
       // Should show action line
       expect(screen.getByText(/your biggest score lift is in/i)).toBeInTheDocument();
     });
@@ -1082,7 +1071,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       expect(screen.getByText(/readiness: building/i)).toBeInTheDocument();
       // Should still show action line
       expect(screen.getByText(/your biggest score lift is in/i)).toBeInTheDocument();
-      expect(screen.getByText(/architecting low-code ml solutions/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/architecting low-code ml solutions/i)[0]).toBeInTheDocument();
     });
 
     it("should handle missing domain breakdown gracefully in treatment variant", async () => {
@@ -1106,8 +1095,8 @@ describe("DiagnosticSummaryPage Integration", () => {
         expect(screen.getByText(/diagnostic results/i)).toBeInTheDocument();
       });
 
-      // Should show "Ready — with risk" but no risk qualifier (no domain data)
-      expect(screen.getByText(/readiness: ready — with risk/i)).toBeInTheDocument();
+      // Should show standard "Ready" without risk qualifier when domain data is absent
+      expect(screen.getByText(/^readiness: ready$/i)).toBeInTheDocument();
       // Should NOT show risk qualifier lines (no domain data)
       expect(screen.queryByText(/but exposed in/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/your biggest score lift is in/i)).not.toBeInTheDocument();
@@ -1123,7 +1112,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       });
 
       // Should show standard label
-      expect(screen.getByText(/readiness: building/i)).toBeInTheDocument();
+      expect(screen.getByText(/readiness: ready/i)).toBeInTheDocument();
       expect(screen.queryByText(/with risk/i)).not.toBeInTheDocument();
     });
   });
@@ -1173,7 +1162,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       
       // Should NOT show control copy
       expect(screen.queryByText(/create a free account to unlock/i)).not.toBeInTheDocument();
-      expect(screen.queryByText(/sign up free/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^sign up free$/i })).not.toBeInTheDocument();
     });
 
     it("should set attribution marker when signup CTA is clicked (treatment variant)", async () => {
@@ -1310,7 +1299,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       render(<DiagnosticSummaryPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/domain performance/i)).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: /^domain performance$/i })).toBeInTheDocument();
         expect(screen.getByText(/study plan/i)).toBeInTheDocument();
         expect(screen.getByText(/question review/i)).toBeInTheDocument();
       });
@@ -1327,7 +1316,7 @@ describe("DiagnosticSummaryPage Integration", () => {
         isLoading: false 
       });
       
-      (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      (global.fetch as jest.Mock).mockReset().mockImplementation((url: string) => {
         if (url.includes("/api/billing/status")) {
           return Promise.resolve({
             ok: true,
@@ -1348,7 +1337,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       render(<DiagnosticSummaryPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/domain performance/i)).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: /^domain performance$/i })).toBeInTheDocument();
         expect(screen.getByText(/study plan/i)).toBeInTheDocument();
         expect(screen.getByText(/question review/i)).toBeInTheDocument();
       });

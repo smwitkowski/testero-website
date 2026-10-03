@@ -180,6 +180,8 @@ const ResetPasswordPage = () => {
                   <FormControl>
                     <Input
                       type="password"
+                      autoComplete="new-password"
+                      aria-required="true"
                       placeholder="New Password"
                       className="h-12 px-4 py-3 rounded-md bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={isSubmitting}
@@ -199,6 +201,8 @@ const ResetPasswordPage = () => {
                   <FormControl>
                     <Input
                       type="password"
+                      autoComplete="new-password"
+                      aria-required="true"
                       placeholder="Confirm New Password"
                       className="h-12 px-4 py-3 rounded-md bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={isSubmitting}
