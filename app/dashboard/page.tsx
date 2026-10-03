@@ -30,39 +30,45 @@ import type { BillingStatusResponse } from "@/app/api/billing/status/route";
 const DashboardPage = () => {
   const { user } = useAuth();
   const router = useRouter();
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [examReadiness, setExamReadiness] = useState<ExamReadinessSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const identityKey = user?.id ?? "anonymous";
+  const [dashboardResult, setDashboardResult] = useState<{
+    identity: string; data: DashboardData | null; error: string | null;
+  } | null>(null);
+  const currentDashboard = dashboardResult?.identity === identityKey ? dashboardResult : null;
+  const dashboardData = currentDashboard?.data ?? null;
+  const loading = currentDashboard === null;
+  const error = currentDashboard?.error ?? null;
+  const [readinessSnapshot, setReadinessSnapshot] = useState<{ identity: string; data: ExamReadinessSummary } | null>(null);
+  const examReadiness = readinessSnapshot?.identity === identityKey ? readinessSnapshot.data : null;
   const [showBetaBanner, setShowBetaBanner] = useState(false);
   const [betaVariant, setBetaVariant] = useState<'A' | 'B'>('A');
-  const [accessLevel, setAccessLevel] = useState<AccessLevel>("ANONYMOUS");
+  const [accessSnapshot, setAccessSnapshot] = useState<{ identity: string; level: AccessLevel } | null>(null);
+  const accessLevel = accessSnapshot?.identity === identityKey
+    ? accessSnapshot.level : getPmleAccessLevelForUser(user, null);
+  const practiceQuestionCount = accessLevel === "SUBSCRIBER" ? 10 : 5;
   const posthog = usePostHog();
 
-  // Fetch billing status to compute access level
+  // A prior account's paid response must never change this account's practice size.
   useEffect(() => {
-    if (!user) {
-      setAccessLevel("ANONYMOUS");
-      return;
-    }
-
+    let active = true;
+    setAccessSnapshot({ identity: identityKey, level: getPmleAccessLevelForUser(user, null) });
+    if (!user) return () => { active = false; };
     const fetchBillingStatus = async () => {
       try {
         const response = await fetch("/api/billing/status");
-        if (response.ok) {
-          const data = (await response.json()) as BillingStatusResponse;
-          const level = getPmleAccessLevelForUser(user, data);
-          setAccessLevel(level);
-        }
+        if (!response.ok) throw new Error("Failed to load billing status");
+        const data = (await response.json()) as BillingStatusResponse;
+        if (active) setAccessSnapshot({ identity: identityKey, level: getPmleAccessLevelForUser(user, data) });
       } catch (err) {
-        console.error("Error fetching billing status:", err);
-        // Default to FREE if fetch fails (user is logged in)
-        setAccessLevel(getPmleAccessLevelForUser(user, null));
+        if (active) {
+          console.error("Error fetching billing status:", err);
+          setAccessSnapshot({ identity: identityKey, level: getPmleAccessLevelForUser(user, null) });
+        }
       }
     };
-
-    fetchBillingStatus();
-  }, [user]);
+    void fetchBillingStatus();
+    return () => { active = false; };
+  }, [user, identityKey]);
 
   // Track dashboard page view (middleware ensures auth)
   useEffect(() => {
@@ -105,20 +111,21 @@ const DashboardPage = () => {
   useEffect(() => {
     // Middleware ensures user is authenticated
     if (!user) return;
+    let active = true;
 
     const fetchDashboardData = async () => {
       try {
-        setLoading(true);
-        setError(null);
+
 
         const response = await fetch("/api/dashboard");
         const data: SuccessResponse | ErrorResponse = await response.json();
 
+        if (!active) return;
         if (!response.ok) {
           throw new Error((data as ErrorResponse).error || "Failed to fetch dashboard data");
         }
 
-        setDashboardData((data as SuccessResponse).data);
+        setDashboardResult({ identity: identityKey, data: (data as SuccessResponse).data, error: null });
 
         // Track successful dashboard load with metrics
         posthog?.capture("dashboard_loaded", {
@@ -132,33 +139,35 @@ const DashboardPage = () => {
           has_practice_data: (data as SuccessResponse).data.practice.totalQuestionsAnswered > 0,
         });
       } catch (err) {
+        if (!active) return;
         const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
-        setError(errorMessage);
+        setDashboardResult({ identity: identityKey, data: null, error: errorMessage });
 
         // Track dashboard load error
         posthog?.capture("dashboard_error", {
           user_id: user?.id,
           error: errorMessage,
         });
-      } finally {
-        setLoading(false);
       }
     };
 
-    fetchDashboardData();
-  }, [user, posthog]);
+    void fetchDashboardData();
+    return () => { active = false; };
+  }, [user, identityKey, posthog]);
 
   // Fetch exam readiness summary separately
   useEffect(() => {
     if (!user) return;
+    let active = true;
 
     const fetchExamReadiness = async () => {
       try {
         const response = await fetch("/api/dashboard/summary?examKey=pmle");
         const data: DashboardSummarySuccessResponse | DashboardSummaryErrorResponse = await response.json();
 
+        if (!active) return;
         if (response.ok && 'status' in data && data.status === 'ok') {
-          setExamReadiness(data.data);
+          setReadinessSnapshot({ identity: identityKey, data: data.data });
         } else {
           // Log error but don't break the dashboard - fall back to empty state
           const errorMessage = 'error' in data ? data.error : "Unknown error";
@@ -169,6 +178,7 @@ const DashboardPage = () => {
           });
         }
       } catch (err) {
+        if (!active) return;
         // Log error but don't break the dashboard
         console.error('Error fetching exam readiness summary:', err);
         posthog?.capture("dashboard_readiness_summary_error", {
@@ -178,8 +188,9 @@ const DashboardPage = () => {
       }
     };
 
-    fetchExamReadiness();
-  }, [user, posthog]);
+    void fetchExamReadiness();
+    return () => { active = false; };
+  }, [user, identityKey, posthog]);
 
   const handleDismissBanner = () => {
     setShowBetaBanner(false);
@@ -395,7 +406,7 @@ const DashboardPage = () => {
         {weakestDomain && (
           <NextBestStepCard
             domain={weakestDomain.displayName}
-            questionCount={10}
+            questionCount={practiceQuestionCount}
             domainWeight={weakestDomain ? (() => {
               const domain = PMLE_BLUEPRINT.find(d => d.domainCode === weakestDomain.domainCode);
               return domain ? Math.round(domain.weight * 100) : undefined;
@@ -419,7 +430,7 @@ const DashboardPage = () => {
                   body: JSON.stringify({
                     examKey: 'pmle',
                     domainCodes: [domainCode],
-                    questionCount: 10,
+                    questionCount: practiceQuestionCount,
                     source: 'dashboard_next_best_step',
                   }),
                 });

@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -153,6 +153,84 @@ describe("DiagnosticSummaryPage Integration", () => {
     Object.defineProperty(window, "localStorage", {
       value: localStorageMock,
       writable: true,
+    });
+  });
+
+  describe("identity and session isolation", () => {
+    const secretResponse = {
+      ...mockSuccessResponse,
+      summary: { ...mockSuccessResponse.summary, questions: [{
+        ...mockSuccessResponse.summary.questions[0], stem: "Account A secret question", explanation: "Account A paid explanation",
+      }] },
+    };
+    const deferred = () => {
+      let resolve!: (value: unknown) => void;
+      const promise = new Promise((done) => { resolve = done; });
+      return { promise, resolve };
+    };
+    it("hides loaded paid questions synchronously when the new account requests fail", async () => {
+      const accountA = { id: "paid-a" };
+      (useAuth as jest.Mock).mockReturnValue({ user: accountA, isLoading: false });
+      (global.fetch as jest.Mock).mockReset().mockImplementation((url: string) => Promise.resolve({
+        ok: true, status: 200, json: async () => url.includes("/api/billing/status") ? { isSubscriber: true } : secretResponse,
+      }));
+      const view = render(<DiagnosticSummaryPage />);
+      const expand = await screen.findByRole("button", { name: /^view explanation$/i });
+      fireEvent.click(expand);
+      expect(screen.getByText("Account A paid explanation")).toBeInTheDocument();
+      (useAuth as jest.Mock).mockReturnValue({ user: { id: "free-b" }, isLoading: false });
+      (global.fetch as jest.Mock).mockRejectedValue(new Error("account B offline"));
+      const spy = jest.spyOn(console, "error").mockImplementation(() => {});
+      view.rerender(<DiagnosticSummaryPage />);
+      expect(screen.queryByText("Account A secret question")).not.toBeInTheDocument();
+      expect(screen.queryByText("Account A paid explanation")).not.toBeInTheDocument();
+      await screen.findByText("Failed to load diagnostic summary");
+      expect(screen.queryByRole("button", { name: /view explanation/i })).not.toBeInTheDocument();
+      spy.mockRestore();
+    });
+    it("ignores late paid billing and summary responses after account and session change", async () => {
+      const billingA = deferred();
+      const summaryA = deferred();
+      (useAuth as jest.Mock).mockReturnValue({ user: { id: "paid-a" }, isLoading: false });
+      (global.fetch as jest.Mock).mockReset().mockImplementation((url: string) =>
+        url.includes("/api/billing/status") ? billingA.promise : summaryA.promise);
+      const view = render(<DiagnosticSummaryPage />);
+      (useAuth as jest.Mock).mockReturnValue({ user: { id: "free-b" }, isLoading: false });
+      (useParams as jest.Mock).mockReturnValue({ sessionId: "session-b" });
+      const accountBResponse = { ...mockSuccessResponse, summary: {
+        ...mockSuccessResponse.summary, sessionId: "session-b", questions: [{
+          ...mockSuccessResponse.summary.questions[0], stem: "Account B question", explanation: null,
+        }],
+      } };
+      (global.fetch as jest.Mock).mockReset().mockImplementation((url: string) => Promise.resolve({
+        ok: true, status: 200, json: async () => url.includes("/api/billing/status") ? { isSubscriber: false } : accountBResponse,
+      }));
+      view.rerender(<DiagnosticSummaryPage />);
+      await screen.findByText("Account B question");
+      await act(async () => {
+        billingA.resolve({ ok: true, status: 200, json: async () => ({ isSubscriber: true }) });
+        summaryA.resolve({ ok: true, status: 200, json: async () => secretResponse });
+      });
+      expect(screen.queryByText("Account A secret question")).not.toBeInTheDocument();
+      expect(screen.queryByText("Account A paid explanation")).not.toBeInTheDocument();
+      expect(screen.getByText("Account B question")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /start 5-question practice/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /get pmle pass/i })).toBeInTheDocument();
+    });
+    it("requests ten questions and reports ten in analytics for paid practice", async () => {
+      (useAuth as jest.Mock).mockReturnValue({ user: { id: "paid-a" }, isLoading: false });
+      (global.fetch as jest.Mock).mockReset().mockImplementation((url: string) => Promise.resolve({
+        ok: true, status: 200, json: async () => url.includes("/api/billing/status") ? { isSubscriber: true }
+          : url.includes("/api/practice/session") ? { sessionId: "practice-paid", route: "/practice/session/practice-paid", questionCount: 10 }
+          : mockSuccessResponse,
+      }));
+      render(<DiagnosticSummaryPage />);
+      fireEvent.click(await screen.findByRole("button", { name: /start 10-question practice/i }));
+      await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith("/practice/session/practice-paid"));
+      const practiceCall = (global.fetch as jest.Mock).mock.calls.find(([url]) => url === "/api/practice/session");
+      expect(JSON.parse(practiceCall[1].body).questionCount).toBe(10);
+      expect(mockPostHog.capture).toHaveBeenCalledWith(ANALYTICS_EVENTS.STUDY_PLAN_START_PRACTICE_CLICKED,
+        expect.objectContaining({ questionCount: 10 }));
     });
   });
 
@@ -411,7 +489,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       const mockPracticeResponse = {
         sessionId: "practice-session-domain",
         route: "/practice?sessionId=practice-session-domain",
-        questionCount: 10,
+        questionCount: 5,
       };
 
       mockSummaryAndPractice(mockSuccessResponse, {
@@ -427,7 +505,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       });
 
       const studyPlanButtons = screen.getAllByRole("button", { 
-        name: /start practice \(10\)/i 
+        name: /start practice \(5\)/i
       });
       
       expect(studyPlanButtons.length).toBeGreaterThan(0);
@@ -440,7 +518,7 @@ describe("DiagnosticSummaryPage Integration", () => {
             sessionId: "test-session-123",
             examKey: "pmle",
             domainCodes: expect.any(Array),
-            questionCount: 10,
+            questionCount: 5,
             source: "domain_row",
           })
         );
@@ -536,7 +614,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       const mockPracticeResponse = {
         sessionId: "practice-session-456",
         route: "/practice?sessionId=practice-session-456",
-        questionCount: 10,
+        questionCount: 5,
       };
 
       mockSummaryAndPractice(mockSuccessResponse, {
@@ -550,7 +628,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       });
 
       const practiceButton = screen.getByRole("button", { 
-        name: /start 10-min practice on your weakest topics/i 
+        name: /start 5-question practice on your weakest topics/i
       });
       fireEvent.click(practiceButton);
 
@@ -567,7 +645,7 @@ describe("DiagnosticSummaryPage Integration", () => {
         const body = JSON.parse(practiceCall[1].body);
         expect(body).toMatchObject({
           examKey: "pmle",
-          questionCount: 10,
+          questionCount: 5,
           source: "diagnostic_summary",
           sourceSessionId: "test-session-123",
         });
@@ -586,7 +664,7 @@ describe("DiagnosticSummaryPage Integration", () => {
           practiceSessionId: "practice-session-456",
           examKey: "pmle",
           domainCodes: expect.any(Array),
-          questionCount: 10,
+          questionCount: 5,
         })
       );
       
@@ -597,7 +675,7 @@ describe("DiagnosticSummaryPage Integration", () => {
           sessionId: "test-session-123",
           examKey: "pmle",
           domainCodes: expect.any(Array),
-          questionCount: 10,
+          questionCount: 5,
           source: "weakest",
         })
       );
@@ -607,7 +685,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       const mockPracticeResponse = {
         sessionId: "practice-session-789",
         route: "/practice?sessionId=practice-session-789",
-        questionCount: 10,
+        questionCount: 5,
       };
 
       mockSummaryAndPractice(mockSuccessResponse, {
@@ -621,7 +699,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       });
 
       const studyPlanButtons = screen.getAllByRole("button", { 
-        name: /start practice \(10\)/i 
+        name: /start practice \(5\)/i
       });
       
       if (studyPlanButtons.length > 0) {
@@ -632,7 +710,7 @@ describe("DiagnosticSummaryPage Integration", () => {
             "/api/practice/session",
             expect.objectContaining({
               method: "POST",
-              body: expect.stringContaining('"questionCount":10'),
+              body: expect.stringContaining('"questionCount":5'),
             })
           );
         });
@@ -656,7 +734,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       });
 
       const practiceButton = screen.getByRole("button", { 
-        name: /start 10-min practice on your weakest topics/i 
+        name: /start 5-question practice on your weakest topics/i
       });
       fireEvent.click(practiceButton);
 
@@ -699,7 +777,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       });
 
       const practiceButton = screen.getByRole("button", { 
-        name: /start 10-min practice on your weakest topics/i 
+        name: /start 5-question practice on your weakest topics/i
       });
       fireEvent.click(practiceButton);
 
@@ -717,7 +795,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       });
       render(<DiagnosticSummaryPage />);
       const practiceButton = await screen.findByRole("button", {
-        name: /start 10-min practice on your weakest topics/i,
+        name: /start 5-question practice on your weakest topics/i,
       });
       fireEvent.click(practiceButton);
       await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith("/practice/session/quota-session"));
@@ -737,7 +815,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       const mockPracticeResponse = {
         sessionId: "practice-session-999",
         route: "/practice?sessionId=practice-session-999",
-        questionCount: 10,
+        questionCount: 5,
       };
 
       mockSummaryAndPractice(mockResponseWithWeakDomains, {
@@ -751,7 +829,7 @@ describe("DiagnosticSummaryPage Integration", () => {
       });
 
       const practiceButton = screen.getByRole("button", { 
-        name: /start 10-min practice on your weakest topics/i 
+        name: /start 5-question practice on your weakest topics/i
       });
       fireEvent.click(practiceButton);
 

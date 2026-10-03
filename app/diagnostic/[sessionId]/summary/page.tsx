@@ -57,6 +57,7 @@ const getDomainCodeFromDisplayName = (displayName: string): string | null => {
 
 // Minimum attempts required for a domain to be eligible for practice
 const MIN_DOMAIN_ATTEMPTS_FOR_PRACTICE = 1;
+const EMPTY_DOMAINS: DomainBreakdown[] = [];
 
 // Select weakest 2-3 domains with sufficient attempts
 const selectWeakestDomains = (domainBreakdown: DomainBreakdown[]): string[] => {
@@ -199,6 +200,7 @@ const VerdictBlock = ({
   onStartPractice,
   onRetakeDiagnostic,
   isLoading,
+  questionCount,
   domainBreakdown,
   verdictCopyVariant
 }: {
@@ -206,6 +208,7 @@ const VerdictBlock = ({
   onStartPractice: () => void;
   onRetakeDiagnostic: () => void;
   isLoading?: boolean;
+  questionCount: number;
   domainBreakdown: DomainBreakdown[];
   verdictCopyVariant: 'control' | 'risk_qualifier' | 'unknown';
 }) => {
@@ -339,7 +342,7 @@ const VerdictBlock = ({
       {/* CTAs */}
       <div className="flex flex-col sm:flex-row gap-3 mt-6">
         <Button onClick={onStartPractice} tone="accent" size="md" disabled={isLoading}>
-          {isLoading ? "Creating practice session..." : "Start 10-min practice on your weakest topics"}
+          {isLoading ? "Creating practice session..." : `Start ${questionCount}-question practice on your weakest topics`}
         </Button>
         <Button
           onClick={onRetakeDiagnostic}
@@ -400,11 +403,13 @@ const DomainPerformance = ({
 const StudyPlan = ({ 
   domains, 
   onStartPractice,
-  isLoading 
+  isLoading,
+  questionCount
 }: { 
   domains: DomainBreakdown[];
   onStartPractice: (domainCodes: string[]) => void;
   isLoading?: boolean;
+  questionCount: number;
 }) => {
   // Handle legacy sessions without domain breakdown
   if (domains.length === 0) {
@@ -430,7 +435,7 @@ const StudyPlan = ({
             tone="accent"
             disabled={isLoading}
           >
-            {isLoading ? "Creating..." : "Start general practice (10 questions)"}
+            {isLoading ? "Creating..." : `Start general practice (${questionCount} questions)`}
           </Button>
         </div>
       </div>
@@ -479,7 +484,7 @@ const StudyPlan = ({
                 className="text-xs"
                 disabled={isLoading}
               >
-                {isLoading ? "Creating..." : "Start practice (10)"}
+                {isLoading ? "Creating..." : `Start practice (${questionCount})`}
               </Button>
             </div>
           );
@@ -884,12 +889,25 @@ const DiagnosticSummaryPage = () => {
   const posthog = usePostHog();
   const sessionId = params?.sessionId as string;
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<ExtendedSessionSummary | null>(null);
-  const [domainBreakdown, setDomainBreakdown] = useState<DomainBreakdown[]>([]);
+  const identityKey = user?.id ?? "anonymous";
+  const [accessSnapshot, setAccessSnapshot] = useState<{ identity: string; level: AccessLevel } | null>(null);
+  // Do not reuse a previous account's paid UI, even for the render before effects run.
+  const accessLevel = !isAuthLoading && accessSnapshot?.identity === identityKey
+    ? accessSnapshot.level : getPmleAccessLevelForUser(isAuthLoading ? null : user, null);
+  const practiceQuestionCount = accessLevel === "SUBSCRIBER" ? 10 : 5;
+  const summaryKey = `${identityKey}:${sessionId}:${accessLevel}`;
+  const [summaryResult, setSummaryResult] = useState<{
+    key: string;
+    summary: ExtendedSessionSummary | null;
+    domains: DomainBreakdown[];
+    error: string | null;
+  } | null>(null);
+  const currentResult = !isAuthLoading && summaryResult?.key === summaryKey ? summaryResult : null;
+  const loading = isAuthLoading || currentResult === null;
+  const summary = currentResult?.summary ?? null;
+  const domainBreakdown = currentResult?.domains ?? EMPTY_DOMAINS;
+  const error = currentResult?.error ?? null;
   const [creatingPracticeSession, setCreatingPracticeSession] = useState(false);
-  const [accessLevel, setAccessLevel] = useState<AccessLevel>("ANONYMOUS");
   const [showSignupPanel, setShowSignupPanel] = useState(true);
   const [hasTrackedGatedView, setHasTrackedGatedView] = useState(false);
   
@@ -957,81 +975,65 @@ const DiagnosticSummaryPage = () => {
     });
   }, [posthog]);
 
-  // Fetch billing status to compute access level
+  // Keep billing responses scoped to the account that requested them.
   useEffect(() => {
-    if (isAuthLoading) {
-      return; // Wait for auth state
-    }
-
+    if (isAuthLoading) return;
+    let active = true;
+    setAccessSnapshot({ identity: identityKey, level: getPmleAccessLevelForUser(user, null) });
     const fetchBillingStatus = async () => {
       try {
         const response = await fetch("/api/billing/status");
-        if (response.ok) {
-          const data = (await response.json()) as BillingStatusResponse;
-          const level = getPmleAccessLevelForUser(user, data);
-          setAccessLevel(level);
-        }
+        if (!response.ok) throw new Error("Failed to load billing status");
+        const data = (await response.json()) as BillingStatusResponse;
+        if (active) setAccessSnapshot({ identity: identityKey, level: getPmleAccessLevelForUser(user, data) });
       } catch (err) {
-        console.error("Error fetching billing status:", err);
-        // Default to ANONYMOUS if fetch fails
-        setAccessLevel(getPmleAccessLevelForUser(user, null));
+        if (active) {
+          console.error("Error fetching billing status:", err);
+          setAccessSnapshot({ identity: identityKey, level: getPmleAccessLevelForUser(user, null) });
+        }
       }
     };
-
-    fetchBillingStatus();
-  }, [user, isAuthLoading]);
+    void fetchBillingStatus();
+    return () => { active = false; };
+  }, [user, identityKey, isAuthLoading]);
 
   useEffect(() => {
+    if (isAuthLoading) return;
+    let active = true;
+    const failure = (message: string) => {
+      if (active) setSummaryResult({ key: summaryKey, summary: null, domains: [], error: message });
+    };
     const fetchSummary = async () => {
       if (!sessionId) {
-        setError("Session ID not found");
-        setLoading(false);
+        failure("Session ID not found");
         return;
       }
-
-      if (isAuthLoading) {
-        return; // Wait for auth state
-      }
-
       try {
         let apiUrl = `/api/diagnostic/summary/${sessionId}`;
-
-        // Include anonymous session ID if user is not logged in
         if (!user) {
           const anonymousSessionId = localStorage.getItem("anonymousSessionId");
-          if (anonymousSessionId) {
-            apiUrl += `?anonymousSessionId=${anonymousSessionId}`;
-          }
+          if (anonymousSessionId) apiUrl += `?anonymousSessionId=${anonymousSessionId}`;
         }
-
         const response = await fetch(apiUrl);
         const data = (await response.json()) as {
           error?: string;
           summary?: ExtendedSessionSummary;
           domainBreakdown?: DomainBreakdown[];
         };
-
+        if (!active) return;
         if (!response.ok) {
-          if (response.status === 404) {
-            setError("session_not_found");
-          } else if (response.status === 403) {
-            setError("access_denied");
-          } else if (response.status === 400) {
-            setError("session_not_completed");
-          } else if (response.status === 410) {
-            setError("session_expired");
-          } else {
-            setError(data.error || "Failed to load summary");
-          }
+          const errors: Record<number, string> = {
+            404: "session_not_found", 403: "access_denied", 400: "session_not_completed", 410: "session_expired",
+          };
+          failure(errors[response.status] ?? data.error ?? "Failed to load summary");
           return;
         }
-
-        if (data.summary) {
-          setSummary({ ...data.summary, questions: data.summary.questions ?? [] });
-        }
-        setDomainBreakdown(data.domainBreakdown || []);
-
-        // Track summary view
+        setSummaryResult({
+          key: summaryKey,
+          summary: data.summary ? { ...data.summary, questions: data.summary.questions ?? [] } : null,
+          domains: data.domainBreakdown ?? [],
+          error: null,
+        });
         if (data.summary) {
           trackEvent(posthog, ANALYTICS_EVENTS.DIAGNOSTIC_SUMMARY_VIEWED, {
             sessionId: data.summary.sessionId,
@@ -1045,21 +1047,19 @@ const DiagnosticSummaryPage = () => {
             verdict_copy_variant: verdictCopyVariant,
           });
         }
-
-        // Clean up localStorage since session is completed
         localStorage.removeItem("testero_diagnostic_session_id");
-
       } catch (err) {
-        console.error("Error fetching summary:", err);
-        setError("Failed to load diagnostic summary");
-      } finally {
-        setLoading(false);
+        if (active) {
+          console.error("Error fetching summary:", err);
+          failure("Failed to load diagnostic summary");
+        }
       }
     };
-
-    fetchSummary();
+    void fetchSummary();
+    return () => { active = false; };
+  // The A/B copy does not change the underlying authorized result.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, user, isAuthLoading, posthog, accessLevel]);
+  }, [summaryKey, sessionId, user, isAuthLoading, posthog]);
 
   // Track gated summary view for anonymous users
   useEffect(() => {
@@ -1123,7 +1123,7 @@ const DiagnosticSummaryPage = () => {
         sessionId: summary.sessionId,
         examKey: "pmle",
         domainCodes: codesToUse,
-        questionCount: 10,
+        questionCount: practiceQuestionCount,
         source: domainCodes && domainCodes.length > 0 ? "domain_row" : "weakest",
         verdict_copy_variant: verdictCopyVariant,
       });
@@ -1139,7 +1139,7 @@ const DiagnosticSummaryPage = () => {
         body: JSON.stringify({
           examKey: 'pmle',
           domainCodes: codesToUse,
-          questionCount: 10,
+          questionCount: practiceQuestionCount,
           source: 'diagnostic_summary',
           sourceSessionId: summary.sessionId,
         }),
@@ -1209,7 +1209,7 @@ const DiagnosticSummaryPage = () => {
     } finally {
       setCreatingPracticeSession(false);
     }
-  }, [posthog, accessLevel, router, summary, domainBreakdown, addToast, upsell, verdictCopyVariant]);
+  }, [posthog, accessLevel, router, summary, domainBreakdown, addToast, upsell, verdictCopyVariant, practiceQuestionCount]);
 
   const handleRetakeDiagnostic = useCallback(() => {
     router.push("/diagnostic");
@@ -1460,6 +1460,7 @@ const DiagnosticSummaryPage = () => {
             {/* Verdict Block */}
             <VerdictBlock 
               summary={summary}
+              questionCount={practiceQuestionCount}
               onStartPractice={() => handleStartPractice()}
               onRetakeDiagnostic={handleRetakeDiagnostic}
               isLoading={creatingPracticeSession}
@@ -1498,6 +1499,7 @@ const DiagnosticSummaryPage = () => {
               <LockedSection isLocked={isAnonymous}>
                 <StudyPlan 
                   domains={domainBreakdown}
+                  questionCount={practiceQuestionCount}
                   onStartPractice={handleStartPractice}
                   isLoading={creatingPracticeSession}
                 />
