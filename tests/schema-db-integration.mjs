@@ -116,7 +116,19 @@ try {
   assert.equal((await scalar(authRead(owner))).split("\n").at(-1), "1", "owner can read metadata");
   assert.equal((await scalar(authRead(other))).split("\n").at(-1), "0", "foreign metadata hidden by RLS");
   await denied(`BEGIN; SET LOCAL ROLE authenticated; UPDATE public.study_sessions SET completed_at=now() WHERE id=${q(userSession)}; ROLLBACK;`, "browser cannot write session state");
-  console.log("PASS concurrent five-question limit, transactional rollback, owned metadata RLS, browser write denial");
+  // Regression: a restored legacy broad SELECT policy must not OR away ownership.
+  // DDL lives only in this transaction; ROLLBACK removes the fixture without policy drops.
+  const broadPolicy = "local_broad_" + randomUUID().replaceAll("-", "");
+  const broadRead = (id) => `BEGIN;
+    CREATE POLICY ${broadPolicy} ON public.study_sessions FOR SELECT TO authenticated USING (true);
+    SET LOCAL ROLE authenticated;
+    SELECT set_config('request.jwt.claim.sub',${q(id)},true);
+    SELECT count(*) FROM public.study_sessions WHERE id=${q(userSession)};
+    ROLLBACK;`;
+  assert.equal((await scalar(broadRead(other))).split("\n").at(-1), "0", "restrictive gate defeats legacy broad SELECT for foreign owner");
+  assert.equal((await scalar(broadRead(owner))).split("\n").at(-1), "1", "restrictive gate still permits own metadata with broad fixture");
+  assert.equal(await scalar(`SELECT count(*) FROM pg_policies WHERE schemaname='public' AND tablename='study_sessions' AND policyname=${q(broadPolicy)};`), "0", "fixture policy rolled back");
+  console.log("PASS concurrent five-question limit, transactional rollback, owned metadata RLS, legacy broad-policy isolation, browser write denial");
 
   const paidAt = "2026-10-03T12:00:00Z", refundedAt = "2026-10-03T13:00:00Z";
   const fulfill = (pi, cs) => `SELECT id FROM public.fulfill_pmle_pass(${q(paidOwner)},${q(cs)},${q(pi)},'local-customer',${q(paidAt)}::timestamptz)`;

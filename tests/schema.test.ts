@@ -19,6 +19,16 @@ describe("v2 baseline security and replay contracts", () => {
     expect(sql).toContain("IF NOT EXISTS (SELECT 1 FROM pg_policies");
     expect(sql).not.toMatch(/CREATE INDEX (?!IF NOT EXISTS)/i);
   });
+  it("ANDs owner isolation with any existing permissive metadata policy", () => {
+    for (const table of ["user_subscriptions", "payment_history", "study_sessions", "pmle_passes", "free_practice_quota"]) {
+      expect(sql).toContain(`tablename = '${table}' AND policyname = 'v2_owner_gate'`);
+      expect(sql).toContain(`CREATE POLICY v2_owner_gate ON public.${table} AS RESTRICTIVE FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id);`);
+    }
+    for (const table of ["user_subscriptions", "payment_history", "study_sessions", "pmle_passes"]) {
+      expect(sql).toContain(`CREATE POLICY v2_own_metadata ON public.${table} FOR SELECT TO authenticated`);
+    }
+    expect(sql).not.toContain("GRANT SELECT ON TABLE public.free_practice_quota TO authenticated");
+  });
   it("keeps questions, correct answers, explanations and snapshots server-only", () => {
     for (const table of ["questions", "answers", "explanations", "session_items", "webhook_events", "pmle_pass_refunds"]) {
       expect(sql).not.toMatch(new RegExp(`GRANT SELECT ON TABLE public\\.${table} TO (anon|authenticated)`));

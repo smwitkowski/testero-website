@@ -152,11 +152,19 @@ DO $policy$ BEGIN
  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'user_subscriptions' AND policyname = 'v2_own_metadata') THEN
   CREATE POLICY v2_own_metadata ON public.user_subscriptions FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id);
  END IF;
+ -- Restrictive policies are ANDed with every permissive policy, including legacy ones.
+ IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'user_subscriptions' AND policyname = 'v2_owner_gate') THEN
+  CREATE POLICY v2_owner_gate ON public.user_subscriptions AS RESTRICTIVE FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id);
+ END IF;
 END $policy$;
 GRANT SELECT ON TABLE public.payment_history TO authenticated;
 DO $policy$ BEGIN
  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'payment_history' AND policyname = 'v2_own_metadata') THEN
   CREATE POLICY v2_own_metadata ON public.payment_history FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id);
+ END IF;
+ -- Restrictive policies are ANDed with every permissive policy, including legacy ones.
+ IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'payment_history' AND policyname = 'v2_owner_gate') THEN
+  CREATE POLICY v2_owner_gate ON public.payment_history AS RESTRICTIVE FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id);
  END IF;
 END $policy$;
 GRANT SELECT ON TABLE public.study_sessions TO authenticated;
@@ -164,11 +172,25 @@ DO $policy$ BEGIN
  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'study_sessions' AND policyname = 'v2_own_metadata') THEN
   CREATE POLICY v2_own_metadata ON public.study_sessions FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id);
  END IF;
+ -- Restrictive policies are ANDed with every permissive policy, including legacy ones.
+ IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'study_sessions' AND policyname = 'v2_owner_gate') THEN
+  CREATE POLICY v2_owner_gate ON public.study_sessions AS RESTRICTIVE FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id);
+ END IF;
 END $policy$;
 GRANT SELECT ON TABLE public.pmle_passes TO authenticated;
 DO $policy$ BEGIN
  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'pmle_passes' AND policyname = 'v2_own_metadata') THEN
   CREATE POLICY v2_own_metadata ON public.pmle_passes FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id);
+ END IF;
+ -- Restrictive policies are ANDed with every permissive policy, including legacy ones.
+ IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'pmle_passes' AND policyname = 'v2_owner_gate') THEN
+  CREATE POLICY v2_owner_gate ON public.pmle_passes AS RESTRICTIVE FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id);
+ END IF;
+END $policy$;
+-- Quota remains server-only (no browser SELECT grant or permissive policy).
+DO $policy$ BEGIN
+ IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'free_practice_quota' AND policyname = 'v2_owner_gate') THEN
+  CREATE POLICY v2_owner_gate ON public.free_practice_quota AS RESTRICTIVE FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id);
  END IF;
 END $policy$;
 CREATE INDEX IF NOT EXISTS questions_exam_idx ON public.questions (exam);
