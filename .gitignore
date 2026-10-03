@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+.env*
+!.env.example
+.DS_Store
+npm-debug.log*
+playwright-report/
+test-results/
+supabase/.temp/
+supabase/.branches/
+# Keep the separate content pipeline source and its own dependency files.
+content-pipeline/node_modules/
+content-pipeline/.venv/
+content-pipeline/__pycache__/

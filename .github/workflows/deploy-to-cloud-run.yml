@@ -1,169 +1,101 @@
-name: CI/CD Pipeline
+name: Testero v2 CI and Cloud Run
 
 on:
-  # Trigger on push to main branch
   push:
-    branches:
-      - main
-  # Trigger on pull requests
+    branches: [main]
   pull_request:
-    branches:
-      - main
-  # Optionally enable manual triggering
+    branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  REGION: ${{ secrets.GCP_REGION }}
-  SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
-  REPOSITORY: ${{ secrets.ARTIFACT_REPOSITORY }}
-  NODE_VERSION: '20'
+  NODE_VERSION: "22"
+  NEXT_TELEMETRY_DISABLED: "1"
 
 jobs:
-  # Job for code quality checks
   quality:
-    name: Code Quality
     runs-on: ubuntu-latest
-    
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: local-anon-key-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: local-service-role-key-placeholder
+      NEXT_PUBLIC_POSTHOG_KEY: ""
+      NEXT_PUBLIC_POSTHOG_HOST: ""
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Run ESLint
-        run: npm run lint
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
 
-      - name: ESLint rule tests
-        run: npm run test:eslint-rules
-        
-      - name: Type check
-        run: npx tsc --noEmit -p tsconfig.build.json
-
-      - name: Jest tests
-        run: npm run test:ci
-  
-  # Job for building and pushing Docker image
+  # PR checks never contact production or push images.
   build:
-    name: Build and Push
-    runs-on: ubuntu-latest
     needs: quality
-    # Only run on main branch or pull requests that passed quality checks
-    if: success() && (github.ref == 'refs/heads/main' || github.event_name == 'pull_request')
-    
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
-    
     outputs:
-      image: ${{ steps.set-image.outputs.image }}
-    
+      image: ${{ steps.image.outputs.name }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Authenticate to Google Cloud
-        id: auth
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - id: auth
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-      
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+          token_format: access_token
+      - uses: docker/login-action@v3
         with:
-          project_id: ${{ env.PROJECT_ID }}
-      
-      - name: Configure Docker for Artifact Registry
-        run: |
-          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
-      
-      - name: Build and push Docker image
-        id: build-image
-        uses: docker/build-push-action@v5
+          registry: ${{ secrets.GCP_REGION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+      - id: image
+        env:
+          IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/frontend:${{ github.sha }}
+        run: echo "name=$IMAGE" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }}
+          tags: ${{ steps.image.outputs.name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          # Pass secrets as build arguments (fallback to production URL for PR builds)
           build-args: |
-            NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL || 'https://testero.ai' }}
-            NEXT_PUBLIC_POSTHOG_KEY=${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }}
-            NEXT_PUBLIC_POSTHOG_HOST=${{ secrets.NEXT_PUBLIC_POSTHOG_HOST }}
             NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
             NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      
-      - name: Image digest
-        run: echo "Image digest=${{ steps.build-image.outputs.digest }}"
-      
-      - name: Set image output
-        id: set-image
-        run: echo "image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
-  
-  # Job for deploying to Cloud Run (only on main branch)
+            NEXT_PUBLIC_POSTHOG_KEY=${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }}
+            NEXT_PUBLIC_POSTHOG_HOST=${{ secrets.NEXT_PUBLIC_POSTHOG_HOST }}
+
   deploy:
-    name: Deploy to Cloud Run
-    runs-on: ubuntu-latest
     needs: build
-    # Only deploy on main branch
-    if: success() && github.ref == 'refs/heads/main'
-    
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
-    
     steps:
-      - name: Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@v2
+      - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-      
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/deploy-cloudrun@v2
         with:
-          project_id: ${{ env.PROJECT_ID }}
-      
-      # ----- Add this step for debugging -----
-      - name: Debug Image Output
-        run: "echo Image from build job is: [${{ needs.build.outputs.image }}]"
-      # --------------------------------------
-      
-      - name: Deploy to Cloud Run
-        id: deploy
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: ${{ env.SERVICE_NAME }}
-          region: ${{ env.REGION }}
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }}
-          flags: |
-            --allow-unauthenticated
-            --memory=1Gi
-            --cpu=1
-            --min-instances=0
-            --max-instances=10
-            --port=3000
-            --set-env-vars=NODE_ENV=production,NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }},NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }},NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }},SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }},NEXT_PUBLIC_POSTHOG_KEY=${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }},NEXT_PUBLIC_POSTHOG_HOST=${{ secrets.NEXT_PUBLIC_POSTHOG_HOST }},STRIPE_PRICE_PMLE_PASS=${{ secrets.STRIPE_PRICE_PMLE_PASS }},STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }},STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }},PAYWALL_SIGNING_SECRET=${{ secrets.PAYWALL_SIGNING_SECRET }}
-      
-      - name: Show Output
-        run: echo "Deployed to ${{ steps.deploy.outputs.url }}"
-      
-      - name: Deployment Status Notification
-        if: always()
-        run: |
-          if [ "${{ job.status }}" == "success" ]; then
-            echo "✅ Deployment successful! Application is live at: ${{ steps.deploy.outputs.url }}"
-          else
-            echo "❌ Deployment failed. Check the logs for more information."
-          fi
+          service: ${{ secrets.SERVICE_NAME }}
+          region: ${{ secrets.GCP_REGION }}
+          image: ${{ needs.build.outputs.image }}
+          flags: --allow-unauthenticated --memory=1Gi --cpu=1 --min-instances=0 --max-instances=10 --port=3000
+          env_vars: |
+            NODE_ENV=production
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+            SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+            NEXT_PUBLIC_POSTHOG_KEY=${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }}
+            NEXT_PUBLIC_POSTHOG_HOST=${{ secrets.NEXT_PUBLIC_POSTHOG_HOST }}

@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.github
+.env*
+!.env.example
+*.tsbuildinfo
+playwright-report
+test-results
+e2e
+content-pipeline
+supabase
+content
+docs
+README.md
+CLAUDE.md
