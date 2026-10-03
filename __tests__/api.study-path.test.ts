@@ -122,7 +122,11 @@ describe("/api/study-path - TDD RED Phase", () => {
 
       const request = new NextRequest("http://localhost:3000/api/study-path", {
         method: "POST",
-        body: JSON.stringify({ score: 50, domains: [] }),
+        // A valid payload isolates authentication from domain validation (9972ec1).
+        body: JSON.stringify({
+          score: 50,
+          domains: [{ domain: "Neural Networks", correct: 1, total: 2, percentage: 50 }],
+        }),
       });
 
       const response = await POST(request);

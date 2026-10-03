@@ -40,7 +40,7 @@ describe("StudyPathPage - Authentication", () => {
       expect(mockPush).not.toHaveBeenCalled();
     });
 
-    it("should show login prompt for anonymous users", () => {
+    it("should show signup and login options for anonymous users", () => {
       // Mock anonymous user
       (useAuth as jest.Mock).mockReturnValue({
         user: null,
@@ -49,8 +49,9 @@ describe("StudyPathPage - Authentication", () => {
 
       render(<StudyPathPage />);
 
-      // Should display login prompt
-      expect(screen.getByText(/sign in to access/i)).toBeInTheDocument();
+      // The public study path preview offers signup and login (f32df17).
+      expect(screen.getByRole("heading", { name: /sign up to see full path/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /sign up to see full path/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
     });
 
@@ -66,10 +67,10 @@ describe("StudyPathPage - Authentication", () => {
       const signInButton = screen.getByRole("button", { name: /sign in/i });
       signInButton.click();
 
-      expect(mockPush).toHaveBeenCalledWith("/login?redirect=/study-path");
+      expect(mockPush).toHaveBeenCalledWith("/login?redirect=%2Fstudy-path");
     });
 
-    it("should show loading state while checking authentication", () => {
+    it("should render the public preview while authentication resolves", () => {
       // Mock loading state
       (useAuth as jest.Mock).mockReturnValue({
         user: null,
@@ -78,7 +79,9 @@ describe("StudyPathPage - Authentication", () => {
 
       render(<StudyPathPage />);
 
-      expect(screen.getByText(/loading/i)).toBeInTheDocument();
+      // Client auth loading gates were removed in 1fdddf4; middleware owns protection.
+      expect(screen.getByRole("heading", { name: /sign up to see full path/i })).toBeInTheDocument();
+      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
     });
 
     it("should preserve diagnostic data after login redirect", () => {
