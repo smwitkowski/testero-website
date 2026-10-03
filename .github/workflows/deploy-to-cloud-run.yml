@@ -46,6 +46,9 @@ jobs:
         
       - name: Type check
         run: npx tsc --noEmit -p tsconfig.build.json
+
+      - name: Jest tests
+        run: npm run test:ci
   
   # Job for building and pushing Docker image
   build:
