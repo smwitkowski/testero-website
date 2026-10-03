@@ -60,9 +60,8 @@ describe("GET /api/dashboard - Practice Stats", () => {
       // Mock practice_attempts count queries
       // Count queries return { count, error } when awaited
       const practiceCountMock = jest.fn().mockReturnValue({
-        select: jest.fn().mockResolvedValue({
-          count: 10,
-          error: null,
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ count: 10, error: null }),
         }),
       });
 
@@ -130,9 +129,8 @@ describe("GET /api/dashboard - Practice Stats", () => {
 
       // Mock practice counts: 10 total, 7 correct
       const practiceCountMock = jest.fn().mockReturnValue({
-        select: jest.fn().mockResolvedValue({
-          count: 10,
-          error: null,
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ count: 10, error: null }),
         }),
       });
 
@@ -191,9 +189,8 @@ describe("GET /api/dashboard - Practice Stats", () => {
       });
 
       const practiceCountMock = jest.fn().mockReturnValue({
-        select: jest.fn().mockResolvedValue({
-          count: 5,
-          error: null,
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ count: 5, error: null }),
         }),
       });
 
@@ -282,9 +279,8 @@ describe("GET /api/dashboard - Practice Stats", () => {
 
       // Mock practice stats (7/10 = 70%)
       const practiceCountMock = jest.fn().mockReturnValue({
-        select: jest.fn().mockResolvedValue({
-          count: 10,
-          error: null,
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ count: 10, error: null }),
         }),
       });
 
@@ -402,6 +398,7 @@ describe("GET /api/dashboard - Practice Stats", () => {
         .mockReturnValueOnce(diagnosticSessionsMock()) // diagnostics_sessions
         .mockReturnValueOnce(diagnosticResponsesMock()) // diagnostic_responses
         .mockReturnValueOnce(practiceCountMock()) // practice_attempts (total)
+        .mockReturnValueOnce({ select: jest.fn(() => ({ eq: jest.fn(() => ({ eq: jest.fn().mockResolvedValue({ count: 0, error: null }) })) })) })
         .mockReturnValueOnce(practiceLastDateMock()); // practice_attempts (last date)
 
       const response = await GET();

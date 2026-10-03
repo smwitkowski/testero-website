@@ -4,8 +4,10 @@ import { isSubscriber } from "@/lib/auth/entitlements";
 import { getServerPostHog } from "@/lib/analytics/server-analytics";
 import { trackEvent, ANALYTICS_EVENTS } from "@/lib/analytics/analytics";
 import { cookies } from "next/headers";
+import { isBillingEnforcementActive } from "@/lib/billing/enforcement";
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import { PAYWALL_GRACE_COOKIE } from "@/lib/billing/grace-cookie";
 
 // Mock NextResponse
 jest.mock("next/server", () => ({
@@ -14,6 +16,7 @@ jest.mock("next/server", () => ({
     json: jest.fn((data, init) => ({
       json: async () => data,
       status: init?.status || 200,
+      cookies: { set: jest.fn() },
     })),
   },
 }));
@@ -24,6 +27,9 @@ jest.mock("@/lib/auth/entitlements");
 jest.mock("@/lib/analytics/server-analytics");
 jest.mock("@/lib/analytics/analytics");
 jest.mock("next/headers");
+jest.mock("@/lib/billing/enforcement", () => ({
+  isBillingEnforcementActive: jest.fn(() => true),
+}));
 
 describe("requireSubscriber", () => {
   let mockSupabase: any;
@@ -33,9 +39,11 @@ describe("requireSubscriber", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (isSubscriber as jest.Mock).mockResolvedValue(false);
+    (isBillingEnforcementActive as jest.Mock).mockReturnValue(true);
     
-    // Set GRACE_COOKIE_SECRET for tests
-    process.env.GRACE_COOKIE_SECRET = "test-secret";
+    // Set PAYWALL_SIGNING_SECRET for tests
+    process.env.PAYWALL_SIGNING_SECRET = "test-secret";
     
     // Mock console.log for structured logging
     consoleSpy = jest.spyOn(console, "log").mockImplementation();
@@ -68,7 +76,7 @@ describe("requireSubscriber", () => {
   });
 
   afterEach(() => {
-    delete process.env.GRACE_COOKIE_SECRET;
+    delete process.env.PAYWALL_SIGNING_SECRET;
     consoleSpy.mockRestore();
   });
 
@@ -77,22 +85,24 @@ describe("requireSubscriber", () => {
       method: "GET",
     });
     if (cookieValue) {
-      // URL encode the cookie value to handle base64 characters like +, /, =
-      const encodedValue = encodeURIComponent(cookieValue);
-      req.headers.set("cookie", `tgrace=${encodedValue}`);
+      req.cookies.set(PAYWALL_GRACE_COOKIE, cookieValue);
     }
     return req;
   };
 
-  const createGraceCookie = (userId: string, exp?: number): string => {
-    const secret = process.env.GRACE_COOKIE_SECRET || "test-secret";
-    const expiresAt = exp || Math.floor(Date.now() / 1000) + 24 * 60 * 60; // 24h from now
-    const payload = JSON.stringify({ userId, exp: expiresAt });
-    const hmac = crypto.createHmac("sha256", secret);
-    hmac.update(payload);
-    const signature = hmac.digest("hex");
-    return `${Buffer.from(payload).toString("base64")}.${signature}`;
+  const createGraceCookie = (_userId: string, exp?: number): string => {
+    const expiresAt = exp || Math.floor(Date.now() / 1000) + 24 * 60 * 60;
+    const payload = JSON.stringify({ checkoutSuccess: true, exp: expiresAt });
+    const signature = crypto.createHmac("sha256", "test-secret").update(payload).digest("base64url");
+    return `${Buffer.from(payload).toString("base64url")}.${signature}`;
   };
+  it("bypasses auth and subscription checks when billing enforcement is disabled", async () => {
+    (isBillingEnforcementActive as jest.Mock).mockReturnValue(false);
+    expect(await requireSubscriber(createRequest(), "/api/test")).toBeNull();
+    expect(mockSupabase.auth.getUser).not.toHaveBeenCalled();
+    expect(isSubscriber).not.toHaveBeenCalled();
+    expect(trackEvent).not.toHaveBeenCalled();
+  });
 
   describe("grace cookie validation", () => {
     it("should allow access with valid grace cookie", async () => {
@@ -127,15 +137,15 @@ describe("requireSubscriber", () => {
         ANALYTICS_EVENTS.ENTITLEMENT_CHECK_FAILED,
         expect.objectContaining({
           route: "/api/test",
-          reason: "grace_cookie_expired",
+          reason: "not_subscriber",
         }),
-        "user-grace"
+        "user-123"
       );
     });
 
     it("should block access with invalid signature", async () => {
-      const payload = JSON.stringify({ userId: "user-grace", exp: Math.floor(Date.now() / 1000) + 3600 });
-      const invalidCookie = `${Buffer.from(payload).toString("base64")}.invalid-signature`;
+      const payload = JSON.stringify({ checkoutSuccess: true, exp: Math.floor(Date.now() / 1000) + 3600 });
+      const invalidCookie = `${Buffer.from(payload).toString("base64url")}.invalid-signature`;
       const req = createRequest(invalidCookie);
 
       const result = await requireSubscriber(req, "/api/test");
@@ -149,9 +159,9 @@ describe("requireSubscriber", () => {
         ANALYTICS_EVENTS.ENTITLEMENT_CHECK_FAILED,
         expect.objectContaining({
           route: "/api/test",
-          reason: "grace_cookie_invalid",
+          reason: "not_subscriber",
         }),
-        undefined
+        "user-123"
       );
     });
   });
@@ -234,13 +244,10 @@ describe("requireSubscriber", () => {
   });
 
   describe("Request vs NextRequest compatibility", () => {
-    it.skip("should work with plain Request object", async () => {
-      // Note: This test is skipped because mocking Request properly in Jest is complex.
-      // The implementation handles both Request and NextRequest in production.
-      // In production, NextRequest is always used, so this edge case is less critical.
+    it("should work with plain Request object", async () => {
       const cookieValue = createGraceCookie("user-grace");
       const mockHeaders = new Headers();
-      mockHeaders.set("cookie", `tgrace=${cookieValue}`);
+      mockHeaders.set("cookie", `${PAYWALL_GRACE_COOKIE}=${cookieValue}`);
       const req = {
         headers: mockHeaders,
       } as unknown as Request;
