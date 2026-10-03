@@ -26,7 +26,7 @@ function timestamp(value: unknown): value is string {
   const day = value.slice(0, 10);
   return new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) === day;
 }
-function validPass(value: unknown): value is PmlePass {
+export function isValidPass(value: unknown): value is PmlePass {
   if (!value || typeof value !== "object") return false;
   const pass = value as PmlePass;
   return typeof pass.id === "string" && UUID.test(pass.id) && timestamp(pass.paid_at) && timestamp(pass.expires_at)
@@ -36,7 +36,7 @@ function validPass(value: unknown): value is PmlePass {
 
 /** Shared predicate for safe, active metadata; malformed rows never grant access. */
 export function isActivePass(pass: unknown, now = Date.now()): pass is PmlePass {
-  return Number.isFinite(now) && validPass(pass) && pass.refunded_at === null
+  return Number.isFinite(now) && isValidPass(pass) && pass.refunded_at === null
     && Date.parse(pass.paid_at) <= now && Date.parse(pass.expires_at) > now;
 }
 
@@ -51,7 +51,7 @@ export async function readPaidAccess(userId: string, client?: SupabaseClient, no
   const { data: passes, error: passError } = await supabase.from("pmle_passes")
     .select("id,paid_at,expires_at,refunded_at").eq("user_id", userId).order("expires_at", { ascending: false });
   if (legacyError || passError || (legacy !== null && (!legacy || typeof legacy !== "object" || legacy.status !== "active" || (legacy.current_period_end !== null && !timestamp(legacy.current_period_end))))
-    || !Array.isArray(passes) || !passes.every(validPass)) throw new Error("Paid access unavailable");
+    || !Array.isArray(passes) || !passes.every(isValidPass)) throw new Error("Paid access unavailable");
   const pass = [...passes].sort((a, b) => Date.parse(b.expires_at) - Date.parse(a.expires_at))
     .find(row => isActivePass(row, now));
   const access = freeAccess();
