@@ -13,6 +13,11 @@ jest.mock("@/lib/supabase/server", () => ({
   createServerSupabaseClient: jest.fn(() => mockSupabase),
 }));
 
+// Route tests must not make real rate-limit service calls.
+jest.mock("@/lib/auth/rate-limiter", () => ({
+  checkRateLimit: jest.fn().mockResolvedValue(true),
+}));
+
 // Import route after mocks are set up
 import { POST } from "@/app/api/study-path/route";
 
