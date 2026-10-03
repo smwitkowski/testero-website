@@ -21,6 +21,7 @@ npm ci
 colima start --cpu 4 --memory 8
 supabase start
 supabase db reset --local
+npm run dev:local
 ```
 
 The local API is `http://127.0.0.1:56541`; PostgreSQL listens on
@@ -29,19 +30,15 @@ The reset is **local only** and destroys the local database. It applies the v2
 baseline and seed, not `supabase/migrations_legacy/`. Never use `link`, `--linked`,
 `--project-ref`, a remote database URL, or `db push` for local work.
 
-`.env.example` lists placeholder values, not working credentials. A local runner
-must read `supabase status -o json` and supply its generated local API URL, anon
-key, and service-role key through the child process environment. Do not print,
-commit, or copy real credentials into documentation. Keep
-`NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` empty locally. Do not use
+`.env.example` lists placeholders, not working credentials. `scripts/local.mjs`
+reads generated keys from `supabase status -o json` into the child process
+environment only. It reads or writes no `.env` files. It rejects a Supabase config
+other than `testero-v2` and API/database endpoints outside loopback ports
+56541/56542. It keeps PostHog empty. Do not print or commit credentials. Do not use
 production Supabase, Stripe, or PostHog for tests.
 
-```sh
-npm run dev
-```
-
-The app listens on `http://127.0.0.1:3000`. Supply the same local process environment
-when running the diagnostic smoke test. Placeholder credentials cannot run it.
+The app listens on `http://127.0.0.1:3000`. Leave `npm run dev:local` running for
+manual use. Placeholder credentials cannot run the diagnostic.
 
 ## Checks
 
@@ -49,10 +46,14 @@ when running the diagnostic smoke test. Placeholder credentials cannot run it.
 npm run lint
 npm run typecheck
 npm test
-npm run build
+npm run test:db:local
 npx playwright install chromium
-npm run test:e2e
+npm run test:e2e:local
 ```
+
+Run the smoke test in a new terminal. If `npm run dev:local` is already running,
+use `PLAYWRIGHT_MANAGED_SERVER=1 npm run test:e2e:local`. Otherwise the smoke test
+starts and stops its own local Playwright web server.
 
 `npm test` runs Vitest's pure server-logic units in Node. It excludes the content
 pipeline, legacy migrations, and browser tests. Playwright runs `e2e/` in Chromium
@@ -60,9 +61,18 @@ against localhost and rejects a non-loopback Supabase URL. Its default web serve
 is `npm run dev`, with `reuseExistingServer: false`. Set
 `PLAYWRIGHT_MANAGED_SERVER=1` only when a local runner already owns port 3000.
 
-The build does not need a running database. Supply loopback placeholder Supabase
-values and an empty PostHog key; do not put a real service-role key in image builds.
-`npm run runtimebuild` is an alias for `npm run build`. `npm start` runs a built app.
+The build does not need a running database. Use loopback placeholders:
+
+```sh
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:56541 \
+NEXT_PUBLIC_SUPABASE_ANON_KEY=local-anon-key-placeholder \
+SUPABASE_SERVICE_ROLE_KEY=local-service-role-key-placeholder \
+NEXT_PUBLIC_POSTHOG_KEY= NEXT_PUBLIC_POSTHOG_HOST= NEXT_TELEMETRY_DISABLED=1 \
+npm run build
+```
+
+Do not put a real service-role key in image builds. `npm run runtimebuild` is an
+alias for `npm run build`. `npm start` runs a built app.
 
 Count direct runtime dependencies:
 
