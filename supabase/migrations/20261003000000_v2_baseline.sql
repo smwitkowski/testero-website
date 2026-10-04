@@ -117,6 +117,16 @@ GRANT ALL ON TABLE public.questions TO service_role;
 ALTER TABLE public.answers ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.answers FROM PUBLIC, anon, authenticated;
 GRANT ALL ON TABLE public.answers TO service_role;
+-- Production has this legacy SECURITY DEFINER writer, owned by postgres.
+-- Table ACLs and RLS alone cannot stop it from rewriting canonical answers.
+-- Keep its body and identity intact; tighten only access when it exists.
+-- Clean installations do not have this function and must not create it.
+DO $legacy_answer_acl$ BEGIN
+ IF to_regprocedure('public.upsert_question_answers(uuid,jsonb)') IS NOT NULL THEN
+  REVOKE EXECUTE ON FUNCTION public.upsert_question_answers(UUID, JSONB) FROM PUBLIC, anon, authenticated;
+  GRANT EXECUTE ON FUNCTION public.upsert_question_answers(UUID, JSONB) TO service_role;
+ END IF;
+END $legacy_answer_acl$;
 ALTER TABLE public.explanations ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.explanations FROM PUBLIC, anon, authenticated;
 GRANT ALL ON TABLE public.explanations TO service_role;

@@ -19,6 +19,35 @@ describe("v2 baseline security and replay contracts", () => {
     expect(sql).toContain("IF NOT EXISTS (SELECT 1 FROM pg_policies");
     expect(sql).not.toMatch(/CREATE INDEX (?!IF NOT EXISTS)/i);
   });
+  it("preserves production UUID content contracts and unrelated legacy objects", () => {
+    // Production also has bigint questions_legacy and a stale diagnostic RPC.
+    // Canonical questions and domains are UUIDs; never adapt them to that RPC.
+    for (const table of ["exam_domains", "questions", "answers", "explanations", "question_generation_runs"]) {
+      const definition = sql.match(new RegExp(`CREATE TABLE IF NOT EXISTS public\\.${table} \\(([\\s\\S]*?)\\n\\);`))?.[1];
+      expect(definition).toMatch(/id UUID PRIMARY KEY/);
+    }
+    expect(sql).toContain("domain_id UUID NOT NULL REFERENCES public.exam_domains(id)");
+    expect(sql).toContain("question_id UUID NOT NULL REFERENCES public.questions(id)");
+    expect(sql).not.toMatch(/ALTER\s+(?:TABLE|FUNCTION)[^;]*\b(?:TYPE|RENAME)\b/i);
+    // Preserve production function signatures/bodies, including RETURNS TABLE.
+    for (const name of ["check_and_increment_practice_quota", "get_diagnostic_questions_for_exam",
+      "get_diagnostic_session_progress", "update_updated_at_column", "upsert_question_answers"]) {
+      expect(sql).not.toContain(`CREATE OR REPLACE FUNCTION public.${name}(`);
+    }
+    for (const table of ["subscriptions", "payments", "products", "questions_legacy", "answers_legacy", "options_legacy", "explanations_legacy"]) {
+      expect(sql).not.toMatch(new RegExp(`public\\.${table}\\b`));
+    }
+    expect(sql).not.toMatch(/CREATE(?: OR REPLACE)? TRIGGER|ALTER DEFAULT PRIVILEGES/i);
+  });
+  it("closes the production SECURITY DEFINER answer-write bypass without replacing it", () => {
+    const acl = sql.match(/DO \$legacy_answer_acl\$[\s\S]*?END \$legacy_answer_acl\$;/)?.[0];
+    expect(acl).toBeDefined();
+    expect(acl).toContain("IF to_regprocedure('public.upsert_question_answers(uuid,jsonb)') IS NOT NULL THEN");
+    expect(acl).toContain("REVOKE EXECUTE ON FUNCTION public.upsert_question_answers(UUID, JSONB) FROM PUBLIC, anon, authenticated;");
+    expect(acl).toContain("GRANT EXECUTE ON FUNCTION public.upsert_question_answers(UUID, JSONB) TO service_role;");
+    expect(acl).not.toMatch(/CREATE|ALTER|DELETE|INSERT|UPDATE/);
+    expect(sql).not.toMatch(/REVOKE[^;]*(check_and_increment_practice_quota|get_diagnostic_questions_for_exam|get_diagnostic_session_progress|update_updated_at_column)/);
+  });
   it("ANDs owner isolation with any existing permissive metadata policy", () => {
     for (const table of ["user_subscriptions", "payment_history", "study_sessions", "pmle_passes", "free_practice_quota"]) {
       expect(sql).toContain(`tablename = '${table}' AND policyname = 'v2_owner_gate'`);
