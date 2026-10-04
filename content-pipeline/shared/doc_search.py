@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+import time
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -44,6 +45,7 @@ class OfficialDocsRedirectHandler(HTTPRedirectHandler):
     """Validate each redirect target BEFORE urllib can request it."""
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         approved_documentation_url(newurl)
+        time.sleep(0.3)
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
@@ -74,6 +76,7 @@ def _fetch_documentation(url: str) -> dict:
     requested_url = approved_documentation_url(url, discovery=True)
     opener = build_opener(OfficialDocsRedirectHandler())
     request = Request(requested_url, headers={"User-Agent": "Testero-documentation/1.0"})
+    time.sleep(0.3)
     with opener.open(request, timeout=30) as response:
         final_url = approved_documentation_url(response.geturl())
         if response.status != 200:
@@ -109,6 +112,11 @@ def _search_objective_docs(objective_text: str, services: list[str], num_results
             source = _fetch_documentation(url)
         except Exception as exc:
             logger.warning("Could not fetch discovered documentation %s: %s", url, exc)
+            continue
+        previous = next((s for s in sources if s["url"] == source["url"]), None)
+        if previous is not None:
+            if previous["text_sha256"] != source["text_sha256"]:
+                raise DocumentationError("Conflicting text for one final documentation URL")
             continue
         sources.append(source)
     if not sources:

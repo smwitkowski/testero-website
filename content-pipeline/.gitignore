@@ -14,3 +14,6 @@ review/
 
 # Raw official certification downloads (never commit sample question text)
 .cache/cert-registry/
+
+# Local generation candidates and frozen documentation for founder review
+.cache/generation/
