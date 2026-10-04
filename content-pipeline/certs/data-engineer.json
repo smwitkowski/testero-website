@@ -1,0 +1,1047 @@
+{
+  "schema_version": 1,
+  "cert_id": "data-engineer",
+  "catalog_name": "Data Engineer",
+  "level": "professional",
+  "cert_url": "https://cloud.google.com/learn/certification/data-engineer",
+  "name": "Professional Data Engineer",
+  "status": "catalog-listed",
+  "registration_status": "not_stated",
+  "canonical_exam_code": null,
+  "retirement": null,
+  "announcements": [
+    "This exam will soon be updated to reflect recent branding changes. Refer to the exam guide to review product names used on the exam."
+  ],
+  "upcoming_versions": [
+    {
+      "variant": null,
+      "version": null,
+      "guide_url": null,
+      "effective_date": null,
+      "date_stated": null,
+      "announcement": "This exam will soon be updated to reflect recent branding changes. Refer to the exam guide to review product names used on the exam.",
+      "source_url": "https://cloud.google.com/certification/data-engineer",
+      "note": "Upcoming change is stated, but variant, version, date or future guide link may be unspecified. Do not substitute the current guide."
+    }
+  ],
+  "exam_variants": [
+    {
+      "variant": "standard",
+      "duration_minutes": 120,
+      "duration_stated": "2 hours",
+      "question_count": {
+        "min": 40,
+        "max": 50,
+        "approximate": false
+      },
+      "question_types": [
+        "multiple_choice",
+        "multiple_select"
+      ],
+      "format_stated": "40-50 multiple choice and multiple select questions",
+      "languages": [
+        "English",
+        "Japanese"
+      ],
+      "languages_stated": "English, Japanese",
+      "price_usd": 200,
+      "price_stated": "$200 (plus tax where applicable)",
+      "validity_stated": "2 years",
+      "delivery_stated": "a. Take the online-proctored exam from a remote location. b. Take the onsite-proctored exam at a testing center - search for Google Cloud.",
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/professional_data_engineer_exam_guide_english.pdf"
+      ],
+      "case_study_names": null
+    },
+    {
+      "variant": "renewal",
+      "duration_minutes": 60,
+      "duration_stated": "1 hour",
+      "question_count": {
+        "min": 20,
+        "max": 20,
+        "approximate": false
+      },
+      "question_types": [
+        "multiple_choice",
+        "multiple_select"
+      ],
+      "format_stated": "20 multiple choice and multiple select questions",
+      "languages": [
+        "English",
+        "Japanese"
+      ],
+      "languages_stated": "English, Japanese",
+      "price_usd": 100,
+      "price_stated": "$100 (plus tax where applicable)",
+      "validity_stated": "2 years",
+      "delivery_stated": "a. Take the online-proctored exam from a remote location. b. Take the onsite-proctored exam at a testing center - search for Google Cloud.",
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/professional_data_engineer_renewal_exam_guide_english.pdf"
+      ],
+      "case_study_names": null
+    },
+    {
+      "variant": "skills_renewal",
+      "duration_minutes": null,
+      "duration_stated": null,
+      "question_count": null,
+      "question_types": null,
+      "format_stated": "Designated courses and/or skill badges in the renewal learning path",
+      "languages": null,
+      "languages_stated": null,
+      "price_usd": null,
+      "price_stated": null,
+      "validity_stated": "1 year",
+      "delivery_stated": null,
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [],
+      "case_study_names": null
+    }
+  ],
+  "sample_sources": [
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSfkWEzBCP0wQ09ZuFm7G2_4qtkYbfmk_0getojdnPdCYmq37Q/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSfkWEzBCP0wQ09ZuFm7G2_4qtkYbfmk_0getojdnPdCYmq37Q/viewform",
+      "availability": "public_html_fetched"
+    }
+  ],
+  "guides": [
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_data_engineer_exam_guide_english.pdf",
+      "variant": "standard",
+      "version": null,
+      "effective_date": null,
+      "as_of_date": null,
+      "date_evidence": null,
+      "normalized_text_sha256": "2894c67e980d162e8198c1feb69cee8f450c50b65394e91bc36a983504658281",
+      "case_studies": [],
+      "sections": [
+        {
+          "id": "data-engineer:standard:1",
+          "number": "1",
+          "title": "Designing data processing systems",
+          "weight_percent": 22.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "data-engineer:standard:1.1",
+              "number": "1.1",
+              "title": "Designing for security and compliance.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:1.1:1",
+                  "text": "Identity and Access Management (e.g., Cloud IAM and organization policies)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:1.1:2",
+                  "text": "Data security (encryption and key management)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:1.1:3",
+                  "text": "Privacy (e.g., strategies to handle personally identifiable information)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:1.1:4",
+                  "text": "Regional considerations (data sovereignty) for data access and storage",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:1.1:5",
+                  "text": "Legal and regulatory compliance",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:1.1:6",
+                  "text": "Designing the project, dataset, and table architecture to ensure proper data governance",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:1.1:7",
+                  "text": "Multi-environment use cases (development vs. production)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:standard:1.2",
+              "number": "1.2",
+              "title": "Designing for reliability and fidelity.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:1.2:1",
+                  "text": "Preparing and cleaning data (e.g., Dataform, Dataflow, and Cloud Data Fusion, prompting LLMs for query generation)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:1.2:2",
+                  "text": "Monitoring and orchestration of data pipelines",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:1.2:3",
+                  "text": "Disaster recovery and fault tolerance",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:1.2:4",
+                  "text": "Making decisions related to ACID (atomicity, consistency, isolation, and durability) compliance and availability",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:1.2:5",
+                  "text": "Data validation",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:standard:1.3",
+              "number": "1.3",
+              "title": "Designing for flexibility and portability.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:1.3:1",
+                  "text": "Mapping current and future business requirements to the architecture",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:1.3:2",
+                  "text": "Designing for data and application portability (e.g., multi-cloud and data residency requirements)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:1.3:3",
+                  "text": "Data staging, cataloging, profiling, and discovery (data governance)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:standard:1.4",
+              "number": "1.4",
+              "title": "Designing data migrations.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:1.4:1",
+                  "text": "Analyzing current stakeholder needs, users, processes, and technologies, and creating a plan to get to desired state",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:1.4:2",
+                  "text": "Planning migration and validation to Google Cloud (e.g., BigQuery Data Transfer Service, Database Migration Service, Transfer Appliance, Google Cloud networking, Datastream)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "data-engineer:standard:2",
+          "number": "2",
+          "title": "Ingesting and processing the data",
+          "weight_percent": 25.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "data-engineer:standard:2.1",
+              "number": "2.1",
+              "title": "Planning the data pipelines.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:2.1:1",
+                  "text": "Defining data sources and sinks",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:2.1:2",
+                  "text": "Defining data transformation and orchestration logic",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:2.1:3",
+                  "text": "Networking fundamentals",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:2.1:4",
+                  "text": "Data encryption",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:standard:2.2",
+              "number": "2.2",
+              "title": "Building the pipelines.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:2.2:1",
+                  "text": "Data cleansing",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:2.2:2",
+                  "text": "Identifying the services (e.g., Dataflow, Apache Beam, Dataproc, Cloud Data Fusion, BigQuery, Pub/Sub, Apache Spark, Hadoop ecosystem, and Apache Kafka)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:2.2:3",
+                  "text": "Transformations",
+                  "children": [
+                    {
+                      "id": "data-engineer:standard:2.2:3:1",
+                      "text": "Batch",
+                      "children": []
+                    },
+                    {
+                      "id": "data-engineer:standard:2.2:3:2",
+                      "text": "Streaming (e.g., windowing, late arriving data)",
+                      "children": []
+                    },
+                    {
+                      "id": "data-engineer:standard:2.2:3:3",
+                      "text": "Processing logic",
+                      "children": []
+                    },
+                    {
+                      "id": "data-engineer:standard:2.2:3:4",
+                      "text": "AI data enrichment",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "id": "data-engineer:standard:2.2:4",
+                  "text": "Data acquisition and import",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:2.2:5",
+                  "text": "Integrating with new data sources",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:standard:2.3",
+              "number": "2.3",
+              "title": "Deploying and operationalizing the pipelines.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:2.3:1",
+                  "text": "Job automation and orchestration (e.g., Cloud Composer and Workflows)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:2.3:2",
+                  "text": "CI/CD (Continuous Integration and Continuous Deployment)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "data-engineer:standard:3",
+          "number": "3",
+          "title": "Storing the data",
+          "weight_percent": 20.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "data-engineer:standard:3.1",
+              "number": "3.1",
+              "title": "Selecting storage systems.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:3.1:1",
+                  "text": "Analyzing data access patterns",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:3.1:2",
+                  "text": "Choosing managed services (e.g., BigQuery, BigLake, AlloyDB, Bigtable, Spanner, Cloud SQL, Cloud Storage, Firestore, Memorystore)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:3.1:3",
+                  "text": "Planning for storage costs and performance",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:3.1:4",
+                  "text": "Lifecycle management of data",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:standard:3.2",
+              "number": "3.2",
+              "title": "Planning for using a data warehouse.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:3.2:1",
+                  "text": "Designing the data model",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:3.2:2",
+                  "text": "Deciding the degree of data normalization",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:3.2:3",
+                  "text": "Mapping business requirements",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:3.2:4",
+                  "text": "Defining architecture to support data access patterns",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:standard:3.3",
+              "number": "3.3",
+              "title": "Using a data lake.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:3.3:1",
+                  "text": "Managing the lake (configuring data discovery, access, and cost controls)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:3.3:2",
+                  "text": "Processing data",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:3.3:3",
+                  "text": "Monitoring the data lake",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:standard:3.4",
+              "number": "3.4",
+              "title": "Designing for a data platform.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:3.4:1",
+                  "text": "Building a data platform based on requirements by using Google Cloud tools (e.g., Dataplex, Dataplex Catalog, BigQuery, Cloud Storage)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:3.4:2",
+                  "text": "Building a federated governance model for distributed data systems",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "data-engineer:standard:4",
+          "number": "4",
+          "title": "Preparing and using data for analysis",
+          "weight_percent": 15.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "data-engineer:standard:4.1",
+              "number": "4.1",
+              "title": "Preparing data for visualization.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:4.1:1",
+                  "text": "Connecting to tools",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:4.1:2",
+                  "text": "Precalculating fields",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:4.1:3",
+                  "text": "BigQuery features for business intelligence (e.g., BI Engine, materialized views)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:4.1:4",
+                  "text": "Troubleshooting poor performing queries",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:4.1:5",
+                  "text": "Security, data masking, Identity and Access Management (IAM), and Cloud Data Loss Prevention (Cloud DLP)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:standard:4.2",
+              "number": "4.2",
+              "title": "Preparing data for AI and ML.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:4.2:1",
+                  "text": "Preparing data for feature engineering, training and serving machine learning models (e.g., BigQueryML)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:4.2:2",
+                  "text": "Preparing unstructured data for embeddings and retrieval-augmented generation (RAG)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:standard:4.3",
+              "number": "4.3",
+              "title": "Sharing data.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:4.3:1",
+                  "text": "Defining rules to share data",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:4.3:2",
+                  "text": "Publishing datasets",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:4.3:3",
+                  "text": "Publishing reports and visualizations",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:4.3:4",
+                  "text": "BigQuery sharing (Analytics Hub)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "data-engineer:standard:5",
+          "number": "5",
+          "title": "Maintaining and automating data workloads",
+          "weight_percent": 18.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "data-engineer:standard:5.1",
+              "number": "5.1",
+              "title": "Optimizing resources.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:5.1:1",
+                  "text": "Minimizing costs per required business need for data",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:5.1:2",
+                  "text": "Ensuring that enough resources are available for business-critical data processes",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:5.1:3",
+                  "text": "Deciding between persistent or job-based data clusters (e.g., Dataproc)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:standard:5.2",
+              "number": "5.2",
+              "title": "Designing automation and repeatability.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:5.2:1",
+                  "text": "Creating directed acyclic graphs (DAGs) for Cloud Composer",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:5.2:2",
+                  "text": "Scheduling and orchestrating jobs in a repeatable way",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:standard:5.3",
+              "number": "5.3",
+              "title": "Organizing workloads based on business requirements.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:5.3:1",
+                  "text": "Capacity management (e.g., BigQuery Editions and reservations)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:5.3:2",
+                  "text": "Interactive or batch query jobs",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:standard:5.4",
+              "number": "5.4",
+              "title": "Monitoring and troubleshooting processes.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:5.4:1",
+                  "text": "Observability of data processes (e.g., Cloud Monitoring, Cloud Logging, BigQuery admin panel)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:5.4:2",
+                  "text": "Monitoring planned usage",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:5.4:3",
+                  "text": "Troubleshooting error messages, billing issues, and quotas",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:5.4:4",
+                  "text": "Manage workloads, such as jobs, queries, and compute capacity (reservations)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:standard:5.5",
+              "number": "5.5",
+              "title": "Maintaining awareness of failures and mitigating impact.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:standard:5.5:1",
+                  "text": "Designing system for fault tolerance and managing restarts",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:5.5:2",
+                  "text": "Running jobs in multiple regions or zones",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:5.5:3",
+                  "text": "Preparing for data corruption and missing data",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:standard:5.5:4",
+                  "text": "Data replication and failover (e.g., Cloud SQL, Redis clusters)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "in_scope_tools": [],
+      "outline_counts": {
+        "sections": 5,
+        "subsections": 19,
+        "objectives": 67,
+        "nested_objectives": 4
+      },
+      "stated_weight_total_percent": 100.0,
+      "weight_note": "Approximate stated weights are preserved; totals need not equal 100.",
+      "status": "current"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_data_engineer_renewal_exam_guide_english.pdf",
+      "variant": "renewal",
+      "version": null,
+      "effective_date": null,
+      "as_of_date": null,
+      "date_evidence": null,
+      "normalized_text_sha256": "03db9f7b1d8147074abf0f39163ef90cea01358a8fb321f65600fe90cb507763",
+      "case_studies": [],
+      "sections": [
+        {
+          "id": "data-engineer:renewal:1",
+          "number": "1",
+          "title": "Designing data processing systems",
+          "weight_percent": 25.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "data-engineer:renewal:1.1",
+              "number": "1.1",
+              "title": "Designing for security and compliance.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:renewal:1.1:1",
+                  "text": "Regional considerations (data sovereignty) for data access and storage",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:renewal:1.1:2",
+                  "text": "Legal and regulatory compliance",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:renewal:1.2",
+              "number": "1.2",
+              "title": "Designing for reliability and fidelity.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:renewal:1.2:1",
+                  "text": "Preparing and cleaning data (e.g., Dataform, Dataflow, and Cloud Data Fusion, prompting LLMs for query generation)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:renewal:1.2:2",
+                  "text": "Data validation",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:renewal:1.3",
+              "number": "1.3",
+              "title": "Designing for flexibility and portability.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:renewal:1.3:1",
+                  "text": "Data staging, cataloging, profiling, and discovery (data governance)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "data-engineer:renewal:2",
+          "number": "2",
+          "title": "Ingesting and processing the data",
+          "weight_percent": 10.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "data-engineer:renewal:2.1",
+              "number": "2.1",
+              "title": "Planning the data pipelines.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:renewal:2.1:1",
+                  "text": "Defining data transformation and orchestration logic",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:renewal:2.2",
+              "number": "2.2",
+              "title": "Building the pipelines.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:renewal:2.2:1",
+                  "text": "Transformations",
+                  "children": [
+                    {
+                      "id": "data-engineer:renewal:2.2:1:1",
+                      "text": "Processing logic",
+                      "children": []
+                    },
+                    {
+                      "id": "data-engineer:renewal:2.2:1:2",
+                      "text": "AI data enrichment",
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:renewal:2.3",
+              "number": "2.3",
+              "title": "Deploying and operationalizing the pipelines.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:renewal:2.3:1",
+                  "text": "Job automation and orchestration (e.g., Cloud Composer and Workflows)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:renewal:2.3:2",
+                  "text": "CI/CD (Continuous Integration and Continuous Deployment)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "data-engineer:renewal:3",
+          "number": "3",
+          "title": "Storing the data",
+          "weight_percent": 25.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "data-engineer:renewal:3.1",
+              "number": "3.1",
+              "title": "Selecting storage systems.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:renewal:3.1:1",
+                  "text": "Choosing managed services (e.g., BigQuery, BigLake, AlloyDB, Bigtable, Spanner, Cloud SQL, Cloud Storage, Firestore, Memorystore)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:renewal:3.3",
+              "number": "3.3",
+              "title": "Using a data lake.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:renewal:3.3:1",
+                  "text": "Managing the lake (configuring data discovery, access, and cost controls)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:renewal:3.4",
+              "number": "3.4",
+              "title": "Designing for a data platform.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:renewal:3.4:1",
+                  "text": "Building a data platform based on requirements by using Google Cloud tools (e.g., Dataplex, Dataplex Catalog, BigQuery, Cloud Storage)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:renewal:3.4:2",
+                  "text": "Building a federated governance model for distributed data systems",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "data-engineer:renewal:4",
+          "number": "4",
+          "title": "Preparing and using data for analysis",
+          "weight_percent": 25.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "data-engineer:renewal:4.1",
+              "number": "4.1",
+              "title": "Preparing data for visualization.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:renewal:4.1:1",
+                  "text": "Security, data masking, Identity and Access Management (IAM), and Cloud Data Loss Prevention (Cloud DLP)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:renewal:4.2",
+              "number": "4.2",
+              "title": "Preparing data for AI and ML.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:renewal:4.2:1",
+                  "text": "Preparing data for feature engineering, training and serving machine learning models (e.g., BigQueryML)",
+                  "children": []
+                },
+                {
+                  "id": "data-engineer:renewal:4.2:2",
+                  "text": "Preparing unstructured data for embeddings and retrieval-augmented generation (RAG)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:renewal:4.3",
+              "number": "4.3",
+              "title": "Sharing data.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:renewal:4.3:1",
+                  "text": "BigQuery sharing (Analytics Hub)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "data-engineer:renewal:5",
+          "number": "5",
+          "title": "Maintaining and automating data workloads",
+          "weight_percent": 15.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "data-engineer:renewal:5.2",
+              "number": "5.2",
+              "title": "Designing automation and repeatability.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:renewal:5.2:1",
+                  "text": "Scheduling and orchestrating jobs in a repeatable way",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:renewal:5.3",
+              "number": "5.3",
+              "title": "Organizing workloads based on business requirements.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:renewal:5.3:1",
+                  "text": "Capacity management (e.g., BigQuery Editions and reservations)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-engineer:renewal:5.4",
+              "number": "5.4",
+              "title": "Monitoring and troubleshooting processes.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-engineer:renewal:5.4:1",
+                  "text": "Observability of data processes (e.g., Cloud Monitoring, Cloud Logging, BigQuery admin panel)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "in_scope_tools": [],
+      "outline_counts": {
+        "sections": 5,
+        "subsections": 15,
+        "objectives": 20,
+        "nested_objectives": 2
+      },
+      "stated_weight_total_percent": 100.0,
+      "weight_note": "Approximate stated weights are preserved; totals need not equal 100.",
+      "status": "current"
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification",
+      "final_url": "https://cloud.google.com/learn/certification",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "catalog",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://cloud.google.com/certification/data-engineer",
+      "final_url": "https://cloud.google.com/learn/certification/data-engineer",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "certification",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_data_engineer_exam_guide_english.pdf",
+      "final_url": "https://services.google.com/fh/files/misc/professional_data_engineer_exam_guide_english.pdf",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "exam_guide",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_data_engineer_renewal_exam_guide_english.pdf",
+      "final_url": "https://services.google.com/fh/files/misc/professional_data_engineer_renewal_exam_guide_english.pdf",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "exam_guide",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSfkWEzBCP0wQ09ZuFm7G2_4qtkYbfmk_0getojdnPdCYmq37Q/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSfkWEzBCP0wQ09ZuFm7G2_4qtkYbfmk_0getojdnPdCYmq37Q/viewform",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "official_sample",
+      "content_type": "text/html; charset=utf-8"
+    }
+  ],
+  "missing_fields": [
+    "exam_variants.skills_renewal.duration_minutes",
+    "exam_variants.skills_renewal.question_count",
+    "exam_variants.skills_renewal.question_types",
+    "exam_variants.skills_renewal.languages",
+    "exam_variants.skills_renewal.price_usd"
+  ],
+  "not_stated_notes": [
+    "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+    "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions."
+  ]
+}

@@ -1,0 +1,536 @@
+{
+  "schema_version": 1,
+  "cert_id": "cloud-developer",
+  "catalog_name": "Cloud Developer",
+  "level": "professional",
+  "cert_url": "https://cloud.google.com/learn/certification/cloud-developer",
+  "name": "Professional Cloud Developer",
+  "status": "catalog-listed",
+  "registration_status": "not_stated",
+  "canonical_exam_code": null,
+  "retirement": null,
+  "announcements": [
+    "This exam was updated to reflect recent branding changes. Refer to the exam guide to review product names used on the exam."
+  ],
+  "upcoming_versions": [],
+  "exam_variants": [
+    {
+      "variant": "standard",
+      "duration_minutes": 120,
+      "duration_stated": "Two hours",
+      "question_count": {
+        "min": 50,
+        "max": 60,
+        "approximate": false
+      },
+      "question_types": [
+        "multiple_choice",
+        "multiple_select"
+      ],
+      "format_stated": "50-60 multiple choice and multiple select questions",
+      "languages": [
+        "English",
+        "Japanese"
+      ],
+      "languages_stated": "English and Japanese",
+      "price_usd": 200,
+      "price_stated": "$200 (plus tax where applicable)",
+      "validity_stated": null,
+      "delivery_stated": "a. Take the online-proctored exam from a remote location b. Take the onsite-proctored exam at a testing center - search for Google Cloud.",
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/professional_cloud_developer_exam_guide_english.pdf"
+      ],
+      "case_study_names": null
+    }
+  ],
+  "sample_sources": [
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSfFeB8zBNi2q-ar0V7iIguhk2e6P-UkrJ8OJfg6n0k6HcYLDQ/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSfFeB8zBNi2q-ar0V7iIguhk2e6P-UkrJ8OJfg6n0k6HcYLDQ/viewform",
+      "availability": "public_html_fetched"
+    }
+  ],
+  "guides": [
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_cloud_developer_exam_guide_english.pdf",
+      "variant": "standard",
+      "version": null,
+      "effective_date": null,
+      "as_of_date": null,
+      "date_evidence": null,
+      "normalized_text_sha256": "7a71b639c93a63c0137ed420276a62788e4ef2e41b3f633a07f2e4a852b9ed2e",
+      "case_studies": [],
+      "sections": [
+        {
+          "id": "cloud-developer:standard:1",
+          "number": "1",
+          "title": "Designing highly scalable, secure, and reliable cloud-native applications",
+          "weight_percent": 32.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-developer:standard:1.1",
+              "number": "1.1",
+              "title": "Designing high-performing applications and APIs.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-developer:standard:1.1:1",
+                  "text": "Choosing the appropriate platform based on the use case and requirements (e.g., Compute Engine, Google Kubernetes Engine, Cloud Run)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.1:2",
+                  "text": "Building, refactoring, and deploying application containers to Cloud Run and GKE",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.1:3",
+                  "text": "Understanding how Google Cloud services are geographically distributed (e.g., latency, regional services, zonal services)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.1:4",
+                  "text": "Understanding the use cases for load balancers",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.1:5",
+                  "text": "Enabling session affinity for performant content delivery",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.1:6",
+                  "text": "Implementing caching solutions (e.g., Memorystore)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.1:7",
+                  "text": "Creating and deploying APIs (e.g., HTTP REST, gRPC [Remote Procedure Call])",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.1:8",
+                  "text": "Using application rate limiting, authentication, and observability (e.g., Apigee, Cloud API Gateway)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.1:9",
+                  "text": "Integrating applications using asynchronous or event-driven approaches (e.g., Eventarc, Pub/Sub)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.1:10",
+                  "text": "Defining resource requirements for workloads",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.1:11",
+                  "text": "Optimizing for cost and resource usage",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.1:12",
+                  "text": "Understanding data replication to support zonal and regional failover models",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.1:13",
+                  "text": "Using traffic splitting strategies (e.g., gradual rollouts, rollbacks, A/B testing) on a new service on Cloud Run or GKE",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.1:14",
+                  "text": "Orchestrating application services with Workflows, Eventarc, Cloud Tasks, and Cloud Scheduler",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-developer:standard:1.2",
+              "number": "1.2",
+              "title": "Designing secure applications.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-developer:standard:1.2:1",
+                  "text": "Implementing data retention and organization policies (e.g., Cloud Storage Object Lifecycle Management, Cloud Storage use and lock retention policies)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.2:2",
+                  "text": "Using security mechanisms that identify vulnerabilities and protect services and resources (e.g., Identity-Aware Proxy [IAP], Web Security Scanner)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.2:3",
+                  "text": "Responding to and resolving vulnerabilities, including those identified by Artifact Analysis and Security Command Center",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.2:4",
+                  "text": "Storing, accessing, and rotating application secrets, credentials, and encryption keys (e.g., Secret Manager, Cloud Key Management Service, Workload Identity Federation)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.2:5",
+                  "text": "Authenticating to Google Cloud services (e.g., Application Default Credentials, JSON Web Token [JWT], OAuth 2.0, Cloud SQL Auth Proxy, AlloyDB Auth Proxy, Identity Platform, WIF)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.2:6",
+                  "text": "Securing cloud resources using Identity and Access Management (IAM) roles for service accounts",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.2:7",
+                  "text": "Incorporating secure service-to-service communications (e.g., Cloud Service Mesh, Kubernetes Network Policies, Direct VPC egress, private service connectivity)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.2:8",
+                  "text": "Running services with least privileged access",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.2:9",
+                  "text": "Securing application artifacts using Binary Authorization",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-developer:standard:1.3",
+              "number": "1.3",
+              "title": "Storing and accessing data.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-developer:standard:1.3:1",
+                  "text": "Selecting the appropriate storage system based on the volume of data and performance requirements",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.3:2",
+                  "text": "Designing appropriate schemas for structured databases (e.g., AlloyDB, Spanner) and unstructured databases (e.g., Bigtable, Firestore)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.3:3",
+                  "text": "Understanding the implications of eventual and strongly consistent replication of AlloyDB, Bigtable, Cloud SQL, Spanner, and Cloud Storage",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.3:4",
+                  "text": "Creating signed URLs to grant access to Cloud Storage objects",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:1.3:5",
+                  "text": "Writing data to BigQuery for analytics and AI/ML workloads",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-developer:standard:2",
+          "number": "2",
+          "title": "Building and testing applications",
+          "weight_percent": 23.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-developer:standard:2.1",
+              "number": "2.1",
+              "title": "Setting up your development environment.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-developer:standard:2.1:1",
+                  "text": "Emulating Google Cloud services using the Google Cloud CLI for local application development and local unit testing",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:2.1:2",
+                  "text": "Using the Google Cloud console, Cloud SDK, Cloud Code, Gemini Cloud Assist, Cloud Shell, and Cloud Workstations",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:2.1:3",
+                  "text": "Configuring IDEs with the appropriate integrations (e.g., Cloud SDK, AI tooling [coding assistants, MCP servers])",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-developer:standard:2.2",
+              "number": "2.2",
+              "title": "Building.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-developer:standard:2.2:1",
+                  "text": "Using Cloud Build and Artifact Registry to build and store containers from source code",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:2.2:2",
+                  "text": "Configuring provenance in Cloud Build (e.g., Binary Authorization)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-developer:standard:2.3",
+              "number": "2.3",
+              "title": "Testing.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-developer:standard:2.3:1",
+                  "text": "Writing unit tests with the help of AI coding assistants",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:2.3:2",
+                  "text": "Executing automated integration tests in Cloud Build",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-developer:standard:3",
+          "number": "3",
+          "title": "Configuring cloud-native applications for deployment",
+          "weight_percent": 24.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-developer:standard:3.1",
+              "number": "3.1",
+              "title": "Deploying applications to Cloud Run.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-developer:standard:3.1:1",
+                  "text": "Deploying applications from source code",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:3.1:2",
+                  "text": "Invoking Cloud Run services using triggers (e.g., Eventarc, Pub/Sub)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:3.1:3",
+                  "text": "Configuring event receivers (e.g., Eventarc, Pub/Sub)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:3.1:4",
+                  "text": "Versioning, exposing and securing APIs in applications (e.g., Apigee)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-developer:standard:3.2",
+              "number": "3.2",
+              "title": "Deploying containers to GKE.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-developer:standard:3.2:1",
+                  "text": "Deploying containerized applications",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:3.2:2",
+                  "text": "Implementing Kubernetes health checks to increase application availability",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:3.2:3",
+                  "text": "Incorporating Horizontal Pod Autoscaler attributes (scaling, metrics)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-developer:standard:4",
+          "number": "4",
+          "title": "Integrating applications with Google Cloud services",
+          "weight_percent": 21.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-developer:standard:4.1",
+              "number": "4.1",
+              "title": "Integrating applications with data and storage services.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-developer:standard:4.1:1",
+                  "text": "Managing connections to various Google Cloud datastores (e.g., Cloud SQL, Firestore, Cloud Storage)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:4.1:2",
+                  "text": "Reading and writing data to and from various Google Cloud data sources",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:4.1:3",
+                  "text": "Writing applications that publish and consume data using messaging services",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-developer:standard:4.2",
+              "number": "4.2",
+              "title": "Consuming Google Cloud APIs.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-developer:standard:4.2:1",
+                  "text": "Enabling Google Cloud services",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:4.2:2",
+                  "text": "Making API calls by using supported options (e.g., Cloud Client Libraries, REST API, gRPC, API Explorer) taking into consideration:",
+                  "children": [
+                    {
+                      "id": "cloud-developer:standard:4.2:2:1",
+                      "text": "Batching requests",
+                      "children": []
+                    },
+                    {
+                      "id": "cloud-developer:standard:4.2:2:2",
+                      "text": "Restricting return data",
+                      "children": []
+                    },
+                    {
+                      "id": "cloud-developer:standard:4.2:2:3",
+                      "text": "Paginating results",
+                      "children": []
+                    },
+                    {
+                      "id": "cloud-developer:standard:4.2:2:4",
+                      "text": "Caching results",
+                      "children": []
+                    },
+                    {
+                      "id": "cloud-developer:standard:4.2:2:5",
+                      "text": "Handling errors (e.g., exponential backoff)",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "id": "cloud-developer:standard:4.2:3",
+                  "text": "Using service accounts to make Cloud API calls",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-developer:standard:4.3",
+              "number": "4.3",
+              "title": "Troubleshooting and observability.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-developer:standard:4.3:1",
+                  "text": "Instrumenting code to facilitate troubleshooting using metrics, logs, and traces in Google Cloud Observability",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:4.3:2",
+                  "text": "Identifying and resolving issues using Google Cloud Observability",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:4.3:3",
+                  "text": "Managing application issues using Error Reporting",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:4.3:4",
+                  "text": "Using trace IDs to correlate trace spans across services",
+                  "children": []
+                },
+                {
+                  "id": "cloud-developer:standard:4.3:5",
+                  "text": "Using AI-assisted observability",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "in_scope_tools": [],
+      "outline_counts": {
+        "sections": 4,
+        "subsections": 11,
+        "objectives": 53,
+        "nested_objectives": 5
+      },
+      "stated_weight_total_percent": 100.0,
+      "weight_note": "Approximate stated weights are preserved; totals need not equal 100.",
+      "status": "current"
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification",
+      "final_url": "https://cloud.google.com/learn/certification",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "catalog",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://cloud.google.com/certification/cloud-developer",
+      "final_url": "https://cloud.google.com/learn/certification/cloud-developer",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "certification",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_cloud_developer_exam_guide_english.pdf",
+      "final_url": "https://services.google.com/fh/files/misc/professional_cloud_developer_exam_guide_english.pdf",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "exam_guide",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSfFeB8zBNi2q-ar0V7iIguhk2e6P-UkrJ8OJfg6n0k6HcYLDQ/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSfFeB8zBNi2q-ar0V7iIguhk2e6P-UkrJ8OJfg6n0k6HcYLDQ/viewform",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "official_sample",
+      "content_type": "text/html; charset=utf-8"
+    }
+  ],
+  "missing_fields": [
+    "exam_variants.standard.validity_stated"
+  ],
+  "not_stated_notes": [
+    "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+    "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+    "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+  ]
+}

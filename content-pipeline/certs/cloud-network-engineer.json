@@ -1,0 +1,1006 @@
+{
+  "schema_version": 1,
+  "cert_id": "cloud-network-engineer",
+  "catalog_name": "Cloud Network Engineer",
+  "level": "professional",
+  "cert_url": "https://cloud.google.com/learn/certification/cloud-network-engineer",
+  "name": "Professional Cloud Network Engineer",
+  "status": "catalog-listed",
+  "registration_status": "not_stated",
+  "canonical_exam_code": null,
+  "retirement": null,
+  "announcements": [],
+  "upcoming_versions": [],
+  "exam_variants": [
+    {
+      "variant": "standard",
+      "duration_minutes": 120,
+      "duration_stated": "2 hours",
+      "question_count": {
+        "min": 50,
+        "max": 60,
+        "approximate": false
+      },
+      "question_types": [
+        "multiple_choice",
+        "multiple_select"
+      ],
+      "format_stated": "50-60 multiple choice and multiple select questions",
+      "languages": [
+        "English",
+        "Japanese"
+      ],
+      "languages_stated": "English, Japanese",
+      "price_usd": 200,
+      "price_stated": "$200 (plus tax where applicable)",
+      "validity_stated": null,
+      "delivery_stated": "a) Take the online-proctored exam from a remote location, review the online testing requirements b) Take the onsite-proctored exam at a testing center, locate a test center near you - search for Google Cloud.",
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/042426_professional_cloud_network_engineer_exam_guide_english.pdf"
+      ],
+      "case_study_names": null
+    }
+  ],
+  "sample_sources": [
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLServ0tNGkr-dYAfmez_Gdk74dmVypZjzUKrkVFtFcArzhmPow/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLServ0tNGkr-dYAfmez_Gdk74dmVypZjzUKrkVFtFcArzhmPow/viewform",
+      "availability": "public_html_fetched"
+    }
+  ],
+  "guides": [
+    {
+      "url": "https://services.google.com/fh/files/misc/042426_professional_cloud_network_engineer_exam_guide_english.pdf",
+      "variant": "standard",
+      "version": null,
+      "effective_date": null,
+      "as_of_date": null,
+      "date_evidence": null,
+      "normalized_text_sha256": "b6a7027aa1b86948c048ba8abcd68a6b22df0d8558d17e0b428ababcbf045488",
+      "case_studies": [],
+      "sections": [
+        {
+          "id": "cloud-network-engineer:standard:1",
+          "number": "1",
+          "title": "Designing and planning a Google Cloud VPC network",
+          "weight_percent": 21.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-network-engineer:standard:1.1",
+              "number": "1.1",
+              "title": "Designing an overall network architecture.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:1.1:1",
+                  "text": "Differentiating between network tiers (e.g., Premium and Standard).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.1:2",
+                  "text": "Designing for high availability, failover, disaster recovery, and scale.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.1:3",
+                  "text": "Designing the DNS topology (e.g., on-premises and Cloud DNS).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.1:4",
+                  "text": "Choosing an appropriate load balancer for network implementation.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.1:5",
+                  "text": "Planning for Google Kubernetes Engine (GKE) networking (e.g., secondary ranges, scale potential based on IP address space, and access to GKE control plane).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.1:6",
+                  "text": "Identifying the most appropriate Identity and Access Management (IAM) roles suited to specific network architecture designs (e.g. load balancer provisioning and Shared VPC subnet permissions).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.1:7",
+                  "text": "Planning for connectivity to managed services (e.g., private services access, Private Service Connect [PSC], and Serverless VPC Access).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.1:8",
+                  "text": "Planning for quotas and limits.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:1.2",
+              "number": "1.2",
+              "title": "Designing VPC networks.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:1.2:1",
+                  "text": "Choosing the VPC type and quantity (e.g., standalone or Shared VPC and the number of VPC environments).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.2:2",
+                  "text": "Determining how the networks interconnect based on requirements (e.g., VPC Network Peering, network connectivity [mesh and star topology] with Network Connectivity Center, and PSC).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.2:3",
+                  "text": "Planning the IP address management (IPAM) strategy (e.g., subnets, IPv6, bring your own IP, privately used public IP [PUPI], Private NAT, non-RFC 1918 addresses, managed services, and IPAM automation techniques).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.2:4",
+                  "text": "Planning a global or regional network environment (or variations of these).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.2:5",
+                  "text": "Determining the correct maximum transmission unit (MTU) sizing for VPC for workloads.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.2:6",
+                  "text": "Planning third-party device insertion (e.g., network virtual appliance) with custom routes (static or policy-based) and load balancing.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:1.3",
+              "number": "1.3",
+              "title": "Designing a resilient and performant hybrid and multi-cloud network.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:1.3:1",
+                  "text": "Designing for hybrid (e.g., on-premises and cloud, branch office) connectivity, including bandwidth and security constraints (e.g., Dedicated Interconnect, Partner Interconnect, Cloud VPN, and SD-WAN appliances).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.3:2",
+                  "text": "Designing for multicloud connectivity (e.g., Cloud VPN and Cross-Cloud Interconnect).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.3:3",
+                  "text": "Choosing when to use Direct Peering or Verified Peering Provider.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.3:4",
+                  "text": "Designing high-availability and disaster recovery connectivity strategies for multiple regions (e.g., regional or global dynamic routing mode).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.3:5",
+                  "text": "Accessing multiple VPCs from on-premises locations (e.g., Shared VPC, multi-VPC peering, and Network Connectivity Center topologies).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.3:6",
+                  "text": "Accessing Google services like Vertex AI and application programming interfaces (APIs) privately from on-premises locations.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.3:7",
+                  "text": "Accessing managed services through PSC and VPC Network Peering connections (e.g., private services access).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.3:8",
+                  "text": "Designing the IP address space across on-premises locations and cloud environments (e.g., internal ranges, planning to avoid overlaps, and Private NAT).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.3:9",
+                  "text": "Architecting hybrid DNS topology: Define forwarding paths, inbound policies, cross-project binding, and DNS peering strategy.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.3:10",
+                  "text": "Determining the correct MTU sizing for hybrid connections (Cloud Interconnect and HA VPN) for workloads.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.3:11",
+                  "text": "Understanding interconnect encryption options, such as MACsec and HA VPN, over Cloud Interconnect.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:1.4",
+              "number": "1.4",
+              "title": "Designing for Google Kubernetes Engine (GKE).",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:1.4:1",
+                  "text": "Choosing between public or private cluster nodes and node pools.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.4:2",
+                  "text": "Choosing between public or private control plane endpoints.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.4:3",
+                  "text": "Planning subnets: Primary and secondary ranges.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.4:4",
+                  "text": "Planning for GKE IP addresses using (RFC 1918, non-RFC 1918, Google-managed services range, PSC, shared IP ranges, and PUPI).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.4:5",
+                  "text": "Planning for IPv6.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.4:6",
+                  "text": "Designing load balancing for GKE networking.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:1.4:7",
+                  "text": "Adding and managing node pool configuration.",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-network-engineer:standard:2",
+          "number": "2",
+          "title": "Implementing a VPC network",
+          "weight_percent": 20.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-network-engineer:standard:2.1",
+              "number": "2.1",
+              "title": "Configuring VPCs.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:2.1:1",
+                  "text": "Creating Google Cloud VPC resources (e.g., networks, subnets, firewall rules or policies, private services access subnet, and private pools).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.1:2",
+                  "text": "Configuring VPC Network Peering.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.1:3",
+                  "text": "Creating a Shared VPC network and sharing subnets with other projects.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.1:4",
+                  "text": "Assigning the correct IAM permissions to use Shared VPC subnets from service projects.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.1:5",
+                  "text": "Configuring access to Google APIs and Google-managed services (e.g., Private Google Access and public interfaces).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.1:6",
+                  "text": "Expanding VPC subnet ranges after creation.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.1:7",
+                  "text": "Configuring restricted Google Cloud services with VPC Service Controls perimeters.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:2.2",
+              "number": "2.2",
+              "title": "Configuring VPC routing.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:2.2:1",
+                  "text": "Setting up static and dynamic routing (e.g., Cloud Router).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.2:2",
+                  "text": "Configuring global or regional dynamic routing.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.2:3",
+                  "text": "Implementing routing using network tags and priority.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.2:4",
+                  "text": "Implementing route priorities with global dynamic routing, including policy-based routing and dynamic routing.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.2:5",
+                  "text": "Implementing an internal load balancer as a next hop.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.2:6",
+                  "text": "Configuring custom route import/export over VPC Network Peering and Network Connectivity Center.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.2:7",
+                  "text": "Configuring policy-based routing.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:2.3",
+              "number": "2.3",
+              "title": "Configuring Network Connectivity Center.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:2.3:1",
+                  "text": "Differentiating between spoke types (VPC spoke, hybrid spoke, and producer spoke).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.3:2",
+                  "text": "Managing VPC topology (e.g., star topology, hub and spokes, and mesh topology).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.3:3",
+                  "text": "Configuring Private NAT and PSC propagation.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.3:4",
+                  "text": "Configuring IP/CIDR range filters for Network Connectivity Center spokes.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.3:5",
+                  "text": "Monitoring and troubleshooting Network Connectivity Center.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:2.4",
+              "number": "2.4",
+              "title": "Configuring and maintaining GKE clusters.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:2.4:1",
+                  "text": "Creating VPC-native clusters using alias IPs.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.4:2",
+                  "text": "Setting up clusters with Shared VPC.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.4:3",
+                  "text": "Configuring private clusters and private control plane endpoints.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.4:4",
+                  "text": "Adding authorized networks for cluster control plane endpoints.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.4:5",
+                  "text": "Using DNS-based endpoint for control plane access.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.4:6",
+                  "text": "Enabling GKE Dataplane V2.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.4:7",
+                  "text": "Configuring source NAT (SNAT) and IP Masquerade policies.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.4:8",
+                  "text": "Creating GKE network policies.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.4:9",
+                  "text": "Configuring Pod ranges and service ranges.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.4:10",
+                  "text": "Deploying additional Pod ranges for GKE clusters.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:2.4:11",
+                  "text": "Configuring DNS (local DNS cache, Cloud DNS, and kube-dns).",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-network-engineer:standard:3",
+          "number": "3",
+          "title": "Configuring managed network services",
+          "weight_percent": 16.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-network-engineer:standard:3.1",
+              "number": "3.1",
+              "title": "Configuring load balancing.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:3.1:1",
+                  "text": "Determining the load balancing solution for your network (internal/external, regional/global, application/proxy/passthrough, etc.).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:3.1:2",
+                  "text": "Configuring backend services, including autoscaling (e.g., network endpoint groups [NEGs] and managed instance groups).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:3.1:3",
+                  "text": "Configuring various load balancers and backend settings, such as the balancing method, session affinity, serving capacity, URL maps, health checks, and global access.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:3.1:4",
+                  "text": "Understanding load balancers in GKE (e.g., GKE Gateway controller, GKE Ingress controller, and NEGs).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:3.1:5",
+                  "text": "Setting up traffic management on Application Load Balancer (e.g., traffic splitting, traffic mirroring, and URL rewrites).",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:3.2",
+              "number": "3.2",
+              "title": "Configuring Cloud CDN.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:3.2:1",
+                  "text": "Setting up Cloud CDN for supported origins (e.g., managed instance groups, Cloud Storage buckets, and Cloud Run).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:3.2:2",
+                  "text": "Setting up Cloud CDN for external backends (internet NEGs) and third-party object storage.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:3.2:3",
+                  "text": "Invalidating cached content.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:3.3",
+              "number": "3.3",
+              "title": "Configuring Cloud DNS.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:3.3:1",
+                  "text": "Managing Cloud DNS zones and records.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:3.3:2",
+                  "text": "Migrating to Cloud DNS.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:3.3:3",
+                  "text": "Configuring Cloud DNS routing policies, such as geolocation and failover policies.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:3.3:4",
+                  "text": "Enabling DNS Security Extensions (DNSSEC).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:3.3:5",
+                  "text": "Setting up self-hosted DNS integration with Cloud DNS, including configuring DNS forwarding and DNS server policies.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:3.3:6",
+                  "text": "Understanding DNS private and public zones and setting up split-horizon DNS.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:3.3:7",
+                  "text": "Setting up DNS cross-project binding and DNS peering.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:3.3:8",
+                  "text": "Configuring Cloud DNS and external-DNS operator for GKE.",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-network-engineer:standard:4",
+          "number": "4",
+          "title": "Configuring and implementing hybrid and multicloud network interconnectivity",
+          "weight_percent": 16.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-network-engineer:standard:4.1",
+              "number": "4.1",
+              "title": "Configuring Cloud Interconnect.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:4.1:1",
+                  "text": "Creating Dedicated Interconnect connections and configuring VLAN attachments.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:4.1:2",
+                  "text": "Creating Partner Interconnect connections, configuring VLAN attachments, and differentiating between layer 2 and layer 3 type interconnects.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:4.1:3",
+                  "text": "Creating Cross-Cloud Interconnect connections and configuring VLAN attachments.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:4.1:4",
+                  "text": "Configuring HA VPN over Cloud Interconnect.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:4.1:5",
+                  "text": "Implementing 99.9% and 99.99% service-level agreements (SLAs) for interconnect topologies.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:4.2",
+              "number": "4.2",
+              "title": "Configuring a site-to-site IPSec VPN.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:4.2:1",
+                  "text": "Configuring HA VPN toward on-premise VPN gateways.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:4.2:2",
+                  "text": "Configuring HA VPN toward other Google Cloud VPCs.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:4.2:3",
+                  "text": "Configuring Classic VPN (e.g., route-based and policy-based).",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:4.3",
+              "number": "4.3",
+              "title": "Configuring Cloud Router.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:4.3:1",
+                  "text": "Implementing Border Gateway Protocol (BGP) attributes (e.g., ASN, route priority/MED, link-local addresses, and authentication).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:4.3:2",
+                  "text": "Configuring Bidirectional Forwarding Detection (BFD).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:4.3:3",
+                  "text": "Creating custom-advertised routes and custom-learned routes.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:4.3:4",
+                  "text": "Selecting between legacy and standard best path selection at the VPC.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:4.4",
+              "number": "4.4",
+              "title": "Configuring Network Connectivity Center.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:4.4:1",
+                  "text": "Creating hybrid spokes (e.g., VPN and VLAN attachment).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:4.4:2",
+                  "text": "Establishing site-to-site data transfer.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:4.4:3",
+                  "text": "Creating router appliances (RAs).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:4.4:4",
+                  "text": "Solving common transitivity networking issues.",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-network-engineer:standard:5",
+          "number": "5",
+          "title": "Managing, monitoring, and troubleshooting network operations",
+          "weight_percent": 14.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-network-engineer:standard:5.1",
+              "number": "5.1",
+              "title": "Logging and monitoring with Google Cloud Observability.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:5.1:1",
+                  "text": "Enabling and reviewing Cloud Logging for networking components (e.g., Cloud VPN, Cloud Router, VPC Service Controls, Cloud Next Generation Firewall [NGFW], Firewall Insights, VPC Flow Logs, Cloud DNS, Cloud NAT, and Network Connectivity Center).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:5.1:2",
+                  "text": "Monitoring networking metrics (e.g., Cloud VPN, Cloud Interconnect and VLAN attachments, Cloud Router, load balancers, Google Cloud Armor, and Cloud NAT).",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:5.2",
+              "number": "5.2",
+              "title": "Maintaining and troubleshooting connectivity issues.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:5.2:1",
+                  "text": "Draining and redirecting traffic flows with Application Load Balancer.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:5.2:2",
+                  "text": "Managing and troubleshooting VPNs.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:5.2:3",
+                  "text": "Managing and troubleshooting Cloud Interconnect issues.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:5.2:4",
+                  "text": "Troubleshooting Cloud Router BGP peering issues.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:5.2:5",
+                  "text": "Troubleshooting with VPC Flow Logs, firewall logs, and Packet Mirroring.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:5.3",
+              "number": "5.3",
+              "title": "Using Network Intelligence Center to monitor and troubleshoot common networking issues.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:5.3:1",
+                  "text": "Using Network Topology to visualize throughput and traffic flows.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:5.3:2",
+                  "text": "Using Connectivity Tests to diagnose route and firewall misconfigurations.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:5.3:3",
+                  "text": "Using Performance Dashboard to identify packet loss and latency (e.g., Google-wide and project scoped).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:5.3:4",
+                  "text": "Using Firewall Insights to monitor, identify, and improve rules.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:5.3:5",
+                  "text": "Using Network Analyzer to identify network failures, suboptimal configurations, and utilization warnings.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:5.3:6",
+                  "text": "Using Flow Analyzer and VPC Flow Logs to evaluate network traffic.",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-network-engineer:standard:6",
+          "number": "6",
+          "title": "Configuring, implementing and managing a cloud network security solution",
+          "weight_percent": 13.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-network-engineer:standard:6.1",
+              "number": "6.1",
+              "title": "Configuring Google Cloud Armor policies.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:6.1:1",
+                  "text": "Configuring and attaching edge and backend security policies.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.1:2",
+                  "text": "Implementing web application firewall (WAF) rules (e.g., SQL injection, cross-site scripting, and remote file inclusion).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.1:3",
+                  "text": "Configuring advanced network distributed denial of service (DDoS) and Adaptive Protection.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.1:4",
+                  "text": "Configuring rate limiting.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.1:5",
+                  "text": "Configuring bot management.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.1:6",
+                  "text": "Applying Google Threat Intelligence.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:6.2",
+              "number": "6.2",
+              "title": "Configuring and managing NGFW policies and VPC Firewall rules.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:6.2:1",
+                  "text": "Planning the firewall strategy (e.g., VPC firewall rules, Cloud NGFW, hierarchical firewall rules, and third-party integration).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.2:2",
+                  "text": "Understanding the effective policy rules for hierarchical firewall situations.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.2:3",
+                  "text": "Configuring Cloud NGFW to support GKE and Cloud Load Balancing.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.2:4",
+                  "text": "Creating and troubleshooting VPC firewall rules and Cloud NGFW regional/global/hierarchical policies.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.2:5",
+                  "text": "Enabling layer 7 packet inspection with Cloud NGFW Enterprise.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.2:6",
+                  "text": "Migrating from VPC firewall rules to Cloud NGFW policies.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.2:7",
+                  "text": "Configuring VPC and NGFW rule criteria (e.g., rule priority, network protocols, direction [ingress and egress], source, and destination).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.2:8",
+                  "text": "Configuring VPC and Firewall Rules Logging.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.2:9",
+                  "text": "Incorporating micro-segmentation for security purposes (e.g., using metadata, [secure] tags, service accounts, and network tags).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.2:10",
+                  "text": "Differentiating between the different tiers of Cloud NGFW: Essentials, Standard, and Enterprise.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:6.3",
+              "number": "6.3",
+              "title": "Configuring and securing internet egress traffic using Public Cloud NAT and Secure Web Proxy.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:6.3:1",
+                  "text": "Configuring public Cloud NAT IP addressing and assigning automatic and manual Cloud NAT IP addresses.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.3:2",
+                  "text": "Configuring static and dynamic port allocation for Cloud NAT.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.3:3",
+                  "text": "Configuring Secure Web Proxy.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-network-engineer:standard:6.4",
+              "number": "6.4",
+              "title": "Configuring self-managed network virtual appliance and Packet Mirroring.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-network-engineer:standard:6.4:1",
+                  "text": "Routing and inspecting inter-VPC traffic using multi-network interface card (NIC) virtual machines (VMs) (e.g., NGFW appliances).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.4:2",
+                  "text": "Configuring an internal load balancer as a next hop for HA multi-NIC VM routing.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.4:3",
+                  "text": "Configure policy-based routes for HA multi-NIC VM routing.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.4:4",
+                  "text": "Developing a strategy for out-of-band Network Security Integration.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-network-engineer:standard:6.4:5",
+                  "text": "Configuring Packet Mirroring for VPC traffic toward self-managed collectors.",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "in_scope_tools": [],
+      "outline_counts": {
+        "sections": 6,
+        "subsections": 22,
+        "objectives": 131,
+        "nested_objectives": 0
+      },
+      "stated_weight_total_percent": 100.0,
+      "weight_note": "Approximate stated weights are preserved; totals need not equal 100.",
+      "status": "current"
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification",
+      "final_url": "https://cloud.google.com/learn/certification",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "catalog",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://cloud.google.com/certification/cloud-network-engineer",
+      "final_url": "https://cloud.google.com/learn/certification/cloud-network-engineer",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "certification",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/042426_professional_cloud_network_engineer_exam_guide_english.pdf",
+      "final_url": "https://services.google.com/fh/files/misc/042426_professional_cloud_network_engineer_exam_guide_english.pdf",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "exam_guide",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLServ0tNGkr-dYAfmez_Gdk74dmVypZjzUKrkVFtFcArzhmPow/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLServ0tNGkr-dYAfmez_Gdk74dmVypZjzUKrkVFtFcArzhmPow/viewform",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "official_sample",
+      "content_type": "text/html; charset=utf-8"
+    }
+  ],
+  "missing_fields": [
+    "exam_variants.standard.validity_stated"
+  ],
+  "not_stated_notes": [
+    "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+    "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+    "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+  ]
+}

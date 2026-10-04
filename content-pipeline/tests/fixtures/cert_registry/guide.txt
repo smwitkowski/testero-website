@@ -1,0 +1,15 @@
+Synthetic Systems Engineer
+Certification exam guide as of June 1, 2026
+Section 1: Design systems (~50.5% of the exam)
+1.1 Evaluate a synthetic system. Considerations include:
+ ● Compare synthetic modes
+   over a wrapped line
+ ○ Match a synthetic nested requirement
+ ● Select a synthetic deployment
+Section 2: Operate systems (~50.5% of the exam)
+2.1 Monitor a synthetic service. Considerations include:
+ ● Test synthetic monitoring
+2.2 Review a synthetic incident
+The following tools are in scope for this exam:
+ - Synthetic CLI
+ - Synthetic Database

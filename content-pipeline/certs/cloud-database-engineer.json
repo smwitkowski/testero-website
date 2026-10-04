@@ -1,0 +1,503 @@
+{
+  "schema_version": 1,
+  "cert_id": "cloud-database-engineer",
+  "catalog_name": "Cloud Database Engineer",
+  "level": "professional",
+  "cert_url": "https://cloud.google.com/learn/certification/cloud-database-engineer",
+  "name": "Professional Cloud Database Engineer",
+  "status": "catalog-listed",
+  "registration_status": "not_stated",
+  "canonical_exam_code": null,
+  "retirement": null,
+  "announcements": [
+    "This exam will soon be updated to reflect recent branding changes. Refer to the exam guide to review product names used on the exam."
+  ],
+  "upcoming_versions": [
+    {
+      "variant": null,
+      "version": null,
+      "guide_url": null,
+      "effective_date": null,
+      "date_stated": null,
+      "announcement": "This exam will soon be updated to reflect recent branding changes. Refer to the exam guide to review product names used on the exam.",
+      "source_url": "https://cloud.google.com/certification/cloud-database-engineer",
+      "note": "Upcoming change is stated, but variant, version, date or future guide link may be unspecified. Do not substitute the current guide."
+    }
+  ],
+  "exam_variants": [
+    {
+      "variant": "standard",
+      "duration_minutes": 120,
+      "duration_stated": "2 hours",
+      "question_count": {
+        "min": 50,
+        "max": 60,
+        "approximate": false
+      },
+      "question_types": [
+        "multiple_choice",
+        "multiple_select"
+      ],
+      "format_stated": "50-60 multiple choice and multiple select questions",
+      "languages": [
+        "English",
+        "Japanese"
+      ],
+      "languages_stated": "English, Japanese",
+      "price_usd": 200,
+      "price_stated": "$200 (plus tax where applicable)",
+      "validity_stated": null,
+      "delivery_stated": "a. Take the online-proctored exam from a remote location. b. Take the onsite-proctored exam at a testing center - search for Google Cloud.",
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/professional_cloud_database_engineer_exam_guide_english.pdf"
+      ],
+      "case_study_names": null
+    }
+  ],
+  "sample_sources": [
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSe55cAg8a3NzgV_QCJ2_F75NAyE44Z-XuVB6oPJXaWnI5UBIQ/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSe55cAg8a3NzgV_QCJ2_F75NAyE44Z-XuVB6oPJXaWnI5UBIQ/viewform",
+      "availability": "public_html_fetched"
+    },
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSe55cAg8a3NzgV_QCJ2_F75NAyE44Z-XuVB6oPJXaWnI5UBIQ/viewform?usp=sf_link",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSe55cAg8a3NzgV_QCJ2_F75NAyE44Z-XuVB6oPJXaWnI5UBIQ/viewform?usp=sf_link",
+      "availability": "public_html_fetched"
+    }
+  ],
+  "guides": [
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_cloud_database_engineer_exam_guide_english.pdf",
+      "variant": "standard",
+      "version": null,
+      "effective_date": null,
+      "as_of_date": null,
+      "date_evidence": null,
+      "normalized_text_sha256": "057b1d1a56eca41d53d7703b8f9d0f8a7140d80bbdfbee35dd9d2d9293eda006",
+      "case_studies": [],
+      "sections": [
+        {
+          "id": "cloud-database-engineer:standard:1",
+          "number": "1",
+          "title": "Design innovative, scalable, and highly available cloud database solutions",
+          "weight_percent": 32.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-database-engineer:standard:1.1",
+              "number": "1.1",
+              "title": "Analyze relevant variables to perform database capacity and usage planning",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-database-engineer:standard:1.1:1",
+                  "text": "Perform solution sizing based on current environment workload metrics and future requirements",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:1.1:2",
+                  "text": "Evaluate performance and cost tradeoffs of different database configurations (e.g., machine types, storage types)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:1.1:3",
+                  "text": "Size database compute and storage based on performance requirements",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-database-engineer:standard:1.2",
+              "number": "1.2",
+              "title": "Evaluate database high availability and disaster recovery options given the requirements",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-database-engineer:standard:1.2:1",
+                  "text": "Evaluate tradeoffs between multi-regional, regional, and zonal database deployment strategies",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:1.2:2",
+                  "text": "Define maintenance windows and notifications based on application availability requirements",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-database-engineer:standard:1.3",
+              "number": "1.3",
+              "title": "Determine how applications will connect to the database",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-database-engineer:standard:1.3:1",
+                  "text": "Configure networking, key management, encryption, and security",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:1.3:2",
+                  "text": "Justify the use of session pooler services",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:1.3:3",
+                  "text": "Assess auditing policies for managed services",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-database-engineer:standard:1.4",
+              "number": "1.4",
+              "title": "Evaluate appropriate database solutions on Google Cloud",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-database-engineer:standard:1.4:1",
+                  "text": "Differentiate between managed and unmanaged database services (e.g., self-managed, bare metal, Google-managed, Google Cloud native and partner database offerings)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:1.4:2",
+                  "text": "Distinguish between SQL and NoSQL business requirements (e.g., structured, semi-structured, unstructured, vector)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:1.4:3",
+                  "text": "Analyze the cost of running database solutions in Google Cloud (comparative analysis)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:1.4:4",
+                  "text": "Assess application and database dependencies",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:1.4:5",
+                  "text": "Identify solutions to support regulatory and compliance requirements",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:1.4:6",
+                  "text": "Understand implications of organizational policies on database strategy",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:1.4:7",
+                  "text": "Consider solutions that span multiple database technologies (e.g. federation,",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:1.4:8",
+                  "text": "exports, hybrid deployments)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:1.4:9",
+                  "text": "Leverage database technologies to support generative AI and LLM use cases",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-database-engineer:standard:2",
+          "number": "2",
+          "title": "Manage a solution that can span multiple database technologies",
+          "weight_percent": 25.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-database-engineer:standard:2.1",
+              "number": "2.1",
+              "title": "Determine database connectivity and access management considerations",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-database-engineer:standard:2.1:1",
+                  "text": "Determine Identity and Access Management (IAM) and policies for database connectivity and access control",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:2.1:2",
+                  "text": "Manage database users including authentication and access",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-database-engineer:standard:2.2",
+              "number": "2.2",
+              "title": "Configure database monitoring and troubleshooting options",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-database-engineer:standard:2.2:1",
+                  "text": "Assess slow running queries, database locking - identify missing indexes",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:2.2:2",
+                  "text": "Monitor and investigate database vitals - RAM, CPU storage, I/O, and audit logging",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:2.2:3",
+                  "text": "Monitor and update quotas",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:2.2:4",
+                  "text": "Investigate database resource contention",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:2.2:5",
+                  "text": "Set up alerts for errors and performance metrics",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-database-engineer:standard:2.3",
+              "number": "2.3",
+              "title": "Design database backup and recovery solutions",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-database-engineer:standard:2.3:1",
+                  "text": "Given requirements, recommend backup and recovery options (automatic scheduled backups)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:2.3:2",
+                  "text": "Configure export and import data for databases",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:2.3:3",
+                  "text": "Design for RTO, RPO, and PITR",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:2.3:4",
+                  "text": "Manage data retention",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-database-engineer:standard:2.4",
+              "number": "2.4",
+              "title": "Optimize database cost and performance in Google Cloud",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-database-engineer:standard:2.4:1",
+                  "text": "Assess scaling up and scaling out options",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:2.4:2",
+                  "text": "Scale database instances based on current and upcoming workload",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:2.4:3",
+                  "text": "Define replication strategies",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:2.4:4",
+                  "text": "Continuously assess and optimize the cost of running a database solution",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:2.4:5",
+                  "text": "Optimize queries for cost and performance",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-database-engineer:standard:2.5",
+              "number": "2.5",
+              "title": "Automate common database tasks",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-database-engineer:standard:2.5:1",
+                  "text": "Perform database maintenance (e.g., rebuilding indexes, data exports)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:2.5:2",
+                  "text": "Schedule database exports",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:2.5:3",
+                  "text": "Manage upgrades for Google Cloud-managed databases",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:2.5:4",
+                  "text": "Monitor database SLA/SLOs",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-database-engineer:standard:3",
+          "number": "3",
+          "title": "Migrate data solutions",
+          "weight_percent": 23.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-database-engineer:standard:3.1",
+              "number": "3.1",
+              "title": "Design and implement data migration and replication",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-database-engineer:standard:3.1:1",
+                  "text": "Develop and execute migration strategies and plans, including zero/near-zero downtime, extended outage, and fallback",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:3.1:2",
+                  "text": "Reverse replication from Google Cloud to source",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:3.1:3",
+                  "text": "Plan and perform database migration, including fallback plans and DDL/DML conversion",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:3.1:4",
+                  "text": "Determine the correct database migration tools for a given scenario (e.g., databases hosted outside of Google Cloud)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-database-engineer:standard:4",
+          "number": "4",
+          "title": "Deploy scalable and highly available databases in Google Cloud",
+          "weight_percent": 20.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-database-engineer:standard:4.1",
+              "number": "4.1",
+              "title": "Apply concepts to implement scalable and highly available databases in Google Cloud.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-database-engineer:standard:4.1:1",
+                  "text": "Provision highly available database solutions in Google Cloud",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:4.1:2",
+                  "text": "Test high availability and disaster recovery strategies",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:4.1:3",
+                  "text": "Set up multi-regional replication for databases",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:4.1:4",
+                  "text": "Deploy and scale read replicas",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:4.1:5",
+                  "text": "Automate database instance provisioning",
+                  "children": []
+                },
+                {
+                  "id": "cloud-database-engineer:standard:4.1:6",
+                  "text": "Configure monitoring for highly available databases",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "in_scope_tools": [],
+      "outline_counts": {
+        "sections": 4,
+        "subsections": 11,
+        "objectives": 47,
+        "nested_objectives": 0
+      },
+      "stated_weight_total_percent": 100.0,
+      "weight_note": "Approximate stated weights are preserved; totals need not equal 100.",
+      "status": "current"
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification",
+      "final_url": "https://cloud.google.com/learn/certification",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "catalog",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://cloud.google.com/certification/cloud-database-engineer",
+      "final_url": "https://cloud.google.com/learn/certification/cloud-database-engineer",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "certification",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_cloud_database_engineer_exam_guide_english.pdf",
+      "final_url": "https://services.google.com/fh/files/misc/professional_cloud_database_engineer_exam_guide_english.pdf",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "exam_guide",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSe55cAg8a3NzgV_QCJ2_F75NAyE44Z-XuVB6oPJXaWnI5UBIQ/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSe55cAg8a3NzgV_QCJ2_F75NAyE44Z-XuVB6oPJXaWnI5UBIQ/viewform",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "official_sample",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSe55cAg8a3NzgV_QCJ2_F75NAyE44Z-XuVB6oPJXaWnI5UBIQ/viewform?usp=sf_link",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSe55cAg8a3NzgV_QCJ2_F75NAyE44Z-XuVB6oPJXaWnI5UBIQ/viewform?usp=sf_link",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "official_sample",
+      "content_type": "text/html; charset=utf-8"
+    }
+  ],
+  "missing_fields": [
+    "exam_variants.standard.validity_stated"
+  ],
+  "not_stated_notes": [
+    "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+    "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+    "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+  ]
+}

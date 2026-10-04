@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "catalog_url": "https://cloud.google.com/learn/certification",
+  "certifications": [
+    {
+      "cert_id": "agentic-architect",
+      "name": "Professional Agentic Architect",
+      "level": "professional",
+      "registration_status": "closed_beta_upcoming_ga",
+      "file": "agentic-architect.json"
+    },
+    {
+      "cert_id": "associate-google-workspace-administrator",
+      "name": "Associate Google Workspace Administrator",
+      "level": "associate",
+      "registration_status": "not_stated",
+      "file": "associate-google-workspace-administrator.json"
+    },
+    {
+      "cert_id": "cloud-architect",
+      "name": "Professional Cloud Architect",
+      "level": "professional",
+      "registration_status": "not_stated",
+      "file": "cloud-architect.json"
+    },
+    {
+      "cert_id": "cloud-database-engineer",
+      "name": "Professional Cloud Database Engineer",
+      "level": "professional",
+      "registration_status": "not_stated",
+      "file": "cloud-database-engineer.json"
+    },
+    {
+      "cert_id": "cloud-developer",
+      "name": "Professional Cloud Developer",
+      "level": "professional",
+      "registration_status": "not_stated",
+      "file": "cloud-developer.json"
+    },
+    {
+      "cert_id": "cloud-devops-engineer",
+      "name": "Professional Cloud DevOps Engineer",
+      "level": "professional",
+      "registration_status": "not_stated",
+      "file": "cloud-devops-engineer.json"
+    },
+    {
+      "cert_id": "cloud-digital-leader",
+      "name": "Cloud Digital Leader",
+      "level": "foundational",
+      "registration_status": "not_stated",
+      "file": "cloud-digital-leader.json"
+    },
+    {
+      "cert_id": "cloud-engineer",
+      "name": "Associate Cloud Engineer",
+      "level": "associate",
+      "registration_status": "not_stated",
+      "file": "cloud-engineer.json"
+    },
+    {
+      "cert_id": "cloud-network-engineer",
+      "name": "Professional Cloud Network Engineer",
+      "level": "professional",
+      "registration_status": "not_stated",
+      "file": "cloud-network-engineer.json"
+    },
+    {
+      "cert_id": "cloud-security-engineer",
+      "name": "Professional Cloud Security Engineer",
+      "level": "professional",
+      "registration_status": "not_stated",
+      "file": "cloud-security-engineer.json"
+    },
+    {
+      "cert_id": "data-engineer",
+      "name": "Professional Data Engineer",
+      "level": "professional",
+      "registration_status": "not_stated",
+      "file": "data-engineer.json"
+    },
+    {
+      "cert_id": "data-practitioner",
+      "name": "Associate Data Practitioner",
+      "level": "associate",
+      "registration_status": "not_stated",
+      "file": "data-practitioner.json"
+    },
+    {
+      "cert_id": "generative-ai-leader",
+      "name": "Generative AI Leader",
+      "level": "foundational",
+      "registration_status": "not_stated",
+      "file": "generative-ai-leader.json"
+    },
+    {
+      "cert_id": "machine-learning-engineer",
+      "name": "Professional Machine Learning Engineer",
+      "level": "professional",
+      "registration_status": "not_stated",
+      "file": "machine-learning-engineer.json"
+    },
+    {
+      "cert_id": "security-operations-engineer",
+      "name": "Professional Security Operations Engineer",
+      "level": "professional",
+      "registration_status": "not_stated",
+      "file": "security-operations-engineer.json"
+    }
+  ],
+  "removed_from_catalog_unverified": [],
+  "retirement_scope_note": "Current catalog and fetched linked official pages only. Absence is not proof of retirement. Unstated lifecycle facts remain null."
+}

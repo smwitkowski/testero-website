@@ -11,3 +11,6 @@ __pycache__/
 
 # Generated human review outputs
 review/
+
+# Raw official certification downloads (never commit sample question text)
+.cache/cert-registry/

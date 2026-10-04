@@ -1,0 +1,1291 @@
+{
+  "schema_version": 1,
+  "cert_id": "cloud-engineer",
+  "catalog_name": "Cloud Engineer",
+  "level": "associate",
+  "cert_url": "https://cloud.google.com/learn/certification/cloud-engineer",
+  "name": "Associate Cloud Engineer",
+  "status": "catalog-listed",
+  "registration_status": "not_stated",
+  "canonical_exam_code": null,
+  "retirement": null,
+  "announcements": [
+    "This exam was updated to reflect recent branding changes. Refer to the exam guide to review product names used on the exam."
+  ],
+  "upcoming_versions": [],
+  "exam_variants": [
+    {
+      "variant": "standard",
+      "duration_minutes": 120,
+      "duration_stated": "2 hours",
+      "question_count": {
+        "min": 50,
+        "max": 60,
+        "approximate": false
+      },
+      "question_types": [
+        "multiple_choice",
+        "multiple_select"
+      ],
+      "format_stated": "50-60 multiple choice and multiple select questions",
+      "languages": [
+        "English",
+        "Japanese",
+        "Spanish",
+        "Portuguese"
+      ],
+      "languages_stated": "English, Japanese, Spanish, Portuguese",
+      "price_usd": 125,
+      "price_stated": "$125 (plus tax where applicable)",
+      "validity_stated": "3 years",
+      "delivery_stated": "a. Take the Online-proctored exam from a remote location. b. Take the onsite-proctored exam at a testing center - search for Google Cloud.",
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/associate_cloud_engineer_exam_guide_english.pdf"
+      ],
+      "case_study_names": null
+    },
+    {
+      "variant": "renewal",
+      "duration_minutes": 60,
+      "duration_stated": "1 hour",
+      "question_count": {
+        "min": 20,
+        "max": 20,
+        "approximate": false
+      },
+      "question_types": [
+        "multiple_choice",
+        "multiple_select"
+      ],
+      "format_stated": "20 multiple choice and multiple select questions",
+      "languages": [
+        "English",
+        "Japanese"
+      ],
+      "languages_stated": "English, Japanese",
+      "price_usd": 75,
+      "price_stated": "$75 (plus tax where applicable)",
+      "validity_stated": "3 years",
+      "delivery_stated": "a. Take the Online-proctored exam from a remote location. b. Take the onsite-proctored exam at a testing center - search for Google Cloud.",
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/associate_cloud_engineer_renewal_exam_guide_english.pdf"
+      ],
+      "case_study_names": null
+    },
+    {
+      "variant": "skills_renewal",
+      "duration_minutes": null,
+      "duration_stated": null,
+      "question_count": null,
+      "question_types": null,
+      "format_stated": "Designated courses and/or skill badges in the renewal learning path",
+      "languages": null,
+      "languages_stated": null,
+      "price_usd": null,
+      "price_stated": null,
+      "validity_stated": "1 year",
+      "delivery_stated": null,
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [],
+      "case_study_names": null
+    }
+  ],
+  "sample_sources": [
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSfexWKtXT2OSFJ-obA4iT3GmzgiOCGvjrT9OfxilWC1yPtmfQ/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSfexWKtXT2OSFJ-obA4iT3GmzgiOCGvjrT9OfxilWC1yPtmfQ/viewform",
+      "availability": "public_html_fetched"
+    }
+  ],
+  "guides": [
+    {
+      "url": "https://services.google.com/fh/files/misc/associate_cloud_engineer_exam_guide_english.pdf",
+      "variant": "standard",
+      "version": null,
+      "effective_date": null,
+      "as_of_date": null,
+      "date_evidence": null,
+      "normalized_text_sha256": "a7c7295e3594c2b2dc9fc449772ed24e0f8102809837ddec9a8b807968e407c6",
+      "case_studies": [],
+      "sections": [
+        {
+          "id": "cloud-engineer:standard:1",
+          "number": "1",
+          "title": "Setting up a cloud solution environment",
+          "weight_percent": 20.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-engineer:standard:1.1",
+              "number": "1.1",
+              "title": "Setting up cloud projects and accounts.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:standard:1.1:1",
+                  "text": "Creating a resource hierarchy",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:1.1:2",
+                  "text": "Applying organizational policies to the resource hierarchy",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:1.1:3",
+                  "text": "Granting members Identity and Access Management (IAM) roles within a project",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:1.1:4",
+                  "text": "Managing users and groups in Cloud Identity (manually and automated)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:1.1:5",
+                  "text": "Enabling APIs within projects",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:1.1:6",
+                  "text": "Provisioning and setting up products in Google Cloud Observability",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:1.1:7",
+                  "text": "Assessing quotas and requesting increases",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:1.1:8",
+                  "text": "Setting up standalone organizations",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:1.1:9",
+                  "text": "Setting up cloud networking",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:1.1:10",
+                  "text": "Verifying product availability across geographical locations (e.g., regions, zones)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:1.1:11",
+                  "text": "Configuring Cloud Asset Inventory and using Gemini Cloud Assist to analyze resources",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:1.1:12",
+                  "text": "Configuring Workforce Identity Federation",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-engineer:standard:1.2",
+              "number": "1.2",
+              "title": "Managing billing configuration.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:standard:1.2:1",
+                  "text": "Creating one or more billing accounts",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:1.2:2",
+                  "text": "Linking projects to a billing account",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:1.2:3",
+                  "text": "Establishing billing budgets and alerts",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:1.2:4",
+                  "text": "Setting up billing exports",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-engineer:standard:2",
+          "number": "2",
+          "title": "Planning and implementing a cloud solution",
+          "weight_percent": 30.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-engineer:standard:2.1",
+              "number": "2.1",
+              "title": "Planning and implementing compute resources.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:standard:2.1:1",
+                  "text": "Selecting appropriate compute choices for a given workload (e.g., Compute Engine, Google Kubernetes Engine [GKE], Cloud Run, Cloud Run functions, Agent Runtime on Gemini Enterprise Agent Platform [formerly Vertex AI Agent Engine])",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.1:2",
+                  "text": "Launching a compute instance (e.g., availability policy, SSH keys)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.1:3",
+                  "text": "Choosing the appropriate storage for Compute Engine (e.g., zonal Persistent Disk, regional Persistent Disk, Google Cloud Hyperdisk)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.1:4",
+                  "text": "Creating an autoscaled managed instance group by using an instance template",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.1:5",
+                  "text": "Configuring OS Login",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.1:6",
+                  "text": "Configuring VM Manager",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.1:7",
+                  "text": "Using Spot VM instances and custom machine types",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.1:8",
+                  "text": "Installing and configuring the command-line interface (CLI) for Kubernetes (kubectl)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.1:9",
+                  "text": "Deploying a GKE cluster with different configurations (e.g., GKE Autopilot, regional clusters, private clusters)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.1:10",
+                  "text": "Deploying a containerized application to GKE",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.1:11",
+                  "text": "Deploying an application to serverless compute platforms, including for the processing of Google Cloud events (e.g., Pub/Sub events, Cloud Storage object change notification events, Eventarc)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.1:12",
+                  "text": "Identifying whether to use GPUs or TPUs",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-engineer:standard:2.2",
+              "number": "2.2",
+              "title": "Planning and implementing storage and data solutions.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:standard:2.2:1",
+                  "text": "Choosing and deploying data products (e.g., Cloud SQL, BigQuery, Firestore, Spanner, Bigtable, AlloyDB, Dataflow, Pub/Sub, Google Cloud Managed Service for Apache Kafka, Memorystore)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.2:2",
+                  "text": "Choosing and deploying storage products (e.g., Cloud Storage, Filestore, Google Cloud NetApp Volumes, Google Cloud Managed Lustre) and Cloud Storage options (e.g., Standard, Nearline, Coldline, Archive)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.2:3",
+                  "text": "Loading data (e.g., command-line upload, load data from Cloud Storage, Storage Transfer Service)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.2:4",
+                  "text": "Maintaining multi-region redundancy across data solutions",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-engineer:standard:2.3",
+              "number": "2.3",
+              "title": "Planning and implementing networking resources.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:standard:2.3:1",
+                  "text": "Creating a VPC with subnets (e.g., custom mode VPC, Shared VPC, VPC Network Peering)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.3:2",
+                  "text": "Creating and applying VPC firewalls rules and Cloud Next Generation Firewall (Cloud NGFW) policies with ingress and egress rules and attributes (e.g., action, source, destination, targets, protocols, ports)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.3:3",
+                  "text": "Using Tags (e.g., secure Tags) and service accounts in Cloud NGFW policy rules",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.3:4",
+                  "text": "Establishing network connectivity (e.g., Cloud VPN, VPC Network Peering, Cloud Interconnect)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.3:5",
+                  "text": "Choosing and deploying load balancers",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.3:6",
+                  "text": "Differentiating Network Service Tiers",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-engineer:standard:2.4",
+              "number": "2.4",
+              "title": "Planning and implementing resources using tooling.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:standard:2.4:1",
+                  "text": "Infrastructure as Code tooling (e.g., Fabric FAST, Config Connector, Terraform, Helm)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:2.4:2",
+                  "text": "AI-assisted planning and implementation (e.g., Gemini CLI, Google Antigravity, Gemini Cloud Assist, Application Design Center)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-engineer:standard:3",
+          "number": "3",
+          "title": "Ensuring the successful operation of a cloud solution",
+          "weight_percent": 30.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-engineer:standard:3.1",
+              "number": "3.1",
+              "title": "Managing compute resources.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:standard:3.1:1",
+                  "text": "Remotely connecting to a Compute Engine instance",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.1:2",
+                  "text": "Viewing current running Compute Engine instances",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.1:3",
+                  "text": "Working with snapshots and images (e.g., create, view, and delete images or snapshots; schedule a snapshot)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.1:4",
+                  "text": "Viewing current running GKE cluster inventory (e.g., nodes, Pods, Services)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.1:5",
+                  "text": "Configuring GKE to access Artifact Registry",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.1:6",
+                  "text": "Working with GKE node pools (e.g., add, edit, or remove a node pool; autoscaling node pool)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.1:7",
+                  "text": "Working with Kubernetes resources (e.g., Pods, Services, StatefulSets)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.1:8",
+                  "text": "Managing horizontal and vertical Pod autoscaling configurations",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.1:9",
+                  "text": "Managing GKE Autopilot Pod resource requests",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.1:10",
+                  "text": "Deploying new versions of a Cloud Run application",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.1:11",
+                  "text": "Adjusting application traffic splitting parameters (e.g., Cloud Run, Cloud Run functions, GKE)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.1:12",
+                  "text": "Configuring autoscaling for a Cloud Run application",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.1:13",
+                  "text": "Attaching GPUs and TPUs",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.1:14",
+                  "text": "Deploying an agent to Agent Runtime on Gemini Enterprise Agent Platform (formerly Vertex AI Agent Engine)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.1:15",
+                  "text": "Managing notebooks in Gemini Enterprise Agent Platform Workbench (formerly Vertex AI Workbench) and BigQuery",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.1:16",
+                  "text": "Managing developer environments (e.g., Cloud Workstations)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-engineer:standard:3.2",
+              "number": "3.2",
+              "title": "Managing storage and data solutions.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:standard:3.2:1",
+                  "text": "Managing and securing objects in Cloud Storage buckets",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.2:2",
+                  "text": "Setting object lifecycle management policies for Cloud Storage buckets",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.2:3",
+                  "text": "Executing queries to retrieve data from data instances (e.g., Cloud SQL, BigQuery, Bigtable, Spanner, Firestore, AlloyDB)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.2:4",
+                  "text": "Estimating costs of data storage resources",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.2:5",
+                  "text": "Backing up and restoring database instances (e.g., Cloud SQL, Firestore, Spanner, AlloyDB, Bigtable)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.2:6",
+                  "text": "Reviewing job status (e.g., Dataflow, BigQuery)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.2:7",
+                  "text": "Using Database Center to manage the Google Cloud database fleet",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.2:8",
+                  "text": "Configuring customer-managed encryption keys (CMEK)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-engineer:standard:3.3",
+              "number": "3.3",
+              "title": "Managing networking resources.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:standard:3.3:1",
+                  "text": "Resizing a subnet’s IPv4 address range",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.3:2",
+                  "text": "Reserving static external or internal IP addresses",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.3:3",
+                  "text": "Adding custom static routes in a VPC",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.3:4",
+                  "text": "Using Cloud DNS and Cloud NAT",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.3:5",
+                  "text": "Managing VPC firewall rules and Cloud NGFW policies",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-engineer:standard:3.4",
+              "number": "3.4",
+              "title": "Monitoring and logging.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:standard:3.4:1",
+                  "text": "Creating Cloud Monitoring alerts based on resource metrics",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.4:2",
+                  "text": "Creating and ingesting Cloud Monitoring custom metrics (e.g., from applications or logs)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.4:3",
+                  "text": "Configuring audit logs (e.g., VPC Flow Logs, audit logs, firewall logs)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.4:4",
+                  "text": "Exporting logs to external systems (e.g., on-premises, BigQuery)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.4:5",
+                  "text": "Configuring log buckets, log analytics, and log routers",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.4:6",
+                  "text": "Viewing and filtering logs in Cloud Logging",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.4:7",
+                  "text": "Viewing specific log message details in Cloud Logging",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.4:8",
+                  "text": "Using cloud diagnostic tools (e.g., Cloud Trace, Cloud Profiler, Query Insights, index advisor) to investigate an application issue",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.4:9",
+                  "text": "Viewing the Personalized Service Health dashboard",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.4:10",
+                  "text": "Configuring and deploying Ops Agent",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.4:11",
+                  "text": "Deploying Google Cloud Managed Service for Prometheus",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.4:12",
+                  "text": "Using Gemini Cloud Assist for Cloud Monitoring",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.4:13",
+                  "text": "Using Active Assist to optimize resource utilization",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:3.4:14",
+                  "text": "Using Cloud Hub to monitor active events and application health data",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-engineer:standard:4",
+          "number": "4",
+          "title": "Configuring access and security",
+          "weight_percent": 20.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-engineer:standard:4.1",
+              "number": "4.1",
+              "title": "Managing IAM.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:standard:4.1:1",
+                  "text": "Viewing and creating IAM policies",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:4.1:2",
+                  "text": "Attaching roles and policy inheritance in the Organization hierarchy",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:4.1:3",
+                  "text": "Managing the various role types and defining custom IAM roles",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-engineer:standard:4.2",
+              "number": "4.2",
+              "title": "Managing service accounts.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:standard:4.2:1",
+                  "text": "Creating service accounts, including Google-managed service accounts",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:4.2:2",
+                  "text": "Using service accounts in IAM policies with minimum permissions",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:4.2:3",
+                  "text": "Assigning service accounts to resources",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:4.2:4",
+                  "text": "Managing IAM permissions of a service account",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:4.2:5",
+                  "text": "Managing service account impersonation",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:4.2:6",
+                  "text": "Creating and managing short-lived service account credentials",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:4.2:7",
+                  "text": "Using a Google Cloud service account with a GKE application",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:standard:4.2:8",
+                  "text": "Provisioning Workload Identity Federation",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "in_scope_tools": [],
+      "outline_counts": {
+        "sections": 4,
+        "subsections": 12,
+        "objectives": 94,
+        "nested_objectives": 0
+      },
+      "stated_weight_total_percent": 100.0,
+      "weight_note": "Approximate stated weights are preserved; totals need not equal 100.",
+      "status": "current"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/associate_cloud_engineer_renewal_exam_guide_english.pdf",
+      "variant": "renewal",
+      "version": null,
+      "effective_date": null,
+      "as_of_date": null,
+      "date_evidence": null,
+      "normalized_text_sha256": "ff895b07e7514bd1a9c632a8a99034b7cfd006c00e8b70c6d04fff24a29ef5d8",
+      "case_studies": [],
+      "sections": [
+        {
+          "id": "cloud-engineer:renewal:1",
+          "number": "1",
+          "title": "Setting up a cloud solution environment",
+          "weight_percent": null,
+          "weight_approximate": null,
+          "included": false,
+          "subsections": []
+        },
+        {
+          "id": "cloud-engineer:renewal:2",
+          "number": "2",
+          "title": "Planning and implementing a cloud solution",
+          "weight_percent": 40.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-engineer:renewal:2.1",
+              "number": "2.1",
+              "title": "Planning and implementing compute resources.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:renewal:2.1:1",
+                  "text": "Selecting appropriate compute choices for a given workload (e.g., Compute Engine, Google Kubernetes Engine [GKE], Cloud Run, Cloud Run functions, Agent Runtime on Gemini Enterprise Agent Platform [formerly Vertex AI Agent Engine])",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.1:2",
+                  "text": "Launching a compute instance (e.g., availability policy, SSH keys)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.1:3",
+                  "text": "Choosing the appropriate storage for Compute Engine (e.g., zonal Persistent Disk, regional Persistent Disk, Google Cloud Hyperdisk)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.1:4",
+                  "text": "Creating an autoscaled managed instance group by using an instance template",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.1:5",
+                  "text": "Configuring OS Login",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.1:6",
+                  "text": "Configuring VM Manager",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.1:7",
+                  "text": "Using Spot VM instances and custom machine types",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.1:8",
+                  "text": "Installing and configuring the command-line interface (CLI) for Kubernetes (kubectl)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.1:9",
+                  "text": "Deploying a GKE cluster with different configurations (e.g., GKE Autopilot, regional clusters, private clusters)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.1:10",
+                  "text": "Deploying a containerized application to GKE",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.1:11",
+                  "text": "Deploying an application to serverless compute platforms, including for the processing of Google Cloud events (e.g., Pub/Sub events, Cloud Storage object change notification events, Eventarc)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.1:12",
+                  "text": "Identifying whether to use GPUs or TPUs",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-engineer:renewal:2.2",
+              "number": "2.2",
+              "title": "Planning and implementing storage and data solutions.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:renewal:2.2:1",
+                  "text": "Choosing and deploying data products (e.g., Cloud SQL, BigQuery, Firestore, Spanner, Bigtable, AlloyDB, Dataflow, Pub/Sub, Google Cloud Managed Service for Apache Kafka, Memorystore)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.2:2",
+                  "text": "Choosing and deploying storage products (e.g., Cloud Storage, Filestore, Google Cloud NetApp Volumes, Google Cloud Managed Lustre) and Cloud Storage options (e.g., Standard, Nearline, Coldline, Archive)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.2:3",
+                  "text": "Loading data (e.g., command-line upload, load data from Cloud Storage, Storage Transfer Service)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.2:4",
+                  "text": "Maintaining multi-region redundancy across data solutions",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-engineer:renewal:2.3",
+              "number": "2.3",
+              "title": "Planning and implementing networking resources.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:renewal:2.3:1",
+                  "text": "Creating a VPC with subnets (e.g., custom mode VPC, Shared VPC, VPC Network Peering)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.3:2",
+                  "text": "Creating and applying VPC firewalls rules and Cloud Next Generation Firewall (Cloud NGFW) policies with ingress and egress rules and attributes (e.g., action, source, destination, targets, protocols, ports)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.3:3",
+                  "text": "Using Tags (e.g., secure Tags) and service accounts in Cloud NGFW policy rules",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.3:4",
+                  "text": "Establishing network connectivity (e.g., Cloud VPN, VPC Network Peering, Cloud Interconnect)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.3:5",
+                  "text": "Choosing and deploying load balancers",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.3:6",
+                  "text": "Differentiating Network Service Tiers",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-engineer:renewal:2.4",
+              "number": "2.4",
+              "title": "Planning and implementing resources using tooling.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:renewal:2.4:1",
+                  "text": "Infrastructure as Code tooling (e.g., Fabric FAST, Config Connector, Terraform, Helm)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:2.4:2",
+                  "text": "AI-assisted planning and implementation (e.g., Gemini CLI, Google Antigravity, Gemini Cloud Assist, Application Design Center) Associate Cloud Engineer Renewal exam guide 2",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-engineer:renewal:3",
+          "number": "3",
+          "title": "Ensuring the successful operation of a cloud solution",
+          "weight_percent": 40.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-engineer:renewal:3.1",
+              "number": "3.1",
+              "title": "Managing compute resources.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:renewal:3.1:1",
+                  "text": "Remotely connecting to a Compute Engine instance",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.1:2",
+                  "text": "Viewing current running Compute Engine instances",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.1:3",
+                  "text": "Working with snapshots and images (e.g., create, view, and delete images or snapshots; schedule a snapshot)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.1:4",
+                  "text": "Viewing current running GKE cluster inventory (e.g., nodes, Pods, Services)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.1:5",
+                  "text": "Configuring GKE to access Artifact Registry",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.1:6",
+                  "text": "Working with GKE node pools (e.g., add, edit, or remove a node pool; autoscaling node pool)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.1:7",
+                  "text": "Working with Kubernetes resources (e.g., Pods, Services, StatefulSets)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.1:8",
+                  "text": "Managing horizontal and vertical Pod autoscaling configurations",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.1:9",
+                  "text": "Managing GKE Autopilot Pod resource requests",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.1:10",
+                  "text": "Deploying new versions of a Cloud Run application",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.1:11",
+                  "text": "Adjusting application traffic splitting parameters (e.g., Cloud Run, Cloud Run functions, GKE)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.1:12",
+                  "text": "Configuring autoscaling for a Cloud Run application",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.1:13",
+                  "text": "Attaching GPUs and TPUs",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.1:14",
+                  "text": "Deploying an agent to Agent Runtime on Gemini Enterprise Agent Platform (formerly Vertex AI Agent Engine)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.1:15",
+                  "text": "Managing notebooks in Gemini Enterprise Agent Platform Workbench (formerly Vertex AI Workbench) and BigQuery",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.1:16",
+                  "text": "Managing developer environments (e.g., Cloud Workstations)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-engineer:renewal:3.2",
+              "number": "3.2",
+              "title": "Managing storage and data solutions.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:renewal:3.2:1",
+                  "text": "Managing and securing objects in Cloud Storage buckets",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.2:2",
+                  "text": "Setting object lifecycle management policies for Cloud Storage buckets",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.2:3",
+                  "text": "Executing queries to retrieve data from data instances (e.g., Cloud SQL, BigQuery, Bigtable, Spanner, Firestore, AlloyDB)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.2:4",
+                  "text": "Estimating costs of data storage resources",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.2:5",
+                  "text": "Backing up and restoring database instances (e.g., Cloud SQL, Firestore, Spanner, AlloyDB, Bigtable)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.2:6",
+                  "text": "Reviewing job status (e.g., Dataflow, BigQuery)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.2:7",
+                  "text": "Using Database Center to manage the Google Cloud database fleet",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.2:8",
+                  "text": "Configuring customer-managed encryption keys (CMEK) Associate Cloud Engineer Renewal exam guide 3",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-engineer:renewal:3.3",
+              "number": "3.3",
+              "title": "Managing networking resources.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:renewal:3.3:1",
+                  "text": "Resizing a subnet’s IPv4 address range",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.3:2",
+                  "text": "Reserving static external or internal IP addresses",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.3:3",
+                  "text": "Adding custom static routes in a VPC",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.3:4",
+                  "text": "Using Cloud DNS and Cloud NAT",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.3:5",
+                  "text": "Managing VPC firewall rules and Cloud NGFW policies",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-engineer:renewal:3.4",
+              "number": "3.4",
+              "title": "Monitoring and logging.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:renewal:3.4:1",
+                  "text": "Creating Cloud Monitoring alerts based on resource metrics",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.4:2",
+                  "text": "Creating and ingesting Cloud Monitoring custom metrics (e.g., from applications or logs)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.4:3",
+                  "text": "Configuring audit logs (e.g., VPC Flow Logs, audit logs, firewall logs)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.4:4",
+                  "text": "Exporting logs to external systems (e.g., on-premises, BigQuery)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.4:5",
+                  "text": "Configuring log buckets, log analytics, and log routers",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.4:6",
+                  "text": "Viewing and filtering logs in Cloud Logging",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.4:7",
+                  "text": "Viewing specific log message details in Cloud Logging",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.4:8",
+                  "text": "Using cloud diagnostic tools (e.g., Cloud Trace, Cloud Profiler, Query Insights, index advisor) to investigate an application issue",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.4:9",
+                  "text": "Viewing the Personalized Service Health dashboard",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.4:10",
+                  "text": "Configuring and deploying Ops Agent",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.4:11",
+                  "text": "Deploying Google Cloud Managed Service for Prometheus",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.4:12",
+                  "text": "Using Gemini Cloud Assist for Cloud Monitoring",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.4:13",
+                  "text": "Using Active Assist to optimize resource utilization",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:3.4:14",
+                  "text": "Using Cloud Hub to monitor active events and application health data",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-engineer:renewal:4",
+          "number": "4",
+          "title": "Configuring access and security",
+          "weight_percent": 20.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-engineer:renewal:4.2",
+              "number": "4.2",
+              "title": "Managing service accounts.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-engineer:renewal:4.2:1",
+                  "text": "Creating service accounts, including Google-managed service accounts",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:4.2:2",
+                  "text": "Using service accounts in IAM policies with minimum permissions",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:4.2:3",
+                  "text": "Assigning service accounts to resources",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:4.2:4",
+                  "text": "Managing IAM permissions of a service account",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:4.2:5",
+                  "text": "Managing service account impersonation",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:4.2:6",
+                  "text": "Creating and managing short-lived service account credentials",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:4.2:7",
+                  "text": "Using a Google Cloud service account with a GKE application",
+                  "children": []
+                },
+                {
+                  "id": "cloud-engineer:renewal:4.2:8",
+                  "text": "Provisioning Workload Identity Federation Associate Cloud Engineer Renewal exam guide 4",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "in_scope_tools": [],
+      "outline_counts": {
+        "sections": 4,
+        "subsections": 9,
+        "objectives": 75,
+        "nested_objectives": 0
+      },
+      "stated_weight_total_percent": 100.0,
+      "weight_note": "Approximate stated weights are preserved; totals need not equal 100.",
+      "status": "current"
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification",
+      "final_url": "https://cloud.google.com/learn/certification",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "catalog",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://cloud.google.com/certification/cloud-engineer",
+      "final_url": "https://cloud.google.com/learn/certification/cloud-engineer",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "certification",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/associate_cloud_engineer_exam_guide_english.pdf",
+      "final_url": "https://services.google.com/fh/files/misc/associate_cloud_engineer_exam_guide_english.pdf",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "exam_guide",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/associate_cloud_engineer_renewal_exam_guide_english.pdf",
+      "final_url": "https://services.google.com/fh/files/misc/associate_cloud_engineer_renewal_exam_guide_english.pdf",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "exam_guide",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSfexWKtXT2OSFJ-obA4iT3GmzgiOCGvjrT9OfxilWC1yPtmfQ/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSfexWKtXT2OSFJ-obA4iT3GmzgiOCGvjrT9OfxilWC1yPtmfQ/viewform",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "official_sample",
+      "content_type": "text/html; charset=utf-8"
+    }
+  ],
+  "missing_fields": [
+    "exam_variants.skills_renewal.duration_minutes",
+    "exam_variants.skills_renewal.question_count",
+    "exam_variants.skills_renewal.question_types",
+    "exam_variants.skills_renewal.languages",
+    "exam_variants.skills_renewal.price_usd"
+  ],
+  "not_stated_notes": [
+    "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+    "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions."
+  ]
+}
