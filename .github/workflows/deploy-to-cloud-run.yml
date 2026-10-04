@@ -118,7 +118,9 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           service: ${{ secrets.SERVICE_NAME }}
           region: ${{ secrets.GCP_REGION }}
-          image: ${{ needs.build.outputs.image }}
+          # Recompute instead of using needs.build.outputs: GitHub drops job outputs that contain
+          # secret values (region/project/repository), which left --image empty.
+          image: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/frontend:${{ github.sha }}
           flags: --allow-unauthenticated --memory=1Gi --cpu=1 --min-instances=0 --max-instances=10 --port=3000
           # Preserve unrelated runtime configuration and Secret Manager bindings.
           env_vars_update_strategy: merge

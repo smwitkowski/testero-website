@@ -83,7 +83,7 @@ secret versions and the existing runtime service identity. Grant that **runtime
 service account** `roles/secretmanager.secretAccessor` on each required secret.
 The GitHub deployment account needs the approved Cloud Run deployment permission
 (`roles/run.admin` for the existing unauthenticated-service setting),
-`roles/iam.serviceAccountUser` on that runtime account, and
+`roles/iam.serviceAccountUser` on that runtime account, `roles/iam.serviceAccountTokenCreator` on **itself** (the build job's `token_format: access_token` login mints a token for the deployer account), and
 `roles/artifactregistry.writer` on the target repository. Use resource-scoped grants
 where supported. Keep the existing Cloud Run service agent's image-read access.
 Do not replace the runtime service account or broaden project-wide access just to
