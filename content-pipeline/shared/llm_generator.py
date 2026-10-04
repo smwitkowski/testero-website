@@ -1,7 +1,7 @@
 """LLM-backed question generator using DSPy.
 
 This module provides question generation using DSPy with OpenRouter,
-generating PMLE scenario-based questions with structured output.
+generating scoped certification questions with typed option evidence.
 """
 
 import os
@@ -10,11 +10,7 @@ import logging
 import json
 from typing import Dict, Any, Optional, Callable, Tuple
 import dspy
-from dotenv import load_dotenv
-
-# Load environment variables
-env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
-load_dotenv(dotenv_path=env_path)
+from shared.evidence import OptionEvidence, evidence_records
 
 from shared.tracing import traceable_decorator
 
@@ -22,15 +18,15 @@ logger = logging.getLogger(__name__)
 
 
 class PmleQuestionSignature(dspy.Signature):
-    """Generate a PMLE question grounded in official documentation.
-    
-    Outputs structured question data with 4 choices (A-D) and per-option explanations.
-    
-    The Professional Machine Learning Engineer builds, evaluates, productionizes, and optimizes 
-    AI solutions using Google Cloud capabilities. The ML Engineer handles large, complex datasets 
-    and creates repeatable, reusable code. The ML Engineer designs and operationalizes generative 
-    AI solutions based on foundation models, considers responsible AI practices, and collaborates 
-    closely with other job roles.
+    """Generate a question within the supplied certification registry objective scope.
+
+    Follow the supplied STYLE guidance and certification level. Produce exactly
+    four reasonable options with one best answer and per-option explanations.
+    Use a scenario only when useful for the objective; foundational questions
+    need not adopt a professional-role scenario. A is correct_answer; B, C and
+    D are distractor_1, distractor_2 and distractor_3 respectively. Attach one
+    exact documentation quote for each option's factual basis. Evidence must
+    be regenerated whenever any answer or explanation changes.
     """
     # Input fields
     domain_context: str = dspy.InputField(
@@ -66,12 +62,23 @@ class PmleQuestionSignature(dspy.Signature):
         default=""
     )
     
-    # Output fields - Scenario-based stem
+    evidence: list[OptionEvidence] = dspy.OutputField(
+        description=(
+            "Exactly one evidence record for each label A, B, C, D. A maps to correct_answer; "
+            "B/C/D map to distractor_1/2/3. Each URL must be a fetched URL explicitly listed "
+            "in documentation_context. Each quote must be a nonempty exact, case-sensitive "
+            "substring of that URL's source text, at most 300 characters. For distractors, "
+            "quote the documented capability or limitation used in its explanation. "
+            "Generate fresh evidence for the returned answers; never retain stale evidence."
+        )
+    )
+
+    # Output fields
     stem: str = dspy.OutputField(
         description=(
-            "Realistic scenario (3-5 sentences) using ONLY facts from documentation_context. "
-            "State explicit constraints (latency, cost, compliance, maintainability). "
-            "End with 'What should you do?' or similar question."
+            "Question appropriate to the registry objective and certification level, using ONLY documented facts. "
+            "For a scenario, state the constraints needed to distinguish the best answer. "
+            "Ask one clear single-answer question."
         )
     )
     
@@ -135,7 +142,7 @@ class PmleQuestionSignature(dspy.Signature):
 
 
 class QuestionCorrectionSignature(dspy.Signature):
-    """Correct a PMLE question based on validation errors.
+    """Correct a scoped certification question based on validation errors.
     
     Takes the original question output and validation errors, then produces
     a corrected version that addresses all validation issues.
@@ -172,12 +179,23 @@ class QuestionCorrectionSignature(dspy.Signature):
         description="Difficulty level: EASY, MEDIUM, or HARD"
     )
     
+    evidence: list[OptionEvidence] = dspy.OutputField(
+        description=(
+            "Exactly one evidence record for each label A, B, C, D. A maps to correct_answer; "
+            "B/C/D map to distractor_1/2/3. Each URL must be a fetched URL explicitly listed "
+            "in documentation_context. Each quote must be a nonempty exact, case-sensitive "
+            "substring of that URL's source text, at most 300 characters. For distractors, "
+            "quote the documented capability or limitation used in its explanation. "
+            "Generate fresh evidence for the returned answers; never retain stale evidence."
+        )
+    )
+
     # Output fields - same structure as PmleQuestionSignature
     stem: str = dspy.OutputField(
         description=(
-            "Corrected realistic scenario (3-5 sentences) using ONLY facts from documentation_context. "
-            "State explicit constraints (latency, cost, compliance, maintainability). "
-            "End with 'What should you do?' or similar question. "
+            "Corrected question appropriate to the registry objective and certification level, using ONLY documented facts. "
+            "For a scenario, state the constraints needed to distinguish the best answer. "
+            "Ask one clear single-answer question. "
             "Ensure minimum 20 characters if that was an error."
         )
     )
@@ -245,7 +263,7 @@ class QuestionCorrectionSignature(dspy.Signature):
 
 
 class FactualCorrectionSignature(dspy.Signature):
-    """Correct a PMLE question based on factual accuracy evaluation feedback.
+    """Correct a scoped certification question based on factual accuracy evaluation feedback.
     
     Takes the original question output and factual evaluation errors, then produces
     a corrected version that addresses all factual issues found during evaluation.
@@ -288,12 +306,23 @@ class FactualCorrectionSignature(dspy.Signature):
         description="Difficulty level: EASY, MEDIUM, or HARD"
     )
     
+    evidence: list[OptionEvidence] = dspy.OutputField(
+        description=(
+            "Exactly one evidence record for each label A, B, C, D. A maps to correct_answer; "
+            "B/C/D map to distractor_1/2/3. Each URL must be a fetched URL explicitly listed "
+            "in documentation_context. Each quote must be a nonempty exact, case-sensitive "
+            "substring of that URL's source text, at most 300 characters. For distractors, "
+            "quote the documented capability or limitation used in its explanation. "
+            "Generate fresh evidence for the returned answers; never retain stale evidence."
+        )
+    )
+
     # Output fields - same structure as PmleQuestionSignature
     stem: str = dspy.OutputField(
         description=(
-            "Corrected realistic scenario (3-5 sentences) using ONLY facts from documentation_context. "
-            "State explicit constraints (latency, cost, compliance, maintainability). "
-            "End with 'What should you do?' or similar question."
+            "Corrected question appropriate to the registry objective and certification level, using ONLY documented facts. "
+            "For a scenario, state the constraints needed to distinguish the best answer. "
+            "Ask one clear single-answer question."
         )
     )
     
@@ -406,6 +435,20 @@ class GapAnalysisSignature(dspy.Signature):
     )
 
 
+QUESTION_FIELDS = (
+    "stem", "correct_answer", "distractor_1", "distractor_2", "distractor_3",
+    "correct_explanation", "distractor_1_explanation", "distractor_2_explanation",
+    "distractor_3_explanation",
+)
+
+
+def _question_data(result) -> Dict[str, Any]:
+    """Extract a fresh complete generation, including its own typed evidence."""
+    data = {name: getattr(result, name).strip() for name in QUESTION_FIELDS}
+    data["evidence"] = evidence_records(result.evidence)
+    return data
+
+
 class LLMGenerator:
     """Question generator using DSPy with OpenRouter.
     
@@ -487,17 +530,7 @@ class LLMGenerator:
             
             # Extract and structure the output
             # Note: correct_answer becomes choice A, distractors become B, C, D
-            question_data = {
-                "stem": result.stem.strip(),
-                "correct_answer": result.correct_answer.strip(),
-                "distractor_1": result.distractor_1.strip(),
-                "distractor_2": result.distractor_2.strip(),
-                "distractor_3": result.distractor_3.strip(),
-                "correct_explanation": result.correct_explanation.strip(),
-                "distractor_1_explanation": result.distractor_1_explanation.strip(),
-                "distractor_2_explanation": result.distractor_2_explanation.strip(),
-                "distractor_3_explanation": result.distractor_3_explanation.strip(),
-            }
+            question_data = _question_data(result)
             
             logger.debug(f"Generated question stem: {question_data['stem'][:100]}...")
             return question_data
@@ -541,19 +574,9 @@ class LLMGenerator:
             }
         )
         
-        # Extract corrected question data
-        return {
-            "stem": corrected_result.stem.strip(),
-            "correct_answer": corrected_result.correct_answer.strip(),
-            "distractor_1": corrected_result.distractor_1.strip(),
-            "distractor_2": corrected_result.distractor_2.strip(),
-            "distractor_3": corrected_result.distractor_3.strip(),
-            "correct_explanation": corrected_result.correct_explanation.strip(),
-            "distractor_1_explanation": corrected_result.distractor_1_explanation.strip(),
-            "distractor_2_explanation": corrected_result.distractor_2_explanation.strip(),
-            "distractor_3_explanation": corrected_result.distractor_3_explanation.strip(),
-        }
-    
+        # Replace the full question and proof together; never merge stale evidence.
+        return _question_data(corrected_result)
+
     @traceable_decorator(name="generate_question_with_retry", project_name=os.environ.get("LANGSMITH_PROJECT", "question-generation"))
     def generate_question_with_retry(
         self,
@@ -757,10 +780,28 @@ def generate_question(
     Returns:
         Dictionary with question data including per-option explanations
     """
-    generator = LLMGenerator(model=model)
-    return generator.generate_question(
+    if (not isinstance(domain_context, str) or not domain_context.strip()
+            or not isinstance(documentation_context, str) or not documentation_context.strip()):
+        raise ValueError("Registry objective scope and fetched documentation are required")
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+    if not api_key:
+        raise ValueError("OPENROUTER_API_KEY must be supplied in the environment")
+    lm = dspy.LM(
+        model=model,
+        api_key=api_key,
+        api_base="https://openrouter.ai/api/v1",
+        max_tokens=8000,
+        temperature=0.7,
+        cache=False,
+    )
+    predictor = dspy.ChainOfThought(PmleQuestionSignature)
+    result = predictor(
         domain_context=domain_context,
         documentation_context=documentation_context,
         difficulty=difficulty,
-        exam_subsection=exam_subsection,
+        exam_subsection=exam_subsection or "",
+        gap_analysis_guidance="",
+        lm=lm,
+        config={"rollout_id": time.time_ns(), "temperature": 0.7},
     )
+    return _question_data(result)
