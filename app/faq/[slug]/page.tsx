@@ -1,37 +1,28 @@
-import React, { Suspense } from 'react';
-import { faqData } from '@/lib/content/faqData';
-import type { Metadata } from 'next';
-import FaqClientContent from './FaqClientContent';
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { MarkdownContent } from "@/components/markdown-content";
+import { getFaqEntry, getFaqEntries } from "@/lib/content/loader";
+import { pageMetadata } from "@/lib/seo";
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://testero.ai';
-
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const unwrappedParams = await params;
-  const faq = faqData.find((f) => f.slug === unwrappedParams.slug);
-
-  if (!faq) {
-    return {
-      title: 'FAQ Not Found',
-      description: 'The FAQ you are looking for could not be found.',
-    };
-  }
-
-  return {
-    title: faq.question,
-    description: faq.answer.substring(0, 160) + (faq.answer.length > 160 ? '...' : ''),
-    alternates: {
-      canonical: `${baseUrl}/faq/${faq.slug}`,
-    },
-  };
+type PageProps = { params: Promise<{ slug: string }> };
+export function generateStaticParams() { return getFaqEntries().map((entry) => ({ slug: entry.slug })); }
+export async function generateMetadata({ params }: PageProps) {
+  const { slug } = await params;
+  const entry = getFaqEntry(slug);
+  if (!entry) notFound();
+  return pageMetadata(entry.title, entry.description, entry.href);
 }
-
-export default async function FaqSlugPage({ params }: { params: Promise<{ slug: string }> }) {
-  const unwrappedParams = await params;
-  const faq = faqData.find((f) => f.slug === unwrappedParams.slug);
-
-  return (
-    <Suspense fallback={<div>Loading FAQ...</div>}>
-      <FaqClientContent faq={faq} />
-    </Suspense>
-  );
+export default async function FaqArticlePage({ params }: PageProps) {
+  const { slug } = await params;
+  const entry = getFaqEntry(slug);
+  if (!entry) notFound();
+  return <article className="space-y-8">
+    <Link href="/faq" className="text-sm font-medium text-primary hover:underline">← Back to faq</Link>
+    <header className="space-y-3"><h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">{entry.title}</h1>{entry.publishedAt && <p className="text-sm text-muted-foreground">Originally published <time dateTime={entry.publishedAt}>{entry.publishedAt}</time></p>}</header>
+    {entry.editorialNotice && <aside aria-label="Editorial notice" className="rounded-lg border border-border bg-muted p-5 text-sm leading-relaxed"><p className="mb-2 font-semibold">Editorial notice</p><p>{entry.editorialNotice}</p></aside>}
+    <p className="rounded-lg border border-border bg-muted p-5 text-sm leading-relaxed">Historical certification answer. Exam fees, formats, registration providers, and program requirements can change. Check the linked sources and <a className="text-primary underline" href="https://cloud.google.com/learn/certification">current official Google Cloud guidance</a> before booking or choosing a course. No certification or preparation tool guarantees a job or salary increase.</p>
+    <MarkdownContent content={entry.body} />
+    <section aria-label="Sources" className="space-y-3 border-t border-border pt-6"><h2 className="text-xl font-semibold">Sources and current guidance</h2><ul className="list-disc space-y-2 pl-6">{entry.citations.map((href) => <li key={href}><a href={href} className="break-words text-sm text-primary underline underline-offset-4" rel="noopener noreferrer">{href}</a></li>)}</ul></section>
+    <footer className="space-y-3 border-t border-border pt-6"><p className="text-sm text-muted-foreground">Testero is independent and not affiliated with Google. Our diagnostic and practice cover PMLE only. A readiness score is a study signal, not an exam-outcome guarantee.</p><Link href="/diagnostic" className="inline-flex rounded-lg bg-primary px-5 py-3 font-medium text-primary-foreground hover:opacity-90">Start free PMLE diagnostic</Link></footer>
+  </article>;
 }

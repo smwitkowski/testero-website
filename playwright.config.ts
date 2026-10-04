@@ -1,53 +1,31 @@
-import { defineConfig, devices } from "@playwright/test"
+import { defineConfig, devices } from "@playwright/test";
 
-const PORT = Number(process.env.PORT ?? 3000)
+const baseURL = "http://127.0.0.1:3000";
+const supabaseURL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+if (supabaseURL) {
+  const url = new URL(supabaseURL);
+  if (!["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) {
+    throw new Error("Playwright requires a loopback-only local Supabase URL.");
+  }
+}
 
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: [
-    ["list"],
-    ["html", { outputFolder: "playwright-report", open: "never" }],
-  ],
-  timeout: 30000,
-  expect: {
-    timeout: 5000,
-  },
-  use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${PORT}`,
-    trace: "on-first-retry",
-    screenshot: "only-on-failure",
-    video: "retain-on-failure",
-    actionTimeout: 10000,
-  },
-  projects: [
-    {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+  retries: 0,
+  workers: 1,
+  reporter: "list",
+  use: { baseURL, trace: "retain-on-failure" },
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  webServer: process.env.PLAYWRIGHT_MANAGED_SERVER === "1" ? undefined : {
+    command: "npm run dev",
+    url: baseURL,
+    reuseExistingServer: false,
+    timeout: 120_000,
+    env: {
+      NEXT_PUBLIC_POSTHOG_KEY: "",
+      NEXT_PUBLIC_POSTHOG_HOST: "",
     },
-  ],
-  webServer: process.env.PLAYWRIGHT_SKIP_WEB_SERVER
-    ? undefined
-    : {
-        command: "npm run build && npm run start",
-        url: `http://localhost:${PORT}`,
-        reuseExistingServer: !process.env.CI,
-        timeout: 120000,
-        env: {
-          NEXT_PUBLIC_STRIPE_BASIC_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_BASIC_MONTHLY ?? "price_test_basic_monthly",
-          NEXT_PUBLIC_STRIPE_BASIC_3MONTH: process.env.NEXT_PUBLIC_STRIPE_BASIC_3MONTH ?? "price_test_basic_3month",
-          NEXT_PUBLIC_STRIPE_PRO_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY ?? "price_test_pro_monthly",
-          NEXT_PUBLIC_STRIPE_PRO_3MONTH: process.env.NEXT_PUBLIC_STRIPE_PRO_3MONTH ?? "price_test_pro_3month",
-          NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY:
-            process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY ?? "price_test_all_access_monthly",
-          NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH:
-            process.env.NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH ?? "price_test_all_access_3month",
-          NEXT_PUBLIC_STRIPE_EXAM_3MONTH: process.env.NEXT_PUBLIC_STRIPE_EXAM_3MONTH ?? "price_test_exam_3m",
-          NEXT_PUBLIC_STRIPE_EXAM_6MONTH: process.env.NEXT_PUBLIC_STRIPE_EXAM_6MONTH ?? "price_test_exam_6m",
-          NEXT_PUBLIC_STRIPE_EXAM_12MONTH: process.env.NEXT_PUBLIC_STRIPE_EXAM_12MONTH ?? "price_test_exam_12m",
-        },
-      },
-})
+  },
+});

@@ -1,135 +1,95 @@
-# Stripe Setup for Trial Conversion (Monthly + 3-Month)
+# PMLE Pass: Stripe setup for Testero v2
 
-## Required Environment Variables
+The only new offer is **PMLE Pass**: **US $39 one-time**, **90 days** of full PMLE
+access from payment, **no auto-renewal**, and a **7-day refund window**. Any refund,
+including a partial refund, ends pass access. Active legacy subscriptions remain
+supported, but v2 does not create new subscriptions, tiers, or trials.
 
-### Local Development
+## Founder setup
 
-Add these to your `.env.local` file:
+1. In the Stripe dashboard, start in **test mode**. Create a product named
+   **PMLE Pass** and one **one-time USD $39.00 price** (3900 cents). Do not create
+   a recurring or three-month price. Archive retired offers for new buyers without
+   canceling existing legacy subscriptions.
+2. Set server-only **`STRIPE_PRICE_PMLE_PASS`** to that `price_...` ID. Set
+   **`STRIPE_SECRET_KEY`** to the matching test-mode key. The browser cannot select
+   a price. Test and live mode have separate price IDs and API keys.
+3. Add webhook endpoint **`https://<app-host>/api/billing/webhook`**. Enable:
+   - **`checkout.session.completed`** — paid, payment-mode, configured-price pass.
+   - **`charge.refunded`** — revoke access and save a durable refund tombstone.
+   - **`customer.subscription.updated`**, **`customer.subscription.deleted`** —
+     refresh existing legacy subscription status; no new subscription creation.
+   Configure that endpoint's signing secret as **`STRIPE_WEBHOOK_SECRET`**.
+   Checkout accepts cards, so no delayed-payment success event is required.
+4. Store the raw **`STRIPE_SECRET_KEY`**, **`STRIPE_WEBHOOK_SECRET`**, and
+   **`SUPABASE_SERVICE_ROLE_KEY`** values in Secret Manager. In GitHub Actions
+   secrets, configure **`STRIPE_SECRET_KEY_SECRET`**,
+   **`STRIPE_WEBHOOK_SECRET_SECRET`**, and **`SUPABASE_SERVICE_ROLE_KEY_SECRET`**
+   as Secret Manager **`name:version` references**, not raw credentials. Also set
+   **`STRIPE_PRICE_PMLE_PASS`**, **`NEXT_PUBLIC_SUPABASE_URL`**,
+   **`NEXT_PUBLIC_SUPABASE_ANON_KEY`**, and the Cloud Run/GCP secrets listed in
+   [v2 runtime configuration](v2-runtime.md). Optional **`NEXT_PUBLIC_POSTHOG_KEY`**
+   / **`NEXT_PUBLIC_POSTHOG_HOST`** enable analytics. The runtime service account
+   needs Secret Manager read access. Deployment merges env values and secret
+   bindings to preserve unrelated settings. Stripe and service-role keys go only
+   to server runtime, never Docker build args or browser variables. v2 does
+   **not** use `PAYWALL_SIGNING_SECRET`.
+5. Review and apply **`supabase/migrations/20261003000000_v2_baseline.sql`** through
+   the approved migration process. It already includes `pmle_passes`,
+   `pmle_pass_refunds`, and order-safe fulfillment/refund functions. Local checks
+   do not apply this baseline to a remote database.
+6. Configure Stripe's customer portal for existing legacy subscriptions. Only
+   active legacy subscribers see the portal. Pass buyers do not use it for refunds.
+7. Handle refund requests within seven days through the Stripe dashboard.
+   `charge.refunded` revokes access automatically. There is no self-service
+   pass refund endpoint. A refund-before-checkout tombstone defeats later replay.
+8. Repeat approved test-mode QA before switching to separate live-mode keys,
+   price, endpoint, and signing secret. No push or deployment is part of this work.
 
-```bash
-# Stripe API Keys (get from https://dashboard.stripe.com/test/apikeys)
-STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_publishable_key
+## Local verification — no Stripe account or network needed
 
-# Stripe Price IDs (see docs/deployment/stripe-price-ids.md for actual values)
-NEXT_PUBLIC_STRIPE_BASIC_MONTHLY=price_basic_monthly   # $14.99
-NEXT_PUBLIC_STRIPE_BASIC_3MONTH=price_basic_3month    # $39.99 every 3 months
-NEXT_PUBLIC_STRIPE_PRO_MONTHLY=price_pro_monthly
-NEXT_PUBLIC_STRIPE_PRO_3MONTH=price_pro_3month
-NEXT_PUBLIC_STRIPE_ALL_ACCESS_MONTHLY=price_all_access_monthly
-NEXT_PUBLIC_STRIPE_ALL_ACCESS_3MONTH=price_all_access_3month
-
-# Webhook Secret (for production - get from webhook endpoint settings)
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
-
-# Grace Cookie Signing Secret (for checkout success grace window)
-# Generate a secure random string (32+ characters recommended)
-PAYWALL_SIGNING_SECRET=your_secure_random_secret_here
+```sh
+supabase start
+supabase db reset --local  # disposable local DB only; deletes local data
+npm run test:db:local
+npm run test:e2e:local
 ```
 
-### Production Deployment (Cloud Run)
+`node scripts/local.mjs` obtains only this project's loopback Supabase keys and
+injects deliberately fake Stripe values into child process environment. For dev
+and browser tests it starts/reuses a **loopback-only HTTP fixture on port 56545**.
+The real Stripe SDK uses that fixture, not Stripe. Raw webhook payloads are signed
+locally with the runner's test-only webhook secret and verified by the SDK.
+No credential files are read or written. PostHog stays disabled. Fixture mode is
+refused in production and outside local Supabase port 56541. Never configure these
+local placeholder values in production.
 
-The `NEXT_PUBLIC_STRIPE_*` environment variables are wired through the CI/CD pipeline:
+For manual local review, use `npm run dev:local` on port **3000**. Leave the frozen
+Phase 1 preview on port **3100** untouched. The fake checkout success initially
+shows processing; it does not grant access from a redirect alone.
 
-1. **GitHub Actions** (`.github/workflows/deploy-to-cloud-run.yml`):
-   - Stripe price IDs are passed as Docker build arguments during image build
-   - They are also set as Cloud Run environment variables at deployment time
-   - Ensure GitHub repository secrets are configured:
-     - `NEXT_PUBLIC_STRIPE_BASIC_MONTHLY`
-     - `NEXT_PUBLIC_STRIPE_BASIC_3MONTH`
-     - (and other Stripe price IDs as needed)
+## Founder-operated test-mode QA
 
-2. **Verifying Cloud Run Environment Variables**:
-   ```bash
-   # Check configured env vars on Cloud Run service
-   gcloud run services describe testero-frontend --region=us-central1 \
-     --format='yaml(spec.template.spec.containers[0].env)'
-   
-   # Or list all env vars
-   gcloud run services describe testero-frontend --region=us-central1 \
-     --format='value(spec.template.spec.containers[0].env)'
-   ```
+- Signed-out pricing leads to signup with `next=/pricing`. Checkout refuses
+  anonymous/unconfirmed users and ignores client prices.
+- Checkout shows **PMLE Pass**, **$39 USD**, and a single payment. An existing
+  paid account returns to `/account` rather than being charged again.
+- Use Stripe test card `4242 4242 4242 4242`, future expiry, and any test CVC only
+  in founder-operated test mode. Success says processing until the webhook grant
+  exists. Then account shows **Access until <date>**, 90 × 24 hours from payment.
+- Confirm explanations and unlimited five-question practice sessions. Free users
+  retain five questions per week and explanation-free review. Anonymous diagnostic
+  results remain aggregate-only. No correctness appears during a diagnostic.
+- Replay completion: exactly one pass row, no expiry extension. Concurrent grant
+  and refund, refund-first, and refund-after-grant all remain revoked on replay.
+- Refund the test payment, then reload protected views. Explanations disappear and
+  new practice uses the free quota again. A failed access read also denies paid
+  features and blocks checkout, rather than risking a second charge.
+- Legacy active accounts retain paid access and can open their owned customer
+  portal. Pass-only, free, and inactive legacy accounts cannot open it.
+- Inspect optional analytics: `checkout_started` client-side; `purchase_completed`
+  server-side only after an unrefunded grant. No email, account ID, or raw customer
+  identity is sent. Local tests mock or disable the analytics service.
 
-3. **Checking for Missing Price ID Errors**:
-   ```bash
-   # Search Cloud Run logs for missing price ID errors
-   gcloud logging read "resource.type=cloud_run_revision AND \
-     resource.labels.service_name=testero-frontend AND \
-     textPayload=~'missing_basic_monthly_price_id'" \
-     --limit=50 --format=json
-   ```
-
-**Note**: Missing `NEXT_PUBLIC_STRIPE_BASIC_*` environment variables will **not** break anonymous signup flows (users will still be redirected to `/signup`), but will prevent authenticated users from initiating checkout. Always ensure these are configured in production.
-
-## Setup Steps
-
-1. **Create a Stripe Account**
-
-   - Go to https://stripe.com and sign up
-   - Use test mode for development
-
-2. **Get API Keys**
-
-   - Navigate to Developers → API keys
-   - Copy the test publishable and secret keys
-
-3. **Create Products and Prices**
-
-   - Go to Products → Add product
-   - Create subscription products
-   - Add monthly and 3-month recurring prices (interval=month, interval_count=3)
-   - Copy the price IDs (starts with `price_`)
-
-4. **Configure Environment**
-   - Copy `.env.example` to `.env.local`
-   - Add your Stripe keys and price IDs
-
-## Testing the Trial Flow
-
-1. Start the dev server: `npm run dev`
-2. Complete a diagnostic test
-3. On the summary page, the trial modal will appear after 5 seconds
-4. Click "Start 14-Day Free Trial"
-5. If not logged in, you'll be redirected to signup
-6. After signup/login, the trial will be created
-
-## Troubleshooting
-
-### "Payment system not configured" Error
-
-- Ensure `STRIPE_SECRET_KEY` is set in `.env.local`
-- Restart the dev server after adding environment variables
-
-### "Invalid subscription plan" Error
-
-- Verify the price IDs are correct
-- Ensure the prices are active in your Stripe dashboard
-
-### Rate Limiting Errors
-
-- The trial endpoint is rate-limited to 3 requests per minute
-- Wait 60 seconds before retrying
-
-## Database Requirements
-
-The following tables must exist:
-
-- `user_subscriptions` - Stores subscription data
-- `auth.users` - User authentication (managed by Supabase)
-
-Run the migration if needed:
-
-```sql
--- Add trial-related fields
-ALTER TABLE user_subscriptions
-ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMP WITH TIME ZONE;
-
--- Add indexes for performance
-CREATE INDEX IF NOT EXISTS idx_user_subscriptions_trial_ends_at
-ON user_subscriptions(trial_ends_at)
-WHERE trial_ends_at IS NOT NULL;
-
-CREATE INDEX IF NOT EXISTS idx_user_subscriptions_trialing
-ON user_subscriptions(status)
-WHERE status = 'trialing';
-```
+Terms and Privacy remain unapproved Phase 4 placeholders. Founder legal approval
+and production configuration are still required before launch.

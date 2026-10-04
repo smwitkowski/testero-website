@@ -14,8 +14,8 @@
  * - <40: Critical - Critical gaps that need immediate attention
  * - 40-69: Moderate - Important topics that need strengthening
  * - 70+: Strong - Areas where you're already strong
- * 
- * Pass Threshold: Typically ≥70% (aligned with "Ready" tier)
+ *
+ * Diagnostic tiers are study guidance, not an official exam pass threshold.
  */
 
 export type ExamReadinessTierId = "low" | "building" | "ready" | "strong";
@@ -40,12 +40,6 @@ const EXAM_READY_THRESHOLD = 85;
 // Domain tier thresholds
 const DOMAIN_CRITICAL_THRESHOLD = 40;
 const DOMAIN_MODERATE_THRESHOLD = 70;
-
-/**
- * Typical pass threshold for exam readiness.
- * Used in UI copy to set expectations (e.g., "Pass typically ≥70%").
- */
-export const READINESS_PASS_THRESHOLD = 70;
 
 /**
  * Get the exam readiness tier for a given score.
@@ -190,25 +184,6 @@ export function getDomainTierColors(tierId: DomainTierId): DomainTierColors {
       bg: 'bg-green-100', 
       text: 'text-green-700' 
     },
-  };
-  return colorMap[tierId];
-}
-
-/**
- * Get design system semantic colors for a given exam readiness tier.
- * 
- * This function is used primarily by the ReadinessMeter component for inline styles.
- * Returns hex color values from the design system for dynamic styling.
- */
-export function getExamReadinessSemanticColor(tierId: ExamReadinessTierId): string {
-  // Import inline to avoid circular dependencies
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { primitive } = require("@/lib/design-system/tokens/colors") as { primitive: { red: Record<number, string>; orange: Record<number, string>; blue: Record<number, string>; green: Record<number, string> } };
-  const colorMap: Record<ExamReadinessTierId, string> = {
-    low: primitive.red[500],      // red-500
-    building: primitive.orange[600], // orange-600
-    ready: primitive.blue[500],    // blue-500
-    strong: primitive.green[500],   // green-500
   };
   return colorMap[tierId];
 }

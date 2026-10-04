@@ -1,0 +1,49 @@
+name: Daily production database readiness
+
+on:
+  schedule:
+    - cron: "17 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      # Deployment configuration, not a Next.js application environment variable.
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL || secrets.PRODUCTION_URL }}
+    steps:
+      - name: Require HTTP 200 and exactly a healthy JSON response
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+
+          origin = os.environ.get("PRODUCTION_URL", "").rstrip("/")
+          parsed = urllib.parse.urlsplit(origin)
+          if (parsed.scheme != "https" or not parsed.hostname
+              or parsed.username or parsed.password or parsed.path
+              or parsed.query or parsed.fragment):
+              raise SystemExit("Configure PRODUCTION_URL as the production HTTPS origin.")
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          opener = urllib.request.build_opener(NoRedirect())
+          request = urllib.request.Request(origin + "/api/health", headers={"Accept": "application/json"})
+          with opener.open(request, timeout=20) as response:
+              if response.status != 200:
+                  raise SystemExit("Production readiness failed: expected HTTP 200.")
+              if response.headers.get_content_type() != "application/json":
+                  raise SystemExit("Production readiness failed: expected JSON.")
+              payload = json.loads(response.read(1024))
+              if not isinstance(payload, dict) or set(payload) != {"ok"} or payload["ok"] is not True:
+                  raise SystemExit("Production readiness failed: expected exactly {ok: true}.")
+          print("Production database readiness succeeded.")
+          PY

@@ -1,74 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
+import { requestOrigin } from "@/lib/auth/redirects";
+import { getPaidAccess } from "@/lib/billing/paid-access";
+import { billingUser, billingJson, billingErrorResponse, requireEmptyBody } from "@/lib/billing/http";
+import { requireSameOrigin, DiagnosticError } from "@/lib/diagnostic/http";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { StripeService } from "@/lib/stripe/stripe-service";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { checkRateLimit } from "@/lib/auth/rate-limiter";
-import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics/analytics";
-import { getServerPostHog } from "@/lib/analytics/server-analytics";
-
-interface PortalSessionResponse {
-  url: string;
-}
-
-interface ErrorResponse {
-  error: string;
-}
-
-export async function POST(
-  request: NextRequest
-): Promise<NextResponse<PortalSessionResponse | ErrorResponse>> {
+export const runtime = "nodejs";
+export async function POST(request: Request) {
   try {
-    // Rate limiting
-    const ip =
-      request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
-    if (!(await checkRateLimit(ip))) {
-      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-    }
-
-    // Check authentication
-    const supabase = createServerSupabaseClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "You must be authenticated" }, { status: 401 });
-    }
-
-    // Get user's subscription
-    const { data: subscription, error: subError } = await supabase
-      .from("user_subscriptions")
-      .select("stripe_customer_id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (subError || !subscription?.stripe_customer_id) {
-      return NextResponse.json({ error: "No subscription found" }, { status: 404 });
-    }
-
-    // Create portal session
-    const stripeService = new StripeService();
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    const session = await stripeService.createPortalSession(
-      subscription.stripe_customer_id,
-      `${siteUrl}/dashboard/billing`
-    );
-
-    // Track billing portal access
-    const posthog = getServerPostHog();
-    trackEvent(
-      posthog,
-      ANALYTICS_EVENTS.BILLING_PORTAL_ACCESSED,
-      {
-        stripe_customer_id: subscription.stripe_customer_id,
-        return_url: `${siteUrl}/dashboard/billing`,
-      },
-      user.id
-    );
-
-    return NextResponse.json({ url: session.url }, { status: 200 });
-  } catch (error) {
-    console.error("Portal session creation error:", error);
-    return NextResponse.json({ error: "Failed to create portal session" }, { status: 500 });
-  }
+    requireSameOrigin(request);
+    const user = await billingUser();
+    await requireEmptyBody(request);
+    const db = createServiceSupabaseClient();
+    const access = await getPaidAccess(user.id, db);
+    if (access.unavailable) throw new DiagnosticError(503, "Billing is unavailable. Please try again.");
+    if (!access.isLegacySubscriber) throw new DiagnosticError(403, "Billing management is available for active legacy subscriptions only");
+    const { data, error } = await db.from("user_subscriptions").select("stripe_customer_id")
+      .eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle();
+    if (error || !data?.stripe_customer_id) throw new Error("Unavailable owned subscription customer");
+    const portal = await new StripeService().createPortalSession(data.stripe_customer_id, `${requestOrigin(request)}/account`);
+    if (!portal.url) throw new Error("Missing portal URL");
+    return billingJson({ href: portal.url });
+  } catch (error) { return billingErrorResponse(error); }
 }

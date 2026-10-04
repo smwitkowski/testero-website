@@ -1,0 +1,76 @@
+{
+  "blog": [
+    {
+      "slug": "accelerated-google-ml-certification-30-day-success-story-2025",
+      "title": "Accelerated Google ML Certification: 30-Day Success Story (2025)",
+      "href": "/blog/accelerated-google-ml-certification-30-day-success-story-2025"
+    },
+    {
+      "slug": "pmle-october-2024-exam-changes",
+      "title": "PMLE October 2024 Exam Changes: Complete Guide to What's New",
+      "href": "/blog/pmle-october-2024-exam-changes"
+    },
+    {
+      "slug": "5-hardest-pmle-questions",
+      "title": "5 Hardest PMLE Questions (With Expert Solutions) - 2025",
+      "href": "/blog/5-hardest-pmle-questions"
+    },
+    {
+      "slug": "google-cloud-digital-leader-certification",
+      "title": "Google Cloud Digital Leader Certification: The Complete 2025 Guide",
+      "href": "/blog/google-cloud-digital-leader-certification"
+    },
+    {
+      "slug": "pmle-vs-aws-ml-vs-azure-ai",
+      "title": "PMLE vs AWS ML vs Azure AI: 2025 Certification Comparison",
+      "href": "/blog/pmle-vs-aws-ml-vs-azure-ai"
+    }
+  ],
+  "faq": [
+    {
+      "slug": "what-is-google-cloud-certification",
+      "title": "What are Google Cloud certifications?",
+      "href": "/faq/what-is-google-cloud-certification"
+    },
+    {
+      "slug": "is-google-cloud-certification-worth-it",
+      "title": "Are Google Cloud certifications worth it?",
+      "href": "/faq/is-google-cloud-certification-worth-it"
+    },
+    {
+      "slug": "what-are-the-five-sections-of-the-associate-cloud-engineer-certification-by-google",
+      "title": "What are the five sections of the Associate Cloud Engineer certification by Google?",
+      "href": "/faq/what-are-the-five-sections-of-the-associate-cloud-engineer-certification-by-google"
+    },
+    {
+      "slug": "how-much-does-google-cloud-digital-leader-cost",
+      "title": "(Bonus) How much does Google Cloud Digital Leader cost?",
+      "href": "/faq/how-much-does-google-cloud-digital-leader-cost"
+    },
+    {
+      "slug": "how-do-you-register-for-google-cloud-certification",
+      "title": "(Bonus) How do you register for Google Cloud certifications?",
+      "href": "/faq/how-do-you-register-for-google-cloud-certification"
+    },
+    {
+      "slug": "how-long-to-complete-google-data-analytics-certification",
+      "title": "How long does it take to complete the Google Data Analytics certification?",
+      "href": "/faq/how-long-to-complete-google-data-analytics-certification"
+    },
+    {
+      "slug": "is-google-data-analytics-certification-worth-it",
+      "title": "Is the Google Data Analytics certification worth it?",
+      "href": "/faq/is-google-data-analytics-certification-worth-it"
+    },
+    {
+      "slug": "is-the-google-professional-machine-learning-engineer-certification-worth-it",
+      "title": "Is the Google Professional Machine Learning Engineer certification worth it?",
+      "href": "/faq/is-the-google-professional-machine-learning-engineer-certification-worth-it"
+    },
+    {
+      "slug": "how-long-is-the-google-ml-engineer-exam",
+      "title": "How long is the Google Professional Machine Learning Engineer exam?",
+      "href": "/faq/how-long-is-the-google-ml-engineer-exam"
+    }
+  ]
+}

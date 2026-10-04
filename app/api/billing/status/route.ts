@@ -1,98 +1,22 @@
-import { NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { computeIsSubscriber, type SubscriptionStatus } from "@/lib/billing/subscription-status";
-
-export type BillingStatusResponse = {
-  isSubscriber: boolean;
-  status: SubscriptionStatus;
-};
-
-/**
- * GET /api/billing/status
- * Returns lightweight subscription status for UI decisions only.
- * Server remains authoritative for authorization.
- * No sensitive plan details (plan_id, Stripe IDs, amounts) are returned.
- */
-export async function GET(): Promise<NextResponse<BillingStatusResponse>> {
+import { getPaidAccess, isActivePass, isValidPass } from "@/lib/billing/paid-access";
+import { billingUser, billingJson, billingErrorResponse } from "@/lib/billing/http";
+import { DiagnosticError } from "@/lib/diagnostic/http";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
+export const runtime = "nodejs";
+export async function GET(request: Request) {
   try {
-    const supabase = createServerSupabaseClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    // Unauthenticated users get default response
-    if (authError || !user) {
-      return NextResponse.json(
-        {
-          isSubscriber: false,
-          status: "none",
-        },
-        { status: 200 }
-      );
-    }
-
-    // Query subscription with minimal fields - get most recent subscription
-    // First check for active/trialing subscriptions
-    const { data: activeData, error: activeError } = await supabase
-      .from("user_subscriptions")
-      .select("status, trial_ends_at")
-      .eq("user_id", user.id)
-      .in("status", ["active", "trialing"])
-      .limit(1)
-      .maybeSingle();
-
-    // If found active/trialing, use it
-    if (!activeError && activeData) {
-      const isSubscriber = computeIsSubscriber(activeData);
-
-      return NextResponse.json(
-        {
-          isSubscriber,
-          status: activeData.status as BillingStatusResponse["status"],
-        },
-        { status: 200 }
-      );
-    }
-
-    // If no active/trialing, check for any other subscription status
-    const { data: anyData, error: anyError } = await supabase
-      .from("user_subscriptions")
-      .select("status, trial_ends_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    // No subscription found at all
-    if (anyError || !anyData) {
-      return NextResponse.json(
-        {
-          isSubscriber: false,
-          status: "none",
-        },
-        { status: 200 }
-      );
-    }
-
-    // Return the status even if not active/trialing (for past_due, canceled, etc.)
-    return NextResponse.json(
-      {
-        isSubscriber: false, // Non-active/trialing subscriptions are not subscribers
-        status: anyData.status as BillingStatusResponse["status"],
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Error fetching billing status:", error);
-    // Fail gracefully - return non-subscriber status
-    return NextResponse.json(
-      {
-        isSubscriber: false,
-        status: "none",
-      },
-      { status: 200 }
-    );
-  }
+    const user = await billingUser();
+    const ids = new URL(request.url).searchParams.getAll("session_id");
+    if (ids.length !== 1 || !/^cs_[A-Za-z0-9_]{1,240}$/.test(ids[0])) throw new DiagnosticError(400, "A valid checkout session is required");
+    const db = createServiceSupabaseClient();
+    const now = Date.now();
+    const access = await getPaidAccess(user.id, db, now);
+    if (access.unavailable) throw new DiagnosticError(503, "Billing is unavailable. Please try again.");
+    const { data, error } = await db.from("pmle_passes")
+      .select("id, paid_at, expires_at, refunded_at").eq("user_id", user.id).eq("stripe_checkout_session_id", ids[0]).maybeSingle();
+    if (error) throw error;
+    if (!data) return billingJson({ status: "processing", accessUntil: null });
+    if (!isValidPass(data)) throw new Error("Invalid pass metadata");
+    return billingJson({ status: data.refunded_at !== null ? "refunded" : access.hasPaidAccess && isActivePass(data, now) ? "active" : "expired", accessUntil: data.expires_at });
+  } catch (error) { return billingErrorResponse(error); }
 }
-

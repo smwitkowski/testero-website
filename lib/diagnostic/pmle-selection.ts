@@ -7,11 +7,31 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { PMLE_BLUEPRINT, PMLE_BLUEPRINT_MAP } from '@/lib/constants/pmle-blueprint';
+import { shuffleArray } from '@/lib/questions/answer-order';
 
 export interface CanonicalAnswer {
   choice_label: string;
   choice_text: string;
   is_correct: boolean;
+}
+
+/** A selectable question must have usable options and exactly one answer key. */
+export function hasValidAnswers(answers: unknown): answers is CanonicalAnswer[] {
+  if (!Array.isArray(answers) || answers.length < 2 || answers.length > 26) return false;
+  const labels = new Set<string>();
+  let correctCount = 0;
+  for (const answer of answers) {
+    if (
+      !answer ||
+      typeof answer.choice_label !== 'string' || answer.choice_label.trim() === '' ||
+      typeof answer.choice_text !== 'string' || answer.choice_text.trim() === '' ||
+      typeof answer.is_correct !== 'boolean' ||
+      labels.has(answer.choice_label)
+    ) return false;
+    labels.add(answer.choice_label);
+    if (answer.is_correct) correctCount++;
+  }
+  return correctCount === 1;
 }
 
 export interface CanonicalQuestionWithAnswers {
@@ -49,6 +69,9 @@ export function calculateDomainTargets(
   totalQuestions: number,
   domainAvailability: Map<string, number>
 ): Map<string, number> {
+  if (!Number.isInteger(totalQuestions) || totalQuestions < 0) {
+    throw new Error('Question count must be a non-negative integer');
+  }
   const targets = new Map<string, number>();
   const remainders: Array<{ domainCode: string; remainder: number }> = [];
 
@@ -88,29 +111,34 @@ export function calculateDomainTargets(
 
     // If still have remainder, distribute to domains with most availability
     if (totalAllocated < totalQuestions) {
-      const stillRemaining = totalQuestions - totalAllocated;
-      const sortedByAvailability = Array.from(domainAvailability.entries())
-        .map(([code, available]) => ({
-          domainCode: code,
-          available,
-          currentTarget: targets.get(code) || 0,
-        }))
-        .filter((d) => d.currentTarget < d.available)
-        .sort((a, b) => {
-          // Sort by available capacity (descending)
-          const capacityA = a.available - a.currentTarget;
-          const capacityB = b.available - b.currentTarget;
-          if (capacityA !== capacityB) return capacityB - capacityA;
-          // Then by weight (descending)
-          const weightA = PMLE_BLUEPRINT_MAP[a.domainCode]?.weight || 0;
-          const weightB = PMLE_BLUEPRINT_MAP[b.domainCode]?.weight || 0;
-          return weightB - weightA;
-        });
-
-      for (let i = 0; i < stillRemaining && i < sortedByAvailability.length; i++) {
-        const { domainCode } = sortedByAvailability[i];
-        const currentTarget = targets.get(domainCode) || 0;
-        targets.set(domainCode, currentTarget + 1);
+      // Repeat capacity redistribution until full or no domain has room.
+      // One increment per domain is not enough when only one domain has stock.
+      while (totalAllocated < totalQuestions) {
+        const sortedByAvailability = Array.from(domainAvailability.entries())
+          .map(([code, available]) => ({
+            domainCode: code,
+            available,
+            currentTarget: targets.get(code) || 0,
+          }))
+          .filter((d) => d.currentTarget < d.available)
+          .sort((a, b) => {
+            // Sort by available capacity (descending)
+            const capacityA = a.available - a.currentTarget;
+            const capacityB = b.available - b.currentTarget;
+            if (capacityA !== capacityB) return capacityB - capacityA;
+            // Then by weight (descending)
+            const weightA = PMLE_BLUEPRINT_MAP[a.domainCode]?.weight || 0;
+            const weightB = PMLE_BLUEPRINT_MAP[b.domainCode]?.weight || 0;
+            return weightB - weightA;
+          });
+  
+        if (sortedByAvailability.length === 0) break;
+        for (const { domainCode } of sortedByAvailability) {
+          if (totalAllocated >= totalQuestions) break;
+          const currentTarget = targets.get(domainCode) || 0;
+          targets.set(domainCode, currentTarget + 1);
+          totalAllocated++;
+        }
       }
     }
   }
@@ -134,7 +162,8 @@ export async function selectPmleQuestionsByBlueprint(
     .from('questions')
     .select(`
       domain_id,
-      exam_domains!inner(code, name)
+      exam_domains!inner(code, name),
+      answers(choice_label, choice_text, is_correct)
     `)
     .eq('exam', 'GCP_PM_ML_ENG')
     .eq('status', 'ACTIVE')
@@ -151,6 +180,7 @@ export async function selectPmleQuestionsByBlueprint(
 
   interface DomainCountRow {
     domain_id: string;
+    answers: CanonicalAnswer[] | null;
     exam_domains: {
       code: string;
       name: string;
@@ -158,6 +188,8 @@ export async function selectPmleQuestionsByBlueprint(
   }
 
   (domainCounts as unknown as DomainCountRow[] | null)?.forEach((q) => {
+    // Count the same valid inventory that can actually be selected below.
+    if (!hasValidAnswers(q.answers)) return;
     const domain = q.exam_domains;
     const code = domain.code;
     domainAvailability.set(code, (domainAvailability.get(code) || 0) + 1);
@@ -237,7 +269,7 @@ export async function selectPmleQuestionsByBlueprint(
     }
 
     // Randomize and select target count
-    const shuffled = [...domainQuestions].sort(() => Math.random() - 0.5);
+    const shuffled = shuffleArray(domainQuestions.filter((q) => hasValidAnswers(q.answers)));
     const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
 
     interface DomainQuestionRow {
@@ -286,10 +318,10 @@ export async function selectPmleQuestionsByBlueprint(
   }
 
   // Step 5: Final shuffle to randomize domain order
-  const finalShuffled = selectedQuestions.sort(() => Math.random() - 0.5).slice(0, totalQuestions);
+  const finalShuffled = shuffleArray(selectedQuestions).slice(0, totalQuestions);
 
   // Log distribution in development
-  if (process.env.NODE_ENV !== 'production' || process.env.DIAGNOSTIC_BLUEPRINT_DEBUG === 'true') {
+  if (process.env.NODE_ENV !== 'production') {
     console.log('📊 PMLE Diagnostic Domain Distribution:');
     domainDistribution.forEach((dist) => {
       const match = dist.targetCount === dist.selectedCount ? '✅' : '⚠️';

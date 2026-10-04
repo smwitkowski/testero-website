@@ -1,69 +1,20 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-storybook-static/
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
+node_modules/
+.next/
+out/
+build/
 *.tsbuildinfo
-next-env.d.ts
-
-# GCP service account keys
-github-actions-key.json
-*-key.json
-*-credentials.json
-
-# Claude Code settings
-.claude/settings.local.json
-
-# Playwright test artifacts
+.env*
+!.env.example
+.DS_Store
+npm-debug.log*
 playwright-report/
 test-results/
+supabase/.temp/
+supabase/.branches/
+# Keep the separate content pipeline source and its own dependency files.
+content-pipeline/node_modules/
+content-pipeline/.venv/
+content-pipeline/__pycache__/
 
-# Implementation tracking
-implement/
-
-# Local development files (secrets, keys, etc.)
-.local/
-
-# Root-level LLM context and copy-review dumps
-/repomix-*.txt
-/repomix-*.xml
-/*-repomix.txt
-/*-repomix-command.txt
-/*-copy-review.txt
-/pricing-*-context.xml
-/diagnostic-readiness-week3-code.txt
+# Google auth artifacts must never enter source or Docker build layers.
+gha-creds-*.json
