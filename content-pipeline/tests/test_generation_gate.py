@@ -296,3 +296,43 @@ def test_cleaner_preserves_normal_see_and_bracketed_terms():
     assert generate.strip_references(prose) == prose
     assert "https://" not in generate.strip_references("Use the setting https://docs.cloud.google.com/path [1]")
     assert "[1]" not in generate.strip_references("Use the setting [1]")
+
+
+@pytest.mark.parametrize("invalid", [float("inf"), float("-inf"), float("nan")])
+def test_invalid_nonfinite_receipts_are_rejected_but_saved_json_safely(generation, invalid):
+    raw = generation[2]
+    bad = [{**e, "quote": invalid, "extra": {"numbers": [invalid]}} for e in raw["evidence"]]
+    generation[4].cite_mock.side_effect = [{"evidence": bad}, {"evidence": bad}]
+    outcome = invoke(generation, "--dry-run")
+    assert outcome.exit_code == 1, outcome.output
+    generation[1].assert_not_called()
+    generation[5].assert_not_called()
+    artifact = json.loads((generation[-1] / "pilot.json").read_text(), parse_constant=lambda _: pytest.fail("Invalid JSON constant"))
+    candidate = artifact["candidates"][0]
+    assert len(candidate["citation_attempts"]) == 2
+    assert not candidate["mechanical_check"]["passed"]
+    assert "__nonfinite_float__" in candidate["evidence"][0]["quote"]
+    assert "__nonfinite_float__" in candidate["evidence"][0]["extra"]["numbers"][0]
+    # Artifact serialization must not alter what the checker rejected.
+    assert isinstance(bad[0]["quote"], float)
+
+
+def test_real_citation_parser_numeric_overflow_is_retained_as_debug_marker(generation, monkeypatch):
+    from dspy.utils import DummyLM
+    from shared import llm_generator
+    receipts = [{"option_label": label, "url": URL, "quote": quote} for label, quote in zip("ABCD", QUOTES)]
+    receipts[0]["quote"] = "OVERFLOW_PLACEHOLDER"
+    completion = "[[ ## evidence ## ]]\n" + json.dumps(receipts).replace('"OVERFLOW_PLACEHOLDER"', "1e999")
+    lm = DummyLM([completion, completion])
+    monkeypatch.setenv("OPENROUTER_API_KEY", "offline-test-only")
+    monkeypatch.setattr(llm_generator.dspy, "LM", lambda **kwargs: lm)
+    monkeypatch.setattr(generate, "cite_question", llm_generator.cite_question)
+    outcome = invoke(generation, "--dry-run")
+    assert outcome.exit_code == 1, outcome.output
+    generation[1].assert_not_called()
+    generation[5].assert_not_called()
+    artifact = json.loads((generation[-1] / "pilot.json").read_text())
+    candidate = artifact["candidates"][0]
+    assert len(candidate["citation_attempts"]) == 2
+    assert candidate["evidence"][0]["quote"] == {"__nonfinite_float__": "Infinity"}
+    assert not candidate["mechanical_check"]["passed"]

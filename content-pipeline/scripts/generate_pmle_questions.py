@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate registry-scoped, grounded single-answer questions; never publish."""
 import json
+import math
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -48,10 +49,21 @@ def database_client():
     return SupabaseClient()
 
 
+def artifact_json_value(value):
+    """Copy invalid nonfinite receipt values into explicit JSON-safe debug markers."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return {"__nonfinite_float__": "NaN" if math.isnan(value) else ("Infinity" if value > 0 else "-Infinity")}
+    if isinstance(value, dict):
+        return {key: artifact_json_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [artifact_json_value(item) for item in value]
+    return value
+
+
 def write_artifact(path, artifact):
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_suffix(path.suffix + ".tmp")
-    temp.write_text(json.dumps(artifact, indent=2, ensure_ascii=False, allow_nan=False) + "\n")
+    temp.write_text(json.dumps(artifact_json_value(artifact), indent=2, ensure_ascii=False, allow_nan=False) + "\n")
     temp.replace(path)
 
 
