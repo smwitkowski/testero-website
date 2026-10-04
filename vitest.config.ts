@@ -10,6 +10,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    setupFiles: ["./tests/setup-environment.ts"],
     include: ["**/*.{test,spec}.{ts,tsx}"],
     exclude: [
       "node_modules/**", ".next/**", "content-pipeline/**",

@@ -14,7 +14,18 @@ function dbMock() {
   const rpc = vi.fn((name: string) => name === "fulfill_pmle_pass" ? { single } : Promise.resolve({ error: null }));
   return { single, rpc, db: { rpc } as unknown as SupabaseClient };
 }
-beforeEach(() => { vi.stubEnv("NODE_ENV", "test"); vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_mock_never_network"); vi.stubEnv("TESTERO_LOCAL_STRIPE", undefined); vi.stubEnv("STRIPE_PRICE_PMLE_PASS", "price_pass"); vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", ""); m.intentRetrieve.mockReset().mockResolvedValue(intent()); m.checkoutCreate.mockReset().mockResolvedValue({ id: "cs_test_created", url: "https://checkout.stripe.com/c/test" }); });
+beforeEach(() => {
+  vi.stubEnv("NODE_ENV", "test");
+  vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_mock_never_network");
+  vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_mock");
+  vi.stubEnv("STRIPE_PRICE_PMLE_PASS", "price_pass");
+  vi.stubEnv("TESTERO_LOCAL_STRIPE", undefined);
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:56541");
+  vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "");
+  vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "http://127.0.0.1:56546");
+  m.intentRetrieve.mockReset().mockResolvedValue(intent());
+  m.checkoutCreate.mockReset().mockResolvedValue({ id: "cs_test_created", url: "https://checkout.stripe.com/c/test" });
+});
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 describe("reviewed PMLE pass fulfillment port", () => {
   it("keeps duration and Stripe id handling", () => { expect(PASS_DURATION_MS).toBe(90 * 24 * 60 * 60 * 1000); expect(stripeId("pi_1")).toBe("pi_1"); expect(stripeId({ id: "pi_1" })).toBe("pi_1"); expect(stripeId(null)).toBeNull(); });
@@ -58,7 +69,7 @@ describe("minimal SDK adapter and fixture guard", () => {
   it("normal production uses SDK defaults", () => { vi.stubEnv("NODE_ENV", "production"); new StripeService(); expect(m.constructor).toHaveBeenCalledWith("sk_test_mock_never_network", { typescript: true }); });
   it("the valid fixture gate fixes loopback transport and cannot reach Stripe", () => { vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_testero_local_only"); vi.stubEnv("TESTERO_LOCAL_STRIPE", "1"); vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:56541"); new StripeService(); expect(m.constructor).toHaveBeenCalledWith("sk_test_testero_local_only", expect.objectContaining({ host: "127.0.0.1", port: 56545, protocol: "http", maxNetworkRetries: 0 })); });
   it.each([ { NODE_ENV: "production" }, { STRIPE_SECRET_KEY: "sk_live_wrong" }, { NEXT_PUBLIC_SUPABASE_URL: "https://remote.supabase.co" }, { NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321" }, { TESTERO_LOCAL_STRIPE: "0" } ])("rejects invalid fixture configuration without SDK network fallback %#", override => { vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_testero_local_only"); vi.stubEnv("TESTERO_LOCAL_STRIPE", "1"); vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:56541"); Object.entries(override).forEach(([key, value]) => vi.stubEnv(key, value)); expect(() => new StripeService()).toThrow("Invalid local Stripe configuration"); expect(m.constructor).not.toHaveBeenCalled(); });
-  it.each([ { STRIPE_SECRET_KEY: "sk_test_placeholder" }, { STRIPE_PRICE_PMLE_PASS: "price_testero_local_pmle" }, { STRIPE_WEBHOOK_SECRET: "whsec_testero_local_only" }, { STRIPE_WEBHOOK_SECRET: "whsec_testero_local_other" } ])("rejects known local placeholders outside fixture mode %#", override => { Object.entries(override).forEach(([key, value]) => vi.stubEnv(key, value)); expect(() => new StripeService()).toThrow("Local placeholder Stripe configuration is forbidden"); expect(m.constructor).not.toHaveBeenCalled(); });
+  it.each([ { STRIPE_SECRET_KEY: "sk_test_placeholder" }, { STRIPE_PRICE_PMLE_PASS: "price_testero_local_pmle" }, { STRIPE_WEBHOOK_SECRET: "whsec_testero_local_only" }, { STRIPE_WEBHOOK_SECRET: "whsec_testero_local_other" }, { STRIPE_WEBHOOK_SECRET: "whsec_placeholder" } ])("rejects known local placeholders outside fixture mode %#", override => { Object.entries(override).forEach(([key, value]) => vi.stubEnv(key, value)); expect(() => new StripeService()).toThrow("Local placeholder Stripe configuration is forbidden"); expect(m.constructor).not.toHaveBeenCalled(); });
   it("rejects local test secret without local flag", () => { vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_testero_local_only"); vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:56541"); expect(() => new StripeService()).toThrow("Invalid local Stripe configuration"); });
   it("sends card-only payment, server price, metadata on both objects, and idempotency", async () => { await new StripeService().createCheckoutSession({ customerId: "cus_owned", userId: user, successUrl: "http://localhost:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}", cancelUrl: "http://localhost:3000/pricing", idempotencyKey: "bounded" }); expect(m.checkoutCreate).toHaveBeenCalledWith({ customer: "cus_owned", mode: "payment", allowed_payment_method_types: ["card"], line_items: [{ price: "price_pass", quantity: 1 }], metadata: { user_id: user, plan_name: "PMLE Pass" }, payment_intent_data: { metadata: { user_id: user, plan_name: "PMLE Pass" } }, success_url: "http://localhost:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}", cancel_url: "http://localhost:3000/pricing" }, { idempotencyKey: "bounded" }); });
   it("does not put email in customer metadata or payload", async () => { m.search.mockResolvedValue({ data: [] }); m.customerCreate.mockResolvedValue({ id: "cus_owned" }); await new StripeService().createOrRetrieveCustomer(user); expect(m.customerCreate).toHaveBeenCalledWith({ metadata: { supabase_user_id: user } }, { idempotencyKey: `pmle-customer:${user}` }); });

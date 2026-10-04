@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST, checkoutIdempotencyKey } from "@/app/api/billing/checkout/route";
 import { getVerifiedUser } from "@/lib/auth/session";
 import { getPaidAccess } from "@/lib/billing/paid-access";
@@ -15,6 +15,7 @@ beforeEach(() => {
   vi.mocked(getPaidAccess).mockResolvedValue({ hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null });
   mocks.customer.mockResolvedValue({ id: "cus_owned" }); mocks.checkout.mockResolvedValue({ url: "https://checkout.stripe.com/c/pay" });
 });
+afterEach(() => vi.unstubAllEnvs());
 describe("PMLE checkout", () => {
   it("creates only server price for confirmed identity and bounded idempotency", async () => {
     const response = await POST(req()); expect(response.status).toBe(200);
