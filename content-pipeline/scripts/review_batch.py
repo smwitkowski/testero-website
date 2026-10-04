@@ -14,13 +14,16 @@ import math
 import random
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import click
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.quality_gate import is_judge_passed
+from shared.model_policy import require_independent_models
 
 PIPELINE_ROOT = Path(__file__).resolve().parent.parent
 PAGE_SIZE = 500
@@ -112,6 +115,99 @@ def verdict(question):
     return notes["content_pipeline_judge"]
 
 
+def grounding(question):
+    """Read persisted grounding only; never retrieve sources during review."""
+    notes = question.get("review_notes")
+    try:
+        if isinstance(notes, str):
+            notes = json.loads(notes)
+        data = notes.get("grounding") if isinstance(notes, dict) else None
+        return data if isinstance(data, dict) else None
+    except (ValueError, TypeError, RecursionError):
+        return None
+
+
+def valid_sha256(value):
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+
+
+def grounding_errors(question):
+    """Fail closed on missing/incomplete evidence, even for legacy GOOD rows.
+
+    The generation mechanical check verifies quotes against captured source text.
+    Review has only its immutable persisted receipt, not the full source bodies.
+    """
+    data = grounding(question)
+    if data is None:
+        return ["Missing grounding evidence"]
+    errors = []
+    try:
+        require_independent_models(data.get("generator_model"), data.get("judge_model"))
+    except ValueError:
+        errors.append("Missing, unknown or non-independent generator/judge model vendors")
+    try:
+        judge_model = verdict(question).get("model")
+    except (ValueError, KeyError, TypeError, AttributeError, RecursionError):
+        judge_model = None
+    if not nonempty_text(judge_model) or data.get("judge_model") != judge_model:
+        errors.append("Grounding judge model does not match the stored judge verdict")
+    if not nonempty_text(data.get("cert_id")) or not nonempty_text(data.get("objective_id")):
+        errors.append("Missing certification or objective ID")
+    if not valid_sha256(data.get("guide_sha256")):
+        errors.append("Missing or invalid objective guide SHA-256")
+    check = data.get("mechanical_check")
+    if not isinstance(check, dict) or check.get("passed") is not True or check.get("errors") != []:
+        errors.append("Mechanical grounding check did not pass")
+    evidence = data.get("evidence")
+    if not isinstance(evidence, list) or not evidence:
+        return errors + ["Missing per-option evidence"]
+    labels = set()
+    for item in evidence:
+        if not isinstance(item, dict):
+            errors.append("Invalid evidence record")
+            continue
+        label = item.get("option_label")
+        if not isinstance(label, str) or label not in {"A", "B", "C", "D"}:
+            errors.append("Invalid evidence option label")
+        else:
+            labels.add(label)
+        quote = item.get("quote")
+        if not nonempty_text(quote) or len(quote) > 300 or not valid_sha256(item.get("text_sha256")):
+            errors.append("Missing/invalid quote (maximum 300 characters) or source text SHA-256")
+        try:
+            raw_url = item.get("url") if isinstance(item.get("url"), str) else ""
+            url = urlsplit(raw_url)
+            # Shape-check official documentation references, without fetching them.
+            official = (url.hostname == "docs.cloud.google.com"
+                        or (url.hostname == "cloud.google.com" and "docs" in url.path.split("/")))
+            valid_url = (url.scheme == "https" and official
+                         and url.username is None and url.password is None
+                         and url.port in (None, 443) and "\\" not in raw_url
+                         and not any(c.isspace() for c in raw_url))
+        except ValueError:
+            valid_url = False
+        if not valid_url:
+            errors.append("Missing or invalid official source URL")
+        try:
+            timestamp = datetime.fromisoformat(item.get("retrieved_at", "").replace("Z", "+00:00"))
+            valid_time = timestamp.tzinfo is not None
+        except (ValueError, TypeError, AttributeError):
+            valid_time = False
+        if not valid_time:
+            errors.append("Missing or invalid source retrieval timestamp")
+    if labels != {"A", "B", "C", "D"} or len(evidence) != 4:
+        errors.append("Evidence must cover all options A/B/C/D exactly once")
+    return errors
+
+
+def require_grounded_candidates(candidates):
+    blocked = sum(bool(grounding_errors(question)) for question in candidates)
+    if blocked:
+        raise click.ClickException(
+            f"Approval denied: {blocked} candidates have missing or invalid grounding evidence. "
+            "Generate grounded candidates and export a new founder spotcheck.")
+
+
 def safe_text(value):
     # Escape HTML (including manifest-looking content) and Markdown control chars.
     text = html.escape(str(value), quote=False)
@@ -121,16 +217,43 @@ def safe_text(value):
 def render_report(run_id, candidates, sample):
     lines = [f"# Founder spotcheck: {run_id}", "",
              f"Eligible candidates: {len(candidates)}. Uniform random sample: {len(sample)} (ceil(10%)).", "",
-             "Review every sampled question, correct flag, explanation and judge verdict before approval.",
-             "If any sample fails, fix or reject it and export a new spotcheck before approving.", ""]
+             "Review every sampled question, correct flag, explanation, judge verdict and A/B/C/D source quote before approval.",
+             "If any sample fails, fix or reject it and export a new spotcheck before approving.",
+             f"Candidates blocked from approval by missing/invalid grounding: {sum(bool(grounding_errors(q)) for q in candidates)}.", ""]
     for question in sample:
         v = verdict(question)
         lines.extend([f"## Question {question['id']}", "", safe_text(question["stem"]), "",
                       f"Judge: passed={v['passed']}; score={v['score']}; model={safe_text(v['model'])}",
                       f"Reason: {safe_text(v['reason'])}", ""])
+        data = grounding(question)
+        errors = grounding_errors(question)
+        if data is None:
+            lines.extend(["Grounding: **MISSING EVIDENCE — approval denied**.", ""])
+        else:
+            lines.extend([f"Generator model: {safe_text(data.get('generator_model', 'MISSING'))}",
+                          f"Judge model receipt: {safe_text(data.get('judge_model', 'MISSING'))}",
+                          f"Certification: {safe_text(data.get('cert_id', 'MISSING'))}",
+                          f"Objective ID: {safe_text(data.get('objective_id', 'MISSING'))}",
+                          f"Objective guide SHA-256: {safe_text(data.get('guide_sha256', 'MISSING'))}"])
+            check = data.get("mechanical_check")
+            check = check if isinstance(check, dict) else {}
+            lines.extend([f"Mechanical check: passed={safe_text(check.get('passed', 'MISSING'))}; errors={safe_text(check.get('errors', 'MISSING'))}", ""])
+        if errors:
+            lines.extend([f"Approval denied: {safe_text('; '.join(errors))}.", ""])
+        evidence = data.get("evidence", []) if data else []
+        evidence = evidence if isinstance(evidence, list) else []
         for answer in question["answers"]:
             lines.extend([f"- **{answer['choice_label']}** (correct={answer['is_correct']}): {safe_text(answer['choice_text'])}",
                           f"  Explanation: {safe_text(answer['explanation_text'])}"])
+            sources = [item for item in evidence if isinstance(item, dict)
+                       and item.get("option_label") == answer["choice_label"]]
+            if not sources:
+                lines.append("  Evidence: **MISSING quote and official URL**.")
+            for source in sources:
+                lines.extend([f"  Official URL: {safe_text(source.get('url', 'MISSING'))}",
+                              f"  Source quote: {safe_text(source.get('quote', 'MISSING'))}",
+                              f"  Retrieved at: {safe_text(source.get('retrieved_at', 'MISSING'))}",
+                              f"  Source text SHA-256: {safe_text(source.get('text_sha256', 'MISSING'))}"])
         lines.append("")
     return "\n".join(lines) + "\n"
 
@@ -182,6 +305,8 @@ def verify_report(path, run_id, candidates):
 
 
 def approve_candidates(wrapper, run_id, candidates):
+    # Check the entire pool before the first write; never partly approve a legacy pool.
+    require_grounded_candidates(candidates)
     promoted = 0
     for question in candidates:
         # Recheck the judge immediately before constructing each guarded update.
@@ -221,6 +346,7 @@ def main(generation_run_id, output, approve, yes):
             click.echo("Promoted: 0.")
             return
         verify_report(path, run_id, candidates)
+        require_grounded_candidates(candidates)
         if not yes:
             click.confirm(f"I personally reviewed all sampled questions in {path} and accept their quality. "
                           f"Promote all {len(candidates)} candidates for run {run_id} to ACTIVE?", abort=True)

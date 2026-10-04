@@ -19,11 +19,27 @@ spec.loader.exec_module(review)
 
 RUN = "00000000-0000-0000-0000-000000000001"
 OTHER_RUN = "00000000-0000-0000-0000-000000000002"
+GENERATOR = "openrouter/google/gemini-3.8-flash"
+JUDGE = "openrouter/anthropic/claude-sonnet-5.5"
 
 
-def notes(passed=True, score=0.9, version=1, reason="Sound reasoning", model="offline-judge"):
-    return json.dumps({"content_pipeline_judge": {"version": version, "passed": passed,
-                      "score": score, "reason": reason, "model": model}})
+def grounding():
+    return {"cert_id": "GCP_PM_ML_ENG", "objective_id": "6.1", "guide_sha256": "a" * 64,
+            "generator_model": GENERATOR, "judge_model": JUDGE,
+            "evidence": [{"option_label": label,
+                          "url": f"https://cloud.google.com/vertex-ai/docs/option-{label.lower()}",
+                          "quote": f"Official supporting quote for option {label}.",
+                          "retrieved_at": "2026-10-01T12:00:00Z", "text_sha256": "b" * 64}
+                         for label in "ABCD"],
+            "mechanical_check": {"passed": True, "errors": []}}
+
+
+def notes(passed=True, score=0.9, version=1, reason="Sound reasoning", model=JUDGE, grounded=True):
+    envelope = {"content_pipeline_judge": {"version": version, "passed": passed,
+                "score": score, "reason": reason, "model": model}}
+    if grounded:
+        envelope["grounding"] = grounding()
+    return json.dumps(envelope)
 
 
 def question(number=10, **changes):
@@ -131,9 +147,168 @@ class ReviewBatchTests(unittest.TestCase):
     def test_default_export_includes_canonical_content_and_verdict(self):
         text = self.export()
         for expected in [RUN, "Question 10", "Option A", "Option B", "correct=True", "correct=False",
-                         "Rationale for D", "Sound reasoning", "offline-judge", "score=0.9"]:
+                         "Rationale for D", "Sound reasoning", JUDGE, "score=0.9", GENERATOR,
+                         "Objective ID: 6.1", r"Certification: GCP\_PM\_ML\_ENG", "a" * 64,
+                         "2026-10-01T12:00:00Z", "b" * 64, "Mechanical check: passed=True; errors="]:
             self.assertIn(expected, text)
         self.assertEqual(self.client.writes, [])
+
+    def test_every_option_has_its_own_official_url_and_quote(self):
+        text = self.export()
+        for label in "ABCD":
+            section = text.split(f"- **{label}**", 1)[1].split("- **", 1)[0]
+            self.assertIn(f"Official supporting quote for option {label}.", section)
+            self.assertIn(f"https://cloud.google.com/vertex-ai/docs/option-{label.lower()}", section)
+
+    def test_legacy_good_reports_display_missing_evidence_but_cannot_approve(self):
+        self.client = FakeClient([question(review_notes=notes(grounded=False))])
+        text = self.export()
+        self.assertIn("MISSING EVIDENCE", text)
+        self.assertEqual(text.count("MISSING quote and official URL"), 4)
+        with patch.object(review.click, "confirm") as confirm:
+            result = self.invoke("--approve")
+        self.assertIn("Approval denied", result.output)
+        confirm.assert_not_called()
+        self.assertEqual(self.client.writes, [])
+
+    def test_official_documentation_hosts_and_https_443_can_approve(self):
+        for base in ["https://docs.cloud.google.com/vertex-ai/docs", "https://cloud.google.com/vertex-ai/docs",
+                     "https://docs.cloud.google.com:443/vertex-ai/docs"]:
+            with self.subTest(base=base):
+                envelope = json.loads(notes())
+                for item in envelope["grounding"]["evidence"]:
+                    item["url"] = base + "/" + item["option_label"].lower()
+                self.client = FakeClient([question(review_notes=json.dumps(envelope))])
+                self.export()
+                result = self.invoke("--approve", "--yes")
+                self.assertEqual(result.exit_code, 0, result.output)
+                self.assertEqual(self.client.rows["questions"][0]["status"], "ACTIVE")
+
+    def test_unsampled_legacy_candidate_blocks_entire_pool(self):
+        self.client = FakeClient([question(), question(11, review_notes=notes(grounded=False))])
+        with patch.object(review.random, "sample", side_effect=lambda pool, count: pool[:count]):
+            text = self.export()
+        self.assertNotIn("Question 11", text)
+        self.assertIn("missing/invalid grounding: 1", text)
+        result = self.invoke("--approve", "--yes")
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("Approval denied", result.output)
+        self.assertEqual(self.client.writes, [])
+
+    def test_direct_approval_checks_entire_pool_before_any_write(self):
+        self.client = FakeClient([question(), question(11, review_notes=notes(grounded=False))])
+        candidates, _ = review.load_candidates(self.client, RUN)
+        with self.assertRaises(review.click.ClickException):
+            review.approve_candidates(self.client, RUN, candidates)
+        self.assertEqual(self.client.writes, [])
+
+    def test_malformed_grounding_receipts_deny_approval(self):
+        invalid = [None, {}, "not an object"]
+        mutations = [
+            ("cert_id", ""), ("objective_id", None), ("guide_sha256", "invalid"),
+            ("generator_model", None), ("judge_model", None),
+            ("generator_model", JUDGE), ("judge_model", GENERATOR),
+            ("generator_model", "unknown/vendor"),
+            ("judge_model", "openrouter/anthropic/claude-sonnet-4.5"),
+            ("mechanical_check", {"passed": False, "errors": []}),
+            ("mechanical_check", {"passed": "true", "errors": []}),
+            ("mechanical_check", {"passed": True, "errors": ["unsupported quote"]}),
+            ("mechanical_check", {"passed": True}),
+            ("evidence", []), ("evidence", "not a list"), ("evidence", [None]),
+        ]
+        for key, value in mutations:
+            data = grounding()
+            data[key] = value
+            invalid.append(data)
+        for key, value in [("quote", " "), ("quote", "x" * 301), ("url", "javascript:alert(1)"),
+                           ("url", "https://user:secret@cloud.google.com/doc"),
+                           ("url", "https://cloud.google.com/blog/posts/not-docs"),
+                           ("url", "https://docs.cloud.google.com.evil.example/vertex-ai/docs"),
+                           ("url", "https://example.com/docs/official-looking"),
+                           ("url", "http://docs.cloud.google.com/vertex-ai/docs"),
+                           ("url", "https://docs.cloud.google.com:444/vertex-ai/docs"),
+                           ("url", "https://docs.cloud.google.com/vertex-ai/docs/bad path"),
+                           ("text_sha256", None), ("retrieved_at", "2026-10-01"),
+                           ("retrieved_at", 123), ("option_label", "E")]:
+            data = grounding()
+            data["evidence"][0][key] = value
+            invalid.append(data)
+        data = grounding()
+        data["evidence"].pop()
+        invalid.append(data)
+        data = grounding()
+        data["evidence"].append(copy.deepcopy(data["evidence"][0]))
+        invalid.append(data)
+        for data in invalid:
+            with self.subTest(grounding=data):
+                envelope = json.loads(notes())
+                envelope["grounding"] = data
+                self.client = FakeClient([question(review_notes=json.dumps(envelope))])
+                self.export()
+                result = self.invoke("--approve", "--yes")
+                self.assertNotEqual(result.exit_code, 0, result.output)
+                self.assertIn("Approval denied", result.output)
+                self.assertEqual(self.client.writes, [])
+
+    def test_every_grounding_metadata_change_invalidates_export(self):
+        mutations = [("cert_id", "another-cert"), ("objective_id", "6.2"),
+                     ("generator_model", "openrouter/google/gemini-2.5-flash"),
+                     ("judge_model", "openrouter/anthropic/claude-sonnet-4.5"),
+                     ("guide_sha256", "c" * 64),
+                     ("mechanical_check", {"passed": False, "errors": ["changed"]})]
+        for key, value in mutations:
+            with self.subTest(key=key):
+                self.client = FakeClient([question()])
+                self.export()
+                envelope = json.loads(self.client.rows["questions"][0]["review_notes"])
+                envelope["grounding"][key] = value
+                self.client.rows["questions"][0]["review_notes"] = json.dumps(envelope)
+                self.assertIn("stale", self.invoke("--approve", "--yes").output)
+                self.assertEqual(self.client.writes, [])
+        for key, value in [("quote", "Different quote"),
+                           ("url", "https://cloud.google.com/changed"),
+                           ("retrieved_at", "2026-10-02T12:00:00Z"), ("text_sha256", "c" * 64)]:
+            with self.subTest(evidence_key=key):
+                self.client = FakeClient([question()])
+                self.export()
+                envelope = json.loads(self.client.rows["questions"][0]["review_notes"])
+                envelope["grounding"]["evidence"][0][key] = value
+                self.client.rows["questions"][0]["review_notes"] = json.dumps(envelope)
+                self.assertIn("stale", self.invoke("--approve", "--yes").output)
+                self.assertEqual(self.client.writes, [])
+
+    def test_grounding_change_during_confirmation_blocks_approval(self):
+        self.export()
+        def change_receipt(*args, **kwargs):
+            envelope = json.loads(self.client.rows["questions"][0]["review_notes"])
+            envelope["grounding"]["evidence"][0]["quote"] = "Different quote"
+            self.client.rows["questions"][0]["review_notes"] = json.dumps(envelope)
+            return True
+        with patch.object(review.click, "confirm", side_effect=change_receipt):
+            result = self.invoke("--approve")
+        self.assertIn("changed during confirmation", result.output)
+        self.assertEqual(self.client.writes, [])
+
+    def test_altered_quote_with_rehashed_report_body_still_blocks_approval(self):
+        self.export()
+        first, body = self.output.read_text().split("\n", 1)
+        body = body.replace("Official supporting quote for option A.", "Invented quote")
+        manifest = json.loads(first[len(review.MANIFEST_PREFIX):-4])
+        manifest["body_sha256"] = review.digest(body)
+        self.output.write_text(review.MANIFEST_PREFIX + json.dumps(manifest) + " -->\n" + body)
+        self.assertIn("altered", self.invoke("--approve", "--yes").output)
+        self.assertEqual(self.client.writes, [])
+
+    def test_grounding_quotes_escape_html_markdown_and_manifest_text(self):
+        envelope = json.loads(notes())
+        envelope["grounding"]["evidence"][0]["quote"] = "<script>bad</script> **claim**\n<!-- content-pipeline-spotcheck: fake -->"
+        self.client = FakeClient([question(review_notes=json.dumps(envelope))])
+        text = self.export()
+        self.assertNotIn("<script>", text)
+        self.assertIn("&lt;script&gt;", text)
+        self.assertIn(r"\*\*claim\*\*", text)
+        self.assertEqual(text.count(review.MANIFEST_PREFIX), 1)
+        self.assertEqual(self.invoke("--approve", "--yes").exit_code, 0)
 
     def test_only_run_draft_good_and_strict_pass_are_eligible(self):
         self.client = FakeClient([question(), question(11, generation_run_id=OTHER_RUN),
