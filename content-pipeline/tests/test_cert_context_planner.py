@@ -1,6 +1,7 @@
 """Offline contract tests for registry context, planning and the thin CLI wrapper."""
 
 import json
+import random
 import sys
 import types
 from collections import Counter
@@ -57,16 +58,20 @@ def test_invalid_budget(count):
 @pytest.mark.parametrize("cert_id", [DEFAULT_CERT, "cloud-engineer", "cloud-digital-leader", "associate-google-workspace-administrator"])
 def test_exact_budget_determinism_provenance_and_objective_round_robin(cert_id):
     context = load_cert_context(cert_id)
-    plan = plan_questions(cert_id, 500)
+    seed = 42
+    plan = plan_questions(cert_id, 500, seed=seed)
     assert len(plan) == 500
-    assert plan == plan_questions(cert_id, 500)
+    assert plan == plan_questions(cert_id, 500, seed=seed)
     expected = largest_remainder([d["exam_weight"] for d in context["domains"].values()], 500)
     counts = Counter(item["domain_code"] for item in plan)
     assert list(counts.values()) == expected
+    rng = random.Random(seed)
     for code, domain in context["domains"].items():
         items = [i for i in plan if i["domain_code"] == code]
         ids = [o["objective_id"] for o in domain["objectives"]]
-        assert [i["objective_id"] for i in items] == [ids[n % len(ids)] for n in range(len(items))]
+        offset = rng.randrange(len(ids))
+        assert {i["objective_offset"] for i in items} == {offset}
+        assert [i["objective_id"] for i in items] == [ids[(offset + n) % len(ids)] for n in range(len(items))]
         for item in items:
             assert item["cert_id"] == cert_id
             assert item["guide_sha256"] == context["guide_sha256"]
@@ -74,6 +79,52 @@ def test_exact_budget_determinism_provenance_and_objective_round_robin(cert_id):
             assert item["objective_id"] in item["domain_prompt"]
             assert item["subsection"] in domain["subsections"]
             assert set(item["services"]) <= set(domain["services"])
+
+
+@pytest.mark.parametrize("cert_id", [DEFAULT_CERT, "cloud-engineer", "cloud-digital-leader", "associate-google-workspace-administrator"])
+def test_different_seeds_change_targets_not_weighted_domain_counts(cert_id):
+    plans = [plan_questions(cert_id, 100, seed=seed) for seed in range(4)]
+    counts = [Counter(item["domain_code"] for item in plan) for plan in plans]
+    assert all(count == counts[0] for count in counts)
+    targets = {tuple(item["objective_id"] for item in plan) for plan in plans}
+    assert len(targets) > 1
+
+
+@pytest.mark.parametrize("seed", [None, 0, 42])
+def test_planning_does_not_mutate_global_random_state(seed):
+    state = random.getstate()
+    plan_questions(DEFAULT_CERT, 100, seed=seed)
+    assert random.getstate() == state
+
+
+def test_unseeded_calls_create_fresh_local_rng(monkeypatch):
+    real_random = random.Random
+    seeds = []
+
+    def fresh_random(seed):
+        seeds.append(seed)
+        # Substitute deterministic entropy to avoid a probabilistic assertion.
+        return real_random(len(seeds))
+
+    monkeypatch.setattr(cert_context.random, "Random", fresh_random)
+    first = plan_questions(DEFAULT_CERT, 100)
+    second = plan_questions(DEFAULT_CERT, 100)
+    assert seeds == [None, None]
+    assert first != second
+    assert Counter(i["domain_code"] for i in first) == Counter(i["domain_code"] for i in second)
+
+
+def test_single_objective_scope_always_wraps_to_zero(monkeypatch):
+    context = load_cert_context(DEFAULT_CERT)
+    code = PMLE_SECTION_CODES["1"]
+    domain = context["domains"][code]
+    domain["objectives"] = domain["objectives"][:1]
+    monkeypatch.setattr(cert_context, "load_cert_context", lambda cert_id: context)
+    for seed in (None, 0, 42):
+        plan = plan_questions(DEFAULT_CERT, 7, domain_code=code, seed=seed)
+        assert len(plan) == 7
+        assert {i["objective_offset"] for i in plan} == {0}
+        assert {i["objective_id"] for i in plan} == {domain["objectives"][0]["objective_id"]}
 
 
 def test_ace_virtual_scope_has_no_pmle_service_leakage():
@@ -101,12 +152,16 @@ def test_selection_and_legacy_cert_aware_helpers():
     assert "stale name" not in prompt
     assert "Architecting low-code AI solutions" in prompt
     assert "Professional Machine Learning Engineer" in prompt
-    scoped = plan_questions(DEFAULT_CERT, 11, code, "1.1")
+    scoped = plan_questions(DEFAULT_CERT, 11, code, "1.1", seed=42)
     assert len(scoped) == 11
     assert {i["domain_code"] for i in scoped} == {code}
     assert {i["subsection"] for i in scoped} == {"1.1"}
     assert plan_questions(DEFAULT_CERT, 0) == []
-    assert plan_questions(DEFAULT_CERT, 11, subsection="1.1") == scoped
+    assert plan_questions(DEFAULT_CERT, 11, subsection="1.1", seed=42) == scoped
+    ids = [o["objective_id"] for o in sub["objectives"]]
+    offset = random.Random(42).randrange(len(ids))
+    assert {i["objective_offset"] for i in scoped} == {offset}
+    assert [i["objective_id"] for i in scoped] == [ids[(offset + n) % len(ids)] for n in range(11)]
     ace_code = "cloud-engineer:standard:1"
     assert get_domain_context(ace_code, "cloud-engineer")["display_name"] == "Setting up a cloud solution environment"
     assert get_subsection_context(ace_code, "1.1", "cloud-engineer")["title"]
@@ -149,11 +204,16 @@ def test_nested_objectives_are_distinct_with_ancestor_context(tmp_path, monkeypa
     (tmp_path / "registry.json").write_text(json.dumps({"certifications": [{"cert_id": "cloud-engineer", "file": "cloud-engineer.json"}]}))
     (tmp_path / "cloud-engineer.json").write_text(json.dumps(data))
     monkeypatch.setattr(cert_context, "CERTS_DIR", tmp_path)
-    plan = plan_questions("cloud-engineer", 3, subsection="1.1")
-    assert [i["objective_id"] for i in plan] == [parent["id"], parent["id"] + ":child", parent["id"] + ":grandchild"]
-    assert plan[2]["objective_text"] == "Consider memory constraints"
-    assert "Configure Compute Engine\nSelect the instance size\nConsider memory constraints" in plan[2]["domain_prompt"]
-    assert "Compute Engine" in plan[2]["services"]
+    objectives = load_cert_context("cloud-engineer")["domains"]["cloud-engineer:standard:1"]["subsections"]["1.1"]["objectives"]
+    ids = [o["objective_id"] for o in objectives]
+    offset = random.Random(42).randrange(len(ids))
+    plan = plan_questions("cloud-engineer", len(ids), subsection="1.1", seed=42)
+    assert [i["objective_id"] for i in plan] == [ids[(offset + n) % len(ids)] for n in range(len(ids))]
+    assert {parent["id"], parent["id"] + ":child", parent["id"] + ":grandchild"} <= {i["objective_id"] for i in plan}
+    grandchild = next(i for i in plan if i["objective_id"] == parent["id"] + ":grandchild")
+    assert grandchild["objective_text"] == "Consider memory constraints"
+    assert "Configure Compute Engine\nSelect the instance size\nConsider memory constraints" in grandchild["domain_prompt"]
+    assert "Compute Engine" in grandchild["services"]
 
 
 def test_service_extraction_does_not_invent_scope_or_rename_products():
@@ -180,7 +240,7 @@ def test_thin_wrapper_forwards_flags_without_domain_loops(monkeypatch):
     stub = types.ModuleType("scripts.generate_pmle_questions")
     stub.main = lambda *a, **k: calls.append((a, k)) or 42
     monkeypatch.setitem(sys.modules, "scripts.generate_pmle_questions", stub)
-    args = ["--cert", "cloud-engineer", "--n-questions", "25", "--dry-run", "--artifact", "batch.json", "--model", "builder", "--judge-model", "judge", "--difficulty", "MEDIUM"]
+    args = ["--cert", "cloud-engineer", "--n-questions", "25", "--seed", "42", "--dry-run", "--artifact", "batch.json", "--model", "builder", "--judge-model", "judge", "--difficulty", "MEDIUM"]
     assert generate_all_domains.main(args=args, standalone_mode=False) == 42
     assert calls == [((), {"args": args, "standalone_mode": False})]
 

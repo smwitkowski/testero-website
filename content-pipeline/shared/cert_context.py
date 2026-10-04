@@ -8,6 +8,7 @@ exam guide is supported. Registry ambiguity is an error, not a guessed version.
 from __future__ import annotations
 
 import json
+import random
 import re
 from decimal import Decimal, InvalidOperation, ROUND_FLOOR
 from pathlib import Path
@@ -202,9 +203,12 @@ def domain_prompt(context: dict, domain: dict, subsection: str | None = None) ->
 
 
 def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = None,
-                   subsection: str | None = None) -> list[dict[str, Any]]:
-    """Plan a total budget with weighted domains and round-robin objectives.
+                   subsection: str | None = None, seed: int | None = None) -> list[dict[str, Any]]:
+    """Plan weighted domains with a random start and round-robin objectives.
 
+    Each domain draws its own objective offset from a local RNG for this call.
+    A seed reproduces the plan; None uses fresh entropy without global RNG state
+    or a persisted cursor. objective_offset records the start in selected scope.
     A subsection number can select its owning domain without domain_code.
     Children are separate coverage candidates, with ancestor text retained in
     objective_context and the prompt. Parent/child ids are never coalesced.
@@ -221,17 +225,20 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
             raise ValueError(f"Subsection {subsection!r} not found in selected certification/domain")
     counts = largest_remainder([d["exam_weight"] for d in domains.values()], n_questions)
     plan = []
+    rng = random.Random(seed)
     for (code, domain), count in zip(domains.items(), counts):
         objectives = domain["objectives"] if subsection is None else domain["subsections"][subsection]["objectives"]
         if not objectives:
             raise ValueError(f"Domain {code!r} has no objectives in the selected scope")
+        objective_offset = rng.randrange(len(objectives))
         for index in range(count):
-            objective = objectives[index % len(objectives)]
+            objective = objectives[(objective_offset + index) % len(objectives)]
             prompt = domain_prompt(context, domain, objective["subsection"])
             prompt += f"\nTarget Objective: {objective['objective_id']}\n{objective['objective_context']}\nTest this objective specifically."
             plan.append({
                 "cert_id": cert_id, "domain_code": code, "domain_name": domain["display_name"],
                 "objective_id": objective["objective_id"], "guide_sha256": context["guide_sha256"],
+                "objective_offset": objective_offset,
                 "objective_text": objective["objective_text"], "objective_context": objective["objective_context"],
                 "services": list(objective["services"]), "subsection": objective["subsection"],
                 "domain_prompt": prompt,
