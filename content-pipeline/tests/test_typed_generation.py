@@ -244,3 +244,14 @@ def test_transport_failures_never_dump_provider_exception_or_retry(monkeypatch):
         generator.generate_question("Scope", "Docs")
     assert "fake-provider-secret" not in str(captured.value)
     assert lm.call_count == 2
+
+
+def test_parse_accepts_field_marker_glued_to_previous_line():
+    # Real Gemini 3.8 Flash output put "[[ ## stem ## ]]" right after the reasoning text.
+    fields = ["reasoning", *generator.QUESTION_FIELDS]
+    completion = "[[ ## reasoning ## ]]\nWhy.[[ ## stem ## ]]\nWhat should you do?\n\n" + "".join(
+        f"[[ ## {name} ## ]]\n{name} text\n\n" for name in fields[2:]) + "[[ ## completed ## ]]\n"
+    signature = generator.dspy.ChainOfThought(generator.PmleQuestionSignature).predict.signature
+    parsed = generator.CompletionCaptureAdapter().parse(signature, completion)
+    assert parsed["reasoning"] == "Why."
+    assert parsed["stem"] == "What should you do?"

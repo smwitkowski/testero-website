@@ -780,6 +780,9 @@ class CompletionCaptureAdapter(dspy.ChatAdapter):
     def parse(self, signature, completion):
         from dspy.utils.exceptions import AdapterParseError
         self.raw_response = _safe_completion(completion)
+        # Some models (seen: Gemini 3.8 Flash) glue a field marker onto the previous line;
+        # ChatAdapter only recognizes markers at the start of a line.
+        completion = re.sub(r"(?<=\S)[ \t]*(\[\[ ## \w+ ## \]\])", r"\n\1", completion)
         try:
             return super().parse(signature, completion)
         except AdapterParseError:
