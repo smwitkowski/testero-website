@@ -7,17 +7,18 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import Any
 from urllib.parse import urlparse
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class OptionEvidence(BaseModel):
-    # Preserve invalid generated receipts for review; the pure gate owns rejection.
-    option_label: Any = None
-    url: Any = None
-    quote: Any = None
+    """Required strings in the LM-facing schema; factual rules live in the gate."""
+
+    model_config = ConfigDict(strict=True)
+    option_label: str
+    url: str
+    quote: str
 
 
 def normalize_whitespace(text: str) -> str:

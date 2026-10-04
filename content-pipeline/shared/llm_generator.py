@@ -1,13 +1,14 @@
 """LLM-backed question generator using DSPy.
 
 This module provides question generation using DSPy with OpenRouter,
-generating scoped certification questions with typed option evidence.
+generating scoped certification questions and then citing their finished options.
 """
 
 import os
 import time
 import logging
 import json
+import re
 from typing import Dict, Any, Optional, Callable, Tuple
 import dspy
 from shared.evidence import OptionEvidence
@@ -24,9 +25,7 @@ class PmleQuestionSignature(dspy.Signature):
     four reasonable options with one best answer and per-option explanations.
     Use a scenario only when useful for the objective; foundational questions
     need not adopt a professional-role scenario. A is correct_answer; B, C and
-    D are distractor_1, distractor_2 and distractor_3 respectively. Attach one
-    exact documentation quote for each option's factual basis. Evidence must
-    be regenerated whenever any answer or explanation changes.
+    D are distractor_1, distractor_2 and distractor_3 respectively.
     """
     # Input fields
     domain_context: str = dspy.InputField(
@@ -62,17 +61,6 @@ class PmleQuestionSignature(dspy.Signature):
         default=""
     )
     
-    evidence: list[OptionEvidence] | None = dspy.OutputField(
-        description=(
-            "Exactly one evidence record for each label A, B, C, D. A maps to correct_answer; "
-            "B/C/D map to distractor_1/2/3. Each URL must be a fetched URL explicitly listed "
-            "in documentation_context. Each quote must be a nonempty exact, case-sensitive "
-            "substring of that URL's source text, at most 300 characters. For distractors, "
-            "quote the documented capability or limitation used in its explanation. "
-            "Generate fresh evidence for the returned answers; never retain stale evidence."
-        )
-    )
-
     # Output fields
     stem: str = dspy.OutputField(
         description=(
@@ -179,17 +167,6 @@ class QuestionCorrectionSignature(dspy.Signature):
         description="Difficulty level: EASY, MEDIUM, or HARD"
     )
     
-    evidence: list[OptionEvidence] | None = dspy.OutputField(
-        description=(
-            "Exactly one evidence record for each label A, B, C, D. A maps to correct_answer; "
-            "B/C/D map to distractor_1/2/3. Each URL must be a fetched URL explicitly listed "
-            "in documentation_context. Each quote must be a nonempty exact, case-sensitive "
-            "substring of that URL's source text, at most 300 characters. For distractors, "
-            "quote the documented capability or limitation used in its explanation. "
-            "Generate fresh evidence for the returned answers; never retain stale evidence."
-        )
-    )
-
     # Output fields - same structure as PmleQuestionSignature
     stem: str = dspy.OutputField(
         description=(
@@ -306,17 +283,6 @@ class FactualCorrectionSignature(dspy.Signature):
         description="Difficulty level: EASY, MEDIUM, or HARD"
     )
     
-    evidence: list[OptionEvidence] | None = dspy.OutputField(
-        description=(
-            "Exactly one evidence record for each label A, B, C, D. A maps to correct_answer; "
-            "B/C/D map to distractor_1/2/3. Each URL must be a fetched URL explicitly listed "
-            "in documentation_context. Each quote must be a nonempty exact, case-sensitive "
-            "substring of that URL's source text, at most 300 characters. For distractors, "
-            "quote the documented capability or limitation used in its explanation. "
-            "Generate fresh evidence for the returned answers; never retain stale evidence."
-        )
-    )
-
     # Output fields - same structure as PmleQuestionSignature
     stem: str = dspy.OutputField(
         description=(
@@ -443,12 +409,8 @@ QUESTION_FIELDS = (
 
 
 def _question_data(result) -> Dict[str, Any]:
-    """Extract a fresh complete generation, including its own typed evidence."""
-    data = {name: getattr(result, name).strip() for name in QUESTION_FIELDS}
-    raw_evidence = getattr(result, "evidence", None)
-    data["evidence"] = ([item.model_dump() if isinstance(item, OptionEvidence) else item
-                         for item in raw_evidence] if isinstance(raw_evidence, list) else raw_evidence)
-    return data
+    """Extract only question fields; citations are a separate finished-question step."""
+    return {name: getattr(result, name).strip() for name in QUESTION_FIELDS}
 
 
 class LLMGenerator:
@@ -576,7 +538,7 @@ class LLMGenerator:
             }
         )
         
-        # Replace the full question and proof together; never merge stale evidence.
+        # Replace the full question; citations must be made after corrections.
         return _question_data(corrected_result)
 
     @traceable_decorator(name="generate_question_with_retry", project_name=os.environ.get("LANGSMITH_PROJECT", "question-generation"))
@@ -761,21 +723,91 @@ class LLMGenerator:
             return {}
 
 
-class EvidencePreservingAdapter(dspy.ChatAdapter):
-    """Retain a fully parsed question when only its evidence output is omitted."""
+class CitationSignature(dspy.Signature):
+    """Cite the factual basis of each option in a finished question, without editing it.
+
+    Return exactly one receipt for each label A, B, C, D. Use only a URL listed
+    with fetched source text. Each quote must be a nonempty exact, case-sensitive
+    substring of that URL's own text and at most 300 characters. For distractors,
+    cite the documented capability or limitation used in the rationale, not an
+    endorsement of the incorrect option. Address every mechanical check error.
+    """
+
+    finished_question: str = dspy.InputField(desc="Stem and labeled A-D options with their final rationales")
+    fetched_sources: str = dspy.InputField(desc="Fetched source URLs and their associated source text")
+    check_errors: str = dspy.InputField(desc="Mechanical checker errors from the previous citation attempt, or empty")
+    evidence: list[OptionEvidence] = dspy.OutputField(desc="One required option_label, url and quote receipt per A-D option")
+
+
+MAX_RAW_RESPONSE = 2048
+
+
+def _safe_completion(completion: str) -> str:
+    """Bound/redact only an actual completion, never request or history metadata."""
+    # Redact credential-like header lines and common inline credential patterns.
+    text = re.sub(
+        r"(?im)^.*(?:authorization|proxy-authorization|x-api-key|api[_-]?key|"
+        r"set-cookie|cookie|password|passwd|client[_-]?secret|access[_-]?token|"
+        r"refresh[_-]?token)\s*[\"']?\s*[:=].*$",
+        "[REDACTED CREDENTIAL/HEADER]", completion,
+    )
+    text = re.sub(r"(?i)\bBearer\s+[^\s\"',;<>]+", "Bearer [REDACTED]", text)
+    text = re.sub(r"\b(?:sk-|sk_)[A-Za-z0-9_-]+", "[REDACTED KEY]", text)
+    text = re.sub(r"\bAIza[A-Za-z0-9_-]+", "[REDACTED KEY]", text)
+    text = re.sub(r"(https?://)[^/\s@]+@", r"\1[REDACTED]@", text)
+    marker = "\n[TRUNCATED]"
+    return text if len(text) <= MAX_RAW_RESPONSE else text[:MAX_RAW_RESPONSE - len(marker)] + marker
+
+
+class CompletionCaptureAdapter(dspy.ChatAdapter):
+    """One native DSPy call, with parse-only preservation of invalid receipts.
+
+    The altered Any annotation is never formatted or sent to the LM. It is used
+    only to parse the same completion after the strict receipt DTO rejects it.
+    """
+
+    def __init__(self, preserve_receipts=False):
+        super().__init__()
+        self.preserve_receipts = preserve_receipts
+        self.raw_response = None
+
+    def __call__(self, lm, lm_kwargs, signature, demos, inputs):
+        from dspy.adapters.base import Adapter
+        # ChatAdapter normally retries with JSONAdapter after ANY exception.
+        # Root owns the single citation retry, so bypass that hidden live call.
+        return Adapter.__call__(self, lm, lm_kwargs, signature, demos, inputs)
 
     def parse(self, signature, completion):
         from dspy.utils.exceptions import AdapterParseError
+        self.raw_response = _safe_completion(completion)
         try:
             return super().parse(signature, completion)
-        except AdapterParseError as exc:
-            # Use only DSPy's typed partial fields, never raw responses/error bodies.
-            fields = exc.parsed_result
-            required = set(signature.output_fields) - {"evidence"}
-            if ("evidence" in signature.output_fields and isinstance(fields, dict)
-                    and required <= set(fields) and "evidence" not in fields):
-                return {**fields, "evidence": None}
+        except AdapterParseError:
+            if self.preserve_receipts and "evidence" in signature.output_fields:
+                parse_signature = signature.with_updated_fields("evidence", type_=Any)
+                return super().parse(parse_signature, completion)
             raise
+
+
+class GenerationOutputError(ValueError):
+    """Question parsing failed, with only a safe actual-completion diagnostic."""
+
+    def __init__(self, raw_response=None):
+        super().__init__("Question output could not be parsed")
+        self.raw_response = raw_response
+
+
+def _generation_lm(model: str):
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+    if not api_key:
+        raise ValueError("OPENROUTER_API_KEY must be supplied in the environment")
+    try:
+        return dspy.LM(
+            model=model, api_key=api_key, api_base="https://openrouter.ai/api/v1",
+            max_tokens=8000, temperature=0.7, cache=False,
+        )
+    except Exception:
+        raise RuntimeError("Generation model initialization failed") from None
 
 
 def generate_question(
@@ -786,42 +818,76 @@ def generate_question(
     exam_subsection: str = "",
     prompt_version: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Convenience function to generate a question.
-    
-    Args:
-        domain_context: Domain-specific context (services, topics, guidance, exam weight, subsections)
-        documentation_context: Google Cloud documentation context from web search
-        model: OpenRouter model identifier (default: "openai/gpt-4o")
-        difficulty: Difficulty level
-        exam_subsection: Optional exam subsection code (e.g., "1.1", "2.3") to target specific subsection
-        prompt_version: Optional prompt version identifier (for tracking)
-        
-    Returns:
-        Dictionary with question data including per-option explanations
-    """
+    """Generate only a question; cite its finished options in a separate call."""
+    from dspy.utils.exceptions import AdapterParseError
     if (not isinstance(domain_context, str) or not domain_context.strip()
             or not isinstance(documentation_context, str) or not documentation_context.strip()):
         raise ValueError("Registry objective scope and fetched documentation are required")
-    api_key = os.environ.get("OPENROUTER_API_KEY")
-    if not api_key:
-        raise ValueError("OPENROUTER_API_KEY must be supplied in the environment")
-    lm = dspy.LM(
-        model=model,
-        api_key=api_key,
-        api_base="https://openrouter.ai/api/v1",
-        max_tokens=8000,
-        temperature=0.7,
-        cache=False,
-    )
+    lm = _generation_lm(model)
+    adapter = CompletionCaptureAdapter()
     predictor = dspy.ChainOfThought(PmleQuestionSignature)
-    with dspy.context(adapter=EvidencePreservingAdapter()):
-        result = predictor(
-            domain_context=domain_context,
-            documentation_context=documentation_context,
-            difficulty=difficulty,
-            exam_subsection=exam_subsection or "",
-            gap_analysis_guidance="",
-            lm=lm,
-            config={"rollout_id": time.time_ns(), "temperature": 0.7},
-        )
-    return _question_data(result)
+    try:
+        with dspy.context(adapter=adapter):
+            result = predictor(
+                domain_context=domain_context,
+                documentation_context=documentation_context,
+                difficulty=difficulty,
+                exam_subsection=exam_subsection or "",
+                gap_analysis_guidance="",
+                lm=lm,
+                config={"rollout_id": time.time_ns(), "temperature": 0.7},
+            )
+        return _question_data(result)
+    except AdapterParseError:
+        raise GenerationOutputError(adapter.raw_response) from None
+    except Exception:
+        # Never expose a provider exception body, which may contain credentials.
+        raise RuntimeError("Question generation request failed") from None
+
+
+def cite_question(
+    question_data: dict,
+    sources: list[dict],
+    model: str,
+    check_errors: list[str] | None = None,
+) -> dict:
+    """Make one citation call. Root checks and stores every attempt, then retries."""
+    from dspy.utils.exceptions import AdapterParseError
+    question = {
+        "stem": question_data["stem"],
+        "options": [
+            {"option_label": label, "option": question_data[answer],
+             "rationale": question_data[explanation]}
+            for label, answer, explanation in [
+                ("A", "correct_answer", "correct_explanation"),
+                ("B", "distractor_1", "distractor_1_explanation"),
+                ("C", "distractor_2", "distractor_2_explanation"),
+                ("D", "distractor_3", "distractor_3_explanation"),
+            ]
+        ],
+    }
+    fetched = [{"url": source["url"], "requested_url": source.get("requested_url"),
+                "text": source["text"]} for source in sources]
+    adapter = CompletionCaptureAdapter(preserve_receipts=True)
+    try:
+        lm = _generation_lm(model)
+        with dspy.context(adapter=adapter):
+            result = dspy.Predict(CitationSignature)(
+                finished_question=json.dumps(question, ensure_ascii=False),
+                fetched_sources=json.dumps(fetched, ensure_ascii=False),
+                check_errors="\n".join(check_errors or []),
+                lm=lm,
+                config={"rollout_id": time.time_ns(), "temperature": 0.7},
+            )
+        receipts = result.evidence
+        if not isinstance(receipts, list):
+            return {"evidence": None, "parse_failure": "Citation evidence is not a list",
+                    **({"raw_response": adapter.raw_response} if adapter.raw_response is not None else {})}
+        return {"evidence": [item.model_dump() if isinstance(item, OptionEvidence) else item
+                             for item in receipts]}
+    except AdapterParseError:
+        return {"evidence": None, "parse_failure": "Citation output could not be parsed",
+                "raw_response": adapter.raw_response}
+    except Exception:
+        # Transport failures have no completion; never serialize the exception body.
+        return {"evidence": None, "parse_failure": "Citation request failed"}

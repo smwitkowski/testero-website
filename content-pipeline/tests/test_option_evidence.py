@@ -95,3 +95,14 @@ def test_checker_does_not_mutate_inputs():
 def test_unapproved_source_records_cannot_claim_fetch_proof(url):
     record = source(url=url)
     assert not check_evidence(evidence(url=url), [record])["passed"]
+
+
+@pytest.mark.parametrize("changes", [{"option_label": 7}, {"url": ["bad"]},
+                                      {"quote": {"bad": "value"}}, {"option_label": None}])
+def test_raw_invalid_receipts_remain_checkable_without_dto_coercion(changes):
+    records = evidence()
+    records[0].update(changes)
+    before = copy.deepcopy(records)
+    result = check_evidence(records, [source()])
+    assert not result["passed"] and result["errors"]
+    assert records == before
