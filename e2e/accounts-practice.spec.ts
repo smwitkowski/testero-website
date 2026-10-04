@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { assertRestoredSession } from "./prod-bank";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
@@ -80,10 +81,11 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     expect(created.status()).toBe(201);
     const { sessionId: diagnosticId } = await created.json() as { sessionId: string };
     ids.push(diagnosticId);
+    await assertRestoredSession(service, diagnosticId);
     for (let ordinal = 1; ordinal <= 20; ordinal++) {
       const progress = await (await page.request.get(`/api/diagnostic/${diagnosticId}`)).json() as DiagnosticProgress;
       expect(progress.currentQuestion!.ordinal).toBe(ordinal);
-      const response = await page.request.post(`/api/diagnostic/${diagnosticId}/answer`, { data: { itemId: progress.currentQuestion!.id, selectedLabel: "A" } });
+      const response = await page.request.post(`/api/diagnostic/${diagnosticId}/answer`, { data: { itemId: progress.currentQuestion!.id, selectedLabel: progress.currentQuestion!.options[0].label } });
       expect(response.status()).toBe(200);
     }
     const anonymousResult = await (await page.request.get(`/api/diagnostic/${diagnosticId}/results`)).json() as DiagnosticResult;
@@ -93,6 +95,7 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     expect(foreignCreated.status()).toBe(201);
     const { sessionId: foreignId } = await foreignCreated.json() as { sessionId: string };
     ids.push(foreignId);
+    await assertRestoredSession(service, foreignId);
 
     await page.goto("/signup?next=%2Fdashboard");
     await page.getByLabel("Email", { exact: true }).fill(email);
@@ -135,6 +138,7 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     expect(started.status()).toBe(201);
     const { sessionId: practiceId } = await started.json() as { sessionId: string };
     ids.push(practiceId);
+    await assertRestoredSession(service, practiceId, 5);
     await expect(page).toHaveURL(new RegExp(`/practice/${practiceId}$`));
     for (let ordinal = 1; ordinal <= 5; ordinal++) {
       await expect(page.getByText(`Question ${ordinal} of 5`, { exact: true })).toBeVisible();

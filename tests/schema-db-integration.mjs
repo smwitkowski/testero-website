@@ -5,7 +5,14 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID, createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+
+const prodSchema = process.env.TESTERO_PROD_SCHEMA === "1";
+if (process.env.TESTERO_PROD_SCHEMA && !prodSchema) throw new Error("TESTERO_PROD_SCHEMA must be 1 or unset");
+if (prodSchema) {
+  if (!/project_id\s*=\s*"testero-v2"/.test(readFileSync("supabase/config.toml", "utf8"))) throw new Error("Expected isolated testero-v2 project");
+  if (readdirSync(".").some(name => name.startsWith(".env") && name !== ".env.example")) throw new Error("Prod-schema verifier refuses credential env files");
+}
 
 const urlText = process.env.DATABASE_URL;
 if (!urlText) throw new Error("Provide a LOCAL DATABASE_URL explicitly");
@@ -46,17 +53,41 @@ const tables = ["exam_domains", "questions", "answers", "explanations", "questio
   "study_sessions", "session_items", "free_practice_quota"];
 const digestSQL = tables.map((table) => `SELECT '${table}', count(*), md5(coalesce(string_agg(row_to_json(t)::text, '|' ORDER BY row_to_json(t)::text), '')) FROM public.${table} t;`).join("\n");
 const baseline = readFileSync("supabase/migrations/20261003000000_v2_baseline.sql", "utf8");
-const seed = readFileSync("supabase/seed.sql", "utf8");
+const bankTables = tables.slice(0, 5);
+const bankDigestSQL = bankTables.map((table) => `SELECT '${table}', count(*), md5(coalesce(string_agg(row_to_json(t)::text, '|' ORDER BY row_to_json(t)::text), '')) FROM public.${table} t;`).join("\n");
+const bankBefore = prodSchema ? await scalar(bankDigestSQL) : null;
 const before = await scalar(digestSQL);
 await run(baseline);
 assert.equal(await scalar(digestSQL), before, "second baseline apply must not change any rows");
-await run(seed);
-const seeded = await scalar(digestSQL);
-await run(seed);
-assert.equal(await scalar(digestSQL), seeded, "second seed apply must preserve rows");
-assert.equal(await scalar("SELECT count(*) FROM public.questions WHERE source_ref LIKE 'local-educational-seed-%';"), "30");
-assert.equal(await scalar("SELECT count(*) FROM (SELECT q.id FROM public.questions q JOIN public.answers a ON a.question_id=q.id WHERE q.source_ref LIKE 'local-educational-seed-%' GROUP BY q.id HAVING count(*)=4 AND count(*) FILTER (WHERE a.is_correct)=1 AND bool_and(length(a.explanation_text)>0)) s;"), "30");
-assert.equal(await scalar("SELECT count(*) FROM (SELECT domain_id FROM public.questions WHERE source_ref LIKE 'local-educational-seed-%' GROUP BY domain_id HAVING count(*)=5) s;"), "6");
+if (prodSchema) {
+  // No seed read or execution in restored-bank mode. The approved restore stays immutable.
+  assert.equal(await scalar("SELECT count(*) FROM public.questions;"), "343");
+  assert.equal(await scalar("SELECT count(*) FROM public.questions WHERE status='ACTIVE';"), "145");
+  assert.equal(await scalar("SELECT count(*) FROM public.exam_domains;"), "29");
+  assert.equal(await scalar("SELECT count(*) FROM public.answers;"), "1372");
+  assert.equal(await scalar("SELECT count(*) FROM public.explanations;"), "343");
+  assert.equal(await scalar("SELECT count(*) FROM public.question_generation_runs;"), "165");
+  assert.equal(await scalar("SELECT count(*) FROM public.questions WHERE source_ref LIKE 'local-educational-seed-%';"), "0");
+  const quotas = { ARCHITECTING_LOW_CODE_ML_SOLUTIONS: 2, COLLABORATING_TO_MANAGE_DATA_AND_MODELS: 3,
+    SCALING_PROTOTYPES_INTO_ML_MODELS: 4, SERVING_AND_SCALING_MODELS: 4,
+    AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES: 4, MONITORING_ML_SOLUTIONS: 3 };
+  for (const [code, quota] of Object.entries(quotas)) {
+    const available = Number(await scalar(`SELECT count(*) FROM public.questions q JOIN public.exam_domains d ON d.id=q.domain_id
+      WHERE q.status='ACTIVE' AND q.review_status='GOOD' AND q.exam='GCP_PM_ML_ENG' AND d.code=${q(code)}
+      AND (SELECT count(*)=4 AND count(*) FILTER (WHERE a.is_correct)=1 AND bool_and(length(trim(a.choice_text))>0 AND length(trim(a.explanation_text))>0)
+        FROM public.answers a WHERE a.question_id=q.id);`));
+    assert.ok(available >= Math.max(5, quota), `${code}: restored bank supplies diagnostic quota ${quota} and five-question practice`);
+  }
+} else {
+  const seed = readFileSync("supabase/seed.sql", "utf8");
+  await run(seed);
+  const seeded = await scalar(digestSQL);
+  await run(seed);
+  assert.equal(await scalar(digestSQL), seeded, "second seed apply must preserve rows");
+  assert.equal(await scalar("SELECT count(*) FROM public.questions WHERE source_ref LIKE 'local-educational-seed-%';"), "30");
+  assert.equal(await scalar("SELECT count(*) FROM (SELECT q.id FROM public.questions q JOIN public.answers a ON a.question_id=q.id WHERE q.source_ref LIKE 'local-educational-seed-%' GROUP BY q.id HAVING count(*)=4 AND count(*) FILTER (WHERE a.is_correct)=1 AND bool_and(length(a.explanation_text)>0)) s;"), "30");
+  assert.equal(await scalar("SELECT count(*) FROM (SELECT domain_id FROM public.questions WHERE source_ref LIKE 'local-educational-seed-%' GROUP BY domain_id HAVING count(*)=5) s;"), "6");
+}
 assert.equal(await scalar(`SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname=ANY(ARRAY[${tables.map(q).join(",")}]) AND c.relrowsecurity;`), String(tables.length));
 for (const role of ["anon", "authenticated"]) {
   for (const table of ["questions", "answers", "explanations", "session_items", "webhook_events", "pmle_pass_refunds"]) {
@@ -66,7 +97,21 @@ for (const role of ["anon", "authenticated"]) {
     assert.equal(await scalar(`SELECT has_function_privilege('${role}', 'public.${signature}', 'EXECUTE');`), "f");
   }
 }
-console.log("PASS replay, seed inventory, table RLS and browser privilege denial");
+// A restored SECURITY DEFINER legacy writer must not bypass canonical-bank isolation.
+// Explicit rollback also protects the bank if the privilege regression unexpectedly succeeds.
+if (await scalar("SELECT to_regprocedure('public.upsert_question_answers(uuid,jsonb)') IS NOT NULL;") === "t") {
+  const legacyBefore = await scalar(bankDigestSQL);
+  const existingId = await scalar("SELECT id FROM public.questions ORDER BY id LIMIT 1;");
+  for (const role of ["anon", "authenticated"]) {
+    assert.equal(await scalar(`SELECT has_function_privilege('${role}', 'public.upsert_question_answers(uuid,jsonb)', 'EXECUTE');`), "f");
+    const deniedWriter = await run(`\\set VERBOSITY verbose
+      BEGIN; SET LOCAL ROLE ${role}; SELECT public.upsert_question_answers(${q(existingId)}::uuid,'[]'::jsonb); ROLLBACK;`, true);
+    assert.notEqual(deniedWriter.code, 0, `${role}: restored legacy writer denied`);
+    assert.match(deniedWriter.error, /42501/, `${role}: writer denial must be insufficient_privilege`);
+    assert.equal(await scalar(bankDigestSQL), legacyBefore, `${role}: denied legacy writer leaves all five bank tables unchanged`);
+  }
+}
+console.log(`PASS replay, ${prodSchema ? "restored 145-ACTIVE bank inventory and blueprint supply" : "seed inventory"}, table RLS and browser privilege denial`);
 
 const owner = randomUUID(), other = randomUUID(), paidOwner = randomUUID(), legacyOwner = randomUUID();
 const strictOwner = randomUUID(), claimOwner = randomUUID(), claimOther = randomUUID();
@@ -86,29 +131,37 @@ const afterCheckout = "local-checkout-" + randomUUID();
 let sessionId;
 try {
   await run(`INSERT INTO auth.users(id) VALUES ${ownerIds.map((id) => `(${q(id)})`).join(",")};`);
-  const questions = JSON.parse(await scalar(`SELECT json_agg(s) FROM (SELECT q.id AS question_id,d.code AS domain_code,d.name AS domain_name,q.stem FROM public.questions q JOIN public.exam_domains d ON d.id=q.domain_id WHERE q.source_ref LIKE 'local-educational-seed-%' ORDER BY q.id LIMIT 6) s;`));
-  const items = questions.map((question) => ({ ...question,
+  const questions = JSON.parse(await scalar(`SELECT json_agg(s) FROM (SELECT q.id AS question_id,d.code AS domain_code,d.name AS domain_name,q.stem,
+    (SELECT json_agg(json_build_object('label',a.choice_label,'text',a.choice_text) ORDER BY a.choice_label) FROM public.answers a WHERE a.question_id=q.id) AS options,
+    (SELECT a.choice_label FROM public.answers a WHERE a.question_id=q.id AND a.is_correct) AS correct_label
+    FROM public.questions q JOIN public.exam_domains d ON d.id=q.domain_id
+    WHERE ${prodSchema ? "q.status='ACTIVE' AND q.review_status='GOOD' AND q.exam='GCP_PM_ML_ENG'" : "q.source_ref LIKE 'local-educational-seed-%'"} ORDER BY q.id LIMIT 6) s;`));
+  assert.equal(questions.length, 6);
+  const items = prodSchema ? questions : questions.map((question) => ({ ...question,
     options: [{ label: "A", text: "First" }, { label: "B", text: "Second" }], correct_label: "A" }));
+  const firstCorrect = items[0].correct_label;
+  const firstWrong = items[0].options.find(option => option.label !== firstCorrect).label;
+  const secondCorrect = items[1].correct_label;
   const createSQL = (kind, user, anonymous, snapshots) => `SELECT public.create_study_session(${q(kind)},${user ? q(user) : "NULL"},${anonymous ? q(anonymous) : "NULL"},${q(JSON.stringify(snapshots))}::jsonb,now()+interval '1 hour')`;
   const strictSQL = (user, snapshots) => `SELECT public.create_free_practice_session(${q(user)},${q(JSON.stringify(snapshots))}::jsonb,now()+interval '1 hour')`;
   const claimSQL = (user, digest) => `SELECT public.claim_anonymous_diagnostics(${user ? q(user) : "NULL"},${digest === null ? "NULL" : q(digest)})`;
   sessionId = await scalar(service(createSQL("diagnostic", null, hash, items.slice(0, 2))));
   const rows = JSON.parse(await scalar(`SELECT json_agg(s ORDER BY ordinal) FROM (SELECT id,ordinal FROM public.session_items WHERE session_id=${q(sessionId)}) s;`));
   const answerSQL = (id, label, user = null, anonymous = hash) => `SELECT public.answer_study_item(${q(sessionId)},${q(id)},${q(label)},${user ? q(user) : "NULL"},${anonymous ? q(anonymous) : "NULL"})`;
-  await denied(service(answerSQL(rows[0].id, "A", other, null)), "foreign user cannot answer anonymous session");
-  await denied(service(answerSQL(rows[0].id, "A", null, "0".repeat(64))), "wrong anonymous owner denied");
-  await denied(service(answerSQL(rows[1].id, "A")), "out of order answer denied");
-  await denied(service(answerSQL(rows[0].id, "C")), "unknown option denied");
-  const first = JSON.parse(await scalar(service(answerSQL(rows[0].id, "B"))));
+  await denied(service(answerSQL(rows[0].id, firstCorrect, other, null)), "foreign user cannot answer anonymous session");
+  await denied(service(answerSQL(rows[0].id, firstCorrect, null, "0".repeat(64))), "wrong anonymous owner denied");
+  await denied(service(answerSQL(rows[1].id, secondCorrect)), "out of order answer denied");
+  await denied(service(answerSQL(rows[0].id, "INVALID")), "unknown option denied");
+  const first = JSON.parse(await scalar(service(answerSQL(rows[0].id, firstWrong))));
   assert.deepEqual(first, { answeredCount: 1, totalQuestions: 2, completed: false });
-  assert.deepEqual(JSON.parse(await scalar(service(answerSQL(rows[0].id, "B")))), first, "same answer retry idempotent");
-  await denied(service(answerSQL(rows[0].id, "A")), "changed answer rejected");
-  assert.deepEqual(JSON.parse(await scalar(service(answerSQL(rows[1].id, "A")))), { answeredCount: 2, totalQuestions: 2, completed: true });
+  assert.deepEqual(JSON.parse(await scalar(service(answerSQL(rows[0].id, firstWrong)))), first, "same answer retry idempotent");
+  await denied(service(answerSQL(rows[0].id, firstCorrect)), "changed answer rejected");
+  assert.deepEqual(JSON.parse(await scalar(service(answerSQL(rows[1].id, secondCorrect)))), { answeredCount: 2, totalQuestions: 2, completed: true });
   assert.equal(await scalar(`SELECT count(*) FROM public.session_items WHERE session_id=${q(sessionId)} AND is_correct;`), "1");
   assert.equal(await scalar(`SELECT completed_at IS NOT NULL FROM public.study_sessions WHERE id=${q(sessionId)};`), "t");
   // Expiry checked independently of item state.
   await run(`UPDATE public.study_sessions SET created_at=now()-interval '2 hours',expires_at=now()-interval '1 hour' WHERE id=${q(sessionId)};`);
-  await denied(service(answerSQL(rows[0].id, "B")), "expired session denied");
+  await denied(service(answerSQL(rows[0].id, firstWrong)), "expired session denied");
   console.log("PASS anonymous ownership, next ordinal, options, retry, server correctness, completion, expiry");
 
   // Real concurrent session-creation transactions contend on the same quota row.
@@ -137,7 +190,7 @@ try {
   const claimSessions = await Promise.all(Array.from({ length: 3 }, () => scalar(service(createSQL("diagnostic", null, claimHash, items.slice(0, 1))))));
   const foreignSession = await scalar(service(createSQL("diagnostic", null, foreignHash, items.slice(0, 1))));
   const completedClaimItem = await scalar(`SELECT id FROM public.session_items WHERE session_id=${q(claimSessions[1])};`);
-  await run(service(`SELECT public.answer_study_item(${q(claimSessions[1])},${q(completedClaimItem)},'A',NULL,${q(claimHash)})`));
+  await run(service(`SELECT public.answer_study_item(${q(claimSessions[1])},${q(completedClaimItem)},${q(firstCorrect)},NULL,${q(claimHash)})`));
   await run(`UPDATE public.study_sessions SET created_at=now()-interval '2 hours',expires_at=now()-interval '1 hour' WHERE id IN (${q(claimSessions[1])},${q(claimSessions[2])});`);
   await denied(service(claimSQL(null, claimHash)), "claim requires a verified user ID");
   for (const invalid of [null, "", "a".repeat(63), "A".repeat(64)]) {
@@ -153,7 +206,7 @@ try {
   assert.equal(await scalar(`SELECT count(*) FROM public.study_sessions WHERE id IN (${claimSessions.map(q).join(",")}) AND user_id=${q(winningOwner)} AND anonymous_owner_hash IS NULL;`), "3");
   assert.equal(await scalar(`SELECT user_id IS NULL AND anonymous_owner_hash=${q(foreignHash)} FROM public.study_sessions WHERE id=${q(foreignSession)};`), "t", "foreign cookie row untouched");
   const claimedItem = await scalar(`SELECT id FROM public.session_items WHERE session_id=${q(claimSessions[0])};`);
-  const claimAnswer = (user, digest) => `SELECT public.answer_study_item(${q(claimSessions[0])},${q(claimedItem)},'A',${user ? q(user) : "NULL"},${digest ? q(digest) : "NULL"})`;
+  const claimAnswer = (user, digest) => `SELECT public.answer_study_item(${q(claimSessions[0])},${q(claimedItem)},${q(firstCorrect)},${user ? q(user) : "NULL"},${digest ? q(digest) : "NULL"})`;
   await denied(service(claimAnswer(null, claimHash)), "old anonymous cookie loses access after claim");
   await denied(service(claimAnswer(losingOwner, null)), "losing signed user cannot access claimed row");
   assert.equal(JSON.parse(await scalar(service(claimAnswer(winningOwner, null)))).completed, true, "signed owner can answer claimed row");
@@ -332,5 +385,6 @@ try {
   await run(`DELETE FROM public.study_sessions WHERE anonymous_owner_hash IN (${q(hash)},${q(claimHash)},${q(foreignHash)});
     DELETE FROM public.pmle_pass_refunds WHERE stripe_payment_intent_id IN (${[intent, intentAfter, ...phase3Fixtures.map((fixture) => fixture.intent)].map(q).join(",")});
     DELETE FROM auth.users WHERE id IN (${ownerIds.map(q).join(",")});`);
+  if (prodSchema) assert.equal(await scalar(bankDigestSQL), bankBefore, "all five restored question-bank tables remain byte-for-byte unchanged after every integration group");
 }
-console.log("PASS all local DB integration checks; isolated fixtures removed");
+console.log(`PASS all local DB integration checks; isolated fixtures removed${prodSchema ? "; restored question bank unchanged" : ""}`);

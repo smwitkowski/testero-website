@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { assertRestoredSession } from "./prod-bank";
 import { createClient } from "@supabase/supabase-js";
 import type { DiagnosticProgress, DiagnosticAnswerResponse, DiagnosticResult } from "../lib/diagnostic/types";
 
@@ -32,6 +33,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
   const { sessionId } = await created.json() as { sessionId: string };
   const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
   try {
+    await assertRestoredSession(service, sessionId);
     const api = `/api/diagnostic/${sessionId}`;
     await expect(page).toHaveURL(new RegExp(`/diagnostic/${sessionId}$`));
     const cookie = (await context.cookies()).find(value => value.name === "testero_anon");
@@ -51,7 +53,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
         expect(response.status()).toBe(404);
         expect(await response.json()).toEqual({ error: "Diagnostic not found" });
       }
-      const foreignWrite = await foreign.request.post(`http://127.0.0.1:3000${api}/answer`, { data: { itemId: first.currentQuestion!.id, selectedLabel: "A" } });
+      const foreignWrite = await foreign.request.post(`http://127.0.0.1:3000${api}/answer`, { data: { itemId: first.currentQuestion!.id, selectedLabel: first.currentQuestion!.options[0].label } });
       expect(foreignWrite.status()).toBe(404);
     } finally { await foreign.close(); }
 

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { assertRestoredSession, assertRestoredPaidReview } from "./prod-bank";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { randomUUID } from "node:crypto";
@@ -55,25 +56,35 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     expect(response.status()).toBe(200); return eventId;
   }
   async function completePractice(id: string, paid: boolean) {
+    const restoredItems = await assertRestoredSession(service, id, 5);
     for (let ordinal = 1; ordinal <= 5; ordinal++) {
       const progress = await (await page.request.get(`/api/practice/${id}`)).json() as DiagnosticProgress;
       expect(progress.currentQuestion!.ordinal).toBe(ordinal); noPaidContent(progress);
-      const response = await page.request.post(`/api/practice/${id}/answer`, { data: { itemId: progress.currentQuestion!.id, selectedLabel: "A" } });
+      const response = await page.request.post(`/api/practice/${id}/answer`, { data: { itemId: progress.currentQuestion!.id, selectedLabel: progress.currentQuestion!.options[0].label } });
       expect(response.status()).toBe(200);
       const accepted = await response.json() as PracticeAnswerResponse;
       expect(accepted.feedback.itemId).toBe(progress.currentQuestion!.id);
       if (paid) {
         expect(accepted.feedback.explanation).toBeTruthy();
         expect(accepted.feedback.optionExplanations).toHaveLength(4);
-        expect(accepted.feedback.optionExplanations!.every(option => option.explanation.length > 0)).toBe(true);
+        expect(accepted.feedback.optionExplanations!.every(option => option.explanation.trim().length > 0)).toBe(true);
+        if (process.env.TESTERO_PROD_SCHEMA === "1") {
+          const restored = restoredItems.get(progress.currentQuestion!.id)!;
+          expect(accepted.feedback.explanation).toBe(restored.question.explanations[0].explanation_text);
+          for (const option of accepted.feedback.optionExplanations!) {
+            expect(option.explanation).toBe(restored.question.answers.find(answer => answer.choice_text === option.text)!.explanation_text);
+          }
+        }
       } else noPaidContent(accepted);
     }
     const response = await page.request.get(`/api/practice/${id}/summary`);
     expect(response.status()).toBe(200);
     const summary = await response.json() as PracticeSummary;
     expect(summary.review).toHaveLength(5);
-    if (paid) expect(summary.review.every(item => item.explanation && item.options.every(option => option.explanation))).toBe(true);
-    else noPaidContent(summary);
+    if (paid) {
+      expect(summary.review.every(item => item.explanation && item.options.every(option => option.explanation))).toBe(true);
+      assertRestoredPaidReview(summary.review, restoredItems);
+    } else noPaidContent(summary);
     return summary;
   }
   try {
@@ -91,9 +102,10 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     const diagnostic = await page.request.post("/api/diagnostic", { data: {} });
     expect(diagnostic.status()).toBe(201);
     const { sessionId: diagnosticId } = await diagnostic.json() as { sessionId: string };
+    const diagnosticBank = await assertRestoredSession(service, diagnosticId);
     for (let i = 0; i < 20; i++) {
       const progress = await (await page.request.get(`/api/diagnostic/${diagnosticId}`)).json() as DiagnosticProgress;
-      const response = await page.request.post(`/api/diagnostic/${diagnosticId}/answer`, { data: { itemId: progress.currentQuestion!.id, selectedLabel: "A" } });
+      const response = await page.request.post(`/api/diagnostic/${diagnosticId}/answer`, { data: { itemId: progress.currentQuestion!.id, selectedLabel: progress.currentQuestion!.options[0].label } });
       expect(response.status()).toBe(200); noPaidContent(await response.json());
     }
     const freeReview = await (await page.request.get(`/api/diagnostic/${diagnosticId}/results`)).json() as DiagnosticResult;
@@ -142,11 +154,15 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     await expect(page.getByText("Explanation", { exact: true }).first()).toBeVisible();
     const paidReview = await (await page.request.get(`/api/diagnostic/${diagnosticId}/results`)).json() as DiagnosticResult;
     expect(paidReview.review!.every(item => item.explanation && item.options.every(option => option.explanation))).toBe(true);
+    assertRestoredPaidReview(paidReview.review!, diagnosticBank);
     await layout("diagnostic-paid");
     const paidPracticeIds: string[] = [];
     for (let i = 0; i < 3; i++) {
       const started = await page.request.post("/api/practice", { data: { domainCode } });
-      expect(started.status()).toBe(201); paidPracticeIds.push((await started.json()).sessionId);
+      expect(started.status()).toBe(201);
+      const paidSessionId = (await started.json()).sessionId as string;
+      paidPracticeIds.push(paidSessionId);
+      await assertRestoredSession(service, paidSessionId, 5);
     }
     const quota = await service.from("free_practice_quota").select("questions_used").eq("user_id", userId).single();
     expect(quota.data!.questions_used).toBe(5);
@@ -199,6 +215,7 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     await expect(page).toHaveURL("http://127.0.0.1:3000/account");
     const legacyPractice = await page.request.post("/api/practice", { data: { domainCode } });
     expect(legacyPractice.status()).toBe(201);
+    await assertRestoredSession(service, (await legacyPractice.json()).sessionId, 5);
     expect(failures).toEqual([]);
   } finally {
     await foreign.close();
