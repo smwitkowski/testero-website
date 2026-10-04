@@ -13,7 +13,7 @@ from shared.cert_context import DEFAULT_CERT, plan_questions
 from shared.dedupe import normalize_stem, strip_markdown
 from shared.doc_search import search_objective_docs, documentation_context
 from shared.evidence import check_evidence
-from shared.llm_generator import generate_question
+from shared.llm_generator import generate_question, cite_question, GenerationOutputError
 from shared.model_policy import DEFAULT_GENERATOR_MODEL, DEFAULT_JUDGE_MODEL, require_independent_models
 from shared.quality_gate import JudgeVerdict, QUESTION_FIELDS, judge_question
 from shared.validator import validate_question
@@ -29,7 +29,7 @@ def strip_option_letter(text):
 
 def strip_references(text):
     text = re.sub(r"https?://\S+|www\.\S+", "", text)
-    text = re.sub(r"\[(?:\d+|reference|source|docs)\]|\((?:see|reference|source|ref|docs|documentation)\b[^)]*\)", "", text, flags=re.I)
+    text = re.sub(r"\[\s*\d+\s*\]", "", text)
     return " ".join(text.split()).strip()
 
 
@@ -95,10 +95,11 @@ def persist_candidate(client, scope, question, judge, grounding, exam, domain_id
 @click.option("--dry-run", is_flag=True, help="Generate and judge locally; never access/write the DB.")
 @click.option("--artifact", type=click.Path(path_type=Path), help="JSON review artifact. Defaults to .cache/generation/<cert>-<UTC>.json.")
 @click.option("--exam", default=None, help="Existing DB exam identifier; no domain seeding is performed.")
-def main(cert, n_questions, domain_code, subsection, model, judge_model, difficulty, dry_run, artifact, exam):
+@click.option("--seed", type=int, default=None, help="Reproducible random objective start offsets per domain.")
+def main(cert, n_questions, domain_code, subsection, model, judge_model, difficulty, dry_run, artifact, exam, seed):
     try:
         generator_family, judge_family = require_independent_models(model, judge_model)
-        plan = plan_questions(cert, n_questions, domain_code=domain_code, subsection=subsection)
+        plan = plan_questions(cert, n_questions, domain_code=domain_code, subsection=subsection, seed=seed)
     except ValueError as exc:
         raise click.ClickException(str(exc)) from None
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
@@ -107,7 +108,7 @@ def main(cert, n_questions, domain_code, subsection, model, judge_model, difficu
         raise click.ClickException("Artifacts must be JSON files under .cache/generation/")
     payload = {"version": 1, "cert_id": cert, "model": model, "judge_model": judge_model,
                "generator_family": generator_family, "judge_family": judge_family,
-               "dry_run": dry_run, "planned_count": n_questions, "plan": plan, "candidates": []}
+               "dry_run": dry_run, "seed": seed, "planned_count": n_questions, "plan": plan, "candidates": []}
     client = None if dry_run else database_client()
     exam = exam or ("GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert)
     domains, runs, run_counts = {}, {}, {}
@@ -133,7 +134,7 @@ def main(cert, n_questions, domain_code, subsection, model, judge_model, difficu
     for index, scope in enumerate(plan, 1):
         entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256")},
                  "index": index, "stem": None, "options": [], "key": "A", "rationales": {},
-                 "evidence": [], "mechanical_check": {"passed": False, "errors": ["No fetched evidence"]},
+                 "evidence": [], "citation_attempts": [], "mechanical_check": {"passed": False, "errors": ["No fetched evidence"]},
                  "judge_verdict": {"passed": False, "score": 0.0, "reason": "Not judged", "model": judge_model},
                  "accepted": False}
         payload["candidates"].append(entry)
@@ -150,13 +151,28 @@ def main(cert, n_questions, domain_code, subsection, model, judge_model, difficu
             question = clean_question(raw)
             entry.update({"stem": question["stem"], "options": [
                 {"label": label, "text": question[field]} for label, field in zip("ABCD", OPTION_FIELDS)],
-                "rationales": {label: question[field] for label, field in zip("ABCD", RATIONALE_FIELDS)},
-                "evidence": raw.get("evidence", [])})
+                "rationales": {label: question[field] for label, field in zip("ABCD", RATIONALE_FIELDS)}})
             validation = validate_question(question)
             entry["schema_check"] = {"passed": validation.is_valid, "errors": validation.errors}
-            checked = check_evidence(raw.get("evidence", []), sources)
-            entry["mechanical_check"] = {"passed": checked["passed"], "errors": checked["errors"]}
-            if not validation.is_valid or not checked["passed"]:
+            if not validation.is_valid:
+                continue
+            checked = None
+            for cite_attempt in range(2):
+                citation = cite_question(question, sources, model=model,
+                    check_errors=checked["errors"] if checked else None)
+                checked = check_evidence(citation.get("evidence"), sources)
+                attempt = {"evidence": citation.get("evidence"),
+                           "mechanical_check": {"passed": checked["passed"], "errors": checked["errors"]}}
+                # The citation helper returns only bounded, sanitized completion diagnostics.
+                for key in ("parse_failure", "raw_response"):
+                    if key in citation:
+                        attempt[key] = citation[key]
+                entry["citation_attempts"].append(attempt)
+                entry["evidence"] = attempt["evidence"]
+                entry["mechanical_check"] = attempt["mechanical_check"]
+                if checked["passed"]:
+                    break
+            if not checked["passed"]:
                 continue
             entry["evidence"] = checked["options"]
             normalized = normalize_stem(question["stem"])
@@ -180,6 +196,8 @@ def main(cert, n_questions, domain_code, subsection, model, judge_model, difficu
         except Exception as exc:
             # Never copy provider exception bodies/credentials into artifacts or stdout.
             entry["error_class"] = type(exc).__name__
+            if isinstance(exc, GenerationOutputError) and isinstance(exc.raw_response, str):
+                entry["raw_response"] = exc.raw_response
         finally:
             write_artifact(artifact, payload)
     if client is not None:

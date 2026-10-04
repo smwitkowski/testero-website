@@ -47,9 +47,12 @@ def generation(monkeypatch, tmp_path):
     raw = {**QUESTION, "evidence": [{"option_label": label, "url": URL, "quote": quote}
                                    for label, quote in zip("ABCD", QUOTES)]}
     def candidate(*args, **kwargs):
-        return {**raw, "stem": raw["stem"] + f" Request number {generator.call_count}."}
+        return {**{k: v for k, v in raw.items() if k != "evidence"},
+                "stem": f"Request number {generator.call_count}. " + raw["stem"]}
     generator = Mock(side_effect=candidate)
     monkeypatch.setattr(generate, "generate_question", generator)
+    generator.cite_mock = Mock(side_effect=lambda *a, **kw: {"evidence": raw["evidence"]})
+    monkeypatch.setattr(generate, "cite_question", generator.cite_mock)
     judge = Mock(return_value=JudgeVerdict(True, 0.9, "Offline pass", generate.DEFAULT_JUDGE_MODEL))
     monkeypatch.setattr(generate, "judge_question", judge)
     return client, database, raw, search, generator, judge, tmp_path
@@ -70,7 +73,8 @@ def test_pilot_dry_run_exact_plan_all_candidates_and_no_database(generation, cer
     assert len(artifact["candidates"]) == count
     assert len(artifact["plan"]) == count
     assert len({c["domain_code"] for c in artifact["candidates"]}) == count
-    assert generator.call_count == judge.call_count == count
+    assert generator.call_count == generator.cite_mock.call_count == judge.call_count == count
+    assert all(call.args[0] == verdict.args[0] for call, verdict in zip(generator.cite_mock.call_args_list, judge.call_args_list))
     for item in artifact["candidates"]:
         assert item["cert_id"] == cert and item["objective_id"]
         assert len(item["guide_sha256"]) == 64
@@ -112,7 +116,12 @@ def test_fail_closed_before_judge_and_database_writes_but_artifact_retains_attem
     record = json.loads((path / "pilot.json").read_text())["candidates"][0]
     assert not record["accepted"] and not record["judge_verdict"]["passed"]
     if failure == "no_sources": generator.assert_not_called()
-    else: assert record["stem"] and record["evidence"]
+    else: assert record["stem"]
+    if failure in {"quote_missing", "wrong_url"}:
+        assert len(record["citation_attempts"]) == 2
+        assert generator.cite_mock.call_args_list[1].kwargs["check_errors"]
+    else:
+        generator.cite_mock.assert_not_called()
 
 
 @pytest.mark.parametrize("passed", [True, False])
@@ -221,30 +230,69 @@ def test_identical_redirect_aliases_do_not_create_ambiguous_source_receipts(monk
         doc_search.search_objective_docs("Synthetic objective", [])
 
 
+
+
 @pytest.mark.parametrize("failure", ["overlong", "bad_label", "missing_quote", "null_evidence", "omitted_evidence"])
-def test_real_typed_boundary_retains_invalid_evidence_candidate(generation, monkeypatch, failure):
+def test_real_cite_step_retains_invalid_receipts_without_judge_or_database(generation, monkeypatch, failure):
     from dspy.utils import DummyLM
     from shared import llm_generator
-    raw = {**QUESTION, "reasoning": "Synthetic offline reasoning.",
-           "evidence": [{"option_label": label, "url": URL, "quote": quote} for label, quote in zip("ABCD", QUOTES)]}
-    if failure == "overlong": raw["evidence"][0]["quote"] = "x" * 301
-    elif failure == "bad_label": raw["evidence"][0]["option_label"] = "Z"
-    elif failure == "missing_quote": del raw["evidence"][0]["quote"]
-    elif failure == "omitted_evidence": del raw["evidence"]
-    else: raw["evidence"] = None
-    lm = DummyLM([raw])
+    records = [{"option_label": label, "url": URL, "quote": quote} for label, quote in zip("ABCD", QUOTES)]
+    if failure == "overlong": records[0]["quote"] = "x" * 301
+    elif failure == "bad_label": records[0]["option_label"] = "Z"
+    elif failure == "missing_quote": del records[0]["quote"]
+    elif failure == "null_evidence": records = None
+    values = {"evidence": records}
+    if failure == "omitted_evidence": del values["evidence"]
+    # Two mechanical failures exercise the one allowed citation retry.
+    lm = DummyLM([values, values])
     monkeypatch.setenv("OPENROUTER_API_KEY", "offline-test-only")
     monkeypatch.setattr(llm_generator.dspy, "LM", lambda **kwargs: lm)
-    monkeypatch.setattr(generate, "generate_question", llm_generator.generate_question)
+    monkeypatch.setattr(generate, "cite_question", llm_generator.cite_question)
     outcome = invoke(generation, "--dry-run")
     assert outcome.exit_code != 0
     generation[1].assert_not_called()
     generation[5].assert_not_called()
     record = json.loads((generation[-1] / "pilot.json").read_text())["candidates"][0]
-    assert record["stem"] == QUESTION["stem"]
+    assert record["stem"].endswith(QUESTION["stem"])
     assert len(record["options"]) == len(record["rationales"]) == 4
-    assert record["mechanical_check"]["passed"] is False
-    assert record["mechanical_check"]["errors"]
+    assert not record["mechanical_check"]["passed"]
+    assert len(record["citation_attempts"]) == 2
     assert "error_class" not in record
-    if failure == "overlong": assert len(record["evidence"][0]["quote"]) == 301
-    if failure in {"null_evidence", "omitted_evidence"}: assert record["evidence"] is None
+    if failure == "overlong": assert len(record["citation_attempts"][0]["evidence"][0]["quote"]) == 301
+    if failure == "omitted_evidence":
+        assert record["citation_attempts"][0]["parse_failure"]
+        assert len(record["citation_attempts"][0].get("raw_response", "")) <= 2048
+
+
+def test_cite_retry_passes_errors_and_does_not_regenerate_question(generation):
+    raw = generation[2]
+    bad = [{**e, "quote": "Not in frozen text"} for e in raw["evidence"]]
+    generation[4].cite_mock.side_effect = [{"evidence": bad}, {"evidence": raw["evidence"]}]
+    outcome = invoke(generation, "--dry-run")
+    assert outcome.exit_code == 0, outcome.output
+    generation[4].assert_called_once()
+    generation[5].assert_called_once()
+    cite = generation[4].cite_mock
+    assert cite.call_count == 2
+    assert cite.call_args_list[0].kwargs["check_errors"] is None
+    assert cite.call_args_list[1].kwargs["check_errors"]
+    record = json.loads((generation[-1] / "pilot.json").read_text())["candidates"][0]
+    assert [a["mechanical_check"]["passed"] for a in record["citation_attempts"]] == [False, True]
+    assert record["accepted"]
+
+
+def test_seed_cli_is_reproducible_and_recorded(generation):
+    outcome = invoke(generation, "--dry-run", "--n-questions", "6", "--seed", "1234")
+    assert outcome.exit_code == 0, outcome.output
+    artifact = json.loads((generation[-1] / "pilot.json").read_text())
+    assert artifact["seed"] == 1234
+    from shared.cert_context import plan_questions
+    assert artifact["plan"] == plan_questions(generate.DEFAULT_CERT, 6, seed=1234)
+    assert all("objective_offset" in item for item in artifact["plan"])
+
+
+def test_cleaner_preserves_normal_see_and_bracketed_terms():
+    prose = "Users see the [project] configuration and oversee settings (see details)."
+    assert generate.strip_references(prose) == prose
+    assert "https://" not in generate.strip_references("Use the setting https://docs.cloud.google.com/path [1]")
+    assert "[1]" not in generate.strip_references("Use the setting [1]")
