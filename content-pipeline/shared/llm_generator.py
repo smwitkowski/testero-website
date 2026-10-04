@@ -10,7 +10,7 @@ import logging
 import json
 from typing import Dict, Any, Optional, Callable, Tuple
 import dspy
-from shared.evidence import OptionEvidence, evidence_records
+from shared.evidence import OptionEvidence
 
 from shared.tracing import traceable_decorator
 
@@ -62,7 +62,7 @@ class PmleQuestionSignature(dspy.Signature):
         default=""
     )
     
-    evidence: list[OptionEvidence] = dspy.OutputField(
+    evidence: list[OptionEvidence] | None = dspy.OutputField(
         description=(
             "Exactly one evidence record for each label A, B, C, D. A maps to correct_answer; "
             "B/C/D map to distractor_1/2/3. Each URL must be a fetched URL explicitly listed "
@@ -179,7 +179,7 @@ class QuestionCorrectionSignature(dspy.Signature):
         description="Difficulty level: EASY, MEDIUM, or HARD"
     )
     
-    evidence: list[OptionEvidence] = dspy.OutputField(
+    evidence: list[OptionEvidence] | None = dspy.OutputField(
         description=(
             "Exactly one evidence record for each label A, B, C, D. A maps to correct_answer; "
             "B/C/D map to distractor_1/2/3. Each URL must be a fetched URL explicitly listed "
@@ -306,7 +306,7 @@ class FactualCorrectionSignature(dspy.Signature):
         description="Difficulty level: EASY, MEDIUM, or HARD"
     )
     
-    evidence: list[OptionEvidence] = dspy.OutputField(
+    evidence: list[OptionEvidence] | None = dspy.OutputField(
         description=(
             "Exactly one evidence record for each label A, B, C, D. A maps to correct_answer; "
             "B/C/D map to distractor_1/2/3. Each URL must be a fetched URL explicitly listed "
@@ -445,7 +445,9 @@ QUESTION_FIELDS = (
 def _question_data(result) -> Dict[str, Any]:
     """Extract a fresh complete generation, including its own typed evidence."""
     data = {name: getattr(result, name).strip() for name in QUESTION_FIELDS}
-    data["evidence"] = evidence_records(result.evidence)
+    raw_evidence = getattr(result, "evidence", None)
+    data["evidence"] = ([item.model_dump() if isinstance(item, OptionEvidence) else item
+                         for item in raw_evidence] if isinstance(raw_evidence, list) else raw_evidence)
     return data
 
 
@@ -759,6 +761,23 @@ class LLMGenerator:
             return {}
 
 
+class EvidencePreservingAdapter(dspy.ChatAdapter):
+    """Retain a fully parsed question when only its evidence output is omitted."""
+
+    def parse(self, signature, completion):
+        from dspy.utils.exceptions import AdapterParseError
+        try:
+            return super().parse(signature, completion)
+        except AdapterParseError as exc:
+            # Use only DSPy's typed partial fields, never raw responses/error bodies.
+            fields = exc.parsed_result
+            required = set(signature.output_fields) - {"evidence"}
+            if ("evidence" in signature.output_fields and isinstance(fields, dict)
+                    and required <= set(fields) and "evidence" not in fields):
+                return {**fields, "evidence": None}
+            raise
+
+
 def generate_question(
     domain_context: str,
     documentation_context: str,
@@ -795,13 +814,14 @@ def generate_question(
         cache=False,
     )
     predictor = dspy.ChainOfThought(PmleQuestionSignature)
-    result = predictor(
-        domain_context=domain_context,
-        documentation_context=documentation_context,
-        difficulty=difficulty,
-        exam_subsection=exam_subsection or "",
-        gap_analysis_guidance="",
-        lm=lm,
-        config={"rollout_id": time.time_ns(), "temperature": 0.7},
-    )
+    with dspy.context(adapter=EvidencePreservingAdapter()):
+        result = predictor(
+            domain_context=domain_context,
+            documentation_context=documentation_context,
+            difficulty=difficulty,
+            exam_subsection=exam_subsection or "",
+            gap_analysis_guidance="",
+            lm=lm,
+            config={"rollout_id": time.time_ns(), "temperature": 0.7},
+        )
     return _question_data(result)

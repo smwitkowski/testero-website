@@ -22,7 +22,7 @@ def output(prefix="Original"):
 def test_signatures_have_typed_evidence_and_registry_scope():
     for signature in [generator.PmleQuestionSignature, generator.QuestionCorrectionSignature,
                       generator.FactualCorrectionSignature]:
-        assert signature.output_fields["evidence"].annotation == list[OptionEvidence]
+        assert signature.output_fields["evidence"].annotation == list[OptionEvidence] | None
     instructions = generator.PmleQuestionSignature.instructions
     assert "registry objective" in instructions
     assert "Professional Machine Learning Engineer builds" not in instructions
@@ -70,11 +70,12 @@ def test_missing_key_never_calls_lm(monkeypatch):
     fake.assert_not_called()
 
 
-def test_missing_evidence_is_not_silently_dropped():
+def test_missing_evidence_retains_candidate_for_mechanical_rejection():
     result = output()
     del result.evidence
-    with pytest.raises(AttributeError):
-        generator._question_data(result)
+    extracted = generator._question_data(result)
+    assert extracted["stem"] == "Original stem"
+    assert extracted["evidence"] is None
 
 
 def test_facade_retry_replaces_all_proof_instead_of_merging_stale(monkeypatch):

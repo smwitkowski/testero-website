@@ -219,3 +219,32 @@ def test_identical_redirect_aliases_do_not_create_ambiguous_source_receipts(monk
     monkeypatch.setattr(doc_search, "_fetch_documentation", Mock(side_effect=[first, second]))
     with pytest.raises(doc_search.DocumentationError, match="Conflicting"):
         doc_search.search_objective_docs("Synthetic objective", [])
+
+
+@pytest.mark.parametrize("failure", ["overlong", "bad_label", "missing_quote", "null_evidence", "omitted_evidence"])
+def test_real_typed_boundary_retains_invalid_evidence_candidate(generation, monkeypatch, failure):
+    from dspy.utils import DummyLM
+    from shared import llm_generator
+    raw = {**QUESTION, "reasoning": "Synthetic offline reasoning.",
+           "evidence": [{"option_label": label, "url": URL, "quote": quote} for label, quote in zip("ABCD", QUOTES)]}
+    if failure == "overlong": raw["evidence"][0]["quote"] = "x" * 301
+    elif failure == "bad_label": raw["evidence"][0]["option_label"] = "Z"
+    elif failure == "missing_quote": del raw["evidence"][0]["quote"]
+    elif failure == "omitted_evidence": del raw["evidence"]
+    else: raw["evidence"] = None
+    lm = DummyLM([raw])
+    monkeypatch.setenv("OPENROUTER_API_KEY", "offline-test-only")
+    monkeypatch.setattr(llm_generator.dspy, "LM", lambda **kwargs: lm)
+    monkeypatch.setattr(generate, "generate_question", llm_generator.generate_question)
+    outcome = invoke(generation, "--dry-run")
+    assert outcome.exit_code != 0
+    generation[1].assert_not_called()
+    generation[5].assert_not_called()
+    record = json.loads((generation[-1] / "pilot.json").read_text())["candidates"][0]
+    assert record["stem"] == QUESTION["stem"]
+    assert len(record["options"]) == len(record["rationales"]) == 4
+    assert record["mechanical_check"]["passed"] is False
+    assert record["mechanical_check"]["errors"]
+    assert "error_class" not in record
+    if failure == "overlong": assert len(record["evidence"][0]["quote"]) == 301
+    if failure in {"null_evidence", "omitted_evidence"}: assert record["evidence"] is None

@@ -7,16 +7,17 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import Literal
+from typing import Any
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class OptionEvidence(BaseModel):
-    option_label: Literal["A", "B", "C", "D"]
-    url: str = Field(min_length=1)
-    quote: str = Field(min_length=1, max_length=300)
+    # Preserve invalid generated receipts for review; the pure gate owns rejection.
+    option_label: Any = None
+    url: Any = None
+    quote: Any = None
 
 
 def normalize_whitespace(text: str) -> str:
