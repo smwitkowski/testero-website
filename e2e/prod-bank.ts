@@ -16,6 +16,11 @@ type BankQuestion = {
   exam_domains: { code: string; name: string }; answers: BankAnswer[];
   explanations: { explanation_text: string }[];
 };
+// PostgREST embeds UNIQUE question_id as an object on the real schema;
+// older seeded schemas can embed a one-to-many array instead.
+type BankQuestionRow = Omit<BankQuestion, "explanations"> & {
+  explanations: BankQuestion["explanations"] | BankQuestion["explanations"][number] | null;
+};
 type Snapshot = {
   id: string; question_id: string; stem: string; domain_code: string; domain_name: string;
   options: { label: string; text: string }[]; correct_label: string;
@@ -30,7 +35,10 @@ export async function assertRestoredSession(service: SupabaseClient, sessionId: 
   expect(url.protocol).toBe("http:"); expect(url.port).toBe("56541"); expect(url.search).toBe("");
   const bank = await service.from("questions").select("id,stem,status,review_status,exam,source_ref,exam_domains!inner(code,name),answers(choice_label,choice_text,is_correct,explanation_text),explanations(explanation_text)");
   expect(bank.error).toBeNull(); expect(bank.data).toHaveLength(343);
-  const questions = bank.data as unknown as BankQuestion[];
+  const questions: BankQuestion[] = (bank.data as unknown as BankQuestionRow[]).map(question => ({
+    ...question,
+    explanations: Array.isArray(question.explanations) ? question.explanations : question.explanations ? [question.explanations] : [],
+  }));
   expect(questions.filter(question => question.status === "ACTIVE")).toHaveLength(145);
   expect(questions.some(question => question.source_ref?.startsWith("local-educational-seed-"))).toBe(false);
   const domains = await service.from("exam_domains").select("id", { count: "exact", head: true });
