@@ -322,8 +322,9 @@ def test_real_citation_parser_numeric_overflow_is_retained_as_debug_marker(gener
     from shared import llm_generator
     receipts = [{"option_label": label, "url": URL, "quote": quote} for label, quote in zip("ABCD", QUOTES)]
     receipts[0]["quote"] = "OVERFLOW_PLACEHOLDER"
-    completion = "[[ ## evidence ## ]]\n" + json.dumps(receipts).replace('"OVERFLOW_PLACEHOLDER"', "1e999")
-    lm = DummyLM([completion, completion])
+    completion = json.dumps(receipts).replace('"OVERFLOW_PLACEHOLDER"', "1e999")
+    # DummyLM accepts field dictionaries; the raw field string preserves 1e999.
+    lm = DummyLM([{"evidence": completion}, {"evidence": completion}])
     monkeypatch.setenv("OPENROUTER_API_KEY", "offline-test-only")
     monkeypatch.setattr(llm_generator.dspy, "LM", lambda **kwargs: lm)
     monkeypatch.setattr(generate, "cite_question", llm_generator.cite_question)
