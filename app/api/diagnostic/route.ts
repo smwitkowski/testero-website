@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createAnswerSnapshot } from "@/lib/questions/answer-order";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import {
   getAnonymousSessionIdFromCookie,
@@ -481,9 +482,8 @@ export async function POST(req: Request) {
             canonical_question_id: canonicalQuestionId,
             original_question_id: originalQuestionId,
             stem: q.stem,
-            // Ensure options are in {label: string, text: string} format for snapshot
-            options: q.options.map((opt) => ({ label: opt.label, text: opt.text })),
-            correct_label: q.options.find((opt) => opt.is_correct)?.label || "", // Store correct label in snapshot
+            // Shuffle only new snapshots; resume, scoring, and review use stored labels.
+            ...createAnswerSnapshot(q.options),
             // Include domain info for canonical PMLE questions
             domain_id: q.domain_id || null,
             domain_code: q.domain_code || null,

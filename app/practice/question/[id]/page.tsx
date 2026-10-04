@@ -89,6 +89,8 @@ const SpecificPracticeQuestionPage = () => {
         body: JSON.stringify({
           questionId: question.id, // Use the ID of the fetched question
           selectedOptionKey,
+          selectedOptionId: question.options.find((option) => option.label === selectedOptionKey)?.id,
+          optionOrder: question.options.map((option) => option.id),
         }),
       });
       if (!res.ok) {

@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, test, jest, beforeEach } from "@jest/globals";
-import { component as colorComponent } from "@/lib/design-system/tokens/colors";
+import { primitive, component as colorComponent } from "@/lib/design-system/tokens/colors";
 
 // Mock Next.js router
 jest.mock("next/navigation", () => ({
@@ -30,7 +30,7 @@ describe("Diagnostic Page Styling", () => {
     test("should use design system tokens for primary button", () => {
       // Verify the diagnostic button tokens are defined
       expect(colorComponent.diagnostic.buttonPrimary).toBeDefined();
-      expect(colorComponent.diagnostic.buttonPrimary).toBe("#0070f3");
+      expect(colorComponent.diagnostic.buttonPrimary).toBe(primitive.brand.teal.DEFAULT);
     });
 
     test("should use design system tokens for borders", () => {

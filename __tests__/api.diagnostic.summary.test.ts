@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { GET } from "@/app/api/diagnostic/summary/[sessionId]/route";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getPmleDomainConfig } from "@/lib/constants/pmle-blueprint";
+import { getPmleAccessLevelForRequest } from "@/lib/access/pmleEntitlements.server";
+jest.mock("@/lib/access/pmleEntitlements.server");
 
 // Mock the dependencies
 jest.mock("@/lib/supabase/server");
@@ -22,6 +24,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (getPmleAccessLevelForRequest as jest.Mock).mockResolvedValue({ accessLevel: "ANONYMOUS", user: null });
 
     // Setup default mock implementations
     mockSupabase = {
@@ -877,6 +880,7 @@ describe("GET /api/diagnostic/summary/[sessionId]", () => {
 
   describe("Explanation handling", () => {
     beforeEach(() => {
+      (getPmleAccessLevelForRequest as jest.Mock).mockResolvedValue({ accessLevel: "SUBSCRIBER", user: { id: "subscriber" } });
       // Setup chain for questions query
       const questionsQuery = {
         from: jest.fn().mockReturnThis(),

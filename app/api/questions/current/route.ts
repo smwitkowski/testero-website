@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { serializeQuestion } from '@/lib/practice/serialize';
 import { requireSubscriber } from '@/lib/auth/require-subscriber';
+import { shuffleArray } from '@/lib/questions/answer-order';
 
 // Question row shape returned from Supabase with explanations inner join
 type QuestionWithExplanation = {
@@ -12,18 +13,6 @@ type QuestionWithExplanation = {
 
 // Sample size for question selection (used as fallback when no user context)
 const QUESTION_SAMPLE_SIZE = 50;
-
-/**
- * Shuffles an array in place using Fisher-Yates algorithm
- */
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
 
 /**
  * Parse and validate difficulty parameter from query string.

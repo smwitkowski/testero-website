@@ -193,6 +193,8 @@ const PracticeQuestionPage = () => {
         body: JSON.stringify({
           questionId: question.id,
           selectedOptionKey,
+          selectedOptionId: question.options.find((option) => option.label === selectedOptionKey)?.id,
+          optionOrder: question.options.map((option) => option.id),
         }),
       });
       if (!res.ok) {

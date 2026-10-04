@@ -167,8 +167,8 @@ describe('TrustedBySection', () => {
       const logoCard = screen.getByRole('button');
       
       // Check for hover classes
-      expect(logoCard).toHaveClass('hover:scale-105');
-      expect(logoCard).toHaveClass('transition-all');
+      expect(logoCard).toHaveClass('hover:-translate-y-0.5');
+      expect(logoCard).toHaveClass('transition-transform');
     });
   });
 
@@ -177,14 +177,14 @@ describe('TrustedBySection', () => {
       render(<TrustedBySection />);
       
       const title = screen.getByText('Trusted by industry leaders');
-      expect(title).toHaveClass('text-2xl', 'sm:text-3xl', 'md:text-4xl');
+      expect(title).toHaveClass('text-3xl', 'sm:text-4xl');
     });
 
     it('applies responsive spacing classes', () => {
       render(<TrustedBySection />);
       
       const section = screen.getByRole('region');
-      expect(section).toHaveClass('py-16', 'md:py-20');
+      expect(section.firstElementChild).toHaveClass('py-section-xl');
     });
   });
 
@@ -222,7 +222,7 @@ describe('TrustedBySection', () => {
       render(<TrustedBySection />);
       
       const section = screen.getByRole('region');
-      expect(section).toHaveClass('bg-white', 'dark:bg-slate-950');
+      expect(section).toHaveClass('bg-surface');
     });
 
     it('uses design system typography classes', () => {
@@ -235,7 +235,7 @@ describe('TrustedBySection', () => {
     it('applies design system spacing consistently', () => {
       render(<TrustedBySection />);
       
-      const container = screen.getByRole('region').firstChild;
+      const container = screen.getByRole('region').firstElementChild?.firstElementChild;
       expect(container).toHaveClass('max-w-7xl', 'mx-auto', 'px-4');
     });
   });

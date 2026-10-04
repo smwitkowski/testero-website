@@ -68,20 +68,18 @@ const createMockSupabaseClient = (): Partial<SupabaseClient> => {
                 eq: jest.fn(() => ({
                   eq: jest.fn(() => ({
                     eq: jest.fn(() => ({
-                      limit: jest.fn(() => ({
-                        data: [
-                          {
-                            id: 'q1',
-                            stem: 'Test question 1',
-                            difficulty: 'MEDIUM',
-                            answers: [
-                              { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
-                              { choice_label: 'B', choice_text: 'Answer B', is_correct: false },
-                            ],
-                          },
-                        ],
-                        error: null,
-                      })),
+                      data: [
+                        {
+                          id: 'q1',
+                          stem: 'Test question 1',
+                          difficulty: 'MEDIUM',
+                          answers: [
+                            { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
+                            { choice_label: 'B', choice_text: 'Answer B', is_correct: false },
+                          ],
+                        },
+                      ],
+                      error: null,
                     })),
                   })),
                 })),
@@ -219,10 +217,8 @@ describe('PMLE Question Selection', () => {
                 eq: jest.fn(() => ({
                   eq: jest.fn(() => ({
                     eq: jest.fn(() => ({
-                      limit: jest.fn(() => ({
-                        data: [], // No questions available
-                        error: null,
-                      })),
+                      data: [], // No questions available
+                      error: null,
                     })),
                   })),
                 })),
@@ -269,22 +265,20 @@ describe('PMLE Question Selection', () => {
                 eq: jest.fn(() => ({
                   eq: jest.fn(() => ({
                     eq: jest.fn(() => ({
-                      limit: jest.fn(() => ({
-                        data: [
-                          {
-                            id: 'q1',
-                            stem: 'Test question stem',
-                            difficulty: 'MEDIUM',
-                            answers: [
-                              { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
-                              { choice_label: 'B', choice_text: 'Answer B', is_correct: false },
-                              { choice_label: 'C', choice_text: 'Answer C', is_correct: false },
-                              { choice_label: 'D', choice_text: 'Answer D', is_correct: false },
-                            ],
-                          },
-                        ],
-                        error: null,
-                      })),
+                      data: [
+                        {
+                          id: 'q1',
+                          stem: 'Test question stem',
+                          difficulty: 'MEDIUM',
+                          answers: [
+                            { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
+                            { choice_label: 'B', choice_text: 'Answer B', is_correct: false },
+                            { choice_label: 'C', choice_text: 'Answer C', is_correct: false },
+                            { choice_label: 'D', choice_text: 'Answer D', is_correct: false },
+                          ],
+                        },
+                      ],
+                      error: null,
                     })),
                   })),
                 })),
@@ -450,18 +444,16 @@ describe('PMLE Question Selection', () => {
                           expect(reviewStatusValue).toBe('GOOD');
                           return {
                             eq: jest.fn(() => ({
-                              limit: jest.fn(() => ({
-                                data: Array(5).fill(null).map((_, i) => ({
-                                  id: `q${i}`,
-                                  stem: `Question ${i}`,
-                                  difficulty: 'MEDIUM',
-                                  answers: [
-                                    { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
-                                    { choice_label: 'B', choice_text: 'Answer B', is_correct: false },
-                                  ],
-                                })),
-                                error: null,
+                              data: Array(5).fill(null).map((_, i) => ({
+                                id: `q${i}`,
+                                stem: `Question ${i}`,
+                                difficulty: 'MEDIUM',
+                                answers: [
+                                  { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
+                                  { choice_label: 'B', choice_text: 'Answer B', is_correct: false },
+                                ],
                               })),
+                              error: null,
                             })),
                           };
                         }),
@@ -516,18 +508,16 @@ describe('PMLE Question Selection', () => {
                 eq: jest.fn(() => ({
                   eq: jest.fn(() => ({
                     eq: jest.fn(() => ({
-                      limit: jest.fn(() => ({
-                        data: Array(5).fill(null).map((_, i) => ({
-                          id: `q${i}`,
-                          stem: `Question ${i}`,
-                          difficulty: 'MEDIUM',
-                          answers: [
-                            { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
-                            { choice_label: 'B', choice_text: 'Answer B', is_correct: false },
-                          ],
-                        })),
-                        error: null,
+                      data: Array(5).fill(null).map((_, i) => ({
+                        id: `q${i}`,
+                        stem: `Question ${i}`,
+                        difficulty: 'MEDIUM',
+                        answers: [
+                          { choice_label: 'A', choice_text: 'Answer A', is_correct: true },
+                          { choice_label: 'B', choice_text: 'Answer B', is_correct: false },
+                        ],
                       })),
+                      error: null,
                     })),
                   })),
                 })),

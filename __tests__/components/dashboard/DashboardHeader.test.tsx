@@ -2,7 +2,6 @@
  * @jest-environment jsdom
  */
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -36,35 +35,24 @@ describe("DashboardHeader", () => {
     expect(screen.getByText(/Let's continue your journey to PMLE certification/i)).toBeInTheDocument();
   });
 
-  it("renders both CTA buttons", () => {
+  it("leaves practice CTAs to the dashboard next-step card", () => {
     render(<DashboardHeader />);
 
-    expect(screen.getByRole("button", { name: /Start New Practice Exam/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Review Weakest Areas/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("calls onStartPractice when primary CTA clicked", async () => {
-    const user = userEvent.setup();
-    const onStartPractice = jest.fn();
-
-    render(<DashboardHeader onStartPractice={onStartPractice} />);
-
-    const button = screen.getByRole("button", { name: /Start New Practice Exam/i });
-    await user.click(button);
-
-    expect(onStartPractice).toHaveBeenCalledTimes(1);
+  it("applies custom styling to the welcome header", () => {
+    const { container } = render(<DashboardHeader className="custom-header" />);
+    expect(container.firstChild).toHaveClass("custom-header");
   });
 
-  it("calls onReviewWeakest when secondary CTA clicked", async () => {
-    const user = userEvent.setup();
-    const onReviewWeakest = jest.fn();
-
-    render(<DashboardHeader onReviewWeakest={onReviewWeakest} />);
-
-    const button = screen.getByRole("button", { name: /Review Weakest Areas/i });
-    await user.click(button);
-
-    expect(onReviewWeakest).toHaveBeenCalledTimes(1);
+  it("uses a fallback greeting without a user", () => {
+    mockUseAuth.mockReturnValue({
+      user: null, session: null, isLoading: false,
+      signOut: jest.fn(), refreshSession: jest.fn(),
+    });
+    render(<DashboardHeader />);
+    expect(screen.getByText("Welcome back, there!")).toBeInTheDocument();
   });
 
   it("uses email when full_name is not available", () => {

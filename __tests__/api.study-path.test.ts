@@ -13,6 +13,11 @@ jest.mock("@/lib/supabase/server", () => ({
   createServerSupabaseClient: jest.fn(() => mockSupabase),
 }));
 
+// Route tests must not make real rate-limit service calls.
+jest.mock("@/lib/auth/rate-limiter", () => ({
+  checkRateLimit: jest.fn().mockResolvedValue(true),
+}));
+
 // Import route after mocks are set up
 import { POST } from "@/app/api/study-path/route";
 
@@ -122,7 +127,11 @@ describe("/api/study-path - TDD RED Phase", () => {
 
       const request = new NextRequest("http://localhost:3000/api/study-path", {
         method: "POST",
-        body: JSON.stringify({ score: 50, domains: [] }),
+        // A valid payload isolates authentication from domain validation (9972ec1).
+        body: JSON.stringify({
+          score: 50,
+          domains: [{ domain: "Neural Networks", correct: 1, total: 2, percentage: 50 }],
+        }),
       });
 
       const response = await POST(request);

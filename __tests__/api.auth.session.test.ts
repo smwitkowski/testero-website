@@ -88,7 +88,7 @@ describe("GET /api/auth/session", () => {
     expect(response.status).toBe(200);
     expect(data).toEqual({ user: null });
     expect(consoleSpy).toHaveBeenCalledWith(
-      "Session endpoint error:",
+      "Session fetch error:",
       expect.any(Error)
     );
 

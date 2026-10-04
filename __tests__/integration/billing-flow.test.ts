@@ -41,6 +41,9 @@ describe("Billing Flow Integration", () => {
       webhooks: {
         constructEvent: jest.fn(),
       },
+      prices: {
+        retrieve: jest.fn().mockResolvedValue({ type: "recurring" }),
+      },
     } as any;
 
     (Stripe as jest.MockedClass<typeof Stripe>).mockImplementation(() => mockStripe);

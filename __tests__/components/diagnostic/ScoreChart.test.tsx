@@ -45,7 +45,7 @@ describe("ScoreChart", () => {
       expect(progressCircle).toHaveAttribute("stroke", "currentColor");
       expect(progressCircle).toHaveClass("text-success");
       expect(scoreValue).toHaveClass("text-success");
-      expect(status).toHaveClass("text-success");
+      expect(status.closest('[data-slot="badge"]')).toHaveClass("text-success");
     });
 
     it("should use warning tone for scores 50-69%", () => {
@@ -58,7 +58,7 @@ describe("ScoreChart", () => {
       expect(progressCircle).toHaveAttribute("stroke", "currentColor");
       expect(progressCircle).toHaveClass("text-warning");
       expect(scoreValue).toHaveClass("text-warning");
-      expect(status).toHaveClass("text-warning");
+      expect(status.closest('[data-slot="badge"]')).toHaveClass("text-warning-dark");
     });
 
     it("should use error tone for scores < 50%", () => {
@@ -71,7 +71,7 @@ describe("ScoreChart", () => {
       expect(progressCircle).toHaveAttribute("stroke", "currentColor");
       expect(progressCircle).toHaveClass("text-error");
       expect(scoreValue).toHaveClass("text-error");
-      expect(status).toHaveClass("text-error");
+      expect(status.closest('[data-slot="badge"]')).toHaveClass("text-error");
     });
   });
 
@@ -147,7 +147,7 @@ describe("ScoreChart", () => {
       const progressCircle = screen.getByTestId("progress-circle");
       expect(progressCircle).toHaveAttribute("stroke", "currentColor");
       expect(progressCircle).toHaveClass("text-error");
-      expect(screen.getByText(/needs improvement/i)).toHaveClass("text-error");
+      expect(screen.getByText(/needs improvement/i).closest('[data-slot="badge"]')).toHaveClass("text-error");
     });
 
     it("should handle 100% score", () => {
@@ -157,7 +157,7 @@ describe("ScoreChart", () => {
       const progressCircle = screen.getByTestId("progress-circle");
       expect(progressCircle).toHaveAttribute("stroke", "currentColor");
       expect(progressCircle).toHaveClass("text-success");
-      expect(screen.getByText(/excellent performance|good progress/i)).toHaveClass("text-success");
+      expect(screen.getByText(/excellent performance|good progress/i).closest('[data-slot="badge"]')).toHaveClass("text-success");
     });
 
     it("should handle decimal scores by rounding", () => {

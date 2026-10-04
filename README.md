@@ -61,9 +61,8 @@ app/              # Next.js App Router pages and API routes
 components/       # React components organized by feature
 lib/             # Business logic and utilities
 docs/            # Documentation
-├── strategy/    # Product vision, metrics, revenue model
-├── deployment/  # Deployment and setup guides
-└── development/ # Development guidelines and AI instructions
+├── strategy/    # Revenue model
+└── deployment/  # Deployment and setup guides
 ```
 
 ## Documentation
@@ -73,7 +72,6 @@ Comprehensive documentation is available in the `/docs` folder:
 - **[Documentation Index](./docs/README.md)** - Complete guide to all documentation
 - **[CLAUDE.md](./CLAUDE.md)** - Development guidelines for AI assistants
 - **[Deployment Guide](./docs/deployment/deployment-guide.md)** - GCP Cloud Run deployment
-- **[Product Vision](./docs/strategy/product-vision.md)** - Product strategy and roadmap
 
 ## Features
 

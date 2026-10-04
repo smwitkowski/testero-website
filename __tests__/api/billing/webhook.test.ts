@@ -792,6 +792,7 @@ describe("Stripe Webhook Handler", () => {
       const mockSubscription = {
         id: "sub_test_123",
         status: "past_due",
+        items: { data: [{ price: { id: "price_monthly" } }] },
         current_period_start: 1234567890,
         current_period_end: 1234567890,
         cancel_at_period_end: false,

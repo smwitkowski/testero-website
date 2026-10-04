@@ -10,6 +10,7 @@
  * TODO: Consider consolidating these endpoints or clearly documenting when to use each.
  */
 import { NextResponse } from "next/server";
+import { createAnswerSnapshot } from "@/lib/questions/answer-order";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 // Analytics imports for future use
 import { trackDiagnosticStartWithCampaign } from "@/lib/analytics/campaign-analytics-integration";
@@ -188,8 +189,10 @@ export async function POST(req: Request) {
         canonical_question_id: canonicalQuestionId,
         original_question_id: null, // PMLE sessions don't use legacy bigint IDs
         stem: q.stem,
-        options: q.answers.map((opt) => ({ label: opt.choice_label, text: opt.choice_text })),
-        correct_label: q.answers.find((opt) => opt.is_correct)?.choice_label || "",
+        ...createAnswerSnapshot(q.answers.map((opt) => ({
+          text: opt.choice_text,
+          is_correct: opt.is_correct,
+        }))),
         domain_id: q.domain_id,
         domain_code: q.domain_code,
       };

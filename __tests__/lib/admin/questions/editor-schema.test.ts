@@ -12,7 +12,7 @@ describe("QuestionUpdateSchema", () => {
     review_notes: "Looks good",
     stem: "This is a test question stem that is long enough",
     answers: [
-      { choice_label: "A" as const, choice_text: "Answer A", is_correct: true },
+      { choice_label: "A" as const, choice_text: "Answer A", is_correct: true, explanation_text: "Why A is correct" },
       { choice_label: "B" as const, choice_text: "Answer B", is_correct: false },
       { choice_label: "C" as const, choice_text: "Answer C", is_correct: false },
       { choice_label: "D" as const, choice_text: "Answer D", is_correct: false },
@@ -25,6 +25,19 @@ describe("QuestionUpdateSchema", () => {
   it("should validate a valid payload", () => {
     const result = QuestionUpdateSchema.safeParse(validPayload);
     expect(result.success).toBe(true);
+  });
+
+  it("requires a per-option explanation for the correct answer", () => {
+    const result = QuestionUpdateSchema.safeParse({
+      ...validPayload,
+      answers: validPayload.answers.map((answer) => ({ ...answer, explanation_text: undefined })),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(expect.arrayContaining([
+        expect.objectContaining({ message: "The correct answer must have an explanation" }),
+      ]));
+    }
   });
 
   it("should reject payload with invalid domain_id", () => {

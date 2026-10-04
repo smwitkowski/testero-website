@@ -12,19 +12,15 @@ Welcome to the Testero documentation. This repository contains comprehensive doc
 
 ### Strategy & Business
 
-Strategic documents for product vision, metrics, and business planning:
+Business planning documentation:
 
-- **[Product Vision](./strategy/product-vision.md)** - Mission, vision, and strategic goals
-- **[Metrics & KPIs](./strategy/metrics-kpis.md)** - Success metrics and key performance indicators
 - **[Revenue Model](./strategy/revenue-model.md)** - Pricing strategy and revenue projections
-- **[Risks & Assumptions](./strategy/risks-assumptions.md)** - Risk register and key assumptions
-- **[Dashboard MVP Overview](./strategy/dashboard-mvp-overview.md)** - Dashboard MVP planning
 
 ### Development
 
 Developer resources and AI assistant instructions:
 
-- **[AI System Instructions](./development/ai-system-instructions.md)** - Strategic copilot guidelines for AI assistants
+- **[CLAUDE.md](../CLAUDE.md)** - Development guidelines for AI assistants
 
 ### Deployment & Operations
 
@@ -97,9 +93,7 @@ Documentation of code refactorings and migrations:
 
 ### For Product & Business
 
-1. Review [Product Vision](./strategy/product-vision.md) for strategic direction
-2. Track [Metrics & KPIs](./strategy/metrics-kpis.md) for success measurement
-3. Understand [Revenue Model](./strategy/revenue-model.md) for business strategy
+1. Understand [Revenue Model](./strategy/revenue-model.md) for business strategy
 
 ## Contributing to Documentation
 

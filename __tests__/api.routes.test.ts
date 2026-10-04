@@ -1,11 +1,23 @@
 /** @jest-environment node */
 import { NextRequest } from "next/server";
 
+let mockDefaultSeenTracking = false;
 let serverSupabaseMock: any = { auth: { getUser: jest.fn() }, from: jest.fn() };
 let clientSupabaseMock: any = { from: jest.fn() };
 
 jest.mock("../lib/supabase/server", () => ({
-  createServerSupabaseClient: jest.fn(() => serverSupabaseMock),
+  createServerSupabaseClient: jest.fn(() => ({
+    ...serverSupabaseMock,
+    from: (table: string) => {
+      if (table === "practice_question_attempts_v2" && mockDefaultSeenTracking) {
+        return {
+          select: jest.fn(() => ({ eq: jest.fn().mockResolvedValue({ data: [], error: null }) })),
+          insert: jest.fn().mockResolvedValue({ error: null }),
+        };
+      }
+      return serverSupabaseMock.from(table);
+    },
+  })),
 }));
 
 jest.mock("../lib/supabase/client", () => ({
@@ -25,6 +37,7 @@ import { GET as diagnosticGET, POST as diagnosticPOST } from "../app/api/diagnos
 
 describe("API routes", () => {
   beforeEach(() => {
+    mockDefaultSeenTracking = false;
     serverSupabaseMock.auth.getUser.mockReset();
     serverSupabaseMock.from.mockReset();
     clientSupabaseMock.from.mockReset();
@@ -92,15 +105,20 @@ describe("API routes", () => {
       });
     });
 
-    it("requires auth", async () => {
-      serverSupabaseMock.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
-      const res = await listGET();
-      expect(res.status).toBe(401);
+    it("returns the subscriber gate response before querying questions", async () => {
+      const { requireSubscriber } = require("../lib/auth/require-subscriber");
+      const { NextResponse } = require("next/server");
+      requireSubscriber.mockResolvedValueOnce(NextResponse.json({ code: "PAYWALL" }, { status: 403 }));
+      const res = await listGET(new NextRequest("http://localhost/api/questions"));
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ code: "PAYWALL" });
+      expect(serverSupabaseMock.from).not.toHaveBeenCalled();
     });
   });
 
   describe("current question", () => {
-    it("returns latest question", async () => {
+    beforeEach(() => { mockDefaultSeenTracking = true; });
+    it("returns an eligible question", async () => {
       serverSupabaseMock.auth.getUser.mockResolvedValue({
         data: { user: { id: "user-123" } },
         error: null,
@@ -113,7 +131,9 @@ describe("API routes", () => {
         { id: 7, stem: "q3" },
       ];
       const limitMock = jest.fn().mockResolvedValue({ data: questionsData, error: null });
-      const eqEligibleMock = jest.fn(() => ({ limit: limitMock }));
+      const queryResult = { then: (resolve: any, reject: any) => limitMock().then(resolve, reject) };
+      const eqReviewStatusMock = jest.fn(() => queryResult);
+      const eqEligibleMock = jest.fn(() => ({ eq: eqReviewStatusMock }));
       const selectMockQ = jest.fn(() => ({ eq: eqEligibleMock }));
       serverSupabaseMock.from.mockReturnValueOnce({ select: selectMockQ });
 
@@ -618,7 +638,7 @@ describe("API routes", () => {
 
         // Verify warning was logged
         expect(consoleWarnSpy).toHaveBeenCalledWith(
-          expect.stringContaining("Missing canonical explanation for question canonical-question-uuid-999 in session session-456")
+          expect.stringContaining("Missing canonical explanation for question canonical-question-uuid-999 (canonical: undefined, original: canonical-question-uuid-999) in session session-456")
         );
 
         // Verify explanations_legacy was NOT queried

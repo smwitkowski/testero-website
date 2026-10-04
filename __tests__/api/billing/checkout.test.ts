@@ -238,7 +238,7 @@ describe("Checkout Session API", () => {
       expect(responseData.url).toBe(mockSession.url);
     });
 
-    test("should create checkout session for 3-month subscription", async () => {
+    test("should reject retired 3-month prices for new checkout sessions", async () => {
       const mockUser = {
         id: "user_123",
         email: "test@example.com",
@@ -273,16 +273,11 @@ describe("Checkout Session API", () => {
       const response = await POST(mockRequest);
       const responseData = await response.json();
 
-      expect(mockStripeService.createCheckoutSession).toHaveBeenCalledWith({
-        customerId: mockCustomer.id,
-        priceId: "price_basic_3month",
-        successUrl: "https://testero.ai/api/billing/checkout/success?session_id={CHECKOUT_SESSION_ID}",
-        cancelUrl: "https://testero.ai/pricing",
-        userId: mockUser.id,
-      });
-
-      expect(response.status).toBe(200);
-      expect(responseData.url).toBe(mockSession.url);
+      // New signups are monthly-only; existing 3-month subscriptions remain supported (9b5d94c).
+      expect(response.status).toBe(400);
+      expect(responseData.error).toBe("Invalid price ID");
+      expect(mockStripeService.createOrRetrieveCustomer).not.toHaveBeenCalled();
+      expect(mockStripeService.createCheckoutSession).not.toHaveBeenCalled();
     });
 
     test("should reject invalid price ID", async () => {

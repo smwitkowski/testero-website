@@ -5,6 +5,7 @@ import { isSubscriber } from "@/lib/auth/entitlements";
 import { getServerPostHog } from "@/lib/analytics/server-analytics";
 import { trackEvent } from "@/lib/analytics/analytics";
 import crypto from "crypto";
+import { PAYWALL_GRACE_COOKIE } from "@/lib/billing/grace-cookie";
 
 // Mock dependencies
 jest.mock("@/lib/supabase/server");
@@ -13,6 +14,9 @@ jest.mock("@/lib/analytics/server-analytics");
 jest.mock("@/lib/analytics/analytics");
 jest.mock("@/lib/auth/rate-limiter");
 jest.mock("next/headers");
+jest.mock("@/lib/billing/enforcement", () => ({
+  isBillingEnforcementActive: jest.fn(() => true),
+}));
 
 describe("Premium API Gating Integration Tests", () => {
   let mockSupabase: any;
@@ -20,7 +24,7 @@ describe("Premium API Gating Integration Tests", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.GRACE_COOKIE_SECRET = "test-secret";
+    process.env.PAYWALL_SIGNING_SECRET = "test-secret";
 
     // Mock Supabase
     mockSupabase = {
@@ -52,31 +56,34 @@ describe("Premium API Gating Integration Tests", () => {
   });
 
   afterEach(() => {
-    delete process.env.GRACE_COOKIE_SECRET;
+    delete process.env.PAYWALL_SIGNING_SECRET;
   });
 
-  const createGraceCookie = (userId: string, exp?: number): string => {
-    const secret = process.env.GRACE_COOKIE_SECRET || "test-secret";
+  const createGraceCookie = (_userId: string, exp?: number): string => {
     const expiresAt = exp || Math.floor(Date.now() / 1000) + 24 * 60 * 60;
-    const payload = JSON.stringify({ userId, exp: expiresAt });
-    const hmac = crypto.createHmac("sha256", secret);
-    hmac.update(payload);
-    const signature = hmac.digest("hex");
-    return `${Buffer.from(payload).toString("base64")}.${signature}`;
+    const payload = JSON.stringify({ checkoutSuccess: true, exp: expiresAt });
+    const signature = crypto.createHmac("sha256", "test-secret").update(payload).digest("base64url");
+    return `${Buffer.from(payload).toString("base64url")}.${signature}`;
   };
-
   const createRequest = (cookieValue?: string): NextRequest => {
     const req = new NextRequest("http://localhost:3000/api/test", {
       method: "GET",
     });
     if (cookieValue) {
-      const encodedValue = encodeURIComponent(cookieValue);
-      req.headers.set("cookie", `tgrace=${encodedValue}`);
+      req.cookies.set(PAYWALL_GRACE_COOKIE, cookieValue);
     }
     return req;
   };
 
   describe("/api/questions/current", () => {
+    beforeEach(() => {
+      (createServerSupabaseClient as jest.Mock).mockImplementation(() => ({
+        ...mockSupabase,
+        from: (table: string) => table === "practice_question_attempts_v2"
+          ? { select: jest.fn(() => ({ eq: jest.fn().mockResolvedValue({ data: [], error: null }) })), insert: jest.fn().mockResolvedValue({ error: null }) }
+          : mockSupabase.from(table),
+      }));
+    });
     it("should return 403 PAYWALL for unauthenticated user without grace cookie", async () => {
       const { GET } = require("@/app/api/questions/current/route");
       const req = createRequest();
@@ -130,6 +137,7 @@ describe("Premium API Gating Integration Tests", () => {
       mockSupabase.from.mockReturnValueOnce({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
+        then: (resolve: any) => Promise.resolve({ data: [{ id: "q1", stem: "Test", explanations: [{ id: "e1" }] }], error: null }).then(resolve),
         limit: jest.fn().mockResolvedValue({
           data: [{ id: "q1", stem: "Test", explanations: [{ id: "e1" }] }],
           error: null,
@@ -176,7 +184,7 @@ describe("Premium API Gating Integration Tests", () => {
       const req = new NextRequest("http://localhost/api/diagnostic/session", {
         method: "POST",
         headers: {
-          cookie: `tgrace=${encodeURIComponent(cookieValue)}`,
+          cookie: `${PAYWALL_GRACE_COOKIE}=${encodeURIComponent(cookieValue)}`,
         },
         body: JSON.stringify({ examKey: "pmle", source: "beta_welcome" }),
       });
@@ -272,15 +280,22 @@ describe("Premium API Gating Integration Tests", () => {
   });
 
   describe("/api/diagnostic/summary/[sessionId]", () => {
-    it("should return 403 PAYWALL for unauthenticated user without grace cookie", async () => {
+    it("allows anonymous users to read a completed basic summary without a grace cookie", async () => {
+      mockSupabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(), eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: { id: "session-123", user_id: null, anonymous_session_id: "anon-test", completed_at: new Date().toISOString() }, error: null }),
+      }).mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(), eq: jest.fn().mockResolvedValue({ data: [], error: null }),
+      });
       const { GET } = require("@/app/api/diagnostic/summary/[sessionId]/route");
-      const req = new NextRequest("http://localhost/api/diagnostic/summary/session-123");
+      const req = new NextRequest("http://localhost/api/diagnostic/summary/session-123?anonymousSessionId=anon-test");
 
       const res = await GET(req);
       const body = await res.json();
 
-      expect(res.status).toBe(403);
-      expect(body).toEqual({ code: "PAYWALL" });
+      expect(res.status).toBe(200);
+      expect(body.summary.sessionId).toBe("session-123");
+      expect(isSubscriber).not.toHaveBeenCalled();
     });
 
     it("should return 200 for user with valid grace cookie", async () => {
@@ -288,7 +303,7 @@ describe("Premium API Gating Integration Tests", () => {
       const cookieValue = createGraceCookie("user-grace");
       const req = new NextRequest("http://localhost/api/diagnostic/summary/session-123", {
         headers: {
-          cookie: `tgrace=${encodeURIComponent(cookieValue)}`,
+          cookie: `${PAYWALL_GRACE_COOKIE}=${encodeURIComponent(cookieValue)}`,
         },
       });
 

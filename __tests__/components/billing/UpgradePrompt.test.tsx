@@ -53,7 +53,7 @@ describe("UpgradePrompt", () => {
     expect(screen.getByText("Unlock Full PMLE Practice")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Upgrade to PMLE Readiness for unlimited practice questions and detailed explanations."
+        "Unlock unlimited PMLE practice and expert explanations to accelerate your readiness."
       )
     ).toBeInTheDocument();
   });

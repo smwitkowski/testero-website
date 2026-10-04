@@ -30,17 +30,18 @@ describe("PricingCard", () => {
     expect(card.className).toContain("ring-2");
   });
 
-  it("adds extra padding when three-month savings badge is present", () => {
+  it("does not advertise retired three-month savings", () => {
     const { container } = render(
       <PricingCard
         tier={{ ...baseTier, savingsPercentage: 20 }}
-        billingInterval="three_month"
+        billingInterval="monthly"
         onCheckout={jest.fn()}
       />
     );
 
     const card = container.firstElementChild as HTMLElement;
-    expect(card.className).toContain("pt-6");
+    expect(screen.queryByText(/save 20%/i)).not.toBeInTheDocument();
+    expect(screen.getByText("/month")).toBeInTheDocument();
     expect(card.className).not.toMatch(/(^|\s)scale-[^:\s]+/);
   });
 
@@ -60,18 +61,20 @@ describe("PricingCard", () => {
       expect(button).toBeEnabled();
     });
 
-    it("should enable button when three-month price ID is present", () => {
+    it("should use monthly checkout even when legacy three-month data is present", async () => {
       const onCheckout = jest.fn();
       render(
         <PricingCard
           tier={baseTier}
-          billingInterval="three_month"
+          billingInterval="monthly"
           onCheckout={onCheckout}
         />
       );
 
       const button = screen.getByRole("button", { name: /start preparing/i });
       expect(button).toBeEnabled();
+      await userEvent.click(button);
+      expect(onCheckout).toHaveBeenCalledWith("price_monthly_pro", "Pro");
     });
 
     it("should show Get Started button when monthly price ID is missing", () => {
@@ -89,19 +92,21 @@ describe("PricingCard", () => {
       // When checkout isn't configured, button redirects to signup instead of calling onCheckout
     });
 
-    it("should show Get Started button when three-month price ID is missing", () => {
+    it("should keep monthly checkout available when legacy three-month price ID is missing", async () => {
       const onCheckout = jest.fn();
       render(
         <PricingCard
           tier={{ ...baseTier, threeMonthPriceId: undefined }}
-          billingInterval="three_month"
+          billingInterval="monthly"
           onCheckout={onCheckout}
         />
       );
 
-      const button = screen.getByRole("button", { name: /get started/i });
+      const button = screen.getByRole("button", { name: /start preparing/i });
       expect(button).toBeEnabled();
-      // When checkout isn't configured, button redirects to signup instead of calling onCheckout
+      // Three-month configuration no longer controls monthly checkout (9b5d94c).
+      await userEvent.click(button);
+      expect(onCheckout).toHaveBeenCalledWith("price_monthly_pro", "Pro");
     });
 
     it("should call onCheckout with correct price ID when button is clicked", async () => {

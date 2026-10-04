@@ -10,10 +10,12 @@ describe("StudyPathDisplay - TDD RED Phase", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (global.fetch as jest.Mock).mockReset();
+    window.localStorage.clear();
   });
 
   describe("Component Rendering", () => {
     it("should render loading state initially", () => {
+      (global.fetch as jest.Mock).mockImplementationOnce(() => new Promise(() => {}));
       render(<StudyPathDisplay diagnosticData={{ score: 60, domains: [] }} />);
 
       expect(screen.getByText(/loading/i)).toBeInTheDocument();

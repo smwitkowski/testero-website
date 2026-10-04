@@ -23,6 +23,10 @@ import SignupPage from '../app/signup/page';
 beforeEach(() => {
   (global.fetch as jest.Mock).mockReset();
   captureMock.mockClear();
+  Object.defineProperty(window, "localStorage", {
+    value: { getItem: jest.fn(() => null), setItem: jest.fn(), removeItem: jest.fn(), clear: jest.fn() },
+    writable: true,
+  });
 });
 
 test('shows validation errors for empty submission', async () => {
@@ -59,7 +63,7 @@ test('submits valid form and shows confirmation', async () => {
     });
   });
 
-  expect(captureMock).toHaveBeenCalledWith('signup_attempt');
+  expect(captureMock).toHaveBeenCalledWith('signup_attempt', { source: 'signup_page' });
   expect(captureMock).toHaveBeenCalledWith('signup_success', {
     guestUpgraded: false,
     sessionsTransferred: 0,
@@ -79,7 +83,7 @@ test('handles API errors correctly', async () => {
   await userEvent.click(screen.getByRole('button', { name: /sign up/i }));
 
   expect(await screen.findByText(/email already registered/i)).toBeInTheDocument();
-  expect(captureMock).toHaveBeenCalledWith('signup_attempt');
+  expect(captureMock).toHaveBeenCalledWith('signup_attempt', { source: 'signup_page' });
   expect(captureMock).toHaveBeenCalledWith('signup_error', {
     error_message: 'Email already registered',
   });

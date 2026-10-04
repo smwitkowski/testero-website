@@ -1,5 +1,6 @@
 /**
  * @jest-environment jsdom
+ * @jest-environment-options {"url": "https://localhost/"}
  */
 
 import {
@@ -25,6 +26,19 @@ Object.defineProperty(global, 'crypto', {
 });
 
 describe('Anonymous Session Management', () => {
+  const windowDescriptor = Object.getOwnPropertyDescriptor(global, 'window')!;
+  const documentDescriptor = Object.getOwnPropertyDescriptor(global, 'document')!;
+  const browserWindow = window;
+  const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location')!;
+
+  afterEach(() => {
+    // Restore the real jsdom objects, including when an assertion fails.
+    Object.defineProperty(global, 'window', windowDescriptor);
+    Object.defineProperty(global, 'document', documentDescriptor);
+    Object.defineProperty(browserWindow, 'location', locationDescriptor);
+    jest.restoreAllMocks();
+  });
+
   beforeEach(() => {
     // Clear localStorage and cookies before each test
     localStorage.clear();
@@ -103,24 +117,14 @@ describe('Anonymous Session Management', () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       
       // Mock document.cookie to throw error
-      Object.defineProperty(document, 'cookie', {
-        get: () => {
-          throw new Error('Cookie access error');
-        },
-        configurable: true,
+      jest.spyOn(document, 'cookie', 'get').mockImplementation(() => {
+        throw new Error('Cookie access error');
       });
       
       expect(getAnonymousSessionIdFromClientCookie()).toBeNull();
       expect(consoleSpy).toHaveBeenCalledWith('Error reading anonymous session from client cookie:', expect.any(Error));
       
       consoleSpy.mockRestore();
-      
-      // Restore normal cookie behavior
-      Object.defineProperty(document, 'cookie', {
-        get: () => '',
-        set: () => {},
-        configurable: true,
-      });
     });
   });
 
@@ -199,12 +203,6 @@ describe('Anonymous Session Management', () => {
       expect(getAnonymousSessionId()).toBeNull();
       expect(() => setAnonymousSessionId('test')).not.toThrow();
       expect(() => clearAnonymousSessionId()).not.toThrow();
-      
-      // Restore window object
-      Object.defineProperty(global, 'window', {
-        value: {},
-        configurable: true,
-      });
     });
 
     test('document-dependent functions should handle server-side environment', () => {
@@ -216,14 +214,6 @@ describe('Anonymous Session Management', () => {
       
       expect(getAnonymousSessionIdFromClientCookie()).toBeNull();
       expect(() => setAnonymousSessionIdInClientCookie('test')).not.toThrow();
-      
-      // Restore document object
-      Object.defineProperty(global, 'document', {
-        value: {
-          cookie: '',
-        },
-        configurable: true,
-      });
     });
   });
 
