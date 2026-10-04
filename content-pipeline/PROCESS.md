@@ -23,7 +23,7 @@ Verified in the public `https://openrouter.ai/api/v1/models` list on 2026-10-04:
 Both list structured outputs. This is a cost/independence choice, not a measured
 quality claim. Unknown vendor aliases and same-vendor versions/sizes fail closed.
 
-## Pilot (founder runs with keys supplied in the shell)
+## Pilot (operator runs with keys supplied in the shell)
 
 From `content-pipeline/`:
 
@@ -52,5 +52,8 @@ and `certs/PMLE-DRIFT.md` / `certs/GAPS.md` for the historical Phase 1 audit (th
 old line numbers describe the baseline, not the rewritten Phase 2 files).
 Ordinal objective IDs are guide-local locators; review aliases before any future
 cross-version migration. Public technical-doc license exceptions still apply.
+Optional dump cross-check (founder policy D-024): view-only, stop at any login
+or bot wall, and keep only aggregate notes in `certs/STYLE.md`. Dump items are never
+stored, prompted, used as few-shot examples, or treated as an answer key.
 Write original questions. Never commit official sample stems/options/keys or raw
 Forms. Samples are style evidence, not answer authority or live-exam frequencies.

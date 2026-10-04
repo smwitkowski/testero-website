@@ -103,6 +103,14 @@ These are qualitative observations, not measured distractor frequencies. Public 
 - **ML and agentic AI:** distinguish current ML production workflows from agent orchestration, evaluation, tools, and governance. The current ML sample uses revised platform terminology; the [ML guide](https://services.google.com/fh/files/misc/professional_machine_learning_engineer_exam_guide_english_new.pdf) is dated June 1, 2026. The Agentic Architect beta has its [own guide](https://services.google.com/fh/files/misc/professional_agentic_architect_exam_guide_english.pdf). Check current docs before using names from either sample [S14], [S06].
 - **Security versus Security Operations:** Cloud Security includes IAM/scope, network protections, encryption, and compliance decisions [S12]. Security Operations' six samples focus on SecOps ingestion, detection, investigation, and SOAR workflows [S15]. Do not substitute general cloud-security recall for incident-response objectives or infer broad coverage from six examples.
 
+## Exam-dump cross-check (reference only, founder policy D-024)
+
+On 2026-10-04 an agent viewed only the free first page of one public dump site for PMLE and Associate Cloud Engineer, and stopped at the login wall. No question text, options or answers were stored, prompted or used as an answer key. Only these aggregate notes were kept:
+
+- **PMLE:** 10 items, all 4 options, none choose-N. Stems were ~30–120 words, typically 60–80. Every product name used pre-Vertex branding ("AI Platform", AutoML Tables, Kubeflow), so these items predate the June 2026 guide by years.
+- **Associate Cloud Engineer:** 10 items, all 4 options, none choose-N. Stems were ~25–65 words, typically 40–50. 9 of 10 were scenarios, mostly Compute Engine, IAM and console or gcloud tasks.
+- **Verdict:** the format matches the official samples above, and the topics are stale against the current guides. Dumps add no signal the official sources don't already give, so the process does not depend on them.
+
 ## Case studies: shared context changes reading cost
 
 The Architect public sample links ten items to four cases: **EHR Healthcare (4), Mountkirk Games (4), Helicopter Racing League (1), TerramEarth (1)** [S07]. EHR includes the image-only item. The other nine items have no such explicit case-reference page. The stem ranges exclude external case summaries and repeated reference instructions.
