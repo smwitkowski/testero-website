@@ -20,6 +20,9 @@ The main workflow deploys on push: configure and review its target before mergin
 - [ ] Prepare a reviewed PR from `prime/v2` to `main`; run CI. Do not merge until
       backup, migration, payment QA and no-traffic revision plans are approved.
 
+
+> **Status 2026-10-04:** the v2 baseline was applied to production, and the counts and post-check passed. Because it revoked browser-role access, which the OLD app relies on, interim read-only `interim_old_app_read` policies plus SELECT grants were added on questions, answers, explanations, and exam_domains. **After v2 serves traffic, run `scripts/sql/v2-cutover-lockdown.sql`** (as `postgres`) to remove them.
+
 ## Restore, back up, then migrate
 
 The 2026-10-03 non-PII schema/bank rehearsal is in
