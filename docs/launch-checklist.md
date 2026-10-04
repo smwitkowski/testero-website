@@ -22,14 +22,107 @@ The main workflow deploys on push: configure and review its target before mergin
 
 ## Restore, back up, then migrate
 
-- [ ] Confirm the correct production project and restore/verify the intended database.
-      Inspect existing auth accounts, subscriptions, questions, payments and domain records.
-- [ ] Take a `pg_dump` backup of the restored database BEFORE applying the baseline.
-      Store it securely, record timestamp/location, and verify a restore into a separate safe database.
-      Do not commit backups, database URLs or credentials.
-- [ ] Review and explicitly approve `supabase/migrations/20261003000000_v2_baseline.sql`.
-      Apply only to the approved target. Do not replay `migrations_legacy` or load local seed in production.
-- [ ] Verify RLS, confirmed auth, RPC grants, quotas, pass/refund/receipt state and existing legacy access.
+The 2026-10-03 non-PII schema/bank rehearsal is in
+[`v2-prod-schema-verification.md`](v2-prod-schema-verification.md). It is not
+approval to connect to production or apply SQL. Never read/load `data.sql` or
+`roles.sql` in this local procedure. Legacy/user data and production role
+memberships were not restored; the founder must check those on the real target.
+
+### Local preflight with the approved two-file backup
+
+```sh
+supabase start
+node scripts/verify-prod-schema.mjs --restore-local \
+  --schema /Users/switkowski/Projects/Testero/backups/2026-10-03/schema.sql \
+  --bank /Users/switkowski/Projects/Testero/backups/2026-10-03/question-bank-data.sql
+node scripts/local.mjs verify-db:prod
+node scripts/local.mjs e2e:prod
+```
+
+`--restore-local` destroys ONLY isolated local public/archive/vecs/vector schemas
+on port56542. No local seed is loaded. The script checks full-row fingerprints,
+all existing object identities/definitions, RLS/grants and logical replay.
+The verifier whitelists the two exact 2026-10-03 backup paths, including
+symlink targets. A different backup directory requires explicit approval and a
+reviewed whitelist update. Record both backup SHA256s and the exact reviewed
+baseline commit/hash. If the
+backup/schema/inventory changes, take a new approved non-PII backup and repeat;
+do not bypass failed counts or load user/role dumps to make a test pass.
+
+### Human-only production pre-check
+
+- [ ] Verify the approved target, database/user/server version and connection
+      privileges. Stop conflicting writes for a coordinated maintenance/cutover
+      window. The baseline tightens canonical browser grants and disables the
+      browser answer-upsert RPC; approve impact on old-app/admin clients first.
+- [ ] Take a fresh `pg_dump` backup BEFORE apply. Store it securely and verify
+      restoration in a separate approved database. Never commit/read a user backup
+      as part of these local checks. Record backup location and rollback approver.
+- [ ] Use an approved libpq service named `testero-approved-prod` provisioned by
+      the founder (not this agent). Do not place credentials in shell history,
+      command arguments, Git, logs or `.env.example`.
+- [ ] Record every existing public/archive/vecs/vector table count, including all
+      legacy/user tables, using the read-only command below. Record bank status
+      totals 145 ACTIVE / 140 DRAFT / 58 RETIRED. Current bank counts must be
+      domains29 / runs165 / questions343 / answers1372 / explanations343.
+      Any difference requires a fresh rehearsal, not blind application.
+- [ ] Confirm all eight v2 tables are absent on the first apply: user_subscriptions,
+      payment_history, webhook_events, pmle_passes, pmle_pass_refunds,
+      study_sessions, session_items, free_practice_quota. If any exist, review
+      their structures/data/functions/policies against the rehearsed target.
+      Existing legacy subscriptions are not automatically copied into
+      user_subscriptions; decide any legacy-entitlement mapping before launch.
+- [ ] Review current grants/role memberships, all five existing application RPC
+      definitions, seven matching index names and policy names. Unknown collisions
+      or privileged role inheritance require review before apply.
+
+```sh
+PGSERVICE=testero-approved-prod psql -X -v ON_ERROR_STOP=1 --csv -t \
+  -f scripts/sql/v2-migration-counts.sql > /approved/secure/location/counts-before.csv
+```
+
+The output contains counts only, not user rows. Use an actual secure location.
+Do not replay `migrations_legacy`, load local seed, run the destructive local
+restore script against production, or use Supabase link/db push for this step.
+
+### Exact approved apply and post-check
+
+The baseline already contains `BEGIN`/`COMMIT`. Apply the reviewed file once:
+
+```sh
+PGSERVICE=testero-approved-prod psql -X -v ON_ERROR_STOP=1 \
+  -f supabase/migrations/20261003000000_v2_baseline.sql
+PGSERVICE=testero-approved-prod psql -X -v ON_ERROR_STOP=1 --csv -t \
+  -f scripts/sql/v2-migration-counts.sql > /approved/secure/location/counts-after.csv
+PGSERVICE=testero-approved-prod psql -X -v ON_ERROR_STOP=1 \
+  -f scripts/sql/v2-migration-postcheck.sql
+```
+
+- [ ] Compare EVERY pre-existing table count with its before value; the eight
+      new tables start empty. Verify bank counts/status totals and reviewed
+      eligibility143, domain supply27/27/28/17/27/17. Do not mistake empty local
+      legacy fixtures for verified production legacy counts.
+- [ ] Confirm canonical content is service-only, all13 v2 tables have RLS,
+      authenticated metadata has restrictive ownership gates, all10 v2 RPCs
+      deny browser execution, and existing upsert_question_answers is denied
+      to PUBLIC/anon/authenticated but still allowed to service_role.
+- [ ] Preserve old tables/columns/indexes/triggers and legacy RPC/policy definitions.
+      Review pre-existing legacy quota/progress exposure separately; this migration
+      does not silently redesign those legacy contracts.
+- [ ] Reload PostgREST schema if needed, then run approved no-traffic product QA.
+      Review absence of user_subscriptions in the backup before assuming old
+      subscription customers have v2 legacy access. Record migration evidence.
+
+### On failure
+
+Stop on any nonzero exit. Do not promote or blindly retry. The baseline transaction
+rolls back an SQL failure before COMMIT; verify transaction/object state and
+unchanged pre-existing counts before deciding the next step. A successful COMMIT
+followed by a failed post-check is NOT an automatic rollback. Keep traffic gated,
+inspect grants/role inheritance/count differences, and obtain approval for a
+forward fix or restoration/reconciliation. Never drop preserved tables to force
+compatibility or restore over new accounts/payments without a reconciliation plan.
+A repeated apply is logically idempotent, but rerun in production only after review.
 
 ## Stripe and no-traffic revision
 

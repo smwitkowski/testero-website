@@ -31,7 +31,7 @@
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-body { background: var(--background); color: var(--foreground); }
+body { background: var(--background); color: var(--foreground); overflow-wrap: anywhere; }
 ::selection { background: #b9e7df; color: var(--foreground); }
 a { text-underline-offset: 0.2em; }
 input { accent-color: var(--primary); }
