@@ -203,6 +203,63 @@ real-output replay was made. The next proposed diagnostic is a separately
 approved, bounded/redacted parse-only judge completion capture and keyed replay
 of that saved row. Do not weaken the quality gate to recover a PASS.
 
+## D-025 batch 1 diagnosis and batch 2
+
+Batch 1 stored 19/30 accepted candidates as DRAFT across six runs. This is not
+founder approval or publication. Evidence: ignored read-only artifact
+`.cache/generation/pmle-d025-first-30.json`, SHA-256
+`97d48a7e7cadb3bcf7bcff64e6e360fb3eb41f6e43da11b803feeb0a55fb64de`.
+Candidate numbers below are the artifact's 1-based `index` values.
+
+**Parse failures #4, #6, #20:** `GenerationOutputError` specifically wraps
+DSPy's `AdapterParseError`, not a transport failure. Their saved `raw_response`
+values are all 2,048 characters and end in `[TRUNCATED]` because `_safe_completion`
+clips diagnostics locally. This is not evidence of provider token exhaustion.
+The saved prefixes contain glued reasoning/stem markers; the current adapter
+already normalizes those. Native offline replay of all three saved prefixes
+shows the current adapter recovers `stem`, which native ChatAdapter misses.
+Both still reject the incomplete prefixes. The missing saved tail cannot prove
+the original full-response parse cause. No speculative parser fix or fabricated
+complete-response fixture was made; the schema and both quality gates stay unchanged.
+`No fetched evidence` / `Not judged` are initial placeholders on these rows:
+all three actually have fetched sources, but failed before citation/judging.
+
+| Zero-accepted objective | Candidates and observed cause | Smallest proposed change |
+| --- | --- | --- |
+| `1.2:3` | #4 parse failure; #19 score .72, uncertain evidence. Veo reference-image key is supported; Gemini image-tuning docs do not establish Imagen's capabilities, and an inference example does not establish an exhaustive client prohibition. | Use distractors refuted by explicit fetched limits, such as the three-reference limit, rather than universal negative capability claims; otherwise fetch the missing capability specification. |
+| `2.1:3` | #20 parse failure; #5 schema/mechanical PASS but generic judge output failure, not a substantive rejection. Feature-group/view docs support the topic. | Diagnose the judge boundary before attributing its failure to content. New candidates should state compatible entity keys and the documented timestamp requirements for group-backed sources. Those are content cautions, not proven causes of #5's judge error. |
+| `2.2:3` | #6 parse failure; #21 score .60. Manual upload/deploy is documented, so C is not decisively excluded by the claimed rationale. Its exact second-correct status is debatable. D clearly contradicts the quickstart: Spaces deploys a managed model endpoint plus a Cloud Run app. | Make a specific notebook/config-inspection requirement distinguish alternatives; do not claim Spaces lacks a managed endpoint or manual deployment is categorically invalid. |
+| `4.1:4` | #10/#25 score .60 each. Rolling-deployment keys are supported, but the stems only replace models; the target requires comparing versions. Fetched docs mix generic Cloud Deploy canary and rolling replacement. | Require a version-comparison decision before promotion; target ML version-comparison/traffic-splitting docs. Remove unsupported blanket cost/rollback claims. Rolling strategies are not banned merely because A/B and canary are examples. |
+
+There is no demonstrated primary overly-strict-judge cause. Relevant source text
+was fetched for every candidate; exact quote membership is not full semantic
+support. Judge reasons are capped at 300 characters, so their unseen tails and
+#5's absent judge completion must not be reconstructed.
+
+**Proposals, not runtime changes:** one scoped generator instruction should require
+the selected objective's actual operation/decision, explicitly documented
+rationale facts, and a decisive stem constraint for each distractor. For `4.1:4`,
+also narrow retrieval to model-version comparison rather than generic deployment.
+Add separately reviewed parse-boundary diagnostics (allowlisted expected/observed
+field metadata and native finish reason; sanitized bounded actual completion only,
+never transport bodies/history) if needed to diagnose the three parse failures
+and #5. Do not turn failed records into PASS or loosen either gate.
+
+Exact non-dry batch-2 allocation: four candidates for each target, 16 total,
+across three domain runs (4/8/4). This command does **not** apply the proposed
+changes above. Supply the four generation/DB keys in the shell as in step 1 of
+the runbook, use a fresh artifact name, then export/review/approve each run:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/generate_all_domains.py \
+  --cert machine-learning-engineer --n-questions 16 \
+  --objective machine-learning-engineer:standard:1.2:3 \
+  --objective machine-learning-engineer:standard:2.1:3 \
+  --objective machine-learning-engineer:standard:2.2:3 \
+  --objective machine-learning-engineer:standard:4.1:4 \
+  --artifact .cache/generation/pmle-d025-second-16.json
+```
+
 ## Later
 
 - **Multiple-select:** add when a separately reviewed schema, scoring and report contract can represent more than one key; never fake it as single-answer.
