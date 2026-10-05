@@ -30,7 +30,7 @@ REVISED = {**QUESTION,
     "distractor_2": "Use Cloud Storage for storing objects",
     "distractor_3": "Use Compute Engine virtual machine instances",
 }
-ALLOWED = {"distractors_need_knowledge", "constraints_as_wants", "distractors_plausible", "decisions_not_syntax", "scenario_clear"}
+ALLOWED = {"distractors_need_knowledge", "constraints_as_wants", "distractors_plausible", "decisions_not_syntax", "scenario_clear", "options_distinct_approaches"}
 
 
 @pytest.fixture
@@ -308,11 +308,10 @@ def test_repaired_request_export_and_mock_ingest_store_content_uuid_not_r1_label
 def test_real_round4_raw_verdict_eligibility_replay(index):
     fixture = json.loads((Path(__file__).parent / "fixtures" / "round4_repair_failures.json").read_text())
     case = next(item for item in fixture["cases"] if item["index"] == index)
-    if case["expected_eligible"]:
+    # Recorded v2 eligibility is historical, not a v3 authorization. Never invent O5.
+    assert "options_distinct_approaches" not in case["verdict"]
+    with pytest.raises(ValueError):
         eligible_repair_verdict(case["verdict"])
-    else:
-        with pytest.raises(ValueError):
-            eligible_repair_verdict(case["verdict"])
 
 
 def add_second_parent(repairs):
@@ -339,7 +338,7 @@ def add_second_parent(repairs):
                                           (["--limit", "2", "--max-calls", "4"], 2)])
 def test_two_parent_total_call_budget_and_candidate_limit(repairs, flags, expected):
     second = add_second_parent(repairs)
-    repairs[1].side_effect = [deepcopy(REVISED), {**REVISED, "stem": REVISED["stem"].replace("A retailer's", "Another retailer's")}]
+    repairs[1].side_effect = [deepcopy(REVISED), {**REVISED, "stem": REVISED["stem"].replace("A retailer's", "A different retailer's")}]
     result = invoke(repairs, *flags)
     assert result.exit_code == 0, result.output
     summary = json.loads(result.output)

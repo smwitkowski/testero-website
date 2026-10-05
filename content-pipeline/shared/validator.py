@@ -4,6 +4,7 @@ Validates LLM-generated questions against generic quality checks before database
 """
 
 import re
+from itertools import combinations
 from dataclasses import dataclass, field
 from typing import Dict, Any, List
 
@@ -71,9 +72,41 @@ def _check_action_question(stem: str) -> bool:
     return stem.rstrip().endswith("?")
 
 
+
+def has_human_subject_opening(stem: str) -> bool:
+    """Accept You/Your or a short third-person organization/person noun phrase."""
+    if re.match(r"^(?:You|Your)\b", stem, re.IGNORECASE):
+        return True
+    noun = (r"company|organization|organisation|team|engineer|scientist|analyst|developer|"
+            r"administrator|customer|client|manufacturer|retailer|bank|hospital|university|"
+            r"agency|manager|researcher|user|architect|operator|firm|business|department")
+    modifier = r"(?!(?:is|are|was|were|has|have|can|will|would|runs|uses|predicts|supports|helps|provides|enables|processes|handles|serves)\b)[\w'-]+"
+    return bool(re.match(r"^(?:A|An|The)\s+(?:" + modifier + r"\s+){0,5}(?:" + noun + r")\b",
+                         stem, re.IGNORECASE))
+
+
+def shared_leading_words(options: List[str]) -> int:
+    """Return the longest leading word sequence shared by any three options."""
+    tokens = []
+    for text in options:
+        text = re.sub(r"^\s*[A-D](?:[.)]|\s*[:\-])\s*", "", text, flags=re.IGNORECASE)
+        tokens.append([word.casefold().strip('.,;:!?()"') for word in text.split()])
+    longest = 0
+    for group in combinations(tokens, 3):
+        shared = 0
+        for words in zip(*group):
+            if len(set(words)) != 1:
+                break
+            shared += 1
+        longest = max(longest, shared)
+    return longest
+
+
 def _stem_style_errors(stem: str) -> List[str]:
     """Detect narrow requirements-checklist and documentation language in stems."""
     errors = []
+    if not has_human_subject_opening(stem):
+        errors.append("Stem opening must start with You/Your or A/An/The plus an organization or person noun")
     checklist_patterns = (
         r"\bmust\s+satisfy\s+the\s+following\b",
         r"\bstakeholders\s+have\s+established\b",
@@ -305,6 +338,11 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
             
         option_metrics.append(option_metric)
     
+    shared_prefix = shared_leading_words(choice_texts)
+    if shared_prefix >= 8:
+        errors.append(f"Three or more choices share {shared_prefix} leading words (maximum 7)")
+        style_score -= 0.2
+
     # Reject only exact or near-duplicate options (similarity >= 0.97).
     for i, choice_a in enumerate(choice_texts):
         for j, choice_b in enumerate(choice_texts[i+1:], start=i+1):

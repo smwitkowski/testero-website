@@ -3,14 +3,16 @@
 ## Current operator flow
 
 The Codex and Claude subscription CLIs are authenticated and ready. The generator
-uses `--model codex` (default `gpt-6.1-sol`, high reasoning). For the current
-45-candidate batch, generate with `--judge-model external`, then choose either
+uses `--model codex` (default `gpt-6.1-sol`, high reasoning). For the current rules-v3 round-5
+45-candidate batch (`pmle-d025-r5-45.json`), generate with `--judge-model external`, then choose either
 **the bounded Claude CLI request runner** or **manual independent Claude Code
 Sonnet 5.5 subagents**. Both consume the same frozen prompts and full verdict
 schemas. Wait for generation to finish before judging or ingesting; do not edit
 its artifact or request directory while generation is active. Validate ingestion
 with `--dry-run` before any separate DRAFT write. Neither route publishes or
-replaces founder review. Exact commands are in the external-judge runbook below.
+replaces founder review. Exact commands are in the rules-v3 round-5 runbook below. Earlier generation
+and round-4 repair commands are historical only; do not rerun or overwrite
+their artifacts. No live calls are authorized by this document update.
 
 Phase 2 implements the smallest single-answer path from the reviewed Phase 1
 registry. No migration or new-cert product support. Generation never publishes.
@@ -20,9 +22,9 @@ registry. No migration or new-cert product support. Generation never publishes.
 | 1. Refresh registry | EXISTS | Use the explicit sequential refresh; review official guide and inventory diffs. Missing facts remain null. |
 | 2. Load scope | EXISTS | `--cert` selects the current standard guide. PMLE codes are preserved in one section map. Other codes are virtual, not DB seeds. Each candidate has cert/objective/guide hash. |
 | 3. Fetch objective docs | EXISTS | Exa discovers only `docs.cloud.google.com`; direct HTTP fetches official HTML with checked redirects. URL-bound text, timestamp and hash are required. No snippets, guessed links or positional joins. |
-| 4. Allocate and generate | EXISTS | Normalize published section weights for largest-remainder quotas at total N. Choose a random start offset per domain, then cover objectives round-robin; `--seed` reproduces offsets. Explicit objectives instead cycle in flag order. Record each item's `scenario_moment` and rotate already-running situations, with greenfield at most half (including N=1). Follow rules-v2 S1–S9/O1–O4 in `certs/STYLE.md`. Create original four-option, single-key content, then separately cite the finished options/rationales with required string receipts. |
-| 5. Mechanical gate | EXISTS | Check schema; require exactly A-D, one fetched URL and nonempty quote at most 300 characters per option. Match each quote case-sensitively, with whitespace normalization only, against its own fetched text. Retry the cite step once with its mechanical errors; retain both attempts and reject before judging if either required final check fails. |
-| 6. Independent judge | EXISTS | `--judge-model` must have a known vendor family different from `--model`. Judge exact cleaned content against fetched docs. PASS requires score >=0.8 and all rubric checks. Quote presence is provenance, not semantic proof. |
+| 4. Allocate and generate | EXISTS | Normalize published section weights for largest-remainder quotas at total N. Choose a random start offset per domain, then cover objectives round-robin; `--seed` reproduces offsets. Explicit objectives instead cycle in flag order. Record each item's `scenario_moment` and rotate already-running situations, with greenfield at most half (including N=1). Follow rules-v3 S1–S10/O1–O5 in `certs/STYLE.md`; record the human-subject opening mix, use objective-aware moments and keep the selected objective central. Create original four-option, single-key content, then separately cite the finished options/rationales with required string receipts. |
+| 5. Mechanical gate | EXISTS | Check schema, the narrow S10 human-subject opening, existing O4 length bounds and O5 shared-prefix rejection (three or more options with ≥8 leading words); require exactly A-D, one fetched URL and nonempty quote at most 300 characters per option. Match each quote case-sensitively, with whitespace normalization only, against its own fetched text. Retry the cite step once with its mechanical errors; retain both attempts and reject before judging if either required final check fails. |
+| 6. Independent judge | EXISTS | `--judge-model` must have a known vendor family different from `--model`. Judge exact cleaned content against fetched docs. Require the canonical 15-field verdict with 12 exact boolean checks, including `options_distinct_approaches`; PASS requires score >=0.8 and all checks true. Quote presence is provenance, not semantic proof. |
 | 7. Founder spot-check | EXISTS | Export random ceil(10%) of the completed DRAFT+GOOD pool. Report objective, guide hash, both models and every option's quote/URL/hash/timestamp. Missing or invalid grounding blocks approval, including legacy ungrounded rows. |
 | 8. Approve separately | EXISTS | Preserve DRAFT through generation. Existing manifest, candidate/body fingerprints and guarded updates require explicit human acceptance. An LLM verdict never approves a run. |
 | 9. Keep evidence | EXISTS | Store receipt under `review_notes.grounding`; `doc_links` retains URLs. Dry-run saves all question/citation attempts, rejections, checks and verdicts, plus frozen fetched text, to gitignored JSON without DB access. Parse failures include at most 2048 characters of sanitized actual LM completion, never keys, headers or transport metadata. |
@@ -42,7 +44,7 @@ choice, not a measured quality claim. The default independent judge is `claude`,
 Claude subscription CLI (Anthropic), with Sonnet 5.5 by default. Generation and
 judging remain separate calls and must have known different-vendor families.
 Unknown aliases and same-vendor versions/sizes fail closed. Schema, mechanical
-evidence, S1–S8/O1–O3 style and judge gates remain mandatory. Neither subscription
+evidence, rules-v3 S1–S10/O1–O5 style and all 12 judge checks remain mandatory. Neither subscription
 backend makes generation publication or replaces founder approval.
 
 `--judge-model openrouter/anthropic/claude-sonnet-5.5` remains an explicit fallback
@@ -138,8 +140,11 @@ reviewed coverage gaps. Never use positional guide IDs as cross-version aliases.
 
 Founder decision: replace the legacy PMLE bank domain by domain. The historical
 first batch planned two candidates for each of the 15 zero-ACTIVE-coverage
-objectives from the lexical audit. The current style regeneration command below
-plans three for each of those same objectives, 45 total. Planning is not a promise
+objectives from the lexical audit. The current rules-v3 round-5 command below
+plans three for each of those same objectives, 45 total. Round 3 and round 4 are
+preserved below as historical instructions, not authorization to run them or
+overwrite old artifacts. Their 13/14-field verdicts are not rules-v3 approval.
+Planning is not a promise
 that all candidates pass. Explicit
 `--objective` flags are validated against the current cert/domain/subsection and
 cycled in flag order; duplicate flags are de-duplicated. Domain weights and random
@@ -150,7 +155,185 @@ Run these commands from `content-pipeline/`. Supply keys in the shell only;
 Never publish by generating, and never retire legacy questions before founder
 approval of enough replacements. Use a new artifact filename for each batch.
 
-### Current style regeneration: 45 DRAFT candidates
+### Current rules-v3 round 5: 45 candidates (D-025)
+
+This is the current runbook. Historical instructions below do not authorize
+rerunning earlier batches. Use the same 15 batch-1 objective IDs, three original
+candidates per objective, with `--model codex --judge-model external` and a new
+`pmle-d025-r5-45.json` artifact. Never overwrite round-3, round-4, first-30 or
+second-16 artifacts, requests, verdicts, journals or review exports. If the new
+filename already exists, stop; use a separately approved fresh name instead.
+These commands are for a separately authorized operator run, not live calls
+made during the offline rules update.
+
+Apply S1–S10/O1–O5 from `certs/STYLE.md`. Human-subject opening targets are 30%
+“You are”, 25% “Your company/organization/team”, 10% “You work for”, 15%
+“You have/manage/use”, 10% “You need to”, and 10% “You recently”. Keep the
+business application or concrete ML task in that opening. The structural gate
+accepts only initial `You`/`Your`, or `A`/`An`/`The` plus an organization/person
+noun, including qualified roles. It does not use anywhere-in-stem keywords.
+
+S7 allows security incidents only for security/privacy/governance objectives:
+PMLE `6.1:x` and explicitly privacy-related data items are eligible. Other objectives rotate deployment, monitoring,
+migration, cost/latency reduction, scale growth and greenfield. Greenfield stays
+at most half; N=1 starts operational. The selected objective's actual decision
+must remain central; `scenario_relevant` fails if an incident wrapper displaces
+it. Hints never expand scope.
+
+O4 balances comparable detail, not sentence clones; keep the existing ±20%
+authoring target, inclusive 0.75–1.25× mechanical range, and key lead rejection
+above two words unchanged. O5 requires genuinely distinct approaches, with at
+most one pair of minor variants. Reject three or more options sharing at least
+eight leading words, with option labels stripped. `option_prefix_report` uses
+the maximum leading-word prefix shared by any three options per item, not pairs:
+batch median target ≤2 words and share with ≥6 words ≤10%. Keep the length
+report, including ties and unique-longest keys, and inspect `option_prefix_report`
+for generated, awaiting and accepted items. Batch targets are reports, not new
+automatic batch rejection gates.
+
+#### One strict verdict contract, including repair eligibility
+
+The canonical DSPy verdict has exactly 15 required fields: `verdict`, `score`,
+`reason`, and these 12 exact boolean checks:
+`correct_answer_accurate`, `distractors_incorrect`, `distractors_plausible`,
+`distractors_need_knowledge`, `options_distinct_approaches`,
+`explanations_accurate`, `scenario_relevant`, `scenario_clear`,
+`evidence_supported`, `business_context`, `constraints_as_wants`, and
+`decisions_not_syntax`. PASS needs `verdict: "PASS"`, score ≥0.8 and all 12 true.
+Missing, false, mistyped, extra or malformed fields, UNCERTAIN and low scores
+fail closed. Every generation/judge path, exported request schema, Claude runner,
+ingestion path and repair-eligibility check uses this same contract. Do not
+backfill historical 13/14-field verdicts with invented checks or use them as
+rules-v3 approvals; no historical-rubric waiver applies to this round.
+
+Repair requires a current strict 15-field `FAIL`. Every failed check must be
+among `distractors_need_knowledge`, `constraints_as_wants`,
+`distractors_plausible`, `decisions_not_syntax`, `scenario_clear`, and
+`options_distinct_approaches`; at least one must fail. All other checks must be
+true, including factual/evidence checks and `scenario_relevant`. A supported
+O5 failure is eligible under the same one-attempt rules; missing or mistyped
+O5 checks block repair. PASS, UNCERTAIN, malformed, unsupported, completed,
+attempted or orphaned parents remain blocked.
+
+Keep all existing evidence and safety gates: supplied current official product
+docs are factual authority; samples/dumps are aggregate style-only evidence.
+Each option needs fresh exact A–D URL/quote receipts, with quote membership
+checked against its own frozen fetched text. Quote membership is provenance,
+not semantic proof. Requests use full cited text first, bounded at 150,000
+serialized characters; oversized sources use largest-first fixed ±8,000-character
+quote windows, never narrower windows to fit. Schema or mechanical failures
+never reach judging. Do not weaken these gates to recover a PASS.
+
+#### Commands, in order
+
+Use shell keys only, never `.env` files. New generation needs `EXA_API_KEY` and
+the existing Codex login; Claude judging needs its existing subscription login.
+Repair uses only Codex login and stored docs. External generation, repair and
+dry ingestion use no DB client. Only separately approved write ingestion needs
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Wait for each work phase to finish
+before starting the next; never edit an active artifact/request directory.
+
+1. Generate the new local originals and frozen requests (no DB writes).
+
+```sh
+cd /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline
+PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/scripts/generate_all_domains.py \
+  --cert machine-learning-engineer --n-questions 45 --model codex --judge-model external \
+  --objective machine-learning-engineer:standard:1.1:5 \
+  --objective machine-learning-engineer:standard:1.2:1 \
+  --objective machine-learning-engineer:standard:1.2:2 \
+  --objective machine-learning-engineer:standard:1.2:3 \
+  --objective machine-learning-engineer:standard:2.1:3 \
+  --objective machine-learning-engineer:standard:2.2:3 \
+  --objective machine-learning-engineer:standard:3.1:4 \
+  --objective machine-learning-engineer:standard:3.2:6 \
+  --objective machine-learning-engineer:standard:3.3:1 \
+  --objective machine-learning-engineer:standard:4.1:4 \
+  --objective machine-learning-engineer:standard:4.1:5 \
+  --objective machine-learning-engineer:standard:4.2:4 \
+  --objective machine-learning-engineer:standard:5.1:2 \
+  --objective machine-learning-engineer:standard:6.1:1 \
+  --objective machine-learning-engineer:standard:6.2:3 \
+  --artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.json
+```
+
+2. Judge the original frozen requests with the independent Claude subscription.
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/scripts/judge_requests.py \
+  --requests /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.judge-requests \
+  --verdicts /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.verdicts --judge-model claude --parallel 3
+```
+
+3. Inventory strict eligible failures without calls or artifact mutation. Inspect
+   the result before separately authorizing one-attempt repair calls.
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/scripts/repair_candidates.py \
+  --artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.json \
+  --verdicts /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.verdicts --dry-run
+```
+
+4. Run only the separately authorized repairs; do not start a concurrent repair.
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/scripts/repair_candidates.py \
+  --artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.json \
+  --verdicts /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.verdicts
+```
+
+`--candidate ID` is repeatable; `--limit N --max-calls N` bounds work. Each parent
+reserves exactly two calls: one typed DSPy writer revision and one fresh citation
+call. No retries, retrieval, judging or DB writes occur here. Journal the attempt
+durably before either call; failed/interrupted/unknown attempts are consumed.
+A stays byte-exact; objective, sources and frozen plan stay unchanged. Preserve
+original candidates/requests/verdicts; append `<parent-id>-r1` with verified lineage
+and a distinct content-bound DB UUID. Preserve original-only generation-run IDs.
+Any partial/unknown persistence or orphan publication needs human reconciliation;
+never clear journals or copy artifacts to retry. A mechanical/citation PASS is
+not a quality PASS; every repair needs a fresh current 15-field verdict.
+
+5. Judge again. Existing verdict paths are skipped; only fresh repair IDs get
+   calls. Invalid existing verdicts need manual reconciliation, not overwrite.
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/scripts/judge_requests.py \
+  --requests /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.judge-requests \
+  --verdicts /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.verdicts --judge-model claude --parallel 3
+```
+
+6. Dry ingest; inspect strict verdicts, request hashes, lineage, receipts,
+   persistence journals, failures and both batch reports without DB access.
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/scripts/ingest_external_verdicts.py \
+  --artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.json \
+  --verdicts /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.verdicts --dry-run
+```
+
+7. Only after inspection and separate approval, ingest passing DRAFTs.
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/scripts/ingest_external_verdicts.py \
+  --artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.json \
+  --verdicts /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.verdicts
+```
+
+Ingestion never publishes. Inspect each actual domain run UUID; export a fresh
+founder sample per run with `review_batch.py RUN_UUID`. Only founder review of
+the unchanged eligible pool can authorize `review_batch.py RUN_UUID --approve --yes`.
+Pool changes need a new export and repeated review. Never edit hashed
+review files. Legacy retirement remains separately approved, domain by domain,
+only after grounded ACTIVE count and receipt gates pass. Unknown/partial DB
+writes require reconciliation, not retry through a copied artifact.
+
+### Historical round-3 inline-judge style regeneration: 45 DRAFT candidates
+
+The round-3/round-4 commands and contracts in the next sections are historical.
+They preserve prior operator context, including then-current model selections,
+rubrics and artifact names; they are not current rules-v3 instructions. Do not
+rerun these generation commands, overwrite their artifacts or infer rules-v3
+approval from their old verdicts. Use the round-5 runbook above for new work.
 
 Generic inline-judge example; use the external runbook below for the current
 batch so judgments can resume independently of generation. Claude CLI
@@ -196,7 +379,7 @@ below. Generation leaves accepted rows DRAFT; it never publishes. Retirement
 still requires enough approved grounded ACTIVE replacements and a separate
 explicit apply. This command was not run as part of the offline code change.
 
-### Rules v2: round 4, 45 candidates
+### Historical rules-v2 round 4: 45 candidates
 
 The planner records `opening_style` (roughly one third task-first) and
 `question_line` (about 70% default, natural variants for the rest) on each plan item
@@ -214,7 +397,7 @@ artifacts and printed: key-is-longest includes ties, unique-longest is separate,
 and the target is ≤35%. Generated, awaiting, and accepted groups are recorded.
 A missed batch target prints a warning; it is not an added batch hard gate.
 
-The canonical DSPy verdict now has 14 required fields. Every old check remains;
+The historical rules-v2 DSPy verdict had 14 required fields. Every old check remained;
 `distractors_need_knowledge` is a new required boolean. False, missing, or mistyped
 values fail closed, even at score 1.0. Export, the Claude request runner and ingest
 share this schema. Old real 13-field verdicts are preserved as historical evidence,
@@ -268,7 +451,7 @@ PYTHON_DOTENV_DISABLED=1 uv run python scripts/ingest_external_verdicts.py \
   --verdicts .cache/generation/pmle-d025-r4-45.verdicts
 ```
 
-### One-attempt repair of supported round-4 quality failures
+### Historical one-attempt repair of supported round-4 quality failures
 
 A stated want can distinguish the key without violating O3. The reason each
 alternative fails must need documented product/ML knowledge. A literal fact or
@@ -277,7 +460,7 @@ Before returning, the writer checks each distractor, at most two distinct wants,
 and removes approach-specific “without X” clauses. No check or score threshold
 is removed.
 
-The repair CLI accepts only a strict 14-field `FAIL`: `correct_answer_accurate`,
+The historical round-4 repair CLI accepted only a strict 14-field `FAIL`: `correct_answer_accurate`,
 `explanations_accurate`, and `evidence_supported` must be true. Every failed check
 must be among `distractors_need_knowledge`, `constraints_as_wants`,
 `distractors_plausible`, `decisions_not_syntax`, and `scenario_clear`. Other checks
@@ -333,13 +516,13 @@ dry ingestion, and separately approve any DRAFT writes. Founder approval is
 still required before ACTIVE. A mechanical/citation-PASS repair is not a quality
 PASS, and repair yield is unknown until that independent judgment.
 
-### Current external-judge style regeneration: 45 candidates
+### Historical round-3 external-judge style regeneration: 45 candidates
 
 Claude CLI authentication is ready. The request runner below uses the existing
 Claude subscription, not API billing. Manual independent **Sonnet 5.5 subagents**
 in the existing Claude Code session remain available as an alternative. The
 current `codex` alias defaults to `gpt-6.1-sol` at high reasoning. The active
-style-45 batch below retains its explicit `codex/gpt-5.6-sol` selection. Do not
+historical style-45 batch below retained its explicit `codex/gpt-5.6-sol` selection. Do not
 restart or overwrite its artifact. Batch tests are offline; two separately
 authorized Claude smoke calls verified the shared transport, not the live batch.
 
@@ -637,7 +820,7 @@ real-output replay was made. The next proposed diagnostic is a separately
 approved, bounded/redacted parse-only judge completion capture and keyed replay
 of that saved row. Do not weaken the quality gate to recover a PASS.
 
-## D-025 batch 1 diagnosis and batch 2
+## Historical D-025 batch 1 diagnosis and batch 2
 
 Batch 1 stored 19/30 accepted candidates as DRAFT across six runs. This is not
 founder approval or publication. Evidence: ignored read-only artifact
@@ -699,7 +882,7 @@ PYTHON_DOTENV_DISABLED=1 uv run python scripts/generate_all_domains.py \
   --artifact .cache/generation/pmle-d025-second-16.json
 ```
 
-## D-025 batch 2 diagnosis and recovery
+## Historical D-025 batch 2 diagnosis and recovery
 
 Batch 2 accepted 8/16 candidates; all four target objectives now have at least
 one accepted DRAFT. The ignored original artifact is read-only and unchanged.
@@ -753,8 +936,17 @@ publication threshold is loosened. Live yield under these changes is unmeasured.
 
 ## Validator calibration
 
-Parallel choices are valid; only exact/near duplicates (token similarity >=0.97)
-are blocked. A stem must end with `?`, without a wording whitelist. Learner
+Parallel choices with comparable detail are valid; sentence clones are not.
+Keep exact/near-duplicate rejection (token similarity >=0.97), and additionally
+reject three or more options sharing ≥8 leading words under O5. The strict
+`options_distinct_approaches` judge check covers semantic sameness beyond that
+mechanical threshold; at most one pair may be minor variants. Report batch
+`option_prefix_report` targets: median ≤2 and ≥6-word share ≤10%, using the
+maximum prefix shared by any three options with labels stripped, not pairwise
+prefixes. Report generated/awaiting/accepted groups without inventing a batch gate.
+S10 requires an initial `You`/`Your`, or `A`/`An`/`The` plus an organization/person
+noun; it is not the historical anywhere-in-stem scenario-keyword test. A stem
+must end with `?`, without a question-wording whitelist. Learner
 rationales reject URLs and numeric citations, not ordinary “see” words or bracketed
 terms. Service grounding comes from fetched evidence and the judge, not a PMLE-era
 service-name list. The old helper remains only for deferred legacy metrics.

@@ -2,7 +2,7 @@
 
 **Sample research retrieval date: 2026-10-04. Authoring policy updated: 2026-10-05.**
 
-This document measures the official public sample forms linked by all 15 certifications on the [Google Cloud certification index](https://cloud.google.com/learn/certification). The measurements guide original, docs-grounded authoring. The rules-v2 S1–S9/O1–O4 rules below are founder authoring policy, not measured sample frequencies. Generation still creates DRAFT candidates only; it never publishes or replaces human approval.
+This document measures the official public sample forms linked by all 15 certifications on the [Google Cloud certification index](https://cloud.google.com/learn/certification). The measurements guide original, docs-grounded authoring. The rules-v3 S1–S10/O1–O5 rules below are founder authoring policy, not measured sample frequencies. Generation still creates DRAFT candidates only; it never publishes or replaces human approval.
 
 ## Evidence boundary
 
@@ -71,26 +71,28 @@ Those are standard/beta formats, not renewal-exam claims. Versioned exam guides 
 
 ## Original authoring style
 
-### Founder policy, rules v2: S1–S9 and O1–O4
+### Founder policy, rules v3: S1–S10 and O1–O5
 
 Apply these rules to new generated candidates. Do not rewrite legacy bank rows
 or infer exam frequencies from them.
 
 | Rule | Contract |
 | --- | --- |
-| S1 — Purpose first | Name the business application or a concrete ML task in the opening, not an abstract model deployment. Business-first and task-first are both valid; the planner assigns roughly one third task-first openings and records `opening_style`. Hints never expand exam scope. |
+| S1 — Purpose first | Name the business application or a concrete ML task in the opening, not an abstract model deployment. Use a natural human/organizational subject from S10; the planner records its prefix-family hint as `opening_style`. Hints never expand exam scope. |
 | S2 — Facts as story | Describe what exists and what happened in plain narrative. Use a numbered list only for existing workflow steps, never requirements. |
 | S3 — Constraints as wants or policies | At most two explicit wants or policies. Do not pack extra wants into one sentence or pre-exclude a distractor with “without X” or an equivalent approach-specific ban. Let product/ML knowledge eliminate alternatives. Never use “must satisfy the following requirements” or “Stakeholders have established”. |
 | S4 — Natural task | Target about 70% “What should you do?” per batch. Rotate natural variants for the rest, with `question_line` recorded by the planner. Use a variant only when it fits the decision; do not invent a first-step premise. Every question line must end with “?” and must not name settings or config objects. |
 | S5 — Reading size | Use 50–110 words and one paragraph, two at most. This is authoring policy, not a claim about all sample lengths. |
 | S6 — Plain register | State goals in plain language. Use product names only as needed, with current short names such as Agent Platform Pipelines and Agent Platform Workbench. Use “Gemini Enterprise Agent Platform” at most once. Do not put setting names, enum values, file formats or code in the stem. |
-| S7 — Vary the moment | At most half of a plan may be fresh design. Rotate already-running situations: recent deployment, monitoring, migration, cost/latency reduction and security incident. The planner records `scenario_moment` on every item and embeds the hint in its prompt. Its cycle starts with operational moments, so N=1 is not greenfield. The hint never expands the selected objective's scope. |
+| S7 — Objective-aware moment | At most half of a plan may be fresh design. For non-security objectives, rotate recent deployment, monitoring, migration, cost/latency reduction, scale growth and greenfield. Use a security incident only when the selected objective explicitly concerns security, privacy or governance. PMLE `6.1:x` and explicitly privacy-related data items are eligible. The planner records `scenario_moment` on every item and embeds the hint in its prompt. Start with an operational moment, so N=1 is not greenfield. The selected objective's actual decision must stay central; `scenario_relevant` fails when an incident wrapper displaces it. Hints never expand objective scope. |
 | S8 — No documentation voice | Never put “documented”, “documentation”, “supported specifications” or “per best practices” in the stem. Evidence belongs in receipts, not learner prose. |
 | S9 — No dated model names | No model/product version numbers unless the objective is explicitly version-specific. Prefer “a Gemini model”. |
+| S10 — Human subject first | Begin with a human or organizational subject, then name the business application or concrete ML task required by S1. Plan approximately 30% “You are”, 25% “Your company/organization/team”, 10% “You work for”, 15% “You have/manage/use”, 10% “You need to”, and 10% “You recently”. These are batch targets, not exact single-item quotas. The narrow structural validator accepts only an opening `You` or `Your`, or `A`/`An`/`The` followed by an organization/person noun (including a qualified role such as “A machine learning engineer”). Reject service-first, abstract-model-first and task-only subjects; do not restore the old anywhere-in-stem keyword test. |
 | O1 — Parallel actions | Write imperative, parallel practitioner actions of similar length. Use one or two sentences, or two or three short numbered steps. |
 | O2 — Decisions, not syntax | Distinguish approach, service or sequence. Even for configuration-heavy objective 1.2:3, compare tuning/adaptation approaches and why they fit, not setting values or media resolution per image part. |
 | O3 — Knowledge-dependent alternatives | A distractor may fail a stated want when the reason needs documented product/ML knowledge. The want itself is not disqualifying. Fail if a literal fact or prohibition excludes it, such as batch for an explicit online endpoint, a policy-banned action, or prompt design when supervised-learning adaptation is required. A hand-written server can validly fail minimal maintenance when rejecting it requires knowing that custom prediction routines provide the server. Multiple distractors may fail the same want for different documented reasons; do not add a third want. The required `distractors_need_knowledge` check stays fail-closed. |
-| O4 — Length balance | All four options are parallel and within about ±20% of their mean word count. Never make the key uniquely longest; vary the non-key longest option and do not always tie the key for longest. The validator rejects a uniquely longest key more than 2 words ahead, or any option outside inclusive 0.75–1.25× mean. Counts use whitespace-separated words. Artifact reports include ties in the primary key-is-longest rate, record unique-longest separately, and target ≤35%. A missed batch target is reported, not a new automatic batch rejection. |
+| O4 — Length balance | Balance comparable detail, not cloned sentences or repeated scaffolding. All four options are parallel and within about ±20% of their mean word count. Never make the key uniquely longest; vary the non-key longest option and do not always tie the key for longest. The validator rejects a uniquely longest key more than 2 words ahead, or any option outside inclusive 0.75–1.25× mean. Counts use whitespace-separated words. Artifact reports include ties in the primary key-is-longest rate, record unique-longest separately, and target ≤35%. A missed batch target is reported, not a new automatic batch rejection. |
+| O5 — Distinct approaches | Compare genuinely different approaches, services or sequences. At most one pair may be minor variants of one approach. Do not clone the same action and change a small setting or noun. Mechanically reject an item when three or more options share at least eight leading words. Report `option_prefix_report` using the maximum leading-word prefix shared by any three options per item, with option labels stripped: batch median target ≤2 words; the share of items with a prefix ≥6 words must be ≤10%. These batch targets are reports, not new automatic batch rejections. The required `options_distinct_approaches` judge check rejects semantic clones even when the mechanical prefix threshold is not reached. |
 
 Codex is the generator/citer choice for the founder's existing subscription, not
 a quality exemption. The default independent judge uses the Claude subscription
@@ -98,13 +100,35 @@ CLI (`claude`, Anthropic); Codex is OpenAI. An explicit OpenRouter judge remains
 a fallback. Known different-vendor families are required, and all evidence,
 schema, style and judge gates still apply. Generation is never publication.
 
+### Canonical rules-v3 judge contract
+
+Use one canonical DSPy verdict everywhere: 15 required fields, consisting of
+`verdict`, `score`, `reason` and these 12 exact boolean checks:
+`correct_answer_accurate`, `distractors_incorrect`, `distractors_plausible`,
+`distractors_need_knowledge`, `options_distinct_approaches`,
+`explanations_accurate`, `scenario_relevant`, `scenario_clear`,
+`evidence_supported`, `business_context`, `constraints_as_wants`, and
+`decisions_not_syntax`. PASS requires `verdict: "PASS"`, score ≥0.8 and all 12
+checks true. False, missing, mistyped, extra-field, malformed or UNCERTAIN
+verdicts fail closed; a high score never compensates. Generation, export, the
+Claude runner, ingestion and repair eligibility all use this exact contract.
+Historical 13/14-field verdicts stay historical; never invent the new check or
+use an old verdict as rules-v3 approval. Repairs require the current strict
+15-field FAIL: only `distractors_need_knowledge`, `constraints_as_wants`,
+`distractors_plausible`, `decisions_not_syntax`, `scenario_clear`, and
+`options_distinct_approaches` may fail. All other checks must be true. Missing or
+mistyped checks, including O5, block repair; a supported O5 failure is eligible
+under the same one-attempt rules and requires a fresh independent judgment.
+
 ### Writer self-check before returning
 
 For each distractor, verify that no literal stem fact or prohibition excludes its
 approach. Identify the documented product/ML knowledge needed to reject it. Count
 at most two distinct wants or policies, including extra goals packed into one
-sentence. Remove any “without X” clause where X is a distractor's approach. Keep
-all factual, evidence, option-length, and fail-closed checks unchanged.
+sentence. Remove any “without X” clause where X is a distractor's approach. Check
+the human-subject opening, objective-aware moment and genuinely distinct option
+approaches. Balance comparable detail without cloning sentences. Keep all factual,
+evidence, option-length, and fail-closed checks unchanged.
 
 ### Stem and task
 
@@ -146,7 +170,23 @@ On 2026-10-04 an agent viewed only the free first page of one public dump site f
 - **Associate Cloud Engineer:** 10 items, all 4 options, none choose-N. Stems were ~25–65 words, typically 40–50. 9 of 10 were scenarios, mostly Compute Engine, IAM and console or gcloud tasks.
 - **Verdict:** the format matches the official samples above, and the topics are stale against the current guides. Dumps add no signal the official sources don't already give, so the process does not depend on them.
 
-### Aggregate-only calibration, 2026-10-05
+### Rules-v3 calibration, 2026-10-05 (founder-supplied aggregates)
+
+The founder measured 200 official professional text questions: about 30% opened
+with “You are”, 25% with “Your company/organization/team”, 11% with
+“You have/manage/used”, 8.5% with “You need/want to”, and 3% with “You recently”.
+About 4% used a third-person organization/person opening. No imperative or gerund
+openings were observed. Leading words shared by at least three options, labels
+stripped: median 0, 90th percentile 5, 95th percentile 7; only 7/200 had at least 8.
+The S10 planned mix is authoring policy, not an exact reproduction of these rates.
+
+A 19-item public-page review under D-024 found 100% You/Your openings, no items
+with at least 8 shared leading words, and about 26% with one minor-variant pair.
+Our 12 accepted round-4 items had median 7 shared words and 4/12 with at least 8.
+These aggregates explain S10 and O5; no dump/sample items, options or keys were
+stored or prompted. No network calls were made for this rules update.
+
+### Historical rules-v2 calibration, 2026-10-05
 
 The founder supplied a structural review of public pre-rebrand dump pages under
 D-024. About 63% of openings used business scenarios and 37% began with a concrete

@@ -79,7 +79,7 @@ def eligible_repair_verdict(raw):
     try:
         parsed = parse_output(json.dumps(raw, allow_nan=False), QuestionQualitySignature)
         allowed = {"distractors_need_knowledge", "constraints_as_wants", "distractors_plausible",
-                   "decisions_not_syntax", "scenario_clear"}
+                   "decisions_not_syntax", "scenario_clear", "options_distinct_approaches"}
         if (parsed["verdict"] != "FAIL" or any(parsed[key] is not True for key in ACCURACY_CHECKS if key not in allowed)
                 or not any(parsed[key] is False for key in allowed)
                 or not 0 <= parsed["score"] <= 1 or not parsed["reason"].strip()):

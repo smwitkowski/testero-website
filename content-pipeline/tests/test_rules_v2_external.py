@@ -9,7 +9,7 @@ from shared.quality_gate import ACCURACY_CHECKS, QuestionQualitySignature, judge
 
 def test_new_required_bool_survives_canonical_schema():
     schema=output_model(QuestionQualitySignature).model_json_schema()
-    assert len(schema["properties"])==14
+    assert len(schema["properties"])==15
     assert "distractors_need_knowledge" in schema["required"]
     assert schema["properties"]["distractors_need_knowledge"]["type"]=="boolean"
 
@@ -34,7 +34,7 @@ def test_real_round3_pass_without_new_check_is_not_current_pass():
 def test_round4_runbook_exact_commands_and_same_objectives():
     import shlex
     text=(Path(__file__).parents[1]/"PROCESS.md").read_text()
-    section=text.split("### Rules v2: round 4, 45 candidates",1)[1].split("### One-attempt repair",1)[0]
+    section=text.split("### Historical rules-v2 round 4: 45 candidates",1)[1].split("### Historical one-attempt repair",1)[0]
     blocks=[block.split("```",1)[0] for block in section.split("```sh\n")[1:]]
     commands=[shlex.split(block.replace("\\\n"," ")) for block in blocks]
     generation,judge,dry,write=commands

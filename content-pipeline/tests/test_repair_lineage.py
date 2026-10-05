@@ -307,7 +307,7 @@ def completed_batch(case):
         entry = deepcopy(template)
         entry.update({key: scope[key] for key in ("cert_id", "domain_code", "objective_id", "guide_sha256",
                                                 "scenario_moment", "opening_style", "question_line")})
-        entry.update(index=index, stem=f"Question {index}. " + template["stem"])
+        entry.update(index=index, stem=f"You manage workload number {index}. " + template["stem"])
         entry["candidate_id"] = candidate_id(index, scope, candidate_question(entry))
         if index <= 12:
             entry.update(persistence_status="complete", inserted_question_id=entry["candidate_id"],

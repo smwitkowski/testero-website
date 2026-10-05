@@ -463,7 +463,7 @@ def test_planned_authoring_hint_tampering_blocks_ingestion_before_client(case,fi
 
 def test_scope_replay_uses_actual_index_when_question_cycle_differs():
     plans=plan_questions("machine-learning-engineer",45,objective_ids=["machine-learning-engineer:standard:1.1:5"])
-    assert plans[0]["scenario_moment"]==plans[6]["scenario_moment"]
+    assert plans[0]["scenario_moment"]==plans[7]["scenario_moment"]
     assert plans[5]["question_line"]!=plans[11]["question_line"]
     payload={"cert_id":"machine-learning-engineer","plan":plans}
     for index in (1,3,6,7,12,30,45):

@@ -92,7 +92,7 @@ def test_real_codex_quote_gate_still_rejects_mutated_receipts():
 
 
 
-HISTORICAL_CLAUDE_SIGNATURE = QuestionQualitySignature.delete("distractors_need_knowledge")
+HISTORICAL_CLAUDE_SIGNATURE = QuestionQualitySignature.delete("distractors_need_knowledge").delete("options_distinct_approaches")
 
 
 def test_real_logged_in_claude_historical_schema_and_current_missing_check_rejection(monkeypatch,tmp_path):

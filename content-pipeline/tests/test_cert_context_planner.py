@@ -282,7 +282,12 @@ def test_registry_paths_cannot_escape_reviewed_cert_directory(tmp_path, monkeypa
 def test_scenario_moments_rotate_and_greenfield_never_exceeds_half(cert_id, count):
     plan = plan_questions(cert_id, count, seed=42)
     moments = [item["scenario_moment"] for item in plan]
-    assert moments == [cert_context.SCENARIO_MOMENTS[i % 6] for i in range(count)]
+    for index, item in enumerate(plan):
+        hint = cert_context.SCENARIO_MOMENTS[index % len(cert_context.SCENARIO_MOMENTS)]
+        if hint == "security incident":
+            assert item["scenario_moment"] in {"security incident", "scale growth"}
+        else:
+            assert item["scenario_moment"] == hint
     assert moments.count("greenfield") <= count // 2
     assert json.loads(json.dumps(plan)) == plan
     for item in plan:
@@ -298,8 +303,60 @@ def test_scenario_rotation_is_global_not_reset_at_domain_boundaries():
     plan = plan_questions(DEFAULT_CERT, 45, seed=42)
     assert len({item["domain_code"] for item in plan}) == 6
     for index, item in enumerate(plan):
-        assert item["scenario_moment"] == cert_context.SCENARIO_MOMENTS[index % 6]
-    assert set(item["scenario_moment"] for item in plan) == {
+        hint = cert_context.SCENARIO_MOMENTS[index % len(cert_context.SCENARIO_MOMENTS)]
+        if hint == "security incident":
+            assert item["scenario_moment"] in {"security incident", "scale growth"}
+        else:
+            assert item["scenario_moment"] == hint
+    assert set(item["scenario_moment"] for item in plan) >= {
         "recent deployment", "monitoring", "migration", "cost/latency reduction",
-        "security incident", "greenfield",
+        "scale growth", "greenfield",
     }
+
+
+@pytest.mark.parametrize("suffix,eligible", [
+    ("6.1:1", True), ("6.1:2", True), ("6.1:3", True),
+    ("2.1:4", True), ("2.2:1", False), ("2.1:3", False),
+    ("1.1:5", False), ("4.2:2", False), ("6.2:3", False),
+])
+def test_pmle_incidents_only_risk_or_explicit_data_privacy_objectives(suffix, eligible):
+    ident = f"{DEFAULT_CERT}:standard:{suffix}"
+    plan = plan_questions(DEFAULT_CERT, 21, objective_ids=[ident])
+    assert [item["scenario_moment"] for item in plan] == [
+        "scale growth" if moment == "security incident" and not eligible else moment
+        for moment in cert_context.SCENARIO_MOMENTS
+    ] * 3
+    assert all(item["objective_id"] == ident for item in plan)
+    assert all("must not displace the objective" in item["domain_prompt"] for item in plan)
+
+
+@pytest.mark.parametrize("cert_id,suffix,eligible", [
+    ("data-engineer", "1.1:3", True),
+    ("data-engineer", "1.1:6", True),
+    ("data-engineer", "1.1:7", False),
+    ("cloud-digital-leader", "2.1:5", True),
+    ("cloud-engineer", "1.1:1", False),
+    ("associate-google-workspace-administrator", "4.2:1", True),
+])
+def test_other_cert_incidents_need_selected_security_privacy_or_governance_objective(cert_id, suffix, eligible):
+    ident = f"{cert_id}:standard:{suffix}"
+    plan = plan_questions(cert_id, 14, objective_ids=[ident])
+    assert plan[4]["scenario_moment"] == plan[11]["scenario_moment"] == (
+        "security incident" if eligible else "scale growth"
+    )
+    assert all(item["objective_id"] == ident for item in plan)
+
+
+def test_security_ancestor_context_allows_nested_objective_but_not_sibling_scope(monkeypatch):
+    context = load_cert_context("cloud-engineer")
+    domain = next(iter(context["domains"].values()))
+    objective = domain["objectives"][0]
+    domain["display_name"] = "Security, privacy and governance"
+    domain["subsections"][objective["subsection"]]["title"] = "Security incidents"
+    objective["objective_text"] = "Select a compute instance size"
+    objective["objective_context"] = objective["objective_text"]
+    monkeypatch.setattr(cert_context, "load_cert_context", lambda cert_id: context)
+    kwargs = {"objective_ids": [objective["objective_id"]]}
+    assert plan_questions("cloud-engineer", 5, **kwargs)[4]["scenario_moment"] == "scale growth"
+    objective["objective_context"] = "Protect sensitive data\nSelect an encryption key"
+    assert plan_questions("cloud-engineer", 5, **kwargs)[4]["scenario_moment"] == "security incident"

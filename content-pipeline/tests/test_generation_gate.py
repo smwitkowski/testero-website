@@ -53,7 +53,7 @@ def generation(monkeypatch, tmp_path):
                                    for label, quote in zip("ABCD", QUOTES)]}
     def candidate(*args, **kwargs):
         return {**{k: v for k, v in raw.items() if k != "evidence"},
-                "stem": f"Request number {generator.call_count}. " + raw["stem"]}
+                "stem": f"You manage workload number {generator.call_count}. " + raw["stem"]}
     generator = Mock(side_effect=candidate)
     monkeypatch.setattr(generate, "generate_question", generator)
     generator.cite_mock = Mock(side_effect=lambda *a, **kw: {"evidence": raw["evidence"]})

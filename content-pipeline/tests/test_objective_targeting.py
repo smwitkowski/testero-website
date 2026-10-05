@@ -86,7 +86,16 @@ def test_style_regeneration_targets_all_first_batch_objectives_three_times():
     plan = plan_questions(DEFAULT_CERT, 45, objective_ids=ZERO_IDS)
     assert [item["objective_id"] for item in plan] == list(ZERO_IDS) * 3
     assert Counter(item["objective_id"] for item in plan) == {ident: 3 for ident in ZERO_IDS}
-    assert [item["scenario_moment"] for item in plan] == [SCENARIO_MOMENTS[i % 6] for i in range(45)]
+    eligible = f"{DEFAULT_CERT}:standard:6.1:1"
+    expected_moments = []
+    for index, item in enumerate(plan):
+        moment = SCENARIO_MOMENTS[index % len(SCENARIO_MOMENTS)]
+        if moment == "security incident" and item["objective_id"] != eligible:
+            moment = "scale growth"
+        expected_moments.append(moment)
+    assert [item["scenario_moment"] for item in plan] == expected_moments
+    assert all(item["objective_id"] == eligible for item in plan
+               if item["scenario_moment"] == "security incident")
     assert sum(item["scenario_moment"] == "greenfield" for item in plan) <= 45 // 2
     assert plan == plan_questions(DEFAULT_CERT, 45, seed=999, objective_ids=ZERO_IDS)
     assert json.loads(json.dumps(plan)) == plan
@@ -106,7 +115,7 @@ def test_documented_style_regeneration_uses_exact_first_batch_targets():
     from pathlib import Path
 
     process = (Path(__file__).parents[1] / "PROCESS.md").read_text()
-    section = process.split("### Current style regeneration: 45 DRAFT candidates", 1)[1]
+    section = process.split("### Historical round-3 inline-judge style regeneration: 45 DRAFT candidates", 1)[1]
     command = section.split("```sh\n", 1)[1].split("```", 1)[0]
     args = shlex.split(command.replace("\\\n", " "))
     ids = [args[index + 1] for index, arg in enumerate(args) if arg == "--objective"]

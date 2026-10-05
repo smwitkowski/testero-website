@@ -26,7 +26,7 @@ from shared.cli_models import CLIModelError, CLIUsageLimitError
 
 from shared.completion_diagnostics import CompletionCaptureAdapter
 from shared.model_policy import DEFAULT_JUDGE_MODEL, require_independent_models
-from shared.question_style import STYLE_INSTRUCTIONS, KNOWLEDGE_O3, PRE_REPAIR_O3
+from shared.question_style import STYLE_INSTRUCTIONS, LEGACY_STYLE_INSTRUCTIONS_V2, KNOWLEDGE_O3, PRE_REPAIR_O3
 from shared.llm_limits import (
     MaxTokensTruncation, TRUNCATION_REASON, reject_token_limit,
 )
@@ -94,7 +94,7 @@ QuestionQualitySignature.instructions += (
     "\n\nApply every Testero writing rule below independently of factual accuracy. "
     "A high factual score cannot hide poor style. Return false for any violated style check; "
     "missing or non-boolean style checks fail closed. The founder exemplars calibrate style, "
-    "not facts or a pass verdict.\n\n" + STYLE_INSTRUCTIONS
+    "not facts or a pass verdict.\n\n" + LEGACY_STYLE_INSTRUCTIONS_V2
 )
 
 
@@ -108,10 +108,26 @@ LEGACY_ROUND4_QUALITY_SIGNATURE = QuestionQualitySignature.with_updated_fields(
     "A high factual score cannot hide poor style. Return false for any violated style check; "
     "missing or non-boolean style checks fail closed. The founder exemplars calibrate style, "
     "not facts or a pass verdict.\n\n"
-    + STYLE_INSTRUCTIONS.replace(KNOWLEDGE_O3, PRE_REPAIR_O3, 1)
+    + LEGACY_STYLE_INSTRUCTIONS_V2.replace(KNOWLEDGE_O3, PRE_REPAIR_O3, 1)
 )
 # DSPy clones use a generic class name; preserve the frozen output schema title.
 LEGACY_ROUND4_QUALITY_SIGNATURE.__name__ = QuestionQualitySignature.__name__
+
+
+
+# Preserve the exact clarified v2 signature for offline historical replay only.
+RULES_V2_QUALITY_SIGNATURE = QuestionQualitySignature
+
+# Rules v3 retains every prior required check and adds one strict O5 boolean.
+QuestionQualitySignature = QuestionQualitySignature.with_updated_fields(
+    "scenario_relevant", desc="Scenario tests the selected target objective's actual decision in a realistic context. Fail if the scenario moment's theme displaces the objective, such as turning a Feature Store decision into IAM because of a security incident. Security-incident framing is only for security, privacy or governance objectives (PMLE 6.1:x or explicitly privacy-related data items)."
+).with_updated_fields(
+    "business_context", desc="S1/S10: The opening names a business application or concrete ML task with a purpose and starts with You/Your or A/An/The plus an organization or person noun. No imperative or gerund openings. False for abstract model deployment without an application or concrete task. Opening-style percentages are batch hints, not an item gate."
+).append(
+    "options_distinct_approaches", dspy.OutputField(desc="O5: All four options compare different services, architectures, methods or sequences. At most one pair may be the same plan with one small detail changed (location, account, new versus existing resource, percentage). False if more options are minor variants of the same plan. O1 parallelism and O4 length balance require comparable detail in distinct approaches, never cloned sentences."), type_=bool
+).with_instructions(QuestionQualitySignature.instructions.replace(LEGACY_STYLE_INSTRUCTIONS_V2, STYLE_INSTRUCTIONS, 1))
+QuestionQualitySignature.__name__ = "QuestionQualitySignature"
+ACCURACY_CHECKS += ("options_distinct_approaches",)
 
 
 def _valid_score(value: Any) -> bool:

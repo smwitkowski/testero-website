@@ -3,7 +3,7 @@
 PRE_REPAIR_O3 = 'O3 Wrong options are real approaches a competent engineer might plausibly try. Each fails a\nstated want (cost/upkeep/latency/policy/downtime) because of a Google Cloud/ML fact not given as\nan explicit contradiction in the stem. No distractor can be eliminated using stem text alone;\nanswering must require product/domain knowledge. Never invented/broken config.'
 KNOWLEDGE_O3 = 'O3 Wrong options are real approaches a competent engineer might plausibly try. A stated want\nmay distinguish the key: each distractor can fail that want for a documented Google Cloud/ML\nreason the reader must know. Do not fail this check merely because the want is in the stem.\nFail when a literal stem fact or prohibition rules an option out: a batch option for an\nexplicit online endpoint, an approach company policy bans, or prompt design when the stem\nexplicitly requires adaptation through supervised learning. A hand-written server can be a\nvalid distractor for minimal maintenance when rejecting it requires knowing that custom\nprediction routines provide the server. Do not put that capability or a ban on hand-written\nservers into the stem. Multiple distractors may fail the same want for different documented\nreasons; do not add a third want just to give each a different failure. Never invented/broken\nconfig.'
 
-STYLE_RULES = """S1 Purpose first: the opening must name the business application or a concrete ML task,
+LEGACY_STYLE_RULES_V2 = """S1 Purpose first: the opening must name the business application or a concrete ML task,
 in 1–2 sentences. Business-first and task-first openings are both valid. Roughly one third
 of a batch may be task-first, as the planner records in opening_style. Never use an abstract
 model deployment with no application or task purpose; do not expand the selected objective.
@@ -53,6 +53,50 @@ must be within ±20% of the mean word count of all four options. The key must ne
 longest. Vary the longest option's position across the batch, including which non-key option
 is longest; do not make the key tied for longest on every item. This variation is a batch rule,
 not a single-item check or a batch hard-rejection rule."""
+
+STYLE_RULES = (
+    LEGACY_STYLE_RULES_V2
+    .replace("""S1 Purpose first: the opening must name the business application or a concrete ML task,
+in 1–2 sentences. Business-first and task-first openings are both valid. Roughly one third
+of a batch may be task-first, as the planner records in opening_style. Never use an abstract
+model deployment with no application or task purpose; do not expand the selected objective.
+""", """S1 Purpose first: the opening must name the business application or a concrete ML task,
+in 1–2 sentences. Never use abstract model deployment with no application or task purpose;
+do not expand the selected objective.
+""", 1)
+    .replace("""S7 Vary moment: max half fresh design, rest running situations: recent deployment, monitoring,
+migration, cost/latency reduction, security incident. Planner rotates hints and records them in
+the artifact. This is a batch rule, not a single-item count.
+""", """S7 Vary moment: max half fresh design, rest running situations: recent deployment, monitoring,
+migration, cost/latency reduction, scale growth. Security incident is allowed only for security,
+privacy or governance objectives (PMLE 6.1:x and explicitly privacy-related data items).
+The moment is framing only: the tested decision must remain the selected objective. Never let
+an incident turn a Feature Store objective into an IAM question. Planner records hints in the
+artifact. This is a batch rule, not a single-item count.
+""", 1)
+    .replace("""O1 Imperative""", """S10 Natural human-subject openings: lead with You or Your. Rotate the planner's recorded hints:
+You are (~30%), Your company/organization/team (~25%), You work for (~10%), You have/manage/use
+(~15%), You need to (~10%), You recently (~10%). A third-person A/An/The plus an organization
+or person noun is also valid. Never open with an imperative or a gerund subject. S1 still
+requires a business application or concrete ML task; percentages are batch hints, not item gates.
+O1 Imperative""", 1)
+    .replace("""O4 Keep all four options parallel in action, structure and detail. Each option's word count
+must be within ±20% of the mean word count of all four options. The key must never be uniquely
+longest. Vary the longest option's position across the batch, including which non-key option
+is longest; do not make the key tied for longest on every item. This variation is a batch rule,
+not a single-item check or a batch hard-rejection rule.""", """O4 Keep all four options parallel in action, structure and detail. Each option's word count
+must be within ±20% of the mean word count of all four options. The key must never be uniquely
+longest. Vary the longest option's position across the batch, including which non-key option
+is longest; do not make the key tied for longest on every item. This variation is a batch rule,
+not a single-item check or a batch hard-rejection rule.
+Reach comparable length with comparable detail in distinct approaches, never cloned sentences.
+O5 Distinct approaches: options differ in service, architecture, method or sequence. At most
+one pair may be variants of the same plan with one small detail changed (location, account,
+new versus existing resource, or percentage). Do not clone options to meet O1 parallelism or
+O4 length balance. Three or more options sharing eight or more leading words fail mechanically.
+Batch targets: median shared leading words <=2; share with three or more options sharing six
+or more leading words <=10%. Batch targets are reports, not additional item hard gates.""", 1)
+)
 
 FOUNDER_EXEMPLARS = (
     (
@@ -105,3 +149,6 @@ STYLE_INSTRUCTIONS = (
       "A necessary business interface such as CSV rows in exemplar 5 is context, not a settings/syntax quiz.\n"
     + "\n\n".join(f"Exemplar {index}: {stem}" for index, stem in enumerate(FOUNDER_EXEMPLARS, 1))
 )
+
+# Exact frozen policy text is only for matching historical original requests.
+LEGACY_STYLE_INSTRUCTIONS_V2 = STYLE_INSTRUCTIONS.replace(STYLE_RULES, LEGACY_STYLE_RULES_V2, 1)

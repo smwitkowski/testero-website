@@ -17,7 +17,7 @@ from scripts import ingest_external_verdicts as ingestion
 from scripts import judge_requests as request_runner
 from scripts.generate_pmle_questions import clean_question, OPTION_FIELDS, RATIONALE_FIELDS
 from shared import cli_models
-from shared.batch_report import option_length_report
+from shared.batch_report import option_length_report, option_prefix_report
 from shared.dedupe import normalize_stem
 from shared.doc_search import documentation_context
 from shared.evidence import check_evidence
@@ -219,6 +219,7 @@ def _repair_one(path, payload, entry, item, destination, summary):
         final["candidates"].append(child)
         final["repair_attempts"][ident]["status"] = "awaiting_external_judge"
         final["option_length_report"] = option_length_report(final["candidates"])
+        final["option_prefix_report"] = option_prefix_report(final["candidates"])
         validate_candidate_records(final)
         # Publish without replacement. If the artifact save then fails, the started
         # journal + orphan request require human reconciliation, never another call.

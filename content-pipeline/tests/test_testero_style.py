@@ -51,7 +51,7 @@ def test_actual_founder_rejected_stems_fail_validator(case):
 
 @pytest.mark.parametrize("words,valid", [(39, False), (40, True), (130, True), (131, False)])
 def test_hard_word_count_boundaries(words, valid):
-    stem = " ".join(["Context"] * (words - 5) + ["What", "should", "you", "do", "now?"])
+    stem = " ".join(["You"] + ["context"] * (words - 6) + ["What", "should", "you", "do", "now?"])
     result = validate_question(question(stem))
     assert result.is_valid is valid
     assert any("between 40 and 130" in error for error in result.errors) is not valid

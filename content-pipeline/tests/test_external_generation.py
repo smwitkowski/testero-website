@@ -57,7 +57,7 @@ def external_generation(monkeypatch, tmp_path):
     search = Mock(return_value=[source()])
     generator = Mock()
     generator.side_effect = lambda *a, **kw: {
-        **QUESTION, "stem": f"Request number {generator.call_count}. " + QUESTION["stem"]}
+        **QUESTION, "stem": f"You manage workload number {generator.call_count}. " + QUESTION["stem"]}
     cite = Mock(side_effect=lambda *a, **kw: {"evidence": receipts()})
     monkeypatch.setattr(generate, "database_client", database)
     monkeypatch.setattr(generate, "judge_question", judge)
@@ -174,7 +174,7 @@ def test_current_external_runbook_has_exact_style45_plan_and_safe_ingestion():
     ZERO_IDS = tuple(f"{DEFAULT_CERT}:standard:{suffix}" for suffix in suffixes)
 
     process = (Path(__file__).parents[1] / "PROCESS.md").read_text()
-    section = process.split("### Current external-judge style regeneration: 45 candidates", 1)[1]
+    section = process.split("### Historical round-3 external-judge style regeneration: 45 candidates", 1)[1]
     blocks = [block.split("```", 1)[0] for block in section.split("```sh\n")[1:]]
     args = shlex.split(blocks[0].replace("\\\n", " "))
     assert [args[i + 1] for i, flag in enumerate(args) if flag == "--objective"] == list(ZERO_IDS)
@@ -385,7 +385,7 @@ def test_opening_and_question_line_hints_are_recorded_in_candidate_and_request(e
     result=invoke(env,"--n-questions","3")
     assert result.exit_code==0,result.output
     payload=read_artifact(env)
-    assert [entry["opening_style"] for entry in payload["candidates"]]==["business-first","business-first","task-first"]
+    assert [entry["opening_style"] for entry in payload["candidates"]]==["You are","Your company/organization/team","You work for"]
     for entry,scope in zip(payload["candidates"],payload["plan"]):
         assert entry["opening_style"]==scope["opening_style"]
         assert entry["question_line"]==scope["question_line"]

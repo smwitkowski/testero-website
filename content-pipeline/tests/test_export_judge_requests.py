@@ -451,6 +451,6 @@ def test_reexport_schema_requires_new_knowledge_check(case):
     result=invoke(case)
     assert result.exit_code==0,result.output
     schema=json.loads(request_path(case).read_text())["verdict_schema"]
-    assert len(schema["properties"])==14
+    assert len(schema["properties"])==15
     assert "distractors_need_knowledge" in schema["required"]
     assert schema["properties"]["distractors_need_knowledge"]["type"]=="boolean"

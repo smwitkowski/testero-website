@@ -8,7 +8,7 @@ from shared.external_judge import build_request,candidate_question,candidate_sto
 from shared.evidence import check_evidence
 from shared.validator import validate_question,option_length_metrics
 from shared.cli_models import output_model
-from shared.quality_gate import QuestionQualitySignature
+from shared.quality_gate import QuestionQualitySignature, RULES_V2_QUALITY_SIGNATURE
 
 DATA=json.loads((Path(__file__).parent/"fixtures/round4_repair_smoke.json").read_text())
 
@@ -22,17 +22,20 @@ def test_real_smoke_requires_fresh_independent_judgment(case):
     assert child["candidate_id"]==case["parent_candidate_id"]+"-r1"
     assert child["repair"]["attempt"]==1
     assert question_sha256(question)==child["repair"]["question_sha256"]
-    assert candidate_storage_id(child,case["scope"],question)==child["repair"]["storage_question_id"]
+    # The frozen parent verdict has no O5 check; v3 fails closed, without rewriting it.
+    with pytest.raises(ValueError):
+        candidate_storage_id(child,case["scope"],question)
+    assert "options_distinct_approaches" not in child["repair"]["original_verdict"]
     validation=validate_question(question)
     assert validation.is_valid,validation.errors
     assert not option_length_metrics(question)["key_is_longest"]
     checked=check_evidence(child["evidence"],child["sources"])
     assert checked["passed"],checked["errors"]
-    request=build_request(child["candidate_id"],case["scope"],question,child["sources"],checked["options"])
+    request=build_request(child["candidate_id"],case["scope"],question,child["sources"],checked["options"], signature=RULES_V2_QUALITY_SIGNATURE)
     raw=(json.dumps(request,indent=2,ensure_ascii=False,allow_nan=False)+"\n").encode()
     assert hashlib.sha256(raw).hexdigest()==child["external_judge_request"]["sha256"]
     assert len(request["verdict_schema"]["required"])==14
-    assert request["verdict_schema"]==output_model(QuestionQualitySignature).model_json_schema()
+    assert request["verdict_schema"]==output_model(RULES_V2_QUALITY_SIGNATURE).model_json_schema()
     assert child["accepted"] is False
     assert child["awaiting_external_judge"] is True
     assert child["judge_verdict"]["passed"] is False

@@ -20,11 +20,20 @@ CERTS_DIR = Path(__file__).resolve().parents[1] / "certs"
 # greenfield at or below half of the plan. Hints never expand objective scope.
 SCENARIO_MOMENTS = (
     "recent deployment", "monitoring", "migration", "cost/latency reduction",
-    "security incident", "greenfield",
+    "security incident", "scale growth", "greenfield",
 )
 
-# Global rotations are presentation hints, not quotas or scope selection.
-OPENING_STYLES = ("business-first", "business-first", "task-first")
+# A spaced 20-item cycle gives the S10 prefix-family mix: 30/25/10/15/10/10%.
+# Slashes mean choose one natural prefix, not literal text to put in the stem.
+# These are global presentation hints, not single-item gates or scope selection.
+OPENING_STYLES = (
+    "You are", "Your company/organization/team", "You work for",
+    "You have/manage/use", "You are", "Your company/organization/team",
+    "You need to", "You recently", "You are", "Your company/organization/team",
+    "You have/manage/use", "You are", "You work for", "Your company/organization/team",
+    "You need to", "You are", "You have/manage/use", "Your company/organization/team",
+    "You recently", "You are",
+)
 DEFAULT_QUESTION_LINE = "What should you do?"
 DEFAULT_QUESTION_LINE_TARGET_PERCENT = 70
 QUESTION_LINES = (
@@ -226,6 +235,22 @@ def domain_prompt(context: dict, domain: dict, subsection: str | None = None) ->
     return "\n".join(lines)
 
 
+def _security_incident_allowed(cert_id: str, objective: dict) -> bool:
+    """Gate incident context on the selected objective, never unrelated scope."""
+    text = objective["objective_context"]
+    if cert_id == DEFAULT_CERT:
+        return objective["subsection"] == "6.1" or bool(re.search(
+            r"\b(?:privacy|personally identifiable information|PII|sensitive (?:data|information))\b",
+            text, re.IGNORECASE,
+        ))
+    return bool(re.search(
+        r"\b(?:security|secure|securing|privacy|governance|encryption|firewalls?|"
+        r"authentication|authorization|least privilege|personally identifiable information|"
+        r"PII|sensitive (?:data|information)|data loss prevention)\b",
+        text, re.IGNORECASE,
+    ))
+
+
 def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = None,
                    subsection: str | None = None, seed: int | None = None,
                    objective_ids: list[str] | tuple[str, ...] | None = None) -> list[dict[str, Any]]:
@@ -237,8 +262,11 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
     offsets; None uses fresh local entropy. Children remain separate objectives.
     Scenario moments rotate independently of objective selection, starting with
     already-running workloads; greenfield stays <=50%, including a one-item plan.
-    Opening styles and question-line hints rotate globally without changing
-    objective order, weights or scope. Hints are not enforced wording quotas.
+    Security incidents are reserved for security/privacy/governance objectives;
+    PMLE permits only 6.1 or explicitly privacy-related data objectives. Other
+    incident slots use scale growth, without changing objective order or scope.
+    Opening prefix families and question-line hints rotate globally without
+    changing objective order, weights or scope. Hints are not wording quotas.
     """
     context = load_cert_context(cert_id)
     domains = context["domains"]
@@ -277,6 +305,8 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
     plan = []
     for index, (code, domain, objective, offset) in enumerate(targets):
         moment = SCENARIO_MOMENTS[index % len(SCENARIO_MOMENTS)]
+        if moment == "security incident" and not _security_incident_allowed(cert_id, objective):
+            moment = "scale growth"
         opening_style = OPENING_STYLES[index % len(OPENING_STYLES)]
         question_line = QUESTION_LINES[index % len(QUESTION_LINES)]
         prompt = domain_prompt(context, domain, objective["subsection"])
@@ -290,15 +320,21 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
                 " Keep the selected objective's actual decision central; the moment"
                 " is context, not permission to add unsupported exam scope."
             )
-        prompt += f"\nOpening style: {opening_style}."
-        if opening_style == "task-first":
-            prompt += (
-                " Lead with the concrete task, then give the business/application"
-                " context and the selected scenario moment. Task-first does not"
-                " mean greenfield; retain the already-running workload when selected."
-            )
-        else:
-            prompt += " Lead with the business/application context, then the concrete task."
+        prompt += (
+            " Keep the selected objective's actual decision central; the scenario moment"
+            " must not displace the objective or turn it into a different decision."
+        )
+        if moment == "security incident":
+            prompt += " Keep the incident within this security/privacy/governance objective."
+        prompt += (
+            f"\nOpening style: {opening_style}."
+            " Use this second-person prefix family naturally; when slashes separate"
+            " alternatives, choose one (for example, Your company or You manage)."
+            " Business-first and concrete task-first contexts are both valid in the"
+            " first 1–2 sentences. Never start with an imperative or a gerund-led"
+            " opening such as Deploy a model or Building a model. Prefix hints must"
+            " not invent a role, chronology or scope unsupported by the objective."
+        )
         prompt += (
             " Every opening must name a business application or a concrete ML task"
             " relevant to the selected objective (for example, train a fraud classifier"
