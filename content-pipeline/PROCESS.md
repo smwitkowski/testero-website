@@ -241,10 +241,90 @@ Only schema- and mechanical-PASS candidates receive a request under
 unique `candidate_id` values, `status: "awaiting_external_judge"`,
 `awaiting_external_judge: true`, and each request's artifact-relative path and
 SHA-256 of its exact bytes. Candidates are **not accepted and not published**
-while awaiting a verdict. Request evidence comes from fetched official source
-text, bounded around cited quotes; trimming offsets and hashes are recorded.
-A quote match alone is not semantic proof or a judge PASS. Inspect failed
-candidate records; schema or mechanical rejects must not be sent for judging.
+while awaiting a verdict. Requests include the full fetched official source
+text first, up to 150000 serialized characters. If needed, the largest cited
+sources are trimmed one at a time to quote-centered windows with 8000 characters
+on each side. Windows are merged; they are never narrowed to squeeze a request
+under the limit. A request that still exceeds the limit fails closed. Per-source
+trimming flags, offsets and hashes are recorded. A quote match alone is not
+semantic proof or a judge PASS. Inspect failed candidate records; schema or
+mechanical rejects must not be sent for judging.
+
+**Re-export an existing batch after a request-policy change.** Do not regenerate
+questions. Rebuild requests offline from the artifact's stored questions, fetched
+sources and verified A–D receipts:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/export_judge_requests.py \
+  --artifact .cache/generation/pmle-d025-style-45.json
+```
+
+The default output is `<artifact-stem>.judge-requests/`. Optional `--out DIR`
+must be strictly beneath the artifact's parent directory. Symlinks are forbidden.
+This restriction keeps every stored request path safe and artifact-relative.
+Ingestion accepts these custom paths and validates the exact new request bytes
+against their updated SHA-256 values and the current rubric. Use the same custom
+request directory for the judge runner. Prefer a sibling verdict directory named
+`<custom-directory>.verdicts`; a directory ending in `.judge-requests` also has its
+corresponding `.verdicts` sibling checked.
+
+The exporter validates all outputs before replacing any request. It changes only
+request path/hash metadata during a normal export. It preserves questions,
+source text, receipts, scopes, candidate IDs and other artifact data. Previously
+exported candidates and candidates awaiting judgment are eligible; early rejects
+without request metadata are skipped. It validates unique IDs and plan indices,
+current registry scope, question schema and mechanical evidence. It makes no live
+model, retrieval or DB calls, reads no `.env` files and creates no verdict directory.
+No export mode bypasses candidate insertion state or database run journals; those
+require human reconciliation.
+
+Any existing JSON verdict in an associated verdict directory blocks normal export.
+Checked locations are `<artifact-stem>.verdicts`, the output's `.judge-requests`
+counterpart, `<output-directory>.verdicts`, and raw candidate verdict JSON in the
+output itself. The runner also records every used verdict directory in the
+request directory's `.verdict-directories.json` registry before submitting calls.
+The exporter reads these registries from all old request directories and the target,
+then locks and checks their registered verdict directories. Registries use strict
+version-1 JSON with absolute directory paths. Symlinks or malformed registries block
+export. Registered verdict directories must be strictly beneath the artifact parent;
+export fails closed for paths outside that boundary.
+
+For historical custom or manually saved verdicts that have no registry, pass
+repeatable `--verdicts DIR` options. These directories must also be strictly beneath
+the artifact parent. For example, add `--verdicts .cache/generation/manual-results`
+to the export command. This option authorizes checking and, with `--force`, archiving
+affected results there. Stored judge decisions also require `--force`.
+Explicit `--force` moves affected
+verdict files to timestamped `.export-quarantine-*` directories instead of deleting
+or reusing them. It resets only judge-derived verdict/reason/failure fields and
+returns eligible candidates to awaiting judgment, with `accepted: false`. It never
+clears DB state. Unrelated verdict files in associated verdict directories are
+preserved. Unrelated JSON in the request output, including obsolete candidate
+requests, is refused even with `--force`; choose a clean directory. The exporter
+never deletes obsolete requests or lets the runner silently judge extra candidates.
+Only the known `.verdict-directories.json` registry is excluded from request scans.
+
+The artifact lock prevents concurrent ingestion. The exporter then takes the judge
+runner's batch locks on the target and existing metadata-linked request directories
+in sorted order, before locking associated verdict directories. The runner also
+locks its request directory before its verdict directory. This blocks a concurrent
+reader even when its verdict directory does not exist yet, or when `--out` moves
+requests to another directory. All locks are nonblocking. Move manually stored
+results to a checked verdict location before using `--force`.
+
+Requests are atomically replaced and durably flushed before the artifact is
+flushed. When `--out` changes the request directory, the exporter then archives
+only old metadata-linked candidate request files, under the held old request locks,
+before flushing new artifact paths. Their exact bytes remain in quarantine, but
+the old directory can no longer submit those requests. In-place exports do not
+retire requests. Unrelated files and noneligible candidates remain untouched.
+
+A partial crash can leave a request/hash mismatch, or old metadata pointing at a
+retired request; ingestion then fails closed. Rerun export with the same `--out`
+to repair the mismatch. Do not clear persistence journals. The final line is JSON
+with request count, minimum/p50/p95/maximum character counts, trimmed count,
+archived-verdict count and quarantine paths, plus `retired_requests` and
+`request_quarantine_paths`.
 
 2. **Judge the frozen requests: Claude CLI or manual subagents.** Wait for
    generation to finish. Run the bounded subscription CLI runner from
@@ -263,7 +343,7 @@ PYTHON_DOTENV_DISABLED=1 uv run python scripts/judge_requests.py \
    Parallel defaults to 3 and accepts 1–4. Each request receives exactly one call using its supplied
    prompt and schema verbatim; no rebuilding, trimming, rewriting or retries
    occur within a run. Stale schemas, unsafe IDs, symlink requests and requests
-   over 60000 characters fail before a call. The runner uses no DB, retrieval,
+   over 150000 characters fail before a call. The runner uses no DB, retrieval,
    API keys or `.env` files and does not call ingestion.
 
    Successful output is the raw full schema dictionary, including valid FAIL

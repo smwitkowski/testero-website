@@ -13,7 +13,8 @@ from shared.model_policy import EXTERNAL_JUDGE_PROVENANCE
 from shared.quality_gate import QUESTION_FIELDS, QuestionQualitySignature
 
 EXTERNAL_POLICY_MODEL = "anthropic/claude-sonnet-5.5"
-REQUEST_CHARACTER_LIMIT = 60000
+REQUEST_CHARACTER_LIMIT = 150000
+QUOTE_WINDOW_MARGIN = 8000
 
 
 def request_directory(artifact_path):
@@ -59,36 +60,50 @@ def _merge_windows(windows):
     return merged
 
 
-def _source_context(cited, evidence, margin):
-    if margin is None:
-        metadata = {"enabled": False, "method": "full cited sources", "character_limit": REQUEST_CHARACTER_LIMIT,
-                    "sources": [{"url": source["url"], "original_text_sha256": source["text_sha256"],
-                                 "original_characters": len(source["text"]),
-                                 "included_characters": len(source["text"]),
-                                 "windows": [[0, len(source["text"])]]} for source in cited]}
-        return documentation_context(cited), metadata
+def _source_context(cited, evidence, trimmed_urls):
     excerpts, records = [], []
     for source in cited:
-        text = normalize_whitespace(source["text"])
-        quotes = [item["quote"] for item in evidence if item["url"] == source["url"]]
+        text = source["text"]
+        record = {"url": source["url"], "original_text_sha256": source["text_sha256"],
+                  "original_characters": len(text), "included_characters": len(text),
+                  "trimmed": False, "windows": [[0, len(text)]]}
+        if source["url"] not in trimmed_urls:
+            excerpts.append(source)
+            records.append(record)
+            continue
+        normalized = normalize_whitespace(text)
         windows = []
-        for quote in quotes:
-            start = text.index(normalize_whitespace(quote))
-            windows.append([max(0, start - margin), min(len(text), start + len(quote) + margin)])
+        for item in evidence:
+            if item["url"] == source["url"]:
+                quote = normalize_whitespace(item["quote"])
+                start = normalized.index(quote)
+                windows.append([max(0, start - QUOTE_WINDOW_MARGIN),
+                                min(len(normalized), start + len(quote) + QUOTE_WINDOW_MARGIN)])
         windows = _merge_windows(windows)
-        excerpt = "\n[... source text omitted ...]\n".join(text[start:end] for start, end in windows)
-        excerpt_hash = hashlib.sha256(excerpt.encode()).hexdigest()
-        excerpts.append({**source, "text": excerpt, "text_sha256": excerpt_hash})
-        records.append({"url": source["url"], "original_text_sha256": source["text_sha256"],
-                        "excerpt_sha256": excerpt_hash, "original_characters": len(source["text"]),
-                        "normalized_characters": len(text), "included_characters": sum(b-a for a,b in windows),
-                        "margin": margin, "windows": windows})
-    metadata = {"enabled": True, "method": "quote-centered windows in whitespace-normalized fetched text",
+        # If the wide windows cover everything, retain the original full fetch.
+        if windows == [[0, len(normalized)]]:
+            excerpts.append(source)
+            records.append(record)
+            continue
+        excerpt = "\n[... source text omitted ...]\n".join(normalized[start:end] for start, end in windows)
+        digest = hashlib.sha256(excerpt.encode()).hexdigest()
+        excerpts.append({**source, "text": excerpt, "text_sha256": digest})
+        record.update({"trimmed": True, "excerpt_sha256": digest,
+                       "normalized_characters": len(normalized),
+                       "included_characters": sum(end-start for start, end in windows),
+                       "margin": QUOTE_WINDOW_MARGIN, "windows": windows})
+        records.append(record)
+    enabled = any(record["trimmed"] for record in records)
+    metadata = {"enabled": enabled,
+                "method": ("largest sources first; wide quote-centered windows in whitespace-normalized fetched text"
+                           if enabled else "full cited sources"),
                 "character_limit": REQUEST_CHARACTER_LIMIT, "sources": records}
-    context = ("Only quote-centered excerpts of the fetched sources are shown. Omitted context is marked. "
-               "Text SHA-256 below identifies each excerpt, not the original full fetch. "
-               "Original fetch hashes and offsets are recorded here: " + json.dumps(records, ensure_ascii=False) +
-               "\n\n" + documentation_context(excerpts))
+    context = documentation_context(excerpts)
+    if enabled:
+        context = ("Some cited sources use wide quote-centered excerpts; others retain their full fetched text. "
+                   "Omitted context is marked. Text SHA-256 identifies the included text. "
+                   "Original fetch hashes and offsets are recorded here: " + json.dumps(records, ensure_ascii=False) +
+                   "\n\n" + context)
     return context, metadata
 
 
@@ -102,8 +117,12 @@ def build_request(candidate_id, scope, question, sources, evidence):
     cited_urls = {item["url"] for item in evidence}
     cited = [source for source in sources if source["url"] in cited_urls]
     schema = output_model(QuestionQualitySignature).model_json_schema()
-    for margin in (None, 2048, 1024, 512, 256, 128, 0):
-        context, trimming = _source_context(cited, evidence, margin)
+    trimmed_urls = set()
+    largest_first = sorted(cited, key=lambda source: len(source["text"]), reverse=True)
+    for count in range(len(largest_first) + 1):
+        if count:
+            trimmed_urls.add(largest_first[count - 1]["url"])
+        context, trimming = _source_context(cited, evidence, trimmed_urls)
         inputs = {"question_data": question, "domain_context": scope["domain_prompt"],
                   "documentation_context": context, "option_evidence": evidence}
         request = {"candidate_id": candidate_id, "objective_id": scope["objective_id"],
@@ -111,4 +130,4 @@ def build_request(candidate_id, scope, question, sources, evidence):
                    "verdict_schema": schema, "trimming": trimming}
         if len(json.dumps(request, indent=2, ensure_ascii=False, allow_nan=False)) + 1 <= REQUEST_CHARACTER_LIMIT:
             return request
-    raise ValueError("External request exceeds the character bound even with quote-only excerpts")
+    raise ValueError("External request exceeds the character bound even with wide quote-centered excerpts")

@@ -108,14 +108,16 @@ def _validate_candidate(path, payload, entry):
     checked = check_evidence(entry.get("evidence"), entry.get("sources"))
     if not checked["passed"] or checked["options"] != entry["evidence"]:
         raise ValueError("Frozen receipts or source provenance failed validation")
-    request_path = request_directory(path) / (entry["candidate_id"] + ".json")
     metadata = entry.get("external_judge_request")
     if not isinstance(metadata, dict) or not isinstance(metadata.get("path"), str):
         raise ValueError("Missing external judge request metadata")
     given = Path(metadata["path"])
-    if given.is_absolute() or ".." in given.parts or (path.parent / given).resolve() != request_path.resolve():
+    if given.is_absolute() or ".." in given.parts or given.name != entry["candidate_id"] + ".json":
         raise ValueError("Unsafe external judge request path")
-    if request_path.is_symlink() or request_path.parent.is_symlink():
+    request_path = path.parent / given
+    if not request_path.resolve().is_relative_to(path.parent.resolve()):
+        raise ValueError("Unsafe external judge request path")
+    if any(part.is_symlink() for part in (request_path, *request_path.parents)):
         raise ValueError("External judge requests cannot be symlinks")
     digest = metadata.get("sha256")
     if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):

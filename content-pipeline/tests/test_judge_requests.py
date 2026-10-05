@@ -408,3 +408,36 @@ def test_usage_latch_blocks_worker_still_reading_request(monkeypatch, dirs):
     assert summary.completed == summary.skipped == 0 and summary.remaining == 1
     assert not (results / "candidate-1.json").exists()
     assert not (results / ".failures/candidate-1.json").exists()
+
+
+
+def test_export_request_lock_blocks_judge_without_any_call(monkeypatch, dirs):
+    requests, results=dirs
+    save_request(requests)
+    calls=[]
+    fake_backend(monkeypatch,lambda *args:calls.append(args))
+    with runner.batch_lock(requests):
+        result=CliRunner().invoke(runner.main,["--requests",str(requests),"--verdicts",str(results)])
+    assert result.exit_code==1 and "locked" in result.output
+    assert calls==[] and not (results/"candidate-1.json").exists()
+
+
+def test_custom_verdict_directory_is_registered_for_safe_reexport(monkeypatch, dirs):
+    requests, results=dirs
+    save_request(requests)
+    fake_backend(monkeypatch,lambda *args:verdict())
+    runner.run_requests(requests,results)
+    registry=json.loads((requests/".verdict-directories.json").read_text())
+    assert registry=={"version":1,"directories":[str(results.resolve())]}
+    runner.run_requests(requests,results)
+    assert json.loads((requests/".verdict-directories.json").read_text())==registry
+
+
+def test_invalid_output_registry_blocks_before_any_cli_call(monkeypatch, dirs):
+    requests, results=dirs
+    save_request(requests)
+    (requests/".verdict-directories.json").write_text('{"version":1,"directories":[1]}')
+    calls=[];fake_backend(monkeypatch,lambda *args:calls.append(args))
+    result=CliRunner().invoke(runner.main,["--requests",str(requests),"--verdicts",str(results)])
+    assert result.exit_code==1 and "registry" in result.output
+    assert calls==[]

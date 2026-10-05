@@ -248,9 +248,9 @@ def test_oversize_request_trims_only_sources_preserves_quotes_rubric_and_receipt
     assert check_evidence(evidence, fetched)["passed"]
     request = external_judge.build_request("offline-candidate", scope, QUESTION, fetched, evidence)
     serialized = json.dumps(request, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
-    assert len(serialized) <= external_judge.REQUEST_CHARACTER_LIMIT == 60000
+    assert len(serialized) <= external_judge.REQUEST_CHARACTER_LIMIT == 150000
     assert request["trimming"]["enabled"] is True
-    assert request["trimming"]["character_limit"] == 60000
+    assert request["trimming"]["character_limit"] == 150000
     assert request["verdict_schema"] == output_model(QuestionQualitySignature).model_json_schema()
     prompt = request["judge_prompt"]
     assert " ".join(QuestionQualitySignature.instructions.split()) in " ".join(prompt.split())
@@ -311,6 +311,55 @@ def test_request_bound_does_not_drop_rubric_or_question_to_force_fit():
     from shared.cert_context import plan_questions
 
     scope = plan_questions("machine-learning-engineer", 1, objective_ids=[OBJECTIVE])[0]
-    scope = {**scope, "domain_prompt": scope["domain_prompt"] + "Scope context. " * 6000}
+    scope = {**scope, "domain_prompt": scope["domain_prompt"] + "Scope context. " * 16000}
     with pytest.raises(ValueError, match="character bound"):
         external_judge.build_request("offline-candidate", scope, QUESTION, [source()], receipts())
+
+
+
+def test_full_cited_text_between_old_and_new_limit_is_not_trimmed():
+    from shared import external_judge
+    from shared.cert_context import plan_questions
+    scope=plan_questions("machine-learning-engineer",1,objective_ids=[OBJECTIVE])[0]
+    text="FULL_DOCUMENT_SUPPORT " * 4000 + " ".join(QUOTES)
+    fetched=[source(text)]
+    checked=check_evidence(receipts(),fetched)
+    request=external_judge.build_request("full-source",scope,QUESTION,fetched,checked["options"])
+    size=len(json.dumps(request,indent=2,ensure_ascii=False)+"\n")
+    assert 60000 < size <= external_judge.REQUEST_CHARACTER_LIMIT==150000
+    assert request["trimming"]["enabled"] is False
+    assert text in request["judge_prompt"]
+    assert request["trimming"]["sources"][0]["windows"]==[[0,len(text)]]
+
+
+def test_largest_cited_source_is_trimmed_first_others_stay_full():
+    from shared import external_judge
+    from shared.cert_context import plan_questions
+    scope=plan_questions("machine-learning-engineer",1,objective_ids=[OBJECTIVE])[0]
+    large=source("large source passage " * 10000 + " ".join(QUOTES[:2]))
+    small=source("SMALL_FULL_TEXT " * 2000 + " ".join(QUOTES[2:]),URL+"/smaller")
+    items=receipts()
+    for item in items[2:]:item["url"]=small["url"]
+    fetched=[small,large]
+    checked=check_evidence(items,fetched); assert checked["passed"]
+    before=json.dumps(fetched,sort_keys=True)
+    request=external_judge.build_request("largest-first",scope,QUESTION,fetched,checked["options"])
+    records={record["url"]:record for record in request["trimming"]["sources"]}
+    assert request["trimming"]["enabled"]
+    assert records[large["url"]]["trimmed"] and records[large["url"]]["margin"]==8000
+    assert not records[small["url"]]["trimmed"]
+    assert small["text"] in request["judge_prompt"]
+    assert json.dumps(fetched,sort_keys=True)==before
+    assert len(json.dumps(request,indent=2,ensure_ascii=False)+"\n")<=150000
+
+
+def test_wide_windows_are_not_silently_narrowed_to_meet_limit(monkeypatch):
+    from shared import external_judge
+    from shared.cert_context import plan_questions
+    scope=plan_questions("machine-learning-engineer",1,objective_ids=[OBJECTIVE])[0]
+    text=("irrelevant " * 18000) + (" separator passage " * 2000).join(QUOTES)
+    fetched=[source(text)]
+    checked=check_evidence(receipts(),fetched); assert checked["passed"]
+    monkeypatch.setattr(external_judge,"REQUEST_CHARACTER_LIMIT",20000)
+    with pytest.raises(ValueError,match="wide quote-centered"):
+        external_judge.build_request("too-large",scope,QUESTION,fetched,checked["options"])

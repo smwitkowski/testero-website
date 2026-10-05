@@ -21,7 +21,7 @@ from shared import cli_models
 from shared.cli_models import output_model, parse_output
 from shared.quality_gate import QuestionQualitySignature
 
-REQUEST_CHARACTER_LIMIT = 60000
+from shared.external_judge import REQUEST_CHARACTER_LIMIT
 SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
 ALLOWED_MODELS = {"claude", "claude/claude-sonnet-5-5"}
 
@@ -83,7 +83,7 @@ def _read_request(path, ident, canonical):
             raw = stream.read(4 * REQUEST_CHARACTER_LIMIT + 1)
         text = raw.decode("utf-8")
         if len(text) > REQUEST_CHARACTER_LIMIT:
-            raise RequestValidationError("Request exceeds the 60000-character limit")
+            raise RequestValidationError(f"Request exceeds the {REQUEST_CHARACTER_LIMIT}-character limit")
         request = json.loads(text, object_pairs_hook=_pairs,
                              parse_constant=lambda _: (_ for _ in ()).throw(ValueError()))
     except RequestValidationError:
@@ -144,6 +144,33 @@ def _safe_failure(error):
     return "RequestRunnerError", "Request could not be completed or saved"
 
 
+def _record_verdict_directory(requests, verdicts):
+    """Track output directories so re-export cannot silently reuse stale verdicts."""
+    path = requests / ".verdict-directories.json"
+    _no_symlinks(path)
+    directories = []
+    if path.exists():
+        try:
+            if not path.is_file():
+                raise ValueError()
+            payload = cli_models._load_json(path.read_text(encoding="utf-8"))
+            if (not isinstance(payload, dict) or set(payload) != {"version", "directories"}
+                    or type(payload["version"]) is not int or payload["version"] != 1
+                    or not isinstance(payload["directories"], list)
+                    or any(not isinstance(item, str) or not Path(item).is_absolute()
+                           for item in payload["directories"])):
+                raise ValueError()
+            directories = payload["directories"]
+        except (OSError, UnicodeError, ValueError, TypeError, RecursionError):
+            raise click.ClickException("Invalid verdict-directory registry; export and judging are blocked") from None
+    target = str(verdicts.resolve())
+    if target not in directories:
+        try:
+            _publish(path, {"version": 1, "directories": sorted(set([*directories, target]))}, exclusive=False)
+        except OSError:
+            raise click.ClickException("Cannot record verdict-directory registry safely") from None
+
+
 def run_requests(requests, verdicts, *, judge_model="claude", parallel=3):
     """Run a resumable locked batch, submitting at most parallel requests at once."""
     if not isinstance(judge_model, str) or judge_model not in ALLOWED_MODELS:
@@ -159,7 +186,8 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3):
         raise click.ClickException("Requests and verdicts must be separate directories")
     try:
         verdicts.mkdir(parents=True, exist_ok=True)
-        paths = sorted(requests.glob("*.json"))
+        paths = sorted(path for path in requests.glob("*.json")
+                       if path.name != ".verdict-directories.json")
     except OSError:
         raise click.ClickException("Cannot prepare request and verdict directories") from None
     if any(not SAFE_ID.fullmatch(path.stem) for path in paths):
@@ -211,7 +239,9 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3):
                 failure = ("RequestRunnerError", "Request failure record could not be saved")
             return ident, "failed", failure
 
-    with batch_lock(verdicts):
+    # Exporters take the same request-directory lock before rewriting prompts.
+    with batch_lock(requests), batch_lock(verdicts):
+        _record_verdict_directory(requests, verdicts)
         failures = verdicts / ".failures"
         _no_symlinks(failures)
         try:
