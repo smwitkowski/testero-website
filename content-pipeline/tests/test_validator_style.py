@@ -146,11 +146,11 @@ def test_why_wrong_reasoning_remains_a_warning(question):
     assert any("should explain why it's wrong" in warning for warning in result.warnings)
 
 
-def test_generic_scenario_and_banned_option_checks_remain(question):
+def test_banned_options_still_fail_without_scenario_keyword_rule(question):
     question["stem"] = "A workload runs with separate identities and permissions. Which role meets the requirements?"
     question["distractor_1"] = "All of the above"
     errors = validate_question(question).errors
-    assert any("scenario" in error for error in errors)
+    assert not any("scenario" in error for error in errors)
     assert any("banned pattern" in error for error in errors)
 
 
@@ -176,3 +176,43 @@ def test_original_cached_pilot_content(artifact_name, count):
         # No cleanup or normalization: validate exactly the original artifact text.
         result = validate_question(data)
         assert result.is_valid, f"{artifact_name} item {candidate['index']}: {result.errors}"
+
+
+REAL_THIRD_PERSON_CASES = json.loads(
+    (Path(__file__).parent / "fixtures/pmle_batch2_schema_failures.json").read_text()
+)["cases"]
+
+
+@pytest.mark.parametrize("case", REAL_THIRD_PERSON_CASES, ids=lambda item: str(item["index"]))
+def test_real_batch2_third_person_stems_pass_schema_without_rewording(case):
+    question = case["question"]
+    assert question["stem"].startswith("A machine learning engineer")
+    assert case["schema_errors"] == ["Stem does not contain scenario indicators (e.g., 'you', 'your team', 'company', 'client')"]
+    result = validate_question(question)
+    assert result.is_valid and result.errors == []
+    assert result.review_status == "UNREVIEWED"
+    assert "has_scenario" not in result.stem_metrics
+
+
+@pytest.mark.parametrize("case", REAL_THIRD_PERSON_CASES, ids=lambda item: str(item["index"]))
+@pytest.mark.parametrize("failure", [
+    "missing_key", "empty_key", "empty_option", "duplicate_option", "banned_option",
+    "missing_rationale", "empty_rationale", "short_rationale", "url", "citation",
+    "short_stem", "no_question_mark",
+])
+def test_structural_failures_still_reject_real_third_person_questions(case, failure):
+    question = dict(case["question"])
+    if failure == "missing_key": del question["correct_answer"]
+    elif failure == "empty_key": question["correct_answer"] = ""
+    elif failure == "empty_option": question["distractor_3"] = ""
+    elif failure == "duplicate_option": question["distractor_1"] = question["correct_answer"]
+    elif failure == "banned_option": question["distractor_2"] = "All of the above"
+    elif failure == "missing_rationale": del question["distractor_3_explanation"]
+    elif failure == "empty_rationale": question["distractor_3_explanation"] = ""
+    elif failure == "short_rationale": question["correct_explanation"] = "Too short."
+    elif failure == "url": question["distractor_2_explanation"] += " https://example.invalid/docs"
+    elif failure == "citation": question["distractor_1_explanation"] += " [123]"
+    elif failure == "short_stem": question["stem"] = "Why?"
+    elif failure == "no_question_mark": question["stem"] = question["stem"].rstrip().removesuffix("?") + "."
+    result = validate_question(question)
+    assert not result.is_valid and result.errors

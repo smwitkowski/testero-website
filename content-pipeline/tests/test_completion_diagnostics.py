@@ -140,7 +140,7 @@ def test_native_capture_never_reads_unapproved_fields_or_values():
                 raise AssertionError("Unapproved field: " + name)
             return self.values[name]
     usage = Allowlisted(dict(prompt_tokens=1, completion_tokens=2, total_tokens=3,
-                             input_tokens=None, output_tokens=None))
+                             input_tokens=None, output_tokens=None, completion_tokens_details=None))
     choice = Allowlisted(dict(finish_reason="stop", native_finish_reason="STOP"))
     response = Allowlisted(dict(choices=[choice], usage=usage))
     capture = CompletionDiagnostics()
@@ -216,3 +216,26 @@ def test_finite_integer_usage_does_not_overflow_diagnostics():
                             "usage": {"prompt_tokens": 10 ** 1000, "completion_tokens": 2}})
     assert capture.failure() == {"finish_reason": "stop",
                                  "usage": {"prompt_tokens": 10 ** 1000, "completion_tokens": 2}}
+
+
+@pytest.mark.parametrize("reasoning", [6000, 0, True, -1, float("nan"), float("inf"), "6000", None])
+def test_reasoning_token_counter_is_allowlisted_without_hidden_text(reasoning):
+    capture = CompletionDiagnostics()
+    capture.observe_native({"choices": [{"finish_reason": "length"}], "usage": {
+        "completion_tokens": 7996, "completion_tokens_details": {
+            "reasoning_tokens": reasoning, "reasoning_content": "PRIVATE", "headers": "PRIVATE"}}})
+    expected = {"completion_tokens": 7996}
+    if type(reasoning) is int and reasoning >= 0:
+        expected["completion_tokens_details"] = {"reasoning_tokens": reasoning}
+    assert capture.failure() == {"finish_reason": "length", "usage": expected}
+    assert "PRIVATE" not in str(capture.failure())
+
+
+def test_generation_budget_is_16000_but_citation_default_unchanged(monkeypatch):
+    output = {name: name + " text" for name in generator.QUESTION_FIELDS}
+    lm = DummyLM([{**output, "reasoning": "Short"}])
+    factory = Mock(return_value=lm)
+    monkeypatch.setattr(generator, "_generation_lm", factory)
+    assert generator.generate_question("Objective", "Docs", model="offline/model") == output
+    factory.assert_called_once_with("offline/model", max_tokens=16000)
+    assert generator.cite_question.__kwdefaults__["max_tokens"] == 8000

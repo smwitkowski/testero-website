@@ -434,3 +434,62 @@ def test_transport_diagnostics_attribute_is_not_trusted(generation):
     assert "PRIVATE" not in text + outcome.output
     row = json.loads(text)["candidates"][0]
     assert "diagnostics" not in row and "raw_response" not in row
+
+
+@pytest.mark.parametrize("failure,stage", [
+    ("schema", "schema"), ("mechanical", "mechanical"), ("duplicate", "duplicate"),
+    ("judge", "judge"), ("persistence", "persistence"), ("transport", "generation"),
+])
+def test_every_nonaccepted_candidate_has_explicit_gate_reason(generation, failure, stage):
+    if failure == "schema":
+        generation[2]["stem"] = "Short"
+    elif failure == "mechanical":
+        generation[2]["evidence"][0]["quote"] = "Not in source"
+    elif failure == "duplicate":
+        generation[4].side_effect = lambda *args, **kwargs: {key: value for key, value in generation[2].items() if key != "evidence"}
+    elif failure == "judge":
+        generation[5].return_value = JudgeVerdict(False, 0.6, "Unsupported explanation", generate.DEFAULT_JUDGE_MODEL)
+    elif failure == "persistence":
+        generation[0].insert_answers_batch.return_value = []
+    else:
+        error = RuntimeError("PRIVATE provider exception body")
+        error.diagnostics = {"raw_response": "PRIVATE"}
+        generation[4].side_effect = error
+    flags = ["--n-questions", "2"] if failure == "duplicate" else []
+    outcome = invoke(generation, *flags)
+    assert outcome.exit_code != 0
+    artifact_text = (generation[-1] / "pilot.json").read_text()
+    rows = json.loads(artifact_text)["candidates"]
+    failed = [row for row in rows if not row["accepted"]]
+    assert failed
+    assert all(row["reason"].strip() and row["failure_stage"] == stage for row in failed)
+    assert "PRIVATE" not in artifact_text + outcome.output
+    assert all("reason" not in row and "failure_stage" not in row for row in rows if row["accepted"])
+
+
+@pytest.mark.parametrize("index", [9, 13, 15])
+def test_real_batch2_third_person_stems_pass_schema_but_still_require_judge(generation, index):
+    from pathlib import Path
+    fixture = json.loads((Path(__file__).parent / "fixtures/pmle_batch2_schema_failures.json").read_text())
+    case = next(item for item in fixture["cases"] if item["index"] == index)
+    generation[4].side_effect = None
+    generation[4].return_value = case["question"]
+    generation[5].return_value = JudgeVerdict(False, 0.6, "Independent judge rejected content", generate.DEFAULT_JUDGE_MODEL)
+    outcome = invoke(generation, "--dry-run", "--objective", case["objective_id"])
+    assert outcome.exit_code != 0
+    row = json.loads((generation[-1] / "pilot.json").read_text())["candidates"][0]
+    assert row["schema_check"] == {"passed": True, "errors": []}
+    assert row["failure_stage"] == "judge"
+    assert row["reason"] == "Independent judge rejected content"
+    assert not row["accepted"]
+    generation[4].cite_mock.assert_called_once()
+    generation[5].assert_called_once()
+    generation[1].assert_not_called()
+
+
+def test_batch2_schema_fixture_matches_original_when_available():
+    from pathlib import Path
+    fixture = json.loads((Path(__file__).parent / "fixtures/pmle_batch2_schema_failures.json").read_text())
+    artifact = Path(__file__).parents[1] / fixture["provenance"]["artifact"]
+    if artifact.exists():
+        assert hashlib.sha256(artifact.read_bytes()).hexdigest() == fixture["provenance"]["artifact_sha256"]

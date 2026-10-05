@@ -16,6 +16,7 @@ from shared.doc_search import search_objective_docs, documentation_context
 from shared.evidence import check_evidence
 from shared.llm_generator import generate_question, cite_question, GenerationOutputError
 from shared.llm_limits import MaxTokensTruncation
+from shared.completion_diagnostics import _safe_completion
 from shared.model_policy import DEFAULT_GENERATOR_MODEL, DEFAULT_JUDGE_MODEL, require_independent_models
 from shared.quality_gate import JudgeVerdict, QUESTION_FIELDS, judge_question
 from shared.validator import validate_question
@@ -66,6 +67,12 @@ def write_artifact(path, artifact):
     temp = path.with_suffix(path.suffix + ".tmp")
     temp.write_text(json.dumps(artifact_json_value(artifact), indent=2, ensure_ascii=False, allow_nan=False) + "\n")
     temp.replace(path)
+
+
+def reject_candidate(entry, stage, reason):
+    """Record a bounded gate reason without exposing provider exception bodies."""
+    entry["failure_stage"] = stage
+    entry["reason"] = _safe_completion(reason)[:1000]
 
 
 def persist_candidate(client, scope, question, judge, grounding, exam, domain_id, run_id, difficulty):
@@ -156,6 +163,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                  "judge_verdict": {"passed": False, "score": 0.0, "reason": "Not judged", "model": judge_model},
                  "accepted": False}
         payload["candidates"].append(entry)
+        stage = "documentation"
         try:
             sources = search_objective_docs(scope["objective_text"], scope["services"])
             if not sources:
@@ -164,8 +172,10 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             context = documentation_context(sources)
             if not context.strip():
                 raise ValueError("No fetched documentation text")
+            stage = "generation"
             raw = generate_question(scope["domain_prompt"], context, model=model,
                                     difficulty=difficulty, exam_subsection=scope["subsection"])
+            stage = "schema"
             question = clean_question(raw)
             entry.update({"stem": question["stem"], "options": [
                 {"label": label, "text": question[field]} for label, field in zip("ABCD", OPTION_FIELDS)],
@@ -173,7 +183,9 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             validation = validate_question(question)
             entry["schema_check"] = {"passed": validation.is_valid, "errors": validation.errors}
             if not validation.is_valid:
+                reject_candidate(entry, stage, "Schema validation failed: " + "; ".join(validation.errors))
                 continue
+            stage = "citation"
             checked = None
             for cite_attempt in range(2):
                 citation = cite_question(question, sources, model=model,
@@ -191,13 +203,16 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 if checked["passed"]:
                     break
             if not checked["passed"]:
+                reject_candidate(entry, "mechanical", "Mechanical evidence check failed: " + "; ".join(checked["errors"]))
                 continue
             entry["evidence"] = checked["options"]
             normalized = normalize_stem(question["stem"])
             if normalized in seen:
                 entry["duplicate"] = True
+                reject_candidate(entry, "duplicate", "Duplicate normalized stem within this batch")
                 continue
             seen.add(normalized)
+            stage = "judge"
             judge = judge_question(question, scope["domain_prompt"], documentation_context=context,
                                    model=judge_model, generator_model=model, option_evidence=checked["options"])
             entry["judge_verdict"] = {"passed": judge.passed, "score": judge.score, "reason": judge.reason, "model": judge.model}
@@ -207,20 +222,30 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             grounding.update({"generator_model": model, "judge_model": judge_model,
                               "evidence": checked["options"], "mechanical_check": entry["mechanical_check"]})
             entry["grounding"] = grounding
+            stage = "persistence"
             stored = True if dry_run else persist_candidate(client, scope, question, judge, grounding,
                 exam, domains[scope["domain_code"]], runs[scope["domain_code"]], difficulty)
             entry["accepted"] = judge.passed and stored
+            if not judge.passed:
+                reject_candidate(entry, "judge", judge.reason)
+                if not stored:
+                    entry["reason"] += "; candidate persistence also failed"
+            elif not stored:
+                reject_candidate(entry, stage, "Candidate persistence failed; founder approval remains blocked")
             if client is not None and stored:
                 run_counts[scope["domain_code"]] += 1
             accepted += int(entry["accepted"])
         except Exception as exc:
             # Never copy provider exception bodies/credentials into artifacts or stdout.
             entry["error_class"] = type(exc).__name__
+            reject_candidate(entry, stage, stage.capitalize() + " request failed")
             if isinstance(exc, GenerationOutputError) and isinstance(exc.raw_response, str):
                 entry["raw_response"] = exc.raw_response
             if isinstance(exc, (GenerationOutputError, MaxTokensTruncation)) and getattr(exc, "diagnostics", None):
                 entry["diagnostics"] = exc.diagnostics
         finally:
+            if not entry["accepted"] and not entry.get("reason") and not entry.get("error_class"):
+                reject_candidate(entry, stage, stage.capitalize() + " failed before acceptance")
             write_artifact(artifact, payload)
     if client is not None:
         for code, run_id in runs.items():
