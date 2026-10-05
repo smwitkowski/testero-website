@@ -289,7 +289,9 @@ old verdicts, promote DRAFTs, or claim more live accepts.
   initial judge `Not judged` placeholder without a top-level stopping reason.
   Every future non-accepted candidate now records `failure_stage` and `reason`,
   including schema, mechanical, duplicate, judge, persistence and request stops.
-  The schema keyword rule is unchanged; replacing it requires a separate decision.
+  Approved follow-up removes the schema keyword rule and its style penalty.
+  The same third-person stems now pass structural validation without rewording;
+  independent judge clarity/relevance and the mechanical evidence gate still apply.
 - **#16 generation token limit:** `length`, 16,874 input / 7,996 completion /
   24,870 total tokens; only 1,454 characters of a partial visible reasoning field
   were retained. Hidden reasoning consumption is plausible but not measurable:

@@ -468,21 +468,22 @@ def test_every_nonaccepted_candidate_has_explicit_gate_reason(generation, failur
 
 
 @pytest.mark.parametrize("index", [9, 13, 15])
-def test_real_batch2_schema_reject_records_cause_and_stops_before_citation(generation, index):
+def test_real_batch2_third_person_stems_pass_schema_but_still_require_judge(generation, index):
     from pathlib import Path
     fixture = json.loads((Path(__file__).parent / "fixtures/pmle_batch2_schema_failures.json").read_text())
     case = next(item for item in fixture["cases"] if item["index"] == index)
     generation[4].side_effect = None
     generation[4].return_value = case["question"]
+    generation[5].return_value = JudgeVerdict(False, 0.6, "Independent judge rejected content", generate.DEFAULT_JUDGE_MODEL)
     outcome = invoke(generation, "--dry-run", "--objective", case["objective_id"])
     assert outcome.exit_code != 0
     row = json.loads((generation[-1] / "pilot.json").read_text())["candidates"][0]
-    assert row["schema_check"] == {"passed": False, "errors": case["schema_errors"]}
-    assert row["failure_stage"] == "schema"
-    assert "scenario indicators" in row["reason"]
-    assert row["judge_verdict"]["reason"] == "Not judged"
-    generation[4].cite_mock.assert_not_called()
-    generation[5].assert_not_called()
+    assert row["schema_check"] == {"passed": True, "errors": []}
+    assert row["failure_stage"] == "judge"
+    assert row["reason"] == "Independent judge rejected content"
+    assert not row["accepted"]
+    generation[4].cite_mock.assert_called_once()
+    generation[5].assert_called_once()
     generation[1].assert_not_called()
 
 

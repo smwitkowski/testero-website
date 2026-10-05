@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from shared.validator import (
     validate_question, ValidationResult, format_validation_errors,
-    _check_scenario_presence, _check_action_question, _extract_gcp_services,
+    _check_action_question, _extract_gcp_services,
     _check_why_wrong_reasoning, _compute_string_similarity
 )
 
@@ -227,15 +227,6 @@ def test_format_validation_errors_invalid():
     assert "Choice A is empty" in formatted
 
 
-def test_check_scenario_presence():
-    """Test scenario presence detection."""
-    assert _check_scenario_presence("You are working for a company") is True
-    assert _check_scenario_presence("Your team needs to deploy") is True
-    assert _check_scenario_presence("The client requires") is True
-    assert _check_scenario_presence("A machine learning model") is False
-    assert _check_scenario_presence("What is the best approach?") is False
-
-
 def test_check_action_question():
     """Test action question detection."""
     assert _check_action_question("What should you do?") is True
@@ -273,7 +264,7 @@ def test_compute_string_similarity():
 
 
 def test_validate_question_no_scenario():
-    """Test validation fails when stem lacks scenario indicators."""
+    """Question structure does not depend on scenario keywords."""
     question_data = {
         "stem": "A machine learning model needs to be deployed. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
@@ -287,8 +278,8 @@ def test_validate_question_no_scenario():
     }
     
     result = validate_question(question_data)
-    assert result.is_valid is False
-    assert any("scenario" in error.lower() for error in result.errors)
+    assert result.is_valid is True
+    assert not any("scenario" in error.lower() for error in result.errors)
 
 
 def test_validate_question_no_action_question():
@@ -406,9 +397,8 @@ def test_validate_question_stem_metrics():
     
     result = validate_question(question_data)
     assert hasattr(result, 'stem_metrics')
-    assert 'has_scenario' in result.stem_metrics
+    assert 'has_scenario' not in result.stem_metrics
     assert 'has_action_question' in result.stem_metrics
-    assert result.stem_metrics['has_scenario'] is True
     assert result.stem_metrics['has_action_question'] is True
 
 

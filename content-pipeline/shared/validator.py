@@ -66,24 +66,6 @@ def _extract_gcp_services(text: str) -> List[str]:
     return found_services
 
 
-def _check_scenario_presence(stem: str) -> bool:
-    """Check if stem contains scenario indicators.
-    
-    Args:
-        stem: Question stem text
-        
-    Returns:
-        True if scenario indicators found
-    """
-    scenario_patterns = [
-        r'\byou\b', r'\byour\b', r'\byour team\b', r'\byour company\b',
-        r'\bcompany\b', r'\bclient\b', r'\borganization\b', r'\bteam\b',
-        r'\borganization\'s\b', r'\bclient\'s\b'
-    ]
-    stem_lower = stem.lower()
-    return any(re.search(pattern, stem_lower) for pattern in scenario_patterns)
-
-
 def _check_action_question(stem: str) -> bool:
     """Check that the stem ends with a question, without restricting phrasing."""
     return stem.rstrip().endswith("?")
@@ -134,7 +116,7 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
     
     Validates:
     - Required fields present & non-empty
-    - Stem quality (length, scenario presence, action question)
+    - Stem structure (length and final question mark); scenario quality is judged independently
     - Option quality (non-empty, no near duplicates, no banned patterns)
     - Explanation quality (length, no URLs/citations, why-wrong reasoning)
     
@@ -204,7 +186,6 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
             "length": stem_length,
             "word_count": word_count,
             "sentence_count": sentence_count,
-            "has_scenario": False,
             "has_action_question": False,
         }
         
@@ -215,13 +196,6 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
         elif word_count < 25:
             warnings.append(f"Stem word count ({word_count}) is below recommended minimum (25 words)")
             style_score -= 0.1
-        
-        # Scenario presence check
-        has_scenario = _check_scenario_presence(stem)
-        stem_metrics["has_scenario"] = has_scenario
-        if not has_scenario:
-            errors.append("Stem does not contain scenario indicators (e.g., 'you', 'your team', 'company', 'client')")
-            style_score -= 0.3
         
         # Action question check
         has_action_question = _check_action_question(stem)
