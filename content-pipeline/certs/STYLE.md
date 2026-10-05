@@ -78,10 +78,10 @@ or infer exam frequencies from them.
 
 | Rule | Contract |
 | --- | --- |
-| S1 — Business first | Open with who you are and what the ML system does for the business, in one or two sentences. |
+| S1 — Purpose first | Name the business application or a concrete ML task in the opening, not an abstract model deployment. Business-first and task-first are both valid; the planner assigns roughly one third task-first openings and records `opening_style`. Hints never expand exam scope. |
 | S2 — Facts as story | Describe what exists and what happened in plain narrative. Use a numbered list only for existing workflow steps, never requirements. |
 | S3 — Constraints as wants or policies | At most two explicit wants or policies. Do not pack extra wants into one sentence or pre-exclude a distractor with “without X” or an equivalent approach-specific ban. Let product/ML knowledge eliminate alternatives. Never use “must satisfy the following requirements” or “Stakeholders have established”. |
-| S4 — Natural task | End with “What should you do?”. Use another question only when naturally better, such as “How should you reconfigure the architecture?”. Never name settings or configuration files in the task. |
+| S4 — Natural task | Target about 70% “What should you do?” per batch. Rotate natural variants for the rest, with `question_line` recorded by the planner. Use a variant only when it fits the decision; do not invent a first-step premise. Every question line must end with “?” and must not name settings or config objects. |
 | S5 — Reading size | Use 50–110 words and one paragraph, two at most. This is authoring policy, not a claim about all sample lengths. |
 | S6 — Plain register | State goals in plain language. Use product names only as needed, with current short names such as Agent Platform Pipelines and Agent Platform Workbench. Use “Gemini Enterprise Agent Platform” at most once. Do not put setting names, enum values, file formats or code in the stem. |
 | S7 — Vary the moment | At most half of a plan may be fresh design. Rotate already-running situations: recent deployment, monitoring, migration, cost/latency reduction and security incident. The planner records `scenario_moment` on every item and embeds the hint in its prompt. Its cycle starts with operational moments, so N=1 is not greenfield. The hint never expands the selected objective's scope. |
@@ -137,6 +137,21 @@ On 2026-10-04 an agent viewed only the free first page of one public dump site f
 - **PMLE:** 10 items, all 4 options, none choose-N. Stems were ~30–120 words, typically 60–80. Every product name used pre-Vertex branding ("AI Platform", AutoML Tables, Kubeflow), so these items predate the June 2026 guide by years.
 - **Associate Cloud Engineer:** 10 items, all 4 options, none choose-N. Stems were ~25–65 words, typically 40–50. 9 of 10 were scenarios, mostly Compute Engine, IAM and console or gcloud tasks.
 - **Verdict:** the format matches the official samples above, and the topics are stale against the current guides. Dumps add no signal the official sources don't already give, so the process does not depend on them.
+
+### Aggregate-only calibration, 2026-10-05
+
+The founder supplied a structural review of public pre-rebrand dump pages under
+D-024. About 63% of openings used business scenarios and 37% began with a concrete
+ML task. About 42% used the default task question, compared with the reported
+72–88% in official samples and 100% in our round 3. This supports a roughly
+one-third task-first mix and a 70% default-question target, not a live-exam frequency
+claim. In the same review, 6 of 19 marked keys were longest (about 32%), and stems
+had about 1.5 constraints; those aggregates support rules-v2 O4 and S3.
+
+These are founder-reported reference-only aggregates, not answer evidence or a
+representative exam study. No item text is retained or fed to generation. This
+calibration update made no network requests and did not inspect or trust dump
+answers. Product documentation remains the only factual authority.
 
 ## Case studies: shared context changes reading cost
 

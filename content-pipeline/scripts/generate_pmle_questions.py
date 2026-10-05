@@ -176,7 +176,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     awaiting = 0
     batch_stop = None
     for index, scope in enumerate(plan, 1):
-        entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment")},
+        entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line")},
                  "index": index, "stem": None, "options": [], "key": "A", "rationales": {},
                  "evidence": [], "citation_attempts": [], "mechanical_check": {"passed": False, "errors": ["No fetched evidence"]},
                  "judge_verdict": {"passed": False, "score": 0.0, "reason": "Not judged", "model": judge_model},

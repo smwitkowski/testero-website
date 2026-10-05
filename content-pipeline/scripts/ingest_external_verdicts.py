@@ -16,7 +16,7 @@ import click
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.generate_pmle_questions import database_client as _database_client, persist_candidate, write_artifact
-from shared.cert_context import SCENARIO_MOMENTS, plan_questions
+from shared.cert_context import plan_questions
 from shared.cli_models import parse_output
 from shared.dedupe import normalize_stem
 from shared.doc_search import documentation_context
@@ -84,14 +84,13 @@ def _scope(payload, entry):
     if type(index) is not int or not 1 <= index <= len(payload["plan"]):
         raise ValueError("Invalid candidate plan index")
     scope = payload["plan"][index - 1]
-    for key in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment"):
+    for key in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line"):
         if entry.get(key) != scope.get(key):
             raise ValueError("Candidate does not match its frozen plan")
     if scope["cert_id"] != payload["cert_id"]:
         raise ValueError("Certification does not match the artifact")
-    current = plan_questions(payload["cert_id"], len(SCENARIO_MOMENTS),
-                             objective_ids=[scope["objective_id"]])
-    expected = next((item for item in current if item["scenario_moment"] == scope["scenario_moment"]), None)
+    current = plan_questions(payload["cert_id"], index, objective_ids=[scope["objective_id"]])
+    expected = current[index - 1]
     # Offset is planning provenance, not rubric scope; explicit-objective replay uses zero.
     if expected is None or {k: v for k, v in scope.items() if k != "objective_offset"} != {
             k: v for k, v in expected.items() if k != "objective_offset"}:

@@ -198,6 +198,12 @@ explicit apply. This command was not run as part of the offline code change.
 
 ### Rules v2: round 4, 45 candidates
 
+The planner records `opening_style` (roughly one third task-first) and
+`question_line` (about 70% default, natural variants for the rest) on each plan item
+and candidate. Every opening names an application or concrete ML task; hints
+never expand scope or require an unnatural first-step question. The validator
+still requires a final question mark, not an exact phrase.
+
 Rules v2 keeps at most two explicit wants/policies, requires knowledge-dependent
 distractors, avoids dated model versions, and tests approach choices even for
 configuration-heavy objective 1.2:3. O4 authoring targets ±20% option lengths and

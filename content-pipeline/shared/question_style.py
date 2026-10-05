@@ -1,7 +1,9 @@
 """Founder-owned authoring rules and original style exemplars, not answer evidence."""
 
-STYLE_RULES = """S1 Business first: open with who you are and what the ML system does for the business, in 1–2
-sentences.
+STYLE_RULES = """S1 Purpose first: the opening must name the business application or a concrete ML task,
+in 1–2 sentences. Business-first and task-first openings are both valid. Roughly one third
+of a batch may be task-first, as the planner records in opening_style. Never use an abstract
+model deployment with no application or task purpose; do not expand the selected objective.
 S2 Facts as story: describe what exists and what happened in plain narrative. A numbered list
 only for existing workflow steps, never requirements.
 S3 Constraints as wants or policies: at most two explicit wants or policies, phrased
@@ -10,8 +12,11 @@ story; do not stack requirements or pack extra wants into one sentence. Never "m
 the following requirements" or "Stakeholders have established". Do not write "without X",
 "do not use X", or an equivalent ban when X names a target approach and directly negates a
 distractor. Let Google Cloud/ML product knowledge eliminate that approach, not the stem.
-S4 End "What should you do?"; another question only if naturally better e.g. "How should you
-reconfigure the architecture?". Never name settings/config files in it.
+S4 Natural question line: target about 70% "What should you do?" in a batch. The planner
+rotates and records question_line hints; the rest use natural variants suited to the decision,
+such as "Which approach should you use?" or "What should you do first?". Do not invent a
+first-step premise just to fit a hint. Always end with '?'. Never name settings or config
+objects in the question line. The batch target is not a single-item hard gate.
 S5 50–110 words; one paragraph, two at most. The mechanical acceptance range is 40–130 words.
 S6 Plain register/goals in plain language. Product names only as needed, current short names
 Agent Platform Pipelines, Agent Platform Workbench. Full "Gemini Enterprise Agent Platform" at

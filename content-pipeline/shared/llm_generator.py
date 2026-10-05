@@ -25,7 +25,7 @@ class PmleQuestionSignature(dspy.Signature):
 
     Follow the supplied STYLE guidance and certification level. Produce exactly
     four reasonable options with one best answer and per-option explanations.
-    Use the founder's business-first style, at the supplied certification level.
+    Use the founder's purpose-first style, allowing business-first or task-first openings, at the supplied certification level.
     A is correct_answer; B, C and
     D are distractor_1, distractor_2 and distractor_3 respectively.
     Every technical claim in all four explanations must be documented in the

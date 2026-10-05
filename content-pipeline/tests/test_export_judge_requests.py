@@ -194,9 +194,11 @@ def test_force_rejudges_previous_dry_run_and_preserves_nonjudge_fields(case):
 
 def test_early_rejects_are_skipped_without_question_regeneration(case):
     payload = case[2]
-    payload["plan"].append(deepcopy(payload["plan"][0]))
+    from shared.cert_context import plan_questions
+    second = plan_questions(payload["cert_id"], 2, objective_ids=[payload["plan"][0]["objective_id"]])[1]
+    payload["plan"].append(second)
     scope = payload["plan"][1]
-    reject = {**{key: scope[key] for key in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment")},
+    reject = {**{key: scope[key] for key in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line")},
               "index": 2, "candidate_id": candidate_id(2, scope, {}), "accepted": False,
               "stem": None, "options": [], "failure_stage": "generation", "reason": "Synthetic reject"}
     payload["candidates"].append(reject)
@@ -210,8 +212,11 @@ def test_early_rejects_are_skipped_without_question_regeneration(case):
 
 def test_all_builds_finish_before_any_request_is_replaced(case):
     payload = case[2]
-    payload["plan"].append(deepcopy(payload["plan"][0]))
+    from shared.cert_context import plan_questions
+    second = plan_questions(payload["cert_id"], 2, objective_ids=[payload["plan"][0]["objective_id"]])[1]
+    payload["plan"].append(second)
     other = deepcopy(payload["candidates"][0])
+    other.update({key: second[key] for key in ("scenario_moment", "opening_style", "question_line")})
     other["index"] = 2
     other["candidate_id"] = candidate_id(2, payload["plan"][1], export.candidate_question(other))
     other["sources"][0]["text_sha256"] = "0" * 64

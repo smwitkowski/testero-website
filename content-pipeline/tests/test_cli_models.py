@@ -62,7 +62,7 @@ def test_codex_command_schema_stdin_empty_cwd_and_cleanup(monkeypatch,tmp_path,m
         assert command[command.index("--sandbox")+1] == "read-only"
         schema = json.loads(Path(command[command.index("--output-schema")+1]).read_text())
         assert set(schema["required"]) == set(question())
-        assert "S1 Business first" in kwargs["input"]
+        assert "S1 Purpose first" in kwargs["input"]
         assert "Frozen official source text" in kwargs["input"]
         assert "OPENAI_API_KEY" not in kwargs["env"]
         assert kwargs["timeout"] == 10

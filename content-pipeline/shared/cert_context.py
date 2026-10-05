@@ -23,6 +23,23 @@ SCENARIO_MOMENTS = (
     "security incident", "greenfield",
 )
 
+# Global rotations are presentation hints, not quotas or scope selection.
+OPENING_STYLES = ("business-first", "business-first", "task-first")
+DEFAULT_QUESTION_LINE = "What should you do?"
+DEFAULT_QUESTION_LINE_TARGET_PERCENT = 70
+QUESTION_LINES = (
+    DEFAULT_QUESTION_LINE,
+    DEFAULT_QUESTION_LINE,
+    "Which approach should you use?",
+    DEFAULT_QUESTION_LINE,
+    DEFAULT_QUESTION_LINE,
+    "What should you do first?",
+    DEFAULT_QUESTION_LINE,
+    DEFAULT_QUESTION_LINE,
+    "How should you address this issue?",
+    DEFAULT_QUESTION_LINE,
+)
+
 PMLE_SECTION_CODES = {
     "1": "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
     "2": "COLLABORATING_TO_MANAGE_DATA_AND_MODELS",
@@ -220,6 +237,8 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
     offsets; None uses fresh local entropy. Children remain separate objectives.
     Scenario moments rotate independently of objective selection, starting with
     already-running workloads; greenfield stays <=50%, including a one-item plan.
+    Opening styles and question-line hints rotate globally without changing
+    objective order, weights or scope. Hints are not enforced wording quotas.
     """
     context = load_cert_context(cert_id)
     domains = context["domains"]
@@ -258,6 +277,8 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
     plan = []
     for index, (code, domain, objective, offset) in enumerate(targets):
         moment = SCENARIO_MOMENTS[index % len(SCENARIO_MOMENTS)]
+        opening_style = OPENING_STYLES[index % len(OPENING_STYLES)]
+        question_line = QUESTION_LINES[index % len(QUESTION_LINES)]
         prompt = domain_prompt(context, domain, objective["subsection"])
         prompt += f"\nTarget Objective: {objective['objective_id']}\n{objective['objective_context']}\nTest this objective specifically."
         prompt += f"\nScenario moment: {moment}."
@@ -269,10 +290,35 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
                 " Keep the selected objective's actual decision central; the moment"
                 " is context, not permission to add unsupported exam scope."
             )
+        prompt += f"\nOpening style: {opening_style}."
+        if opening_style == "task-first":
+            prompt += (
+                " Lead with the concrete task, then give the business/application"
+                " context and the selected scenario moment. Task-first does not"
+                " mean greenfield; retain the already-running workload when selected."
+            )
+        else:
+            prompt += " Lead with the business/application context, then the concrete task."
+        prompt += (
+            " Every opening must name a business application or a concrete ML task"
+            " relevant to the selected objective (for example, train a fraud classifier"
+            " or summarize articles). Never use an abstract task such as deploy a model"
+            " without its purpose. For non-ML objectives, name the concrete task"
+            " and its business application purpose; do not introduce ML beyond the"
+            " selected scope. Do not expand the selected exam scope."
+        )
+        prompt += (
+            f"\nQuestion line hint: {question_line}"
+            " Use this exact phrase when it fits the selected decision; otherwise use"
+            " a natural question-line variant ending in ?. Do not force 'first' when"
+            " the scenario has no sequencing decision or introduce a false premise."
+            " These are wording hints, not permission to expand the selected exam scope."
+        )
         plan.append({
             "cert_id": cert_id, "domain_code": code, "domain_name": domain["display_name"],
             "objective_id": objective["objective_id"], "guide_sha256": context["guide_sha256"],
             "objective_offset": offset, "scenario_moment": moment,
+            "opening_style": opening_style, "question_line": question_line,
             "objective_text": objective["objective_text"], "objective_context": objective["objective_context"],
             "services": list(objective["services"]), "subsection": objective["subsection"],
             "domain_prompt": prompt,

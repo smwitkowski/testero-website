@@ -378,3 +378,17 @@ def test_generation_stores_and_prints_length_report_and_new_schema(external_gene
     candidate=payload["candidates"][0]
     schema=read_request(env,candidate)["verdict_schema"]
     assert "distractors_need_knowledge" in schema["required"]
+
+
+def test_opening_and_question_line_hints_are_recorded_in_candidate_and_request(external_generation):
+    env=external_generation
+    result=invoke(env,"--n-questions","3")
+    assert result.exit_code==0,result.output
+    payload=read_artifact(env)
+    assert [entry["opening_style"] for entry in payload["candidates"]]==["business-first","business-first","task-first"]
+    for entry,scope in zip(payload["candidates"],payload["plan"]):
+        assert entry["opening_style"]==scope["opening_style"]
+        assert entry["question_line"]==scope["question_line"]
+        prompt=read_request(env,entry)["judge_prompt"]
+        assert "Opening style: " + scope["opening_style"] in prompt
+        assert "Question line hint: " + scope["question_line"] in prompt

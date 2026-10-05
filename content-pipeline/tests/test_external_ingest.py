@@ -24,7 +24,7 @@ def case(tmp_path, monkeypatch):
                 "text_sha256": hashlib.sha256(TEXT.encode()).hexdigest()}]
     evidence = check_evidence([{"option_label": label, "url": URL, "quote": quote}
                                for label, quote in zip("ABCD", QUOTES)], sources)["options"]
-    entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment")},
+    entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line")},
              "index": 1, "candidate_id": "synthetic-candidate", "key": "A", "stem": QUESTION["stem"],
              "options": [{"label": label, "text": QUESTION[field]} for label, field in zip("ABCD", generate.OPTION_FIELDS)],
              "rationales": {label: QUESTION[field] for label, field in zip("ABCD", generate.RATIONALE_FIELDS)},
@@ -229,12 +229,15 @@ def test_setup_and_completion_errors_are_safe(case, failure):
 def test_all_domains_resolved_before_creating_runs(case):
     extra = next(scope for scope in plan_questions("cloud-engineer", 8, seed=0)
                  if scope["domain_code"] != case[2]["plan"][0]["domain_code"])
+    # Replay its authoring hints at the actual second plan position.
+    extra = plan_questions("cloud-engineer", 2, objective_ids=[extra["objective_id"]])[1]
     # Extra planned candidate need not yet have a verdict to block unseeded-domain writes.
     case[2]["plan"].append(extra)
     save_input(case)
     case[3].get_domain_by_code.side_effect = [{"id": "seeded"}, None]
     result = invoke(case)
     assert result.exit_code == 1, result.output
+    assert case[3].get_domain_by_code.call_count == 2
     case[3].create_generation_run.assert_not_called()
     case[3].insert_question.assert_not_called()
 
@@ -292,7 +295,9 @@ def test_completed_stems_block_pending_duplicates_even_when_reordered(case):
              "accepted": False, "status": "awaiting_external_judge", "awaiting_external_judge": True}
     for field in ("persistence_status", "inserted_question_id", "external_verdict", "judge_verdict"):
         extra.pop(field, None)
-    payload["plan"].append(payload["plan"][0].copy())
+    second = plan_questions(payload["cert_id"], 2, objective_ids=[payload["plan"][0]["objective_id"]])[1]
+    payload["plan"].append(second)
+    extra.update({key: second[key] for key in ("scenario_moment", "opening_style", "question_line")})
     request_path = request_directory(case[0]) / (extra["candidate_id"] + ".json")
     request_path.write_text(json.dumps(build_request(extra["candidate_id"], payload["plan"][1], QUESTION,
                                                      extra["sources"], extra["evidence"])))
@@ -301,9 +306,12 @@ def test_completed_stems_block_pending_duplicates_even_when_reordered(case):
     payload["candidates"].insert(0, extra)
     case[0].write_text(json.dumps(payload))
     (case[1] / (extra["candidate_id"] + ".json")).write_text(json.dumps(case[5]))
+    ingest._validate_candidate(case[0],payload,extra)
     assert invoke(case).exit_code == 1
     assert case[3].insert_question.call_count == 1
     assert not saved(case)["candidates"][0]["accepted"]
+    # Request validation above passed; the ingest loop rejects the duplicate stem.
+    assert saved(case)["candidates"][0]["failure_stage"] == "external_request"
 
 
 @pytest.mark.parametrize("failure", ["missing", "malformed_json", "schema"])
@@ -441,3 +449,23 @@ def test_ingest_stores_and_prints_current_option_length_report(case):
     assert report["count"]==1 and report["accepted"]["count"]==1
     assert report["target_max_rate"]==.35
     assert "Option lengths: key-is-longest" in result.output
+
+
+@pytest.mark.parametrize("field",["opening_style","question_line"])
+def test_planned_authoring_hint_tampering_blocks_ingestion_before_client(case,field):
+    case[2]["candidates"][0][field]="Changed frozen hint"
+    save_input(case)
+    result=invoke(case)
+    assert result.exit_code!=0
+    case[4].assert_not_called()
+    assert not saved(case)["candidates"][0]["accepted"]
+
+
+def test_scope_replay_uses_actual_index_when_question_cycle_differs():
+    plans=plan_questions("machine-learning-engineer",45,objective_ids=["machine-learning-engineer:standard:1.1:5"])
+    assert plans[0]["scenario_moment"]==plans[6]["scenario_moment"]
+    assert plans[5]["question_line"]!=plans[11]["question_line"]
+    payload={"cert_id":"machine-learning-engineer","plan":plans}
+    for index in (1,3,6,7,12,30,45):
+        scope=plans[index-1]
+        assert ingest._scope(payload,{**scope,"index":index})==scope
