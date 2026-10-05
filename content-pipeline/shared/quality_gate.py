@@ -23,6 +23,9 @@ from typing import Any, Callable, Literal, Mapping
 import dspy
 
 from shared.model_policy import DEFAULT_JUDGE_MODEL, require_independent_models
+from shared.llm_limits import (
+    MaxTokensTruncation, TRUNCATION_REASON, SingleCallChatAdapter, reject_token_limit,
+)
 PASS_THRESHOLD = 0.8
 REVIEW_NOTES_SOURCE = "content_pipeline_judge"
 REVIEW_NOTES_VERSION = 1
@@ -95,15 +98,20 @@ class JudgeVerdict:
     score: float
     reason: str
     model: str
+    error_class: str | None = None
 
     def __post_init__(self) -> None:
-        if not _valid_verdict_fields(asdict(self)):
+        if (not _valid_verdict_fields(asdict(self))
+                or self.error_class not in (None, "MaxTokensTruncation")
+                or (self.error_class is not None and self.passed)):
             raise ValueError("Invalid quality judge verdict")
 
     def to_review_notes(self) -> str:
         """Serialize to the existing questions.review_notes text column."""
         return json.dumps(
-            {REVIEW_NOTES_SOURCE: {"version": REVIEW_NOTES_VERSION, **asdict(self)}},
+            {REVIEW_NOTES_SOURCE: {"version": REVIEW_NOTES_VERSION,
+                                   **{key: value for key, value in asdict(self).items()
+                                      if key != "error_class"}}},
             allow_nan=False, separators=(",", ":"),
         )
 
@@ -151,6 +159,7 @@ def judge_question(
     predictor: Callable[..., Any] | None = None,
     generator_model: str | None = None,
     option_evidence: list[dict] | None = None,
+    max_tokens: int = 2000,
 ) -> JudgeVerdict:
     """Judge one already validated, cleaned question, without fail-open paths.
 
@@ -162,8 +171,8 @@ def judge_question(
     if not isinstance(model, str) or not model.strip():
         return JudgeVerdict(False, 0.0, "Invalid judge model", DEFAULT_JUDGE_MODEL)
 
-    def fail(reason: str) -> JudgeVerdict:
-        return JudgeVerdict(False, 0.0, reason, model)
+    def fail(reason: str, error_class: str | None = None) -> JudgeVerdict:
+        return JudgeVerdict(False, 0.0, reason, model, error_class)
 
     if generator_model is not None:
         try:
@@ -196,12 +205,14 @@ def judge_question(
             lm = dspy.LM(
                 model=model, api_key=api_key,
                 api_base="https://openrouter.ai/api/v1",
-                temperature=0.0, max_tokens=2000, cache=False,
+                temperature=0.0, max_tokens=max_tokens, cache=False,
             )
             # DSPy selects per-call lm from the direct keyword, not config.
-            result = dspy.Predict(QuestionQualitySignature)(**inputs, lm=lm)
+            with reject_token_limit(lm), dspy.context(adapter=SingleCallChatAdapter()):
+                result = dspy.Predict(QuestionQualitySignature)(**inputs, lm=lm)
         else:
-            result = predictor(**inputs)
+            with reject_token_limit(None):
+                result = predictor(**inputs)
         verdict = result.verdict
         score = result.score
         reason = result.reason
@@ -225,5 +236,7 @@ def judge_question(
             elif score < PASS_THRESHOLD:
                 reason = "Below quality threshold: " + reason
         return JudgeVerdict(passed, float(score), reason[:MAX_REASON_LENGTH], model)
+    except MaxTokensTruncation:
+        return fail(TRUNCATION_REASON, "MaxTokensTruncation")
     except Exception:
         return fail("Judge failed or returned invalid output")

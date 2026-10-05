@@ -12,6 +12,7 @@ import re
 from typing import Dict, Any, Optional, Callable, Tuple
 import dspy
 from shared.evidence import OptionEvidence
+from shared.llm_limits import MaxTokensTruncation, TRUNCATION_REASON, reject_token_limit
 
 from shared.tracing import traceable_decorator
 
@@ -800,14 +801,14 @@ class GenerationOutputError(ValueError):
         self.raw_response = raw_response
 
 
-def _generation_lm(model: str):
+def _generation_lm(model: str, max_tokens: int = 8000):
     api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
         raise ValueError("OPENROUTER_API_KEY must be supplied in the environment")
     try:
         return dspy.LM(
             model=model, api_key=api_key, api_base="https://openrouter.ai/api/v1",
-            max_tokens=8000, temperature=0.7, cache=False,
+            max_tokens=max_tokens, temperature=0.7, cache=False,
         )
     except Exception:
         raise RuntimeError("Generation model initialization failed") from None
@@ -853,6 +854,8 @@ def cite_question(
     sources: list[dict],
     model: str,
     check_errors: list[str] | None = None,
+    *,
+    max_tokens: int = 8000,
 ) -> dict:
     """Make one citation call. Root checks and stores every attempt, then retries."""
     from dspy.utils.exceptions import AdapterParseError
@@ -873,8 +876,8 @@ def cite_question(
                 "text": source["text"]} for source in sources]
     adapter = CompletionCaptureAdapter(preserve_receipts=True)
     try:
-        lm = _generation_lm(model)
-        with dspy.context(adapter=adapter):
+        lm = _generation_lm(model, max_tokens=max_tokens)
+        with reject_token_limit(lm), dspy.context(adapter=adapter):
             result = dspy.Predict(CitationSignature)(
                 finished_question=json.dumps(question, ensure_ascii=False),
                 fetched_sources=json.dumps(fetched, ensure_ascii=False),
@@ -888,6 +891,9 @@ def cite_question(
                     **({"raw_response": adapter.raw_response} if adapter.raw_response is not None else {})}
         return {"evidence": [item.model_dump() if isinstance(item, OptionEvidence) else item
                              for item in receipts]}
+    except MaxTokensTruncation:
+        return {"evidence": None, "parse_failure": TRUNCATION_REASON,
+                "error_class": "MaxTokensTruncation"}
     except AdapterParseError:
         return {"evidence": None, "parse_failure": "Citation output could not be parsed",
                 "raw_response": adapter.raw_response}

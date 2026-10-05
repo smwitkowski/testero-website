@@ -38,6 +38,73 @@ non-dry-run path can only use existing seeded domains and stores DRAFT questions
 we did not run it or write to a DB. Do not open `.env*`, backups or credentials.
 Native offline checks: `uv run pytest -q` here and `npm test` at the repo root.
 
+## Existing-bank drift audit
+
+The audit never changes the bank export or connects to a database. Default mode
+uses no LLM, credentials, or network. From `content-pipeline/`:
+
+```sh
+uv run python scripts/audit_bank.py --input .cache/bank/pmle-bank-2026-10-04.json
+uv run python scripts/audit_bank.py --input .cache/bank/pmle-bank-2026-10-04.json --grounded --limit 10
+```
+
+Default mode reads the current PMLE registry and writes `<input-stem>-audit.json`
+and `<input-stem>-audit.md` under `.cache/bank/`. It reports every ACTIVE/DRAFT
+question; RETIRED questions are excluded. Lexical matching uses the stem and marked
+answer, not distractors or explanations. All learner prose is scanned for old
+names. Matching is binary IDF-weighted cosine in the objective vocabulary, with
+explicit word/brand normalization, a 0.10 minimum, and two shared terms (one for
+single-term objectives). The JSON records exact matched terms, scores,
+source-cited name aliases, and normalization rules. Best-score ties are retained.
+Historical 1.3/5.3 bullets come from `shared/domain_context.py` at `2a01021`; a
+historical score >110% of the best current score flags `removed_topic`, unless a
+best current objective has at least two terms and every term matches (a credible
+lexical successor, such as training AutoML). Search
+across all current domains allows moved metadata to map to 2.3 instead of blindly
+using the old domain. ACTIVE coverage counts best current ties except
+`removed_topic`/`unmapped`. It is a **provisional lexical estimate**, not proof of
+scope or factual correctness. Removed headings do not mean product deprecation;
+`rename_only` does not certify that a rename is the only factual defect.
+
+`--grounded --limit N` samples up to N ACTIVE/DRAFT rows from sorted question IDs
+with `--seed` (default 0). It requires `EXA_API_KEY` and `OPENROUTER_API_KEY` in the
+shell and uses the same model-policy defaults as generation. It writes a separate
+`<input-stem>-grounded.json` incrementally. Retrieval is question-first: the
+existing marked answer, stem, and their key service names form the query. The
+lexical objective is only a trailing secondary hint. Relevance is judged against
+the complete current certification blueprint, not the provisional objective
+mapping. Unmapped questions can also be checked; their mapping remains null.
+`retrieval`, `relevance_scope`, and `objective_mapping` are recorded separately.
+Existing text is not cleaned or regenerated: only the marked answer is projected
+to A for the existing citer/judge interface; the original choice-label map is
+recorded. The existing validator, fetched docs, up to two citation attempts,
+mechanical check, and independent judge run in order. All sources keep their full
+fetched text and hashes. Audit citation calls use a 16000-token output budget
+instead of 8000; audit judging uses 4000 instead of 2000. Native token-limit finish
+reasons reject the completion even if it parses, and record the explicit
+`MaxTokensTruncation` error class per attempt and on the row. Token-limit
+truncation is terminal: no retry can hide it, and the row fails before judging.
+Non-truncated mechanical failures still receive one citation retry. Judge
+truncation also fails the row. PASS requires every gate. Exit 1 means at least one sampled row failed (or no rows
+were sampled); exit 0 means every sampled row passed. Neither exit publishes or
+approves content. Recorded accepted and judge-rejected PMLE/ACE pilot outputs
+are replayed offline with real frozen source text and the actual citation parser.
+The fixtures preserve the recorded reduced judge verdicts, not invented rubric
+outputs. The real first bank smoke (0/10) also supplies a truncated-explanation
+defect (`9783e3d9`), a matrix-factorization retrieval miss (`0f701a7e`), and a partial
+citation (`bc566ee0`). Replaying the old missing docs must still fail; a new query
+is not evidence of a corrected PASS. That artifact did not capture finish reasons,
+so native truncation tests label provider length metadata as simulated while using
+the real captured partial completion. Live model quality still needs the keyed
+smoke run and human review.
+
+**Proposed handling, not implemented:** re-check `ok` items before retaining
+review approval; review cited aliases and technical wording before changing
+`rename_only` items; inspect current successors for `removed_topic` items and
+retire only genuinely out-of-scope or unsalvageable questions; manually map
+`unmapped` items or retire them and regenerate grounded DRAFT replacements for
+reviewed coverage gaps. Never use positional guide IDs as cross-version aliases.
+
 ## Later
 
 - **Multiple-select:** add when a separately reviewed schema, scoring and report contract can represent more than one key; never fake it as single-answer.
