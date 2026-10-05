@@ -4,6 +4,7 @@ DEFAULT_GENERATOR_MODEL = "openrouter/google/gemini-3.8-flash"
 DEFAULT_JUDGE_MODEL = "claude"
 OPENROUTER_JUDGE_MODEL = "openrouter/anthropic/claude-sonnet-5.5"
 DEFAULT_CLAUDE_MODEL = "claude-sonnet-5-5"
+EXTERNAL_JUDGE_PROVENANCE = "anthropic/claude-sonnet-5.5 via Claude Code subagent"
 # Verified on https://openrouter.ai/api/v1/models, 2026-10-04:
 # Flash is the lower-cost generator; Sonnet provides a different-vendor judge.
 VENDORS = {
@@ -20,7 +21,7 @@ def model_family(model: str) -> str:
         raise ValueError("Unknown model vendor family")
     if model == "codex":
         return "openai"
-    if model == "claude":
+    if model in ("claude", "external", EXTERNAL_JUDGE_PROVENANCE):
         return "anthropic"
     if model.startswith("codex/"):
         name = model.removeprefix("codex/")

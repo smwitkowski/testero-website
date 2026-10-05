@@ -21,6 +21,7 @@ from shared.completion_diagnostics import _safe_completion
 from shared.model_policy import DEFAULT_GENERATOR_MODEL, DEFAULT_JUDGE_MODEL, require_independent_models
 from shared.quality_gate import JudgeVerdict, QUESTION_FIELDS, judge_question
 from shared.validator import validate_question
+from shared.external_judge import build_request, candidate_id, request_directory
 
 ARTIFACT_ROOT = Path(__file__).resolve().parents[1] / ".cache/generation"
 OPTION_FIELDS = ("correct_answer", "distractor_1", "distractor_2", "distractor_3")
@@ -76,18 +77,26 @@ def reject_candidate(entry, stage, reason):
     entry["reason"] = _safe_completion(reason)[:1000]
 
 
-def persist_candidate(client, scope, question, judge, grounding, exam, domain_id, run_id, difficulty):
+def persist_candidate(client, scope, question, judge, grounding, exam, domain_id, run_id, difficulty,
+                      *, before_insert=None, on_question_inserted=None, question_id=None):
     notes = json.loads(judge.to_review_notes())
     notes["grounding"] = grounding
     review_notes = json.dumps(notes, allow_nan=False, separators=(",", ":"))
     final_review = "GOOD" if judge.passed else "NEEDS_ANSWER_FIX"
+    if before_insert is not None:
+        before_insert()
     saved = client.insert_question({
         "exam": exam, "domain_id": domain_id, "stem": question["stem"], "difficulty": difficulty,
         "status": "DRAFT", "review_status": "UNREVIEWED" if judge.passed else final_review,
         "review_notes": review_notes, "generation_run_id": run_id,
+        **({"id": question_id} if question_id is not None else {}),
     })
     if not saved:
         return False
+    if on_question_inserted is not None:
+        on_question_inserted(saved["id"])
+    if question_id is not None and saved["id"] != question_id:
+        raise ValueError("Inserted question ID does not match its idempotency key")
     options = [{"question_id": saved["id"], "choice_label": label,
                 "choice_text": question[field], "is_correct": label == "A",
                 "explanation_text": question[rationale]}
@@ -112,7 +121,7 @@ def persist_candidate(client, scope, question, judge, grounding, exam, domain_id
 @click.option("--subsection", default=None, help="Optional guide subsection filter.")
 @click.option("--objective", "objective_ids", multiple=True, help="Repeatable registry objective ID; overrides weights with round-robin targets in flag order.")
 @click.option("--model", default=DEFAULT_GENERATOR_MODEL, show_default=True)
-@click.option("--judge-model", default=DEFAULT_JUDGE_MODEL, show_default=True)
+@click.option("--judge-model", default=DEFAULT_JUDGE_MODEL, show_default=True, help="Use external to export judge requests and never write the DB.")
 @click.option("--difficulty", type=click.Choice(["EASY", "MEDIUM", "HARD"]), default="MEDIUM", show_default=True)
 @click.option("--dry-run", is_flag=True, help="Generate and judge locally; never access/write the DB.")
 @click.option("--artifact", type=click.Path(path_type=Path), help="JSON review artifact. Defaults to .cache/generation/<cert>-<UTC>.json.")
@@ -129,12 +138,18 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     artifact = artifact or ARTIFACT_ROOT / f"{cert}-{stamp}.json"
     if not artifact.resolve().is_relative_to(ARTIFACT_ROOT.resolve()) or artifact.suffix != ".json":
         raise click.ClickException("Artifacts must be JSON files under .cache/generation/")
+    external = judge_model == "external"
+    if external and (artifact.exists() or request_directory(artifact).exists()):
+        raise click.ClickException("External artifacts/requests must use a new path; never overwrite an ingestion journal")
     payload = {"version": 1, "cert_id": cert, "model": model, "judge_model": judge_model,
                "generator_family": generator_family, "judge_family": judge_family,
                "dry_run": dry_run, "seed": seed, "requested_objective_ids": list(dict.fromkeys(objective_ids)),
                "planned_count": n_questions, "plan": plan, "candidates": []}
-    client = None if dry_run else database_client()
+    client = None if dry_run or external else database_client()
     exam = exam or ("GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert)
+    payload.update({"difficulty": difficulty, "exam": exam})
+    if external:
+        payload["external_judge_version"] = 1
     domains, runs, run_counts = {}, {}, {}
     if client is not None:
         # Resolve ALL existing domains before creating any run; never seed new certs.
@@ -157,6 +172,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     payload["generation_runs"] = runs
     seen = set()
     accepted = 0
+    awaiting = 0
     batch_stop = None
     for index, scope in enumerate(plan, 1):
         entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment")},
@@ -164,6 +180,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                  "evidence": [], "citation_attempts": [], "mechanical_check": {"passed": False, "errors": ["No fetched evidence"]},
                  "judge_verdict": {"passed": False, "score": 0.0, "reason": "Not judged", "model": judge_model},
                  "accepted": False}
+        if external:
+            entry["candidate_id"] = candidate_id(index, scope, {})
         payload["candidates"].append(entry)
         stage = "documentation"
         try:
@@ -179,6 +197,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                                     difficulty=difficulty, exam_subsection=scope["subsection"])
             stage = "schema"
             question = clean_question(raw)
+            if external:
+                entry["candidate_id"] = candidate_id(index, scope, question)
             entry.update({"stem": question["stem"], "options": [
                 {"label": label, "text": question[field]} for label, field in zip("ABCD", OPTION_FIELDS)],
                 "rationales": {label: question[field] for label, field in zip("ABCD", RATIONALE_FIELDS)}})
@@ -214,6 +234,21 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 reject_candidate(entry, "duplicate", "Duplicate normalized stem within this batch")
                 continue
             seen.add(normalized)
+            if external:
+                stage = "external_request"
+                entry["candidate_id"] = candidate_id(index, scope, question)
+                request = build_request(entry["candidate_id"], scope, question, sources, checked["options"])
+                request_path = request_directory(artifact) / (entry["candidate_id"] + ".json")
+                write_artifact(request_path, request)
+                import hashlib
+                entry["external_judge_request"] = {
+                    "path": str(request_path.relative_to(artifact.parent)),
+                    "sha256": hashlib.sha256(request_path.read_bytes()).hexdigest(),
+                }
+                entry.update({"awaiting_external_judge": True, "status": "awaiting_external_judge"})
+                entry["judge_verdict"]["reason"] = "Awaiting external judge"
+                awaiting += 1
+                continue
             stage = "judge"
             judge = judge_question(question, scope["domain_prompt"], documentation_context=context,
                                    model=judge_model, generator_model=model, option_evidence=checked["options"])
@@ -252,7 +287,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             if isinstance(exc, (GenerationOutputError, MaxTokensTruncation)) and getattr(exc, "diagnostics", None):
                 entry["diagnostics"] = exc.diagnostics
         finally:
-            if not entry["accepted"] and not entry.get("reason") and not entry.get("error_class"):
+            if not entry["accepted"] and not entry.get("awaiting_external_judge") and not entry.get("reason") and not entry.get("error_class"):
                 reject_candidate(entry, stage, stage.capitalize() + " failed before acceptance")
             write_artifact(artifact, payload)
     if client is not None:
@@ -262,7 +297,11 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     click.echo(f"Accepted {accepted}/{n_questions}; artifact: {artifact}")
     if batch_stop:
         raise click.ClickException(batch_stop["reason"])
-    if accepted != n_questions:
+    if external:
+        click.echo(f"Awaiting external judge {awaiting}/{n_questions}; requests: {request_directory(artifact)}; no DB writes")
+        if awaiting != n_questions:
+            raise click.ClickException("Some candidates failed before external judgment; inspect the artifact")
+    elif accepted != n_questions:
         raise click.ClickException("Some candidates failed; inspect the artifact before retrying")
 
 

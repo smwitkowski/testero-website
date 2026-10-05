@@ -188,6 +188,9 @@ def judge_question(
     if not isinstance(model, str) or not model.strip():
         return JudgeVerdict(False, 0.0, "Invalid judge model", DEFAULT_JUDGE_MODEL)
 
+    if model == "external" and predictor is None:
+        return JudgeVerdict(False, 0.0, "External judge requires an ingested verdict", model)
+
     adapter = None
 
     def failure_diagnostics():

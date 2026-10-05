@@ -139,6 +139,10 @@ approval of enough replacements. Use a new artifact filename for each batch.
 
 ### Current style regeneration: 45 DRAFT candidates
 
+Historical generic inline-judge example; use the external runbook below for the
+current batch while Claude CLI authentication is pending. Do not run both
+commands against the same artifact filename.
+
 Use this non-dry command from `content-pipeline/` after configuring the existing
 Codex and Claude subscriptions. Do not add `--dry-run`. It uses the default
 `claude` judge independently of Codex. Supply only `EXA_API_KEY` for retrieval
@@ -177,6 +181,102 @@ each completed run, then approve only after personal review using steps 2–3
 below. Generation leaves accepted rows DRAFT; it never publishes. Retirement
 still requires enough approved grounded ACTIVE replacements and a separate
 explicit apply. This command was not run as part of the offline code change.
+
+### Current external-judge style regeneration: 45 candidates
+
+Until standalone Claude CLI authentication is ready, use the existing Claude Code
+session and independent **Sonnet 5.5 subagents** as external judges. The `claude -p`
+backend stays available for later; this runbook does not call it. Use the explicit
+Codex selector below, not the default model alias. No live calls were made while
+implementing or testing this workflow.
+
+1. **Generate local candidates and judge requests.** From `content-pipeline/`,
+   supply only `EXA_API_KEY` in the shell and use the existing Codex subscription.
+   Do not read `.env` files or supply DB keys for generation. No `--dry-run` is
+   needed: `--judge-model external` **never constructs a DB client or writes to
+   the DB**, whether or not `--dry-run` is present. The same 15 first-batch
+   objectives cycle in flag order, three candidates each (45 total). Each plan
+   item records its rotating `scenario_moment`; at most half are greenfield.
+   Use a fresh artifact name for a new batch; the current batch name is below.
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/generate_all_domains.py \
+  --cert machine-learning-engineer --n-questions 45 --model codex/gpt-5.6-sol --judge-model external \
+  --objective machine-learning-engineer:standard:1.1:5 \
+  --objective machine-learning-engineer:standard:1.2:1 \
+  --objective machine-learning-engineer:standard:1.2:2 \
+  --objective machine-learning-engineer:standard:1.2:3 \
+  --objective machine-learning-engineer:standard:2.1:3 \
+  --objective machine-learning-engineer:standard:2.2:3 \
+  --objective machine-learning-engineer:standard:3.1:4 \
+  --objective machine-learning-engineer:standard:3.2:6 \
+  --objective machine-learning-engineer:standard:3.3:1 \
+  --objective machine-learning-engineer:standard:4.1:4 \
+  --objective machine-learning-engineer:standard:4.1:5 \
+  --objective machine-learning-engineer:standard:4.2:4 \
+  --objective machine-learning-engineer:standard:5.1:2 \
+  --objective machine-learning-engineer:standard:6.1:1 \
+  --objective machine-learning-engineer:standard:6.2:3 \
+  --artifact .cache/generation/pmle-d025-style-45.json
+```
+
+Only schema- and mechanical-PASS candidates receive a request under
+`.cache/generation/pmle-d025-style-45.judge-requests/`. The artifact stores stable,
+unique `candidate_id` values, `status: "awaiting_external_judge"`,
+`awaiting_external_judge: true`, and each request's artifact-relative path and
+SHA-256 of its exact bytes. Candidates are **not accepted and not published**
+while awaiting a verdict. Request evidence comes from fetched official source
+text, bounded around cited quotes; trimming offsets and hashes are recorded.
+A quote match alone is not semantic proof or a judge PASS. Inspect failed
+candidate records; schema or mechanical rejects must not be sent for judging.
+
+2. **Founder runs independent Claude Code Sonnet 5.5 subagents.** Give each
+   subagent one saved request. Follow its `judge_prompt` and `verdict_schema`
+   **exactly**, including all factual and S1–S8/O1–O3 style checks. Use only the
+   supplied data; no browsing, tools, edits, or invented evidence. Save one raw
+   JSON object containing precisely the schema fields as
+   `.cache/generation/pmle-d025-style-45.verdicts/<candidate_id>.json`.
+   Use the ID in the filename, not as an extra JSON field. Do not add wrappers,
+   `structured_output`, metadata, `passed`, `model`, or other extra keys. No
+   Markdown fences. FAIL and UNCERTAIN are valid judgments, not errors to rewrite.
+
+3. **Validate ingestion without DB access.** Run the dry-run command below.
+   It validates request hashes, exact verdict schemas, schema/mechanical gates,
+   and the unchanged independent-judge PASS threshold. It never constructs a DB
+   client and never marks a candidate inserted. Missing or invalid verdicts,
+   failed checks, uncertainty, and scores below 0.8 cannot become accepted rows.
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/ingest_external_verdicts.py \
+  --artifact .cache/generation/pmle-d025-style-45.json \
+  --verdicts .cache/generation/pmle-d025-style-45.verdicts --dry-run
+```
+
+4. **Ingest passing DRAFTs only after inspecting the dry-run.** Supply
+   `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in the shell, never env files.
+   Ingestion creates separate runs per existing domain and writes only passing
+   candidates as **DRAFT/GOOD**, never ACTIVE. Use each actual domain run UUID
+   saved in the artifact and printed by ingestion for the founder sample and
+   approval commands in steps 2–3 of the historical review sequence below.
+   `review_batch.py` founder approval is still required; no subagent verdict or
+   ingestion command replaces it. Retirement remains a separate approved step.
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/ingest_external_verdicts.py \
+  --artifact .cache/generation/pmle-d025-style-45.json \
+  --verdicts .cache/generation/pmle-d025-style-45.verdicts
+```
+
+Ingestion records write-ahead progress for both run creation and question insertion
+because multi-row writes are not an atomic transaction. Stable candidate UUIDs
+and deterministic per-domain run UUIDs use the existing DB primary keys, so a
+pristine artifact copy cannot create duplicate rows. Returned IDs must match the
+requested keys. Re-running must never double-insert a candidate already attempted
+or inserted. **Partial or unknown write statuses require human reconciliation
+before any manual retry.** Stop and inspect the artifact, run UUIDs, question IDs,
+and actual DB rows. Do not clear write-ahead markers or rename/copy the artifact
+as a way to retry an uncertain write. Dry-run is not reconciliation and must not
+mark inserted rows or repair unknown outcomes.
 
 ### Historical first-batch command and review sequence
 
