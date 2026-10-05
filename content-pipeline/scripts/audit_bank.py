@@ -279,7 +279,9 @@ def main(argv=None):
     scopes = objective_scopes(context)
     bank_by_id = {q["id"]: q for q in export["questions"]}
     sampled = random.Random(args.seed).sample(artifact["questions"], min(args.limit, len(artifact["questions"])))
-    grounded = {"version": 1, "cert_id": context["cert_id"], "guide_sha256": context["guide_sha256"],
+    grounded = {"version": 2, "cert_id": context["cert_id"], "guide_sha256": context["guide_sha256"],
+                "retrieval_policy": "marked answer + stem + question services; objective hint secondary",
+                "relevance_policy": "full current exam blueprint; lexical mapping is not a relevance gate",
                 "input_sha256": artifact["input_sha256"], "model": args.model, "judge_model": args.judge_model,
                 "seed": args.seed, "limit": args.limit, "results": []}
     write_json(outputs[2], grounded)
@@ -287,16 +289,16 @@ def main(argv=None):
         result = {"question_id": row["question_id"], "flag": row["flag"], "status": row["status"],
                   "best_current_objective_ids": row["best_current_objective_ids"],
                   "passed": False, "reasons": ["No mapped current objective"]}
-        if row["best_current_objective_ids"]:
-            ident = row["best_current_objective_ids"][0]
-            result["objective_id"] = ident
-            try:
-                question, label_map = bank_question_data(bank_by_id[row["question_id"]])
-                result["original_choice_labels"] = label_map
-                result.update(check_existing_question(question, scopes[ident], model=args.model, judge_model=args.judge_model))
-            except Exception as exc:
-                result["reasons"] = ["Existing question re-check failed"]
-                result["error_class"] = type(exc).__name__
+        ident = row["best_current_objective_ids"][0] if row["best_current_objective_ids"] else None
+        result["objective_id"] = ident
+        scope = scopes[ident] if ident else {"cert_id": context["cert_id"], "guide_sha256": context["guide_sha256"]}
+        try:
+            question, label_map = bank_question_data(bank_by_id[row["question_id"]])
+            result["original_choice_labels"] = label_map
+            result.update(check_existing_question(question, scope, model=args.model, judge_model=args.judge_model))
+        except Exception as exc:
+            result["reasons"] = ["Existing question re-check failed"]
+            result["error_class"] = type(exc).__name__
         grounded["results"].append(result)
         write_json(outputs[2], artifact_json_value(grounded))
     passed = sum(r["passed"] for r in grounded["results"])

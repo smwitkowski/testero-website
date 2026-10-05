@@ -69,18 +69,34 @@ scope or factual correctness. Removed headings do not mean product deprecation;
 `--grounded --limit N` samples up to N ACTIVE/DRAFT rows from sorted question IDs
 with `--seed` (default 0). It requires `EXA_API_KEY` and `OPENROUTER_API_KEY` in the
 shell and uses the same model-policy defaults as generation. It writes a separate
-`<input-stem>-grounded.json` incrementally. Unmapped questions fail without an LLM
-call. Other rows use the first best-score current objective, preserving their
-lexical flag. Existing text is not cleaned or regenerated: only the marked
-answer is projected to A for the existing citer/judge interface; the original
-choice-label map is recorded. The existing validator, fetched docs, up to two
-citation attempts, mechanical check, and independent judge run in order. PASS
-requires every gate. Exit 1 means at least one sampled row failed (or no rows
+`<input-stem>-grounded.json` incrementally. Retrieval is question-first: the
+existing marked answer, stem, and their key service names form the query. The
+lexical objective is only a trailing secondary hint. Relevance is judged against
+the complete current certification blueprint, not the provisional objective
+mapping. Unmapped questions can also be checked; their mapping remains null.
+`retrieval`, `relevance_scope`, and `objective_mapping` are recorded separately.
+Existing text is not cleaned or regenerated: only the marked answer is projected
+to A for the existing citer/judge interface; the original choice-label map is
+recorded. The existing validator, fetched docs, up to two citation attempts,
+mechanical check, and independent judge run in order. All sources keep their full
+fetched text and hashes. Audit citation calls use a 16000-token output budget
+instead of 8000; audit judging uses 4000 instead of 2000. Native token-limit finish
+reasons reject the completion even if it parses, and record the explicit
+`MaxTokensTruncation` error class per attempt and on the row. Token-limit
+truncation is terminal: no retry can hide it, and the row fails before judging.
+Non-truncated mechanical failures still receive one citation retry. Judge
+truncation also fails the row. PASS requires every gate. Exit 1 means at least one sampled row failed (or no rows
 were sampled); exit 0 means every sampled row passed. Neither exit publishes or
 approves content. Recorded accepted and judge-rejected PMLE/ACE pilot outputs
 are replayed offline with real frozen source text and the actual citation parser.
 The fixtures preserve the recorded reduced judge verdicts, not invented rubric
-outputs. Live model quality still needs the keyed smoke run and human review.
+outputs. The real first bank smoke (0/10) also supplies a truncated-explanation
+defect (`9783e3d9`), a matrix-factorization retrieval miss (`0f701a7e`), and a partial
+citation (`bc566ee0`). Replaying the old missing docs must still fail; a new query
+is not evidence of a corrected PASS. That artifact did not capture finish reasons,
+so native truncation tests label provider length metadata as simulated while using
+the real captured partial completion. Live model quality still needs the keyed
+smoke run and human review.
 
 **Proposed handling, not implemented:** re-check `ok` items before retaining
 review approval; review cited aliases and technical wording before changing

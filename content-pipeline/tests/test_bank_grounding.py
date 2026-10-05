@@ -67,10 +67,13 @@ def test_real_accepted_and_rejected_replay(monkeypatch, case):
     assert result["judge_verdict"] == case["judge_verdict"]
     assert result["reasons"] == ([] if case["accepted"] else [case["judge_verdict"]["reason"]])
     assert len(lm.history) == len(case["citation_attempts"])
-    search.assert_called_once_with(case["scope"]["objective_text"], case["scope"]["services"])
-    judge.assert_called_once_with(case["question"], case["scope"]["domain_prompt"],
+    retrieval = bank.question_retrieval(case["question"], case["scope"]["objective_text"])
+    search.assert_called_once_with(retrieval["query"], retrieval["key_services"])
+    blueprint = bank.load_cert_context(case["scope"]["cert_id"])
+    judge.assert_called_once_with(case["question"], bank.exam_blueprint_context(blueprint),
         documentation_context=documentation_context(case["sources"]),
-        model=case["judge_model"], generator_model=case["model"], option_evidence=case["evidence"])
+        model=case["judge_model"], generator_model=case["model"], option_evidence=case["evidence"],
+        max_tokens=bank.AUDIT_JUDGE_MAX_TOKENS)
     prompt = lm.history[0]["messages"][-1]["content"]
     for value in case["question"].values():
         # Question is JSON inside the DSPy input, so use its escaped string body.
@@ -147,7 +150,7 @@ def test_bad_input_fails_before_retrieval(monkeypatch, defect):
     elif defect == "type": q["stem"] = None
     elif defect == "duplicate": q["distractor_1"] = q["correct_answer"]
     elif defect == "extra": q["evidence"] = []
-    elif defect == "scope": scope["objective_text"] = ""
+    elif defect == "scope": scope["objective_text"] = None
     else: scope["guide_sha256"] = "not-a-guide-hash"
     search = Mock()
     monkeypatch.setattr(bank, "search_objective_docs", search)

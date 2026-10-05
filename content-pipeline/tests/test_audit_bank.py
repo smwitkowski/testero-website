@@ -158,7 +158,7 @@ def test_grounded_cli_limit_model_defaults_fail_exit_and_strict_json(export_file
     assert export_file.read_bytes() == before
 
 
-def test_grounded_cli_all_pass_exit_and_unmapped_skip(export_file, monkeypatch):
+def test_grounded_cli_all_pass_exit_and_unmapped_checked(export_file, monkeypatch):
     from shared import bank_grounding
     recheck = Mock(return_value={"passed": True, "reasons": []})
     monkeypatch.setattr(bank_grounding, "check_existing_question", recheck)
@@ -166,10 +166,11 @@ def test_grounded_cli_all_pass_exit_and_unmapped_skip(export_file, monkeypatch):
     assert recheck.call_count == 2
     export_file.write_text(json.dumps({"questions": [question("Bananas basketball tickets stadium?")]}))
     recheck.reset_mock()
-    assert audit.main(["--input", str(export_file), "--grounded", "--limit", "1"]) == 1
-    recheck.assert_not_called()
+    assert audit.main(["--input", str(export_file), "--grounded", "--limit", "1"]) == 0
+    recheck.assert_called_once()
+    assert recheck.call_args.args[1] == {"cert_id": CONTEXT["cert_id"], "guide_sha256": CONTEXT["guide_sha256"]}
     result = json.loads((audit.ARTIFACT_ROOT / "bank.export-grounded.json").read_text())["results"][0]
-    assert not result["passed"] and result["reasons"] == ["No mapped current objective"]
+    assert result["passed"] and result["flag"] == "unmapped" and result["objective_id"] is None
 
 
 @pytest.mark.parametrize("flags", [["--limit", "0"], ["--grounded", "--model", "unknown/custom"],
