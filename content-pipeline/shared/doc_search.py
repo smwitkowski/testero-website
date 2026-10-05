@@ -5,12 +5,16 @@ Imports and context formatting are offline-safe; retrieval is an explicit action
 """
 from __future__ import annotations
 
+import errno
 import hashlib
 import logging
 import os
 import re
+import socket
+import ssl
 import time
 from datetime import datetime, timezone
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
@@ -90,21 +94,47 @@ def _discover_urls(objective_text: str, services: list[str], num_results: int) -
     return urls
 
 
+def _transient_fetch_error(exc: OSError) -> bool:
+    """Allow typed network failures only; never infer retryability from messages."""
+    if isinstance(exc, HTTPError):
+        return False
+    reason = exc.reason if isinstance(exc, URLError) else exc
+    # SSL handshake timeouts use TimeoutError. Other SSL failures fail closed,
+    # including certificate verification, even if an SSL errno overlaps an OS errno.
+    if isinstance(reason, (HTTPError, ssl.SSLError)):
+        return False
+    if isinstance(reason, (TimeoutError, ConnectionError)):
+        return True
+    if isinstance(reason, socket.gaierror):
+        return reason.errno == socket.EAI_AGAIN
+    return isinstance(reason, OSError) and reason.errno in {
+        errno.ETIMEDOUT, errno.ECONNRESET, errno.ECONNABORTED, errno.ECONNREFUSED,
+        errno.EPIPE, errno.EHOSTUNREACH, errno.ENETUNREACH, errno.ENETDOWN, errno.ENETRESET,
+    }
+
+
 def _fetch_documentation(url: str) -> dict:
     requested_url = approved_documentation_url(url, discovery=True)
-    opener = build_opener(OfficialDocsRedirectHandler())
-    request = Request(requested_url, headers={"User-Agent": "Testero-documentation/1.0"})
-    time.sleep(0.3)
-    with opener.open(request, timeout=30) as response:
-        final_url = approved_documentation_url(response.geturl())
-        if response.status != 200:
-            raise DocumentationError("Documentation response was not HTTP 200")
-        if response.headers.get_content_type() not in {"text/html", "application/xhtml+xml"}:
-            raise DocumentationError("Documentation response is not HTML")
-        raw = response.read(MAX_HTML_BYTES + 1)
-        if len(raw) > MAX_HTML_BYTES:
-            raise DocumentationError("Documentation HTML exceeds size limit")
-        html = raw.decode(response.headers.get_content_charset() or "utf-8", errors="strict")
+    for attempt in range(2):
+        opener = build_opener(OfficialDocsRedirectHandler())
+        request = Request(requested_url, headers={"User-Agent": "Testero-documentation/1.0"})
+        time.sleep(0.3)
+        try:
+            with opener.open(request, timeout=30) as response:
+                final_url = approved_documentation_url(response.geturl())
+                if response.status != 200:
+                    raise DocumentationError("Documentation response was not HTTP 200")
+                if response.headers.get_content_type() not in {"text/html", "application/xhtml+xml"}:
+                    raise DocumentationError("Documentation response is not HTML")
+                raw = response.read(MAX_HTML_BYTES + 1)
+                if len(raw) > MAX_HTML_BYTES:
+                    raise DocumentationError("Documentation HTML exceeds size limit")
+                html = raw.decode(response.headers.get_content_charset() or "utf-8", errors="strict")
+        except OSError as exc:
+            if attempt == 1 or not _transient_fetch_error(exc):
+                raise
+        else:
+            break
     text = content_node(html).text()
     if not text:
         raise DocumentationError("Fetched documentation has no content")

@@ -748,6 +748,9 @@ class CitationSignature(dspy.Signature):
     evidence: list[OptionEvidence] = dspy.OutputField(desc="One required option_label, url and quote receipt per A-D option")
 
 
+GENERATION_MAX_TOKENS = 16000
+
+
 class GenerationOutputError(ValueError):
     """Question parsing failed, with only a safe actual-completion diagnostic."""
 
@@ -783,7 +786,7 @@ def generate_question(
     if (not isinstance(domain_context, str) or not domain_context.strip()
             or not isinstance(documentation_context, str) or not documentation_context.strip()):
         raise ValueError("Registry objective scope and fetched documentation are required")
-    lm = _generation_lm(model)
+    lm = _generation_lm(model, max_tokens=GENERATION_MAX_TOKENS)
     adapter = CompletionCaptureAdapter()
     predictor = dspy.ChainOfThought(PmleQuestionSignature)
     try:

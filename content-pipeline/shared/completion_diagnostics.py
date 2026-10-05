@@ -59,6 +59,10 @@ class CompletionDiagnostics:
                 value = _field(usage, name)
                 if type(value) in (int, float) and value >= 0 and (type(value) is int or math.isfinite(value)):
                     numeric_usage[name] = value
+            details = _field(usage, "completion_tokens_details")
+            reasoning = _field(details, "reasoning_tokens") if details is not None else None
+            if type(reasoning) in (int, float) and reasoning >= 0 and (type(reasoning) is int or math.isfinite(reasoning)):
+                numeric_usage["completion_tokens_details"] = {"reasoning_tokens": reasoning}
         if numeric_usage:
             self.metadata["usage"] = numeric_usage
 
@@ -100,11 +104,36 @@ class CompletionCaptureAdapter(dspy.ChatAdapter):
     def parse(self, signature, completion):
         from dspy.utils.exceptions import AdapterParseError
         self.capture.raw_response = _safe_completion(completion)
-        # Preserve existing generator/citation marker behavior, never alter judge output.
+        # Preserve existing generator/citation marker behavior.
         if self.normalize_markers:
             completion = re.sub(r"(?<=\S)[ \t]*(\[\[ ## \w+ ## \]\])", r"\n\1", completion)
+        score_header = None
+        judge_fields = (
+            "verdict", "correct_answer_accurate", "distractors_incorrect",
+            "distractors_plausible", "explanations_accurate", "scenario_relevant",
+            "scenario_clear", "evidence_supported", "score", "reason",
+        )
+        observed_headers = ("[[ ## score ></br>", "[[ ## score ||> 0.9 <|| ## ]]")
+        if not self.normalize_markers and tuple(signature.output_fields) == judge_fields:
+            headers = [line for line in completion.splitlines() if "[[" in line]
+            malformed = [line for line in headers if line in observed_headers]
+            if malformed:
+                score_header = malformed[0]
+                expected = [f"[[ ## {name} ## ]]" for name in judge_fields] + ["[[ ## completed ## ]]"]
+                expected[judge_fields.index("score")] = score_header
+                # Repair only the two captured headers, in a complete unambiguous layout.
+                if headers != expected:
+                    raise AdapterParseError("ChatAdapter", signature, completion,
+                                            message="Ambiguous judge field headers")
+                completion = completion.replace(score_header, "[[ ## score ## ]]", 1)
         try:
-            return super().parse(signature, completion)
+            fields = super().parse(signature, completion)
+            # The observed decorated header contains 0.9; never use it as the score
+            # or silently discard it if the independently typed body contradicts it.
+            if score_header == observed_headers[1] and fields["score"] != 0.9:
+                raise AdapterParseError("ChatAdapter", signature, completion,
+                                        message="Contradictory judge score header and body")
+            return fields
         except AdapterParseError:
             if self.preserve_receipts and "evidence" in signature.output_fields:
                 parse_signature = signature.with_updated_fields("evidence", type_=Any)

@@ -265,6 +265,49 @@ PYTHON_DOTENV_DISABLED=1 uv run python scripts/generate_all_domains.py \
   --artifact .cache/generation/pmle-d025-second-16.json
 ```
 
+## D-025 batch 2 diagnosis and recovery
+
+Batch 2 accepted 8/16 candidates; all four target objectives now have at least
+one accepted DRAFT. The ignored original artifact is read-only and unchanged.
+Candidate numbers are its 1-based `index` values; these fixes do not rewrite
+old verdicts, promote DRAFTs, or claim more live accepts.
+
+- **#5 / #8 judge format errors:** native finish was `stop`, with 309 / 337
+  completion tokens, not a token limit. Score headers were respectively
+  `[[ ## score ></br>` and `[[ ## score ||> 0.9 <|| ## ]]`. Native ChatAdapter
+  appended those unrecognized lines and `0.9` to the preceding
+  `evidence_supported` boolean, which then failed typed parsing. Exact observed
+  headers are repaired only for the complete, unique, ordered judge schema;
+  the body still supplies the typed score. The decorated header's 0.9 must agree
+  with the body. Unknown, missing, duplicate, ambiguous or contradictory headers
+  fail closed. Both real completions replay as their recorded PASS/all-true/0.9,
+  while mutated failed checks, FAIL/UNCERTAIN and low scores remain failures.
+- **#9 / #13 / #15 stopped at schema validation:** their role-based stems say
+  "A machine learning engineer" but contain none of the current validator's
+  scenario keywords (`you`, `your`, `team`, `company`, `client`, `organization`).
+  The errors were already in `schema_check.errors`; an early `continue` left the
+  initial judge `Not judged` placeholder without a top-level stopping reason.
+  Every future non-accepted candidate now records `failure_stage` and `reason`,
+  including schema, mechanical, duplicate, judge, persistence and request stops.
+  The schema keyword rule is unchanged; replacing it requires a separate decision.
+- **#16 generation token limit:** `length`, 16,874 input / 7,996 completion /
+  24,870 total tokens; only 1,454 characters of a partial visible reasoning field
+  were retained. Hidden reasoning consumption is plausible but not measurable:
+  the prior metadata capture omitted `completion_tokens_details.reasoning_tokens`.
+  Future diagnostics retain that numeric counter, never hidden reasoning text.
+  Generation alone now has a 16,000-token cap, a bounded 2x trial; citation and
+  judge limits are unchanged, and any token-limit finish remains terminal.
+- **Official-doc fetch timeouts:** one retry only (two attempts maximum) for typed
+  transient timeout/connection/DNS failures, including `URLError.reason` wrapping
+  an SSL handshake `TimeoutError`. HTTP errors, SSL/certificate failures,
+  unapproved redirects, invalid HTML/content and decoding errors are not retried.
+  Both attempts retain the original approved URL, validated redirects and 30s
+  request timeout. Discovery is not retried.
+
+The two remaining substantive judge failures (#7 / #11, score .60) still reject
+unsupported Model Garden capability explanations. No judge, mechanical or
+publication threshold is loosened. Live yield under these changes is unmeasured.
+
 ## Later
 
 - **Multiple-select:** add when a separately reviewed schema, scoring and report contract can represent more than one key; never fake it as single-answer.

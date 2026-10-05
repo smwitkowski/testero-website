@@ -1,0 +1,129 @@
+{
+  "provenance": {
+    "artifact": ".cache/generation/pmle-d025-second-16.json",
+    "artifact_sha256": "fff11a58af782a4ea4610e4269d0bef4e050f393b2458e6c8952c0e38bdf0992",
+    "selection": "candidate.index is 1-based; only captured completions, no LM re-judgment"
+  },
+  "cases": [
+    {
+      "index": 5,
+      "objective_id": "machine-learning-engineer:standard:1.2:3",
+      "model": "openrouter/anthropic/claude-sonnet-5.5",
+      "diagnostics": {
+        "raw_response": "[[ ## verdict ## ]]\nPASS\n\n[[ ## correct_answer_accurate ## ]]\nTrue\n\n[[ ## distractors_incorrect ## ]]\nTrue\n\n[[ ## distractors_plausible ## ]]\nTrue\n\n[[ ## explanations_accurate ## ]]\nTrue\n\n[[ ## scenario_relevant ## ]]\nTrue\n\n[[ ## scenario_clear ## ]]\nTrue\n\n[[ ## evidence_supported ## ]]\nTrue\n\n[[ ## score ></br>\n0.9\n\n[[ ## reason ## ]]\nThe image tuning doc supports the key: Gemini 3+ allows per-Part mediaResolution, Part-level overrides global, and the global setting is in generationConfig. Distractors are refuted: resolution doesn't change image dimensions, and Gemini image fine-tuning is supported while image-generation fine-tuning is not.\n\n[[ ## completed ## ]]",
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 57306,
+          "completion_tokens": 309,
+          "total_tokens": 57615
+        }
+      },
+      "raw_sha256": "05aa96bacca544f02d39a79edfa09bdf84ce095e5172c9ba0c5dad8eef2e3624",
+      "question_data": {
+        "stem": "Your team is preparing a supervised fine-tuning dataset to adapt a Gemini 3 model for automated visual quality inspection of printed circuit boards. The training examples include multi-image inputs: zoomed-in detail shots where high visual detail is essential to identify subtle soldering defects, and broad contextual shots where low visual fidelity is sufficient. To keep the training run within your token budget, you need to minimize token consumption without modifying the physical pixel dimensions of the source images stored in Cloud Storage.\n\nHow should you configure the dataset?",
+        "correct_answer": "Set the global mediaResolution to MEDIA_RESOLUTION_LOW in the generationConfig object, and configure mediaResolution with MEDIA_RESOLUTION_HIGH on individual media Part objects for the zoomed-in defect images.",
+        "correct_explanation": "1) Key constraints: Adapt a Gemini 3 model on image data, minimize token consumption for broad shots while retaining high detail for zoomed-in defect shots, and avoid modifying physical image dimensions. 2) How the solution addresses the constraints: Gemini supports supervised fine-tuning using image inputs for visual inspection use cases. The mediaResolution setting controls the tradeoff between media representation quality and the number of tokens used, without altering the actual image dimensions sent to the model. For Gemini 3 models and higher, mediaResolution can be configured per individual media Part, and part-level media resolution settings take precedence over global settings in generationConfig. Setting MEDIA_RESOLUTION_LOW globally and overriding specific critical defect images with MEDIA_RESOLUTION_HIGH at the Part level fulfills the detail requirement while minimizing overall token usage. 3) Specific services/features: Gemini Enterprise Agent Platform, Gemini 3, supervised fine-tuning, mediaResolution, generationConfig, Part. 4) Why alternatives fail: Preprocessing and downsampling image files is unnecessary because mediaResolution governs token allocation rather than physical file dimensions; part-level overrides are supported in Gemini 3; and fine-tuning image generation models is explicitly unsupported.",
+        "distractor_1": "Downscale and resize the physical image files in Cloud Storage to lower pixel resolutions, because the number of tokens consumed by the model is strictly dictated by the physical pixel dimensions of the input files.",
+        "distractor_1_explanation": "This violates the constraint to avoid modifying image dimensions. According to the Gemini Enterprise Agent Platform documentation, the mediaResolution field controls the number of tokens used to represent the media and does not affect the image dimensions sent to the model.",
+        "distractor_2": "Split the dataset into separate fine-tuning jobs by resolution and set mediaResolution exclusively at the dataset-level generationConfig, because part-level media resolution is ignored during supervised fine-tuning.",
+        "distractor_2_explanation": "This introduces unnecessary operational complexity and violates documented functionality. For Gemini 3 and higher, part-level mediaResolution is explicitly supported within individual media Part objects and takes precedence over global generationConfig settings, allowing mixed resolutions in a single dataset.",
+        "distractor_3": "Submit an Imagen fine-tuning job to train a custom image generation model that highlights defect bounding boxes, because Gemini models do not support fine-tuning with image inputs.",
+        "distractor_3_explanation": "This violates service capabilities and constraints. Supervised fine-tuning of Gemini models directly supports image inputs for understanding and inspection tasks. Furthermore, the documentation states that fine-tuning image generation models is not supported."
+      },
+      "evidence": [
+        {
+          "option_label": "A",
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning/image",
+          "quote": "For Gemini 3 models and higher, you can also set the media resolution per individual media Part. This lets you mix resolutions in your dataset (for example, by setting MEDIA_RESOLUTION_HIGH for one item and MEDIA_RESOLUTION_LOW for another).",
+          "retrieved_at": "2026-10-05T12:27:41.443345+00:00",
+          "text_sha256": "54c7fbea91a3fa71e7c032f3edc603c97ed00d9bd25300e8bbd8831ead0db803"
+        },
+        {
+          "option_label": "B",
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning/image",
+          "quote": "A higher resolution allows the model to perceive more detail, which can lead to a more nuanced tuned model behavior, but it will also use more tokens. This doesn't affect the image dimensions sent to the model.",
+          "retrieved_at": "2026-10-05T12:27:41.443345+00:00",
+          "text_sha256": "54c7fbea91a3fa71e7c032f3edc603c97ed00d9bd25300e8bbd8831ead0db803"
+        },
+        {
+          "option_label": "C",
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning/image",
+          "quote": "Part-level media resolution settings take precedence over global settings.",
+          "retrieved_at": "2026-10-05T12:27:41.443345+00:00",
+          "text_sha256": "54c7fbea91a3fa71e7c032f3edc603c97ed00d9bd25300e8bbd8831ead0db803"
+        },
+        {
+          "option_label": "D",
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning/image",
+          "quote": "Note: This page describes fine-tuning Gemini models for image understanding and analysis (using image data as input). Fine-tuning image generation models is not supported.",
+          "retrieved_at": "2026-10-05T12:27:41.443345+00:00",
+          "text_sha256": "54c7fbea91a3fa71e7c032f3edc603c97ed00d9bd25300e8bbd8831ead0db803"
+        }
+      ],
+      "mechanical_check": {
+        "passed": true,
+        "errors": []
+      }
+    },
+    {
+      "index": 8,
+      "objective_id": "machine-learning-engineer:standard:4.1:4",
+      "model": "openrouter/anthropic/claude-sonnet-5.5",
+      "diagnostics": {
+        "raw_response": "[[ ## verdict ## ]]\nPASS\n\n[[ ## correct_answer_accurate ## ]]\nTrue\n\n[[ ## distractors_incorrect ## ]]\nTrue\n\n[[ ## distractors_plausible ## ]]\nTrue\n\n[[ ## explanations_accurate ## ]]\nTrue\n\n[[ ## scenario_relevant ## ]]\nTrue\n\n[[ ## scenario_clear ## ]]\nTrue\n\n[[ ## evidence_supported ## ]]\nTrue\n\n[[ ## score ||> 0.9 <|| ## ]]\n0.9\n\n[[ ## reason ## ]]\nThe Cloud Run canary doc supports the key: automaticTrafficControl: true, percentages excluding 100, and a service definition without a traffic stanza. Distractor 1 adds 100 and a traffic stanza, distractor 2 hardcodes traffic with automatic control off, and distractor 3 uses Vertex rolling-deployment options, so all three are wrong.\n\n[[ ## completed ## ]]",
+        "finish_reason": "stop",
+        "usage": {
+          "prompt_tokens": 28372,
+          "completion_tokens": 337,
+          "total_tokens": 28709
+        }
+      },
+      "raw_sha256": "422afd275ec9965123100022c527ba4bae07fc80ba9b949851a20037c7420b1a",
+      "question_data": {
+        "stem": "Your team serves a PyTorch recommendation model as an online inference service hosted on Cloud Run. You have packaged an updated model into a new container image and want to perform a canary deployment to compare the new model version against the current production model under live traffic. You need to configure Cloud Deploy to manage the progressive rollout, automatically apportioning traffic across 20% and 50% increments before completing the full rollout to 100%.\n\nHow should you configure the Cloud Deploy delivery pipeline and Cloud Run service manifest?",
+        "correct_answer": "In the Cloud Deploy delivery pipeline stage, configure strategy.canary.runtimeConfig.cloudRun.automaticTrafficControl: true and set canaryDeployment.percentages to [20, 50]. In the Cloud Run service definition manifest, omit the traffic stanza.",
+        "correct_explanation": "The scenario requires setting up an automated canary rollout to Cloud Run using Cloud Deploy to compare model versions across specific traffic increments (20% and 50%) before full deployment. Cloud Deploy's automated canary strategy for Cloud Run manages traffic splitting between the previous stable revision and the newly deployed revision using runtimeConfig.cloudRun.automaticTrafficControl: true. The canaryDeployment.percentages list defines the progression increments ([20, 50]). The value 100 must not be included in percentages because 100% deployment is automatically executed during the final stable phase. The Cloud Run service definition file must omit the traffic stanza so that Cloud Deploy can automatically manage the revision traffic allocation during rollout phases. The alternative options either improperly include 100% in the canary increments, configure hardcoded traffic routing stanzas in the service manifest that prevent Cloud Deploy automated control, or misapply Vertex AI endpoint rolling deployment settings to a Cloud Run pipeline.",
+        "distractor_1": "In the Cloud Deploy delivery pipeline stage, configure strategy.canary.canaryDeployment.percentages to [20, 50, 100]. In the Cloud Run service definition manifest, include a traffic stanza routing 100% of traffic to the latest revision.",
+        "distractor_1_explanation": "This violates the Cloud Deploy canary configuration rules: the percentages field must not include 100 because full deployment is handled by the final stable phase, and the Cloud Run service manifest must omit the traffic stanza because Cloud Deploy manages revision traffic splitting automatically.",
+        "distractor_2": "In the Cloud Run service definition manifest, define the explicit revision split percentages using the traffic stanza, and in the Cloud Deploy delivery pipeline stage, set strategy.canary.runtimeConfig.cloudRun.automaticTrafficControl: false.",
+        "distractor_2_explanation": "This violates the requirement for Cloud Deploy to automatically manage and apportion live traffic splits across progressive rollout phases. Cloud Deploy automated canary requires runtimeConfig.cloudRun.automaticTrafficControl: true and requires omitting the traffic stanza from the Cloud Run service definition so that Cloud Deploy can orchestrate traffic shifting between revisions.",
+        "distractor_3": "In the Cloud Deploy delivery pipeline stage, configure strategy.canary.runtimeConfig.cloudRun.rolloutOptions with previousDeployedModel and set maxSurgeReplicas to split traffic between revisions.",
+        "distractor_3_explanation": "This violates the service choice and configuration syntax for Cloud Run deployments. The rolloutOptions parameters (such as previousDeployedModel and maxSurgeReplicas) are specific to Vertex AI endpoint rolling replacements of deployed models, not Cloud Deploy delivery pipelines targeting Cloud Run services. Furthermore, rolling replacements do not execute structured percentage-based canary phases for model comparison."
+      },
+      "evidence": [
+        {
+          "option_label": "A",
+          "url": "https://docs.cloud.google.com/deploy/docs/deployment-strategies/canary/cloud-run",
+          "quote": "strategy: canary: runtimeConfig: cloudRun: automaticTrafficControl: true canaryDeployment: percentages: [PERCENTAGES]",
+          "retrieved_at": "2026-10-05T12:29:29.195520+00:00",
+          "text_sha256": "522963fafca6578b5367cdbf2367a3d54bb41cb6666ddd2f2f3e6a9b6b34688a"
+        },
+        {
+          "option_label": "B",
+          "url": "https://docs.cloud.google.com/deploy/docs/deployment-strategies/canary/cloud-run",
+          "quote": "Note that this doesn't include 100, because 100% percent deployment is assumed in the canary, and is handled by the stable phase.",
+          "retrieved_at": "2026-10-05T12:29:29.195520+00:00",
+          "text_sha256": "522963fafca6578b5367cdbf2367a3d54bb41cb6666ddd2f2f3e6a9b6b34688a"
+        },
+        {
+          "option_label": "C",
+          "url": "https://docs.cloud.google.com/deploy/docs/deployment-strategies/canary/cloud-run",
+          "quote": "Your normal Cloud Run service definition file is sufficient, but without a traffic stanza. Cloud Deploy manages splitting traffic for you between the last successful revision and the new revision.",
+          "retrieved_at": "2026-10-05T12:29:29.195520+00:00",
+          "text_sha256": "522963fafca6578b5367cdbf2367a3d54bb41cb6666ddd2f2f3e6a9b6b34688a"
+        },
+        {
+          "option_label": "D",
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/rolling-deployment",
+          "quote": "To start a rolling deployment, include the rolloutOptions field in the model deployment request as shown in the following example.",
+          "retrieved_at": "2026-10-05T12:29:32.351755+00:00",
+          "text_sha256": "0e74c2475d1ad035baea70fbfc2f76ec610c15879db68dfbe48edd8c73711639"
+        }
+      ],
+      "mechanical_check": {
+        "passed": true,
+        "errors": []
+      }
+    }
+  ]
+}
