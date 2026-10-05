@@ -337,3 +337,39 @@ def test_real_citation_parser_numeric_overflow_is_retained_as_debug_marker(gener
     assert len(candidate["citation_attempts"]) == 2
     assert candidate["evidence"][0]["quote"] == {"__nonfinite_float__": "Infinity"}
     assert not candidate["mechanical_check"]["passed"]
+
+
+def test_explicit_objective_cli_round_robin_drafts_and_domain_run_ids(generation):
+    client, _, _, search, generator, judge, path = generation
+    first = "machine-learning-engineer:standard:1.1:5"
+    second = "machine-learning-engineer:standard:6.1:1"
+    result = invoke(generation, "--n-questions", "4", "--objective", first, "--objective", second)
+    assert result.exit_code == 0, result.output
+    artifact = json.loads((path / "pilot.json").read_text())
+    assert [item["objective_id"] for item in artifact["plan"]] == [first, second, first, second]
+    assert artifact["requested_objective_ids"] == [first, second]
+    assert set(artifact["generation_runs"]) == {"ARCHITECTING_LOW_CODE_ML_SOLUTIONS", "MONITORING_ML_SOLUTIONS"}
+    assert set(artifact["generation_runs"].values()) == {RUN_ID}
+    assert result.output.count("Generation run ") == 2
+    assert generator.call_count == search.call_count == judge.call_count == client.insert_question.call_count == 4
+    assert all(call.args[0]["status"] == "DRAFT" for call in client.insert_question.call_args_list)
+    assert client.create_generation_run.call_count == 2
+    assert all(call.args[0]["target_count"] == 2 for call in client.create_generation_run.call_args_list)
+
+
+def test_explicit_objective_cli_invalid_id_precedes_services(generation):
+    outcome = invoke(generation, "--objective", "machine-learning-engineer:standard:99.9:1")
+    assert outcome.exit_code != 0 and "Objective" in outcome.output
+    for service in generation[1], generation[3], generation[4], generation[5]:
+        service.assert_not_called()
+
+
+def test_explicit_objective_dry_run_has_no_generation_runs(generation):
+    target = "machine-learning-engineer:standard:3.2:6"
+    outcome = invoke(generation, "--dry-run", "--objective", target)
+    assert outcome.exit_code == 0, outcome.output
+    generation[1].assert_not_called()
+    artifact = json.loads((generation[-1] / "pilot.json").read_text())
+    assert artifact["requested_objective_ids"] == [target]
+    assert artifact["generation_runs"] == {}
+    assert artifact["plan"][0]["objective_id"] == target
