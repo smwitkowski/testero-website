@@ -28,6 +28,7 @@ from shared.external_judge import (
 from shared.model_policy import require_independent_models
 from shared.quality_gate import QuestionQualitySignature, judge_question
 from shared.validator import validate_question
+from shared.batch_report import option_length_report, format_option_length_report
 
 BLOCKED_STATES = {"inserting", "inserted", "complete", "failed_partial", "unknown"}
 
@@ -287,6 +288,7 @@ def ingest(path, verdicts, *, dry_run=False):
         entry["accepted"] = False
         pending.append((entry, scope, question, judge, grounding))
         click.echo(f"{ident}: passing external verdict; {judge.reason}")
+    payload["option_length_report"] = option_length_report(payload["candidates"])
     _flush(path, payload)
     if not dry_run and (pending or payload["generation_runs"]):
         journal = payload.setdefault("external_run_journal", {})
@@ -362,6 +364,7 @@ def ingest(path, verdicts, *, dry_run=False):
                 _reject(entry, "persistence", "Persistence incomplete or unknown; human reconciliation required")
                 blocked += 1
                 click.echo(f"{entry['candidate_id']}: {entry['reason']}")
+            payload["option_length_report"] = option_length_report(payload["candidates"])
             _flush(path, payload)
         try:
             for code, run_id in runs.items():
@@ -373,6 +376,7 @@ def ingest(path, verdicts, *, dry_run=False):
         except Exception:
             raise click.ClickException("Run completion failed; founder approval remains blocked") from None
     complete = sum(_is_complete(entry) for entry in payload["candidates"])
+    click.echo(format_option_length_report(payload["option_length_report"]))
     click.echo(f"Passing verdicts {len(pending)}; accepted/complete {complete}; rejected {rejected}; missing {missing}; blocked {blocked}")
     if rejected or missing or blocked:
         raise click.ClickException("Some candidates were not persisted; inspect the artifact")

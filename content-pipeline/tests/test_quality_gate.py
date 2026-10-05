@@ -87,6 +87,49 @@ def test_each_accuracy_check_is_mandatory(question, check):
     assert not gate.is_judge_passed(verdict.to_review_notes())
 
 
+@pytest.mark.parametrize("check", gate.ACCURACY_CHECKS)
+@pytest.mark.parametrize("value", [None, "true", "false", 0, 1, [], {}])
+def test_every_check_requires_a_real_bool_even_with_high_score(question, check, value):
+    verdict, _ = judge(question, output(**{check: value}, score=1.0))
+    assert not verdict.passed
+    assert verdict.score == 0.0
+    assert not gate.is_judge_passed(verdict.to_review_notes())
+
+
+def test_knowledge_check_is_a_typed_required_dspy_output():
+    field = gate.QuestionQualitySignature.output_fields["distractors_need_knowledge"]
+    assert field.annotation is bool
+    assert "distractors_need_knowledge" in gate.ACCURACY_CHECKS
+    assert "stem text alone" in field.json_schema_extra["desc"]
+    assert "product/domain fact" in field.json_schema_extra["desc"]
+
+
+def test_shared_v2_rules_are_in_judge_instructions():
+    from shared.question_style import STYLE_INSTRUCTIONS, STYLE_RULES
+
+    assert STYLE_INSTRUCTIONS in gate.QuestionQualitySignature.instructions
+    for rule in (
+        "at most two explicit wants or policies",
+        'Do not write "without X"',
+        "No distractor can be eliminated using stem text alone",
+        "competent engineer might plausibly try",
+        "Google Cloud/ML fact",
+        "within ±20% of the mean word count of all four options",
+        "The key must never be uniquely",
+        "Vary the longest option's position across the batch",
+        "including which non-key option",
+        "do not make the key tied for longest on every item",
+        "not a single-item check or a batch hard-rejection rule",
+        "S9 No product/model version strings",
+        'version-specific. Prefer "a Gemini model"',
+        "1.2:3, compare the approach, tuning or adaptation and why it fits",
+        "media resolution per image part",
+    ):
+        assert rule in STYLE_RULES
+    assert "not exhaustive " in STYLE_INSTRUCTIONS
+    assert "current policy and do not override the rules above" in STYLE_INSTRUCTIONS
+
+
 @pytest.mark.parametrize("status", ["FAIL", "UNCERTAIN"])
 def test_nonpass_fails_even_with_high_score(question, status):
     verdict, _ = judge(question, output(verdict=status, score=1.0))
@@ -110,7 +153,7 @@ def test_malformed_output_fails_closed(question, changes):
 
 @pytest.mark.parametrize("field", ["verdict", "score", "reason", *gate.ACCURACY_CHECKS])
 def test_missing_output_field_fails_closed(question, field):
-    prediction = output()
+    prediction = output(score=1.0)
     delattr(prediction, field)
     verdict, _ = judge(question, prediction)
     assert not verdict.passed

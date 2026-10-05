@@ -4,9 +4,12 @@ STYLE_RULES = """S1 Business first: open with who you are and what the ML system
 sentences.
 S2 Facts as story: describe what exists and what happened in plain narrative. A numbered list
 only for existing workflow steps, never requirements.
-S3 Constraints as wants or policies: 1–2 decisive constraints phrased "You want to … while
-minimizing …" or "Company policy does not allow …". Never "must satisfy the following
-requirements" or "Stakeholders have established".
+S3 Constraints as wants or policies: at most two explicit wants or policies, phrased
+"You want to … while minimizing …" or "Company policy does not allow …". Keep the business
+story; do not stack requirements or pack extra wants into one sentence. Never "must satisfy
+the following requirements" or "Stakeholders have established". Do not write "without X",
+"do not use X", or an equivalent ban when X names a target approach and directly negates a
+distractor. Let Google Cloud/ML product knowledge eliminate that approach, not the stem.
 S4 End "What should you do?"; another question only if naturally better e.g. "How should you
 reconfigure the architecture?". Never name settings/config files in it.
 S5 50–110 words; one paragraph, two at most. The mechanical acceptance range is 40–130 words.
@@ -18,12 +21,23 @@ migration, cost/latency reduction, security incident. Planner rotates hints and 
 the artifact. This is a batch rule, not a single-item count.
 S8 Never documentation in stem: "documented", "documentation", "supported specifications", "per
 best practices".
+S9 No product/model version strings unless the learning objective is explicitly
+version-specific. Prefer "a Gemini model" rather than a numbered Gemini model version.
 O1 Imperative, parallel practitioner actions similar length. One/two sentences or 2–3 short
 numbered steps.
 O2 Decisions not syntax: differ approach/service/sequence. Setting names/values only if
-objective literally config, then described choices.
-O3 Wrong options real approaches fail one stated want (cost/upkeep/latency/policy/downtime);
-never invented/broken config."""
+objective literally config, then described choices. Even for configuration-heavy objective
+1.2:3, compare the approach, tuning or adaptation and why it fits, not setting values or
+media resolution per image part.
+O3 Wrong options are real approaches a competent engineer might plausibly try. Each fails a
+stated want (cost/upkeep/latency/policy/downtime) because of a Google Cloud/ML fact not given as
+an explicit contradiction in the stem. No distractor can be eliminated using stem text alone;
+answering must require product/domain knowledge. Never invented/broken config.
+O4 Keep all four options parallel in action, structure and detail. Each option's word count
+must be within ±20% of the mean word count of all four options. The key must never be uniquely
+longest. Vary the longest option's position across the batch, including which non-key option
+is longest; do not make the key tied for longest on every item. This variation is a batch rule,
+not a single-item check or a batch hard-rejection rule."""
 
 FOUNDER_EXEMPLARS = (
     (
@@ -69,7 +83,10 @@ STYLE_INSTRUCTIONS = (
     "Testero writing style (apply to generation and every correction):\n"
     + STYLE_RULES
     + "\n\nFive founder-approved original stem exemplars. Follow their voice, not their technical claims; "
-      "fetched docs remain the only factual authority. Do not copy these scenarios into generated content. "
+      "fetched docs remain the only factual authority. These historical exemplars are not exhaustive "
+      "current policy and do not override the rules above, including the current limits on wants and "
+      "direct distractor-negating constraints. Preserve their quoted text as style references. "
+      "Do not copy these scenarios into generated content. "
       "A necessary business interface such as CSV rows in exemplar 5 is context, not a settings/syntax quiz.\n"
     + "\n\n".join(f"Exemplar {index}: {stem}" for index, stem in enumerate(FOUNDER_EXEMPLARS, 1))
 )

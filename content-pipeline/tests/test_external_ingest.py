@@ -418,3 +418,26 @@ def test_unexpected_returned_ids_remain_unknown_or_partial_and_block_retry(case,
     assert invoke(case).exit_code == 1
     assert case[3].create_generation_run.call_count == 1
     assert case[3].insert_question.call_count == (0 if target == "run" else 1)
+
+
+@pytest.mark.parametrize("state", ["missing", "false", "mistyped"])
+def test_rules_v2_knowledge_check_rejects_before_db_client(case,state):
+    raw=dict(case[5]);raw["score"]=1.0
+    if state=="missing":raw.pop("distractors_need_knowledge")
+    elif state=="false":raw["distractors_need_knowledge"]=False
+    else:raw["distractors_need_knowledge"]="true"
+    (case[1]/(case[2]["candidates"][0]["candidate_id"]+".json")).write_text(json.dumps(raw))
+    result=invoke(case)
+    assert result.exit_code!=0
+    case[4].assert_not_called()
+    entry=saved(case)["candidates"][0]
+    assert not entry["accepted"] and not entry["judge_verdict"]["passed"]
+
+
+def test_ingest_stores_and_prints_current_option_length_report(case):
+    result=invoke(case)
+    assert result.exit_code==0,result.output
+    report=saved(case)["option_length_report"]
+    assert report["count"]==1 and report["accepted"]["count"]==1
+    assert report["target_max_rate"]==.35
+    assert "Option lengths: key-is-longest" in result.output

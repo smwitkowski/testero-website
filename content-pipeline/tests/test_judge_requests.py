@@ -441,3 +441,17 @@ def test_invalid_output_registry_blocks_before_any_cli_call(monkeypatch, dirs):
     result=CliRunner().invoke(runner.main,["--requests",str(requests),"--verdicts",str(results)])
     assert result.exit_code==1 and "registry" in result.output
     assert calls==[]
+
+
+
+def test_rules_v2_runner_keeps_false_new_check_for_ingestion(monkeypatch,dirs):
+    requests,results=dirs
+    expected=save_request(requests)
+    assert "distractors_need_knowledge" in expected["verdict_schema"]["required"]
+    raw=verdict(distractors_need_knowledge=False)
+    fake_backend(monkeypatch,lambda *args:raw)
+    summary=runner.run_requests(requests,results,parallel=1)
+    assert summary.completed==1 and summary.failed==0
+    saved=json.loads((results/"candidate-1.json").read_text())
+    assert len(saved)==14 and saved["distractors_need_knowledge"] is False
+    assert saved==raw

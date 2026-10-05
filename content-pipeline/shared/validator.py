@@ -126,6 +126,24 @@ def _compute_string_similarity(a: str, b: str) -> float:
     return intersection / union if union > 0 else 0.0
 
 
+def option_length_metrics(question_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Count all four options by whitespace; key_is_longest excludes ties."""
+    fields = ("correct_answer", "distractor_1", "distractor_2", "distractor_3")
+    counts = [len((question_data.get(name) or "").split()) for name in fields]
+    total = sum(counts)
+    mean = total / 4
+    next_longest = max(counts[1:])
+    return {
+        "word_counts": counts,
+        "mean": mean,
+        "ratios": [count / mean if mean else 0.0 for count in counts],
+        # Integer comparisons preserve both inclusive bounds without rounding.
+        "within_bounds": [3 * total <= 16 * count <= 5 * total for count in counts],
+        "key_is_longest": counts[0] > next_longest,
+        "key_lead_words": counts[0] - next_longest,
+    }
+
+
 def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
     """Validate LLM-generated question data against quality rubric.
     
@@ -133,7 +151,7 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
     - Required fields present & non-empty
     - Stem structure (40–130 words, final question mark, narrow checklist/doc phrase rejection)
     - Semantic business context and decision style are judged independently
-    - Option quality (non-empty, no near duplicates, no banned patterns)
+    - Option quality (non-empty, balanced word counts, no near duplicates or banned patterns)
     - Explanation quality (length, no URLs/citations, why-wrong reasoning)
     
     Args:
@@ -238,14 +256,31 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
         "D": ("distractor_3", distractor_3),
     }
     
+    length_metrics = option_length_metrics(question_data)
+    if length_metrics["key_is_longest"] and length_metrics["key_lead_words"] > 2:
+        errors.append(
+            "Correct answer is uniquely longest and exceeds the next-longest option "
+            f"by {length_metrics['key_lead_words']} words (maximum 2)"
+        )
+        style_score -= 0.2
+
     option_metrics = []
     choice_texts = []
     
-    for label, (field_name, choice_text) in choices.items():
+    for index, (label, (field_name, choice_text)) in enumerate(choices.items()):
         option_metric = {
             "label": label,
             "is_empty": False,
+            "word_count": length_metrics["word_counts"][index],
+            "ratio": length_metrics["ratios"][index],
         }
+        if not length_metrics["within_bounds"][index]:
+            errors.append(
+                f"Choice {label} word count ({option_metric['word_count']}) is outside "
+                "0.75–1.25 times the four-option mean "
+                f"({length_metrics['mean']:g})"
+            )
+            style_score -= 0.2
         
         if not choice_text or not choice_text.strip():
             errors.append(f"Choice {label} is empty")

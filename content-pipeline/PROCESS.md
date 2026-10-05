@@ -20,7 +20,7 @@ registry. No migration or new-cert product support. Generation never publishes.
 | 1. Refresh registry | EXISTS | Use the explicit sequential refresh; review official guide and inventory diffs. Missing facts remain null. |
 | 2. Load scope | EXISTS | `--cert` selects the current standard guide. PMLE codes are preserved in one section map. Other codes are virtual, not DB seeds. Each candidate has cert/objective/guide hash. |
 | 3. Fetch objective docs | EXISTS | Exa discovers only `docs.cloud.google.com`; direct HTTP fetches official HTML with checked redirects. URL-bound text, timestamp and hash are required. No snippets, guessed links or positional joins. |
-| 4. Allocate and generate | EXISTS | Normalize published section weights for largest-remainder quotas at total N. Choose a random start offset per domain, then cover objectives round-robin; `--seed` reproduces offsets. Explicit objectives instead cycle in flag order. Record each item's `scenario_moment` and rotate already-running situations, with greenfield at most half (including N=1). Follow S1–S8/O1–O3 in `certs/STYLE.md`. Create original four-option, single-key content, then separately cite the finished options/rationales with required string receipts. |
+| 4. Allocate and generate | EXISTS | Normalize published section weights for largest-remainder quotas at total N. Choose a random start offset per domain, then cover objectives round-robin; `--seed` reproduces offsets. Explicit objectives instead cycle in flag order. Record each item's `scenario_moment` and rotate already-running situations, with greenfield at most half (including N=1). Follow rules-v2 S1–S9/O1–O4 in `certs/STYLE.md`. Create original four-option, single-key content, then separately cite the finished options/rationales with required string receipts. |
 | 5. Mechanical gate | EXISTS | Check schema; require exactly A-D, one fetched URL and nonempty quote at most 300 characters per option. Match each quote case-sensitively, with whitespace normalization only, against its own fetched text. Retry the cite step once with its mechanical errors; retain both attempts and reject before judging if either required final check fails. |
 | 6. Independent judge | EXISTS | `--judge-model` must have a known vendor family different from `--model`. Judge exact cleaned content against fetched docs. PASS requires score >=0.8 and all rubric checks. Quote presence is provenance, not semantic proof. |
 | 7. Founder spot-check | EXISTS | Export random ceil(10%) of the completed DRAFT+GOOD pool. Report objective, guide hash, both models and every option's quote/URL/hash/timestamp. Missing or invalid grounding blocks approval, including legacy ungrounded rows. |
@@ -195,6 +195,72 @@ each completed run, then approve only after personal review using steps 2–3
 below. Generation leaves accepted rows DRAFT; it never publishes. Retirement
 still requires enough approved grounded ACTIVE replacements and a separate
 explicit apply. This command was not run as part of the offline code change.
+
+### Rules v2: round 4, 45 candidates
+
+Rules v2 keeps at most two explicit wants/policies, requires knowledge-dependent
+distractors, avoids dated model versions, and tests approach choices even for
+configuration-heavy objective 1.2:3. O4 authoring targets ±20% option lengths and
+never a uniquely longest key. The mechanical gate rejects key leads over two
+words or any option outside inclusive 0.75–1.25× mean. It does not pad real old
+questions to pass. `option_length_report` is stored on generation/ingestion
+artifacts and printed: key-is-longest includes ties, unique-longest is separate,
+and the target is ≤35%. Generated, awaiting, and accepted groups are recorded.
+A missed batch target prints a warning; it is not an added batch hard gate.
+
+The canonical DSPy verdict now has 14 required fields. Every old check remains;
+`distractors_need_knowledge` is a new required boolean. False, missing, or mistyped
+values fail closed, even at score 1.0. Export, the Claude request runner and ingest
+share this schema. Old real 13-field verdicts are preserved as historical evidence,
+not augmented with invented checks. Existing round-3 artifacts and DRAFT rows are
+unchanged; do not treat their old verdicts as rules-v2 judgments.
+
+From `content-pipeline/`, run these commands in order. Generation uses the current
+Codex `gpt-6.1-sol` default and the same 15 objectives. It requires the existing
+Codex login and `EXA_API_KEY`. Claude judging uses its existing subscription login.
+Only the final write-ingestion command uses Supabase credentials and makes DRAFT
+writes. Run dry ingestion first; inspect all failures and the length report before
+separately approving the write. Never regenerate over an existing artifact.
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/generate_all_domains.py \
+  --cert machine-learning-engineer --n-questions 45 --model codex --judge-model external \
+  --objective machine-learning-engineer:standard:1.1:5 \
+  --objective machine-learning-engineer:standard:1.2:1 \
+  --objective machine-learning-engineer:standard:1.2:2 \
+  --objective machine-learning-engineer:standard:1.2:3 \
+  --objective machine-learning-engineer:standard:2.1:3 \
+  --objective machine-learning-engineer:standard:2.2:3 \
+  --objective machine-learning-engineer:standard:3.1:4 \
+  --objective machine-learning-engineer:standard:3.2:6 \
+  --objective machine-learning-engineer:standard:3.3:1 \
+  --objective machine-learning-engineer:standard:4.1:4 \
+  --objective machine-learning-engineer:standard:4.1:5 \
+  --objective machine-learning-engineer:standard:4.2:4 \
+  --objective machine-learning-engineer:standard:5.1:2 \
+  --objective machine-learning-engineer:standard:6.1:1 \
+  --objective machine-learning-engineer:standard:6.2:3 \
+  --artifact .cache/generation/pmle-d025-r4-45.json
+```
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/judge_requests.py \
+  --requests .cache/generation/pmle-d025-r4-45.judge-requests \
+  --verdicts .cache/generation/pmle-d025-r4-45.verdicts \
+  --judge-model claude --parallel 3
+```
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/ingest_external_verdicts.py \
+  --artifact .cache/generation/pmle-d025-r4-45.json \
+  --verdicts .cache/generation/pmle-d025-r4-45.verdicts --dry-run
+```
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/ingest_external_verdicts.py \
+  --artifact .cache/generation/pmle-d025-r4-45.json \
+  --verdicts .cache/generation/pmle-d025-r4-45.verdicts
+```
 
 ### Current external-judge style regeneration: 45 candidates
 

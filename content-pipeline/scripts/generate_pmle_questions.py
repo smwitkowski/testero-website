@@ -21,6 +21,7 @@ from shared.completion_diagnostics import _safe_completion
 from shared.model_policy import DEFAULT_GENERATOR_MODEL, DEFAULT_JUDGE_MODEL, require_independent_models
 from shared.quality_gate import JudgeVerdict, QUESTION_FIELDS, judge_question
 from shared.validator import validate_question
+from shared.batch_report import option_length_report, format_option_length_report
 from shared.external_judge import build_request, candidate_id, request_directory
 
 ARTIFACT_ROOT = Path(__file__).resolve().parents[1] / ".cache/generation"
@@ -289,11 +290,13 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         finally:
             if not entry["accepted"] and not entry.get("awaiting_external_judge") and not entry.get("reason") and not entry.get("error_class"):
                 reject_candidate(entry, stage, stage.capitalize() + " failed before acceptance")
+            payload["option_length_report"] = option_length_report(payload["candidates"])
             write_artifact(artifact, payload)
     if client is not None:
         for code, run_id in runs.items():
             if not client.update_generation_run(run_id, {"generated_count": run_counts[code], "completed_at": datetime.now(timezone.utc).isoformat()}):
                 raise click.ClickException("Run completion failed; founder approval remains blocked")
+    click.echo(format_option_length_report(payload["option_length_report"]))
     click.echo(f"Accepted {accepted}/{n_questions}; artifact: {artifact}")
     if batch_stop:
         raise click.ClickException(batch_stop["reason"])

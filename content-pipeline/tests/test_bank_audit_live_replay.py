@@ -37,6 +37,14 @@ def test_live_true_defect_and_retrieval_miss_still_fail_with_recorded_docs(monke
     judge = Mock(return_value=JudgeVerdict(**recorded["judge_verdict"]))
     monkeypatch.setattr(bank, "judge_question", judge)
     result = bank.check_existing_question(deepcopy(question), deepcopy(case["scope"]), judge_model=recorded["judge_verdict"]["model"])
+    if case["question_id"].startswith("9783e3d9"):
+        # Preserve this real long-key question: O4 now rejects before retrieval.
+        assert not result["schema_check"]["passed"]
+        assert any("uniquely longest" in error for error in result["schema_check"]["errors"])
+        assert not result["passed"] and result["question"] == question and case == before
+        assert result["sources"] == [] and result["citation_attempts"] == []
+        search.assert_not_called(); judge.assert_not_called(); factory.assert_not_called()
+        return
     assert result["schema_check"] == recorded["schema_check"]
     assert result["mechanical_check"] == recorded["mechanical_check"] == {"passed": True, "errors": []}
     assert result["judge_verdict"] == recorded["judge_verdict"]
@@ -136,7 +144,7 @@ def test_judge_truncation_is_explicit_on_row_and_never_passes(monkeypatch):
 
 
 def test_token_limit_is_terminal_even_if_later_valid_receipts_are_available(monkeypatch):
-    case = next(c for c in CASES if c["question_id"].startswith("9783e3d9"))
+    case = HEALTHY_CITATIONS[0]
     recorded = case["recorded"]
     monkeypatch.setattr(bank, "search_objective_docs", Mock(return_value=recorded["sources"]))
     citation = Mock(side_effect=[

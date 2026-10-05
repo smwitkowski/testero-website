@@ -20,8 +20,8 @@ def test_validate_question_valid():
         "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Batch Prediction",
-        "distractor_2": "Use Cloud Functions",
-        "distractor_3": "Use Cloud Run",
+        "distractor_2": "Use Cloud Functions for inference",
+        "distractor_3": "Use Cloud Run for inference",
         "correct_explanation": "Vertex AI Online Prediction provides managed infrastructure for real-time inference with low latency. It handles scaling automatically and provides built-in monitoring.",
         "distractor_1_explanation": "Vertex AI Batch Prediction is designed for batch processing, not real-time inference. It processes large datasets offline.",
         "distractor_2_explanation": "Cloud Functions requires more manual setup and doesn't provide the same level of ML-specific features as Vertex AI.",
@@ -187,8 +187,8 @@ def test_validate_question_all_explanations_valid():
         "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Batch Prediction",
-        "distractor_2": "Use Cloud Functions",
-        "distractor_3": "Use Cloud Run",
+        "distractor_2": "Use Cloud Functions for inference",
+        "distractor_3": "Use Cloud Run for inference",
         "correct_explanation": "Vertex AI Online Prediction provides managed infrastructure for real-time inference with low latency. It handles scaling automatically and provides built-in monitoring.",
         "distractor_1_explanation": "Vertex AI Batch Prediction is designed for batch processing, not real-time inference. It processes large datasets offline.",
         "distractor_2_explanation": "Cloud Functions requires more manual setup and doesn't provide the same level of ML-specific features as Vertex AI.",
@@ -269,8 +269,8 @@ def test_validate_question_no_scenario():
         "stem": "A machine learning engineer maintains a fraud scoring model for customer orders at a retailer. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. The goal is to deploy the trained model for real-time predictions while minimizing infrastructure maintenance for the engineers. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Batch Prediction",
-        "distractor_2": "Use Cloud Functions",
-        "distractor_3": "Use Cloud Run",
+        "distractor_2": "Use Cloud Functions for inference",
+        "distractor_3": "Use Cloud Run for inference",
         "correct_explanation": "Vertex AI Online Prediction provides managed infrastructure for real-time inference with low latency. It handles scaling automatically and provides built-in monitoring.",
         "distractor_1_explanation": "Vertex AI Batch Prediction is designed for batch processing, not real-time inference. It processes large datasets offline.",
         "distractor_2_explanation": "Cloud Functions requires more manual setup and doesn't provide the same level of ML-specific features as Vertex AI.",
@@ -288,8 +288,8 @@ def test_validate_question_no_action_question():
         "stem": "You are working for a company that needs to deploy a machine learning model.",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Batch Prediction",
-        "distractor_2": "Use Cloud Functions",
-        "distractor_3": "Use Cloud Run",
+        "distractor_2": "Use Cloud Functions for inference",
+        "distractor_3": "Use Cloud Run for inference",
         "correct_explanation": "Vertex AI Online Prediction provides managed infrastructure for real-time inference with low latency. It handles scaling automatically and provides built-in monitoring.",
         "distractor_1_explanation": "Vertex AI Batch Prediction is designed for batch processing, not real-time inference. It processes large datasets offline.",
         "distractor_2_explanation": "Cloud Functions requires more manual setup and doesn't provide the same level of ML-specific features as Vertex AI.",
@@ -307,8 +307,8 @@ def test_validate_question_duplicate_options():
         "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Online Prediction",  # Duplicate!
-        "distractor_2": "Use Cloud Functions",
-        "distractor_3": "Use Cloud Run",
+        "distractor_2": "Use Cloud Functions for inference",
+        "distractor_3": "Use Cloud Run for inference",
         "correct_explanation": "Vertex AI Online Prediction provides managed infrastructure for real-time inference with low latency.",
         "distractor_1_explanation": "Vertex AI Online Prediction provides managed infrastructure for real-time inference with low latency.",
         "distractor_2_explanation": "Cloud Functions requires more manual setup.",
@@ -326,8 +326,8 @@ def test_validate_question_banned_patterns():
         "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "All of the above",
         "distractor_1": "Use Vertex AI Batch Prediction",
-        "distractor_2": "Use Cloud Functions",
-        "distractor_3": "Use Cloud Run",
+        "distractor_2": "Use Cloud Functions for inference",
+        "distractor_3": "Use Cloud Run for inference",
         "correct_explanation": "All options are correct.",
         "distractor_1_explanation": "Vertex AI Batch Prediction is designed for batch processing.",
         "distractor_2_explanation": "Cloud Functions requires more manual setup.",
@@ -345,8 +345,8 @@ def test_validate_question_missing_gcp_service_in_explanation():
         "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Batch Prediction",
-        "distractor_2": "Use Cloud Functions",
-        "distractor_3": "Use Cloud Run",
+        "distractor_2": "Use Cloud Functions for inference",
+        "distractor_3": "Use Cloud Run for inference",
         "correct_explanation": "This is the best option because it provides managed infrastructure.",  # No GCP service!
         "distractor_1_explanation": "Vertex AI Batch Prediction is designed for batch processing, not real-time inference.",
         "distractor_2_explanation": "Cloud Functions requires more manual setup and doesn't provide the same level of ML-specific features.",
@@ -364,8 +364,8 @@ def test_validate_question_scores():
         "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Batch Prediction",
-        "distractor_2": "Use Cloud Functions",
-        "distractor_3": "Use Cloud Run",
+        "distractor_2": "Use Cloud Functions for inference",
+        "distractor_3": "Use Cloud Run for inference",
         "correct_explanation": "Vertex AI Online Prediction provides managed infrastructure for real-time inference with low latency. It handles scaling automatically and provides built-in monitoring.",
         "distractor_1_explanation": "Vertex AI Batch Prediction is designed for batch processing, not real-time inference. It processes large datasets offline.",
         "distractor_2_explanation": "Cloud Functions requires more manual setup and doesn't provide the same level of ML-specific features as Vertex AI.",
@@ -387,8 +387,8 @@ def test_validate_question_stem_metrics():
         "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Batch Prediction",
-        "distractor_2": "Use Cloud Functions",
-        "distractor_3": "Use Cloud Run",
+        "distractor_2": "Use Cloud Functions for inference",
+        "distractor_3": "Use Cloud Run for inference",
         "correct_explanation": "Vertex AI Online Prediction provides managed infrastructure for real-time inference with low latency.",
         "distractor_1_explanation": "Vertex AI Batch Prediction is designed for batch processing, not real-time inference.",
         "distractor_2_explanation": "Cloud Functions requires more manual setup and doesn't provide the same level of ML-specific features.",
@@ -408,8 +408,8 @@ def test_validate_question_option_metrics():
         "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Batch Prediction",
-        "distractor_2": "Use Cloud Functions",
-        "distractor_3": "Use Cloud Run",
+        "distractor_2": "Use Cloud Functions for inference",
+        "distractor_3": "Use Cloud Run for inference",
         "correct_explanation": "Vertex AI Online Prediction provides managed infrastructure for real-time inference.",
         "distractor_1_explanation": "Vertex AI Batch Prediction is designed for batch processing, not real-time inference.",
         "distractor_2_explanation": "Cloud Functions requires more manual setup and doesn't provide the same level of ML-specific features.",
@@ -438,6 +438,117 @@ def test_format_validation_errors_with_warnings():
     formatted = format_validation_errors(result)
     assert "warnings" in formatted.lower()
     assert "recommended minimum" in formatted
+
+
+def _option_balance_question(counts):
+    """Build distinct synthetic options for word-count boundary checks."""
+    fields = ("correct_answer", "distractor_1", "distractor_2", "distractor_3")
+    question = {
+        "stem": (
+            "You work for a retailer whose machine learning model scores customer orders for fraud risk. "
+            "The checkout application needs a prediction before accepting each order, and demand changes throughout the day. "
+            "You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. "
+            "What is the best approach?"
+        ),
+        "correct_explanation": "This approach provides managed infrastructure and satisfies the latency requirement.",
+    }
+    for index, (name, count) in enumerate(zip(fields, counts)):
+        question[name] = " ".join(f"option-{index}-{word}" for word in range(count))
+        if index:
+            question[f"distractor_{index}_explanation"] = "This approach violates the requirement for managed low-latency inference."
+    return question
+
+
+@pytest.mark.parametrize("counts, valid, longest, lead", [
+    ([10, 10, 10, 10], True, False, 0),
+    ([12, 10, 10, 10], True, True, 2),
+    ([13, 10, 10, 10], False, True, 3),
+    ([13, 13, 10, 10], True, False, 0),
+    ([10, 13, 10, 10], True, False, -3),
+])
+def test_unique_longest_key_gate(counts, valid, longest, lead):
+    from shared.validator import option_length_metrics
+
+    question = _option_balance_question(counts)
+    metrics = option_length_metrics(question)
+    assert metrics["key_is_longest"] is longest
+    assert metrics["key_lead_words"] == lead
+    assert all(metrics["within_bounds"])
+    result = validate_question(question)
+    assert result.is_valid is valid, result.errors
+    assert any("uniquely longest" in error for error in result.errors) is (not valid)
+
+
+@pytest.mark.parametrize("counts, ratios, valid", [
+    ([8, 6, 8, 10], [1, 0.75, 1, 1.25], True),
+    ([8, 5, 9, 10], [1, 0.625, 1.125, 1.25], False),
+    ([8, 8, 8, 12], [8 / 9, 8 / 9, 8 / 9, 12 / 9], False),
+    ([8, 8, 9, 11], [8 / 9, 8 / 9, 1, 11 / 9], True),
+])
+def test_four_option_mean_inclusive_boundaries(counts, ratios, valid):
+    from shared.validator import option_length_metrics
+
+    question = _option_balance_question(counts)
+    metrics = option_length_metrics(question)
+    assert metrics["mean"] == sum(counts) / 4
+    assert metrics["ratios"] == pytest.approx(ratios)
+    result = validate_question(question)
+    assert result.is_valid is valid, result.errors
+    assert any("four-option mean" in error for error in result.errors) is (not valid)
+    assert [metric["word_count"] for metric in result.option_metrics] == counts
+    assert [metric["ratio"] for metric in result.option_metrics] == pytest.approx(ratios)
+
+
+@pytest.mark.parametrize("outlier", range(4))
+@pytest.mark.parametrize("count", [5, 15])
+def test_any_option_outside_mean_rejects(outlier, count):
+    counts = [10, 10, 10, 10]
+    counts[outlier] = count
+    result = validate_question(_option_balance_question(counts))
+    assert not result.is_valid
+    label = "ABCD"[outlier]
+    assert any(f"Choice {label} word count" in error for error in result.errors)
+
+
+@pytest.mark.parametrize("empty", ["", "  \t\n", None])
+def test_empty_option_counts_zero_without_dropping_from_mean(empty):
+    from shared.validator import option_length_metrics
+
+    question = _option_balance_question([8, 8, 8, 8])
+    question["distractor_1"] = empty
+    metrics = option_length_metrics(question)
+    assert metrics["word_counts"] == [8, 0, 8, 8]
+    assert metrics["mean"] == 6
+    assert metrics["ratios"][1] == 0
+    result = validate_question(question)
+    assert "Choice B is empty" in result.errors
+    assert any("Choice B word count (0)" in error for error in result.errors)
+    assert result.option_metrics[1]["word_count"] == 0
+    assert result.option_metrics[1]["is_empty"]
+
+
+def test_all_empty_options_keep_empty_errors_and_finite_metrics():
+    from shared.validator import option_length_metrics
+
+    question = _option_balance_question([0, 0, 0, 0])
+    metrics = option_length_metrics(question)
+    assert metrics["mean"] == 0
+    assert metrics["ratios"] == [0.0] * 4
+    assert not metrics["key_is_longest"]
+    result = validate_question(question)
+    assert not result.is_valid
+    for label in "ABCD":
+        assert f"Choice {label} is empty" in result.errors
+
+
+def test_option_word_counts_use_whitespace_split():
+    from shared.validator import option_length_metrics
+
+    question = _option_balance_question([4, 4, 4, 4])
+    question["correct_answer"] = "  alpha-beta \t gamma/delta\n epsilon  zeta  "
+    metrics = option_length_metrics(question)
+    assert metrics["word_counts"] == [4, 4, 4, 4]
+    assert validate_question(question).is_valid
 
 
 if __name__ == "__main__":

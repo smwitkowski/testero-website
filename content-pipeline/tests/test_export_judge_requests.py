@@ -440,3 +440,12 @@ def test_custom_move_retirement_crash_fails_closed_and_rerun_repairs(case, monke
     assert request_path(case) == out / case[6].name
     ingest._validate_candidate(case[0], saved(case), saved(case)["candidates"][0])
     case[4].assert_not_called()
+
+
+def test_reexport_schema_requires_new_knowledge_check(case):
+    result=invoke(case)
+    assert result.exit_code==0,result.output
+    schema=json.loads(request_path(case).read_text())["verdict_schema"]
+    assert len(schema["properties"])==14
+    assert "distractors_need_knowledge" in schema["required"]
+    assert schema["properties"]["distractors_need_knowledge"]["type"]=="boolean"

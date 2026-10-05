@@ -363,3 +363,18 @@ def test_wide_windows_are_not_silently_narrowed_to_meet_limit(monkeypatch):
     monkeypatch.setattr(external_judge,"REQUEST_CHARACTER_LIMIT",20000)
     with pytest.raises(ValueError,match="wide quote-centered"):
         external_judge.build_request("too-large",scope,QUESTION,fetched,checked["options"])
+
+
+def test_generation_stores_and_prints_length_report_and_new_schema(external_generation):
+    env=external_generation
+    result=invoke(env,"--n-questions","1")
+    assert result.exit_code==0,result.output
+    payload=read_artifact(env)
+    report=payload["option_length_report"]
+    assert report["count"]==1 and report["awaiting_external_judge"]["count"]==1
+    assert report["accepted"]["count"]==0
+    assert report["target_max_rate"]==.35 and report["key_is_longest_rate"]==1
+    assert "WARNING target exceeded" in result.output
+    candidate=payload["candidates"][0]
+    schema=read_request(env,candidate)["verdict_schema"]
+    assert "distractors_need_knowledge" in schema["required"]

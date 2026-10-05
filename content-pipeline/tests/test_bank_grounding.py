@@ -59,6 +59,15 @@ def test_real_accepted_and_rejected_replay(monkeypatch, case):
     result = run(case)
     assert result["passed"] is case["accepted"]
     assert result["question"] == case["question"]
+    if case["name"] == "ace-pilot-4d-candidate-1":
+        # This unchanged real question now fails O4 before citation or judging.
+        assert not result["schema_check"]["passed"]
+        assert any("four-option mean" in error or "uniquely longest" in error
+                   for error in result["schema_check"]["errors"])
+        assert result["sources"] == [] and result["citation_attempts"] == []
+        search.assert_not_called(); judge.assert_not_called()
+        assert lm.history == []
+        return
     if case["name"] == "pmle-pilot-6d-candidate-3":
         # This real recorded stem is unchanged. The new checklist gate now stops
         # it before retrieval; do not manufacture a new judge output or sources.

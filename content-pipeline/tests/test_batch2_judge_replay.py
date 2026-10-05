@@ -18,9 +18,10 @@ CASES = FIXTURE["cases"]
 # The real historical outputs contain only seven checks. Parse them only under
 # their recorded schema; never add invented style verdicts to real completions.
 LEGACY_SIGNATURE = gate.QuestionQualitySignature
-for name in gate.STYLE_CHECKS:
+HISTORICALLY_ABSENT = (*gate.STYLE_CHECKS, "distractors_need_knowledge")
+for name in HISTORICALLY_ABSENT:
     LEGACY_SIGNATURE = LEGACY_SIGNATURE.delete(name)
-LEGACY_CHECKS = tuple(name for name in gate.ACCURACY_CHECKS if name not in gate.STYLE_CHECKS)
+LEGACY_CHECKS = tuple(name for name in gate.ACCURACY_CHECKS if name not in HISTORICALLY_ABSENT)
 
 HEADERS = ("[[ ## score ></br>", "[[ ## score ||> 0.9 <|| ## ]]")
 
