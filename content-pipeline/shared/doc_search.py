@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+import re
 import time
 from datetime import datetime, timezone
 from urllib.parse import urlparse
@@ -49,13 +50,30 @@ class OfficialDocsRedirectHandler(HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
+def _discovery_query(objective_text: str, services: list[str]) -> str:
+    """Focus objective examples without changing existing question-first queries."""
+    fallback = " ".join(["Google Cloud", objective_text, ", ".join(services)])
+    if objective_text.startswith("Marked answer: ") and "\nQuestion stem: " in objective_text:
+        return fallback
+    pattern = r"\(\s*(?:e\.g\.\s*,?\s*|for example\b\s*[:,]?\s*)([^()]*)\)"
+    examples = [match.group(1).strip() for match in re.finditer(pattern, objective_text, re.I)
+                if match.group(1).strip()]
+    if not examples:
+        return fallback
+    context = re.sub(pattern, " ", objective_text, flags=re.I)
+    # Examples provide concrete retrieval targets; service lists can dilute them.
+    query = " ".join(["Google Cloud", *examples, context])
+    query = re.sub(r"\bA\s*/\s*B\b", "A/B", query, flags=re.I)
+    return " ".join(query.split())
+
+
 def _discover_urls(objective_text: str, services: list[str], num_results: int) -> list[str]:
     # Do not import the legacy Exa wrapper: it loads credential files on import.
     api_key = os.environ.get("EXA_API_KEY")
     if not api_key:
         raise DocumentationError("EXA_API_KEY must be supplied in the environment")
     from exa_py import Exa  # Lazy: imports and pure operations never initialize Exa.
-    query = " ".join(["Google Cloud", objective_text, ", ".join(services)])
+    query = _discovery_query(objective_text, services)
     results = Exa(api_key=api_key).search(
         query=query, type="neural", num_results=num_results,
         include_domains=[DISCOVERY_HOST],

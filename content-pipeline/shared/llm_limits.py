@@ -12,9 +12,11 @@ TRUNCATION_REASON = "LM completion reached its token limit"
 class MaxTokensTruncation(ValueError):
     """A completion stopped at its output token limit, even if it parses."""
 
-    def __init__(self):
+    def __init__(self, diagnostics=None):
         super().__init__(TRUNCATION_REASON)
         self.error_class = "MaxTokensTruncation"
+        self.diagnostics = diagnostics
+        self.raw_response = (diagnostics or {}).get("raw_response")
 
 
 def _field(value, name, default=None):
@@ -27,7 +29,7 @@ def _is_token_limit(reason):
 
 def _is_truncated(response):
     # DSPy 3 LM._check_truncation sees native LiteLLM/OpenRouter choices before
-    # _process_completion discards their finish reasons. Read no completion text.
+    # _process_completion discards their finish reasons. Detection reads no text.
     return any(
         _is_token_limit(_field(choice, "finish_reason"))
         or _is_token_limit(_field(choice, "native_finish_reason"))
@@ -47,8 +49,8 @@ def _typed_truncation(error):
 
 
 @contextmanager
-def reject_token_limit(lm):
-    """Inspect only finish reasons in DSPy's native warning hook for this call."""
+def reject_token_limit(lm, *, capture=None):
+    """Reject token limits; optionally retain safe failure completion diagnostics."""
     truncated = False
     original = getattr(lm, "_check_truncation", None)
     # Production LMs are per-call instances. Restore the instance after use;
@@ -57,8 +59,18 @@ def reject_token_limit(lm):
 
     def check(response):
         nonlocal truncated
-        truncated = truncated or _is_truncated(response)
-        original(response)
+        response_truncated = _is_truncated(response)
+        truncated = truncated or response_truncated
+        if capture is not None:
+            capture.observe_native(response)
+            if response_truncated:
+                capture.observe_truncated_completion(response)
+        try:
+            original(response)
+        except Exception as error:
+            if capture is not None and _typed_truncation(error):
+                capture.observe_truncated_completion(response)
+            raise
 
     if callable(original):
         lm._check_truncation = check
@@ -67,10 +79,10 @@ def reject_token_limit(lm):
             yield
         except Exception as error:
             if truncated or _typed_truncation(error):
-                raise MaxTokensTruncation() from None
+                raise MaxTokensTruncation(capture.failure() if capture is not None else None) from None
             raise
         if truncated:
-            raise MaxTokensTruncation()
+            raise MaxTokensTruncation(capture.failure() if capture is not None else None)
     finally:
         if callable(original):
             if had_override:

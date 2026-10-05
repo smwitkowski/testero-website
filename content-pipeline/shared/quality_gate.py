@@ -22,9 +22,10 @@ from typing import Any, Callable, Literal, Mapping
 
 import dspy
 
+from shared.completion_diagnostics import CompletionCaptureAdapter
 from shared.model_policy import DEFAULT_JUDGE_MODEL, require_independent_models
 from shared.llm_limits import (
-    MaxTokensTruncation, TRUNCATION_REASON, SingleCallChatAdapter, reject_token_limit,
+    MaxTokensTruncation, TRUNCATION_REASON, reject_token_limit,
 )
 PASS_THRESHOLD = 0.8
 REVIEW_NOTES_SOURCE = "content_pipeline_judge"
@@ -99,11 +100,12 @@ class JudgeVerdict:
     reason: str
     model: str
     error_class: str | None = None
+    diagnostics: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if (not _valid_verdict_fields(asdict(self))
                 or self.error_class not in (None, "MaxTokensTruncation")
-                or (self.error_class is not None and self.passed)):
+                or ((self.error_class is not None or self.diagnostics is not None) and self.passed)):
             raise ValueError("Invalid quality judge verdict")
 
     def to_review_notes(self) -> str:
@@ -111,7 +113,7 @@ class JudgeVerdict:
         return json.dumps(
             {REVIEW_NOTES_SOURCE: {"version": REVIEW_NOTES_VERSION,
                                    **{key: value for key, value in asdict(self).items()
-                                      if key != "error_class"}}},
+                                      if key not in ("error_class", "diagnostics")}}},
             allow_nan=False, separators=(",", ":"),
         )
 
@@ -171,8 +173,13 @@ def judge_question(
     if not isinstance(model, str) or not model.strip():
         return JudgeVerdict(False, 0.0, "Invalid judge model", DEFAULT_JUDGE_MODEL)
 
+    adapter = None
+
+    def failure_diagnostics():
+        return adapter.capture.failure() if adapter is not None else None
+
     def fail(reason: str, error_class: str | None = None) -> JudgeVerdict:
-        return JudgeVerdict(False, 0.0, reason, model, error_class)
+        return JudgeVerdict(False, 0.0, reason, model, error_class, failure_diagnostics())
 
     if generator_model is not None:
         try:
@@ -208,7 +215,8 @@ def judge_question(
                 temperature=0.0, max_tokens=max_tokens, cache=False,
             )
             # DSPy selects per-call lm from the direct keyword, not config.
-            with reject_token_limit(lm), dspy.context(adapter=SingleCallChatAdapter()):
+            adapter = CompletionCaptureAdapter(normalize_markers=False)
+            with reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
                 result = dspy.Predict(QuestionQualitySignature)(**inputs, lm=lm)
         else:
             with reject_token_limit(None):
@@ -235,7 +243,8 @@ def judge_question(
                 reason = "Failed " + ", ".join(failed_checks) + ": " + reason
             elif score < PASS_THRESHOLD:
                 reason = "Below quality threshold: " + reason
-        return JudgeVerdict(passed, float(score), reason[:MAX_REASON_LENGTH], model)
+        return JudgeVerdict(passed, float(score), reason[:MAX_REASON_LENGTH], model,
+                            diagnostics=failure_diagnostics() if not passed else None)
     except MaxTokensTruncation:
         return fail(TRUNCATION_REASON, "MaxTokensTruncation")
     except Exception:

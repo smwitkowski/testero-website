@@ -373,3 +373,64 @@ def test_explicit_objective_dry_run_has_no_generation_runs(generation):
     assert artifact["requested_objective_ids"] == [target]
     assert artifact["generation_runs"] == {}
     assert artifact["plan"][0]["objective_id"] == target
+
+
+@pytest.mark.parametrize("passed", [False, True])
+def test_judge_failure_diagnostics_are_local_only_and_success_shape_unchanged(generation, passed):
+    diagnostics = {"raw_response": "Actual failed judge completion", "finish_reason": "stop",
+                   "usage": {"prompt_tokens": 7, "completion_tokens": 11, "total_tokens": 18}}
+    verdict = JudgeVerdict(passed, 0.9 if passed else 0.2, "Offline verdict", generate.DEFAULT_JUDGE_MODEL,
+                           **({} if passed else {"diagnostics": diagnostics}))
+    generation[5].return_value = verdict
+    outcome = invoke(generation)
+    assert outcome.exit_code == (0 if passed else 1), outcome.output
+    artifact = json.loads((generation[-1] / "pilot.json").read_text())
+    row = artifact["candidates"][0]
+    assert ("diagnostics" in row["judge_verdict"]) is (not passed)
+    if not passed:
+        assert row["judge_verdict"]["diagnostics"] == diagnostics
+    notes = json.loads(generation[0].insert_question.call_args.args[0]["review_notes"])
+    assert "diagnostics" not in notes["content_pipeline_judge"]
+    assert set(notes["content_pipeline_judge"]) == {"version", "passed", "score", "reason", "model"}
+    assert "Actual failed judge completion" not in json.dumps(notes)
+
+
+def test_generation_parse_diagnostics_survive_in_artifact(generation):
+    diagnostics = {"raw_response": "Actual generator completion " + "x" * 9000,
+                   "finish_reason": "stop", "usage": {"completion_tokens": 100}}
+    generation[4].side_effect = generate.GenerationOutputError(diagnostics["raw_response"], diagnostics=diagnostics)
+    outcome = invoke(generation, "--dry-run")
+    assert outcome.exit_code != 0
+    row = json.loads((generation[-1] / "pilot.json").read_text())["candidates"][0]
+    assert row["raw_response"] == diagnostics["raw_response"]
+    assert row["diagnostics"] == diagnostics
+    generation[4].cite_mock.assert_not_called()
+    generation[5].assert_not_called()
+    generation[1].assert_not_called()
+
+
+def test_citation_parse_diagnostics_survive_in_attempts(generation):
+    diagnostics = {"raw_response": "Actual failed citation completion " + "x" * 9000,
+                   "finish_reason": "stop", "usage": {"completion_tokens": 100}}
+    generation[4].cite_mock.side_effect = None
+    generation[4].cite_mock.return_value = {"evidence": None, "parse_failure": "Citation output could not be parsed",
+                                          "raw_response": diagnostics["raw_response"], "diagnostics": diagnostics}
+    outcome = invoke(generation, "--dry-run")
+    assert outcome.exit_code != 0
+    row = json.loads((generation[-1] / "pilot.json").read_text())["candidates"][0]
+    assert len(row["citation_attempts"]) == 2
+    assert all(attempt["diagnostics"] == diagnostics for attempt in row["citation_attempts"])
+    assert all(attempt["raw_response"] == diagnostics["raw_response"] for attempt in row["citation_attempts"])
+    generation[5].assert_not_called()
+
+
+def test_transport_diagnostics_attribute_is_not_trusted(generation):
+    error = RuntimeError("PRIVATE provider transport body")
+    error.diagnostics = {"raw_response": "PRIVATE", "messages": "PRIVATE"}
+    generation[4].side_effect = error
+    outcome = invoke(generation, "--dry-run")
+    assert outcome.exit_code != 0
+    text = (generation[-1] / "pilot.json").read_text()
+    assert "PRIVATE" not in text + outcome.output
+    row = json.loads(text)["candidates"][0]
+    assert "diagnostics" not in row and "raw_response" not in row
