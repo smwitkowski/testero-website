@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Generate one weighted total budget through the certification-aware CLI.
 
-Uses the same --cert, --n-questions TOTAL, --dry-run, --artifact PATH, --model,
---judge-model and --difficulty options as generate_pmle_questions.py.
+Uses the same --cert, --n-questions TOTAL, repeatable --objective ID, --dry-run,
+--artifact PATH, --model, --judge-model and --difficulty options as generate_pmle_questions.py.
 There are no equal-count domain loops or subprocesses.
 """
 

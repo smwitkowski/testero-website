@@ -105,6 +105,104 @@ retire only genuinely out-of-scope or unsalvageable questions; manually map
 `unmapped` items or retire them and regenerate grounded DRAFT replacements for
 reviewed coverage gaps. Never use positional guide IDs as cross-version aliases.
 
+## Regeneration runbook (D-025)
+
+Founder decision: replace the legacy PMLE bank domain by domain. The first batch
+plans two candidates for each of the 15 zero-ACTIVE-coverage objectives from the
+lexical audit. Planning is not a promise that all candidates pass. Explicit
+`--objective` flags are validated against the current cert/domain/subsection and
+cycled in flag order; duplicate flags are de-duplicated. Domain weights and random
+start offsets apply only when no explicit objectives are given.
+
+Run these commands from `content-pipeline/`. Supply keys in the shell only;
+`PYTHON_DOTENV_DISABLED=1` prevents the legacy client from reading env files.
+Never publish by generating, and never retire legacy questions before founder
+approval of enough replacements. Use a new artifact filename for each batch.
+
+1. **Generate DRAFT candidates (writes; needs `EXA_API_KEY`, `OPENROUTER_API_KEY`,
+   `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`).** No `--dry-run`:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/generate_all_domains.py \
+  --cert machine-learning-engineer --n-questions 30 \
+  --objective machine-learning-engineer:standard:1.1:5 \
+  --objective machine-learning-engineer:standard:1.2:1 \
+  --objective machine-learning-engineer:standard:1.2:2 \
+  --objective machine-learning-engineer:standard:1.2:3 \
+  --objective machine-learning-engineer:standard:2.1:3 \
+  --objective machine-learning-engineer:standard:2.2:3 \
+  --objective machine-learning-engineer:standard:3.1:4 \
+  --objective machine-learning-engineer:standard:3.2:6 \
+  --objective machine-learning-engineer:standard:3.3:1 \
+  --objective machine-learning-engineer:standard:4.1:4 \
+  --objective machine-learning-engineer:standard:4.1:5 \
+  --objective machine-learning-engineer:standard:4.2:4 \
+  --objective machine-learning-engineer:standard:5.1:2 \
+  --objective machine-learning-engineer:standard:6.1:1 \
+  --objective machine-learning-engineer:standard:6.2:3 \
+  --artifact .cache/generation/pmle-d025-first-30.json
+```
+
+This batch creates six domain-specific generation runs. Their UUIDs are printed
+and saved in the artifact's `generation_runs` mapping. Use each actual run UUID
+in steps 2–3; do not treat the entire batch as one run. Inspect failed candidate
+records and complete the founder review before approval.
+
+2. **Export the ceil(10%) founder sample for each completed run (read-only DB;
+   needs `SUPABASE_URL` and the service-role key).** Replace `RUN_UUID` with a
+   printed UUID. The default report path is `review/RUN_UUID.md`:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/review_batch.py RUN_UUID
+```
+
+3. **After the founder personally reviews and approves that sample, promote the
+   unchanged eligible pool (writes; same DB/service-role keys).** `--yes` attests
+   human review; it does not bypass the saved-report/receipt/fingerprint gates:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/review_batch.py RUN_UUID --approve --yes
+```
+
+4. **Inspect replacements versus legacy ACTIVE (read-only; DB/service-role keys):**
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/retire_legacy.py
+```
+
+5. **Retire one replaced domain only (writes; DB/service-role keys):**
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/retire_legacy.py --apply --domain ARCHITECTING_LOW_CODE_ML_SOLUTIONS
+```
+
+Repeat steps 2–3 for every approved run and step 5 for each replaced domain. If
+new grounded ACTIVE is below legacy ACTIVE, retirement refuses and prints the
+shortfall: generate/review/approve more replacements first. The first gap batch
+alone will usually not satisfy every domain's replacement count. `RETIRED` is a
+status change, never deletion; repeat application is a no-op after replacement.
+
+Receipt detection reuses the approval gate. Phase-2 `persist_candidate` writes
+`review_notes.grounding` alongside the independent judge verdict. A replacement
+must be ACTIVE, run-linked, judge-passed, and have complete A-D official-source
+receipts and a passing mechanical check; the current PMLE cert, guide hash,
+objective ID and objective's owning domain must match. Plain legacy notes with
+no grounding receipt remain legacy. Corrupt or invalid receipt-bearing rows do
+not count as replacements and block apply. No docs/LLM fetching occurs here.
+
+Pause concurrent content approval/edit/retirement while applying a domain. The
+script uses fresh reads and per-row snapshot guards, not a cross-row transaction;
+a conflict or unknown update result stops further writes. Inspect the printed
+before/after counts before retrying any partial run.
+
+**Judge failure `f4d2e283`:** the recorded artifact contains only the generic
+`Judge failed or returned invalid output` verdict, not a raw judge completion,
+parse error class or finish metadata. Its citation passed. The glued-marker
+cause cannot be confirmed from that record; no speculative judge fix or invented
+real-output replay was made. The next proposed diagnostic is a separately
+approved, bounded/redacted parse-only judge completion capture and keyed replay
+of that saved row. Do not weaken the quality gate to recover a PASS.
+
 ## Later
 
 - **Multiple-select:** add when a separately reviewed schema, scoring and report contract can represent more than one key; never fake it as single-answer.

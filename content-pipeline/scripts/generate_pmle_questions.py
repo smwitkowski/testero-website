@@ -98,20 +98,22 @@ def persist_candidate(client, scope, question, judge, grounding, exam, domain_id
 
 @click.command()
 @click.option("--cert", default=DEFAULT_CERT, show_default=True)
-@click.option("--n-questions", type=click.IntRange(min=1), default=10, show_default=True, help="Total count across the weighted plan, not per domain.")
+@click.option("--n-questions", type=click.IntRange(min=1), default=10, show_default=True, help="Total candidate count across the plan, not per domain.")
 @click.option("--domain-code", default=None, help="Optional domain filter; otherwise use all weighted sections.")
 @click.option("--subsection", default=None, help="Optional guide subsection filter.")
+@click.option("--objective", "objective_ids", multiple=True, help="Repeatable registry objective ID; overrides weights with round-robin targets in flag order.")
 @click.option("--model", default=DEFAULT_GENERATOR_MODEL, show_default=True)
 @click.option("--judge-model", default=DEFAULT_JUDGE_MODEL, show_default=True)
 @click.option("--difficulty", type=click.Choice(["EASY", "MEDIUM", "HARD"]), default="MEDIUM", show_default=True)
 @click.option("--dry-run", is_flag=True, help="Generate and judge locally; never access/write the DB.")
 @click.option("--artifact", type=click.Path(path_type=Path), help="JSON review artifact. Defaults to .cache/generation/<cert>-<UTC>.json.")
 @click.option("--exam", default=None, help="Existing DB exam identifier; no domain seeding is performed.")
-@click.option("--seed", type=int, default=None, help="Reproducible random objective start offsets per domain.")
-def main(cert, n_questions, domain_code, subsection, model, judge_model, difficulty, dry_run, artifact, exam, seed):
+@click.option("--seed", type=int, default=None, help="Reproduce weighted-plan objective offsets; explicit objectives always use flag order.")
+def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge_model, difficulty, dry_run, artifact, exam, seed):
     try:
         generator_family, judge_family = require_independent_models(model, judge_model)
-        plan = plan_questions(cert, n_questions, domain_code=domain_code, subsection=subsection, seed=seed)
+        plan = plan_questions(cert, n_questions, domain_code=domain_code, subsection=subsection, seed=seed,
+                              objective_ids=objective_ids)
     except ValueError as exc:
         raise click.ClickException(str(exc)) from None
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
@@ -120,7 +122,8 @@ def main(cert, n_questions, domain_code, subsection, model, judge_model, difficu
         raise click.ClickException("Artifacts must be JSON files under .cache/generation/")
     payload = {"version": 1, "cert_id": cert, "model": model, "judge_model": judge_model,
                "generator_family": generator_family, "judge_family": judge_family,
-               "dry_run": dry_run, "seed": seed, "planned_count": n_questions, "plan": plan, "candidates": []}
+               "dry_run": dry_run, "seed": seed, "requested_objective_ids": list(dict.fromkeys(objective_ids)),
+               "planned_count": n_questions, "plan": plan, "candidates": []}
     client = None if dry_run else database_client()
     exam = exam or ("GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert)
     domains, runs, run_counts = {}, {}, {}
@@ -141,6 +144,8 @@ def main(cert, n_questions, domain_code, subsection, model, judge_model, difficu
             if not run:
                 raise click.ClickException("Could not create generation run")
             runs[code], run_counts[code] = run["id"], 0
+            click.echo(f"Generation run {code}: {run['id']}")
+    payload["generation_runs"] = runs
     seen = set()
     accepted = 0
     for index, scope in enumerate(plan, 1):
