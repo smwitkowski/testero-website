@@ -122,7 +122,8 @@ def test_success_freezes_parent_A_plan_sources_and_publishes_current_request_onc
     request_bytes = case[6].read_bytes()
     verdict_path = next(case[1].glob("*.json"))
     verdict_bytes = verdict_path.read_bytes()
-    def revision(model, signature, inputs):
+    def revision(model, signature, inputs, *, reasoning_effort):
+        assert reasoning_effort == "high"
         journal = saved(repairs)["repair_attempts"][original["candidate_id"]]
         assert journal["status"] == "started" and journal["calls_started"] == 1
         assert journal["parent_entry_sha256"] == canonical_sha256(original)
@@ -133,7 +134,8 @@ def test_success_freezes_parent_A_plan_sources_and_publishes_current_request_onc
         assert set(signature.input_fields) == {"original_question", "reason", "domain_context", "documentation_context", "difficulty"}
         assert model == repair.REPAIR_MODEL
         return deepcopy(REVISED)
-    def citation(question, sources, model):
+    def citation(question, sources, model, *, reasoning_effort):
+        assert reasoning_effort == "medium"
         assert saved(repairs)["repair_attempts"][original["candidate_id"]]["calls_started"] == 2
         assert question == REVISED and sources == original["sources"] and model == repair.REPAIR_MODEL
         return {"evidence": [{"option_label": label, "url": URL, "quote": quote} for label, quote in zip("ABCD", QUOTES)]}
@@ -314,15 +316,15 @@ def test_real_round4_raw_verdict_eligibility_replay(index):
         eligible_repair_verdict(case["verdict"])
 
 
-def add_second_parent(repairs):
+def add_parent(repairs, index=2):
     case = repairs[0]
-    payload = deepcopy(case[2])
+    payload = saved(repairs)
     original = payload["candidates"][0]
-    scope = plan_questions(payload["cert_id"], 2, objective_ids=[original["objective_id"]])[1]
+    scope = plan_questions(payload["cert_id"], index, objective_ids=[original["objective_id"]])[index - 1]
     entry = deepcopy(original)
     entry.update({key: scope[key] for key in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line")})
-    entry.update(index=2, stem=original["stem"].replace("a retailer", "another retailer"))
-    entry["candidate_id"] = candidate_id(2, scope, candidate_question(entry))
+    entry.update(index=index, stem=original["stem"].replace("a retailer", f"retailer number {index}"))
+    entry["candidate_id"] = candidate_id(index, scope, candidate_question(entry))
     destination = case[6].with_name(entry["candidate_id"] + ".json")
     destination.write_text(json.dumps(build_request(entry["candidate_id"], scope, candidate_question(entry), entry["sources"], entry["evidence"])))
     entry["external_judge_request"] = {"path": str(destination.relative_to(case[0].parent)), "sha256": hashlib.sha256(destination.read_bytes()).hexdigest()}
@@ -331,6 +333,10 @@ def add_second_parent(repairs):
     payload["candidates"].append(entry)
     case[0].write_text(json.dumps(payload))
     return entry
+
+
+def add_second_parent(repairs):
+    return add_parent(repairs)
 
 
 @pytest.mark.parametrize("flags,expected", [(["--limit", "1", "--max-calls", "4"], 1),
@@ -355,7 +361,7 @@ def test_two_parent_total_call_budget_and_candidate_limit(repairs, flags, expect
 def test_usage_auth_or_fixed_model_failure_stops_admitting_other_parents(repairs, error, stage):
     second = add_second_parent(repairs)
     (repairs[1] if stage == "revision" else repairs[2]).side_effect = error("SECRET_TOKEN raw logs")
-    result = invoke(repairs, "--limit", "2", "--max-calls", "4")
+    result = invoke(repairs, "--limit", "2", "--max-calls", "4", "--parallel", "1")
     assert result.exit_code == 1
     summary = json.loads(result.output)
     assert summary["stopped"] and summary["attempted"] == 1
@@ -479,3 +485,277 @@ def test_completed_state_exception_never_allows_partial_unknown_or_invalid_state
     repairs[2].assert_not_called()
     repairs[0][4].assert_not_called()
     assert repairs[0][0].read_bytes() == bytes_before
+
+
+@pytest.mark.parametrize("parallel", [1, 2, 3, 4])
+def test_parallel_bounds_journal_integrity_and_unlocked_calls(repairs, monkeypatch, parallel):
+    from threading import Barrier, Lock, RLock
+    for index in range(2, parallel * 2 + 1):
+        add_parent(repairs, index)
+    originals = deepcopy(saved(repairs)["candidates"])
+    by_stem = {entry["stem"]: entry for entry in originals}
+    write_lock = RLock()
+    monkeypatch.setattr(repair, "RLock", lambda: write_lock)
+    phase = Barrier(parallel)
+    count_lock = Lock()
+    active = peak = 0
+    real_publish = request_runner._publish
+    real_flush = repair._flush
+    writes = []
+    def publish(path, payload, *, exclusive):
+        assert write_lock._is_owned(), "Every artifact/request write must own the same lock"
+        writes.append(path)
+        return real_publish(path, payload, exclusive=exclusive)
+    def flush(path, payload):
+        assert write_lock._is_owned()
+        real_flush(path, payload)
+        # Every durable snapshot is complete JSON with all original records intact.
+        frozen = json.loads(path.read_text())
+        assert frozen["candidates"][:len(originals)] == originals
+    def revision(model, signature, inputs, *, reasoning_effort):
+        nonlocal active, peak
+        assert not write_lock._is_owned(), "Model calls must not hold the write lock"
+        entry = by_stem[json.loads(inputs["original_question"])["stem"]]
+        journal = saved(repairs)["repair_attempts"][entry["candidate_id"]]
+        assert journal["status"] == "started" and journal["calls_started"] == 1
+        assert journal["parent_entry_sha256"] == canonical_sha256(entry)
+        assert reasoning_effort == "high"
+        with count_lock:
+            active += 1
+            peak = max(peak, active)
+        phase.wait(timeout=5)
+        return {**REVISED, "stem": REVISED["stem"].replace("A retailer's", f"A retailer number {entry['index']}'s")}
+    def citation(question, sources, *, model, reasoning_effort):
+        nonlocal active
+        assert not write_lock._is_owned()
+        assert reasoning_effort == "medium"
+        index = int(question["stem"].split("number ")[1].split("'")[0])
+        entry = originals[index - 1]
+        assert saved(repairs)["repair_attempts"][entry["candidate_id"]]["calls_started"] == 2
+        with count_lock:
+            active -= 1
+        return {"evidence": [{"option_label": label, "url": URL, "quote": quote}
+                             for label, quote in zip("ABCD", QUOTES)]}
+    monkeypatch.setattr(request_runner, "_publish", publish)
+    monkeypatch.setattr(repair, "_flush", flush)
+    repairs[1].side_effect = revision
+    repairs[2].side_effect = citation
+    flags = [] if parallel == 3 else ["--parallel", str(parallel)]
+    result = invoke(repairs, *flags)
+    assert result.exit_code == 0, result.output
+    assert peak == parallel and active == 0
+    payload = saved(repairs)
+    assert payload["candidates"][:len(originals)] == originals
+    assert [entry["index"] for entry in payload["candidates"][len(originals):]] == list(range(1, len(originals) + 1))
+    assert len(payload["repair_attempts"]) == len(originals)
+    assert all(journal["calls_started"] == 2 and journal["status"] == "awaiting_external_judge"
+               for journal in payload["repair_attempts"].values())
+    assert len([path for path in writes if path != repairs[0][0]]) == len(originals)
+    validate_candidate_records(payload)
+
+
+def test_out_of_order_completion_publishes_parent_plan_order_not_input_order(repairs, monkeypatch):
+    from threading import Event
+    second = add_second_parent(repairs)
+    payload = saved(repairs)
+    originals = deepcopy(payload["candidates"])
+    payload["candidates"].reverse()
+    repairs[0][0].write_text(json.dumps(payload))
+    second_done = Event()
+    real_worker = repair._repair_one
+    completed = []
+    def worker(*args, **kwargs):
+        real_worker(*args, **kwargs)
+        index = args[2]["index"]
+        completed.append(index)
+        if index == 2:
+            second_done.set()
+    def revision(model, signature, inputs, *, reasoning_effort):
+        question = json.loads(inputs["original_question"])
+        if question["stem"] == originals[0]["stem"]:
+            assert second_done.wait(timeout=5)
+            return deepcopy(REVISED)
+        return {**REVISED, "stem": REVISED["stem"].replace("A retailer's", "A different retailer's")}
+    monkeypatch.setattr(repair, "_repair_one", worker)
+    repairs[1].side_effect = revision
+    result = invoke(repairs, "--parallel", "2")
+    assert result.exit_code == 0, result.output
+    assert completed == [2, 1]
+    final = saved(repairs)
+    assert final["candidates"][:2] == list(reversed(originals))
+    assert [entry["repair"]["parent_candidate_id"] for entry in final["candidates"][2:]] == [
+        originals[0]["candidate_id"], second["candidate_id"]]
+    validate_candidate_records(final)
+
+
+@pytest.mark.parametrize("error", [cli_models.CLIUsageLimitError, cli_models.CLIAuthError,
+                                   cli_models.CodexModelRejectedError])
+@pytest.mark.parametrize("stage", ["revision", "citation"])
+def test_parallel_fatal_error_signals_before_journal_io_stops_admission_and_drains(repairs, monkeypatch, error, stage):
+    from threading import Barrier, Event
+    for index in range(2, 5):
+        add_parent(repairs, index)
+    originals = deepcopy(saved(repairs)["candidates"])
+    by_stem = {entry["stem"]: entry for entry in originals}
+    first_wave = Barrier(3)
+    event = Event()
+    monkeypatch.setattr(repair, "Event", lambda: event)
+    real_record = repair._record_failure
+    signals = []
+    def record(*args, **kwargs):
+        assert event.is_set(), "Fatal errors must signal before serialized journal saving"
+        signals.append(True)
+        return real_record(*args, **kwargs)
+    def revision(model, signature, inputs, *, reasoning_effort):
+        entry = by_stem[json.loads(inputs["original_question"])["stem"]]
+        first_wave.wait(timeout=5)
+        if entry["index"] == 1 and stage == "revision":
+            raise error("SECRET_TOKEN raw error")
+        if entry["index"] != 1:
+            assert event.wait(timeout=5)
+        return {**REVISED, "stem": REVISED["stem"].replace("A retailer's", f"A retailer number {entry['index']}'s")}
+    def citation(question, sources, *, model, reasoning_effort):
+        if question["stem"].startswith("A retailer number 1"):
+            raise error("SECRET_TOKEN raw error")
+        return {"evidence": [{"option_label": label, "url": URL, "quote": quote}
+                             for label, quote in zip("ABCD", QUOTES)]}
+    monkeypatch.setattr(repair, "_record_failure", record)
+    repairs[1].side_effect = revision
+    repairs[2].side_effect = citation
+    result = invoke(repairs)
+    assert result.exit_code == 1, result.output
+    summary = json.loads(result.output)
+    assert signals == [True] and summary["stopped"]
+    assert summary["attempted"] == 3 and summary["repaired"] == 2 and summary["failed"] == 1
+    final = saved(repairs)
+    assert originals[3]["candidate_id"] not in final["repair_attempts"]
+    assert final["candidates"][:4] == originals
+    assert [child["index"] for child in final["candidates"][4:]] == [2, 3]
+    journal = final["repair_attempts"][originals[0]["candidate_id"]]
+    assert journal["status"] == "unknown" and journal["calls_started"] == (1 if stage == "revision" else 2)
+    assert repairs[1].call_count == 3 and repairs[2].call_count == (2 if stage == "revision" else 3)
+    assert "SECRET_TOKEN" not in result.output + repairs[0][0].read_text()
+    validate_candidate_records(final)
+
+
+@pytest.mark.parametrize("gen,cite", [("low", "high"), ("medium", "low"), ("high", "medium")])
+def test_cli_and_api_effort_propagation(repairs, gen, cite):
+    summary = repair.repair_candidates(repairs[0][0], repairs[0][1], parallel=1,
+                                       gen_effort=gen, cite_effort=cite)
+    assert summary["repaired"] == 1
+    assert repairs[1].call_args.kwargs == {"reasoning_effort": gen}
+    assert repairs[2].call_args.kwargs == {"model": repair.REPAIR_MODEL, "reasoning_effort": cite}
+
+
+@pytest.mark.parametrize("flags", [["--parallel", "0"], ["--parallel", "5"],
+                                    ["--gen-effort", "invalid"], ["--cite-effort", "invalid"]])
+def test_invalid_cli_parallel_and_effort_fail_before_calls(repairs, flags):
+    before = repairs[0][0].read_bytes()
+    assert invoke(repairs, *flags).exit_code == 2
+    assert repairs[0][0].read_bytes() == before
+    repairs[1].assert_not_called()
+    repairs[2].assert_not_called()
+
+
+@pytest.mark.parametrize("kwargs", [{"parallel": 0}, {"parallel": 5}, {"parallel": True},
+                                     {"parallel": 1.0}, {"gen_effort": "invalid"}, {"cite_effort": "invalid"}])
+def test_invalid_api_parallel_and_effort_fail_before_calls(repairs, kwargs):
+    from click import ClickException
+    before = repairs[0][0].read_bytes()
+    with pytest.raises(ClickException):
+        repair.repair_candidates(repairs[0][0], repairs[0][1], **kwargs)
+    assert repairs[0][0].read_bytes() == before
+    repairs[1].assert_not_called()
+    repairs[2].assert_not_called()
+
+
+def test_cli_effort_overrides(repairs):
+    result = invoke(repairs, "--parallel", "4", "--gen-effort", "medium", "--cite-effort", "low")
+    assert result.exit_code == 0, result.output
+    assert repairs[1].call_args.kwargs["reasoning_effort"] == "medium"
+    assert repairs[2].call_args.kwargs["reasoning_effort"] == "low"
+
+
+@pytest.mark.parametrize("first_failure", [None, "citation", "publication"])
+def test_duplicate_repairs_choose_plan_order_and_failed_prior_attempt_does_not_block(repairs, monkeypatch, first_failure):
+    from threading import Event
+    second = add_second_parent(repairs)
+    originals = deepcopy(saved(repairs)["candidates"])
+    second_done = Event()
+    real_worker = repair._repair_one
+    real_flush = repair._flush
+    def worker(*args, **kwargs):
+        real_worker(*args, **kwargs)
+        if args[2]["index"] == 2:
+            second_done.set()
+    def revision(model, signature, inputs, *, reasoning_effort):
+        if json.loads(inputs["original_question"])["stem"] == originals[0]["stem"]:
+            assert second_done.wait(timeout=5)
+        return deepcopy(REVISED)
+    def citation(question, sources, *, model, reasoning_effort):
+        if first_failure == "citation" and second_done.is_set():
+            return {"evidence": []}
+        return {"evidence": [{"option_label": label, "url": URL, "quote": quote}
+                             for label, quote in zip("ABCD", QUOTES)]}
+    def flush(path, payload):
+        if first_failure == "publication" and any(child.get("repair") and child["index"] == 1
+                                                  for child in payload["candidates"]):
+            raise OSError("SECRET_TOKEN publication failure")
+        real_flush(path, payload)
+    monkeypatch.setattr(repair, "_repair_one", worker)
+    monkeypatch.setattr(repair, "_flush", flush)
+    repairs[1].side_effect = revision
+    repairs[2].side_effect = citation
+    result = invoke(repairs, "--parallel", "2")
+    assert result.exit_code == 1, result.output
+    summary = json.loads(result.output)
+    assert summary["attempted"] == 2 and summary["calls_started"] == 4
+    assert summary["repaired"] == summary["failed"] == 1
+    final = saved(repairs)
+    assert final["candidates"][:2] == originals
+    winner_index = 1 if first_failure is None else 2
+    assert len(final["candidates"]) == 3 and final["candidates"][2]["index"] == winner_index
+    rejected = originals[1 if first_failure is None else 0]["candidate_id"]
+    record = final["repair_attempts"][rejected]
+    assert record["status"] == ("unknown" if first_failure == "publication" else "failed")
+    assert "SECRET_TOKEN" not in result.output + repairs[0][0].read_text()
+    assert child_path(repairs).exists() == (first_failure != "citation")
+    validate_candidate_records(final)
+    # Consumed failures and successful children are never automatically retried.
+    assert invoke(repairs).exit_code == 0
+    assert repairs[1].call_count == repairs[2].call_count == 2
+
+
+def test_efforts_are_durable_per_attempt_without_changing_original_generation_settings(repairs):
+    payload = saved(repairs)
+    payload.update(parallel=1, gen_effort="low", cite_effort="high")
+    repairs[0][0].write_text(json.dumps(payload))
+    original = deepcopy(payload["candidates"][0])
+    def revision(model, signature, inputs, *, reasoning_effort):
+        journal = saved(repairs)["repair_attempts"][original["candidate_id"]]
+        assert (journal["gen_effort"], journal["cite_effort"]) == ("medium", "low")
+        return deepcopy(REVISED)
+    repairs[1].side_effect = revision
+    result = invoke(repairs, "--parallel", "2", "--gen-effort", "medium", "--cite-effort", "low")
+    assert result.exit_code == 0, result.output
+    summary = json.loads(result.output)
+    assert (summary["parallel"], summary["gen_effort"], summary["cite_effort"]) == (2, "medium", "low")
+    final = saved(repairs)
+    assert (final["parallel"], final["gen_effort"], final["cite_effort"]) == (1, "low", "high")
+    assert final["candidates"][0] == original
+    assert (final["candidates"][1]["gen_effort"], final["candidates"][1]["cite_effort"]) == ("medium", "low")
+    validate_candidate_records(final)
+
+
+@pytest.mark.parametrize("field", ["gen_effort", "cite_effort"])
+@pytest.mark.parametrize("value", ["invalid", None, True, 0, ["high"]])
+def test_malformed_journal_effort_fails_closed_without_more_calls(repairs, field, value):
+    assert invoke(repairs).exit_code == 0
+    payload = saved(repairs)
+    next(iter(payload["repair_attempts"].values()))[field] = value
+    repairs[0][0].write_text(json.dumps(payload))
+    before = repairs[0][0].read_bytes()
+    result = invoke(repairs, "--dry-run")
+    assert result.exit_code == 1
+    assert repairs[0][0].read_bytes() == before
+    assert repairs[1].call_count == repairs[2].call_count == 1

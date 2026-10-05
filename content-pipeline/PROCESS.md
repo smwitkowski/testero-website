@@ -3,7 +3,18 @@
 ## Current operator flow
 
 The Codex and Claude subscription CLIs are authenticated and ready. The generator
-uses `--model codex` (default `gpt-6.1-sol`, high reasoning). For the current rules-v3 round-5
+uses `--model codex` (default `gpt-6.1-sol`, generation high reasoning,
+citation medium reasoning). Codex with `--judge-model external` runs up to three
+candidate pipelines concurrently by default (`--parallel 1` through `4`). Other
+generation/judge paths stay serial. `--gen-effort` and `--cite-effort` accept
+`low`, `medium`, or `high`; their defaults are `high` and `medium`. Artifacts
+record both efforts and effective concurrency. A bounded 2026-10-05 citation
+smoke used two Codex calls on one frozen round-5 candidate with 82,160 source
+characters: high took 22.034 s and medium took 12.171 s, including CLI startup.
+Both fresh receipts passed unchanged mechanical checks. This is one sample per
+effort, not a quality or full-batch throughput estimate. Local evidence is under
+`.cache/generation/speed-citation-smoke/`; no Exa, judging or DB calls occurred.
+For the current rules-v3 round-5
 45-candidate batch (`pmle-d025-r5-45.json`), generate with `--judge-model external`, then choose either
 **the bounded Claude CLI request runner** or **manual independent Claude Code
 Sonnet 5.5 subagents**. Both consume the same frozen prompts and full verdict
@@ -32,10 +43,21 @@ registry. No migration or new-cert product support. Generation never publishes.
 ## Model pair
 
 The founder's current generator/citer choice is `--model codex`, using the
-existing Codex subscription (OpenAI), defaulting to `gpt-6.1-sol` at high reasoning (Codex 0.160.0, verified by the founder on the ChatGPT plan).
+existing Codex subscription (OpenAI), defaulting to `gpt-6.1-sol` with generation
+at high reasoning and citation at medium reasoning. Codex 0.160.0 supports the
+explicit config form `-c 'model_reasoning_effort="medium"'` (verified with
+`codex exec --help`); generation passes the same config with `"high"`.
 Use `codex/<model>` to override the model. Every call passes `-m` explicitly.
 An unsupported model raises `CodexModelRejectedError` and stops the batch without
-fallback. Its message lists visible names from `~/.codex/models_cache.json` when
+fallback. Usage-limit and authentication errors also stop new candidate admission;
+already admitted pipelines finish, and the artifact records the stop. No queued
+backlog beyond `--parallel` is admitted. Candidate IDs remain content-bound and
+artifact entries and duplicate selection follow plan order. All artifact/request
+writes share one lock. Within each run, discovery is reused per objective and
+fetched documents per URL. Evidence URL, retrieval time, text and SHA-256 are
+frozen across cache hits; returned records are isolated copies. Retrieval failures
+are cached only for that run; a fresh run uses a fresh cache.
+The model-rejection message lists visible names from `~/.codex/models_cache.json` when
 readable; cached availability can lag new models. No model is blocked before the
 CLI runs: the actual rejection message is authoritative, not the cache. The adapter ignores user config/rules,
 disables file-capable tool features and web search, and suppresses project-doc
@@ -239,6 +261,7 @@ before starting the next; never edit an active artifact/request directory.
 cd /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline
 PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/scripts/generate_all_domains.py \
   --cert machine-learning-engineer --n-questions 45 --model codex --judge-model external \
+  --parallel 3 --gen-effort high --cite-effort medium \
   --objective machine-learning-engineer:standard:1.1:5 \
   --objective machine-learning-engineer:standard:1.2:1 \
   --objective machine-learning-engineer:standard:1.2:2 \
@@ -279,12 +302,17 @@ PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/fronte
 ```sh
 PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/scripts/repair_candidates.py \
   --artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.json \
-  --verdicts /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.verdicts
+  --verdicts /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-r5-45.verdicts \
+  --parallel 3 --gen-effort high --cite-effort medium
 ```
 
 `--candidate ID` is repeatable; `--limit N --max-calls N` bounds work. Each parent
 reserves exactly two calls: one typed DSPy writer revision and one fresh citation
-call. No retries, retrieval, judging or DB writes occur here. Journal the attempt
+call. No retries, retrieval, judging or DB writes occur here. Repairs use the same
+`--parallel` bounds and generation/citation effort flags. Each attempt records its
+efforts without rewriting the original batch settings. Publication stays in parent
+plan order; all journal and request writes share one lock. Usage/auth/model failures
+stop new parents and drain already-started attempts. Journal the attempt
 durably before either call; failed/interrupted/unknown attempts are consumed.
 A stays byte-exact; objective, sources and frozen plan stay unchanged. Preserve
 original candidates/requests/verdicts; append `<parent-id>-r1` with verified lineage

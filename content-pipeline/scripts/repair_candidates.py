@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import sys
+from threading import Event, RLock
 
 import click
 import dspy
@@ -17,6 +18,7 @@ from scripts import ingest_external_verdicts as ingestion
 from scripts import judge_requests as request_runner
 from scripts.generate_pmle_questions import clean_question, OPTION_FIELDS, RATIONALE_FIELDS
 from shared import cli_models
+from shared.parallel import run_bounded
 from shared.batch_report import option_length_report, option_prefix_report
 from shared.dedupe import normalize_stem
 from shared.doc_search import documentation_context
@@ -144,27 +146,33 @@ def _destination(path, entry):
     return destination
 
 
-def _repair_one(path, payload, entry, item, destination, summary):
+def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed,
+                *, gen_effort, cite_effort):
     ident = entry["candidate_id"]
     question, scope, raw = item["question"], item["scope"], item["raw"]
     journal = {"attempt": 1, "candidate_id": ident + "-r1", "status": "started",
                "calls_started": 0, "parent_entry_sha256": canonical_sha256(entry),
                "parent_question_sha256": question_sha256(question),
-               "original_verdict_sha256": canonical_sha256(raw)}
-    payload.setdefault("repair_attempts", {})[ident] = journal
-    _flush(path, payload)  # Consume the attempt durably before any CLI call.
-    summary["attempted"] += 1
+               "original_verdict_sha256": canonical_sha256(raw),
+               "gen_effort": gen_effort, "cite_effort": cite_effort}
+    with lock:
+        if stop_event.is_set():
+            return
+        payload.setdefault("repair_attempts", {})[ident] = journal
+        _flush(path, payload)  # Consume the attempt durably before any CLI call.
+        summary["attempted"] += 1
     try:
-        journal["calls_started"] = 1
-        _flush(path, payload)
-        summary["calls_started"] += 1
+        with lock:
+            journal["calls_started"] = 1
+            _flush(path, payload)
+            summary["calls_started"] += 1
         revised = cli_models.run_signature(REPAIR_MODEL, RepairQuestionSignature, {
             "original_question": json.dumps(question, ensure_ascii=False, allow_nan=False),
             "reason": json.dumps(raw, ensure_ascii=False, allow_nan=False),
             "domain_context": scope["domain_prompt"],
             "documentation_context": documentation_context(entry["sources"]),
             "difficulty": payload["difficulty"],
-        })
+        }, reasoning_effort=gen_effort)
         # Do not let cleaning mask omitted, extra or mistyped model fields.
         cli_models.parse_output(json.dumps(revised, allow_nan=False), RepairQuestionSignature)
         if revised["correct_answer"] != question["correct_answer"]:
@@ -174,32 +182,37 @@ def _repair_one(path, payload, entry, item, destination, summary):
             raise ValueError("Cleaning changed frozen answer")
         validation = validate_question(revised)
         if not validation.is_valid:
-            journal.update(status="failed", error_class="RepairValidationError",
-                           reason="Revised question failed schema or mechanical style validation")
-            summary["failed"] += 1
-            _flush(path, payload)
-            return False
+            with lock:
+                journal.update(status="failed", error_class="RepairValidationError",
+                               reason="Revised question failed schema or mechanical style validation")
+                summary["failed"] += 1
+                _flush(path, payload)
+            return
         normalized = normalize_stem(revised["stem"])
-        for other in payload["candidates"]:
-            if other["candidate_id"] != ident and normalize_stem(other["stem"]) == normalized:
-                raise ValueError("Duplicate question")
-        journal["calls_started"] = 2
-        _flush(path, payload)
-        summary["calls_started"] += 1
-        citation = cite_question(revised, deepcopy(entry["sources"]), model=REPAIR_MODEL)
+        with lock:
+            for other in payload["candidates"]:
+                if other["candidate_id"] != ident and normalize_stem(other["stem"]) == normalized:
+                    raise ValueError("Duplicate question")
+            journal["calls_started"] = 2
+            _flush(path, payload)
+            summary["calls_started"] += 1
+        citation = cite_question(revised, deepcopy(entry["sources"]), model=REPAIR_MODEL,
+                                 reasoning_effort=cite_effort)
         checked = check_evidence(citation.get("evidence"), entry["sources"])
         if not checked["passed"]:
-            journal.update(status="failed", error_class="RepairEvidenceError",
-                           reason="Fresh citation or mechanical evidence validation failed")
-            summary["failed"] += 1
-            _flush(path, payload)
-            return False
+            with lock:
+                journal.update(status="failed", error_class="RepairEvidenceError",
+                               reason="Fresh citation or mechanical evidence validation failed")
+                summary["failed"] += 1
+                _flush(path, payload)
+            return
         child = {key: deepcopy(entry[key]) for key in (
             "cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment",
             "opening_style", "question_line", "index", "sources")}
         child.update(candidate_id=ident + "-r1", key="A", stem=revised["stem"],
             options=[{"label": label, "text": revised[field]} for label, field in zip("ABCD", OPTION_FIELDS)],
             rationales={label: revised[field] for label, field in zip("ABCD", RATIONALE_FIELDS)},
+            gen_effort=gen_effort, cite_effort=cite_effort,
             evidence=checked["options"], accepted=False, status="awaiting_external_judge",
             awaiting_external_judge=True,
             schema_check={"passed": True, "errors": [], "warnings": validation.warnings},
@@ -212,6 +225,35 @@ def _repair_one(path, payload, entry, item, destination, summary):
                     "storage_question_id": content_candidate_id(entry["index"], scope, revised),
                     "original_verdict": deepcopy(raw), "original_verdict_sha256": canonical_sha256(raw)})
         request = build_request(child["candidate_id"], scope, revised, child["sources"], checked["options"])
+        with lock:
+            completed[ident] = (child, request)
+    except Exception as error:
+        # Signal before any journal I/O, so another completed worker cannot cause
+        # the scheduler to admit a fresh parent while this failure is being saved.
+        if isinstance(error, (cli_models.CLIUsageLimitError, cli_models.CLIAuthError,
+                              cli_models.CodexModelRejectedError)):
+            stop_event.set()
+        with lock:
+            _record_failure(path, payload, journal, summary, error)
+
+
+def _record_failure(path, payload, journal, summary, error):
+    error_class, reason = _safe_failure(error)
+    definite = isinstance(error, (ValueError, cli_models.CLISchemaError))
+    journal.update(status="failed" if definite else "unknown", error_class=error_class, reason=reason)
+    summary["failed"] += 1
+    _flush(path, payload)
+
+
+def _publish_repair(path, payload, entry, result, destination, summary):
+    """Publish one staged result while holding the batch's shared write lock."""
+    ident = entry["candidate_id"]
+    child, request = result
+    try:
+        normalized = normalize_stem(child["stem"])
+        if any(other["candidate_id"] != ident and normalize_stem(other["stem"]) == normalized
+               for other in payload["candidates"]):
+            raise ValueError("Duplicate question")
         raw_request = exporter._encode(request)
         child["external_judge_request"] = {"path": str(destination.relative_to(path.parent)),
                                           "sha256": hashlib.sha256(raw_request).hexdigest()}
@@ -221,8 +263,7 @@ def _repair_one(path, payload, entry, item, destination, summary):
         final["option_length_report"] = option_length_report(final["candidates"])
         final["option_prefix_report"] = option_prefix_report(final["candidates"])
         validate_candidate_records(final)
-        # Publish without replacement. If the artifact save then fails, the started
-        # journal + orphan request require human reconciliation, never another call.
+        # An orphan request after a failed save consumes the attempt permanently.
         if not request_runner._publish(destination, request, exclusive=True):
             raise FileExistsError()
         exporter._sync_directory(destination.parent)
@@ -230,19 +271,18 @@ def _repair_one(path, payload, entry, item, destination, summary):
         payload.clear()
         payload.update(final)
         summary["repaired"] += 1
-        return False
     except Exception as error:
-        error_class, reason = _safe_failure(error)
-        definite = isinstance(error, (ValueError, cli_models.CLISchemaError))
-        journal.update(status="failed" if definite else "unknown", error_class=error_class, reason=reason)
-        summary["failed"] += 1
-        _flush(path, payload)
-        return isinstance(error, (cli_models.CLIUsageLimitError, cli_models.CLIAuthError,
-                                  cli_models.CodexModelRejectedError))
+        _record_failure(path, payload, payload["repair_attempts"][ident], summary, error)
 
 
-def repair_candidates(artifact, verdicts, *, candidates=(), limit=None, max_calls=None, dry_run=False):
+def repair_candidates(artifact, verdicts, *, candidates=(), limit=None, max_calls=None, dry_run=False,
+                      parallel=3, gen_effort="high", cite_effort="medium"):
     """Inventory or repair once under the existing artifact/request/verdict locks."""
+    if type(parallel) is not int or not 1 <= parallel <= 4:
+        raise click.ClickException("Parallel must be an integer between 1 and 4")
+    if gen_effort not in ("low", "medium", "high") or cite_effort not in ("low", "medium", "high"):
+        raise click.ClickException("Effort must be low, medium or high")
+    lock, stop_event = RLock(), Event()
     artifact, verdicts = Path(artifact).absolute(), Path(verdicts).absolute()
     request_runner._no_symlinks(artifact)
     request_runner._no_symlinks(artifact.with_suffix(artifact.suffix + ".lock"))
@@ -278,15 +318,18 @@ def repair_candidates(artifact, verdicts, *, candidates=(), limit=None, max_call
                     locks.enter_context(request_runner.batch_lock(directory))
             inventory = _inventory(artifact, verdicts, payload)
             selected = [item for item in inventory if item["eligible"] and (not candidates or item["candidate_id"] in candidates)]
+            entries = {entry["candidate_id"]: entry for entry in payload["candidates"]}
+            selected.sort(key=lambda item: entries[item["candidate_id"]]["index"])
             if limit is not None:
                 selected = selected[:limit]
             budget = len(selected) * 2 if max_calls is None else max_calls
             selected = selected[:budget // 2]  # Reserve both calls before admitting a parent.
-            summary = {"dry_run": dry_run, "model": REPAIR_MODEL, "eligible": sum(item["eligible"] for item in inventory),
+            summary = {"dry_run": dry_run, "model": REPAIR_MODEL, "parallel": parallel,
+                       "gen_effort": gen_effort, "cite_effort": cite_effort,
+                       "eligible": sum(item["eligible"] for item in inventory),
                        "selected": len(selected), "max_calls": budget, "attempted": 0, "calls_started": 0,
                        "repaired": 0, "failed": 0, "stopped": False,
                        "inventory": [{key: item[key] for key in ("candidate_id", "eligible", "reason")} for item in inventory]}
-            entries = {entry["candidate_id"]: entry for entry in payload["candidates"]}
             # Preflight every selected publication before starting any call.
             for item in selected:
                 ident = item["candidate_id"]
@@ -295,11 +338,21 @@ def repair_candidates(artifact, verdicts, *, candidates=(), limit=None, max_call
                                                       for directory in directories):
                     raise click.ClickException("Orphan repair request/verdict requires human reconciliation")
             if not dry_run:
-                for item in selected:
+                completed = {}
+                def worker(item):
                     entry = entries[item["candidate_id"]]
-                    if _repair_one(artifact, payload, entry, item, _destination(artifact, entry), summary):
-                        summary["stopped"] = True
-                        break
+                    _repair_one(artifact, payload, entry, item, summary, lock, stop_event,
+                                completed, gen_effort=gen_effort, cite_effort=cite_effort)
+                run_bounded(selected, worker, parallel, stop_event)
+                # Completion order must not change the artifact's parent plan order.
+                with lock:
+                    for item in selected:
+                        ident = item["candidate_id"]
+                        if ident in completed:
+                            entry = entries[ident]
+                            _publish_repair(artifact, payload, entry, completed[ident],
+                                            _destination(artifact, entry), summary)
+                    summary["stopped"] = stop_event.is_set()
     except click.ClickException:
         raise
     except Exception:
@@ -315,8 +368,12 @@ def repair_candidates(artifact, verdicts, *, candidates=(), limit=None, max_call
 @click.option("--limit", type=click.IntRange(min=0), help="Maximum number of parents admitted for repair.")
 @click.option("--max-calls", type=click.IntRange(min=0), help="Total Codex call budget; each parent reserves two calls.")
 @click.option("--dry-run", is_flag=True, help="Inventory only: no CLI, DB, request publication or artifact mutation.")
-def main(artifact, verdicts, candidates, limit, max_calls, dry_run):
-    summary = repair_candidates(artifact, verdicts, candidates=candidates, limit=limit, max_calls=max_calls, dry_run=dry_run)
+@click.option("--parallel", type=click.IntRange(min=1, max=4), default=3, show_default=True)
+@click.option("--gen-effort", type=click.Choice(["low", "medium", "high"]), default="high", show_default=True)
+@click.option("--cite-effort", type=click.Choice(["low", "medium", "high"]), default="medium", show_default=True)
+def main(artifact, verdicts, candidates, limit, max_calls, dry_run, parallel, gen_effort, cite_effort):
+    summary = repair_candidates(artifact, verdicts, candidates=candidates, limit=limit, max_calls=max_calls,
+                                dry_run=dry_run, parallel=parallel, gen_effort=gen_effort, cite_effort=cite_effort)
     if summary["failed"] or summary["stopped"]:
         raise click.exceptions.Exit(1)
 

@@ -155,7 +155,9 @@ def _validate_candidate_records(payload):
     for parent_id, record in attempts.items():
         parent = by_id.get(parent_id)
         if (not isinstance(parent, dict) or "repair" in parent or not isinstance(record, dict)
-                or not required <= set(record) <= required | {"reason", "error_class"}
+                or not required <= set(record) <= required | {"reason", "error_class", "gen_effort", "cite_effort"}
+                or any(record[key] not in ("low", "medium", "high")
+                       for key in ("gen_effort", "cite_effort") if key in record)
                 or type(record["attempt"]) is not int or record["attempt"] != 1
                 or record["candidate_id"] != parent_id + "-r1"
                 or record["status"] not in ("started", "failed", "unknown", "awaiting_external_judge")

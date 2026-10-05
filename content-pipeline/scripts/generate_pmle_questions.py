@@ -3,6 +3,7 @@
 import json
 import math
 import re
+from threading import Condition, Event, RLock
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
@@ -12,11 +13,12 @@ import click
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from shared.cert_context import DEFAULT_CERT, plan_questions
 from shared.dedupe import normalize_stem, strip_markdown
-from shared.doc_search import search_objective_docs, documentation_context
+from shared.doc_search import search_objective_docs, documentation_context, DocumentationCache
+from shared.parallel import run_bounded
 from shared.evidence import check_evidence
 from shared.llm_generator import generate_question, cite_question, GenerationOutputError
 from shared.llm_limits import MaxTokensTruncation
-from shared.cli_models import CLIModelError, CLIUsageLimitError, CodexModelRejectedError
+from shared.cli_models import CLIModelError, CLIUsageLimitError, CLIAuthError, CodexModelRejectedError
 from shared.completion_diagnostics import _safe_completion
 from shared.model_policy import DEFAULT_GENERATOR_MODEL, DEFAULT_JUDGE_MODEL, require_independent_models
 from shared.quality_gate import JudgeVerdict, QUESTION_FIELDS, judge_question
@@ -128,7 +130,11 @@ def persist_candidate(client, scope, question, judge, grounding, exam, domain_id
 @click.option("--artifact", type=click.Path(path_type=Path), help="JSON review artifact. Defaults to .cache/generation/<cert>-<UTC>.json.")
 @click.option("--exam", default=None, help="Existing DB exam identifier; no domain seeding is performed.")
 @click.option("--seed", type=int, default=None, help="Reproduce weighted-plan objective offsets; explicit objectives always use flag order.")
-def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge_model, difficulty, dry_run, artifact, exam, seed):
+@click.option("--parallel", type=click.IntRange(min=1, max=4), default=3, show_default=True, help="Concurrent candidates for Codex with external judging; other paths remain serial.")
+@click.option("--gen-effort", type=click.Choice(["low", "medium", "high"]), default="high", show_default=True)
+@click.option("--cite-effort", type=click.Choice(["low", "medium", "high"]), default="medium", show_default=True)
+def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge_model, difficulty, dry_run, artifact, exam, seed,
+         parallel=3, gen_effort="high", cite_effort="medium"):
     try:
         generator_family, judge_family = require_independent_models(model, judge_model)
         plan = plan_questions(cert, n_questions, domain_code=domain_code, subsection=subsection, seed=seed,
@@ -140,12 +146,15 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     if not artifact.resolve().is_relative_to(ARTIFACT_ROOT.resolve()) or artifact.suffix != ".json":
         raise click.ClickException("Artifacts must be JSON files under .cache/generation/")
     external = judge_model == "external"
+    codex = model == "codex" or model.startswith("codex/")
+    effective_parallel = parallel if external and codex else 1
     if external and (artifact.exists() or request_directory(artifact).exists()):
         raise click.ClickException("External artifacts/requests must use a new path; never overwrite an ingestion journal")
     payload = {"version": 1, "cert_id": cert, "model": model, "judge_model": judge_model,
                "generator_family": generator_family, "judge_family": judge_family,
                "dry_run": dry_run, "seed": seed, "requested_objective_ids": list(dict.fromkeys(objective_ids)),
-               "planned_count": n_questions, "plan": plan, "candidates": []}
+               "planned_count": n_questions, "plan": plan, "candidates": [],
+               "parallel": effective_parallel, "gen_effort": gen_effort, "cite_effort": cite_effort}
     client = None if dry_run or external else database_client()
     exam = exam or ("GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert)
     payload.update({"difficulty": difficulty, "exam": exam})
@@ -175,7 +184,16 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     accepted = 0
     awaiting = 0
     batch_stop = None
-    for index, scope in enumerate(plan, 1):
+    stop_event = Event()
+    write_lock = RLock()
+    commit_order = Condition(write_lock)
+    next_commit = 1
+    docs_cache = DocumentationCache()
+
+    def process_candidate(item):
+        nonlocal accepted, awaiting, batch_stop, next_commit
+        index, scope = item
+        request = None
         entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line")},
                  "index": index, "stem": None, "options": [], "key": "A", "rationales": {},
                  "evidence": [], "citation_attempts": [], "mechanical_check": {"passed": False, "errors": ["No fetched evidence"]},
@@ -183,10 +201,10 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                  "accepted": False}
         if external:
             entry["candidate_id"] = candidate_id(index, scope, {})
-        payload["candidates"].append(entry)
         stage = "documentation"
         try:
-            sources = search_objective_docs(scope["objective_text"], scope["services"])
+            sources = search_objective_docs(scope["objective_text"], scope["services"],
+                                            cache=docs_cache, objective_id=scope["objective_id"])
             if not sources:
                 raise ValueError("No fetched documentation")
             entry["sources"] = sources  # Local frozen text supports offline founder verification.
@@ -195,7 +213,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 raise ValueError("No fetched documentation text")
             stage = "generation"
             raw = generate_question(scope["domain_prompt"], context, model=model,
-                                    difficulty=difficulty, exam_subsection=scope["subsection"])
+                                    difficulty=difficulty, exam_subsection=scope["subsection"],
+                                    **({"reasoning_effort": gen_effort} if codex else {}))
             stage = "schema"
             question = clean_question(raw)
             if external:
@@ -207,12 +226,13 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             entry["schema_check"] = {"passed": validation.is_valid, "errors": validation.errors}
             if not validation.is_valid:
                 reject_candidate(entry, stage, "Schema validation failed: " + "; ".join(validation.errors))
-                continue
+                return
             stage = "citation"
             checked = None
             for cite_attempt in range(2):
                 citation = cite_question(question, sources, model=model,
-                    check_errors=checked["errors"] if checked else None)
+                    check_errors=checked["errors"] if checked else None,
+                    **({"reasoning_effort": cite_effort} if codex else {}))
                 checked = check_evidence(citation.get("evidence"), sources)
                 attempt = {"evidence": citation.get("evidence"),
                            "mechanical_check": {"passed": checked["passed"], "errors": checked["errors"]}}
@@ -227,29 +247,20 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     break
             if not checked["passed"]:
                 reject_candidate(entry, "mechanical", "Mechanical evidence check failed: " + "; ".join(checked["errors"]))
-                continue
+                return
             entry["evidence"] = checked["options"]
-            normalized = normalize_stem(question["stem"])
-            if normalized in seen:
-                entry["duplicate"] = True
-                reject_candidate(entry, "duplicate", "Duplicate normalized stem within this batch")
-                continue
-            seen.add(normalized)
+            if not external:
+                normalized = normalize_stem(question["stem"])
+                if normalized in seen:
+                    entry["duplicate"] = True
+                    reject_candidate(entry, "duplicate", "Duplicate normalized stem within this batch")
+                    return
+                seen.add(normalized)
             if external:
                 stage = "external_request"
                 entry["candidate_id"] = candidate_id(index, scope, question)
                 request = build_request(entry["candidate_id"], scope, question, sources, checked["options"])
-                request_path = request_directory(artifact) / (entry["candidate_id"] + ".json")
-                write_artifact(request_path, request)
-                import hashlib
-                entry["external_judge_request"] = {
-                    "path": str(request_path.relative_to(artifact.parent)),
-                    "sha256": hashlib.sha256(request_path.read_bytes()).hexdigest(),
-                }
-                entry.update({"awaiting_external_judge": True, "status": "awaiting_external_judge"})
-                entry["judge_verdict"]["reason"] = "Awaiting external judge"
-                awaiting += 1
-                continue
+                return  # Publish in plan order under the shared write lock.
             stage = "judge"
             judge = judge_question(question, scope["domain_prompt"], documentation_context=context,
                                    model=judge_model, generator_model=model, option_evidence=checked["options"])
@@ -279,20 +290,55 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             # Never copy provider exception bodies/credentials into artifacts or stdout.
             entry["error_class"] = type(exc).__name__
             reject_candidate(entry, stage, str(exc) if isinstance(exc, CLIModelError) else stage.capitalize() + " request failed")
-            if isinstance(exc, (CLIUsageLimitError, CodexModelRejectedError)):
-                batch_stop = {"error_class": type(exc).__name__, "reason": str(exc), "index": index}
-                payload["batch_stop"] = batch_stop
-                break
+            if isinstance(exc, (CLIUsageLimitError, CLIAuthError, CodexModelRejectedError)):
+                stop_event.set()  # Stop admission now, not after ordered publication.
+                with write_lock:
+                    if batch_stop is None:
+                        batch_stop = {"error_class": type(exc).__name__, "reason": str(exc), "index": index}
+                        payload["batch_stop"] = batch_stop
             if isinstance(exc, GenerationOutputError) and isinstance(exc.raw_response, str):
                 entry["raw_response"] = exc.raw_response
             if isinstance(exc, (GenerationOutputError, MaxTokensTruncation)) and getattr(exc, "diagnostics", None):
                 entry["diagnostics"] = exc.diagnostics
         finally:
-            if not entry["accepted"] and not entry.get("awaiting_external_judge") and not entry.get("reason") and not entry.get("error_class"):
-                reject_candidate(entry, stage, stage.capitalize() + " failed before acceptance")
-            payload["option_length_report"] = option_length_report(payload["candidates"])
-            payload["option_prefix_report"] = option_prefix_report(payload["candidates"])
-            write_artifact(artifact, payload)
+            # Workers keep entries private until complete. All publication and report
+            # updates share one lock, and duplicate selection follows the frozen plan.
+            with commit_order:
+                commit_order.wait_for(lambda: index == next_commit)
+                try:
+                    if request is not None:
+                        try:
+                            normalized = normalize_stem(entry["stem"])
+                            if normalized in seen:
+                                entry["duplicate"] = True
+                                reject_candidate(entry, "duplicate", "Duplicate normalized stem within this batch")
+                            else:
+                                seen.add(normalized)
+                                request_path = request_directory(artifact) / (entry["candidate_id"] + ".json")
+                                write_artifact(request_path, request)
+                                import hashlib
+                                entry["external_judge_request"] = {
+                                    "path": str(request_path.relative_to(artifact.parent)),
+                                    "sha256": hashlib.sha256(request_path.read_bytes()).hexdigest(),
+                                }
+                                entry.update({"awaiting_external_judge": True, "status": "awaiting_external_judge"})
+                                entry["judge_verdict"]["reason"] = "Awaiting external judge"
+                                awaiting += 1
+                        except Exception as exc:
+                            entry["error_class"] = type(exc).__name__
+                            entry.pop("external_judge_request", None)
+                            reject_candidate(entry, "external_request", "External request publication failed; inspect local artifacts")
+                    if not entry["accepted"] and not entry.get("awaiting_external_judge") and not entry.get("reason") and not entry.get("error_class"):
+                        reject_candidate(entry, stage, stage.capitalize() + " failed before acceptance")
+                    payload["candidates"].append(entry)
+                    payload["option_length_report"] = option_length_report(payload["candidates"])
+                    payload["option_prefix_report"] = option_prefix_report(payload["candidates"])
+                    write_artifact(artifact, payload)
+                finally:
+                    next_commit += 1
+                    commit_order.notify_all()
+
+    run_bounded(enumerate(plan, 1), process_candidate, effective_parallel, stop_event)
     if client is not None:
         for code, run_id in runs.items():
             if not client.update_generation_run(run_id, {"generated_count": run_counts[code], "completed_at": datetime.now(timezone.utc).isoformat()}):

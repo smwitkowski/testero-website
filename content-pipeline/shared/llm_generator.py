@@ -797,6 +797,7 @@ def generate_question(
     difficulty: str = "MEDIUM",
     exam_subsection: str = "",
     prompt_version: Optional[str] = None,
+    *, reasoning_effort: str = "high",
 ) -> Dict[str, Any]:
     """Generate only a question; cite its finished options in a separate call."""
     from dspy.utils.exceptions import AdapterParseError
@@ -809,7 +810,7 @@ def generate_question(
             "domain_context": domain_context, "documentation_context": documentation_context,
             "difficulty": difficulty, "exam_subsection": exam_subsection or "",
             "gap_analysis_guidance": "",
-        })
+        }, reasoning_effort=reasoning_effort)
     lm = _generation_lm(model, max_tokens=GENERATION_MAX_TOKENS)
     adapter = CompletionCaptureAdapter()
     predictor = dspy.ChainOfThought(PmleQuestionSignature)
@@ -841,6 +842,7 @@ def cite_question(
     check_errors: list[str] | None = None,
     *,
     max_tokens: int = 8000,
+    reasoning_effort: str = "medium",
 ) -> dict:
     """Make one citation call. Root checks and stores every attempt, then retries."""
     from dspy.utils.exceptions import AdapterParseError
@@ -865,7 +867,7 @@ def cite_question(
             "finished_question": json.dumps(question, ensure_ascii=False),
             "fetched_sources": json.dumps(fetched, ensure_ascii=False),
             "check_errors": "\n".join(check_errors or []),
-        })
+        }, reasoning_effort=reasoning_effort)
     adapter = CompletionCaptureAdapter(preserve_receipts=True)
     try:
         lm = _generation_lm(model, max_tokens=max_tokens)

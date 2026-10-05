@@ -154,14 +154,15 @@ def test_judge_usage_error_propagates_for_batch_stop(monkeypatch):
 def test_codex_helpers_skip_openrouter_credentials(monkeypatch):
     monkeypatch.delenv("OPENROUTER_API_KEY",raising=False)
     calls=[]
-    def fake(model,signature,inputs):
-        calls.append((model,signature,inputs))
+    def fake(model,signature,inputs, **kwargs):
+        calls.append((model,signature,inputs,kwargs))
         return question() if signature is PmleQuestionSignature else {"evidence":[]}
     monkeypatch.setattr(cli,"run_signature",fake)
     data=generate_question("scope","docs",model="codex")
     assert data == question()
     assert cite_question(data,[{"url":"https://docs.cloud.google.com/real","text":"Frozen text"}],model="codex") == {"evidence":[]}
     assert [call[1] for call in calls] == [PmleQuestionSignature,CitationSignature]
+    assert [call[3]["reasoning_effort"] for call in calls] == ["high", "medium"]
 
 
 @pytest.mark.parametrize("phrase", ["must satisfy the following goals", "Stakeholders have established a policy"])
@@ -284,3 +285,24 @@ def test_new_default_is_not_preblocked_by_stale_model_cache(monkeypatch,tmp_path
     monkeypatch.setattr(cli.subprocess,"run",fake)
     assert cli.run_signature("codex",PmleQuestionSignature,inputs())==question()
     assert len(calls)==1
+
+
+@pytest.mark.parametrize("effort", ["low", "medium", "high"])
+def test_effort_reaches_codex_0160_config(monkeypatch, tmp_path, effort):
+    monkeypatch.setattr(cli, "CLI_TEMP_ROOT", tmp_path)
+    def fake(command, **kwargs):
+        configs = [command[i+1] for i, flag in enumerate(command) if flag == "-c"]
+        assert f'model_reasoning_effort="{effort}"' in configs
+        Path(command[command.index("-o")+1]).write_text(json.dumps(question()))
+        return CompletedProcess(command, 0, "", "")
+    monkeypatch.setattr(cli.subprocess, "run", fake)
+    assert cli.run_signature("codex", PmleQuestionSignature, inputs(), reasoning_effort=effort) == question()
+
+
+def test_invalid_effort_never_launches_cli(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "CLI_TEMP_ROOT", tmp_path)
+    forbidden = Mock(side_effect=AssertionError("CLI must not launch"))
+    monkeypatch.setattr(cli.subprocess, "run", forbidden)
+    with pytest.raises(ValueError, match="Reasoning effort"):
+        cli.run_signature("codex", PmleQuestionSignature, inputs(), reasoning_effort="invalid")
+    forbidden.assert_not_called()

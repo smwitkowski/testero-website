@@ -192,10 +192,10 @@ def _cli_env():
     return env
 
 
-def run_signature(model: str, signature, inputs: dict[str, Any], *, timeout=CLI_TIMEOUT_SECONDS):
+def run_signature(model: str, signature, inputs: dict[str, Any], *, timeout=CLI_TIMEOUT_SECONDS, reasoning_effort="high"):
     """Run one DSPy signature through the shared bounded subscription transport."""
     return _run_cli(model, signature_prompt(signature, inputs),
-                    output_model(signature).model_json_schema(), signature, timeout=timeout)
+                    output_model(signature).model_json_schema(), signature, timeout=timeout, reasoning_effort=reasoning_effort)
 
 
 def run_claude_request(model: str, prompt: str, schema: dict, *, timeout=CLI_TIMEOUT_SECONDS):
@@ -219,12 +219,14 @@ def run_claude_request(model: str, prompt: str, schema: dict, *, timeout=CLI_TIM
     return _run_cli(model, prompt, schema, QuestionQualitySignature, timeout=timeout)
 
 
-def _run_cli(model, prompt, schema, signature, *, timeout):
+def _run_cli(model, prompt, schema, signature, *, timeout, reasoning_effort="high"):
     """Use one transport for both DSPy signatures and frozen external requests."""
     codex = model == "codex" or model.startswith("codex/")
     claude = model == "claude" or model.startswith("claude/")
     if not codex and not claude:
         raise ValueError("Not a subscription CLI model")
+    if reasoning_effort not in ("low", "medium", "high"):
+        raise ValueError("Reasoning effort must be low, medium or high")
     CLI_TEMP_ROOT.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="request-", dir=CLI_TEMP_ROOT) as directory:
         base = Path(directory)
@@ -238,7 +240,7 @@ def _run_cli(model, prompt, schema, signature, *, timeout):
                        "--output-schema", str(schema_path), "-o", str(output)]
             command += ["--ignore-user-config", "--ignore-rules", "-m",
                         DEFAULT_CODEX_MODEL if model == "codex" else model.removeprefix("codex/"),
-                        "-c", 'model_reasoning_effort="high"', "-c", "project_doc_max_bytes=0",
+                        "-c", f'model_reasoning_effort="{reasoning_effort}"', "-c", "project_doc_max_bytes=0",
                         "-c", 'web_search="disabled"']
             for feature in CODEX_DISABLED_FEATURES:
                 command += ["--disable", feature]
@@ -273,6 +275,8 @@ def _run_cli(model, prompt, schema, signature, *, timeout):
                 raise rejection
             if _limit(result.stdout + "\n" + result.stderr):
                 raise CLIUsageLimitError("Codex subscription usage or rate limit reached; batch stopped")
+            if _auth(result.stdout + "\n" + result.stderr):
+                raise CLIAuthError("Codex subscription authentication failed; restore CLI login")
             raise CLISchemaError("Codex CLI did not write its structured output")
         try:
             text = output.read_text()
