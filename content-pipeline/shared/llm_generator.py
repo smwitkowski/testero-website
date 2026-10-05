@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional, Callable, Tuple
 import dspy
 from shared.completion_diagnostics import CompletionCaptureAdapter, MAX_RAW_RESPONSE, _safe_completion
 from shared.evidence import OptionEvidence
+from shared.question_style import STYLE_INSTRUCTIONS
 from shared.llm_limits import MaxTokensTruncation, TRUNCATION_REASON, reject_token_limit
 
 from shared.tracing import traceable_decorator
@@ -24,8 +25,8 @@ class PmleQuestionSignature(dspy.Signature):
 
     Follow the supplied STYLE guidance and certification level. Produce exactly
     four reasonable options with one best answer and per-option explanations.
-    Use a scenario only when useful for the objective; foundational questions
-    need not adopt a professional-role scenario. A is correct_answer; B, C and
+    Use the founder's business-first style, at the supplied certification level.
+    A is correct_answer; B, C and
     D are distractor_1, distractor_2 and distractor_3 respectively.
     Every technical claim in all four explanations must be documented in the
     supplied sources, including claims that alternatives cannot meet a constraint.
@@ -359,6 +360,12 @@ class FactualCorrectionSignature(dspy.Signature):
             "IMPORTANT: Do NOT include URLs, links, citations, or references. Only mention service names."
         )
     )
+
+
+# Keep these instructions identical on first generation and both correction paths.
+PmleQuestionSignature.instructions += "\n\n" + STYLE_INSTRUCTIONS
+QuestionCorrectionSignature.instructions += "\n\n" + STYLE_INSTRUCTIONS
+FactualCorrectionSignature.instructions += "\n\n" + STYLE_INSTRUCTIONS
 
 
 class GapAnalysisSignature(dspy.Signature):
@@ -786,6 +793,13 @@ def generate_question(
     if (not isinstance(domain_context, str) or not domain_context.strip()
             or not isinstance(documentation_context, str) or not documentation_context.strip()):
         raise ValueError("Registry objective scope and fetched documentation are required")
+    if model == "codex" or model.startswith("codex/"):
+        from shared.cli_models import run_signature
+        return run_signature(model, PmleQuestionSignature, {
+            "domain_context": domain_context, "documentation_context": documentation_context,
+            "difficulty": difficulty, "exam_subsection": exam_subsection or "",
+            "gap_analysis_guidance": "",
+        })
     lm = _generation_lm(model, max_tokens=GENERATION_MAX_TOKENS)
     adapter = CompletionCaptureAdapter()
     predictor = dspy.ChainOfThought(PmleQuestionSignature)
@@ -835,6 +849,13 @@ def cite_question(
     }
     fetched = [{"url": source["url"], "requested_url": source.get("requested_url"),
                 "text": source["text"]} for source in sources]
+    if model == "codex" or model.startswith("codex/"):
+        from shared.cli_models import run_signature
+        return run_signature(model, CitationSignature, {
+            "finished_question": json.dumps(question, ensure_ascii=False),
+            "fetched_sources": json.dumps(fetched, ensure_ascii=False),
+            "check_errors": "\n".join(check_errors or []),
+        })
     adapter = CompletionCaptureAdapter(preserve_receipts=True)
     try:
         lm = _generation_lm(model, max_tokens=max_tokens)

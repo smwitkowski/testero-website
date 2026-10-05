@@ -8,7 +8,7 @@ registry. No migration or new-cert product support. Generation never publishes.
 | 1. Refresh registry | EXISTS | Use the explicit sequential refresh; review official guide and inventory diffs. Missing facts remain null. |
 | 2. Load scope | EXISTS | `--cert` selects the current standard guide. PMLE codes are preserved in one section map. Other codes are virtual, not DB seeds. Each candidate has cert/objective/guide hash. |
 | 3. Fetch objective docs | EXISTS | Exa discovers only `docs.cloud.google.com`; direct HTTP fetches official HTML with checked redirects. URL-bound text, timestamp and hash are required. No snippets, guessed links or positional joins. |
-| 4. Allocate and generate | EXISTS | Normalize published section weights for largest-remainder quotas at total N. Choose a random start offset per domain, then cover objectives round-robin; `--seed` reproduces offsets. DSPy first creates original four-option, single-key content, then separately cites the finished options/rationales with required string receipts. |
+| 4. Allocate and generate | EXISTS | Normalize published section weights for largest-remainder quotas at total N. Choose a random start offset per domain, then cover objectives round-robin; `--seed` reproduces offsets. Explicit objectives instead cycle in flag order. Record each item's `scenario_moment` and rotate already-running situations, with greenfield at most half (including N=1). Follow S1–S8/O1–O3 in `certs/STYLE.md`. Create original four-option, single-key content, then separately cite the finished options/rationales with required string receipts. |
 | 5. Mechanical gate | EXISTS | Check schema; require exactly A-D, one fetched URL and nonempty quote at most 300 characters per option. Match each quote case-sensitively, with whitespace normalization only, against its own fetched text. Retry the cite step once with its mechanical errors; retain both attempts and reject before judging if either required final check fails. |
 | 6. Independent judge | EXISTS | `--judge-model` must have a known vendor family different from `--model`. Judge exact cleaned content against fetched docs. PASS requires score >=0.8 and all rubric checks. Quote presence is provenance, not semantic proof. |
 | 7. Founder spot-check | EXISTS | Export random ceil(10%) of the completed DRAFT+GOOD pool. Report objective, guide hash, both models and every option's quote/URL/hash/timestamp. Missing or invalid grounding blocks approval, including legacy ungrounded rows. |
@@ -17,11 +17,24 @@ registry. No migration or new-cert product support. Generation never publishes.
 
 ## Model pair
 
-Verified in the public `https://openrouter.ai/api/v1/models` list on 2026-10-04:
-`openrouter/google/gemini-3.8-flash` is the lower-cost generator;
-`openrouter/anthropic/claude-sonnet-5.5` supplies a different-vendor judge.
-Both list structured outputs. This is a cost/independence choice, not a measured
-quality claim. Unknown vendor aliases and same-vendor versions/sizes fail closed.
+The founder's current generator/citer choice is `--model codex`, using the
+existing Codex subscription (OpenAI), defaulting to `gpt-6.1-sol` at high reasoning.
+Use `codex/<model>` to override the model. The adapter ignores user config/rules,
+disables file-capable tool features and web search, and suppresses project-doc
+loading. It runs from an empty temporary directory. This is a subscription/cost
+choice, not a measured quality claim. The default independent judge is `claude`, using the
+Claude subscription CLI (Anthropic), with Sonnet 5.5 by default. Generation and
+judging remain separate calls and must have known different-vendor families.
+Unknown aliases and same-vendor versions/sizes fail closed. Schema, mechanical
+evidence, S1–S8/O1–O3 style and judge gates remain mandatory. Neither subscription
+backend makes generation publication or replaces founder approval.
+
+`--judge-model openrouter/anthropic/claude-sonnet-5.5` remains an explicit fallback
+for a Codex generator and needs `OPENROUTER_API_KEY` in the shell. The earlier
+OpenRouter pilot used `openrouter/google/gemini-3.8-flash` as generator and that
+Anthropic judge. Both listed structured outputs in the public
+`https://openrouter.ai/api/v1/models` inventory on 2026-10-04; this is historical
+model-selection evidence, not a measured quality comparison.
 
 ## Pilot (operator runs with keys supplied in the shell)
 
@@ -107,9 +120,11 @@ reviewed coverage gaps. Never use positional guide IDs as cross-version aliases.
 
 ## Regeneration runbook (D-025)
 
-Founder decision: replace the legacy PMLE bank domain by domain. The first batch
-plans two candidates for each of the 15 zero-ACTIVE-coverage objectives from the
-lexical audit. Planning is not a promise that all candidates pass. Explicit
+Founder decision: replace the legacy PMLE bank domain by domain. The historical
+first batch planned two candidates for each of the 15 zero-ACTIVE-coverage
+objectives from the lexical audit. The current style regeneration command below
+plans three for each of those same objectives, 45 total. Planning is not a promise
+that all candidates pass. Explicit
 `--objective` flags are validated against the current cert/domain/subsection and
 cycled in flag order; duplicate flags are de-duplicated. Domain weights and random
 start offsets apply only when no explicit objectives are given.
@@ -118,6 +133,49 @@ Run these commands from `content-pipeline/`. Supply keys in the shell only;
 `PYTHON_DOTENV_DISABLED=1` prevents the legacy client from reading env files.
 Never publish by generating, and never retire legacy questions before founder
 approval of enough replacements. Use a new artifact filename for each batch.
+
+### Current style regeneration: 45 DRAFT candidates
+
+Use this non-dry command from `content-pipeline/` after configuring the existing
+Codex and Claude subscriptions. Do not add `--dry-run`. It uses the default
+`claude` judge independently of Codex. Supply only `EXA_API_KEY` for retrieval
+and `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` for DRAFT inserts in the shell;
+no OpenRouter key is needed for the subscription pair. Do not read `.env` files.
+The 15 exact first-batch objective IDs occur once each in flag order; round-robin
+planning allocates three candidates to each. The artifact records every plan
+item's `scenario_moment`. That hint rotates recent deployment, monitoring,
+migration, cost/latency reduction, security incident and greenfield in that
+order. At most half of any plan prefix is greenfield; N=1 is recent deployment.
+These are original authoring contexts, not live-exam frequency claims.
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/generate_all_domains.py \
+  --cert machine-learning-engineer --n-questions 45 --model codex \
+  --objective machine-learning-engineer:standard:1.1:5 \
+  --objective machine-learning-engineer:standard:1.2:1 \
+  --objective machine-learning-engineer:standard:1.2:2 \
+  --objective machine-learning-engineer:standard:1.2:3 \
+  --objective machine-learning-engineer:standard:2.1:3 \
+  --objective machine-learning-engineer:standard:2.2:3 \
+  --objective machine-learning-engineer:standard:3.1:4 \
+  --objective machine-learning-engineer:standard:3.2:6 \
+  --objective machine-learning-engineer:standard:3.3:1 \
+  --objective machine-learning-engineer:standard:4.1:4 \
+  --objective machine-learning-engineer:standard:4.1:5 \
+  --objective machine-learning-engineer:standard:4.2:4 \
+  --objective machine-learning-engineer:standard:5.1:2 \
+  --objective machine-learning-engineer:standard:6.1:1 \
+  --objective machine-learning-engineer:standard:6.2:3 \
+  --artifact .cache/generation/pmle-d025-style-45.json
+```
+
+Inspect failures and all saved domain run UUIDs. Export the founder sample for
+each completed run, then approve only after personal review using steps 2–3
+below. Generation leaves accepted rows DRAFT; it never publishes. Retirement
+still requires enough approved grounded ACTIVE replacements and a separate
+explicit apply. This command was not run as part of the offline code change.
+
+### Historical first-batch command and review sequence
 
 1. **Generate DRAFT candidates (writes; needs `EXA_API_KEY`, `OPENROUTER_API_KEY`,
    `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`).** No `--dry-run`:

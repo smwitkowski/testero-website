@@ -15,7 +15,12 @@ URL = "https://docs.cloud.google.com/run/docs/overview"
 TEXT = "Cloud Run serves HTTP requests. Batch processing is offline. Object storage stores objects. Virtual machines require infrastructure management."
 QUOTES = ["Cloud Run serves HTTP requests.", "Batch processing is offline.", "Object storage stores objects.", "Virtual machines require infrastructure management."]
 QUESTION = {
-    "stem": "Your company must serve HTTP requests with minimal infrastructure management. Which solution should you choose?",
+    "stem": (
+        "You work for a retailer whose order tracking application serves delivery updates over HTTP. "
+        "Customers check their orders throughout the day, and the application must handle changing request volume. "
+        "Your developers already have the application code and want to run it with minimal infrastructure management, "
+        "rather than maintain virtual machines. Which solution should you choose?"
+    ),
     "correct_answer": "Use Cloud Run for HTTP requests",
     "distractor_1": "Use BigQuery batch processing",
     "distractor_2": "Use Cloud Storage object storage",
@@ -468,7 +473,7 @@ def test_every_nonaccepted_candidate_has_explicit_gate_reason(generation, failur
 
 
 @pytest.mark.parametrize("index", [9, 13, 15])
-def test_real_batch2_third_person_stems_pass_schema_but_still_require_judge(generation, index):
+def test_real_batch2_stems_follow_new_style_gate_without_rewording(generation, index):
     from pathlib import Path
     fixture = json.loads((Path(__file__).parent / "fixtures/pmle_batch2_schema_failures.json").read_text())
     case = next(item for item in fixture["cases"] if item["index"] == index)
@@ -478,12 +483,22 @@ def test_real_batch2_third_person_stems_pass_schema_but_still_require_judge(gene
     outcome = invoke(generation, "--dry-run", "--objective", case["objective_id"])
     assert outcome.exit_code != 0
     row = json.loads((generation[-1] / "pilot.json").read_text())["candidates"][0]
-    assert row["schema_check"] == {"passed": True, "errors": []}
-    assert row["failure_stage"] == "judge"
-    assert row["reason"] == "Independent judge rejected content"
     assert not row["accepted"]
-    generation[4].cite_mock.assert_called_once()
-    generation[5].assert_called_once()
+    assert not any("scenario indicators" in error for error in row["schema_check"]["errors"])
+    if index in (9, 15):
+        assert not row["schema_check"]["passed"]
+        assert any("requirements checklist" in error for error in row["schema_check"]["errors"])
+        if index == 9:
+            assert any("documentation/specification" in error for error in row["schema_check"]["errors"])
+        assert row["failure_stage"] == "schema"
+        generation[4].cite_mock.assert_not_called()
+        generation[5].assert_not_called()
+    else:
+        assert row["schema_check"] == {"passed": True, "errors": []}
+        assert row["failure_stage"] == "judge"
+        assert row["reason"] == "Independent judge rejected content"
+        generation[4].cite_mock.assert_called_once()
+        generation[5].assert_called_once()
     generation[1].assert_not_called()
 
 
@@ -493,3 +508,33 @@ def test_batch2_schema_fixture_matches_original_when_available():
     artifact = Path(__file__).parents[1] / fixture["provenance"]["artifact"]
     if artifact.exists():
         assert hashlib.sha256(artifact.read_bytes()).hexdigest() == fixture["provenance"]["artifact_sha256"]
+
+
+@pytest.mark.parametrize("stage", ["generation", "citation", "judge"])
+def test_subscription_usage_limit_stops_batch_cleanly(generation, stage):
+    from shared.cli_models import CLIUsageLimitError
+    client, database, raw, search, generator, judge, path = generation
+    error = CLIUsageLimitError("CLI subscription usage or rate limit reached; batch stopped")
+    target = {"generation":generator, "citation":generator.cite_mock, "judge":judge}[stage]
+    target.side_effect = error
+    result = invoke(generation, "--n-questions", "3", "--model", "codex", "--dry-run")
+    assert result.exit_code != 0 and "batch stopped" in result.output
+    payload = json.loads((path / "pilot.json").read_text())
+    assert len(payload["candidates"]) == 1
+    assert payload["batch_stop"]["index"] == 1
+    assert payload["batch_stop"]["error_class"] == "CLIUsageLimitError"
+    assert payload["candidates"][0]["failure_stage"] == stage
+    assert payload["candidates"][0]["scenario_moment"] == payload["plan"][0]["scenario_moment"]
+    assert search.call_count == 1
+    database.assert_not_called()
+    assert not client.mock_calls
+
+
+def test_non_dry_usage_stop_finishes_runs_without_candidate_writes(generation):
+    from shared.cli_models import CLIUsageLimitError
+    generation[4].side_effect = CLIUsageLimitError("CLI subscription usage or rate limit reached; batch stopped")
+    result = invoke(generation, "--n-questions", "3", "--model", "codex")
+    assert result.exit_code != 0 and "batch stopped" in result.output
+    generation[0].insert_question.assert_not_called()
+    assert generation[0].update_generation_run.call_count > 0
+    assert all(call.args[1]["generated_count"] == 0 for call in generation[0].update_generation_run.call_args_list)

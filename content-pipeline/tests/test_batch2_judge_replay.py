@@ -15,6 +15,13 @@ from shared import quality_gate as gate
 FIXTURE_PATH = Path(__file__).parent / "fixtures/pmle_batch2_judge_completions.json"
 FIXTURE = json.loads(FIXTURE_PATH.read_text())
 CASES = FIXTURE["cases"]
+# The real historical outputs contain only seven checks. Parse them only under
+# their recorded schema; never add invented style verdicts to real completions.
+LEGACY_SIGNATURE = gate.QuestionQualitySignature
+for name in gate.STYLE_CHECKS:
+    LEGACY_SIGNATURE = LEGACY_SIGNATURE.delete(name)
+LEGACY_CHECKS = tuple(name for name in gate.ACCURACY_CHECKS if name not in gate.STYLE_CHECKS)
+
 HEADERS = ("[[ ## score ></br>", "[[ ## score ||> 0.9 <|| ## ]]")
 
 
@@ -30,7 +37,7 @@ def replay(case, raw):
     lm = Mock(return_value=[raw])
 
     def predict(**inputs):
-        fields = adapter(lm, {}, gate.QuestionQualitySignature, [], inputs)[0]
+        fields = adapter(lm, {}, LEGACY_SIGNATURE, [], inputs)[0]
         return dspy.Prediction(**fields)
 
     predictor = Mock(side_effect=predict)
@@ -46,34 +53,34 @@ def replay(case, raw):
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda case: str(case["index"]))
-def test_real_completion_native_rejects_exact_repair_keeps_typed_rubric_and_passes(case):
+def test_real_completion_repairs_legacy_schema_but_missing_style_checks_now_fail_closed(case):
     raw = case["diagnostics"]["raw_response"]
     assert hashlib.sha256(raw.encode()).hexdigest() == case["raw_sha256"]
     assert case["diagnostics"]["finish_reason"] == "stop"
     assert raw.endswith("[[ ## completed ## ]]") and "[TRUNCATED]" not in raw
     assert case["mechanical_check"] == {"passed": True, "errors": []}
     with pytest.raises(AdapterParseError, match="Failed to parse field evidence_supported"):
-        dspy.ChatAdapter().parse(gate.QuestionQualitySignature, raw)
-    fields = CompletionCaptureAdapter(normalize_markers=False).parse(gate.QuestionQualitySignature, raw)
+        dspy.ChatAdapter().parse(LEGACY_SIGNATURE, raw)
+    fields = CompletionCaptureAdapter(normalize_markers=False).parse(LEGACY_SIGNATURE, raw)
     canonical = dspy.ChatAdapter().parse(
-        gate.QuestionQualitySignature, raw.replace(score_header(raw), "[[ ## score ## ]]", 1),
+        LEGACY_SIGNATURE, raw.replace(score_header(raw), "[[ ## score ## ]]", 1),
     )
     assert fields == canonical
     assert fields["verdict"] == "PASS" and type(fields["score"]) is float and fields["score"] == 0.9
-    assert all(type(fields[name]) is bool and fields[name] for name in gate.ACCURACY_CHECKS)
+    assert all(type(fields[name]) is bool and fields[name] for name in LEGACY_CHECKS)
     verdict = replay(case, raw)
-    assert verdict.passed and verdict.score == 0.9 and verdict.diagnostics is None
+    assert not verdict.passed and verdict.score == 0.0
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda case: str(case["index"]))
 @pytest.mark.parametrize("field,value", [("verdict", "FAIL"), ("verdict", "UNCERTAIN"),
-                                         *[(name, "False") for name in gate.ACCURACY_CHECKS]])
+                                         *[(name, "False") for name in LEGACY_CHECKS]])
 def test_real_repair_cannot_override_verdict_or_any_rubric_check(case, field, value):
     raw = case["diagnostics"]["raw_response"]
     old = "PASS" if field == "verdict" else "True"
     raw = raw.replace(f"[[ ## {field} ## ]]\n{old}", f"[[ ## {field} ## ]]\n{value}", 1)
     verdict = replay(case, raw)
-    assert not verdict.passed and verdict.score == 0.9
+    assert not verdict.passed and verdict.score == 0.0
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda case: str(case["index"]))
@@ -82,10 +89,7 @@ def test_low_body_score_never_passes_or_uses_decorated_header_score(case):
     raw = raw.replace(score_header(raw) + "\n0.9", score_header(raw) + "\n0.79", 1)
     verdict = replay(case, raw)
     assert not verdict.passed
-    if case["index"] == 5:
-        assert verdict.score == 0.79 and verdict.reason.startswith("Below quality threshold:")
-    else:
-        assert verdict.score == 0 and verdict.reason == "Judge failed or returned invalid output"
+    assert verdict.score == 0 and verdict.reason == "Judge failed or returned invalid output"
 
 
 def test_decorated_header_cannot_discard_contradictory_above_threshold_body():
@@ -93,7 +97,7 @@ def test_decorated_header_cannot_discard_contradictory_above_threshold_body():
     raw = case["diagnostics"]["raw_response"]
     raw = raw.replace(HEADERS[1] + "\n0.9", HEADERS[1] + "\n0.95", 1)
     with pytest.raises(AdapterParseError, match="Contradictory judge score header and body"):
-        CompletionCaptureAdapter(normalize_markers=False).parse(gate.QuestionQualitySignature, raw)
+        CompletionCaptureAdapter(normalize_markers=False).parse(LEGACY_SIGNATURE, raw)
     verdict = replay(case, raw)
     assert not verdict.passed and verdict.score == 0
 
@@ -142,3 +146,10 @@ def test_original_completion_provenance_when_artifact_available():
         assert candidate["judge_verdict"]["reason"] == "Judge failed or returned invalid output"
         assert candidate["judge_verdict"]["diagnostics"] == case["diagnostics"]
         assert candidate["evidence"] == case["evidence"]
+
+
+@pytest.mark.parametrize("case", CASES, ids=lambda case: str(case["index"]))
+def test_real_old_output_cannot_parse_current_ten_check_signature(case):
+    raw = case["diagnostics"]["raw_response"]
+    with pytest.raises(AdapterParseError):
+        CompletionCaptureAdapter(normalize_markers=False).parse(gate.QuestionQualitySignature, raw)

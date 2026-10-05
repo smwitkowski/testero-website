@@ -17,7 +17,7 @@ from shared.validator import (
 def test_validate_question_valid():
     """Test validation passes for a valid question."""
     question_data = {
-        "stem": "You are working for a company that needs to deploy a machine learning model for real-time predictions. What is the best approach?",
+        "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Batch Prediction",
         "distractor_2": "Use Cloud Functions",
@@ -79,7 +79,7 @@ def test_validate_question_stem_too_short():
 def test_validate_question_empty_choice():
     """Test validation fails when a choice is empty."""
     question_data = {
-        "stem": "You are working for a company that needs to deploy a machine learning model. What should you do?",
+        "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Option A",
         "distractor_1": "",
         "distractor_2": "Option C",
@@ -100,7 +100,7 @@ def test_validate_question_empty_choice():
 def test_validate_question_empty_explanation():
     """Test validation fails when an explanation is empty."""
     question_data = {
-        "stem": "You are working for a company that needs to deploy a machine learning model. What should you do?",
+        "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Option A",
         "distractor_1": "Option B",
         "distractor_2": "Option C",
@@ -121,7 +121,7 @@ def test_validate_question_empty_explanation():
 def test_validate_question_explanation_too_short():
     """Test validation fails when an explanation is too short."""
     question_data = {
-        "stem": "You are working for a company that needs to deploy a machine learning model. What should you do?",
+        "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Option A",
         "distractor_1": "Option B",
         "distractor_2": "Option C",
@@ -142,7 +142,7 @@ def test_validate_question_explanation_too_short():
 def test_validate_question_multiple_explanations_too_short():
     """Test validation captures multiple explanation errors."""
     question_data = {
-        "stem": "You are working for a company that needs to deploy a machine learning model. What should you do?",
+        "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Option A",
         "distractor_1": "Option B",
         "distractor_2": "Option C",
@@ -184,7 +184,7 @@ def test_validate_question_multiple_errors():
 def test_validate_question_all_explanations_valid():
     """Test validation passes when all explanations meet requirements."""
     question_data = {
-        "stem": "You are working for a company that needs to deploy a machine learning model for real-time predictions. What is the best approach?",
+        "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Batch Prediction",
         "distractor_2": "Use Cloud Functions",
@@ -266,7 +266,7 @@ def test_compute_string_similarity():
 def test_validate_question_no_scenario():
     """Question structure does not depend on scenario keywords."""
     question_data = {
-        "stem": "A machine learning model needs to be deployed. What is the best approach?",
+        "stem": "A machine learning engineer maintains a fraud scoring model for customer orders at a retailer. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. The goal is to deploy the trained model for real-time predictions while minimizing infrastructure maintenance for the engineers. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Batch Prediction",
         "distractor_2": "Use Cloud Functions",
@@ -304,7 +304,7 @@ def test_validate_question_no_action_question():
 def test_validate_question_duplicate_options():
     """Test validation detects duplicate options."""
     question_data = {
-        "stem": "You are working for a company that needs to deploy a machine learning model. What should you do?",
+        "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Online Prediction",  # Duplicate!
         "distractor_2": "Use Cloud Functions",
@@ -323,7 +323,7 @@ def test_validate_question_duplicate_options():
 def test_validate_question_banned_patterns():
     """Test validation detects banned patterns."""
     question_data = {
-        "stem": "You are working for a company that needs to deploy a machine learning model. What should you do?",
+        "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "All of the above",
         "distractor_1": "Use Vertex AI Batch Prediction",
         "distractor_2": "Use Cloud Functions",
@@ -342,7 +342,7 @@ def test_validate_question_banned_patterns():
 def test_validate_question_missing_gcp_service_in_explanation():
     """Test generic explanation validation does not require a listed GCP service."""
     question_data = {
-        "stem": "You are working for a company that needs to deploy a machine learning model. What should you do?",
+        "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Batch Prediction",
         "distractor_2": "Use Cloud Functions",
@@ -361,7 +361,7 @@ def test_validate_question_missing_gcp_service_in_explanation():
 def test_validate_question_scores():
     """Test validation result includes component scores."""
     question_data = {
-        "stem": "You are working for a company that needs to deploy a machine learning model for real-time predictions. What is the best approach?",
+        "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Batch Prediction",
         "distractor_2": "Use Cloud Functions",
@@ -384,7 +384,7 @@ def test_validate_question_scores():
 def test_validate_question_stem_metrics():
     """Test validation result includes stem metrics."""
     question_data = {
-        "stem": "You are working for a company that needs to deploy a machine learning model for real-time predictions. What is the best approach?",
+        "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Batch Prediction",
         "distractor_2": "Use Cloud Functions",
@@ -405,7 +405,7 @@ def test_validate_question_stem_metrics():
 def test_validate_question_option_metrics():
     """Test validation result includes option metrics."""
     question_data = {
-        "stem": "You are working for a company that needs to deploy a machine learning model. What should you do?",
+        "stem": "You work for a retailer whose machine learning model scores customer orders for fraud risk. The checkout application needs a prediction before accepting each order, and demand changes throughout the day. You want to deploy the trained model for real-time predictions while minimizing the infrastructure your engineers maintain. What is the best approach?",
         "correct_answer": "Use Vertex AI Online Prediction",
         "distractor_1": "Use Vertex AI Batch Prediction",
         "distractor_2": "Use Cloud Functions",

@@ -13,6 +13,7 @@ import pytest
 
 from shared import llm_generator as generator
 from shared import quality_gate as gate
+from shared.model_policy import OPENROUTER_JUDGE_MODEL
 from shared.completion_diagnostics import CompletionDiagnostics, MAX_RAW_RESPONSE, _safe_completion
 from shared.llm_limits import MaxTokensTruncation, reject_token_limit
 
@@ -52,7 +53,7 @@ def install_native(monkeypatch, output, *, finish_reason="stop", native_finish_r
 def test_native_judge_failure_keeps_complete_actual_completion(monkeypatch, question, updates):
     lm, transport, completion = install_native(monkeypatch, rubric(**updates))
     with dspy.context(disable_history=True):
-        verdict = gate.judge_question(question, "Objective", documentation_context="Docs")
+        verdict = gate.judge_question(question, "Objective", documentation_context="Docs", model=OPENROUTER_JUDGE_MODEL)
     assert not verdict.passed
     assert verdict.diagnostics == {"raw_response": completion, "finish_reason": "stop",
                                    "usage": {"prompt_tokens": 7, "completion_tokens": 11, "total_tokens": 18}}
@@ -65,7 +66,7 @@ def test_native_judge_failure_keeps_complete_actual_completion(monkeypatch, ques
 def test_native_invalid_judge_output_has_actual_completion_no_retry(monkeypatch, question, output):
     lm, transport, completion = install_native(monkeypatch, output, native_finish_reason="STOP")
     with dspy.context(disable_history=True):
-        verdict = gate.judge_question(question, "Objective", documentation_context="Docs")
+        verdict = gate.judge_question(question, "Objective", documentation_context="Docs", model=OPENROUTER_JUDGE_MODEL)
     assert not verdict.passed and verdict.score == 0
     assert verdict.diagnostics["raw_response"] == completion
     assert verdict.diagnostics["finish_reason"] == "stop"
@@ -77,19 +78,19 @@ def test_judge_does_not_normalize_glued_markers(monkeypatch, question):
     completion = DummyLM([rubric()])(messages=[{"role": "user", "content": "offline"}])[0]
     completion = completion.replace("PASS\n\n[[ ## score ## ]]", "PASS[[ ## score ## ]]")
     lm, transport, actual = install_native(monkeypatch, completion)
-    verdict = gate.judge_question(question, "Objective", documentation_context="Docs")
+    verdict = gate.judge_question(question, "Objective", documentation_context="Docs", model=OPENROUTER_JUDGE_MODEL)
     assert not verdict.passed and verdict.diagnostics["raw_response"] == actual
     assert transport.call_count == 1
 
 
 def test_successful_native_judge_has_no_diagnostic_or_db_change(monkeypatch, question):
     lm, transport, completion = install_native(monkeypatch, rubric())
-    verdict = gate.judge_question(question, "Objective", documentation_context="Docs")
-    assert verdict == gate.JudgeVerdict(True, 0.9, "Supported by supplied docs.", gate.DEFAULT_JUDGE_MODEL)
+    verdict = gate.judge_question(question, "Objective", documentation_context="Docs", model=OPENROUTER_JUDGE_MODEL)
+    assert verdict == gate.JudgeVerdict(True, 0.9, "Supported by supplied docs.", OPENROUTER_JUDGE_MODEL)
     assert verdict.diagnostics is None
     assert json.loads(verdict.to_review_notes()) == {gate.REVIEW_NOTES_SOURCE: {
         "version": 1, "passed": True, "score": 0.9, "reason": "Supported by supplied docs.",
-        "model": gate.DEFAULT_JUDGE_MODEL}}
+        "model": OPENROUTER_JUDGE_MODEL}}
     assert transport.call_count == 1
 
 
@@ -195,7 +196,7 @@ def test_native_limit_completion_survives_sdk_error_before_parse(monkeypatch, qu
     lm._process_completion = Mock(side_effect=ValueError("PRIVATE SDK body fake-secret"))
     with dspy.context(disable_history=True):
         if kind == "judge":
-            verdict = gate.judge_question(question, "Objective", documentation_context="Docs")
+            verdict = gate.judge_question(question, "Objective", documentation_context="Docs", model=OPENROUTER_JUDGE_MODEL)
             diagnostics = verdict.diagnostics
             assert verdict.error_class == "MaxTokensTruncation"
         else:

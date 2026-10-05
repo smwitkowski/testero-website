@@ -22,8 +22,11 @@ from typing import Any, Callable, Literal, Mapping
 
 import dspy
 
+from shared.cli_models import CLIModelError, CLIUsageLimitError
+
 from shared.completion_diagnostics import CompletionCaptureAdapter
 from shared.model_policy import DEFAULT_JUDGE_MODEL, require_independent_models
+from shared.question_style import STYLE_INSTRUCTIONS
 from shared.llm_limits import (
     MaxTokensTruncation, TRUNCATION_REASON, reject_token_limit,
 )
@@ -37,11 +40,12 @@ QUESTION_FIELDS = (
     "correct_explanation", "distractor_1_explanation",
     "distractor_2_explanation", "distractor_3_explanation",
 )
+STYLE_CHECKS = ("business_context", "constraints_as_wants", "decisions_not_syntax")
 ACCURACY_CHECKS = (
     "correct_answer_accurate", "distractors_incorrect", "distractors_plausible",
     "explanations_accurate", "scenario_relevant", "scenario_clear",
     "evidence_supported",
-)
+) + STYLE_CHECKS
 
 
 class QuestionQualitySignature(dspy.Signature):
@@ -71,8 +75,19 @@ class QuestionQualitySignature(dspy.Signature):
     scenario_relevant: bool = dspy.OutputField(desc="Scenario tests the supplied domain objectives in a realistic context.")
     scenario_clear: bool = dspy.OutputField(desc="Scenario is unambiguous and supplies enough information for one answer.")
     evidence_supported: bool = dspy.OutputField(desc="Supplied documentation supports all factual judgments; no unsupported assumption needed.")
+    business_context: bool = dspy.OutputField(desc="S1: Opens with who the practitioner is and what the ML system does for the business; concrete business context rather than an abstract implementation task.")
+    constraints_as_wants: bool = dspy.OutputField(desc="S3/S8: Decisive constraints read as natural wants or policies, not a requirements checklist or documentation/specification language. Apply S2/S4/S5/S6 as well: plain narrative, a natural final decision, target 50–110 words (mechanical range 40–130), no unnecessary implementation literals.")
+    decisions_not_syntax: bool = dspy.OutputField(desc="O2: Options compare practitioner decisions, services or sequences, not syntax/configuration trivia. Apply O1/O3: parallel actions, plausible real approaches failing a stated want; literal settings only when the objective itself requires configuration, described in words.")
     score: float = dspy.OutputField(desc="Overall quality from 0.0 to 1.0, covering correctness, distractors, explanations and scenario. 0.8 is publication minimum.")
     reason: str = dspy.OutputField(desc="One short concrete reason (at most 300 characters); name a defect or supporting documented fact. State uncertainty explicitly.")
+
+
+QuestionQualitySignature.instructions += (
+    "\n\nApply every Testero writing rule below independently of factual accuracy. "
+    "A high factual score cannot hide poor style. Return false for any violated style check; "
+    "missing or non-boolean style checks fail closed. The founder exemplars calibrate style, "
+    "not facts or a pass verdict.\n\n" + STYLE_INSTRUCTIONS
+)
 
 
 def _valid_score(value: Any) -> bool:
@@ -104,7 +119,7 @@ class JudgeVerdict:
 
     def __post_init__(self) -> None:
         if (not _valid_verdict_fields(asdict(self))
-                or self.error_class not in (None, "MaxTokensTruncation")
+                or self.error_class not in (None, "MaxTokensTruncation", "CLIExitError", "CLITimeoutError", "CLISchemaError")
                 or ((self.error_class is not None or self.diagnostics is not None) and self.passed)):
             raise ValueError("Invalid quality judge verdict")
 
@@ -205,7 +220,11 @@ def judge_question(
         "option_evidence": option_evidence or [],
     }
     try:
-        if predictor is None:
+        if predictor is None and (model == "claude" or model.startswith("claude/")):
+            from types import SimpleNamespace
+            from shared.cli_models import run_signature
+            result = SimpleNamespace(**run_signature(model, QuestionQualitySignature, inputs))
+        elif predictor is None:
             api_key = os.environ.get("OPENROUTER_API_KEY")
             if not api_key:
                 return fail("Judge credentials unavailable")
@@ -245,6 +264,10 @@ def judge_question(
                 reason = "Below quality threshold: " + reason
         return JudgeVerdict(passed, float(score), reason[:MAX_REASON_LENGTH], model,
                             diagnostics=failure_diagnostics() if not passed else None)
+    except CLIUsageLimitError:
+        raise  # A subscription limit is terminal for the batch, not one candidate.
+    except CLIModelError as exc:
+        return fail(str(exc), type(exc).__name__)
     except MaxTokensTruncation:
         return fail(TRUNCATION_REASON, "MaxTokensTruncation")
     except Exception:

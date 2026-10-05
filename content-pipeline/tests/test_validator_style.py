@@ -15,8 +15,10 @@ from shared.validator import _check_action_question, _compute_string_similarity,
 def question():
     return {
         "stem": (
-            "Your team runs a private application with separate operator and auditor identities. "
-            "The company requires least privilege and does not permit shared credentials. "
+            "You work for a retailer whose private application lets operators track customer orders. "
+            "Auditors review those orders using a separate identity and need to trace changes to individual operators. "
+            "You want each identity to have only the permissions needed for its work. "
+            "Company policy does not allow shared credentials. "
             "Which combination of IAM permissions should you assign?"
         ),
         "correct_answer": "Assign a custom IAM role limited to the required read permissions.",
@@ -52,7 +54,12 @@ def test_iam_rationales_need_no_legacy_service_names(question):
     "Which identity should receive the role?  ",
 ])
 def test_final_question_accepts_any_phrasing(question, ending):
-    question["stem"] = "Your team needs scoped permissions. Separate identities are required. " + ending
+    question["stem"] = (
+        "You work for a retailer whose private application lets operators track customer orders. "
+        "Auditors review those orders using a separate identity and need to trace changes to individual operators. "
+        "You want each identity to have only the permissions needed for its work. "
+        "Company policy does not allow shared credentials. " + ending
+    )
     assert _check_action_question(question["stem"])
     assert validate_question(question).is_valid
 
@@ -175,7 +182,11 @@ def test_original_cached_pilot_content(artifact_name, count):
             data[f"distractor_{index}_explanation"] = candidate["rationales"][label]
         # No cleanup or normalization: validate exactly the original artifact text.
         result = validate_question(data)
-        assert result.is_valid, f"{artifact_name} item {candidate['index']}: {result.errors}"
+        if artifact_name == "pmle-pilot-6b.json" and candidate["index"] in (3, 6):
+            assert not result.is_valid
+            assert any("requirements checklist" in error for error in result.errors)
+        else:
+            assert result.is_valid, f"{artifact_name} item {candidate['index']}: {result.errors}"
 
 
 REAL_THIRD_PERSON_CASES = json.loads(
@@ -184,14 +195,21 @@ REAL_THIRD_PERSON_CASES = json.loads(
 
 
 @pytest.mark.parametrize("case", REAL_THIRD_PERSON_CASES, ids=lambda item: str(item["index"]))
-def test_real_batch2_third_person_stems_pass_schema_without_rewording(case):
+def test_real_batch2_stems_follow_new_style_gate_without_rewording(case):
     question = case["question"]
     assert question["stem"].startswith("A machine learning engineer")
     assert case["schema_errors"] == ["Stem does not contain scenario indicators (e.g., 'you', 'your team', 'company', 'client')"]
     result = validate_question(question)
-    assert result.is_valid and result.errors == []
-    assert result.review_status == "UNREVIEWED"
+    assert not any("scenario indicators" in error for error in result.errors)
     assert "has_scenario" not in result.stem_metrics
+    if case["index"] in (9, 15):
+        assert not result.is_valid and result.review_status == "NEEDS_ANSWER_FIX"
+        assert any("requirements checklist" in error for error in result.errors)
+        if case["index"] == 9:
+            assert any("documentation/specification" in error for error in result.errors)
+    else:
+        assert result.is_valid and result.errors == []
+        assert result.review_status == "UNREVIEWED"
 
 
 @pytest.mark.parametrize("case", REAL_THIRD_PERSON_CASES, ids=lambda item: str(item["index"]))

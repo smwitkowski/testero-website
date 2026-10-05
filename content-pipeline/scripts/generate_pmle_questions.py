@@ -16,6 +16,7 @@ from shared.doc_search import search_objective_docs, documentation_context
 from shared.evidence import check_evidence
 from shared.llm_generator import generate_question, cite_question, GenerationOutputError
 from shared.llm_limits import MaxTokensTruncation
+from shared.cli_models import CLIModelError, CLIUsageLimitError
 from shared.completion_diagnostics import _safe_completion
 from shared.model_policy import DEFAULT_GENERATOR_MODEL, DEFAULT_JUDGE_MODEL, require_independent_models
 from shared.quality_gate import JudgeVerdict, QUESTION_FIELDS, judge_question
@@ -156,8 +157,9 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     payload["generation_runs"] = runs
     seen = set()
     accepted = 0
+    batch_stop = None
     for index, scope in enumerate(plan, 1):
-        entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256")},
+        entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment")},
                  "index": index, "stem": None, "options": [], "key": "A", "rationales": {},
                  "evidence": [], "citation_attempts": [], "mechanical_check": {"passed": False, "errors": ["No fetched evidence"]},
                  "judge_verdict": {"passed": False, "score": 0.0, "reason": "Not judged", "model": judge_model},
@@ -216,6 +218,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             judge = judge_question(question, scope["domain_prompt"], documentation_context=context,
                                    model=judge_model, generator_model=model, option_evidence=checked["options"])
             entry["judge_verdict"] = {"passed": judge.passed, "score": judge.score, "reason": judge.reason, "model": judge.model}
+            if getattr(judge, "error_class", None):
+                entry["judge_verdict"]["error_class"] = judge.error_class
             if not judge.passed and getattr(judge, "diagnostics", None):
                 entry["judge_verdict"]["diagnostics"] = judge.diagnostics
             grounding = {k: scope[k] for k in ("cert_id", "objective_id", "guide_sha256")}
@@ -238,7 +242,11 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         except Exception as exc:
             # Never copy provider exception bodies/credentials into artifacts or stdout.
             entry["error_class"] = type(exc).__name__
-            reject_candidate(entry, stage, stage.capitalize() + " request failed")
+            reject_candidate(entry, stage, str(exc) if isinstance(exc, CLIModelError) else stage.capitalize() + " request failed")
+            if isinstance(exc, CLIUsageLimitError):
+                batch_stop = {"error_class": type(exc).__name__, "reason": str(exc), "index": index}
+                payload["batch_stop"] = batch_stop
+                break
             if isinstance(exc, GenerationOutputError) and isinstance(exc.raw_response, str):
                 entry["raw_response"] = exc.raw_response
             if isinstance(exc, (GenerationOutputError, MaxTokensTruncation)) and getattr(exc, "diagnostics", None):
@@ -252,6 +260,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             if not client.update_generation_run(run_id, {"generated_count": run_counts[code], "completed_at": datetime.now(timezone.utc).isoformat()}):
                 raise click.ClickException("Run completion failed; founder approval remains blocked")
     click.echo(f"Accepted {accepted}/{n_questions}; artifact: {artifact}")
+    if batch_stop:
+        raise click.ClickException(batch_stop["reason"])
     if accepted != n_questions:
         raise click.ClickException("Some candidates failed; inspect the artifact before retrying")
 

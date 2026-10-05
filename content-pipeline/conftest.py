@@ -19,3 +19,6 @@ def block_network(monkeypatch):
     monkeypatch.setattr(socket.socket, "connect", forbidden)
     monkeypatch.setattr(socket.socket, "connect_ex", forbidden)
     monkeypatch.setattr(socket, "create_connection", forbidden)
+    # Socket patches do not reach CLI child processes; block subscription calls too.
+    from shared import cli_models
+    monkeypatch.setattr(cli_models.subprocess, "run", forbidden)

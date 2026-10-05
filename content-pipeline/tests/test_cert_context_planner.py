@@ -275,3 +275,31 @@ def test_registry_paths_cannot_escape_reviewed_cert_directory(tmp_path, monkeypa
     monkeypatch.setattr(cert_context, "CERTS_DIR", tmp_path)
     with pytest.raises(ValueError, match="local JSON"):
         load_cert_context("cloud-engineer")
+
+
+@pytest.mark.parametrize("cert_id", [DEFAULT_CERT, "cloud-engineer", "cloud-digital-leader"])
+@pytest.mark.parametrize("count", [0, 1, 2, 5, 6, 7, 45, 100])
+def test_scenario_moments_rotate_and_greenfield_never_exceeds_half(cert_id, count):
+    plan = plan_questions(cert_id, count, seed=42)
+    moments = [item["scenario_moment"] for item in plan]
+    assert moments == [cert_context.SCENARIO_MOMENTS[i % 6] for i in range(count)]
+    assert moments.count("greenfield") <= count // 2
+    assert json.loads(json.dumps(plan)) == plan
+    for item in plan:
+        assert f"Scenario moment: {item['scenario_moment']}." in item["domain_prompt"]
+        if item["scenario_moment"] == "greenfield":
+            assert "new workload being built" in item["domain_prompt"]
+        else:
+            assert "already-running workload" in item["domain_prompt"]
+            assert "not a new build" in item["domain_prompt"]
+
+
+def test_scenario_rotation_is_global_not_reset_at_domain_boundaries():
+    plan = plan_questions(DEFAULT_CERT, 45, seed=42)
+    assert len({item["domain_code"] for item in plan}) == 6
+    for index, item in enumerate(plan):
+        assert item["scenario_moment"] == cert_context.SCENARIO_MOMENTS[index % 6]
+    assert set(item["scenario_moment"] for item in plan) == {
+        "recent deployment", "monitoring", "migration", "cost/latency reduction",
+        "security incident", "greenfield",
+    }

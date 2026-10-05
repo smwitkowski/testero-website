@@ -16,6 +16,13 @@ from typing import Any, Iterator
 
 DEFAULT_CERT = "machine-learning-engineer"
 CERTS_DIR = Path(__file__).resolve().parents[1] / "certs"
+# Operational moments come first, so every prefix (including N=1) keeps
+# greenfield at or below half of the plan. Hints never expand objective scope.
+SCENARIO_MOMENTS = (
+    "recent deployment", "monitoring", "migration", "cost/latency reduction",
+    "security incident", "greenfield",
+)
+
 PMLE_SECTION_CODES = {
     "1": "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
     "2": "COLLABORATING_TO_MANAGE_DATA_AND_MODELS",
@@ -211,6 +218,8 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
     are de-duplicated without reordering. All targets must belong to the selected
     cert/domain/subsection. Without targets, a seed reproduces random domain
     offsets; None uses fresh local entropy. Children remain separate objectives.
+    Scenario moments rotate independently of objective selection, starting with
+    already-running workloads; greenfield stays <=50%, including a one-item plan.
     """
     context = load_cert_context(cert_id)
     domains = context["domains"]
@@ -247,13 +256,23 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
             offset = rng.randrange(len(objectives))
             targets.extend((code, domain, objectives[(offset + i) % len(objectives)], offset) for i in range(count))
     plan = []
-    for code, domain, objective, offset in targets:
+    for index, (code, domain, objective, offset) in enumerate(targets):
+        moment = SCENARIO_MOMENTS[index % len(SCENARIO_MOMENTS)]
         prompt = domain_prompt(context, domain, objective["subsection"])
         prompt += f"\nTarget Objective: {objective['objective_id']}\n{objective['objective_context']}\nTest this objective specifically."
+        prompt += f"\nScenario moment: {moment}."
+        if moment == "greenfield":
+            prompt += " Use a new workload being built, within the selected objective."
+        else:
+            prompt += (
+                " Use an already-running workload at this moment, not a new build."
+                " Keep the selected objective's actual decision central; the moment"
+                " is context, not permission to add unsupported exam scope."
+            )
         plan.append({
             "cert_id": cert_id, "domain_code": code, "domain_name": domain["display_name"],
             "objective_id": objective["objective_id"], "guide_sha256": context["guide_sha256"],
-            "objective_offset": offset,
+            "objective_offset": offset, "scenario_moment": moment,
             "objective_text": objective["objective_text"], "objective_context": objective["objective_context"],
             "services": list(objective["services"]), "subsection": objective["subsection"],
             "domain_prompt": prompt,

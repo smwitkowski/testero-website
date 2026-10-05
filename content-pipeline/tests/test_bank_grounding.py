@@ -59,6 +59,17 @@ def test_real_accepted_and_rejected_replay(monkeypatch, case):
     result = run(case)
     assert result["passed"] is case["accepted"]
     assert result["question"] == case["question"]
+    if case["name"] == "pmle-pilot-6d-candidate-3":
+        # This real recorded stem is unchanged. The new checklist gate now stops
+        # it before retrieval; do not manufacture a new judge output or sources.
+        assert not case["accepted"] and not result["schema_check"]["passed"]
+        assert any("requirements checklist" in error for error in result["schema_check"]["errors"])
+        assert result["sources"] == [] and result["citation_attempts"] == []
+        assert result["judge_verdict"]["reason"] == "Not judged"
+        search.assert_not_called()
+        judge.assert_not_called()
+        assert lm.history == []
+        return
     assert result["sources"] == case["sources"]
     assert result["schema_check"] == case["schema_check"]
     assert result["mechanical_check"] == case["mechanical_check"] == {"passed": True, "errors": []}

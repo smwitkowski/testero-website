@@ -11,6 +11,7 @@ import pytest
 # Direct pytest and ``python -m pytest`` both work from content-pipeline.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from shared import quality_gate as gate
+from shared.model_policy import OPENROUTER_JUDGE_MODEL
 from dspy.utils import DummyLM
 
 REAL_DSPY_PREDICT = gate.dspy.Predict
@@ -227,8 +228,8 @@ def test_production_path_uses_typed_signature_and_per_call_lm(question, monkeypa
 
 def test_missing_credentials_fail_closed_without_lm(question, monkeypatch):
     monkeypatch.setattr(gate.os.environ, "get", lambda key: None)
-    verdict = gate.judge_question(question, "ML", documentation_context="Docs")
-    assert verdict == gate.JudgeVerdict(False, 0.0, "Judge credentials unavailable", gate.DEFAULT_JUDGE_MODEL)
+    verdict = gate.judge_question(question, "ML", documentation_context="Docs", model=OPENROUTER_JUDGE_MODEL)
+    assert verdict == gate.JudgeVerdict(False, 0.0, "Judge credentials unavailable", OPENROUTER_JUDGE_MODEL)
 
 
 def test_real_dspy_adapter_with_offline_lm(question, monkeypatch):
@@ -237,7 +238,7 @@ def test_real_dspy_adapter_with_offline_lm(question, monkeypatch):
     monkeypatch.setattr(gate.os.environ, "get", lambda key, default=None: "offline-fake-credential" if key == "OPENROUTER_API_KEY" else default)
     monkeypatch.setattr(gate.dspy, "LM", lambda **kwargs: lm)
     monkeypatch.setattr(gate.dspy, "Predict", REAL_DSPY_PREDICT)
-    verdict = gate.judge_question(question, "ML", documentation_context="Vertex AI documentation")
+    verdict = gate.judge_question(question, "ML", documentation_context="Vertex AI documentation", model=OPENROUTER_JUDGE_MODEL)
     assert verdict.passed
     assert verdict.score == 0.9
     assert len(lm.history) == 1

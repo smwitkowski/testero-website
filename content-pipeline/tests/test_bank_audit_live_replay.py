@@ -36,7 +36,7 @@ def test_live_true_defect_and_retrieval_miss_still_fail_with_recorded_docs(monke
     monkeypatch.setattr(llm_generator, "_generation_lm", factory)
     judge = Mock(return_value=JudgeVerdict(**recorded["judge_verdict"]))
     monkeypatch.setattr(bank, "judge_question", judge)
-    result = bank.check_existing_question(deepcopy(question), deepcopy(case["scope"]))
+    result = bank.check_existing_question(deepcopy(question), deepcopy(case["scope"]), judge_model=recorded["judge_verdict"]["model"])
     assert result["schema_check"] == recorded["schema_check"]
     assert result["mechanical_check"] == recorded["mechanical_check"] == {"passed": True, "errors": []}
     assert result["judge_verdict"] == recorded["judge_verdict"]

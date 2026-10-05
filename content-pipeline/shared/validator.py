@@ -71,6 +71,21 @@ def _check_action_question(stem: str) -> bool:
     return stem.rstrip().endswith("?")
 
 
+def _stem_style_errors(stem: str) -> List[str]:
+    """Detect narrow requirements-checklist and documentation language in stems."""
+    errors = []
+    checklist_patterns = (
+        r"\bmust\s+satisfy\s+the\s+following\b",
+        r"\bstakeholders\s+have\s+established\b",
+        r"\b(?:the\s+)?following\s+(?:(?:technical|compliance|interpretability)\s+(?:and\s+)?)*requirements\s*:",
+    )
+    if any(re.search(pattern, stem, re.IGNORECASE) for pattern in checklist_patterns):
+        errors.append("Stem uses a requirements checklist; phrase constraints as wants or policies")
+    if re.search(r"\b(?:documented|documentation)\b|\bsupported\s+(?:platform\s+)?specifications\b|\bper\s+best\s+practices\b", stem, re.IGNORECASE):
+        errors.append("Stem uses documentation/specification language; state the business goal in plain words")
+    return errors
+
+
 def _check_why_wrong_reasoning(explanation: str) -> bool:
     """Check if distractor explanation contains 'why wrong' reasoning.
     
@@ -116,7 +131,8 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
     
     Validates:
     - Required fields present & non-empty
-    - Stem structure (length and final question mark); scenario quality is judged independently
+    - Stem structure (40–130 words, final question mark, narrow checklist/doc phrase rejection)
+    - Semantic business context and decision style are judged independently
     - Option quality (non-empty, no near duplicates, no banned patterns)
     - Explanation quality (length, no URLs/citations, why-wrong reasoning)
     
@@ -189,13 +205,15 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
             "has_action_question": False,
         }
         
-        # Minimum length check (20 chars is too low, use 25-30 words)
         if stem_length < 20:
             errors.append(f"Stem too short (minimum 20 characters, got {stem_length})")
             structural_score -= 0.5
-        elif word_count < 25:
-            warnings.append(f"Stem word count ({word_count}) is below recommended minimum (25 words)")
-            style_score -= 0.1
+        if not 40 <= word_count <= 130:
+            errors.append(f"Stem word count ({word_count}) must be between 40 and 130 words")
+            style_score -= 0.2
+        style_errors = _stem_style_errors(stem)
+        errors.extend(style_errors)
+        style_score -= 0.2 * len(style_errors)
         
         # Action question check
         has_action_question = _check_action_question(stem)

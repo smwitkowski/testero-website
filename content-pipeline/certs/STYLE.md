@@ -1,8 +1,8 @@
 # Google Cloud question style: measured samples and authoring rules
 
-**Phase 1 research/design only. Retrieval date: 2026-10-04.**
+**Sample research retrieval date: 2026-10-04. Authoring policy updated: 2026-10-05.**
 
-This document measures the official public sample forms linked by all 15 certifications on the [Google Cloud certification index](https://cloud.google.com/learn/certification). It guides original, docs-grounded authoring. It does not change the generator, judge, review flow, application, or database.
+This document measures the official public sample forms linked by all 15 certifications on the [Google Cloud certification index](https://cloud.google.com/learn/certification). The measurements guide original, docs-grounded authoring. The S1–S8/O1–O3 rules below are founder authoring policy, not measured sample frequencies. Generation still creates DRAFT candidates only; it never publishes or replaces human approval.
 
 ## Evidence boundary
 
@@ -71,13 +71,38 @@ Those are standard/beta formats, not renewal-exam claims. Versioned exam guides 
 
 ## Original authoring style
 
+### Founder policy: S1–S8 and O1–O3
+
+Apply these rules to new generated candidates. Do not rewrite legacy bank rows
+or infer exam frequencies from them.
+
+| Rule | Contract |
+| --- | --- |
+| S1 — Business first | Open with who you are and what the ML system does for the business, in one or two sentences. |
+| S2 — Facts as story | Describe what exists and what happened in plain narrative. Use a numbered list only for existing workflow steps, never requirements. |
+| S3 — Constraints as wants or policies | State one or two decisive constraints as “You want to … while minimizing …” or “Company policy does not allow …”. Never use “must satisfy the following requirements” or “Stakeholders have established”. |
+| S4 — Natural task | End with “What should you do?”. Use another question only when naturally better, such as “How should you reconfigure the architecture?”. Never name settings or configuration files in the task. |
+| S5 — Reading size | Use 50–110 words and one paragraph, two at most. This is authoring policy, not a claim about all sample lengths. |
+| S6 — Plain register | State goals in plain language. Use product names only as needed, with current short names such as Agent Platform Pipelines and Agent Platform Workbench. Use “Gemini Enterprise Agent Platform” at most once. Do not put setting names, enum values, file formats or code in the stem. |
+| S7 — Vary the moment | At most half of a plan may be fresh design. Rotate already-running situations: recent deployment, monitoring, migration, cost/latency reduction and security incident. The planner records `scenario_moment` on every item and embeds the hint in its prompt. Its cycle starts with operational moments, so N=1 is not greenfield. The hint never expands the selected objective's scope. |
+| S8 — No documentation voice | Never put “documented”, “documentation”, “supported specifications” or “per best practices” in the stem. Evidence belongs in receipts, not learner prose. |
+| O1 — Parallel actions | Write imperative, parallel practitioner actions of similar length. Use one or two sentences, or two or three short numbered steps. |
+| O2 — Decisions, not syntax | Distinguish approach, service or sequence. Use setting names or values only when the objective literally tests configuration; describe the choices rather than presenting syntax puzzles. |
+| O3 — Real alternatives | Each wrong option is a real approach that fails one stated want: cost, upkeep, latency, policy or downtime. Never invent an approach or use broken configuration as a distractor. |
+
+Codex is the generator/citer choice for the founder's existing subscription, not
+a quality exemption. The default independent judge uses the Claude subscription
+CLI (`claude`, Anthropic); Codex is OpenAI. An explicit OpenRouter judge remains
+a fallback. Known different-vendor families are required, and all evidence,
+schema, style and judge gates still apply. Generation is never publication.
+
 ### Stem and task
 
 Write one decision around a clear objective. Supply only facts needed to decide: workload, present state, desired change, and hard constraints. Put the task at the end. Use common words and exact current product/role names. Do not pad with a company's story when it cannot affect the answer.
 
-Useful short qualifier patterns include **“least privilege,” “minimize cost,” “minimal maintenance,” “Google-recommended practices,” “low latency,”** and **“high availability.”** Samples across Cloud Engineer, Developer, Database, ML, Network, and Security demonstrate these constraints [S03], [S09], [S08], [S14], [S13], [S12]. A qualifier must do real work: explain which plausible alternatives fail it. Do not use a recommendation phrase as unsupported authority.
+Observed short qualifier patterns include **“least privilege,” “minimize cost,” “minimal maintenance,” “Google-recommended practices,” “low latency,”** and **“high availability.”** For new stems, follow S8: state the actual goal or constraint, not a documentation or best-practice appeal. Samples across Cloud Engineer, Developer, Database, ML, Network, and Security demonstrate these constraints [S03], [S09], [S08], [S14], [S13], [S12]. A qualifier must do real work: explain which plausible alternatives fail it. Do not use a recommendation phrase as unsupported authority.
 
-Observed lengths are calibration evidence, not a hard minimum or maximum. Foundational stems can be short conceptual checks. Technical scenarios often need several constraints. Longer stems can include lists, code, diagrams, or shared cases; do not impose one narrow word cap across every family. Image-only measurements are missing, not proof that image questions are short.
+Observed lengths are calibration evidence, not a hard minimum or maximum for the exams. New generated candidates follow the founder's S5 range. Foundational stems can be short conceptual checks. Technical scenarios often need several constraints. Longer stems can include lists, code, diagrams, or shared cases; do not impose one narrow word cap across every family. Image-only measurements are missing, not proof that image questions are short.
 
 ### Choices and distractors
 
