@@ -1,0 +1,692 @@
+{
+  "schema_version": 1,
+  "cert_id": "cloud-devops-engineer",
+  "catalog_name": "Cloud DevOps Engineer",
+  "level": "professional",
+  "cert_url": "https://cloud.google.com/learn/certification/cloud-devops-engineer",
+  "name": "Professional Cloud DevOps Engineer",
+  "status": "catalog-listed",
+  "registration_status": "not_stated",
+  "canonical_exam_code": null,
+  "retirement": null,
+  "announcements": [],
+  "upcoming_versions": [],
+  "exam_variants": [
+    {
+      "variant": "standard",
+      "duration_minutes": 120,
+      "duration_stated": "Two hours",
+      "question_count": {
+        "min": 50,
+        "max": 60,
+        "approximate": false
+      },
+      "question_types": [
+        "multiple_choice",
+        "multiple_select"
+      ],
+      "format_stated": "50-60 multiple choice and multiple select questions",
+      "languages": [
+        "English",
+        "Japanese"
+      ],
+      "languages_stated": "English, Japanese",
+      "price_usd": 200,
+      "price_stated": "$200 (plus tax where applicable)",
+      "validity_stated": null,
+      "delivery_stated": "a. Take the online-proctored exam from a remote location b. Take the onsite-proctored exam at a testing center - search for Google Cloud.",
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/professional_cloud_devops_engineer_exam_guide_english.pdf"
+      ],
+      "case_study_names": null
+    }
+  ],
+  "sample_sources": [
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSdpk564uiDvdnqqyPoVjgpBp0TEtgScSFuDV7YQvRSumwUyoQ/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSdpk564uiDvdnqqyPoVjgpBp0TEtgScSFuDV7YQvRSumwUyoQ/viewform",
+      "availability": "public_html_fetched"
+    }
+  ],
+  "guides": [
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_cloud_devops_engineer_exam_guide_english.pdf",
+      "variant": "standard",
+      "version": null,
+      "effective_date": null,
+      "as_of_date": null,
+      "date_evidence": null,
+      "normalized_text_sha256": "2d175323cadda21fd029978d9353456977e30eb22d2d11e3fe9053ee0a068fd7",
+      "case_studies": [],
+      "sections": [
+        {
+          "id": "cloud-devops-engineer:standard:1",
+          "number": "1",
+          "title": "Bootstrapping and maintaining a Google Cloud organization",
+          "weight_percent": 20.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-devops-engineer:standard:1.1",
+              "number": "1.1",
+              "title": "Designing the overall resource hierarchy for an organization.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:1.1:1",
+                  "text": "Organizing resources (e.g., application-centric, projects, folders)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.1:2",
+                  "text": "Shared networking (e.g., Shared VPC, VPC Network Peering, Private Service Connect)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.1:3",
+                  "text": "Multi-project monitoring and logging",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.1:4",
+                  "text": "Identity and Access Management (IAM) roles and organization-level policies",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.1:5",
+                  "text": "Creating and managing service accounts",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.1:6",
+                  "text": "Data residency",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-devops-engineer:standard:1.2",
+              "number": "1.2",
+              "title": "Managing infrastructure.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:1.2:1",
+                  "text": "Infrastructure-as-code tooling and managed services (e.g., Infrastructure Manager, Cloud Foundation Toolkit, Config Connector, GitOps, Terraform, Helm)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.2:2",
+                  "text": "Making infrastructure changes using Google-recommended practices and blueprints",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.2:3",
+                  "text": "Automation with scripting (e.g., Python, Go)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-devops-engineer:standard:1.3",
+              "number": "1.3",
+              "title": "Designing a CI/CD architecture stack in Google Cloud, hybrid, and multi-cloud environments.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:1.3:1",
+                  "text": "Continuous integration (CI) with Cloud Build",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.3:2",
+                  "text": "Continuous delivery (CD) with Cloud Deploy, including Kustomize and Skaffold",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.3:3",
+                  "text": "Artifact Registry configuration",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.3:4",
+                  "text": "Widely used third-party tooling (e.g., Git, Jenkins, Argo CD, Packer, kpt)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.3:5",
+                  "text": "Security of CI/CD tooling",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-devops-engineer:standard:1.4",
+              "number": "1.4",
+              "title": "Managing multiple environments (e.g., staging, production).",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:1.4:1",
+                  "text": "Managing ephemeral environments",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.4:2",
+                  "text": "Managing configuration and policy",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.4:3",
+                  "text": "Managing Google Kubernetes Engine (GKE) clusters across an enterprise (e.g., fleets)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.4:4",
+                  "text": "Safe and secure patching and upgrading practices",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-devops-engineer:standard:1.5",
+              "number": "1.5",
+              "title": "Enabling secure cloud development environments.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:1.5:1",
+                  "text": "Configuring and managing cloud development environments (e.g., Cloud Workstations, Cloud Shell)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.5:2",
+                  "text": "Bootstrapping environments with required tooling (e.g., custom images, IDE, Cloud SDK)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:1.5:3",
+                  "text": "Leveraging AI to assist with development and operations (e.g., Gemini Code Assist, Gemini Cloud Assist, Gemini CLI)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-devops-engineer:standard:2",
+          "number": "2",
+          "title": "Building and implementing CI/CD pipelines, including continuous testing, for application, infrastructure, and machine learning workloads",
+          "weight_percent": 25.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-devops-engineer:standard:2.1",
+              "number": "2.1",
+              "title": "Designing pipelines.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:2.1:1",
+                  "text": "CI/CD of applications and infrastructure",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:2.1:2",
+                  "text": "Artifact management with Artifact Registry",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:2.1:3",
+                  "text": "Deployment to hybrid and multi-cloud environments (e.g., GKE)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:2.1:4",
+                  "text": "CI/CD pipeline triggers",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:2.1:5",
+                  "text": "Configuring deployment processes (e.g., approval flows)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-devops-engineer:standard:2.2",
+              "number": "2.2",
+              "title": "Implementing and managing pipelines.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:2.2:1",
+                  "text": "Auditing and tracking deployments (e.g., Artifact Registry, Cloud Build, Cloud Deploy, Cloud Audit Logs)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:2.2:2",
+                  "text": "Deployment strategies (e.g., canary, blue/green, rolling, traffic splitting, feature flags) and defining success metrics based on application or ML pipeline telemetry",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:2.2:3",
+                  "text": "Troubleshooting and mitigating deployment issues Professional Cloud DevOps Engineer exam guide 2",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-devops-engineer:standard:2.3",
+              "number": "2.3",
+              "title": "Managing pipeline configuration and secrets.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:2.3:1",
+                  "text": "Key management (e.g., Cloud Key Management Service)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:2.3:2",
+                  "text": "Configuration and secret management (e.g., Secret Manager, Certificate Manager, Parameter Manager, Workload Identity Federation)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:2.3:3",
+                  "text": "Build versus runtime secret injection",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-devops-engineer:standard:2.4",
+              "number": "2.4",
+              "title": "Securing the deployment pipeline.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:2.4:1",
+                  "text": "Artifact Analysis and vulnerability scanning",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:2.4:2",
+                  "text": "Software supply chain security (e.g., Binary Authorization, Supply-chain Levels for Software Artifacts [SLSA] framework)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:2.4:3",
+                  "text": "IAM policies based on environment",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-devops-engineer:standard:3",
+          "number": "3",
+          "title": "Applying site reliability engineering practices",
+          "weight_percent": 18.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-devops-engineer:standard:3.1",
+              "number": "3.1",
+              "title": "Balancing change, velocity, and reliability of the service.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:3.1:1",
+                  "text": "Defining SLIs (e.g., availability, latency), SLOs, and SLAs",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:3.1:2",
+                  "text": "Error budgets (e.g., Cloud Service Mesh definitions)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:3.1:3",
+                  "text": "Opportunity cost of risk and reliability (e.g., number of “nines”)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-devops-engineer:standard:3.2",
+              "number": "3.2",
+              "title": "Managing service lifecycle.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:3.2:1",
+                  "text": "Service management (e.g., planning, deployment, maintenance, retirement)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:3.2:2",
+                  "text": "Capacity planning (e.g., quotas, limits, reservations, Dynamic Workload Scheduler)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:3.2:3",
+                  "text": "Autoscaling (e.g., managed instance groups, Cloud Run, GKE)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-devops-engineer:standard:3.3",
+              "number": "3.3",
+              "title": "Mitigating incident impact on users.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:3.3:1",
+                  "text": "Draining/redirecting traffic",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:3.3:2",
+                  "text": "Adding capacity",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:3.3:3",
+                  "text": "Rollback strategies Professional Cloud DevOps Engineer exam guide 3",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-devops-engineer:standard:4",
+          "number": "4",
+          "title": "Implementing observability practices and troubleshooting issues",
+          "weight_percent": 25.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-devops-engineer:standard:4.1",
+              "number": "4.1",
+              "title": "Instrumenting and collecting telemetry.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:4.1:1",
+                  "text": "Collecting and importing logs (e.g., Ops Agent, OpenTelemetry, Cloud Audit Logs, VPC Flow Logs, Cloud Service Mesh)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.1:2",
+                  "text": "Optimizing logs (e.g., filtering, sampling, exclusions, cost management, source considerations)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.1:3",
+                  "text": "Collecting metrics (e.g., from applications, platforms, networking, Cloud Service Mesh, Google Cloud Managed Service for Prometheus, hybrid/multi-cloud environments)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.1:4",
+                  "text": "Creating synthetic monitors to proactively probe application endpoints and workflows",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.1:5",
+                  "text": "Creating custom metrics, including log-based metrics",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-devops-engineer:standard:4.2",
+              "number": "4.2",
+              "title": "Managing and analyzing logs.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:4.2:1",
+                  "text": "Analyzing logs using the Logs Explorer and the Logging query language",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.2:2",
+                  "text": "Exporting and retaining logs (e.g., routing to BigQuery, Pub/Sub, Cloud Storage)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.2:3",
+                  "text": "Handling sensitive data (e.g., using log processors to redact personally identifiable information [PII], protected health information [PHI])",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.2:4",
+                  "text": "Using Gemini Cloud Assist for AI-powered log analysis",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-devops-engineer:standard:4.3",
+              "number": "4.3",
+              "title": "Managing metrics, dashboards, and alerts.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:4.3:1",
+                  "text": "Analyzing metrics using the Metrics Explorer",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.3:2",
+                  "text": "Managing dashboards (e.g., creating, filtering, sharing, playbooks, PromQL)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.3:3",
+                  "text": "Configuring alerting and alerting policies (e.g., SLIs, SLOs, cost control)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.3:4",
+                  "text": "Integrating with third-party alerting tools (e.g., webhooks, PagerDuty, Rootly)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.3:5",
+                  "text": "Leveraging Gemini Cloud Assist for metrics interpretation",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-devops-engineer:standard:4.4",
+              "number": "4.4",
+              "title": "Capturing and analyzing distributed traces.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:4.4:1",
+                  "text": "Utilizing tracing frameworks (e.g., OpenTelemetry)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.4:2",
+                  "text": "Analyzing trace waterfalls and spans",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.4:3",
+                  "text": "Correlating trace IDs with structured logs",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.4:4",
+                  "text": "Employing Gemini Cloud Assist for trace analysis Professional Cloud DevOps Engineer exam guide 4",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-devops-engineer:standard:4.5",
+              "number": "4.5",
+              "title": "Troubleshooting issues.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:4.5:1",
+                  "text": "Infrastructure issues",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.5:2",
+                  "text": "CI/CD pipeline issues",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.5:3",
+                  "text": "Application issues",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.5:4",
+                  "text": "Observability issues",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:4.5:5",
+                  "text": "Performance and latency issues",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-devops-engineer:standard:5",
+          "number": "5",
+          "title": "Optimizing performance and cost",
+          "weight_percent": 12.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-devops-engineer:standard:5.1",
+              "number": "5.1",
+              "title": "Collecting performance information in Google Cloud.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:5.1:1",
+                  "text": "Application performance monitoring",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:5.1:2",
+                  "text": "Active Assist insights and recommendations",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-devops-engineer:standard:5.2",
+              "number": "5.2",
+              "title": "Implementing FinOps practices for optimizing resource utilization and costs.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-devops-engineer:standard:5.2:1",
+                  "text": "Observability costs",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:5.2:2",
+                  "text": "Spot virtual machines (VMs)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:5.2:3",
+                  "text": "Optimizing resource usage for cost and efficiency",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:5.2:4",
+                  "text": "Infrastructure cost planning (e.g., committed-use discounts, sustained-use discounts, network tiers)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:5.2:5",
+                  "text": "Leveraging Google Cloud recommenders (e.g., cost, security, performance, manageability, reliability)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-devops-engineer:standard:5.2:6",
+                  "text": "Optimizing individual workload costs (e.g., GKE, Cloud Run, Compute Engine) Professional Cloud DevOps Engineer exam guide 5",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "in_scope_tools": [],
+      "outline_counts": {
+        "sections": 5,
+        "subsections": 19,
+        "objectives": 75,
+        "nested_objectives": 0
+      },
+      "stated_weight_total_percent": 100.0,
+      "weight_note": "Approximate stated weights are preserved; totals need not equal 100.",
+      "status": "current"
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification",
+      "final_url": "https://cloud.google.com/learn/certification",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "catalog",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://cloud.google.com/certification/cloud-devops-engineer",
+      "final_url": "https://cloud.google.com/learn/certification/cloud-devops-engineer",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "certification",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_cloud_devops_engineer_exam_guide_english.pdf",
+      "final_url": "https://services.google.com/fh/files/misc/professional_cloud_devops_engineer_exam_guide_english.pdf",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "exam_guide",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSdpk564uiDvdnqqyPoVjgpBp0TEtgScSFuDV7YQvRSumwUyoQ/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSdpk564uiDvdnqqyPoVjgpBp0TEtgScSFuDV7YQvRSumwUyoQ/viewform",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "official_sample",
+      "content_type": "text/html; charset=utf-8"
+    }
+  ],
+  "missing_fields": [
+    "exam_variants.standard.validity_stated"
+  ],
+  "not_stated_notes": [
+    "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+    "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+    "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+  ]
+}

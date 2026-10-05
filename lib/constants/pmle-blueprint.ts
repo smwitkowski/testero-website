@@ -29,40 +29,42 @@ export interface PmleDomainConfig {
 
 /**
  * PMLE Blueprint Configuration
- * 
- * Weights should sum to approximately 1.0 (allowing for rounding).
- * These represent the approximate distribution of questions across domains in the PMLE exam.
+ *
+ * Source: June 1, 2026 official exam guide, cached in
+ * content-pipeline/certs/machine-learning-engineer.json.
+ * Its approximate section weights (13/16/21/20/18/13) total 101%, so sampling
+ * weights are normalized by 101 to sum to 1. Canonical DB codes stay unchanged.
  */
 export const PMLE_BLUEPRINT: PmleDomainConfig[] = [
   {
     domainCode: "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
-    displayName: "Architecting Low-Code ML Solutions",
-    weight: 0.125, // 12–13%
+    displayName: "Architecting low-code AI solutions",
+    weight: 13 / 101, // Official approximate weight: 13%
   },
   {
     domainCode: "COLLABORATING_TO_MANAGE_DATA_AND_MODELS",
-    displayName: "Collaborating to Manage Data & Models",
-    weight: 0.155, // 14–16%
+    displayName: "Collaborating within and across teams to manage data and models",
+    weight: 16 / 101, // Official approximate weight: 16%
   },
   {
     domainCode: "SCALING_PROTOTYPES_INTO_ML_MODELS",
-    displayName: "Scaling Prototypes into ML Models",
-    weight: 0.18, // 18%
+    displayName: "Scaling prototypes into ML models",
+    weight: 21 / 101, // Official approximate weight: 21%
   },
   {
     domainCode: "SERVING_AND_SCALING_MODELS",
-    displayName: "Serving & Scaling Models",
-    weight: 0.195, // 19–20%
+    displayName: "Serving and scaling models",
+    weight: 20 / 101, // Official approximate weight: 20%
   },
   {
     domainCode: "AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES",
-    displayName: "Automating & Orchestrating ML Pipelines",
-    weight: 0.215, // 21–22%
+    displayName: "Automating and orchestrating ML pipelines",
+    weight: 18 / 101, // Official approximate weight: 18%
   },
   {
     domainCode: "MONITORING_ML_SOLUTIONS",
-    displayName: "Monitoring ML Solutions",
-    weight: 0.135, // 13–14%
+    displayName: "Monitoring AI solutions",
+    weight: 13 / 101, // Official approximate weight: 13%
   },
 ];
 
@@ -88,7 +90,7 @@ export function getPmleDomainConfig(domainCode: string): PmleDomainConfig | unde
  */
 export function validateBlueprintWeights(): boolean {
   const totalWeight = PMLE_BLUEPRINT.reduce((sum, config) => sum + config.weight, 0);
-  // Allow 5% tolerance for rounding
-  return Math.abs(totalWeight - 1.0) < 0.05;
+  // Allow only floating-point rounding; official percentages are normalized above.
+  return Math.abs(totalWeight - 1.0) < 1e-10;
 }
 

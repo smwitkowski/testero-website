@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import pmleRegistry from "@/content-pipeline/certs/machine-learning-engineer.json";
 import { PMLE_BLUEPRINT, validateBlueprintWeights } from "@/lib/constants/pmle-blueprint";
 import {
   calculateDomainTargets,
@@ -69,10 +70,40 @@ function seededRandom(seed: number) {
 afterEach(() => vi.restoreAllMocks());
 
 describe("blueprint target allocation", () => {
-  it("retains the verified normal weighted allocation for 20", () => {
+  it("preserves all six canonical domain codes", () => {
+    expect(codes).toEqual([
+      "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
+      "COLLABORATING_TO_MANAGE_DATA_AND_MODELS",
+      "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "SERVING_AND_SCALING_MODELS",
+      "AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES",
+      "MONITORING_ML_SOLUTIONS",
+    ]);
+  });
+
+  it("matches June 2026 official section names and normalizes its 101% total", () => {
+    const guide = pmleRegistry.guides.find((guide) => guide.status === "current" && guide.variant === "standard")!;
+    expect(guide.as_of_date).toBe("2026-06-01");
+    const sections = guide.sections.filter((section) => section.included);
+    const statedWeights = sections.map((section) => section.weight_percent);
+    expect(statedWeights).toEqual([13, 16, 21, 20, 18, 13]);
+    const total = statedWeights.reduce((sum, weight) => sum + weight, 0);
+    expect(total).toBe(101);
+    expect(PMLE_BLUEPRINT.map((domain) => domain.displayName)).toEqual(sections.map((section) => section.title));
+    expect(PMLE_BLUEPRINT.map((domain) => domain.weight)).toEqual(statedWeights.map((weight) => weight / total));
+    expect(PMLE_BLUEPRINT.reduce((sum, domain) => sum + domain.weight, 0)).toBeCloseTo(1, 12);
+    expect(validateBlueprintWeights()).toBe(true);
+  });
+
+  it("allocates the normalized official section counts for 101 questions", () => {
+    expect([...calculateDomainTargets(101, availability([101, 101, 101, 101, 101, 101])).values()])
+      .toEqual([13, 16, 21, 20, 18, 13]);
+  });
+
+  it("uses the current weighted allocation for 20", () => {
     expect(validateBlueprintWeights()).toBe(true);
     expect([...calculateDomainTargets(20, availability([50, 50, 50, 50, 50, 50])).values()])
-      .toEqual([2, 3, 4, 4, 4, 3]);
+      .toEqual([3, 3, 4, 4, 3, 3]);
   });
 
   it("caps targets by availability and redistributes all remaining slots", () => {
@@ -128,7 +159,7 @@ describe("ported Supabase selector", () => {
       const result = await selectPmleQuestionsByBlueprint(supabase, 20);
       expect(result.questions).toHaveLength(20);
       expect(new Set(result.questions.map((q) => q.id)).size).toBe(20);
-      expect(result.domainDistribution.map((d) => d.selectedCount)).toEqual([2, 3, 4, 4, 4, 3]);
+      expect(result.domainDistribution.map((d) => d.selectedCount)).toEqual([3, 3, 4, 4, 3, 3]);
       expect(result.questions.every((q) => hasValidAnswers(q.answers))).toBe(true);
       expect(filters).toContainEqual(["exam", "GCP_PM_ML_ENG"]);
       expect(filters).toContainEqual(["status", "ACTIVE"]);

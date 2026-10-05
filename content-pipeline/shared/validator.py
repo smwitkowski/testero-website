@@ -1,13 +1,13 @@
 """Question validation module.
 
-Validates LLM-generated questions against PMLE quality rubric before database insertion.
+Validates LLM-generated questions against generic quality checks before database insertion.
 """
 
 import re
 from dataclasses import dataclass, field
 from typing import Dict, Any, List
 
-# Comprehensive list of GCP services for validation
+# Retained for legacy batch_eval/eval_accuracy callers, not active validation.
 # Extracted from domain_context.py
 GCP_SERVICES = [
     "BigQuery ML", "AutoML Tables", "AutoML Vision", "AutoML Text", "AutoML Video",
@@ -85,30 +85,8 @@ def _check_scenario_presence(stem: str) -> bool:
 
 
 def _check_action_question(stem: str) -> bool:
-    """Check if stem contains action question patterns.
-    
-    Args:
-        stem: Question stem text
-        
-    Returns:
-        True if action question found
-    """
-    action_patterns = [
-        r'what should you',
-        r'what would you',
-        r'what will you',
-        r'which approach',
-        r'which solution',
-        r'which method',
-        r'how would you',
-        r'how should you',
-        r'how will you',
-        r'what is the best',
-        r'what is the most',
-        r'what should be',
-    ]
-    stem_lower = stem.lower()
-    return any(re.search(pattern, stem_lower) for pattern in action_patterns)
+    """Check that the stem ends with a question, without restricting phrasing."""
+    return stem.rstrip().endswith("?")
 
 
 def _check_why_wrong_reasoning(explanation: str) -> bool:
@@ -157,8 +135,8 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
     Validates:
     - Required fields present & non-empty
     - Stem quality (length, scenario presence, action question)
-    - Option quality (non-empty, no duplicates, GCP service mentions)
-    - Explanation quality (length, GCP service references, why-wrong reasoning)
+    - Option quality (non-empty, no near duplicates, no banned patterns)
+    - Explanation quality (length, no URLs/citations, why-wrong reasoning)
     
     Args:
         question_data: Dictionary with keys: stem, correct_answer, distractor_1, distractor_2, distractor_3,
@@ -249,7 +227,7 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
         has_action_question = _check_action_question(stem)
         stem_metrics["has_action_question"] = has_action_question
         if not has_action_question:
-            errors.append("Stem does not contain action question (e.g., 'What should you do?', 'Which approach?')")
+            errors.append("Stem does not end with an action question (final sentence must end with '?')")
             style_score -= 0.3
         
         # Sentence count check (ideal: 3-5)
@@ -275,8 +253,6 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
         option_metric = {
             "label": label,
             "is_empty": False,
-            "has_gcp_service": False,
-            "services_mentioned": [],
         }
         
         if not choice_text or not choice_text.strip():
@@ -300,22 +276,13 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
                     errors.append(f"Choice {label} contains banned pattern: '{pattern}'")
                     style_score -= 0.2
             
-            # Check for GCP service mentions
-            services_mentioned = _extract_gcp_services(choice_text)
-            option_metric["services_mentioned"] = services_mentioned
-            option_metric["has_gcp_service"] = len(services_mentioned) > 0
-            
-            if not services_mentioned:
-                warnings.append(f"Choice {label} does not mention any GCP service")
-                style_score -= 0.1
-        
         option_metrics.append(option_metric)
     
-    # Check for duplicate options (similarity > 0.8)
+    # Reject only exact or near-duplicate options (similarity >= 0.97).
     for i, choice_a in enumerate(choice_texts):
         for j, choice_b in enumerate(choice_texts[i+1:], start=i+1):
             similarity = _compute_string_similarity(choice_a, choice_b)
-            if similarity > 0.8:
+            if similarity >= 0.97:
                 errors.append(f"Choices are too similar (similarity: {similarity:.2f})")
                 structural_score -= 0.3
                 break
@@ -352,26 +319,14 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
                 explanation_score -= 0.1
             
             # Check for references (URLs, citations)
-            has_url = bool(re.search(r'https?://|www\.', explanation_text))
-            has_citation = bool(re.search(
-                r'\[[\d\w\s]+\]|\(see\s+[^)]+\)|\(reference|\(source|\(ref|\(docs|\(documentation|See\s*:?\s*|Reference\s*:?\s*',
-                explanation_text, re.IGNORECASE
-            ))
+            has_url = bool(re.search(r'https?://|www\.', explanation_text, re.IGNORECASE))
+            has_citation = bool(re.search(r'\[\d+\]', explanation_text))
             if has_url or has_citation:
                 errors.append(
                     f"Explanation for {option_name} contains references (URLs or citations). "
                     "References should not be included in explanations."
                 )
                 explanation_score -= 0.2
-            
-            # For correct explanation: must reference GCP service
-            if is_correct:
-                services_in_explanation = _extract_gcp_services(explanation_text)
-                if not services_in_explanation:
-                    errors.append(
-                        f"Correct answer explanation must reference at least one GCP service"
-                    )
-                    explanation_score -= 0.3
             
             # For distractor explanations: must contain why-wrong reasoning
             if not is_correct:

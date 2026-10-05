@@ -241,7 +241,8 @@ def test_check_action_question():
     assert _check_action_question("What should you do?") is True
     assert _check_action_question("Which approach is best?") is True
     assert _check_action_question("How would you solve this?") is True
-    assert _check_action_question("What is Vertex AI?") is False
+    assert _check_action_question("What is Vertex AI?") is True
+    assert _check_action_question("What should you do? Then explain your answer.") is False
     assert _check_action_question("A machine learning model") is False
 
 
@@ -348,7 +349,7 @@ def test_validate_question_banned_patterns():
 
 
 def test_validate_question_missing_gcp_service_in_explanation():
-    """Test validation requires GCP service in correct explanation."""
+    """Test generic explanation validation does not require a listed GCP service."""
     question_data = {
         "stem": "You are working for a company that needs to deploy a machine learning model. What should you do?",
         "correct_answer": "Use Vertex AI Online Prediction",
@@ -362,8 +363,8 @@ def test_validate_question_missing_gcp_service_in_explanation():
     }
     
     result = validate_question(question_data)
-    assert result.is_valid is False
-    assert any("gcp service" in error.lower() for error in result.errors)
+    assert result.is_valid is True
+    assert not any("gcp service" in error.lower() for error in result.errors)
 
 
 def test_validate_question_scores():
@@ -430,7 +431,9 @@ def test_validate_question_option_metrics():
     assert len(result.option_metrics) == 4
     for metric in result.option_metrics:
         assert 'label' in metric
-        assert 'has_gcp_service' in metric
+        assert 'is_empty' in metric
+        assert 'has_gcp_service' not in metric
+        assert 'services_mentioned' not in metric
 
 
 def test_format_validation_errors_with_warnings():

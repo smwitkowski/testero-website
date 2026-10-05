@@ -22,7 +22,7 @@ from typing import Any, Callable, Literal, Mapping
 
 import dspy
 
-DEFAULT_JUDGE_MODEL = "openrouter/google/gemini-2.5-flash"
+from shared.model_policy import DEFAULT_JUDGE_MODEL, require_independent_models
 PASS_THRESHOLD = 0.8
 REVIEW_NOTES_SOURCE = "content_pipeline_judge"
 REVIEW_NOTES_VERSION = 1
@@ -58,6 +58,7 @@ class QuestionQualitySignature(dspy.Signature):
     question_data: dict[str, str] = dspy.InputField(desc="Exact cleaned question and four options/explanations; correct_answer is the only marked answer.")
     domain_context: str = dspy.InputField(desc="Target exam domain, topics and learning objectives.")
     documentation_context: str = dspy.InputField(desc="Captured technical documentation used as factual evidence.")
+    option_evidence: list[dict] = dspy.InputField(desc="Mechanically verified A-D URL/quote receipts. Verify that each cited passage supports its key or refutes its distractor under the constraints; generic background is insufficient.", default=[])
     verdict: Literal["PASS", "FAIL", "UNCERTAIN"] = dspy.OutputField(desc="PASS only when every check is confidently satisfied. FAIL for defects; UNCERTAIN for insufficient evidence.")
     correct_answer_accurate: bool = dspy.OutputField(desc="Marked answer is factually correct and satisfies all scenario constraints.")
     distractors_incorrect: bool = dspy.OutputField(desc="All three distractors are incorrect for the scenario; no second valid answer.")
@@ -126,7 +127,7 @@ def is_judge_passed(review_notes: Any) -> bool:
         return False
     try:
         envelope = json.loads(review_notes, object_pairs_hook=_unique_json_object)
-        if not isinstance(envelope, dict) or set(envelope) != {REVIEW_NOTES_SOURCE}:
+        if not isinstance(envelope, dict) or not {REVIEW_NOTES_SOURCE} <= set(envelope) <= {REVIEW_NOTES_SOURCE, "grounding"}:
             return False
         data = envelope[REVIEW_NOTES_SOURCE]
         if not isinstance(data, dict) or set(data) != {"version", "passed", "score", "reason", "model"}:
@@ -148,6 +149,8 @@ def judge_question(
     documentation_context: str = "",
     model: str = DEFAULT_JUDGE_MODEL,
     predictor: Callable[..., Any] | None = None,
+    generator_model: str | None = None,
+    option_evidence: list[dict] | None = None,
 ) -> JudgeVerdict:
     """Judge one already validated, cleaned question, without fail-open paths.
 
@@ -162,6 +165,11 @@ def judge_question(
     def fail(reason: str) -> JudgeVerdict:
         return JudgeVerdict(False, 0.0, reason, model)
 
+    if generator_model is not None:
+        try:
+            require_independent_models(generator_model, model)
+        except ValueError:
+            return fail("Generator/judge vendor independence is invalid")
     if not isinstance(question_data, Mapping):
         return fail("Invalid question data")
     if any(not isinstance(question_data.get(key), str) or not question_data[key].strip() for key in QUESTION_FIELDS):
@@ -178,6 +186,7 @@ def judge_question(
         "question_data": {key: question_data[key] for key in QUESTION_FIELDS},
         "domain_context": domain_context,
         "documentation_context": documentation_context,
+        "option_evidence": option_evidence or [],
     }
     try:
         if predictor is None:

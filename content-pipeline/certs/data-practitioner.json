@@ -1,0 +1,478 @@
+{
+  "schema_version": 1,
+  "cert_id": "data-practitioner",
+  "catalog_name": "Data Practitioner",
+  "level": "associate",
+  "cert_url": "https://cloud.google.com/learn/certification/data-practitioner",
+  "name": "Associate Data Practitioner",
+  "status": "catalog-listed",
+  "registration_status": "not_stated",
+  "canonical_exam_code": null,
+  "retirement": null,
+  "announcements": [
+    "This exam will soon be updated to reflect recent branding changes. Refer to the exam guide to review product names used on the exam."
+  ],
+  "upcoming_versions": [
+    {
+      "variant": null,
+      "version": null,
+      "guide_url": null,
+      "effective_date": null,
+      "date_stated": null,
+      "announcement": "This exam will soon be updated to reflect recent branding changes. Refer to the exam guide to review product names used on the exam.",
+      "source_url": "https://cloud.google.com/learn/certification/data-practitioner",
+      "note": "Upcoming change is stated, but variant, version, date or future guide link may be unspecified. Do not substitute the current guide."
+    }
+  ],
+  "exam_variants": [
+    {
+      "variant": "standard",
+      "duration_minutes": 120,
+      "duration_stated": "2 hours",
+      "question_count": {
+        "min": 50,
+        "max": 60,
+        "approximate": false
+      },
+      "question_types": [
+        "multiple_choice",
+        "multiple_select"
+      ],
+      "format_stated": "50-60 multiple choice and multiple select questions",
+      "languages": [
+        "English",
+        "Japanese"
+      ],
+      "languages_stated": "English, Japanese",
+      "price_usd": 125,
+      "price_stated": "$125 (plus tax where applicable)",
+      "validity_stated": null,
+      "delivery_stated": "a. Take the online-proctored exam from a remote location. Review the online testing requirements. b. Take the onsite-proctored exam at a testing center. Locate a test center near you - search for Google Cloud.",
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/v1.0_associate_data_practitioner_exam_guide_english.pdf"
+      ],
+      "case_study_names": null
+    }
+  ],
+  "sample_sources": [
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLScnT9BGAkP_XzaGCtpUqKktIXhr65VkeJrxEL4jT3cMvwYZmw/viewform?resourcekey=0-xKV2_Z4rEIoOmLOAi8LlAA",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLScnT9BGAkP_XzaGCtpUqKktIXhr65VkeJrxEL4jT3cMvwYZmw/viewform?resourcekey=0-xKV2_Z4rEIoOmLOAi8LlAA",
+      "availability": "public_html_fetched"
+    }
+  ],
+  "guides": [
+    {
+      "url": "https://services.google.com/fh/files/misc/v1.0_associate_data_practitioner_exam_guide_english.pdf",
+      "variant": "standard",
+      "version": null,
+      "effective_date": null,
+      "as_of_date": null,
+      "date_evidence": null,
+      "normalized_text_sha256": "fbab30b26c9dd43546930d3392f058a7f4e83aac62c789a11c694efc7841c3da",
+      "case_studies": [],
+      "sections": [
+        {
+          "id": "data-practitioner:standard:1",
+          "number": "1",
+          "title": "Data Preparation and Ingestion",
+          "weight_percent": 30.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "data-practitioner:standard:1.1",
+              "number": "1.1",
+              "title": "Prepare and process data.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-practitioner:standard:1.1:1",
+                  "text": "Differentiate between different data manipulation methodologies (e.g., ETL, ELT, ETLT)",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:1.1:2",
+                  "text": "Choose the appropriate data transfer tool (e.g., Storage Transfer Service, Transfer Appliance)",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:1.1:3",
+                  "text": "Assess data quality",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:1.1:4",
+                  "text": "Conduct data cleaning (e.g., Cloud Data Fusion, BigQuery, SQL, Dataflow)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-practitioner:standard:1.2",
+              "number": "1.2",
+              "title": "Extract and load data into appropriate Google Cloud storage systems.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-practitioner:standard:1.2:1",
+                  "text": "Distinguish the format of the data (e.g., CSV, JSON, Apache Parquet, Apache Avro, structured database tables)",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:1.2:2",
+                  "text": "Choose the appropriate extraction tool (e.g., Dataflow, BigQuery Data Transfer Service, Database Migration Service, Cloud Data Fusion)",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:1.2:3",
+                  "text": "Select the appropriate storage solution (e.g., Cloud Storage, BigQuery, Cloud SQL, Firestore, Bigtable, Spanner)",
+                  "children": [
+                    {
+                      "id": "data-practitioner:standard:1.2:3:1",
+                      "text": "Choose the appropriate data storage location type (e.g., regional, dual-regional, multi-regional, zonal)",
+                      "children": []
+                    },
+                    {
+                      "id": "data-practitioner:standard:1.2:3:2",
+                      "text": "Classify use cases into having structured, unstructured, or semi-structured data requirements",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "id": "data-practitioner:standard:1.2:4",
+                  "text": "Load data into Google Cloud storage systems using the appropriate tool (e.g., gcloud and BQ CLI, Storage Transfer Service, BigQuery Data Transfer Service, client libraries)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "data-practitioner:standard:2",
+          "number": "2",
+          "title": "Data Analysis and Presentation",
+          "weight_percent": 27.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "data-practitioner:standard:2.1",
+              "number": "2.1",
+              "title": "Identify data trends, patterns, and insights by using BigQuery and Jupyter notebooks.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-practitioner:standard:2.1:1",
+                  "text": "Define and execute SQL queries in BigQuery to generate reports and extract key insights",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:2.1:2",
+                  "text": "Use Jupyter notebooks to analyze and visualize data (e.g., Colab Enterprise)",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:2.1:3",
+                  "text": "Analyze data to answer business questions",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-practitioner:standard:2.2",
+              "number": "2.2",
+              "title": "Visualize data and create dashboards in Looker given business requirements.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-practitioner:standard:2.2:1",
+                  "text": "Create, modify, and share dashboards to answer business questions",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:2.2:2",
+                  "text": "Compare Looker and Looker Studio for different analytics use cases",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:2.2:3",
+                  "text": "Manipulate simple LookML parameters to modify a data model",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-practitioner:standard:2.3",
+              "number": "2.3",
+              "title": "Define, train, evaluate, and use ML models.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-practitioner:standard:2.3:1",
+                  "text": "Identify ML use cases for developing models by using BigQuery ML and AutoML",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:2.3:2",
+                  "text": "Use pretrained Google large language models (LLMs) using remote connection in BigQuery",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:2.3:3",
+                  "text": "Plan a standard ML project (e.g., data collection, model training, model evaluation, prediction)",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:2.3:4",
+                  "text": "Execute SQL to create, train, and evaluate models using BigQuery ML",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:2.3:5",
+                  "text": "Perform inference using BigQuery ML models",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:2.3:6",
+                  "text": "Organize models in Model Registry",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "data-practitioner:standard:3",
+          "number": "3",
+          "title": "Data Pipeline Orchestration",
+          "weight_percent": 18.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "data-practitioner:standard:3.1",
+              "number": "3.1",
+              "title": "Design and implement simple data pipelines.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-practitioner:standard:3.1:1",
+                  "text": "Select a data transformation tool (e.g., Dataproc, Dataflow, Cloud Data Fusion, Cloud Composer, Dataform) based on business requirements",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:3.1:2",
+                  "text": "Evaluate use cases for ELT and ETL",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:3.1:3",
+                  "text": "Choose products required to implement basic transformation pipelines",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-practitioner:standard:3.2",
+              "number": "3.2",
+              "title": "Schedule, automate, and monitor basic data processing tasks.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-practitioner:standard:3.2:1",
+                  "text": "Create and manage scheduled queries (e.g., BigQuery, Cloud Scheduler, Cloud Composer)",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:3.2:2",
+                  "text": "Monitor Dataflow pipeline progress using the Dataflow job UI",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:3.2:3",
+                  "text": "Review and analyze logs in Cloud Logging and Cloud Monitoring",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:3.2:4",
+                  "text": "Select a data orchestration solution (e.g., Cloud Composer, scheduled queries, Dataproc Workflow Templates, Workflows) based on business requirements",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:3.2:5",
+                  "text": "Identify use cases for event-driven data ingestion from Pub/Sub to BigQuery",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:3.2:6",
+                  "text": "Use Eventarc triggers in event-driven pipelines (Dataform, Dataflow, Cloud Functions, Cloud Run, Cloud Composer)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "data-practitioner:standard:4",
+          "number": "4",
+          "title": "Data Management",
+          "weight_percent": 25.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "data-practitioner:standard:4.1",
+              "number": "4.1",
+              "title": "Configure access control and governance.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-practitioner:standard:4.1:1",
+                  "text": "Establish the principles of least privileged access by using Identity and Access Management (IAM)",
+                  "children": [
+                    {
+                      "id": "data-practitioner:standard:4.1:1:1",
+                      "text": "Differentiate between basic roles, predefined roles, and permissions for data services (e.g., BigQuery, Cloud Storage)",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "id": "data-practitioner:standard:4.1:2",
+                  "text": "Compare methods of access control for Cloud Storage (e.g., public or private access, uniform access)",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:4.1:3",
+                  "text": "Determine when to share data using Analytics Hub",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-practitioner:standard:4.2",
+              "number": "4.2",
+              "title": "Configure lifecycle management.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-practitioner:standard:4.2:1",
+                  "text": "Determine the appropriate Cloud Storage classes based on the frequency of data access and retention requirements",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:4.2:2",
+                  "text": "Configure rules to delete objects after a specified period to automatically remove unnecessary data and reduce storage expenses (e.g., BigQuery, Cloud Storage)",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:4.2:3",
+                  "text": "Evaluate Google Cloud services for archiving data given business requirements",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-practitioner:standard:4.3",
+              "number": "4.3",
+              "title": "Identify high availability and disaster recovery strategies for data in Cloud Storage and Cloud SQL.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-practitioner:standard:4.3:1",
+                  "text": "Compare backup and recovery solutions offered as Google-managed services",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:4.3:2",
+                  "text": "Determine when to use replication",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:4.3:3",
+                  "text": "Distinguish between primary and secondary data storage location type (e.g., regions, dual-regions, multi-regions, zones) for data redundancy",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "data-practitioner:standard:4.4",
+              "number": "4.4",
+              "title": "Apply security measures and ensure compliance with data privacy regulations.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "data-practitioner:standard:4.4:1",
+                  "text": "Identify use cases for customer-managed encryption keys (CMEK), customer-supplied encryption keys (CSEK), and Google-managed encryption keys (GMEK)",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:4.4:2",
+                  "text": "Understand the role of Cloud Key Management Service (Cloud KMS) to manage encryption keys",
+                  "children": []
+                },
+                {
+                  "id": "data-practitioner:standard:4.4:3",
+                  "text": "Identify the difference between encryption in transit and encryption at rest",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "in_scope_tools": [],
+      "outline_counts": {
+        "sections": 4,
+        "subsections": 11,
+        "objectives": 41,
+        "nested_objectives": 3
+      },
+      "stated_weight_total_percent": 100.0,
+      "weight_note": "Approximate stated weights are preserved; totals need not equal 100.",
+      "status": "current"
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification",
+      "final_url": "https://cloud.google.com/learn/certification",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "catalog",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://cloud.google.com/learn/certification/data-practitioner",
+      "final_url": "https://cloud.google.com/learn/certification/data-practitioner",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "certification",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/v1.0_associate_data_practitioner_exam_guide_english.pdf",
+      "final_url": "https://services.google.com/fh/files/misc/v1.0_associate_data_practitioner_exam_guide_english.pdf",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "exam_guide",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLScnT9BGAkP_XzaGCtpUqKktIXhr65VkeJrxEL4jT3cMvwYZmw/viewform?resourcekey=0-xKV2_Z4rEIoOmLOAi8LlAA",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLScnT9BGAkP_XzaGCtpUqKktIXhr65VkeJrxEL4jT3cMvwYZmw/viewform?resourcekey=0-xKV2_Z4rEIoOmLOAi8LlAA",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "official_sample",
+      "content_type": "text/html; charset=utf-8"
+    }
+  ],
+  "missing_fields": [
+    "exam_variants.standard.validity_stated"
+  ],
+  "not_stated_notes": [
+    "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+    "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+    "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+  ]
+}

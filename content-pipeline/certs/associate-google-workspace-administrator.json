@@ -1,0 +1,1063 @@
+{
+  "schema_version": 1,
+  "cert_id": "associate-google-workspace-administrator",
+  "catalog_name": "Google Workspace Administrator",
+  "level": "associate",
+  "cert_url": "https://cloud.google.com/learn/certification/associate-google-workspace-administrator",
+  "name": "Associate Google Workspace Administrator",
+  "status": "catalog-listed",
+  "registration_status": "not_stated",
+  "canonical_exam_code": null,
+  "retirement": null,
+  "announcements": [],
+  "upcoming_versions": [],
+  "exam_variants": [
+    {
+      "variant": "standard",
+      "duration_minutes": 120,
+      "duration_stated": "2 hours",
+      "question_count": {
+        "min": 50,
+        "max": 60,
+        "approximate": false
+      },
+      "question_types": [
+        "multiple_choice",
+        "multiple_select"
+      ],
+      "format_stated": "50-60 multiple choice and multiple select questions",
+      "languages": [
+        "English",
+        "Japanese"
+      ],
+      "languages_stated": "English, Japanese",
+      "price_usd": 125,
+      "price_stated": "$125 (plus tax where applicable)",
+      "validity_stated": null,
+      "delivery_stated": "a) Take the online-proctored exam from a remote location. Review the online testing requirements. b) Take the onsite-proctored exam at a testing center. Locate a test center near you - search for Google Cloud.",
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/associate_google_workspace_administrator_exam_guide_english.pdf"
+      ],
+      "case_study_names": null
+    }
+  ],
+  "sample_sources": [
+    {
+      "url": "https://forms.gle/neC5XLotJGvRBgEz9",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLScxMo77NjigN7bs3rKhXFRBvrjf5TqdaIzAw39g-MCLMvaSHQ/viewform?usp=send_form",
+      "availability": "public_html_fetched"
+    }
+  ],
+  "guides": [
+    {
+      "url": "https://services.google.com/fh/files/misc/associate_google_workspace_administrator_exam_guide_english.pdf",
+      "variant": "standard",
+      "version": null,
+      "effective_date": null,
+      "as_of_date": null,
+      "date_evidence": null,
+      "normalized_text_sha256": "8cd2b1adf92b8668a85c8990a3973c504327172315c7a93246e6f48986a73738",
+      "case_studies": [],
+      "sections": [
+        {
+          "id": "associate-google-workspace-administrator:standard:1",
+          "number": "1",
+          "title": "Managing user accounts, domains, and Directory",
+          "weight_percent": 20.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "associate-google-workspace-administrator:standard:1.1",
+              "number": "1.1",
+              "title": "Managing the user life cycle.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.1:1",
+                  "text": "Identifying basic migration strategies and matching them with the appropriate Google tool.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.1:2",
+                  "text": "Manually creating user accounts.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.1:3",
+                  "text": "Automating the provisioning and deprovisioning of users.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.1:4",
+                  "text": "Using a third-party identity provider (IdP) to provision and authorize users.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.1:5",
+                  "text": "Configuring basic SAML SSO.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.1:6",
+                  "text": "Identifying use cases for first-party sync tools (e.g., Directory Sync, GCDS).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.1:7",
+                  "text": "Modifying user attributes (e.g., names, email addresses, passwords, aliases).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.1:8",
+                  "text": "Deleting, suspending, restoring, and archiving accounts.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.1:9",
+                  "text": "Transferring ownership of Drive data to another account.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.1:10",
+                  "text": "Managing licenses.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.1:11",
+                  "text": "Administering passwords (e.g., password resets, forcing password changes, monitoring password strength).",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:1.2",
+              "number": "1.2",
+              "title": "Designing and creating organizational units (OUs).",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.2:1",
+                  "text": "Designing the OU hierarchy in alignment with an organizational structure while following Google-recommended practices.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.2:2",
+                  "text": "Creating and managing OUs for users and other objects.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:1.3",
+              "number": "1.3",
+              "title": "Managing groups.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.3:1",
+                  "text": "Designing a groups structure.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.3:2",
+                  "text": "Creating and managing distribution lists.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.3:3",
+                  "text": "Creating and managing shared mailboxes (Collaborative Inbox).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.3:4",
+                  "text": "Creating and managing dynamic groups.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.3:5",
+                  "text": "Creating, managing, and applying settings to security groups.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:1.4",
+              "number": "1.4",
+              "title": "Managing domains.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.4:1",
+                  "text": "Adding and verifying primary and secondary domains.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.4:2",
+                  "text": "Managing domain aliases.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:1.5",
+              "number": "1.5",
+              "title": "Managing buildings and resources.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.5:1",
+                  "text": "Creating buildings and rooms in bulk.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.5:2",
+                  "text": "Creating and managing new resources for booking and scheduling.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.5:3",
+                  "text": "Establishing resource booking permissions.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:1.5:4",
+                  "text": "Creating features to add specific details to resources (e.g., capacity, whiteboard, wheelchair accessible).",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "associate-google-workspace-administrator:standard:2",
+          "number": "2",
+          "title": "Managing core Workspace services",
+          "weight_percent": 23.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "associate-google-workspace-administrator:standard:2.1",
+              "number": "2.1",
+              "title": "Configuring Gmail.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.1:1",
+                  "text": "Configuring MX records for email routing.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.1:2",
+                  "text": "Configuring basic mail routing scenarios.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.1:3",
+                  "text": "Using content compliance rules to filter and route emails based on their content.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.1:4",
+                  "text": "Configuring spam, phishing, and malware settings (e.g., allowlist, denylist, inbound gateway, IP allowlist).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.1:5",
+                  "text": "Managing email attachment size limits and blocked file types.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.1:6",
+                  "text": "Configuring Gmail forwarding and POP/IMAP access.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.1:7",
+                  "text": "Implementing Google-recommended email security practices (e.g., SPF, phishing prevention, DKIM, DMARC).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.1:8",
+                  "text": "Migrating email data to and from Gmail (e.g., when migrating from other email providers).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.1:9",
+                  "text": "Explaining how to delegate Gmail access to other users.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.1:10",
+                  "text": "Managing compliance footers and email quarantines.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:2.2",
+              "number": "2.2",
+              "title": "Configuring Google Drive and Docs.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.2:1",
+                  "text": "Configuring default sharing options for new files (e.g., internal versus external sharing).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.2:2",
+                  "text": "Identifying when Drive trust rules should be used.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.2:3",
+                  "text": "Configuring Drive settings to limit external sharing based on organizational policies.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.2:4",
+                  "text": "Managing target audiences.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.2:5",
+                  "text": "Managing settings for custom Docs templates.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.2:6",
+                  "text": "Creating and managing Shared Drives.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.2:7",
+                  "text": "Setting and adjusting storage quotas for individual users or OUs.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.2:8",
+                  "text": "Allowing or disallowing Google Drive for desktop.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.2:9",
+                  "text": "Transferring ownership of files and folders to other users.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.2:10",
+                  "text": "Managing Drive Labels.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.2:11",
+                  "text": "Enabling and disabling offline access.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:2.3",
+              "number": "2.3",
+              "title": "Configuring Google Calendar.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.3:1",
+                  "text": "Creating and managing resource calendars (e.g., meeting rooms, equipment).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.3:2",
+                  "text": "Configuring booking policies for resources.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.3:3",
+                  "text": "Delegating calendar and resource access to another user.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.3:4",
+                  "text": "Setting default internal sharing options for primary and secondary calendars.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.3:5",
+                  "text": "Configuring shared calendars for teams or groups.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.3:6",
+                  "text": "Managing external sharing options for calendars.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.3:7",
+                  "text": "Transferring event ownership to another user.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.3:8",
+                  "text": "Preventing invitations from unknown senders.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:2.4",
+              "number": "2.4",
+              "title": "Configuring Google Meet.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.4:1",
+                  "text": "Enabling or disabling Meet for an organization or specific OUs.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.4:2",
+                  "text": "Configuring Meet safety settings.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.4:3",
+                  "text": "Configuring Meet video settings (e.g., quality, recordings, transcripts, note taking).",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:2.5",
+              "number": "2.5",
+              "title": "Configuring Google Chat.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.5:1",
+                  "text": "Enabling or disabling Chat for an organization or specific OUs.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.5:2",
+                  "text": "Configuring Chat settings in the Admin console (e.g., chat history, space settings, allowing outside domains to join Chat spaces, moderation).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.5:3",
+                  "text": "Managing Chat invite settings.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.5:4",
+                  "text": "Adding Chat apps.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:2.6",
+              "number": "2.6",
+              "title": "Using generative AI for Google Workspace.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.6:1",
+                  "text": "Determining how to keep organization data private and secure when using gen AI.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.6:2",
+                  "text": "Enabling or disabling Gemini for an organization or specific OUs.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.6:3",
+                  "text": "Enabling Google Workspace extensions for the Gemini app.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.6:4",
+                  "text": "Generating Gemini usage reports.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:2.7",
+              "number": "2.7",
+              "title": "Supporting Workspace development.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.7:1",
+                  "text": "Identifying use cases for AppSheet and Apps Script (e.g., task automation).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:2.7:2",
+                  "text": "Enabling AppSheet for an organization or specific OUs.",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "associate-google-workspace-administrator:standard:3",
+          "number": "3",
+          "title": "Managing data governance and compliance",
+          "weight_percent": 15.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "associate-google-workspace-administrator:standard:3.1",
+              "number": "3.1",
+              "title": "Using Google Vault for eDiscovery and data retention.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.1:1",
+                  "text": "Identifying use cases for archive user licenses when retaining data.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.1:2",
+                  "text": "Setting up retention policies for compliance purposes.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.1:3",
+                  "text": "Configuring data holds for legal or investigative purposes.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.1:4",
+                  "text": "Creating and managing retention rules to automatically retain or delete data based on specific criteria (e.g., date, content).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.1:5",
+                  "text": "Using Vault’s search and export capabilities.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.1:6",
+                  "text": "Configuring Vault settings to determine export location.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.1:7",
+                  "text": "Generating audit reports to track user activity and data access.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:3.2",
+              "number": "3.2",
+              "title": "Creating and managing data loss prevention (DLP) rules.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.2:1",
+                  "text": "Identifying which Workspace services (Gmail, Chat, Drive) support DLP and their different capabilities.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.2:2",
+                  "text": "Creating and configuring automatic DLP rules and actions based on content detectors (e.g., credit card numbers, personally identifiable information) or regular expressions.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.2:3",
+                  "text": "Applying DLP rules to specific Workspace services (e.g., Gmail, Drive, Chat).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.2:4",
+                  "text": "Customizing DLP notification messages.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:3.3",
+              "number": "3.3",
+              "title": "Creating and managing Drive trust rules.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.3:1",
+                  "text": "Limiting sharing to specific OU groups, domains, or users.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.3:2",
+                  "text": "Blocking sharing of certain OU groups, domains, or users.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.3:3",
+                  "text": "Allowing or restricting sharing outside an organization (e.g., visitors, external users).",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:3.4",
+              "number": "3.4",
+              "title": "Determining how to store and export your environment’s data.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.4:1",
+                  "text": "Managing Google Takeout settings (e.g., allowing or restricting certain data types).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.4:2",
+                  "text": "Using the Data Export tool.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.4:3",
+                  "text": "Choosing a geographic location for your data.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.4:4",
+                  "text": "Configuring legal and compliance settings based on industry regulations.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:3.5",
+              "number": "3.5",
+              "title": "Classifying data.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.5:1",
+                  "text": "Identifying use cases for applying labels to data (e.g., user classification, DLP, default classification, AI classification).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:3.5:2",
+                  "text": "Configuring classification labels to manage files and messages (e.g., Drive, Gmail).",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "associate-google-workspace-administrator:standard:4",
+          "number": "4",
+          "title": "Managing security policies and access controls",
+          "weight_percent": 20.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "associate-google-workspace-administrator:standard:4.1",
+              "number": "4.1",
+              "title": "Securing user access.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.1:1",
+                  "text": "Enforcing strong password policies and two-step verification (2SV) rules.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.1:2",
+                  "text": "Configuring password policies and recovery options (e.g., security questions, verification codes).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.1:3",
+                  "text": "Configuring 2SV methods (e.g., Google Authenticator app, text message, passkeys).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.1:4",
+                  "text": "Identifying when to use context-aware access policies.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.1:5",
+                  "text": "Applying security policies to users and groups.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.1:6",
+                  "text": "Assigning prebuilt and custom administrative roles to users (e.g., Super Admin, Groups Admin, User Management Admin) and delegating specific administrative tasks.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.1:7",
+                  "text": "Configuring user signout with Google Session Control.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:4.2",
+              "number": "4.2",
+              "title": "Reporting, auditing, and investigating security risks and events.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.2:1",
+                  "text": "Investigating and analyzing logs and security events by using audit and investigation tools.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.2:2",
+                  "text": "Identifying security risks and threats by using the security center.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.2:3",
+                  "text": "Identifying gaps in security-related configurations by using the security health page in the security center.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.2:4",
+                  "text": "Creating activity rules and alerts.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:4.3",
+              "number": "4.3",
+              "title": "Enabling additional Google and third-party applications.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.3:1",
+                  "text": "Managing the Marketplace allowlist.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.3:2",
+                  "text": "Deploying and restricting Google Workspace Marketplace and Google Play Store applications.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.3:3",
+                  "text": "Configuring SSO in third-party applications.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.3:4",
+                  "text": "Managing access to additional Google services (e.g., AdSense and YouTube) for a specific set of users.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:4.3:5",
+                  "text": "Removing connected applications and sites.",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "associate-google-workspace-administrator:standard:5",
+          "number": "5",
+          "title": "Managing browsers and endpoints",
+          "weight_percent": 10.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "associate-google-workspace-administrator:standard:5.1",
+              "number": "5.1",
+              "title": "Managing mobile devices.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:5.1:1",
+                  "text": "Determining when to use a basic, advanced, or third-party mobile management solution.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:5.1:2",
+                  "text": "Applying security policies to mobile devices by using Google basic mobile management.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:5.1:3",
+                  "text": "Maintaining visibility and control over registered devices, including both company-owned and bring your own device (BYOD).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:5.1:4",
+                  "text": "Offboarding mobile devices from former employees.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:5.2",
+              "number": "5.2",
+              "title": "Managing Chrome browsers.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:5.2:1",
+                  "text": "Applying Chrome browser policies (e.g., offline access, update policies).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:5.2:2",
+                  "text": "Enrolling browsers and applying policies.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:5.2:3",
+                  "text": "Managing extensions and apps (e.g., allowing, blocking, force-installing) based on OUs or groups.",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "associate-google-workspace-administrator:standard:6",
+          "number": "6",
+          "title": "Monitoring and troubleshooting common issues",
+          "weight_percent": 13.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "associate-google-workspace-administrator:standard:6.1",
+              "number": "6.1",
+              "title": "Identifying and diagnosing Workspace issues.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.1:1",
+                  "text": "Navigating the Admin console to access audit logs.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.1:2",
+                  "text": "Interpreting log entries to identify error messages, unusual activity, or patterns related to an issue.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.1:3",
+                  "text": "Checking the Google Workspace Status Dashboard for service disruptions or outages.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.1:4",
+                  "text": "Recommending a solution related to mail delivery issues (e.g., implementing mail policy changes).",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:6.2",
+              "number": "6.2",
+              "title": "Troubleshooting and resolving common issues.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.2:1",
+                  "text": "Troubleshooting problems with user accounts, passwords, 2-step verification, or access to services.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.2:2",
+                  "text": "Troubleshooting email delivery problems (e.g., undelivered messages, spam filtering issues) by using Email Log Search.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.2:3",
+                  "text": "Troubleshooting email delivery problems using user-provided message headers (i.e. SPF, DKIM, DMARC compliance) and the Google Admin Toolbox.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.2:4",
+                  "text": "Assisting users with troubleshooting issues related to email forwarding, filters, or labels.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.2:5",
+                  "text": "Troubleshooting Calendar events that are not syncing or displaying correctly (e.g., Apple Calendar, Outlook).",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.2:6",
+                  "text": "Troubleshooting issues with calendar sharing or managing permissions.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.2:7",
+                  "text": "Troubleshooting Calendar issues with sharing free/busy information.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.2:8",
+                  "text": "Troubleshooting Drive issues with sharing and managing permissions.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.2:9",
+                  "text": "Resolving problems with Drive for Desktop.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.2:10",
+                  "text": "Recovering accidentally deleted files in Drive or mail in Gmail.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.2:11",
+                  "text": "Troubleshooting Drive offline access issues.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.2:12",
+                  "text": "Diagnosing network performance issues (e.g., video and sound quality) by using the Meet quality tool.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.2:13",
+                  "text": "Troubleshooting Meet issues (e.g., users unable to access Meet events).",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:6.3",
+              "number": "6.3",
+              "title": "Viewing, creating, and managing reports and audit logs.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.3:1",
+                  "text": "Monitoring app usage.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.3:2",
+                  "text": "Monitoring storage limits.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.3:3",
+                  "text": "Using the audit reports to check",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.3:4",
+                  "text": "Monitoring device activity.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "associate-google-workspace-administrator:standard:6.4",
+              "number": "6.4",
+              "title": "Using support resources.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.4:1",
+                  "text": "Documenting steps taken by the end user to reproduce an issue.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.4:2",
+                  "text": "Collecting appropriate log file types.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.4:3",
+                  "text": "Searching for an application’s status and known issues.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.4:4",
+                  "text": "Generating HAR files.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.4:5",
+                  "text": "Identifying Google-recommended practices to open a case with Google Support.",
+                  "children": []
+                },
+                {
+                  "id": "associate-google-workspace-administrator:standard:6.4:6",
+                  "text": "Using the Google Workspace updates blog, status dashboard, and release calendar to identify service releases and disruptions.",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "in_scope_tools": [],
+      "outline_counts": {
+        "sections": 6,
+        "subsections": 26,
+        "objectives": 136,
+        "nested_objectives": 0
+      },
+      "stated_weight_total_percent": 101.0,
+      "weight_note": "Approximate stated weights are preserved; totals need not equal 100.",
+      "status": "current"
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification",
+      "final_url": "https://cloud.google.com/learn/certification",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "catalog",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://cloud.google.com/certification/associate-google-workspace-administrator",
+      "final_url": "https://cloud.google.com/learn/certification/associate-google-workspace-administrator",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "certification",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/associate_google_workspace_administrator_exam_guide_english.pdf",
+      "final_url": "https://services.google.com/fh/files/misc/associate_google_workspace_administrator_exam_guide_english.pdf",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "exam_guide",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://forms.gle/neC5XLotJGvRBgEz9",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLScxMo77NjigN7bs3rKhXFRBvrjf5TqdaIzAw39g-MCLMvaSHQ/viewform?usp=send_form",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "official_sample",
+      "content_type": "text/html; charset=utf-8"
+    }
+  ],
+  "missing_fields": [
+    "exam_variants.standard.validity_stated"
+  ],
+  "not_stated_notes": [
+    "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+    "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+    "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+  ]
+}

@@ -1,0 +1,624 @@
+{
+  "schema_version": 1,
+  "cert_id": "security-operations-engineer",
+  "catalog_name": "Security Operations Engineer",
+  "level": "professional",
+  "cert_url": "https://cloud.google.com/learn/certification/security-operations-engineer",
+  "name": "Professional Security Operations Engineer",
+  "status": "catalog-listed",
+  "registration_status": "not_stated",
+  "canonical_exam_code": null,
+  "retirement": null,
+  "announcements": [],
+  "upcoming_versions": [],
+  "exam_variants": [
+    {
+      "variant": "standard",
+      "duration_minutes": 120,
+      "duration_stated": "2 hours",
+      "question_count": {
+        "min": 50,
+        "max": 60,
+        "approximate": false
+      },
+      "question_types": [
+        "multiple_choice",
+        "multiple_select"
+      ],
+      "format_stated": "50-60 multiple choice and multiple select questions",
+      "languages": [
+        "English",
+        "Japanese"
+      ],
+      "languages_stated": "English, Japanese",
+      "price_usd": 200,
+      "price_stated": "$200 (plus tax where applicable)",
+      "validity_stated": null,
+      "delivery_stated": "a. Take the online-proctored exam from a remote location. Review the online testing requirements. b. Take the onsite-proctored exam at a testing center. Locate a test center near you - search for Google Cloud.",
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/professional_security_operations_engineer_exam_guide_english.pdf"
+      ],
+      "case_study_names": null
+    }
+  ],
+  "sample_sources": [
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLScryxTOcaqWaPwxsQ-yjq29xRpYGpsAdy9L0XtIXtZy0s3miQ/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLScryxTOcaqWaPwxsQ-yjq29xRpYGpsAdy9L0XtIXtZy0s3miQ/viewform",
+      "availability": "public_html_fetched"
+    }
+  ],
+  "guides": [
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_security_operations_engineer_exam_guide_english.pdf",
+      "variant": "standard",
+      "version": null,
+      "effective_date": null,
+      "as_of_date": null,
+      "date_evidence": null,
+      "normalized_text_sha256": "daeb0be13769e47e3d790824e4f0e4e642099be77c2e7d4ceb9072ab1cf4725c",
+      "case_studies": [],
+      "sections": [
+        {
+          "id": "security-operations-engineer:standard:1",
+          "number": "1",
+          "title": "Platform operations",
+          "weight_percent": 14.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "security-operations-engineer:standard:1.1",
+              "number": "1.1",
+              "title": "Enhancing detection and response.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "security-operations-engineer:standard:1.1:1",
+                  "text": "Prioritizing telemetry sources (e.g., Security Command Center [SCC], Google Security Operations [SecOps], GTI, Cloud IDS) to detect incidents or misconfigurations within an enterprise environment",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:1.1:2",
+                  "text": "Integrating multiple tools (e.g., SCC, Google SecOps, GTI, Cloud IDS, downstream third-party system) in the security architecture to enhance detection capabilities",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:1.1:3",
+                  "text": "Justifying the use of tools with overlapping capabilities based on a set of requirements",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:1.1:4",
+                  "text": "Evaluating the effectiveness of existing tools to identify gaps in coverage and mitigate potential threats",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:1.1:5",
+                  "text": "Evaluating automation and cloud-based tools to enhance existing detection and response processes",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "security-operations-engineer:standard:1.2",
+              "number": "1.2",
+              "title": "Configuring access.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "security-operations-engineer:standard:1.2:1",
+                  "text": "Configuring user and service account authentication to security tools (e.g., SCC, Google SecOps)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:1.2:2",
+                  "text": "Configuring user and service account authorization for feature access using IAM roles and permissions",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:1.2:3",
+                  "text": "Configuring user and service account authorization for data access using IAM roles and permissions",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:1.2:4",
+                  "text": "Configuring and analyzing audit logs (e.g., Cloud Audit Logs, data access logs) for the solution",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:1.2:5",
+                  "text": "Configuring API access for automations within security tools (e.g., service accounts, API keys, SCC, Google SecOps, GTI)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:1.2:6",
+                  "text": "Provisioning identities using Workforce Identity Federation",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "security-operations-engineer:standard:2",
+          "number": "2",
+          "title": "Data management",
+          "weight_percent": 14.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "security-operations-engineer:standard:2.1",
+              "number": "2.1",
+              "title": "Ingesting logs for security tooling.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "security-operations-engineer:standard:2.1:1",
+                  "text": "Determining approaches for data ingestion within security tools (e.g., SCC, Google SecOps)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:2.1:2",
+                  "text": "Configuring an ingestion tool or features within security tools (e.g., SCC, Google SecOps)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:2.1:3",
+                  "text": "Assessing required logs for detection and response, including automated sources, within security tools (e.g., SCC Event Threat Detection, Google SecOps)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:2.1:4",
+                  "text": "Evaluating parsers for data ingestion in Google SecOps",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:2.1:5",
+                  "text": "Configuring parser modifications or extensions in Google SecOps",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:2.1:6",
+                  "text": "Evaluating data normalization techniques from log sources in Google SecOps",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:2.1:7",
+                  "text": "Evaluating new labels for data ingestion",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:2.1:8",
+                  "text": "Managing log and ingestion costs",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "security-operations-engineer:standard:2.2",
+              "number": "2.2",
+              "title": "Identifying a baseline of user, asset, and entity context.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "security-operations-engineer:standard:2.2:1",
+                  "text": "Identifying relevant threat intelligence information in the enterprise environment",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:2.2:2",
+                  "text": "Differentiating event and entity data log sources (e.g., Cloud Audit Logs, Active Directory organizational context)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:2.2:3",
+                  "text": "Evaluating event and entity data matches for enrichment by using aliasing fields",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "security-operations-engineer:standard:3",
+          "number": "3",
+          "title": "Threat hunting",
+          "weight_percent": 19.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "security-operations-engineer:standard:3.1",
+              "number": "3.1",
+              "title": "Performing threat hunting across environments.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "security-operations-engineer:standard:3.1:1",
+                  "text": "Developing queries to search across environment logs to identify anomalous activity",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:3.1:2",
+                  "text": "Analyzing user behavior to identify anomalous activity",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:3.1:3",
+                  "text": "Investigating the network, endpoints, and services to identify threat patterns or indicators of compromise (IOCs) using Google Cloud tools (e.g., Logs Explorer, Log Analytics, BigQuery, Google SecOps)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:3.1:4",
+                  "text": "Collaborating with the incident response team to identify active threats in the environment",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:3.1:5",
+                  "text": "Developing hypotheses based on behavior, threat intel, posture, and incident data (e.g., SCC, GTI)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "security-operations-engineer:standard:3.2",
+              "number": "3.2",
+              "title": "Leveraging threat intelligence for threat hunting.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "security-operations-engineer:standard:3.2:1",
+                  "text": "Searching for IOCs within historical logs",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:3.2:2",
+                  "text": "Identifying new attack patterns and techniques in real time using threat intelligence and risk assessments (e.g., GTI, detection rules, SCC toxic combinations)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:3.2:3",
+                  "text": "Analyzing entity risk score to identify anomalous behavior",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:3.2:4",
+                  "text": "Comparing and performing retrohunt of historical event data with newly enriched logs (e.g., Google SecOps rules engine, BigQuery, Cloud Logging)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:3.2:5",
+                  "text": "Searching proactively for underlying threats using threat intelligence (e.g., GTI, detection rules)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "security-operations-engineer:standard:4",
+          "number": "4",
+          "title": "Detection engineering",
+          "weight_percent": 22.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "security-operations-engineer:standard:4.1",
+              "number": "4.1",
+              "title": "Developing and implementing mechanisms to detect risks and identify threats.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "security-operations-engineer:standard:4.1:1",
+                  "text": "Reconciling threat intelligence with user and asset activity",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:4.1:2",
+                  "text": "Analyzing logs and events to identify anomalous activity",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:4.1:3",
+                  "text": "Assessing suspicious behavior patterns by using detection rules and searches across various timelines",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:4.1:4",
+                  "text": "Designing detection rules that use risk values (e.g., Google SecOps reference lists) to identify threats matching risk profiles",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:4.1:5",
+                  "text": "Discovering anomalous behavior of assets or users, and assigning risk values to the detections (e.g., Google SecOps Risk Analytics, curated detection rules)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:4.1:6",
+                  "text": "Designing detection rules to discover posture or risk profile changes within the environment (e.g., SCC Security Health Analytics [SHA], SCC posture management, Google SecOps)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:4.1:7",
+                  "text": "Identifying new or low prevalence processes, domains, and IP addresses that do not appear in threat intelligence sources using various methods (e.g., writing YARA-L rules, dashboards)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:4.1:8",
+                  "text": "Assessing how to use entity/context data within detection rules to improve their accuracy (e.g., Google SecOps entity graph)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:4.1:9",
+                  "text": "Configuring SCC Event Threat Detection custom detectors for IOCs",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "security-operations-engineer:standard:4.2",
+              "number": "4.2",
+              "title": "Leveraging threat intelligence for detection.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "security-operations-engineer:standard:4.2:1",
+                  "text": "Scoring alerts based on the risk level of IOCs",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:4.2:2",
+                  "text": "Using latest IOCs to search within ingested security telemetry",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:4.2:3",
+                  "text": "Measuring the frequency of repetitive alerts to identify and reduce false positives",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "security-operations-engineer:standard:5",
+          "number": "5",
+          "title": "Incident response",
+          "weight_percent": 21.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "security-operations-engineer:standard:5.1",
+              "number": "5.1",
+              "title": "Containing and investigating security incidents.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "security-operations-engineer:standard:5.1:1",
+                  "text": "Collecting evidence on the scope of the incident, including forensic images and artifacts",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:5.1:2",
+                  "text": "Observing and analyzing alerts related to the incident using security tooling (e.g., SCC, Google SecOps)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:5.1:3",
+                  "text": "Analyzing the scope of the incident using security tooling (e.g., Logs Explorer, Log Analytics, BigQuery, Cloud Logging, Cloud Monitoring)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:5.1:4",
+                  "text": "Collaborating with other engineering teams for detection and long-term remediation efforts",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:5.1:5",
+                  "text": "Isolating affected services and processes to prevent further damage and spread of attack",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:5.1:6",
+                  "text": "Analyzing identified artifacts based on forensic analysis (e.g., Hash, IP, URL, Binaries) (GTI)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:5.1:7",
+                  "text": "Performing root cause analysis using security tools (e.g., SCC, Google SecOps SIEM)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "security-operations-engineer:standard:5.2",
+              "number": "5.2",
+              "title": "Building, implementing, and using response playbooks.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "security-operations-engineer:standard:5.2:1",
+                  "text": "Determining the appropriate response steps for automation",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:5.2:2",
+                  "text": "Prioritizing high-value enrichments based on threat profiles",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:5.2:3",
+                  "text": "Evaluating appropriate integrations to be leveraged by playbooks",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:5.2:4",
+                  "text": "Designing new processes in response to newly identified attack patterns from recent incidents",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:5.2:5",
+                  "text": "Recommending new orchestrations and automation playbooks based on gaps in the current implementation (e.g., Google SecOps SOAR)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:5.2:6",
+                  "text": "Implementing mechanisms to notify analysts and stakeholders of incidents",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "security-operations-engineer:standard:5.3",
+              "number": "5.3",
+              "title": "Implementing the case management lifecycle.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "security-operations-engineer:standard:5.3:1",
+                  "text": "Assigning cases into appropriate response stages",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:5.3:2",
+                  "text": "Implementing efficient workflows for case escalation",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:5.3:3",
+                  "text": "Assessing the effectiveness of case handoffs",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "security-operations-engineer:standard:6",
+          "number": "6",
+          "title": "Observability",
+          "weight_percent": 10.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "security-operations-engineer:standard:6.1",
+              "number": "6.1",
+              "title": "Developing and maintaining dashboards and reports to provide insights.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "security-operations-engineer:standard:6.1:1",
+                  "text": "Identifying key security analytics (e.g., metrics, KPIs, trends)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:6.1:2",
+                  "text": "Implementing dashboards to visualize security telemetry, ingestion metrics, detections, alerts, and IOCs (e.g., Google SecOps SOAR, SIEM, Looker Studio)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:6.1:3",
+                  "text": "Generating and customizing reports (e.g., Google SecOps SOAR, SIEM)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "security-operations-engineer:standard:6.2",
+              "number": "6.2",
+              "title": "Configuring health monitoring and alerting.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "security-operations-engineer:standard:6.2:1",
+                  "text": "Identifying important metrics for health monitoring and alerts",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:6.2:2",
+                  "text": "Creating dashboards that centralize metrics",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:6.2:3",
+                  "text": "Creating alerts with thresholds for specific metrics",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:6.2:4",
+                  "text": "Configuring notifications using Google Cloud tools (e.g., Cloud Monitoring)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:6.2:5",
+                  "text": "Identifying health issues using Google Cloud tools (e.g., Cloud Logging)",
+                  "children": []
+                },
+                {
+                  "id": "security-operations-engineer:standard:6.2:6",
+                  "text": "Configuring silent source detection",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "in_scope_tools": [],
+      "outline_counts": {
+        "sections": 6,
+        "subsections": 13,
+        "objectives": 69,
+        "nested_objectives": 0
+      },
+      "stated_weight_total_percent": 100.0,
+      "weight_note": "Approximate stated weights are preserved; totals need not equal 100.",
+      "status": "current"
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification",
+      "final_url": "https://cloud.google.com/learn/certification",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "catalog",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://cloud.google.com/learn/certification/security-operations-engineer",
+      "final_url": "https://cloud.google.com/learn/certification/security-operations-engineer",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "certification",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_security_operations_engineer_exam_guide_english.pdf",
+      "final_url": "https://services.google.com/fh/files/misc/professional_security_operations_engineer_exam_guide_english.pdf",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "exam_guide",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLScryxTOcaqWaPwxsQ-yjq29xRpYGpsAdy9L0XtIXtZy0s3miQ/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLScryxTOcaqWaPwxsQ-yjq29xRpYGpsAdy9L0XtIXtZy0s3miQ/viewform",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "official_sample",
+      "content_type": "text/html; charset=utf-8"
+    }
+  ],
+  "missing_fields": [
+    "exam_variants.standard.validity_stated"
+  ],
+  "not_stated_notes": [
+    "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+    "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+    "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+  ]
+}

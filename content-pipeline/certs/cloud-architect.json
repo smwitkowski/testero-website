@@ -1,0 +1,1463 @@
+{
+  "schema_version": 1,
+  "cert_id": "cloud-architect",
+  "catalog_name": "Cloud Architect",
+  "level": "professional",
+  "cert_url": "https://cloud.google.com/learn/certification/cloud-architect",
+  "name": "Professional Cloud Architect",
+  "status": "catalog-listed",
+  "registration_status": "not_stated",
+  "canonical_exam_code": null,
+  "retirement": null,
+  "announcements": [
+    "This exam was updated to reflect recent branding changes. Refer to the exam guide to review product names used on the exam."
+  ],
+  "upcoming_versions": [],
+  "exam_variants": [
+    {
+      "variant": "standard",
+      "duration_minutes": 120,
+      "duration_stated": "2 hours",
+      "question_count": {
+        "min": 50,
+        "max": 60,
+        "approximate": false
+      },
+      "question_types": [
+        "multiple_choice",
+        "multiple_select"
+      ],
+      "format_stated": "50-60 multiple choice and multiple select questions",
+      "languages": [
+        "English",
+        "Japanese"
+      ],
+      "languages_stated": "English, Japanese",
+      "price_usd": 200,
+      "price_stated": "$200 (plus tax where applicable)",
+      "validity_stated": "2 years",
+      "delivery_stated": "a. Take the online-proctored exam from a remote location. b. Take the onsite-proctored exam at a testing center - search for Google Cloud.",
+      "case_studies_per_exam": 2,
+      "case_studies_stated": "Each exam includes 2 case studies. Case study questions make up 20-30% of the exam and assess your ability to apply your knowledge to a realistic business situation. You can view the case studies on a split screen during the exam. See the standard Exam Guide for the 4 available case studies.",
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/professional_cloud_architect_exam_guide_english.pdf"
+      ],
+      "case_study_names": [
+        "Altostrat Media",
+        "Cymbal Retail",
+        "EHR Healthcare",
+        "KnightMotives Automotive"
+      ]
+    },
+    {
+      "variant": "renewal",
+      "duration_minutes": 60,
+      "duration_stated": "1 hour",
+      "question_count": {
+        "min": 25,
+        "max": 25,
+        "approximate": false
+      },
+      "question_types": [
+        "multiple_choice",
+        "multiple_select"
+      ],
+      "format_stated": "25 multiple choice and multiple select questions",
+      "languages": [
+        "English",
+        "Japanese"
+      ],
+      "languages_stated": "English, Japanese",
+      "price_usd": 100,
+      "price_stated": "$100 (plus tax where applicable)",
+      "validity_stated": "2 years",
+      "delivery_stated": "a. Take the online-proctored exam from a remote location. b. Take the onsite-proctored exam at a testing center - search for Google Cloud.",
+      "case_studies_per_exam": 1,
+      "case_studies_stated": "Each exam includes 1 case study aligned to generative AI solutions. Case study questions make up 90-100% of the exam and assess your ability to solve business challenges using generative AI. You can view the case studies on a split screen during the exam. See the Renewal Exam Guide for the 2 available case studies.",
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/professional_cloud_architect_renewal_exam_guide_eng.pdf"
+      ],
+      "case_study_names": [
+        "Cymbal Retail",
+        "Altostrat Media"
+      ]
+    },
+    {
+      "variant": "skills_renewal",
+      "duration_minutes": null,
+      "duration_stated": null,
+      "question_count": null,
+      "question_types": null,
+      "format_stated": "Designated courses and/or skill badges in the renewal learning path",
+      "languages": null,
+      "languages_stated": null,
+      "price_usd": null,
+      "price_stated": null,
+      "validity_stated": "1 year",
+      "delivery_stated": null,
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [],
+      "case_study_names": null
+    }
+  ],
+  "sample_sources": [
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSf54f7FbtSJcXUY6-DUHfBG31jZ3pujgb8-a5io_9biJsNpqg/viewform?usp=sf_link",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSf54f7FbtSJcXUY6-DUHfBG31jZ3pujgb8-a5io_9biJsNpqg/viewform?usp=sf_link",
+      "availability": "public_html_fetched"
+    }
+  ],
+  "guides": [
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_cloud_architect_exam_guide_english.pdf",
+      "variant": "standard",
+      "version": null,
+      "effective_date": null,
+      "as_of_date": null,
+      "date_evidence": null,
+      "normalized_text_sha256": "40e12f019a5804ec5da4813cf3ce58ad84ff99443b3ba5fc3c96212d0627aaeb",
+      "case_studies": [
+        "Altostrat Media",
+        "Cymbal Retail",
+        "EHR Healthcare",
+        "KnightMotives Automotive"
+      ],
+      "sections": [
+        {
+          "id": "cloud-architect:standard:1",
+          "number": "1",
+          "title": "Designing and planning a cloud solution architecture",
+          "weight_percent": 25.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-architect:standard:1.1",
+              "number": "1.1",
+              "title": "Designing a cloud solution infrastructure that meets business requirements.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:1.1:1",
+                  "text": "Business use cases and product strategy",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.1:2",
+                  "text": "Identifying functional and non-functional requirements",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.1:3",
+                  "text": "Business continuity plan",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.1:4",
+                  "text": "Cost optimization",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.1:5",
+                  "text": "Supporting the application design",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.1:6",
+                  "text": "Integration patterns with external systems",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.1:7",
+                  "text": "Movement of data",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.1:8",
+                  "text": "Design decision trade-offs",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.1:9",
+                  "text": "Workload disposition strategies (e.g., build, buy, modify, or deprecate)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.1:10",
+                  "text": "Success measurements (e.g., key performance indicators [KPI], return on investment [ROI], and metrics)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.1:11",
+                  "text": "Security and compliance",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.1:12",
+                  "text": "Observability",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:standard:1.2",
+              "number": "1.2",
+              "title": "Designing a cloud solution infrastructure that meets technical requirements.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:1.2:1",
+                  "text": "Familiarity with the Google Cloud Well-Architected Framework",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.2:2",
+                  "text": "High availability and fail-over design",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.2:3",
+                  "text": "Flexibility of cloud resources",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.2:4",
+                  "text": "Scalability to meet growth requirements",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.2:5",
+                  "text": "Performance and latency",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.2:6",
+                  "text": "Gemini Cloud Assist",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.2:7",
+                  "text": "Backup and recovery",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:standard:1.3",
+              "number": "1.3",
+              "title": "Designing network, storage, and compute resources.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:1.3:1",
+                  "text": "Integration with on-premises/multicloud environments",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.3:2",
+                  "text": "Google Cloud AI and machine learning solutions (e.g., Gemini LLMs, Agent Builder, Model Garden, Gemini models, and AI Hypercomputer)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.3:3",
+                  "text": "Cloud-native networking (e.g., virtual private cloud [VPC], peering, firewalls, load balancers, routing, container networking, shared VPC, and Private Service Connect)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.3:4",
+                  "text": "Choosing data processing solutions",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.3:5",
+                  "text": "Choosing appropriate storage types (e.g., object, file, and databases) Professional Cloud Architect Exam Guide 2",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.3:6",
+                  "text": "Mapping compute needs to platform products (e.g., Google Kubernetes Engine [GKE], Cloud Run, and Cloud Run functions)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.3:7",
+                  "text": "Choosing compute resources (e.g., spot VMs, custom machine types, and specialized workload)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:standard:1.4",
+              "number": "1.4",
+              "title": "Creating a migration plan (i.e., documents and architectural diagrams).",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:1.4:1",
+                  "text": "Integrating solutions with existing systems",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.4:2",
+                  "text": "Assessing and migrating systems and data to support the solution (e.g., Google Cloud Migration Center)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.4:3",
+                  "text": "Using migration methodologies, workload testing, network planning, and dependency planning",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.4:4",
+                  "text": "Determining software license implications and financial impact",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:standard:1.5",
+              "number": "1.5",
+              "title": "Envisioning future solution improvements.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:1.5:1",
+                  "text": "Cloud and technology improvements",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.5:2",
+                  "text": "Evolution of business needs",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:1.5:3",
+                  "text": "Cloud-first design approach",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-architect:standard:2",
+          "number": "2",
+          "title": "Managing and provisioning a cloud solution infrastructure",
+          "weight_percent": 17.5,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-architect:standard:2.1",
+              "number": "2.1",
+              "title": "Configuring network topologies.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:2.1:1",
+                  "text": "Extending to on-premises environments (hybrid networking)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.1:2",
+                  "text": "Extending to a multicloud environment that may include Google Cloud-to-Google Cloud communication",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.1:3",
+                  "text": "Security protection (e.g. intrusion protection, access control, and firewalls)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.1:4",
+                  "text": "VPC design and load balancing (e.g., access to cloud, internet, and cloud adjacent services) Professional Cloud Architect Exam Guide 3",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:standard:2.2",
+              "number": "2.2",
+              "title": "Configuring individual storage systems.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:2.2:1",
+                  "text": "Data storage allocation",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.2:2",
+                  "text": "Data processing and compute provisioning",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.2:3",
+                  "text": "Security and access management",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.2:4",
+                  "text": "Configuration for data transfer and latency",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.2:5",
+                  "text": "Data retention and data lifecycle management",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.2:6",
+                  "text": "Data growth planning",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.2:7",
+                  "text": "Data protection (e.g., backup and recovery)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:standard:2.3",
+              "number": "2.3",
+              "title": "Configuring compute systems.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:2.3:1",
+                  "text": "Compute resource provisioning",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.3:2",
+                  "text": "Compute volatility configuration (spot vs. standard)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.3:3",
+                  "text": "Cloud-native network configuration for compute resources (e.g., Compute Engine, GKE, serverless networking, and Google Cloud VMware Engine)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.3:4",
+                  "text": "Infrastructure orchestration, resource configuration, and patch management",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.3:5",
+                  "text": "Container orchestration",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.3:6",
+                  "text": "Serverless computing",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:standard:2.4",
+              "number": "2.4",
+              "title": "Leveraging Gemini Enterprise Agent Platform for end-to-end ML workflows.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:2.4:1",
+                  "text": "Using Agent Platform Pipelines to automate and orchestrate the ML lifecycle",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.4:2",
+                  "text": "Preparing for Agent Platform data integration",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.4:3",
+                  "text": "Using AI Hypercomputer (e.g., using AI Hypercomputer, Cloud Run functions, and Agent Platform for ML/AI workloads; integrating GPUs and TPUs in ML model training and serving; optimizing for different consumption models; and running large-scale AI model trainings)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:standard:2.5",
+              "number": "2.5",
+              "title": "Configuring prebuilt solutions or APIs with Agent Platform.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:2.5:1",
+                  "text": "Differentiating between the Google AI APIs (e.g., Search, Conversation, Vision, Image, Video, and Audio)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.5:2",
+                  "text": "Integrating Gemini Enterprise features (AI Agents and NotebookLM) to enhance workflows",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:2.5:3",
+                  "text": "Integrating AI models from Model Garden into the solution Professional Cloud Architect Exam Guide 4",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-architect:standard:3",
+          "number": "3",
+          "title": "Designing for security and compliance",
+          "weight_percent": 17.5,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-architect:standard:3.1",
+              "number": "3.1",
+              "title": "Designing for security.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:3.1:1",
+                  "text": "Identity and Access Management (IAM)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:3.1:2",
+                  "text": "Resource hierarchy (organizations, folders, and projects)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:3.1:3",
+                  "text": "Data security (key management, encryption, secret management)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:3.1:4",
+                  "text": "Separation of duties",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:3.1:5",
+                  "text": "Security controls (e.g., auditing, VPC Service Controls, context aware access, organization policy, and hierarchical firewall policy)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:3.1:6",
+                  "text": "Managing customer-managed encryption keys with Cloud Key Management Service (Cloud KMS)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:3.1:7",
+                  "text": "Secure remote access (e.g., Identity-Aware Proxy, service account impersonation, Chrome Enterprise Premium, and Workload Identity Federation)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:3.1:8",
+                  "text": "Securing software supply chain",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:3.1:9",
+                  "text": "Securing AI (e.g., Model Armor, Sensitive Data Protection, and secure model deployment)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:standard:3.2",
+              "number": "3.2",
+              "title": "Designing for compliance.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:3.2:1",
+                  "text": "Legislation and regulation (e.g., health record privacy, children’s privacy, data privacy, ownership, and data sovereignty)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:3.2:2",
+                  "text": "Commercial (e.g., sensitive data such as credit card information handling and personally identifiable information [PII])",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:3.2:3",
+                  "text": "Industry certifications (e.g., SOC 2)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:3.2:4",
+                  "text": "Audits (including logs)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-architect:standard:4",
+          "number": "4",
+          "title": "Analyzing and optimizing technical and business processes",
+          "weight_percent": 15.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-architect:standard:4.1",
+              "number": "4.1",
+              "title": "Analyzing and defining technical processes.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:4.1:1",
+                  "text": "Software development lifecycle (SDLC)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:4.1:2",
+                  "text": "Continuous integration/continuous deployment",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:4.1:3",
+                  "text": "Troubleshooting/root cause analysis best practices",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:4.1:4",
+                  "text": "Testing and validation of software and infrastructure",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:4.1:5",
+                  "text": "Service catalog and provisioning",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:4.1:6",
+                  "text": "Disaster recovery Professional Cloud Architect Exam Guide 5",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:standard:4.2",
+              "number": "4.2",
+              "title": "Analyzing and defining business processes.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:4.2:1",
+                  "text": "Stakeholder management (e.g., influencing and facilitation)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:4.2:2",
+                  "text": "Change management",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:4.2:3",
+                  "text": "Team assessment/skills readiness",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:4.2:4",
+                  "text": "Decision-making processes",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:4.2:5",
+                  "text": "Customer success management",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:4.2:6",
+                  "text": "Cost optimization/resource optimization (CapEx/OpEx)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:4.2:7",
+                  "text": "Business continuity",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-architect:standard:5",
+          "number": "5",
+          "title": "Managing implementation",
+          "weight_percent": 12.5,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-architect:standard:5.1",
+              "number": "5.1",
+              "title": "Advising development and operation teams to ensure the successful deployment of the solution.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:5.1:1",
+                  "text": "Application and infrastructure deployment",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:5.1:2",
+                  "text": "API management best practices (e.g., Apigee)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:5.1:3",
+                  "text": "Testing frameworks (load/unit/integration)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:5.1:4",
+                  "text": "Data and system migration and management tooling",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:5.1:5",
+                  "text": "Gemini Cloud Assist",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:standard:5.2",
+              "number": "5.2",
+              "title": "Interacting with Google Cloud programmatically.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:5.2:1",
+                  "text": "Cloud Shell Editor, Cloud Code, and Cloud Shell Terminal",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:5.2:2",
+                  "text": "Google Cloud SDKs (e.g., gcloud, gsutil, and bq)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:5.2:3",
+                  "text": "Cloud Emulators (e.g., Bigtable, Spanner, Pub/Sub, and Firestore)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:5.2:4",
+                  "text": "Infrastructure as Code (e.g., IaC and Terraform)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:5.2:5",
+                  "text": "Accessing Google API best practices",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:5.2:6",
+                  "text": "Google API client libraries Professional Cloud Architect Exam Guide 6",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-architect:standard:6",
+          "number": "6",
+          "title": "Ensuring solution and operations excellence",
+          "weight_percent": 12.5,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-architect:standard:6.1",
+              "number": "6.1",
+              "title": "Understanding the principles and recommendations of the operational excellence pillar of the Google Cloud Well-Architected Framework",
+              "weight_percent": null,
+              "objectives": []
+            },
+            {
+              "id": "cloud-architect:standard:6.2",
+              "number": "6.2",
+              "title": "Familiarity with Google Cloud Observability solutions.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:standard:6.2:1",
+                  "text": "Monitoring and logging",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:6.2:2",
+                  "text": "Profiling and benchmarking",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:standard:6.2:3",
+                  "text": "Alerting strategies",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:standard:6.3",
+              "number": "6.3",
+              "title": "Deployment and release management",
+              "weight_percent": null,
+              "objectives": []
+            },
+            {
+              "id": "cloud-architect:standard:6.4",
+              "number": "6.4",
+              "title": "Assisting with the support of deployed solutions",
+              "weight_percent": null,
+              "objectives": []
+            },
+            {
+              "id": "cloud-architect:standard:6.5",
+              "number": "6.5",
+              "title": "Evaluating quality control measures",
+              "weight_percent": null,
+              "objectives": []
+            },
+            {
+              "id": "cloud-architect:standard:6.6",
+              "number": "6.6",
+              "title": "Ensuring the reliability of solutions in production (e.g., chaos engineering, penetration testing, and load testing) Professional Cloud Architect Exam Guide 7",
+              "weight_percent": null,
+              "objectives": []
+            }
+          ]
+        }
+      ],
+      "in_scope_tools": [],
+      "outline_counts": {
+        "sections": 6,
+        "subsections": 22,
+        "objectives": 96,
+        "nested_objectives": 0
+      },
+      "stated_weight_total_percent": 100.0,
+      "weight_note": "Approximate stated weights are preserved; totals need not equal 100.",
+      "status": "current"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_cloud_architect_renewal_exam_guide_eng.pdf",
+      "variant": "renewal",
+      "version": null,
+      "effective_date": null,
+      "as_of_date": null,
+      "date_evidence": null,
+      "normalized_text_sha256": "38ef8f44392f5e02576d473e9383218d4b96b5afe87aaf94b9d5dfa361ccd97f",
+      "case_studies": [
+        "Cymbal Retail",
+        "Altostrat Media"
+      ],
+      "sections": [
+        {
+          "id": "cloud-architect:renewal:1",
+          "number": "1",
+          "title": "Designing and planning a cloud solution architecture",
+          "weight_percent": 30.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-architect:renewal:1.1",
+              "number": "1.1",
+              "title": "Designing a solution infrastructure that meets business requirements.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:renewal:1.1:1",
+                  "text": "Business use cases and product strategy",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.1:2",
+                  "text": "Business continuity plan",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.1:3",
+                  "text": "Cost optimization",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.1:4",
+                  "text": "Supporting the application design",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.1:5",
+                  "text": "Integration patterns with external systems",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.1:6",
+                  "text": "Movement of data",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.1:7",
+                  "text": "Design decision trade-offs Professional Cloud Architect Renewal Exam Guide 1",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.1:8",
+                  "text": "Workload disposition strategies (e.g., build, buy, modify, or deprecate)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.1:9",
+                  "text": "Success measurements (e.g., key performance indicators [KPI], return on investment [ROI], metrics)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.1:10",
+                  "text": "Security and Compliance",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.1:11",
+                  "text": "Observability",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:renewal:1.2",
+              "number": "1.2",
+              "title": "Designing a solution infrastructure that meets technical requirements.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:renewal:1.2:1",
+                  "text": "High availability and failover design",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.2:2",
+                  "text": "Flexibility of cloud resources",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.2:3",
+                  "text": "Scalability to meet growth requirements",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.2:4",
+                  "text": "Performance and latency",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.2:5",
+                  "text": "Gemini Cloud Assist",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.2:6",
+                  "text": "Backup and recovery",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:renewal:1.3",
+              "number": "1.3",
+              "title": "Designing network, storage, and compute resources.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:renewal:1.3:1",
+                  "text": "Integration with on-premises/multicloud environments",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.3:2",
+                  "text": "Gemini Enterprise Agent Platform solutions (e.g., Gemini LLMs, Agent Builder, Model Garden, Gemini models)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.3:3",
+                  "text": "Cloud-native networking (e.g., VPC, peering, firewalls, container networking, shared VPC, PSC)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.3:4",
+                  "text": "Choosing data processing solutions",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.3:5",
+                  "text": "Choosing appropriate storage types (e.g., object, file, databases)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.3:6",
+                  "text": "Mapping compute needs to platform products (e.g., Google Kubernetes Engine [GKE], Cloud Run, Cloud Run functions)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.3:7",
+                  "text": "Choosing compute resources (e.g., spot VMs, custom machine types, specialized workload)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:renewal:1.4",
+              "number": "1.4",
+              "title": "Creating a migration plan (i.e., documents and architectural diagrams).",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:renewal:1.4:1",
+                  "text": "Integrating solutions with existing systems",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.4:2",
+                  "text": "Migrating systems and data to support the solution (e.g., Cloud bridge)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.4:3",
+                  "text": "Software license implications",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.4:4",
+                  "text": "Network planning",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.4:5",
+                  "text": "Testing and proofs of concept",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.4:6",
+                  "text": "Dependency management planning",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.4:7",
+                  "text": "Financial impact Professional Cloud Architect Renewal Exam Guide 2",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:renewal:1.5",
+              "number": "1.5",
+              "title": "Envisioning future solution improvements.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:renewal:1.5:1",
+                  "text": "Cloud and technology improvements",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.5:2",
+                  "text": "Evolution of business needs",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:1.5:3",
+                  "text": "Enablement and advocacy",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-architect:renewal:2",
+          "number": "2",
+          "title": "Managing and provisioning a solution infrastructure",
+          "weight_percent": 40.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-architect:renewal:2.1",
+              "number": "2.1",
+              "title": "Configuring network topologies.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:renewal:2.1:1",
+                  "text": "Extending to on-premises environments (hybrid networking)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.1:2",
+                  "text": "Extending to a multicloud environment that may include Google Cloud to Google Cloud communication",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.1:3",
+                  "text": "Security protection (e.g. intrusion protection, access control, firewalls)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.1:4",
+                  "text": "VPC design and load balancing (e.g., access to cloud, internet, and cloud adjacent services)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:renewal:2.2",
+              "number": "2.2",
+              "title": "Configuring individual storage systems.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:renewal:2.2:1",
+                  "text": "Data storage allocation",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.2:2",
+                  "text": "Data processing/compute provisioning",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.2:3",
+                  "text": "Security and access management",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.2:4",
+                  "text": "Configuration for data transfer and latency",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.2:5",
+                  "text": "Data retention and data life cycle management",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.2:6",
+                  "text": "Data growth planning",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.2:7",
+                  "text": "Data protection (e.g., backup, recovery)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:renewal:2.3",
+              "number": "2.3",
+              "title": "Configuring compute systems.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:renewal:2.3:1",
+                  "text": "Compute resource provisioning",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.3:2",
+                  "text": "Compute volatility configuration (spot vs. standard)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.3:3",
+                  "text": "Cloud-native network configuration for compute resources (e.g., Google Compute Engine, GKE, serverless networking, VMware Engine)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.3:4",
+                  "text": "Infrastructure orchestration, resource configuration, and patch management",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.3:5",
+                  "text": "Container orchestration",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.3:6",
+                  "text": "Serverless computing Professional Cloud Architect Renewal Exam Guide 3",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:renewal:2.4",
+              "number": "2.4",
+              "title": "Monitoring, logging, profiling, and alerting solutions.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:renewal:2.4:1",
+                  "text": "Monitoring and logging",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.4:2",
+                  "text": "Profiling and benchmarking",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:2.4:3",
+                  "text": "Alerting strategies",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-architect:renewal:3",
+          "number": "3",
+          "title": "Designing for security and compliance",
+          "weight_percent": 20.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-architect:renewal:3.1",
+              "number": "3.1",
+              "title": "Designing for security.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:renewal:3.1:1",
+                  "text": "Identity and access management (IAM)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:3.1:2",
+                  "text": "Resource hierarchy (organizations, folders, projects)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:3.1:3",
+                  "text": "Data security (key management, encryption, secret management)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:3.1:4",
+                  "text": "Separation of duties (SoD)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:3.1:5",
+                  "text": "Security controls (e.g., auditing, VPC Service Controls, context aware access, organization policy, hierarchical firewall policy)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:3.1:6",
+                  "text": "Managing customer-managed encryption keys with Cloud Key Management Service",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:3.1:7",
+                  "text": "Remote access (e.g., IAP, service account impersonation, beyondcorp, RDP, oslogin (SSH), Workload identity federation)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:3.1:8",
+                  "text": "Securing software supply chain",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:3.1:9",
+                  "text": "Gemini in Security",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:renewal:3.2",
+              "number": "3.2",
+              "title": "Designing for compliance.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:renewal:3.2:1",
+                  "text": "Legislation and regulation (e.g., health record privacy, children’s privacy, data privacy, ownership, data sovereignty)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:3.2:2",
+                  "text": "Commercial (e.g., sensitive data such as credit card information handling, personally identifiable information [PII])",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:3.2:3",
+                  "text": "Industry certifications (e.g., SOC 2)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:3.2:4",
+                  "text": "Audits (including logs) Professional Cloud Architect Renewal Exam Guide 4",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-architect:renewal:4",
+          "number": "4",
+          "title": "Managing implementation",
+          "weight_percent": 10.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-architect:renewal:4.1",
+              "number": "4.1",
+              "title": "Advising development and operations teams to ensure successful deployment of the solution.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:renewal:4.1:1",
+                  "text": "Application and infrastructure deployment",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:4.1:2",
+                  "text": "API management best practices (e.g., Apigee)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:4.1:3",
+                  "text": "Testing frameworks (load/unit/integration)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:4.1:4",
+                  "text": "Data and system migration and management tooling",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:4.1:5",
+                  "text": "Gemini Cloud Assist",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-architect:renewal:4.2",
+              "number": "4.2",
+              "title": "Interacting with Google Cloud programmatically.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-architect:renewal:4.2:1",
+                  "text": "Cloud Shell Editor, Cloud Code, and Cloud Shell Terminal",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:4.2:2",
+                  "text": "Google Cloud SDK (e.g., gcloud, gsutil and bq)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:4.2:3",
+                  "text": "Gemini Code Assist",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:4.2:4",
+                  "text": "Cloud Emulators (e.g. Bigtable, Spanner, Pub/Sub, Firestore)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:4.2:5",
+                  "text": "Infrastructure as code (e.g., IaC)",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:4.2:6",
+                  "text": "Accessing Google API best practices",
+                  "children": []
+                },
+                {
+                  "id": "cloud-architect:renewal:4.2:7",
+                  "text": "Google API client libraries Professional Cloud Architect Renewal Exam Guide 5",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "in_scope_tools": [],
+      "outline_counts": {
+        "sections": 4,
+        "subsections": 13,
+        "objectives": 79,
+        "nested_objectives": 0
+      },
+      "stated_weight_total_percent": 100.0,
+      "weight_note": "Approximate stated weights are preserved; totals need not equal 100.",
+      "status": "current"
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification",
+      "final_url": "https://cloud.google.com/learn/certification",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "catalog",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://cloud.google.com/certification/cloud-architect",
+      "final_url": "https://cloud.google.com/learn/certification/cloud-architect",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "certification",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_cloud_architect_exam_guide_english.pdf",
+      "final_url": "https://services.google.com/fh/files/misc/professional_cloud_architect_exam_guide_english.pdf",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "exam_guide",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_cloud_architect_renewal_exam_guide_eng.pdf",
+      "final_url": "https://services.google.com/fh/files/misc/professional_cloud_architect_renewal_exam_guide_eng.pdf",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "exam_guide",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSf54f7FbtSJcXUY6-DUHfBG31jZ3pujgb8-a5io_9biJsNpqg/viewform?usp=sf_link",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSf54f7FbtSJcXUY6-DUHfBG31jZ3pujgb8-a5io_9biJsNpqg/viewform?usp=sf_link",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "official_sample",
+      "content_type": "text/html; charset=utf-8"
+    }
+  ],
+  "missing_fields": [
+    "exam_variants.skills_renewal.duration_minutes",
+    "exam_variants.skills_renewal.question_count",
+    "exam_variants.skills_renewal.question_types",
+    "exam_variants.skills_renewal.languages",
+    "exam_variants.skills_renewal.price_usd"
+  ],
+  "not_stated_notes": [
+    "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+    "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions."
+  ]
+}

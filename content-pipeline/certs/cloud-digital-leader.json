@@ -1,0 +1,689 @@
+{
+  "schema_version": 1,
+  "cert_id": "cloud-digital-leader",
+  "catalog_name": "Cloud Digital Leader",
+  "level": "foundational",
+  "cert_url": "https://cloud.google.com/learn/certification/cloud-digital-leader",
+  "name": "Cloud Digital Leader",
+  "status": "catalog-listed",
+  "registration_status": "not_stated",
+  "canonical_exam_code": null,
+  "retirement": null,
+  "announcements": [
+    "As of August 12, the new version of the exam is now live. See the exam guide for topics that may be assessed.",
+    "The Cloud Digital Leader sample questions will familiarize you with the format of exam questions and example content that may be covered on both of the exams. The sample questions do not represent the range of topics or level of difficulty of questions presented on the exam. Performance on the sample questions should not be used to predict your Cloud Digital Leader exam result. There is no limit to the number of times you can complete the sample questions. The sample questions are not timed. If you close the sample questions while in progress, your work won't be saved and you will have to start from the beginning. Launch sample questions"
+  ],
+  "upcoming_versions": [],
+  "exam_variants": [
+    {
+      "variant": "standard",
+      "duration_minutes": 90,
+      "duration_stated": "90 minutes",
+      "question_count": {
+        "min": 50,
+        "max": 60,
+        "approximate": false
+      },
+      "question_types": [
+        "multiple_choice",
+        "multiple_select"
+      ],
+      "format_stated": "50-60 multiple choice and multiple select questions",
+      "languages": [
+        "English",
+        "Japanese",
+        "Spanish",
+        "Portuguese",
+        "French"
+      ],
+      "languages_stated": "English, Japanese, Spanish, Portuguese, French",
+      "price_usd": 99,
+      "price_stated": "$99 (plus tax where applicable)",
+      "validity_stated": "3 years",
+      "delivery_stated": "a. Take the Online-proctored exam from a remote location. b. Take the onsite-proctored exam at a testing center - search for Google Cloud.",
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/cloud_digital_leader_exam_guide_english.pdf"
+      ],
+      "case_study_names": null
+    },
+    {
+      "variant": "renewal",
+      "duration_minutes": 45,
+      "duration_stated": "45 minutes",
+      "question_count": {
+        "min": 20,
+        "max": 20,
+        "approximate": false
+      },
+      "question_types": [
+        "multiple_choice",
+        "multiple_select"
+      ],
+      "format_stated": "20 multiple choice and multiple select questions",
+      "languages": [
+        "English",
+        "Japanese"
+      ],
+      "languages_stated": "English, Japanese",
+      "price_usd": 60,
+      "price_stated": "$60 (plus tax where applicable)",
+      "validity_stated": "3 years",
+      "delivery_stated": "a. Take the Online-proctored exam from a remote location. b. Take the onsite-proctored exam at a testing center - search for Google Cloud.",
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/cloud_digital_leader_exam_guide_english.pdf"
+      ],
+      "case_study_names": null
+    },
+    {
+      "variant": "skills_renewal",
+      "duration_minutes": null,
+      "duration_stated": null,
+      "question_count": null,
+      "question_types": null,
+      "format_stated": "Designated courses and/or skill badges in the renewal learning path",
+      "languages": null,
+      "languages_stated": null,
+      "price_usd": null,
+      "price_stated": null,
+      "validity_stated": "1 year",
+      "delivery_stated": null,
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [],
+      "case_study_names": null
+    }
+  ],
+  "sample_sources": [
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSedAmf77MGS7FGEaylFzY51KtBd7kkIZJIMDsV5zSRSmpKIOA/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSedAmf77MGS7FGEaylFzY51KtBd7kkIZJIMDsV5zSRSmpKIOA/viewform",
+      "availability": "public_html_fetched"
+    }
+  ],
+  "guides": [
+    {
+      "url": "https://services.google.com/fh/files/misc/cloud_digital_leader_exam_guide_english.pdf",
+      "variant": "standard",
+      "version": null,
+      "effective_date": "2026-08-12",
+      "as_of_date": null,
+      "date_evidence": "launched on August 12, 2026",
+      "normalized_text_sha256": "9adb722ac6288b9456af95f7b7da1b35afd6ef13f08b045d566ac4ce415afe85",
+      "case_studies": [],
+      "sections": [
+        {
+          "id": "cloud-digital-leader:standard:1",
+          "number": "1",
+          "title": "Digital Transformation with Google Cloud",
+          "weight_percent": 18.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-digital-leader:standard:1.1",
+              "number": "1.1",
+              "title": "Explain why and how the cloud is revolutionizing businesses.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-digital-leader:standard:1.1:1",
+                  "text": "Define the terms: cloud, agentic AI, infrastructure, digital transformation, open source, open standard.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:1.1:2",
+                  "text": "Explain the benefits of cloud technology to a business’ digital transformation (e.g., scalability, cost-effectiveness, agility, speed, flexibility, enhanced security, global reach and high availability, data-driven insights, strategic value and focus).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:1.1:3",
+                  "text": "Describe the primary drivers that compel organizations to pursue digital transformation and the significant challenges they face (i.e., factors that motivate organizations to transform, common hurdles that can affect transformation, implications and risks of not adopting cloud).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:1.1:4",
+                  "text": "Recognize some of Google Cloud’s top differentiators (e.g., world-leading AI, deep commitment to openness and interoperability, AI Hypercomputer, AI-ready data platform, security, global network).",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-digital-leader:standard:1.2",
+              "number": "1.2",
+              "title": "Describe fundamental cloud concepts.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-digital-leader:standard:1.2:1",
+                  "text": "Identify the corresponding business use case and benefits of various cloud architectures (e.g., private cloud, hybrid cloud, multicloud).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:1.2:2",
+                  "text": "Define fundamental networking concepts and describe how Google Cloud’s global network infrastructure supports digital transformation (e.g., IP address, domain name service (DNS), basic IP addresses, latency, bandwidth).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:1.2:3",
+                  "text": "Describe the components of Google Cloud’s network and explain how they work together (e.g., regions, zones, edge locations).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:1.2:4",
+                  "text": "Describe the benefits and tradeoffs of different cloud service models: Infrastructure as a Service (IaaS), Platform as a Service (PaaS), and Software as a Service (SaaS)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-digital-leader:standard:2",
+          "number": "2",
+          "title": "Exploring Data Transformation with Google Cloud",
+          "weight_percent": 18.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-digital-leader:standard:2.1",
+              "number": "2.1",
+              "title": "Describe the intrinsic role that data plays in an organization’s digital transformation.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-digital-leader:standard:2.1:1",
+                  "text": "Explain why data is valuable (e.g., generating real-time business insights, identifying trends, informing strategic decision making, fueling AI).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:2.1:2",
+                  "text": "Differentiate between databases, data warehouses, and data lakes.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:2.1:3",
+                  "text": "Recognize types of data (e.g., first-party, second-party, third-party, structured, unstructured, semi-structured).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:2.1:4",
+                  "text": "Describe an organization’s data supply chain (e.g., data genesis, data collection, data processing, data storage, data analysis, data activation).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:2.1:5",
+                  "text": "Describe the data governance process and why it’s important.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:2.1:6",
+                  "text": "Explain why openness and interoperability with data management platforms are critical for eliminating data silos and avoiding vendor lock-in.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-digital-leader:standard:2.2",
+              "number": "2.2",
+              "title": "Determine which Google Cloud data management products are applicable to different business use cases.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-digital-leader:standard:2.2:1",
+                  "text": "Determine which Google Cloud data management offering is best for each business use case (e.g., Cloud Storage, Spanner, Cloud SQL, AlloyDB, Bigtable, BigQuery, Firestore).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:2.2:2",
+                  "text": "Define key data management concepts and terms (e.g., relational, non-relational, object storage, structured query language [SQL], NoSQL).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:2.2:3",
+                  "text": "Differentiate between storage classes in Cloud Storage regarding cost and frequency of access (e.g., Standard, Nearline, Coldline, Archive, Autoclass).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:2.2:4",
+                  "text": "Describe the ways that an organization can migrate or modernize their current database in the cloud.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-digital-leader:standard:2.3",
+              "number": "2.3",
+              "title": "Discuss how smart analytics, business intelligence tools, and streaming analytics can add value in different business use cases.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-digital-leader:standard:2.3:1",
+                  "text": "Describe how Looker democratizes access to data.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:2.3:2",
+                  "text": "Recognize the value of analyzing and visualizing data from BigQuery in Looker to create real-time reports, dashboards, and integrating data into workflows.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:2.3:3",
+                  "text": "Explain why real-time streaming analytics is critical for modern businesses.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:2.3:4",
+                  "text": "Describe the main Google Cloud products that modernize data pipelines (e.g., Pub/Sub, Dataflow, Managed Service for Apache Spark).",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-digital-leader:standard:3",
+          "number": "3",
+          "title": "Innovating with Google Cloud Artificial Intelligence",
+          "weight_percent": 18.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-digital-leader:standard:3.1",
+              "number": "3.1",
+              "title": "Describe fundamental AI and ML concepts and how they create business value.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-digital-leader:standard:3.1:1",
+                  "text": "Recognize the definition of artificial intelligence (AI), machine learning (ML), generative AI (gen AI), data analytics, and business intelligence.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:3.1:2",
+                  "text": "Recognize some of the ways agentic AI is fundamentally reshaping different industries and the way people work (e.g., workforce productivity, customer support, sales experiences, product innovation, operations, research).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:3.1:3",
+                  "text": "Recognize the key benefits of Google Cloud’s AI offerings (e.g., best infrastructure for AI, AI-ready data cloud, sophisticated 1P models, all-in-one AI developer platform, pre-built AI agents and applications).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:3.1:4",
+                  "text": "Identify the business problems that ML can solve, and describe key use cases and the business value that ML provides (e.g., replacing or simplifying rule-based systems, deriving business insights from large datasets [structured and unstructured], scaling business decisions).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:3.1:5",
+                  "text": "Explain why high-quality, accurate data is essential for successful AI models and identify the main dimensions of data quality (e.g., completeness, uniqueness, timeliness, validity, accuracy, consistency).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:3.1:6",
+                  "text": "Describe the business implications of explainable and responsible AI in AI systems.",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-digital-leader:standard:3.2",
+              "number": "3.2",
+              "title": "Explain how Google Cloud’s AI offerings can create business value.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-digital-leader:standard:3.2:1",
+                  "text": "Describe the strategic considerations that organizations must make when selecting Google Cloud AI solutions (e.g., implementation speed, development effort, potential for business differentiation, technical expertise requirements, choice and flexibility).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:3.2:2",
+                  "text": "Describe the functionality of Gemini Enterprise Agent Platform and identify potential business use cases.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:3.2:3",
+                  "text": "Match the Google Cloud pre-trained API and foundation model to various business use cases (e.g., Agent Platform API, Vision API, Cloud Translation API, Speech-to-Text API, Gemini).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:3.2:4",
+                  "text": "Explain how an organization can build custom models using their own data to create business value (e.g., Agent Studio on Agent Platform, AutoML on Agent Platform).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:3.2:5",
+                  "text": "Recognize the core components of Google Cloud’s AI Hypercomputer and how organizations benefit by gaining improved performance and efficiency for AI workloads (e.g., GPUs and TPUs, industry-leading software and open standards, cost control with flexible consumption models).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:3.2:6",
+                  "text": "Discuss how BigQuery ML lets users create and execute machine learning models in BigQuery by using standard SQL queries and flexibility to experiment with data.",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-digital-leader:standard:4",
+          "number": "4",
+          "title": "Modernize Infrastructure and Applications with Google Cloud",
+          "weight_percent": 18.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-digital-leader:standard:4.1",
+              "number": "4.1",
+              "title": "Describe how Google Cloud helps organizations transition to the cloud.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-digital-leader:standard:4.1:1",
+                  "text": "Define fundamental cloud migration terms (e.g., workload, discovery and assessment, retire, retain, rehost [lift and shift], replatform [move and improve], refactor; reimagine).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:4.1:2",
+                  "text": "Define the fundamental cloud compute terms (e.g., virtual machines (VMs), containerization and containers, applications and microservices, serverless computing, spot VMs, Kubernetes, autoscaling and load balancing, managed services).",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-digital-leader:standard:4.2",
+              "number": "4.2",
+              "title": "Describe the functionality, business use cases, and business value of Google Cloud’s infrastructure offerings.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-digital-leader:standard:4.2:1",
+                  "text": "Discuss the business value of using Compute Engine to create and run virtual machines on Google’s infrastructure.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:4.2:2",
+                  "text": "Describe the business value of modern application development (e.g., flexible architectures like microservices, accelerated deployment processes through managed services, cost optimization, enhanced scalability and resilience, improved operational efficiency).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:4.2:3",
+                  "text": "Describe the business value of using GKE to deploy and manage containers.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:4.2:4",
+                  "text": "Describe the business value of using serverless computing Google Cloud products (e.g., Cloud Run; Cloud Run functions).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:4.2:5",
+                  "text": "Recognize the Google Cloud products that are supported on multicloud and hybrid cloud environments (e.g., AlloyDB Omni, BigQuery Omni, GKE Enterprise, Cloud SQL, Looker).",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-digital-leader:standard:4.3",
+              "number": "4.3",
+              "title": "Describe the business value of application programming interfaces (APIs).",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-digital-leader:standard:4.3:1",
+                  "text": "Define application programming interface (API).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:4.3:2",
+                  "text": "Describe how organizations can create new business opportunities by exposing and monetizing public-facing APIs.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:4.3:3",
+                  "text": "Describe the business value of using Apigee API Management.",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-digital-leader:standard:5",
+          "number": "5",
+          "title": "Trust and Security with Google Cloud",
+          "weight_percent": 18.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-digital-leader:standard:5.1",
+              "number": "5.1",
+              "title": "Describe fundamental cloud security concepts.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-digital-leader:standard:5.1:1",
+                  "text": "Describe relevant cybersecurity threats and business implications (e.g., DDoS, ransomware, cryptomining, malware, viruses, phishing, misconfiguration, unsecured third party systems, physical damage, LLM attacks).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:5.1:2",
+                  "text": "Differentiate between cloud security and on-premises security.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:5.1:3",
+                  "text": "Describe the importance of control, compliance, confidentiality, integrity, and availability in a cloud security model.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:5.1:4",
+                  "text": "Define key security terms and concepts (e.g., data loss prevention, privileged access, least privilege, zero-trust architecture, security by default, security posture, cyber resilience, firewall, encryption, decryption).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:5.1:5",
+                  "text": "Explain how encryption safeguards an organization’s data in different usage states (e.g., in use, in transit, at rest).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:5.1:6",
+                  "text": "Differentiate between authentication, authorization, and auditing (e.g., multi-factor authentication, two-step verification [2SV], IAM).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:5.1:7",
+                  "text": "Define the fundamental cloud security operations (SecOps) terms (e.g., security posture, threat intelligence, threat response).",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-digital-leader:standard:5.2",
+              "number": "5.2",
+              "title": "Describe the business value of making Google part of an organization’s security team with its defense-in-depth, multilayered approach to cloud security.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-digital-leader:standard:5.2:1",
+                  "text": "Recognize how Google Cloud secures every layer of the AI stack (e.g., infrastructure, data, models, platform, agents).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:5.2:2",
+                  "text": "Recognize how Google Threat Intelligence provides organizations with proactive insights into cyber threats and identify the unique sources that power its analysis (e.g., Google’s vast global visibility, Mandiant’s frontline incident response expertise, VirusTotal’s crowd sourced threat detection).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:5.2:3",
+                  "text": "Recognize the benefits of Security Command Center to proactively discover, prioritize, and remediate security risks and misconfigurations across the Google Cloud environment.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:5.2:4",
+                  "text": "Recognize the benefits of using a unified security operations platform, like Google Security Operations, to ingest telemetry and accelerate threat detection and response.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:5.2:5",
+                  "text": "Recognize the benefits of Google’s secure-by-design cloud platform (e.g., core infrastructure, proprietary data centers, purpose-built servers and networking, custom security hardware and software).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:5.2:6",
+                  "text": "Recognize the functionality, business value, and use cases for Google Cloud’s AI-assisted and AI-focused security offerings (e.g., Gemini in Google Security Operations, AI Protection, Model Armor).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:5.2:7",
+                  "text": "Recognize the functionality, use cases, and business value of Google’s other security offerings (e.g., Cloud VPC, Cloud VPN, Cloud Interconnect, firewalls, Cloud Armor, Cloud Logging, IAM, Sensitive Data Protection, Confidential Computing, Certificate Manager, Identity-Aware Proxy).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:5.2:8",
+                  "text": "Describe how Google Cloud earns and maintains customer trust in the cloud (e.g., transparency reports, third-party audits, digital sovereignty, data residency, compliance resource manager).",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cloud-digital-leader:standard:6",
+          "number": "6",
+          "title": "Scaling with Google Cloud Operations",
+          "weight_percent": 10.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "cloud-digital-leader:standard:6.1",
+              "number": "6.1",
+              "title": "Recognize how Google Cloud supports an organization’s ability to control their cloud costs.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-digital-leader:standard:6.1:1",
+                  "text": "Explain how an organization’s transition from an on-premises environment to the cloud shifts their capital expenditures (CapEx) to operational expenditures (OpEx), and how that affects their total cost of ownership (TCO).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:6.1:2",
+                  "text": "Describe Google-recommended practices for cloud financial governance (e.g., identify who manages cloud costs, Google Cloud’s cost management tools).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:6.1:3",
+                  "text": "Recognize the role of people, process, and technology in controlling cloud costs.",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:6.1:4",
+                  "text": "Recognize the components of Google Cloud’s resource hierarchy (e.g., resources, projects, folders, organization node) and the benefits (e.g., access control, inheritance and propagation rules, security and compliance, visibility and auditing capabilities).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:6.1:5",
+                  "text": "Recognize how to control cloud consumption (e.g., resource quota policies, budget threshold rules, Cloud Billing reports, Dynamic Workload Scheduler, Spot VMs).",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "cloud-digital-leader:standard:6.2",
+              "number": "6.2",
+              "title": "Describe the fundamental concepts of modern operations, reliability, and resilience in the cloud.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "cloud-digital-leader:standard:6.2:1",
+                  "text": "Describe how to modernize operations by using Google Cloud’s Observability (e.g., operations suite, Cloud Monitoring, Cloud Logging, Cloud Trace, Cloud Profiler, Error Reporting).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:6.2:2",
+                  "text": "Recognize the fundamental cloud operations terms (e.g., operational excellence, reliability, high availability).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:6.2:3",
+                  "text": "Recognize how to design resilient infrastructure and processes (e.g., redundancy, replication, scalable infrastructure, backups).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:6.2:4",
+                  "text": "Recognize how a system’s performance and reliability are measured (e.g., latency, traffic, saturation, errors).",
+                  "children": []
+                },
+                {
+                  "id": "cloud-digital-leader:standard:6.2:5",
+                  "text": "Recognize fundamental concepts of DevOps and Site Reliability Engineering (e.g., service level indicators, service level objectives, service level agreements).",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "in_scope_tools": [],
+      "outline_counts": {
+        "sections": 6,
+        "subsections": 14,
+        "objectives": 69,
+        "nested_objectives": 0
+      },
+      "stated_weight_total_percent": 100.0,
+      "weight_note": "Approximate stated weights are preserved; totals need not equal 100.",
+      "status": "current"
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification",
+      "final_url": "https://cloud.google.com/learn/certification",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "catalog",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://cloud.google.com/certification/cloud-digital-leader",
+      "final_url": "https://cloud.google.com/learn/certification/cloud-digital-leader",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "certification",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/cloud_digital_leader_exam_guide_english.pdf",
+      "final_url": "https://services.google.com/fh/files/misc/cloud_digital_leader_exam_guide_english.pdf",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "exam_guide",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSedAmf77MGS7FGEaylFzY51KtBd7kkIZJIMDsV5zSRSmpKIOA/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSedAmf77MGS7FGEaylFzY51KtBd7kkIZJIMDsV5zSRSmpKIOA/viewform",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "official_sample",
+      "content_type": "text/html; charset=utf-8"
+    }
+  ],
+  "missing_fields": [
+    "exam_variants.skills_renewal.duration_minutes",
+    "exam_variants.skills_renewal.question_count",
+    "exam_variants.skills_renewal.question_types",
+    "exam_variants.skills_renewal.languages",
+    "exam_variants.skills_renewal.price_usd"
+  ],
+  "not_stated_notes": [
+    "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+    "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions."
+  ]
+}

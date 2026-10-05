@@ -1,0 +1,454 @@
+{
+  "schema_version": 1,
+  "cert_id": "agentic-architect",
+  "catalog_name": "Agentic Architect (Beta)",
+  "level": "professional",
+  "cert_url": "https://cloud.google.com/learn/certification/agentic-architect/",
+  "name": "Professional Agentic Architect",
+  "status": "catalog-listed",
+  "registration_status": "closed_beta_upcoming_ga",
+  "canonical_exam_code": null,
+  "retirement": null,
+  "announcements": [
+    "Professional Agentic Architect beta registration is closed. If you took the beta, please refer to the PAA beta FAQs. GA registration opens November 2.",
+    "Results of the beta exam will be released in CM Connect at the end of October. Candidates who pass will receive a notification to complete the required PAA labs by December 31, 2026.",
+    "Beta certification exams are newly developed assessments. We gather performance statistics on the questions and use these statistics to create the certification standards for the final certification. Beta participants will be notified of their results 4-6 weeks after both the exam window and lab window are closed. You can pass the beta or GA certification to become a Google Cloud Certified - Professional Agentic Architect."
+  ],
+  "upcoming_versions": [
+    {
+      "variant": "ga",
+      "version": null,
+      "guide_url": null,
+      "effective_date": null,
+      "registration_opens_stated": "November 2",
+      "date_note": "Year not stated; do not infer a full date.",
+      "source_url": "https://cloud.google.com/learn/certification/agentic-architect/"
+    }
+  ],
+  "exam_variants": [
+    {
+      "variant": "beta",
+      "duration_minutes": 180,
+      "duration_stated": "3 hours",
+      "question_count": {
+        "min": 80,
+        "max": 80,
+        "approximate": true
+      },
+      "question_types": [
+        "multiple_choice"
+      ],
+      "format_stated": "~80 multiple choice questions",
+      "languages": [
+        "English"
+      ],
+      "languages_stated": "English",
+      "price_usd": 120,
+      "price_stated": "$120 (40% discount on retail price of $200 USD) (plus tax where applicable)",
+      "validity_stated": "1 year",
+      "delivery_stated": "Online-proctored or onsite-proctored",
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/professional_agentic_architect_exam_guide_english.pdf"
+      ],
+      "case_study_names": null
+    }
+  ],
+  "sample_sources": [
+    {
+      "url": "https://docs.google.com/forms/d/1fi1gqbWsNCFxm1CT9V-JNGff1lyqfU9kNWAaaQMvRi4/preview",
+      "final_url": "https://docs.google.com/forms/d/1fi1gqbWsNCFxm1CT9V-JNGff1lyqfU9kNWAaaQMvRi4/viewform?edit_requested=true",
+      "availability": "public_html_fetched"
+    }
+  ],
+  "guides": [
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_agentic_architect_exam_guide_english.pdf",
+      "variant": "beta",
+      "version": null,
+      "effective_date": null,
+      "as_of_date": null,
+      "date_evidence": null,
+      "normalized_text_sha256": "9a6bd1f877a28fa80077c15a485afa58b986063364ee301ce510c57e1a187bf7",
+      "case_studies": [],
+      "sections": [
+        {
+          "id": "agentic-architect:beta:1",
+          "number": "1",
+          "title": "Building agents using low-code tools",
+          "weight_percent": 13.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "agentic-architect:beta:1.1",
+              "number": "1.1",
+              "title": "Configuring agentic workflows and behavior using low-code tools.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "agentic-architect:beta:1.1:1",
+                  "text": "Configuring state-based workflows (pages, transition routes, and event handlers) using Gemini Enterprise tools (e.g., Gemini Enterprise Agent Designer and Customer Experience Agent Studio [CX Agent Studio])",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:1.1:2",
+                  "text": "Creating system instructions and in-console prompt templates (e.g., few-shot and chain-of-thought) to guide agent behavior (e.g., Agent Designer and CX Agent Studio)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "agentic-architect:beta:1.2",
+              "number": "1.2",
+              "title": "Connecting enterprise data to Gemini Enterprise.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "agentic-architect:beta:1.2:1",
+                  "text": "Configuring agents to securely connect and query enterprise proprietary data sources (e.g., Gemini Enterprise and Agent Search)",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:1.2:2",
+                  "text": "Ingesting and processing unstructured multimodal data (e.g., videos, audio, and images) into the agentic workflow",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "agentic-architect:beta:2",
+          "number": "2",
+          "title": "Using coding agents for application development",
+          "weight_percent": 17.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "agentic-architect:beta:2.1",
+              "number": "2.1",
+              "title": "Using coding agents effectively.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "agentic-architect:beta:2.1:1",
+                  "text": "Configuring coding agents with Model Context Protocol (MCP) servers, custom skills, and access to tools (e.g., Antigravity and Claude Code on Google Cloud)",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:2.1:2",
+                  "text": "Using coding agents in secure sandboxes (e.g., Google Kubernetes Engine [GKE], Cloud Workstations, and Antigravity)",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:2.1:3",
+                  "text": "Using coding agents to refactor source code, optimize execution runtimes, and patch application-layer vulnerabilities",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "agentic-architect:beta:2.2",
+              "number": "2.2",
+              "title": "Customizing coding agents for enterprise workflows.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "agentic-architect:beta:2.2:1",
+                  "text": "Creating skills, plugins, extensions hooks, rules, and subagents using Antigravity",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:2.2:2",
+                  "text": "Augmenting Antigravity with Agents CLI to build, scale, govern, and optimize deployed agents",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "agentic-architect:beta:3",
+          "number": "3",
+          "title": "Developing custom agents",
+          "weight_percent": 33.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "agentic-architect:beta:3.1",
+              "number": "3.1",
+              "title": "Designing and building agentic workflows in code.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "agentic-architect:beta:3.1:1",
+                  "text": "Selecting and configuring the appropriate language model (e.g., large language model [LLM] vs. small language model [SLM], self-hosted vs. software as a service [SaaS], and open-source software [OSS] vs. proprietary LLM) considering cost, security, and agent architecture",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:3.1:2",
+                  "text": "Building custom agents using open-source libraries (e.g., Agent Development Kit [ADK])",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:3.1:3",
+                  "text": "Configuring sessions and memory (e.g., Agent Platform Memory Bank and managed sessions)",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:3.1:4",
+                  "text": "Configuring skills using Agents CLI (e.g., plugins and agent vs. human mode)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "agentic-architect:beta:3.2",
+              "number": "3.2",
+              "title": "Integrating enterprise domain knowledge.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "agentic-architect:beta:3.2:1",
+                  "text": "Designing, configuring, and managing retrieval-augmented generation (RAG) pipelines and vector retrieval systems (e.g., embedding models, similarity scoring, and reranking) using appropriate services such as vector databases (e.g., Vector Search and Agent Retrieval)",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:3.2:2",
+                  "text": "Configuring agent permissions (e.g., Agent Identity)",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:3.2:3",
+                  "text": "Using Google Cloud tools (e.g., Agent Registry, Google Cloud MCP Servers) to configure prebuilt and custom capabilities (e.g., custom integration layers for managed databases, API integrations, and MCP server that connects agents to third-party SaaS tools and remote servers)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "agentic-architect:beta:3.3",
+              "number": "3.3",
+              "title": "Orchestrating and coordinating agentic workflows.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "agentic-architect:beta:3.3:1",
+                  "text": "Orchestrating agents using agentic protocols (e.g., MCP and Agent2Agent [A2A])",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:3.3:2",
+                  "text": "Selecting and coordinating multiagent handoffs and workflows (e.g., parallel agents, sequential agents, and graph workflow) using Google Cloud tools (e.g., Agent Identity, Agent Registry, Agent Runtime, and agent policies)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "agentic-architect:beta:4",
+          "number": "4",
+          "title": "Evaluating and deploying agentic workflows",
+          "weight_percent": 22.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "agentic-architect:beta:4.1",
+              "number": "4.1",
+              "title": "Evaluating agents in development and in production.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "agentic-architect:beta:4.1:1",
+                  "text": "Creating test sets for agent evaluation (e.g., golden data, prompts, and edge cases)",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:4.1:2",
+                  "text": "Creating continuous evaluation pipelines to assess an agent’s tool execution based on established success criteria",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:4.1:3",
+                  "text": "Determining the appropriate evaluation framework and tooling (e.g., ADK evaluation tooling (evalset), Agent Platform Gen AI evaluation service, and custom autoraters)",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:4.1:4",
+                  "text": "Evaluating an agentic system against a golden dataset to assess agent response and retrieval quality (e.g., using ADK)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "agentic-architect:beta:4.2",
+              "number": "4.2",
+              "title": "Deploying and scaling production workloads.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "agentic-architect:beta:4.2:1",
+                  "text": "Selecting optimal deployment runtime based on the use case, requirements, and cost (e.g., Agent Runtime, Cloud Run, and GKE)",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:4.2:2",
+                  "text": "Troubleshooting agent issues (e.g., drift, tool invocation latency, agent reasoning loops, and system failures)",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:4.2:3",
+                  "text": "Monitoring and optimizing agents for performance, reliability, and cost (e.g., identify logic errors, latency bottlenecks, and hallucinations)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "agentic-architect:beta:5",
+          "number": "5",
+          "title": "Securing and governing agentic workflows",
+          "weight_percent": 15.0,
+          "weight_approximate": true,
+          "included": true,
+          "subsections": [
+            {
+              "id": "agentic-architect:beta:5.1",
+              "number": "5.1",
+              "title": "Configuring agent security and governance.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "agentic-architect:beta:5.1:1",
+                  "text": "Implementing authentication and secure tool execution (e.g., agent-to-tool API calls using OAuth 2.0)",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:5.1:2",
+                  "text": "Configuring principal access boundary (PAB) policies using Agent Identity",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:5.1:3",
+                  "text": "Configuring Agent Gateway to monitor traffic and track agents",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:5.1:4",
+                  "text": "Designing and configuring agentic governance and policy enforcement (e.g., Agent Registry and Model Armor)",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "id": "agentic-architect:beta:5.2",
+              "number": "5.2",
+              "title": "Implementing secure agent behavior and execution.",
+              "weight_percent": null,
+              "objectives": [
+                {
+                  "id": "agentic-architect:beta:5.2:1",
+                  "text": "Designing appropriate safety frameworks and guardrails (e.g., Agent Gateway, Model Armor, and human-in-the-loop [HITL])",
+                  "children": []
+                },
+                {
+                  "id": "agentic-architect:beta:5.2:2",
+                  "text": "Configuring secure access to data and identity propagation (e.g., Agent Gateway and Agent Registry)",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "in_scope_tools": [
+        "Agent Development Kit (ADK)",
+        "Agent evaluation",
+        "Agent Gateway",
+        "Agent Identity",
+        "Agent Registry",
+        "Agent Retrieval and Vector Search 1.0",
+        "Agent Runtime (formerly Agent Engine)",
+        "Agent Search (formerly Vertex AI Search)",
+        "Agentic protocols (e.g., Agent2Agent [A2A], MCP)",
+        "Agents CLI in Agent Platform",
+        "Antigravity (CLI, SDK, App)",
+        "Auth Manager (OAuth 2.0)",
+        "BigQuery",
+        "Cloud Run",
+        "Cloud SQL",
+        "Cloud Storage",
+        "Firestore",
+        "Gemini Enterprise",
+        "Gemini LLMs",
+        "Google Cloud Observability (Cloud Logging and Cloud Trace)",
+        "Google Kubernetes Engine (GKE)",
+        "Memorystore for Redis",
+        "Model Armor",
+        "Model Context Protocol (MCP) servers",
+        "Model Garden",
+        "RAG Engine",
+        "Sensitive Data Protection",
+        "Skill Registry"
+      ],
+      "outline_counts": {
+        "sections": 5,
+        "subsections": 11,
+        "objectives": 31,
+        "nested_objectives": 0
+      },
+      "stated_weight_total_percent": 100.0,
+      "weight_note": "Approximate stated weights are preserved; totals need not equal 100.",
+      "status": "current"
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification",
+      "final_url": "https://cloud.google.com/learn/certification",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "catalog",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://cloud.google.com/learn/certification/agentic-architect/",
+      "final_url": "https://cloud.google.com/learn/certification/agentic-architect/",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "certification",
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://services.google.com/fh/files/misc/professional_agentic_architect_exam_guide_english.pdf",
+      "final_url": "https://services.google.com/fh/files/misc/professional_agentic_architect_exam_guide_english.pdf",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "exam_guide",
+      "content_type": "application/pdf"
+    },
+    {
+      "url": "https://docs.google.com/forms/d/1fi1gqbWsNCFxm1CT9V-JNGff1lyqfU9kNWAaaQMvRi4/preview",
+      "final_url": "https://docs.google.com/forms/d/1fi1gqbWsNCFxm1CT9V-JNGff1lyqfU9kNWAaaQMvRi4/viewform?edit_requested=true",
+      "retrieved_at": "2026-10-04T13:40:00Z",
+      "role": "official_sample",
+      "content_type": "text/html; charset=utf-8"
+    }
+  ],
+  "missing_fields": [],
+  "not_stated_notes": [
+    "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+    "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions."
+  ],
+  "assessment_components": [
+    "Proctored multiple-choice exam",
+    "Required distinct hands-on PAA labs in Google Skills after passing the exam"
+  ],
+  "lab_deadline": {
+    "date": "2026-12-31",
+    "source_url": "https://cloud.google.com/learn/certification/agentic-architect/"
+  }
+}
