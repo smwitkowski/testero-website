@@ -89,7 +89,7 @@ or infer exam frequencies from them.
 | S9 — No dated model names | No model/product version numbers unless the objective is explicitly version-specific. Prefer “a Gemini model”. |
 | O1 — Parallel actions | Write imperative, parallel practitioner actions of similar length. Use one or two sentences, or two or three short numbered steps. |
 | O2 — Decisions, not syntax | Distinguish approach, service or sequence. Even for configuration-heavy objective 1.2:3, compare tuning/adaptation approaches and why they fit, not setting values or media resolution per image part. |
-| O3 — Knowledge-dependent alternatives | Each wrong option is a plausible approach a competent engineer might choose. It fails for a Google Cloud/ML fact, not a contradiction visible in the stem alone. The required `distractors_need_knowledge` verdict must be true, along with every existing check. |
+| O3 — Knowledge-dependent alternatives | A distractor may fail a stated want when the reason needs documented product/ML knowledge. The want itself is not disqualifying. Fail if a literal fact or prohibition excludes it, such as batch for an explicit online endpoint, a policy-banned action, or prompt design when supervised-learning adaptation is required. A hand-written server can validly fail minimal maintenance when rejecting it requires knowing that custom prediction routines provide the server. Multiple distractors may fail the same want for different documented reasons; do not add a third want. The required `distractors_need_knowledge` check stays fail-closed. |
 | O4 — Length balance | All four options are parallel and within about ±20% of their mean word count. Never make the key uniquely longest; vary the non-key longest option and do not always tie the key for longest. The validator rejects a uniquely longest key more than 2 words ahead, or any option outside inclusive 0.75–1.25× mean. Counts use whitespace-separated words. Artifact reports include ties in the primary key-is-longest rate, record unique-longest separately, and target ≤35%. A missed batch target is reported, not a new automatic batch rejection. |
 
 Codex is the generator/citer choice for the founder's existing subscription, not
@@ -97,6 +97,14 @@ a quality exemption. The default independent judge uses the Claude subscription
 CLI (`claude`, Anthropic); Codex is OpenAI. An explicit OpenRouter judge remains
 a fallback. Known different-vendor families are required, and all evidence,
 schema, style and judge gates still apply. Generation is never publication.
+
+### Writer self-check before returning
+
+For each distractor, verify that no literal stem fact or prohibition excludes its
+approach. Identify the documented product/ML knowledge needed to reject it. Count
+at most two distinct wants or policies, including extra goals packed into one
+sentence. Remove any “without X” clause where X is a distractor's approach. Keep
+all factual, evidence, option-length, and fail-closed checks unchanged.
 
 ### Stem and task
 

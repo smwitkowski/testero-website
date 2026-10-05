@@ -268,6 +268,71 @@ PYTHON_DOTENV_DISABLED=1 uv run python scripts/ingest_external_verdicts.py \
   --verdicts .cache/generation/pmle-d025-r4-45.verdicts
 ```
 
+### One-attempt repair of supported round-4 quality failures
+
+A stated want can distinguish the key without violating O3. The reason each
+alternative fails must need documented product/ML knowledge. A literal fact or
+prohibition that excludes an option still fails `distractors_need_knowledge`.
+Before returning, the writer checks each distractor, at most two distinct wants,
+and removes approach-specific “without X” clauses. No check or score threshold
+is removed.
+
+The repair CLI accepts only a strict 14-field `FAIL`: `correct_answer_accurate`,
+`explanations_accurate`, and `evidence_supported` must be true. Every failed check
+must be among `distractors_need_knowledge`, `constraints_as_wants`,
+`distractors_plausible`, `decisions_not_syntax`, and `scenario_clear`. Other checks
+must stay true. PASS, UNCERTAIN, malformed outputs, unsupported facts, and completed
+parents are not repairable. The original round-4 results were 12/45 passing, with
+27 eligible failures; the six evidence-defective failures remain blocked.
+
+From `content-pipeline/`, inventory without model calls or artifact changes:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/repair_candidates.py \
+  --artifact .cache/generation/pmle-d025-r4-45.json \
+  --verdicts .cache/generation/pmle-d025-r4-45.verdicts --dry-run
+```
+
+After authorizing the repair calls, repair all eligible, not-yet-attempted parents:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/repair_candidates.py \
+  --artifact .cache/generation/pmle-d025-r4-45.json \
+  --verdicts .cache/generation/pmle-d025-r4-45.verdicts
+```
+
+`--candidate ID` is repeatable. `--limit N` bounds parents and `--max-calls N`
+bounds calls; each admitted parent reserves two calls. Repair uses the `codex`
+alias and its current native default, `gpt-6.1-sol`. It uses one typed DSPy revision
+and one fresh citation call, with no retries, retrieval, independent judging, or
+DB access. The A option stays byte-for-byte unchanged; the objective, sources,
+and frozen plan remain unchanged. Validation and fresh A–D evidence checks must
+pass before publishing a new request.
+
+A write-ahead attempt journal is durably saved before either call. A failed,
+interrupted, or unknown attempt is consumed; rerunning never retries it. An orphan
+request/verdict requires human reconciliation. Original candidates, requests,
+and verdict bytes are preserved. Successful revisions append as `<parent-id>-r1`
+at the parent's plan index, with parent/question/verdict hashes and a distinct
+content-bound UUID for the DB primary key. The request runner accepts the repair
+label; ingestion uses the verified UUID, never the `-r1` label as a UUID column.
+
+Repair can extend an artifact with fully verified completed rows. It preserves
+all original generation-run IDs by deriving them from the original candidates,
+not appended repairs. All stored completion and run journals must verify offline
+first. Any partial, unknown, missing, or inconsistent persistence blocks repair;
+never clear journals or copy the artifact to bypass this. The exporter still
+refuses persisted artifacts. Ingestion skips a superseded failed parent and
+requires a fresh current-rubric verdict for its repair. Unchanged original
+requests can match only the exact known preceding 14-field rubric; no historical
+13-field or arbitrary old rubric is accepted.
+
+The Claude request command above remains unchanged. It skips existing verdicts
+and judges only fresh request IDs. The operator must judge the repairs, inspect
+dry ingestion, and separately approve any DRAFT writes. Founder approval is
+still required before ACTIVE. A mechanical/citation-PASS repair is not a quality
+PASS, and repair yield is unknown until that independent judgment.
+
 ### Current external-judge style regeneration: 45 candidates
 
 Claude CLI authentication is ready. The request runner below uses the existing

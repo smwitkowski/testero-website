@@ -19,7 +19,7 @@ from scripts import judge_requests as runner
 from shared.evidence import check_evidence
 from shared.external_judge import (
     EXTERNAL_POLICY_MODEL, REQUEST_CHARACTER_LIMIT, build_request,
-    candidate_id, candidate_question, request_directory,
+    candidate_id, candidate_storage_id, candidate_question, request_directory, validate_candidate_records,
 )
 from shared.model_policy import require_independent_models
 from shared.validator import validate_question
@@ -74,12 +74,10 @@ def _validate_payload(payload):
     entries = payload["candidates"]
     if any(not isinstance(entry, dict) for entry in entries):
         raise click.ClickException("Invalid candidate records")
-    ids = [entry.get("candidate_id") for entry in entries]
-    if any(not isinstance(ident, str) or not runner.SAFE_ID.fullmatch(ident) for ident in ids) or len(set(ids)) != len(ids):
-        raise click.ClickException("Duplicate or unsafe candidate IDs")
-    indices = [entry.get("index") for entry in entries]
-    if any(type(index) is not int or not 1 <= index <= len(payload["plan"]) for index in indices) or len(set(indices)) != len(indices):
-        raise click.ClickException("Duplicate or invalid candidate plan indices")
+    try:
+        validate_candidate_records(payload)
+    except ValueError:
+        raise click.ClickException("Invalid candidate records or repair lineage") from None
     for entry in entries:
         if (entry.get("persistence_status") is not None or entry.get("inserted_question_id") is not None
                 or entry.get("accepted") is not False or entry.get("persistence_validation_failed")
@@ -96,7 +94,12 @@ def _validate_payload(payload):
 
 def _build_outputs(artifact, out, payload, *, force):
     outputs, trimmed = [], 0
+    superseded = {entry["repair"]["parent_candidate_id"] for entry in payload["candidates"] if "repair" in entry}
     for entry in payload["candidates"]:
+        if entry["candidate_id"] in superseded:
+            # This snapshot belongs to the lineage journal; even --force cannot alter it.
+            ingestion._validate_candidate(artifact, payload, entry)
+            continue
         waiting = entry.get("status") == "awaiting_external_judge" or entry.get("awaiting_external_judge") is True
         if not waiting and "external_judge_request" not in entry:
             continue
@@ -106,8 +109,7 @@ def _build_outputs(artifact, out, payload, *, force):
         try:
             scope = ingestion._scope(payload, entry)
             question = candidate_question(entry)
-            if entry["candidate_id"] != candidate_id(entry["index"], scope, question):
-                raise ValueError()
+            candidate_storage_id(entry, scope, question)
             if not validate_question(question).is_valid:
                 raise ValueError()
             checked = check_evidence(entry.get("evidence"), entry.get("sources"))
@@ -209,7 +211,7 @@ def _additional_verdict_directories(artifact, request_directories, explicit):
     return resolved
 
 
-def _prior_results(directories, out, ids):
+def _prior_results(directories, out, ids, *, preserved_ids=()):
     results, found = set(), False
     for directory in directories:
         for path in directory.glob("*.json"):
@@ -228,6 +230,10 @@ def _prior_results(directories, out, ids):
                 is_request = isinstance(data, dict) and set(data) == REQUEST_FIELDS
             except (ValueError, UnicodeError, RecursionError):
                 is_request = False
+            if path.stem in preserved_ids:
+                if not is_request or data["candidate_id"] != path.stem:
+                    raise click.ClickException("Immutable parent request is invalid")
+                continue
             if path.stem not in ids:
                 raise click.ClickException("Output contains unrelated JSON; choose a clean directory")
             if is_request:
@@ -275,7 +281,10 @@ def export_requests(artifact, out=None, *, force=False, verdicts=()):
             _validate_payload(payload)
             request_directories = _request_directories(artifact, out, payload)
             old_requests = []
+            superseded = {entry["repair"]["parent_candidate_id"] for entry in payload["candidates"] if "repair" in entry}
             for entry in payload["candidates"]:
+                if entry["candidate_id"] in superseded:
+                    continue
                 metadata = entry.get("external_judge_request")
                 if metadata is not None:
                     old = artifact.parent / metadata["path"]
@@ -305,7 +314,7 @@ def export_requests(artifact, out=None, *, force=False, verdicts=()):
                 if directory not in held:
                     locks.enter_context(runner.batch_lock(directory))
                     held.add(directory)
-            results, found = _prior_results(directories, out, {path.stem for path, _ in outputs})
+            results, found = _prior_results(directories, out, {path.stem for path, _ in outputs}, preserved_ids=superseded)
             if found and not force:
                 raise click.ClickException("Prior verdicts exist; --force archives them before exporting")
             archives = _archive(results) if results else []

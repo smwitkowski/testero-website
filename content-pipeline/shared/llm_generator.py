@@ -30,8 +30,18 @@ class PmleQuestionSignature(dspy.Signature):
     D are distractor_1, distractor_2 and distractor_3 respectively.
     Every technical claim in all four explanations must be documented in the
     supplied sources, including claims that alternatives cannot meet a constraint.
-    Each distractor must fail one decisive constraint explicitly stated in the stem;
-    do not reject an otherwise valid option using an unstated preference.
+    Each distractor must fail a stated want for a documented product/ML reason,
+    not a literal stem contradiction or prohibition. The want can be stated, but
+    its technical failure must require knowledge. Do not invent unstated preferences.
+    Before returning, self-check all three distractors individually. No literal stem
+    fact or prohibition may exclude their approaches; each flaw must need documented
+    product/ML knowledge. A distractor can fail a stated want for that knowledge-based
+    reason, including a hand-written server when custom prediction routines provide
+    the lower-maintenance alternative. At most two wants or policies are allowed;
+    count goals joined by "and" or "while" separately when they add distinct goals.
+    Different distractors may fail the same want. Remove any "without X" or equivalent
+    clause where X is a distractor's approach. Keep the options parallel and balanced.
+    Do not add bans or facts to make the distractors easy to reject.
     Test the exact target registry objective, not a neighboring objective. For
     PMLE's model-version comparison objective 4.1:4, compare model versions using
     A/B testing or a canary; rolling
@@ -99,7 +109,7 @@ class PmleQuestionSignature(dspy.Signature):
     
     distractor_1: str = dspy.OutputField(
         description=(
-            "Plausible but incorrect solution that violates ONE specific requirement from stem. "
+            "Plausible but incorrect solution that fails a stated want for a documented product/ML reason, never a literal stem contradiction. "
             "Base on real services in documentation_context."
         )
     )
@@ -112,7 +122,7 @@ class PmleQuestionSignature(dspy.Signature):
     
     distractor_2: str = dspy.OutputField(
         description=(
-            "Plausible but incorrect solution that violates a different requirement. "
+            "Plausible but incorrect solution that fails a stated want through product/ML knowledge; it may fail the same want as another distractor. "
             "Test service choice errors or scalability limitations."
         )
     )
@@ -126,7 +136,7 @@ class PmleQuestionSignature(dspy.Signature):
     
     distractor_3: str = dspy.OutputField(
         description=(
-            "Plausible but incorrect solution that violates another requirement. "
+            "Plausible but incorrect solution that fails one of the same at most two wants through product/ML knowledge, not a literal fact or ban. "
             "Test architecture anti-patterns or operational issues."
         )
     )
@@ -206,7 +216,7 @@ class QuestionCorrectionSignature(dspy.Signature):
     
     distractor_1: str = dspy.OutputField(
         description=(
-            "Corrected plausible but incorrect solution that violates ONE specific requirement from stem. "
+            "Corrected plausible but incorrect solution that fails a stated want through product/ML knowledge, never a literal fact or ban. "
             "Base on real services in documentation_context."
         )
     )
@@ -220,7 +230,7 @@ class QuestionCorrectionSignature(dspy.Signature):
     
     distractor_2: str = dspy.OutputField(
         description=(
-            "Corrected plausible but incorrect solution that violates a different requirement. "
+            "Corrected plausible but incorrect solution that fails a stated want through product/ML knowledge; it may share the same want as another distractor. "
             "Test service choice errors or scalability limitations."
         )
     )
@@ -235,7 +245,7 @@ class QuestionCorrectionSignature(dspy.Signature):
     
     distractor_3: str = dspy.OutputField(
         description=(
-            "Corrected plausible but incorrect solution that violates another requirement. "
+            "Corrected plausible but incorrect solution that fails one of the same at most two wants through product/ML knowledge, not a literal fact or ban. "
             "Test architecture anti-patterns or operational issues."
         )
     )
@@ -321,7 +331,7 @@ class FactualCorrectionSignature(dspy.Signature):
     
     distractor_1: str = dspy.OutputField(
         description=(
-            "Corrected plausible but incorrect solution that violates ONE specific requirement from stem. "
+            "Corrected plausible but incorrect solution that fails a stated want through product/ML knowledge, never a literal fact or ban. "
             "Base on real services in documentation_context. Must be factually accurate as a distractor."
         )
     )
@@ -335,7 +345,7 @@ class FactualCorrectionSignature(dspy.Signature):
     
     distractor_2: str = dspy.OutputField(
         description=(
-            "Corrected plausible but incorrect solution that violates a different requirement. "
+            "Corrected plausible but incorrect solution that fails a stated want through product/ML knowledge; it may share the same want as another distractor. "
             "Test service choice errors or scalability limitations. Must be factually accurate as a distractor."
         )
     )
@@ -349,7 +359,7 @@ class FactualCorrectionSignature(dspy.Signature):
     
     distractor_3: str = dspy.OutputField(
         description=(
-            "Corrected plausible but incorrect solution that violates another requirement. "
+            "Corrected plausible but incorrect solution that fails one of the same at most two wants through product/ML knowledge, not a literal fact or ban. "
             "Test architecture anti-patterns or operational issues. Must be factually accurate as a distractor."
         )
     )

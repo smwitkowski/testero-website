@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 import uuid
 
@@ -48,6 +49,160 @@ def candidate_question(entry):
     if any(not isinstance(value, str) or not value.strip() for value in question.values()):
         raise ValueError("External candidate has missing or mistyped question fields")
     return {name: question[name] for name in QUESTION_FIELDS}
+
+
+REPAIR_FIELDS = {"parent_candidate_id", "attempt", "parent_question_sha256", "question_sha256",
+                 "storage_question_id", "original_verdict", "original_verdict_sha256"}
+SCOPE_FIELDS = ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment",
+                "opening_style", "question_line")
+
+
+def canonical_sha256(value):
+    """Hash strict sorted JSON independently of file formatting."""
+    text = json.dumps(value, sort_keys=True, ensure_ascii=False, allow_nan=False)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def question_sha256(question):
+    """Hash only the exact canonical question fields."""
+    return canonical_sha256({name: question[name] for name in QUESTION_FIELDS})
+
+
+def eligible_repair_verdict(raw):
+    """Require a strict FAIL with intact factual checks and a repairable defect.
+
+    Raises:
+        ValueError: The verdict is malformed or is not eligible for repair.
+    """
+    from shared.cli_models import parse_output
+    from shared.quality_gate import ACCURACY_CHECKS
+    try:
+        parsed = parse_output(json.dumps(raw, allow_nan=False), QuestionQualitySignature)
+        allowed = {"distractors_need_knowledge", "constraints_as_wants", "distractors_plausible",
+                   "decisions_not_syntax", "scenario_clear"}
+        if (parsed["verdict"] != "FAIL" or any(parsed[key] is not True for key in ACCURACY_CHECKS if key not in allowed)
+                or not any(parsed[key] is False for key in allowed)
+                or not 0 <= parsed["score"] <= 1 or not parsed["reason"].strip()):
+            raise ValueError("Verdict is not eligible for repair")
+    except Exception:
+        raise ValueError("Verdict is not eligible for repair") from None
+
+
+def candidate_storage_id(entry, scope, question):
+    """Return a verified content-bound UUID, never a repair label, for storage.
+
+    Raises:
+        ValueError: The original ID or repair content binding is invalid.
+    """
+    expected = candidate_id(entry.get("index"), scope, question)
+    if "repair" not in entry:
+        if entry.get("candidate_id") != expected:
+            raise ValueError("Candidate ID does not match its frozen question")
+        return expected
+    repair = entry["repair"]
+    if (not isinstance(repair, dict) or set(repair) != REPAIR_FIELDS
+            or type(repair.get("attempt")) is not int or repair["attempt"] != 1
+            or not isinstance(repair.get("parent_candidate_id"), str)
+            or entry.get("candidate_id") != repair["parent_candidate_id"] + "-r1"
+            or repair.get("question_sha256") != question_sha256(question)
+            or repair.get("storage_question_id") != expected
+            or not re.fullmatch(r"[0-9a-f]{64}", str(repair.get("parent_question_sha256", "")))
+            or repair["parent_question_sha256"] == repair["question_sha256"]
+            or repair.get("original_verdict_sha256") != canonical_sha256(repair.get("original_verdict"))):
+        raise ValueError("Invalid repair content binding")
+    try:
+        if str(uuid.UUID(repair["parent_candidate_id"])) != repair["parent_candidate_id"]:
+            raise ValueError("Invalid parent UUID")
+    except (ValueError, AttributeError):
+        raise ValueError("Invalid repair parent UUID") from None
+    eligible_repair_verdict(repair["original_verdict"])
+    return expected
+
+
+def validate_candidate_records(payload):
+    """Validate unique IDs and the sole permitted original/r1 index pair.
+
+    Raises:
+        ValueError: IDs, indices, attempts, frozen lineage or verdicts are invalid.
+    """
+    try:
+        _validate_candidate_records(payload)
+    except (KeyError, TypeError, ValueError, OverflowError, RecursionError):
+        raise ValueError("Invalid candidate records or repair lineage") from None
+
+
+def _validate_candidate_records(payload):
+    entries, plan = payload["candidates"], payload["plan"]
+    if not isinstance(entries, list) or not entries or not isinstance(plan, list) or not plan:
+        raise ValueError("Invalid candidates or plan")
+    by_id, by_index = {}, {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError("Invalid candidate")
+        ident, index = entry.get("candidate_id"), entry.get("index")
+        if (not isinstance(ident, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", ident)
+                or ident in by_id or type(index) is not int or not 1 <= index <= len(plan)):
+            raise ValueError("Duplicate or unsafe IDs or indices")
+        if "repair" not in entry and re.search(r"-r[0-9]+$", ident):
+            raise ValueError("Repair label without lineage")
+        by_id[ident] = entry
+        by_index.setdefault(index, []).append(entry)
+    attempts = payload.get("repair_attempts", {})
+    if not isinstance(attempts, dict):
+        raise ValueError("Invalid repair journal")
+    required = {"attempt", "status", "candidate_id", "calls_started", "parent_question_sha256",
+                "original_verdict_sha256", "parent_entry_sha256"}
+    for parent_id, record in attempts.items():
+        parent = by_id.get(parent_id)
+        if (not isinstance(parent, dict) or "repair" in parent or not isinstance(record, dict)
+                or not required <= set(record) <= required | {"reason", "error_class"}
+                or type(record["attempt"]) is not int or record["attempt"] != 1
+                or record["candidate_id"] != parent_id + "-r1"
+                or record["status"] not in ("started", "failed", "unknown", "awaiting_external_judge")
+                or type(record["calls_started"]) is not int or not 0 <= record["calls_started"] <= 2
+                or any(not isinstance(record[key], str) or not re.fullmatch(r"[0-9a-f]{64}", record[key])
+                       for key in ("parent_question_sha256", "original_verdict_sha256", "parent_entry_sha256"))
+                or record["parent_question_sha256"] != question_sha256(candidate_question(parent))):
+            raise ValueError("Invalid repair journal")
+        if record["status"] == "awaiting_external_judge" and record["candidate_id"] not in by_id:
+            raise ValueError("Missing completed repair")
+    for entry in entries:
+        if "repair" not in entry:
+            continue
+        question, repair = candidate_question(entry), entry["repair"]
+        scope = plan[entry["index"] - 1]
+        candidate_storage_id(entry, scope, question)
+        parent_id = repair["parent_candidate_id"]
+        parent, record = by_id.get(parent_id), attempts.get(parent_id)
+        if (not isinstance(parent, dict) or "repair" in parent or not isinstance(record, dict)
+                or record["status"] != "awaiting_external_judge"
+                or parent["index"] != entry["index"] or parent.get("accepted") is not False
+                or parent.get("persistence_status") is not None or parent.get("inserted_question_id") is not None
+                or parent.get("persistence_validation_failed")
+                or any(entry.get(key) != parent.get(key) or parent.get(key) != scope.get(key) for key in SCOPE_FIELDS)
+                or canonical_sha256(entry.get("sources")) != canonical_sha256(parent.get("sources"))):
+            raise ValueError("Invalid repair parent or scope")
+        parent_question = candidate_question(parent)
+        candidate_storage_id(parent, scope, parent_question)
+        if (question["correct_answer"] != parent_question["correct_answer"]
+                or repair["question_sha256"] == repair["parent_question_sha256"]
+                or repair["parent_question_sha256"] != question_sha256(parent_question)
+                or repair["original_verdict_sha256"] != canonical_sha256(repair["original_verdict"])
+                or record["parent_entry_sha256"] != canonical_sha256(parent)
+                or record["parent_question_sha256"] != repair["parent_question_sha256"]
+                or record["original_verdict_sha256"] != repair["original_verdict_sha256"]):
+            raise ValueError("Repair hashes or frozen answer do not match")
+        if (parent.get("external_verdict") is not None
+                and canonical_sha256(parent["external_verdict"]) != repair["original_verdict_sha256"]):
+            raise ValueError("Stored parent verdict does not match repair snapshot")
+        eligible_repair_verdict(repair["original_verdict"])
+    for group in by_index.values():
+        originals = [entry for entry in group if "repair" not in entry]
+        repairs = [entry for entry in group if "repair" in entry]
+        if len(originals) != 1 or len(repairs) > 1 or len(group) > 2:
+            raise ValueError("Only one original and its first repair may share an index")
+        if repairs and repairs[0]["repair"]["parent_candidate_id"] != originals[0]["candidate_id"]:
+            raise ValueError("Index pair does not match parent")
 
 
 def _merge_windows(windows):
@@ -107,7 +262,7 @@ def _source_context(cited, evidence, trimmed_urls):
     return context, metadata
 
 
-def build_request(candidate_id, scope, question, sources, evidence):
+def build_request(candidate_id, scope, question, sources, evidence, *, signature=QuestionQualitySignature):
     """Keep the rubric/schema intact; trim only fetched text around verified quotes."""
     question = {name: question[name] for name in QUESTION_FIELDS}
     checked = check_evidence(evidence, sources)
@@ -116,7 +271,7 @@ def build_request(candidate_id, scope, question, sources, evidence):
     evidence = checked["options"]
     cited_urls = {item["url"] for item in evidence}
     cited = [source for source in sources if source["url"] in cited_urls]
-    schema = output_model(QuestionQualitySignature).model_json_schema()
+    schema = output_model(signature).model_json_schema()
     trimmed_urls = set()
     largest_first = sorted(cited, key=lambda source: len(source["text"]), reverse=True)
     for count in range(len(largest_first) + 1):
@@ -126,7 +281,7 @@ def build_request(candidate_id, scope, question, sources, evidence):
         inputs = {"question_data": question, "domain_context": scope["domain_prompt"],
                   "documentation_context": context, "option_evidence": evidence}
         request = {"candidate_id": candidate_id, "objective_id": scope["objective_id"],
-                   "judge_prompt": signature_prompt(QuestionQualitySignature, inputs),
+                   "judge_prompt": signature_prompt(signature, inputs),
                    "verdict_schema": schema, "trimming": trimming}
         if len(json.dumps(request, indent=2, ensure_ascii=False, allow_nan=False)) + 1 <= REQUEST_CHARACTER_LIMIT:
             return request

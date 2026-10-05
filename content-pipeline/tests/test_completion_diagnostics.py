@@ -183,7 +183,8 @@ def test_redaction_preserves_full_completion_below_cap_and_tail():
 def test_generator_instructions_require_grounded_explanations_decisive_constraints_and_exact_scope():
     instructions = generator.PmleQuestionSignature.instructions
     assert "Every technical claim in all four explanations" in instructions
-    assert "one decisive constraint explicitly stated in the stem" in instructions
+    assert "fail a stated want for a documented product/ML reason" in instructions
+    assert "not a literal stem contradiction or prohibition" in instructions
     assert "exact target registry objective, not a neighboring objective" in instructions
     assert "4.1:4" in instructions and "A/B testing or a canary" in instructions
     assert "rolling" in instructions and "alone does not test model-version comparison" in instructions

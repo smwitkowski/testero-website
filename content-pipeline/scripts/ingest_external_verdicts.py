@@ -23,10 +23,11 @@ from shared.doc_search import documentation_context
 from shared.evidence import check_evidence
 from shared.external_judge import (
     EXTERNAL_JUDGE_PROVENANCE, EXTERNAL_POLICY_MODEL, build_request,
-    candidate_id as content_candidate_id, candidate_question, request_directory,
+    candidate_storage_id, candidate_question, request_directory,
+    validate_candidate_records, canonical_sha256, eligible_repair_verdict,
 )
 from shared.model_policy import require_independent_models
-from shared.quality_gate import QuestionQualitySignature, judge_question
+from shared.quality_gate import QuestionQualitySignature, LEGACY_ROUND4_QUALITY_SIGNATURE, judge_question
 from shared.validator import validate_question
 from shared.batch_report import option_length_report, format_option_length_report
 
@@ -101,8 +102,7 @@ def _scope(payload, entry):
 def _validate_candidate(path, payload, entry):
     scope = _scope(payload, entry)
     question = candidate_question(entry)
-    if entry["candidate_id"] != content_candidate_id(entry["index"], scope, question):
-        raise ValueError("Candidate ID does not match its frozen question")
+    candidate_storage_id(entry, scope, question)
     if entry.get("key") != "A" or not validate_question(question).is_valid:
         raise ValueError("Question schema validation failed")
     checked = check_evidence(entry.get("evidence"), entry.get("sources"))
@@ -124,9 +124,15 @@ def _validate_candidate(path, payload, entry):
         raise ValueError("Invalid external judge request digest")
     if hashlib.sha256(request_path.read_bytes()).hexdigest() != digest:
         raise ValueError("External judge request hash mismatch")
+    frozen = _read_json(request_path)
     rebuilt = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"])
-    if json.dumps(_read_json(request_path), sort_keys=True, allow_nan=False) != json.dumps(rebuilt, sort_keys=True, allow_nan=False):
-        raise ValueError("External request differs from frozen content or current rubric")
+    if canonical_sha256(frozen) != canonical_sha256(rebuilt):
+        # Only unchanged originals may retain the exact known preceding 14-field rubric.
+        # No arbitrary old schema or historical 13-field request is accepted.
+        if "repair" in entry or canonical_sha256(frozen) != canonical_sha256(build_request(
+                entry["candidate_id"], scope, question, entry["sources"], checked["options"],
+                signature=LEGACY_ROUND4_QUALITY_SIGNATURE)):
+            raise ValueError("External request differs from frozen content or supported rubric")
     return scope, question, checked
 
 
@@ -151,7 +157,8 @@ def _external_decision(question, scope, sources, evidence, raw, generator_model)
 def _run_id(payload, code):
     content = json.dumps({"cert_id": payload["cert_id"], "model": payload["model"],
                           "domain_code": code,
-                          "candidate_ids": sorted(entry["candidate_id"] for entry in payload["candidates"])},
+                          "candidate_ids": sorted(entry["candidate_id"] for entry in payload["candidates"]
+                                                  if "repair" not in entry)},
                          sort_keys=True, allow_nan=False)
     return str(uuid.uuid5(uuid.NAMESPACE_URL, "testero-external-run:" + content))
 
@@ -160,9 +167,51 @@ def _is_complete(entry):
     return (entry.get("persistence_status") == "complete"
             and isinstance(entry.get("inserted_question_id"), str)
             and bool(entry["inserted_question_id"].strip())
-            and entry["inserted_question_id"] == entry["candidate_id"]
+            and entry["inserted_question_id"] == (entry["repair"]["storage_question_id"]
+                if "repair" in entry else entry["candidate_id"])
             and entry.get("accepted") is True
             and not entry.get("persistence_validation_failed"))
+
+
+def validate_completed_journals(payload, path):
+    """Validate saved complete writes offline; never repair ambiguous DB journals.
+
+    Raises:
+        ValueError: Run mappings, candidate writes or stored PASS decisions are invalid.
+    """
+    try:
+        validate_candidate_records(payload)
+        runs = payload.get("generation_runs")
+        journal = payload.get("external_run_journal", {})
+        domains = {scope["domain_code"] for scope in payload["plan"]}
+        if (not isinstance(runs, dict) or not isinstance(journal, dict)
+                or set(runs) != set(journal) or set(runs) - domains):
+            raise ValueError("Unknown or foreign run journal")
+        for code, record in journal.items():
+            if (not isinstance(record, dict) or set(record) != {"status", "run_id"}
+                    or record["status"] != "created" or record["run_id"] != runs[code]
+                    or runs[code] != _run_id(payload, code)):
+                raise ValueError("Incomplete or changed run identity")
+        for index, scope in enumerate(payload["plan"], 1):
+            _scope(payload, {**scope, "index": index})
+        for entry in payload["candidates"]:
+            state = entry.get("persistence_status")
+            if state is None and entry.get("inserted_question_id") is None:
+                if (entry.get("accepted") is not False or entry.get("persistence_validation_failed")
+                        or entry.get("status") in ("ACTIVE", "active", "persisted", "inserted")):
+                    raise ValueError("Nonpersisted candidate claims a saved write")
+                continue
+            if state != "complete" or not _is_complete(entry):
+                raise ValueError("Partial or unknown candidate write")
+            scope, question, checked = _validate_candidate(Path(path), payload, entry)
+            if scope["domain_code"] not in runs:
+                raise ValueError("Completed candidate has no created run")
+            decision = _external_decision(question, scope, entry["sources"], checked["options"],
+                                          entry["external_verdict"], payload["model"])
+            if not decision.passed:
+                raise ValueError("Completed candidate lacks a strict stored PASS")
+    except Exception:
+        raise ValueError("Persistence journals require human reconciliation") from None
 
 
 def ingest(path, verdicts, *, dry_run=False):
@@ -181,17 +230,50 @@ def ingest(path, verdicts, *, dry_run=False):
         raise click.ClickException("Invalid generator/judge vendor independence") from None
     if payload.get("difficulty") not in ("EASY", "MEDIUM", "HARD") or not isinstance(payload.get("exam"), str) or not payload["exam"].strip():
         raise click.ClickException("Artifact lacks persistence difficulty or exam")
-    ids = [entry.get("candidate_id") if isinstance(entry, dict) else None for entry in payload["candidates"]]
-    if any(not isinstance(ident, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", ident) for ident in ids) or len(set(ids)) != len(ids):
-        raise click.ClickException("Duplicate or unsafe candidate IDs")
-    indices = [entry.get("index") for entry in payload["candidates"]]
-    if any(type(index) is not int for index in indices) or len(set(indices)) != len(indices):
-        raise click.ClickException("Duplicate or invalid candidate plan indices")
+    try:
+        validate_candidate_records(payload)
+    except ValueError:
+        raise click.ClickException("Invalid candidate records or repair lineage") from None
     try:
         for index, scope in enumerate(payload["plan"], 1):
             _scope(payload, {**scope, "index": index})
     except (ValueError, KeyError, TypeError, StopIteration):
         raise click.ClickException("Frozen plan differs from the current registry") from None
+    # Validate superseded parents before modifying any artifact decision or opening a DB client.
+    superseded = {entry["repair"]["parent_candidate_id"]: entry for entry in payload["candidates"] if "repair" in entry}
+    if superseded:
+        try:
+            validate_completed_journals(payload, path)
+        except ValueError:
+            raise click.ClickException("Repair persistence journals require human reconciliation") from None
+    try:
+        for parent in payload["candidates"]:
+            child = superseded.get(parent["candidate_id"])
+            if child is None:
+                continue
+            _validate_candidate(path, payload, parent)
+            verdict_path = verdicts / (parent["candidate_id"] + ".json")
+            if verdict_path.is_symlink():
+                raise ValueError("Unsafe parent verdict path")
+            raw = _read_json(verdict_path)
+            eligible_repair_verdict(raw)
+            if canonical_sha256(raw) != child["repair"]["original_verdict_sha256"]:
+                raise ValueError("Parent verdict changed after repair")
+    except (ValueError, KeyError, TypeError, OSError, UnicodeError, StopIteration):
+        raise click.ClickException("Superseded parent request or frozen FAIL verdict is invalid") from None
+    # A repair cannot evade another candidate's stem by moving earlier in the list.
+    # Its own immutable failed parent is the only permitted duplicate.
+    repair_duplicate_ids = set()
+    for child in superseded.values():
+        normalized = normalize_stem(candidate_question(child)["stem"])
+        for other in payload["candidates"]:
+            if other["candidate_id"] in (child["candidate_id"], child["repair"]["parent_candidate_id"]):
+                continue
+            try:
+                if normalize_stem(candidate_question(other)["stem"]) == normalized:
+                    repair_duplicate_ids.add(child["candidate_id"])
+            except (ValueError, KeyError, TypeError):
+                continue
     pending, seen = [], set()
     # Include completed stems before pending validation, regardless of list order.
     for entry in payload["candidates"]:
@@ -203,6 +285,9 @@ def ingest(path, verdicts, *, dry_run=False):
     rejected, missing, blocked = 0, 0, 0
     for entry in payload["candidates"]:
         ident = entry["candidate_id"]
+        if ident in superseded:
+            click.echo(f"{ident}: immutable failed parent; judging its r1 only")
+            continue
         state = entry.get("persistence_status")
         if entry.get("inserted_question_id") or state in BLOCKED_STATES or state is not None:
             if state == "complete":
@@ -240,7 +325,7 @@ def ingest(path, verdicts, *, dry_run=False):
         try:
             scope, question, checked = _validate_candidate(path, payload, entry)
             normalized = normalize_stem(question["stem"])
-            if normalized in seen:
+            if normalized in seen or ident in repair_duplicate_ids:
                 raise ValueError("Duplicate normalized stem")
             seen.add(normalized)
         except (ValueError, KeyError, TypeError, OSError, UnicodeError, StopIteration):
@@ -336,6 +421,8 @@ def ingest(path, verdicts, *, dry_run=False):
         except Exception:
             raise click.ClickException("Database setup or run creation failed; no candidates inserted. Unknown run writes require human reconciliation") from None
         for entry, scope, question, judge, grounding in pending:
+            storage_id = candidate_storage_id(entry, scope, question)
+
             def before_insert():
                 entry["persistence_status"] = "inserting"
                 _flush(path, payload)
@@ -344,14 +431,14 @@ def ingest(path, verdicts, *, dry_run=False):
                 entry["inserted_question_id"] = saved_id
                 entry["persistence_status"] = "inserted"
                 _flush(path, payload)
-                if saved_id != entry["candidate_id"]:
+                if saved_id != storage_id:
                     raise ValueError("Inserted question returned an unexpected ID")
 
             try:
                 stored = persist_candidate(client, scope, question, judge, grounding, payload["exam"],
                     domains[scope["domain_code"]], runs[scope["domain_code"]], payload["difficulty"],
                     before_insert=before_insert, on_question_inserted=on_question_inserted,
-                    question_id=entry["candidate_id"])
+                    question_id=storage_id)
                 if not stored or not entry.get("inserted_question_id"):
                     raise ValueError("Incomplete persistence")
                 entry["persistence_status"] = "complete"

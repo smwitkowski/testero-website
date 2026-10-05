@@ -100,8 +100,9 @@ def test_knowledge_check_is_a_typed_required_dspy_output():
     field = gate.QuestionQualitySignature.output_fields["distractors_need_knowledge"]
     assert field.annotation is bool
     assert "distractors_need_knowledge" in gate.ACCURACY_CHECKS
-    assert "stem text alone" in field.json_schema_extra["desc"]
-    assert "product/domain fact" in field.json_schema_extra["desc"]
+    assert "literal stem fact or prohibition" in field.json_schema_extra["desc"]
+    assert "A distractor may fail a stated want" in field.json_schema_extra["desc"]
+    assert "custom prediction routines provide the server" in field.json_schema_extra["desc"]
 
 
 def test_shared_v2_rules_are_in_judge_instructions():
@@ -111,9 +112,10 @@ def test_shared_v2_rules_are_in_judge_instructions():
     for rule in (
         "at most two explicit wants or policies",
         'Do not write "without X"',
-        "No distractor can be eliminated using stem text alone",
+        "Do not fail this check merely because the want is in the stem",
+        "literal stem fact or prohibition",
         "competent engineer might plausibly try",
-        "Google Cloud/ML fact",
+        "Google Cloud/ML",
         "within ±20% of the mean word count of all four options",
         "The key must never be uniquely",
         "Vary the longest option's position across the batch",

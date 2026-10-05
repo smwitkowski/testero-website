@@ -1,5 +1,8 @@
 """Founder-owned authoring rules and original style exemplars, not answer evidence."""
 
+PRE_REPAIR_O3 = 'O3 Wrong options are real approaches a competent engineer might plausibly try. Each fails a\nstated want (cost/upkeep/latency/policy/downtime) because of a Google Cloud/ML fact not given as\nan explicit contradiction in the stem. No distractor can be eliminated using stem text alone;\nanswering must require product/domain knowledge. Never invented/broken config.'
+KNOWLEDGE_O3 = 'O3 Wrong options are real approaches a competent engineer might plausibly try. A stated want\nmay distinguish the key: each distractor can fail that want for a documented Google Cloud/ML\nreason the reader must know. Do not fail this check merely because the want is in the stem.\nFail when a literal stem fact or prohibition rules an option out: a batch option for an\nexplicit online endpoint, an approach company policy bans, or prompt design when the stem\nexplicitly requires adaptation through supervised learning. A hand-written server can be a\nvalid distractor for minimal maintenance when rejecting it requires knowing that custom\nprediction routines provide the server. Do not put that capability or a ban on hand-written\nservers into the stem. Multiple distractors may fail the same want for different documented\nreasons; do not add a third want just to give each a different failure. Never invented/broken\nconfig.'
+
 STYLE_RULES = """S1 Purpose first: the opening must name the business application or a concrete ML task,
 in 1–2 sentences. Business-first and task-first openings are both valid. Roughly one third
 of a batch may be task-first, as the planner records in opening_style. Never use an abstract
@@ -34,10 +37,17 @@ O2 Decisions not syntax: differ approach/service/sequence. Setting names/values 
 objective literally config, then described choices. Even for configuration-heavy objective
 1.2:3, compare the approach, tuning or adaptation and why it fits, not setting values or
 media resolution per image part.
-O3 Wrong options are real approaches a competent engineer might plausibly try. Each fails a
-stated want (cost/upkeep/latency/policy/downtime) because of a Google Cloud/ML fact not given as
-an explicit contradiction in the stem. No distractor can be eliminated using stem text alone;
-answering must require product/domain knowledge. Never invented/broken config.
+O3 Wrong options are real approaches a competent engineer might plausibly try. A stated want
+may distinguish the key: each distractor can fail that want for a documented Google Cloud/ML
+reason the reader must know. Do not fail this check merely because the want is in the stem.
+Fail when a literal stem fact or prohibition rules an option out: a batch option for an
+explicit online endpoint, an approach company policy bans, or prompt design when the stem
+explicitly requires adaptation through supervised learning. A hand-written server can be a
+valid distractor for minimal maintenance when rejecting it requires knowing that custom
+prediction routines provide the server. Do not put that capability or a ban on hand-written
+servers into the stem. Multiple distractors may fail the same want for different documented
+reasons; do not add a third want just to give each a different failure. Never invented/broken
+config.
 O4 Keep all four options parallel in action, structure and detail. Each option's word count
 must be within ±20% of the mean word count of all four options. The key must never be uniquely
 longest. Vary the longest option's position across the batch, including which non-key option
