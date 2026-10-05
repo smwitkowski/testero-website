@@ -8,9 +8,9 @@ import os
 import time
 import logging
 import json
-import re
 from typing import Dict, Any, Optional, Callable, Tuple
 import dspy
+from shared.completion_diagnostics import CompletionCaptureAdapter, MAX_RAW_RESPONSE, _safe_completion
 from shared.evidence import OptionEvidence
 from shared.llm_limits import MaxTokensTruncation, TRUNCATION_REASON, reject_token_limit
 
@@ -27,6 +27,14 @@ class PmleQuestionSignature(dspy.Signature):
     Use a scenario only when useful for the objective; foundational questions
     need not adopt a professional-role scenario. A is correct_answer; B, C and
     D are distractor_1, distractor_2 and distractor_3 respectively.
+    Every technical claim in all four explanations must be documented in the
+    supplied sources, including claims that alternatives cannot meet a constraint.
+    Each distractor must fail one decisive constraint explicitly stated in the stem;
+    do not reject an otherwise valid option using an unstated preference.
+    Test the exact target registry objective, not a neighboring objective. For
+    PMLE's model-version comparison objective 4.1:4, compare model versions using
+    A/B testing or a canary; rolling
+    replacement alone does not test model-version comparison.
     """
     # Input fields
     domain_context: str = dspy.InputField(
@@ -38,8 +46,8 @@ class PmleQuestionSignature(dspy.Signature):
     )
     documentation_context: str = dspy.InputField(
         description=(
-            "Authoritative Google Cloud docs. ALL technical claims in the question "
-            "and options MUST be supported by this context. Do not invent features."
+            "Authoritative Google Cloud docs. ALL technical claims in the question, "
+            "options, and every explanation MUST be supported by this context. Do not invent features."
         )
     )
     difficulty: str = dspy.InputField(
@@ -160,8 +168,8 @@ class QuestionCorrectionSignature(dspy.Signature):
     )
     documentation_context: str = dspy.InputField(
         description=(
-            "Authoritative Google Cloud docs. ALL technical claims in the question "
-            "and options MUST be supported by this context. Do not invent features."
+            "Authoritative Google Cloud docs. ALL technical claims in the question, "
+            "options, and every explanation MUST be supported by this context. Do not invent features."
         )
     )
     difficulty: str = dspy.InputField(
@@ -276,8 +284,8 @@ class FactualCorrectionSignature(dspy.Signature):
     )
     documentation_context: str = dspy.InputField(
         description=(
-            "Authoritative Google Cloud docs. ALL technical claims in the question "
-            "and options MUST be supported by this context. Do not invent features."
+            "Authoritative Google Cloud docs. ALL technical claims in the question, "
+            "options, and every explanation MUST be supported by this context. Do not invent features."
         )
     )
     difficulty: str = dspy.InputField(
@@ -740,65 +748,13 @@ class CitationSignature(dspy.Signature):
     evidence: list[OptionEvidence] = dspy.OutputField(desc="One required option_label, url and quote receipt per A-D option")
 
 
-MAX_RAW_RESPONSE = 2048
-
-
-def _safe_completion(completion: str) -> str:
-    """Bound/redact only an actual completion, never request or history metadata."""
-    # Redact credential-like header lines and common inline credential patterns.
-    text = re.sub(
-        r"(?im)^.*(?:authorization|proxy-authorization|x-api-key|api[_-]?key|"
-        r"set-cookie|cookie|password|passwd|client[_-]?secret|access[_-]?token|"
-        r"refresh[_-]?token)\s*[\"']?\s*[:=].*$",
-        "[REDACTED CREDENTIAL/HEADER]", completion,
-    )
-    text = re.sub(r"(?i)\bBearer\s+[^\s\"',;<>]+", "Bearer [REDACTED]", text)
-    text = re.sub(r"\b(?:sk-|sk_)[A-Za-z0-9_-]+", "[REDACTED KEY]", text)
-    text = re.sub(r"\bAIza[A-Za-z0-9_-]+", "[REDACTED KEY]", text)
-    text = re.sub(r"(https?://)[^/\s@]+@", r"\1[REDACTED]@", text)
-    marker = "\n[TRUNCATED]"
-    return text if len(text) <= MAX_RAW_RESPONSE else text[:MAX_RAW_RESPONSE - len(marker)] + marker
-
-
-class CompletionCaptureAdapter(dspy.ChatAdapter):
-    """One native DSPy call, with parse-only preservation of invalid receipts.
-
-    The altered Any annotation is never formatted or sent to the LM. It is used
-    only to parse the same completion after the strict receipt DTO rejects it.
-    """
-
-    def __init__(self, preserve_receipts=False):
-        super().__init__()
-        self.preserve_receipts = preserve_receipts
-        self.raw_response = None
-
-    def __call__(self, lm, lm_kwargs, signature, demos, inputs):
-        from dspy.adapters.base import Adapter
-        # ChatAdapter normally retries with JSONAdapter after ANY exception.
-        # Root owns the single citation retry, so bypass that hidden live call.
-        return Adapter.__call__(self, lm, lm_kwargs, signature, demos, inputs)
-
-    def parse(self, signature, completion):
-        from dspy.utils.exceptions import AdapterParseError
-        self.raw_response = _safe_completion(completion)
-        # Some models (seen: Gemini 3.8 Flash) glue a field marker onto the previous line;
-        # ChatAdapter only recognizes markers at the start of a line.
-        completion = re.sub(r"(?<=\S)[ \t]*(\[\[ ## \w+ ## \]\])", r"\n\1", completion)
-        try:
-            return super().parse(signature, completion)
-        except AdapterParseError:
-            if self.preserve_receipts and "evidence" in signature.output_fields:
-                parse_signature = signature.with_updated_fields("evidence", type_=Any)
-                return super().parse(parse_signature, completion)
-            raise
-
-
 class GenerationOutputError(ValueError):
     """Question parsing failed, with only a safe actual-completion diagnostic."""
 
-    def __init__(self, raw_response=None):
+    def __init__(self, raw_response=None, diagnostics=None):
         super().__init__("Question output could not be parsed")
         self.raw_response = raw_response
+        self.diagnostics = diagnostics
 
 
 def _generation_lm(model: str, max_tokens: int = 8000):
@@ -831,7 +787,7 @@ def generate_question(
     adapter = CompletionCaptureAdapter()
     predictor = dspy.ChainOfThought(PmleQuestionSignature)
     try:
-        with dspy.context(adapter=adapter):
+        with reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
             result = predictor(
                 domain_context=domain_context,
                 documentation_context=documentation_context,
@@ -842,8 +798,10 @@ def generate_question(
                 config={"rollout_id": time.time_ns(), "temperature": 0.7},
             )
         return _question_data(result)
+    except MaxTokensTruncation:
+        raise
     except AdapterParseError:
-        raise GenerationOutputError(adapter.raw_response) from None
+        raise GenerationOutputError(adapter.raw_response, adapter.capture.failure()) from None
     except Exception:
         # Never expose a provider exception body, which may contain credentials.
         raise RuntimeError("Question generation request failed") from None
@@ -877,7 +835,7 @@ def cite_question(
     adapter = CompletionCaptureAdapter(preserve_receipts=True)
     try:
         lm = _generation_lm(model, max_tokens=max_tokens)
-        with reject_token_limit(lm), dspy.context(adapter=adapter):
+        with reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
             result = dspy.Predict(CitationSignature)(
                 finished_question=json.dumps(question, ensure_ascii=False),
                 fetched_sources=json.dumps(fetched, ensure_ascii=False),
@@ -888,15 +846,23 @@ def cite_question(
         receipts = result.evidence
         if not isinstance(receipts, list):
             return {"evidence": None, "parse_failure": "Citation evidence is not a list",
-                    **({"raw_response": adapter.raw_response} if adapter.raw_response is not None else {})}
+                    **_citation_diagnostics(adapter)}
         return {"evidence": [item.model_dump() if isinstance(item, OptionEvidence) else item
                              for item in receipts]}
     except MaxTokensTruncation:
         return {"evidence": None, "parse_failure": TRUNCATION_REASON,
-                "error_class": "MaxTokensTruncation"}
+                "error_class": "MaxTokensTruncation", **_citation_diagnostics(adapter)}
     except AdapterParseError:
         return {"evidence": None, "parse_failure": "Citation output could not be parsed",
-                "raw_response": adapter.raw_response}
+                **_citation_diagnostics(adapter)}
     except Exception:
         # Transport failures have no completion; never serialize the exception body.
         return {"evidence": None, "parse_failure": "Citation request failed"}
+
+
+def _citation_diagnostics(adapter):
+    diagnostics = adapter.capture.failure()
+    if diagnostics is None:
+        return {}
+    return {"diagnostics": diagnostics,
+            **({"raw_response": adapter.raw_response} if adapter.raw_response is not None else {})}

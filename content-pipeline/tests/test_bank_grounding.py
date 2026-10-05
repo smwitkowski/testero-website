@@ -240,3 +240,31 @@ def test_malformed_or_wrong_model_judge_verdict_fails_closed(monkeypatch, verdic
     result = run(CASES[0])
     assert result["mechanical_check"]["passed"] and not result["passed"]
     assert result["reasons"]
+
+
+def test_failed_judge_diagnostics_are_retained_by_read_only_audit(monkeypatch):
+    case = CASES[0]
+    _, _, judge = install_replay(monkeypatch, case)
+    diagnostics = {"raw_response": "Actual failed judge completion " + "z" * 9000,
+                   "finish_reason": "stop", "usage": {"completion_tokens": 100}}
+    judge.return_value = JudgeVerdict(False, 0.0, "Judge failed or returned invalid output",
+                                     case["judge_model"], diagnostics=diagnostics)
+    result = run(case)
+    assert not result["passed"]
+    assert result["judge_verdict"]["diagnostics"] == diagnostics
+    assert "diagnostics" not in json.loads(judge.return_value.to_review_notes())["content_pipeline_judge"]
+
+
+def test_failed_citation_diagnostics_remain_complete_in_read_only_audit(monkeypatch):
+    case = CASES[0]
+    _, _, judge = install_replay(monkeypatch, case)
+    diagnostics = {"raw_response": "Actual failed citation completion " + "z" * 9000,
+                   "finish_reason": "stop", "usage": {"completion_tokens": 100}}
+    monkeypatch.setattr(bank, "cite_question", lambda *args, **kwargs: {
+        "evidence": None, "parse_failure": "Citation output could not be parsed",
+        "raw_response": diagnostics["raw_response"], "diagnostics": diagnostics})
+    result = run(case)
+    assert not result["passed"] and len(result["citation_attempts"]) == 2
+    assert all(attempt["diagnostics"] == diagnostics for attempt in result["citation_attempts"])
+    assert all(attempt["raw_response"] == diagnostics["raw_response"] for attempt in result["citation_attempts"])
+    judge.assert_not_called()

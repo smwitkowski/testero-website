@@ -86,12 +86,14 @@ def test_valid_receipts_rejected_on_token_limit(monkeypatch, question, sources, 
     monkeypatch.setattr(generator, "_generation_lm", factory)
     with dspy.context(disable_history=True):
         result = generator.cite_question(question, sources, "openrouter/offline", max_tokens=16000)
-    assert result == {"evidence": None, "parse_failure": TRUNCATION_REASON,
-                      "error_class": "MaxTokensTruncation"}
+    assert {key: result[key] for key in ("evidence", "parse_failure", "error_class")} == {
+        "evidence": None, "parse_failure": TRUNCATION_REASON, "error_class": "MaxTokensTruncation"}
+    assert result["diagnostics"]["raw_response"] == result["raw_response"]
+    assert result["diagnostics"]["finish_reason"] == ("length" if reason == "max_tokens" else reason)
     factory.assert_called_once_with("openrouter/offline", max_tokens=16000)
     assert transport.call_count == 1
     assert lm.history == []  # Detection does not depend on SDK history.
-    assert "raw_response" not in result
+    assert "[[ ## evidence ## ]]" in result["raw_response"]
 
 
 def test_untruncated_receipts_keep_existing_shape(monkeypatch, question, sources):
@@ -110,8 +112,10 @@ def test_judge_token_limit_fails_even_for_valid_high_score(monkeypatch, question
     monkeypatch.setattr(gate.os.environ, "get", lambda key, default=None: "offline-placeholder" if key == "OPENROUTER_API_KEY" else default)
     with dspy.context(disable_history=True):
         verdict = gate.judge_question(question, "ML", documentation_context="Docs", max_tokens=4000)
-    assert verdict == gate.JudgeVerdict(False, 0.0, TRUNCATION_REASON, gate.DEFAULT_JUDGE_MODEL,
-                                       error_class="MaxTokensTruncation")
+    assert not verdict.passed and verdict.score == 0.0
+    assert verdict.reason == TRUNCATION_REASON and verdict.error_class == "MaxTokensTruncation"
+    assert verdict.diagnostics["finish_reason"] == "length"
+    assert "[[ ## verdict ## ]]" in verdict.diagnostics["raw_response"]
     assert not gate.is_judge_passed(verdict.to_review_notes())
     assert set(json.loads(verdict.to_review_notes())[gate.REVIEW_NOTES_SOURCE]) == {
         "version", "passed", "score", "reason", "model"}
@@ -197,7 +201,8 @@ def test_recorded_partial_live_completion_with_simulated_length_metadata(monkeyp
     monkeypatch.setattr(generator, "_generation_lm", Mock(return_value=lm))
     with dspy.context(disable_history=True):
         result = generator.cite_question(case["question"], case["sources"], "openrouter/offline")
-    assert result == {"evidence": None, "parse_failure": TRUNCATION_REASON,
-                      "error_class": "MaxTokensTruncation"}
+    assert result["evidence"] is None and result["parse_failure"] == TRUNCATION_REASON
+    assert result["error_class"] == "MaxTokensTruncation"
+    assert result["diagnostics"]["raw_response"] == partial
     assert transport.call_count == 1
     assert lm.history == []

@@ -236,18 +236,23 @@ was fetched for every candidate; exact quote membership is not full semantic
 support. Judge reasons are capped at 300 characters, so their unseen tails and
 #5's absent judge completion must not be reconstructed.
 
-**Proposals, not runtime changes:** one scoped generator instruction should require
-the selected objective's actual operation/decision, explicitly documented
-rationale facts, and a decisive stem constraint for each distractor. For `4.1:4`,
-also narrow retrieval to model-version comparison rather than generic deployment.
-Add separately reviewed parse-boundary diagnostics (allowlisted expected/observed
-field metadata and native finish reason; sanitized bounded actual completion only,
-never transport bodies/history) if needed to diagnose the three parse failures
-and #5. Do not turn failed records into PASS or loosen either gate.
+**Approved follow-up:** generator instructions require the selected objective's
+actual operation/decision, documented explanation claims, and a decisive stated
+constraint for each distractor. Discovery queries prioritize the objective's
+parenthesized examples (for example A/B testing and canary deployments), rather
+than broad subsection services. Existing question-first audit queries stay unchanged.
+
+Parse and judge failures now retain the actual redacted completion up to 20,000
+characters, plus allowlisted native finish reasons and numeric token usage when
+available. Capture is local to the failure artifact; successful outputs and DB
+review receipts do not gain diagnostics. No transport bodies, headers, request
+messages or LM history are read or retained. Native token-limit failures remain
+terminal. The historical clipped batch-1 tails cannot be recovered by this change.
+Neither the judge threshold nor the mechanical gate is loosened.
 
 Exact non-dry batch-2 allocation: four candidates for each target, 16 total,
-across three domain runs (4/8/4). This command does **not** apply the proposed
-changes above. Supply the four generation/DB keys in the shell as in step 1 of
+across three domain runs (4/8/4). The command is unchanged; it uses the approved
+follow-up code above. Supply the four generation/DB keys in the shell as in step 1 of
 the runbook, use a fresh artifact name, then export/review/approve each run:
 
 ```sh

@@ -198,13 +198,14 @@ def test_citation_parse_failure_uses_bounded_redacted_actual_completion(monkeypa
     completion_body = ("Actual output only.\nAuthorization: Bearer fake-secret\n"
                        "X-API-Key: fake-api-secret\nCookie: fake-cookie-secret\n"
                        "api_key=another-fake-secret\nStandalone sk-fake-key and Bearer fake-inline-token\n"
-                       "https://fake-user:fake-password@example.invalid/\n" + "z" * 4000)
+                       "https://fake-user:fake-password@example.invalid/\n" + "z" * 24000)
     lm = install_lm(monkeypatch, [{"unrelated": completion_body}])
     result = generator.cite_question(vars(output()), [source()], "offline/model")
     assert result["evidence"] is None and result["parse_failure"]
     raw = result["raw_response"]
     assert "Actual output only." in raw and "[TRUNCATED]" in raw
-    assert len(raw) <= 2048 and "[REDACTED" in raw
+    assert result["diagnostics"]["raw_response"] == raw
+    assert len(raw) <= generator.MAX_RAW_RESPONSE and "[REDACTED" in raw
     for secret in ["fake-secret", "fake-api-secret", "fake-cookie-secret", "another-fake-secret",
                    "sk-fake-key", "fake-inline-token", "fake-user", "fake-password", "offline-test-only"]:
         assert secret not in raw
@@ -213,12 +214,13 @@ def test_citation_parse_failure_uses_bounded_redacted_actual_completion(monkeypa
 
 
 def test_question_parse_failure_exposes_same_safe_completion(monkeypatch):
-    lm = install_lm(monkeypatch, [{"unrelated": "Actual question completion\npassword=fake-secret\n" + "x" * 3000}])
+    lm = install_lm(monkeypatch, [{"unrelated": "Actual question completion\npassword=fake-secret\n" + "x" * 24000}])
     with pytest.raises(generator.GenerationOutputError) as captured:
         generator.generate_question("Scope", "Docs")
     raw = captured.value.raw_response
+    assert captured.value.diagnostics["raw_response"] == raw
     assert "Actual question completion" in raw and "fake-secret" not in raw
-    assert len(raw) <= 2048 and "[TRUNCATED]" in raw
+    assert len(raw) <= generator.MAX_RAW_RESPONSE and "[TRUNCATED]" in raw
     assert "password" not in str(captured.value)
     assert len(lm.history) == 1
 

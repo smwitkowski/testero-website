@@ -15,6 +15,7 @@ from shared.dedupe import normalize_stem, strip_markdown
 from shared.doc_search import search_objective_docs, documentation_context
 from shared.evidence import check_evidence
 from shared.llm_generator import generate_question, cite_question, GenerationOutputError
+from shared.llm_limits import MaxTokensTruncation
 from shared.model_policy import DEFAULT_GENERATOR_MODEL, DEFAULT_JUDGE_MODEL, require_independent_models
 from shared.quality_gate import JudgeVerdict, QUESTION_FIELDS, judge_question
 from shared.validator import validate_question
@@ -181,7 +182,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 attempt = {"evidence": citation.get("evidence"),
                            "mechanical_check": {"passed": checked["passed"], "errors": checked["errors"]}}
                 # The citation helper returns only bounded, sanitized completion diagnostics.
-                for key in ("parse_failure", "raw_response"):
+                for key in ("parse_failure", "raw_response", "diagnostics"):
                     if key in citation:
                         attempt[key] = citation[key]
                 entry["citation_attempts"].append(attempt)
@@ -200,6 +201,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             judge = judge_question(question, scope["domain_prompt"], documentation_context=context,
                                    model=judge_model, generator_model=model, option_evidence=checked["options"])
             entry["judge_verdict"] = {"passed": judge.passed, "score": judge.score, "reason": judge.reason, "model": judge.model}
+            if not judge.passed and getattr(judge, "diagnostics", None):
+                entry["judge_verdict"]["diagnostics"] = judge.diagnostics
             grounding = {k: scope[k] for k in ("cert_id", "objective_id", "guide_sha256")}
             grounding.update({"generator_model": model, "judge_model": judge_model,
                               "evidence": checked["options"], "mechanical_check": entry["mechanical_check"]})
@@ -215,6 +218,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             entry["error_class"] = type(exc).__name__
             if isinstance(exc, GenerationOutputError) and isinstance(exc.raw_response, str):
                 entry["raw_response"] = exc.raw_response
+            if isinstance(exc, (GenerationOutputError, MaxTokensTruncation)) and getattr(exc, "diagnostics", None):
+                entry["diagnostics"] = exc.diagnostics
         finally:
             write_artifact(artifact, payload)
     if client is not None:

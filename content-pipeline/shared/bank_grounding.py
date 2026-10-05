@@ -142,6 +142,8 @@ def check_existing_question(
             for key in ("parse_failure", "raw_response", "error_class"):
                 if isinstance(citation.get(key), str):
                     attempt[key] = _safe_completion(citation[key])
+            if citation.get("diagnostics"):
+                attempt["diagnostics"] = deepcopy(citation["diagnostics"])
             result["citation_attempts"].append(attempt)
             result["mechanical_check"] = mechanical
             if citation.get("error_class"):
@@ -164,7 +166,8 @@ def check_existing_question(
         if verdict.model != judge_model:
             result["reasons"] = ["Independent judge model mismatch"]
             return result
-        result["judge_verdict"] = {key: value for key, value in asdict(verdict).items() if value is not None}
+        result["judge_verdict"] = {key: value for key, value in asdict(verdict).items()
+                                   if value is not None and (key != "diagnostics" or not verdict.passed)}
         result["judge_verdict"]["reason"] = _reason(verdict.reason)
         if getattr(verdict, "error_class", None):
             result["error_class"] = verdict.error_class
