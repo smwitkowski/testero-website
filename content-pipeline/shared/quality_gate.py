@@ -119,7 +119,7 @@ class JudgeVerdict:
 
     def __post_init__(self) -> None:
         if (not _valid_verdict_fields(asdict(self))
-                or self.error_class not in (None, "MaxTokensTruncation", "CLIExitError", "CLITimeoutError", "CLISchemaError")
+                or self.error_class not in (None, "MaxTokensTruncation", "CLIExitError", "CLIAuthError", "CLITimeoutError", "CLISchemaError")
                 or ((self.error_class is not None or self.diagnostics is not None) and self.passed)):
             raise ValueError("Invalid quality judge verdict")
 

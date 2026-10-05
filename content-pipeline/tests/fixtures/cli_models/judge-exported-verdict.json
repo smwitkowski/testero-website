@@ -1,0 +1,15 @@
+{
+  "verdict": "UNCERTAIN",
+  "correct_answer_accurate": true,
+  "distractors_incorrect": true,
+  "distractors_plausible": true,
+  "explanations_accurate": true,
+  "scenario_relevant": true,
+  "scenario_clear": true,
+  "evidence_supported": false,
+  "business_context": true,
+  "constraints_as_wants": true,
+  "decisions_not_syntax": true,
+  "score": 0.74,
+  "reason": "CUSTOM split (TRUE=eval, FALSE=train), RANDOM split and Studio Cloud Storage datasets are documented. Excerpts don't show a BigQuery ML remote model tuning Gemini from a query, or EVALUATE usage. Style is fine; the evidence gap makes this UNCERTAIN."
+}

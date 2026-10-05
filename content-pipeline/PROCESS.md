@@ -1,5 +1,17 @@
 # Docs-grounded question process
 
+## Current operator flow
+
+The Codex and Claude subscription CLIs are authenticated and ready. The generator
+uses `--model codex` (default `gpt-6.1-sol`, high reasoning). For the current
+45-candidate batch, generate with `--judge-model external`, then choose either
+**the bounded Claude CLI request runner** or **manual independent Claude Code
+Sonnet 5.5 subagents**. Both consume the same frozen prompts and full verdict
+schemas. Wait for generation to finish before judging or ingesting; do not edit
+its artifact or request directory while generation is active. Validate ingestion
+with `--dry-run` before any separate DRAFT write. Neither route publishes or
+replaces founder review. Exact commands are in the external-judge runbook below.
+
 Phase 2 implements the smallest single-answer path from the reviewed Phase 1
 registry. No migration or new-cert product support. Generation never publishes.
 
@@ -18,11 +30,12 @@ registry. No migration or new-cert product support. Generation never publishes.
 ## Model pair
 
 The founder's current generator/citer choice is `--model codex`, using the
-existing Codex subscription (OpenAI), defaulting to `gpt-6-astra` at high reasoning.
+existing Codex subscription (OpenAI), defaulting to `gpt-6.1-sol` at high reasoning (Codex 0.160.0, verified by the founder on the ChatGPT plan).
 Use `codex/<model>` to override the model. Every call passes `-m` explicitly.
 An unsupported model raises `CodexModelRejectedError` and stops the batch without
 fallback. Its message lists visible names from `~/.codex/models_cache.json` when
-readable; cached availability can be stale. The adapter ignores user config/rules,
+readable; cached availability can lag new models. No model is blocked before the
+CLI runs: the actual rejection message is authoritative, not the cache. The adapter ignores user config/rules,
 disables file-capable tool features and web search, and suppresses project-doc
 loading. It runs from an empty temporary directory. This is a subscription/cost
 choice, not a measured quality claim. The default independent judge is `claude`, using the
@@ -139,9 +152,10 @@ approval of enough replacements. Use a new artifact filename for each batch.
 
 ### Current style regeneration: 45 DRAFT candidates
 
-Historical generic inline-judge example; use the external runbook below for the
-current batch while Claude CLI authentication is pending. Do not run both
-commands against the same artifact filename.
+Generic inline-judge example; use the external runbook below for the current
+batch so judgments can resume independently of generation. Claude CLI
+authentication is ready. Do not run both generation commands against the same
+artifact filename.
 
 Use this non-dry command from `content-pipeline/` after configuring the existing
 Codex and Claude subscriptions. Do not add `--dry-run`. It uses the default
@@ -184,11 +198,13 @@ explicit apply. This command was not run as part of the offline code change.
 
 ### Current external-judge style regeneration: 45 candidates
 
-Until standalone Claude CLI authentication is ready, use the existing Claude Code
-session and independent **Sonnet 5.5 subagents** as external judges. The `claude -p`
-backend stays available for later; this runbook does not call it. Use the explicit
-Codex selector below, not the default model alias. No live calls were made while
-implementing or testing this workflow.
+Claude CLI authentication is ready. The request runner below uses the existing
+Claude subscription, not API billing. Manual independent **Sonnet 5.5 subagents**
+in the existing Claude Code session remain available as an alternative. The
+current `codex` alias defaults to `gpt-6.1-sol` at high reasoning. The active
+style-45 batch below retains its explicit `codex/gpt-5.6-sol` selection. Do not
+restart or overwrite its artifact. Batch tests are offline; two separately
+authorized Claude smoke calls verified the shared transport, not the live batch.
 
 1. **Generate local candidates and judge requests.** From `content-pipeline/`,
    supply only `EXA_API_KEY` in the shell and use the existing Codex subscription.
@@ -230,9 +246,49 @@ text, bounded around cited quotes; trimming offsets and hashes are recorded.
 A quote match alone is not semantic proof or a judge PASS. Inspect failed
 candidate records; schema or mechanical rejects must not be sent for judging.
 
-2. **Founder runs independent Claude Code Sonnet 5.5 subagents.** Give each
-   subagent one saved request. Follow its `judge_prompt` and `verdict_schema`
-   **exactly**, including all factual and S1–S8/O1–O3 style checks. Use only the
+2. **Judge the frozen requests: Claude CLI or manual subagents.** Wait for
+   generation to finish. Run the bounded subscription CLI runner from
+   `content-pipeline/`:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/judge_requests.py \
+  --requests .cache/generation/pmle-d025-style-45.judge-requests \
+  --verdicts .cache/generation/pmle-d025-style-45.verdicts \
+  --judge-model claude --parallel 3
+```
+
+   Only `claude` (the Sonnet 5.5 default) or `claude/claude-sonnet-5-5` is allowed.
+   Other Claude models are blocked until ingestion provenance supports them;
+   the headless Claude Code call is the independent Sonnet 5.5 judge role.
+   Parallel defaults to 3 and accepts 1–4. Each request receives exactly one call using its supplied
+   prompt and schema verbatim; no rebuilding, trimming, rewriting or retries
+   occur within a run. Stale schemas, unsafe IDs, symlink requests and requests
+   over 60000 characters fail before a call. The runner uses no DB, retrieval,
+   API keys or `.env` files and does not call ingestion.
+
+   Successful output is the raw full schema dictionary, including valid FAIL
+   and UNCERTAIN judgments. It is atomically published as `<candidate_id>.json`
+   without wrappers or extra fields. Every existing verdict path is skipped,
+   even if invalid or human-authored. A verdict-directory batch lock prevents
+   two runners from double-calling. Exclusive publication also preserves a
+   manual verdict created while a call is in flight.
+
+   Failures go only to `.failures/<candidate_id>.json` with ID, safe error class
+   and message, judge model and UTC timestamp; never to the verdict filename.
+   Logs, requests and environment values are not copied into failure records.
+   Authentication, timeout, schema and exit errors are explicit failures, not
+   hidden retries. Only a usage/rate limit stops new submissions; at most the
+   other `parallel - 1` calls already running can finish. Authentication errors
+   do not stop other requests; authenticate before rerunning failed requests.
+   The CLI prints completed/skipped/failed/remaining/usage-stopped and exits 1
+   on failures or a stopped batch. Re-run the same command to retry failures and
+   finish remaining requests; successful IDs remain untouched and old failure
+   records are removed on success. Inspect an invalid existing verdict manually;
+   the runner never replaces it automatically.
+
+   **Manual alternative:** founder runs independent Claude Code Sonnet 5.5
+   subagents. Give each subagent one saved request. Follow its `judge_prompt` and
+   `verdict_schema` **exactly**, including all factual and S1–S8/O1–O3 style checks. Use only the
    supplied data; no browsing, tools, edits, or invented evidence. Save one raw
    JSON object containing precisely the schema fields as
    `.cache/generation/pmle-d025-style-45.verdicts/<candidate_id>.json`.

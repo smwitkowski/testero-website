@@ -183,7 +183,13 @@ def test_current_external_runbook_has_exact_style45_plan_and_safe_ingestion():
     assert args[args.index("--judge-model") + 1] == "external"
     assert args[args.index("--artifact") + 1] == ".cache/generation/pmle-d025-style-45.json"
     assert "--dry-run" not in args
-    dry, write = [shlex.split(block.replace("\\\n", " ")) for block in blocks[1:3]]
+    commands = [shlex.split(block.replace("\\\n", " ")) for block in blocks[1:]]
+    run = next(command for command in commands if "scripts/judge_requests.py" in command)
+    assert run[run.index("--requests") + 1] == ".cache/generation/pmle-d025-style-45.judge-requests"
+    assert run[run.index("--verdicts") + 1] == ".cache/generation/pmle-d025-style-45.verdicts"
+    assert run[run.index("--judge-model") + 1] == "claude"
+    assert run[run.index("--parallel") + 1] == "3"
+    dry, write = [command for command in commands if "scripts/ingest_external_verdicts.py" in command]
     assert "--dry-run" in dry and "--dry-run" not in write
     for command in (dry, write):
         assert "scripts/ingest_external_verdicts.py" in command

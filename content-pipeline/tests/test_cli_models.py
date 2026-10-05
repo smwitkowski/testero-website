@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from subprocess import CompletedProcess, TimeoutExpired
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -66,7 +67,7 @@ def test_codex_command_schema_stdin_empty_cwd_and_cleanup(monkeypatch,tmp_path,m
         assert "OPENAI_API_KEY" not in kwargs["env"]
         assert kwargs["timeout"] == 10
         assert kwargs["capture_output"] and kwargs["text"] and not kwargs["check"]
-        assert command[command.index("-m") + 1] == ("gpt-6-astra" if model == "codex" else "gpt-6.1-sol")
+        assert command[command.index("-m") + 1] == "gpt-6.1-sol"
         assert "--ignore-user-config" in command and "--ignore-rules" in command
         assert "project_doc_max_bytes=0" in command and 'web_search="disabled"' in command
         disabled = [command[i + 1] for i, value in enumerate(command) if value == "--disable"]
@@ -222,3 +223,64 @@ def test_codex_model_rejection_when_cache_unreadable_or_invalid(monkeypatch, tmp
     assert isinstance(error, cli.CodexModelRejectedError)
     assert "Allowed model list is unavailable" in str(error)
     assert cli._codex_model_rejection("codex", "Unrelated request failed") is None
+
+
+
+def test_exported_claude_prompt_and_schema_are_used_verbatim(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "CLI_TEMP_ROOT", tmp_path)
+    prompt="A frozen exported prompt. Do not add, rebuild or truncate this text."
+    schema=cli.output_model(QuestionQualitySignature).model_json_schema()
+    calls=[]
+    def fake(command, **kwargs):
+        calls.append(command)
+        assert kwargs["input"] == prompt
+        assert json.loads(command[command.index("--json-schema") + 1]) == schema
+        assert command[command.index("--model") + 1] == "claude-sonnet-5-5"
+        assert command[command.index("--tools") + 1] == ""
+        return CompletedProcess(command,0,json.dumps({"type":"result","subtype":"success","is_error":False,"structured_output":verdict()}),"")
+    monkeypatch.setattr(cli.subprocess,"run",fake)
+    assert cli.run_claude_request("claude",prompt,schema) == verdict()
+    assert len(calls)==1
+
+
+@pytest.mark.parametrize("failure", ["schema", "prompt", "model"])
+def test_exported_claude_invalid_request_stops_before_cli(monkeypatch, failure):
+    prompt="Frozen prompt"
+    schema=cli.output_model(QuestionQualitySignature).model_json_schema()
+    model="claude"
+    if failure=="schema": del schema["properties"]["business_context"]
+    elif failure=="prompt": prompt=""
+    else: model="codex"
+    runner=Mock(side_effect=AssertionError("No CLI on invalid request"))
+    monkeypatch.setattr(cli.subprocess,"run",runner)
+    with pytest.raises((ValueError,cli.CLISchemaError)):
+        cli.run_claude_request(model,prompt,schema)
+    runner.assert_not_called()
+
+
+@pytest.mark.parametrize("returncode", [0,1])
+def test_claude_auth_failure_has_explicit_class_and_safe_message(monkeypatch,tmp_path,returncode):
+    monkeypatch.setattr(cli,"CLI_TEMP_ROOT",tmp_path)
+    envelope={"type":"result","subtype":"success","is_error":True,"result":"Failed to authenticate: OAuth session expired and could not be refreshed"}
+    monkeypatch.setattr(cli.subprocess,"run",lambda command,**kwargs:CompletedProcess(command,returncode,json.dumps(envelope),"PRIVATE auth token"))
+    schema=cli.output_model(QuestionQualitySignature).model_json_schema()
+    with pytest.raises(cli.CLIAuthError) as caught:
+        cli.run_claude_request("claude","Frozen request",schema)
+    assert "authentication failed" in str(caught.value)
+    assert "PRIVATE" not in str(caught.value)
+
+
+def test_new_default_is_not_preblocked_by_stale_model_cache(monkeypatch,tmp_path):
+    monkeypatch.setattr(cli,"CLI_TEMP_ROOT",tmp_path/"requests")
+    monkeypatch.setattr(Path,"home",lambda:tmp_path)
+    cache=tmp_path/".codex/models_cache.json"; cache.parent.mkdir()
+    cache.write_text(json.dumps({"models":[{"slug":"gpt-5.5","visibility":"list"}]}))
+    calls=[]
+    def fake(command,**kwargs):
+        calls.append(command)
+        assert command[command.index("-m") + 1] == "gpt-6.1-sol"
+        Path(command[command.index("-o") + 1]).write_text(json.dumps(question()))
+        return CompletedProcess(command,0,"","")
+    monkeypatch.setattr(cli.subprocess,"run",fake)
+    assert cli.run_signature("codex",PmleQuestionSignature,inputs())==question()
+    assert len(calls)==1

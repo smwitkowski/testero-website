@@ -16,8 +16,8 @@ from shared.evidence import OptionEvidence
 from shared.model_policy import DEFAULT_CLAUDE_MODEL
 
 CLI_TIMEOUT_SECONDS = 300
-DEFAULT_CODEX_MODEL = "gpt-6-astra"
-# CLI 0.153.4: read-only alone still permits file reads. Disable tool backends
+DEFAULT_CODEX_MODEL = "gpt-6.1-sol"
+# CLI 0.160.0: read-only alone still permits file reads. Disable tool backends
 # and ambient context; the model receives only the DSPy prompt on stdin.
 CODEX_DISABLED_FEATURES = (
     "shell_tool", "unified_exec", "shell_snapshot", "code_mode", "code_mode_host",
@@ -33,6 +33,10 @@ class CLIModelError(RuntimeError):
 
 class CLIExitError(CLIModelError):
     """CLI failed or could not start."""
+
+
+class CLIAuthError(CLIExitError):
+    """CLI subscription authentication is missing, invalid or expired."""
 
 
 class CodexModelRejectedError(CLIExitError):
@@ -105,6 +109,15 @@ def _limit(text):
     return bool(_LIMIT.search(text or ""))
 
 
+_AUTH = re.compile(r"failed to authenticate|authentication_error|invalid_api_key|"
+                   r"not logged in|oauth[^\n]{0,100}(?:expired|invalid)|"
+                   r"invalid (?:bearer|authentication) token|unauthorized|\b401\b", re.I)
+
+
+def _auth(text):
+    return bool(_AUTH.search(text or ""))
+
+
 
 _MODEL_REJECTION = re.compile(
     r"not supported when using Codex with a ChatGPT account|"
@@ -151,6 +164,8 @@ def parse_claude_output(text, signature):
         error_text = json.dumps({key: envelope.get(key) for key in ("result", "errors", "subtype")})
         if _limit(error_text):
             raise CLIUsageLimitError("Claude subscription usage or rate limit reached; batch stopped")
+        if _auth(error_text):
+            raise CLIAuthError("Claude subscription authentication failed; restore CLI login")
         raise CLIExitError("Claude CLI reported a failed request")
     if envelope.get("is_error") is not False or envelope.get("subtype") != "success":
         raise CLISchemaError("Claude CLI returned mistyped or missing success flags")
@@ -159,6 +174,8 @@ def parse_claude_output(text, signature):
     if "structured_output" not in envelope:
         if _limit(str(envelope.get("result", ""))):
             raise CLIUsageLimitError("Claude subscription usage or rate limit reached; batch stopped")
+        if _auth(str(envelope.get("result", ""))):
+            raise CLIAuthError("Claude subscription authentication failed; restore CLI login")
         raise CLISchemaError("Claude CLI omitted structured_output")
     return parse_output(json.dumps(envelope["structured_output"], allow_nan=False), signature)
 
@@ -176,22 +193,38 @@ def _cli_env():
 
 
 def run_signature(model: str, signature, inputs: dict[str, Any], *, timeout=CLI_TIMEOUT_SECONDS):
-    """Run one bounded CLI call in an empty temporary working directory.
+    """Run one DSPy signature through the shared bounded subscription transport."""
+    return _run_cli(model, signature_prompt(signature, inputs),
+                    output_model(signature).model_json_schema(), signature, timeout=timeout)
+
+
+def run_claude_request(model: str, prompt: str, schema: dict, *, timeout=CLI_TIMEOUT_SECONDS):
+    """Judge an exported request verbatim with the existing Claude transport.
 
     Raises:
-        ValueError: The model is not a subscription CLI selector.
+        ValueError: The model is not a Claude CLI selector.
+        CLIAuthError: Subscription authentication failed.
         CLIExitError: The command cannot start or reports failure.
-        CodexModelRejectedError: Codex rejects the requested model; cached choices are reported.
         CLIUsageLimitError: A subscription usage or rate limit stops the batch.
         CLITimeoutError: The command exceeds the timeout.
-        CLISchemaError: The structured output does not match the signature.
+        CLISchemaError: The request or structured output differs from the full rubric schema.
     """
+    from shared.quality_gate import QuestionQualitySignature
+    if not isinstance(model, str) or not (model == "claude" or model.startswith("claude/")):
+        raise ValueError("Exported requests require a Claude CLI model")
+    if not isinstance(prompt, str) or not prompt.strip():
+        raise CLISchemaError("Exported judge prompt is missing")
+    if schema != output_model(QuestionQualitySignature).model_json_schema():
+        raise CLISchemaError("Exported judge schema differs from the full current rubric")
+    return _run_cli(model, prompt, schema, QuestionQualitySignature, timeout=timeout)
+
+
+def _run_cli(model, prompt, schema, signature, *, timeout):
+    """Use one transport for both DSPy signatures and frozen external requests."""
     codex = model == "codex" or model.startswith("codex/")
     claude = model == "claude" or model.startswith("claude/")
     if not codex and not claude:
         raise ValueError("Not a subscription CLI model")
-    schema = output_model(signature).model_json_schema()
-    prompt = signature_prompt(signature, inputs)
     CLI_TEMP_ROOT.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="request-", dir=CLI_TEMP_ROOT) as directory:
         base = Path(directory)
@@ -229,6 +262,8 @@ def run_signature(model: str, signature, inputs: dict[str, Any], *, timeout=CLI_
                     raise rejection
             if _limit(result.stdout + "\n" + result.stderr):
                 raise CLIUsageLimitError("CLI subscription usage or rate limit reached; batch stopped")
+            if _auth(result.stdout + "\n" + result.stderr):
+                raise CLIAuthError("CLI subscription authentication failed; restore CLI login")
             raise CLIExitError(f"CLI model command exited unsuccessfully (exit {result.returncode})")
         if claude:
             return parse_claude_output(result.stdout, signature)

@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 import pytest
-from shared.cli_models import CLIExitError, parse_claude_output
+from shared.cli_models import CLIExitError, CLIAuthError, parse_claude_output
 from shared.quality_gate import QuestionQualitySignature
 
 FIXTURES = Path(__file__).parent / "fixtures/cli_models"
@@ -14,7 +14,7 @@ def test_real_claude_expired_oauth_fails_without_structured_verdict():
     assert data["is_error"] is True
     assert data["result"] == "Failed to authenticate: OAuth session expired and could not be refreshed"
     assert "structured_output" not in data
-    with pytest.raises(CLIExitError):
+    with pytest.raises(CLIAuthError):
         parse_claude_output(text, QuestionQualitySignature)
 
 
@@ -55,7 +55,7 @@ def test_real_codex_astra_generation_replays_through_transport_and_validator(mon
     calls = recorded_codex(monkeypatch, tmp_path, "generation-output.json")
     scope = context["scope"]
     question = generate_question(scope["domain_prompt"], documentation_context(context["sources"]),
-                                 model="codex", exam_subsection=scope["subsection"])
+                                 model="codex/gpt-6-astra", exam_subsection=scope["subsection"])
     assert question == json.loads((FIXTURES / "generation-output.json").read_text())
     result = validate_question(question)
     assert result.is_valid, result.errors
@@ -71,7 +71,7 @@ def test_real_codex_astra_citation_replays_through_transport_and_evidence_gate(m
     context = recorded_context()
     question = cli_models.parse_output((FIXTURES / "generation-output.json").read_text(), PmleQuestionSignature)
     calls = recorded_codex(monkeypatch, tmp_path, "citation-output.json")
-    citation = cite_question(question, context["sources"], model="codex")
+    citation = cite_question(question, context["sources"], model="codex/gpt-6-astra")
     assert citation == json.loads((FIXTURES / "citation-output.json").read_text())
     assert citation == cli_models.parse_output((FIXTURES / "citation-output.json").read_text(), CitationSignature)
     checked = check_evidence(citation["evidence"], context["sources"])
@@ -89,3 +89,87 @@ def test_real_codex_quote_gate_still_rejects_mutated_receipts():
     checked = check_evidence(citation["evidence"], context["sources"])
     assert not checked["passed"]
     assert any("Option A: quote is not present" in error for error in checked["errors"])
+
+
+
+def test_real_logged_in_claude_full_schema_and_failed_styles_replay(monkeypatch,tmp_path):
+    from shared.quality_gate import STYLE_CHECKS, ACCURACY_CHECKS, judge_question
+    context=json.loads((FIXTURES/"judge-logged-in-context.json").read_text())
+    raw=(FIXTURES/"judge-logged-in-output.json").read_text()
+    parsed=cli_models.parse_claude_output(raw,QuestionQualitySignature)
+    assert set(parsed)==set(QuestionQualitySignature.output_fields)
+    assert all(type(parsed[name]) is bool for name in ACCURACY_CHECKS)
+    assert {name:parsed[name] for name in STYLE_CHECKS} == {name:False for name in STYLE_CHECKS}
+    assert parsed["verdict"]=="FAIL" and parsed["score"]==.5
+    monkeypatch.setattr(cli_models,"CLI_TEMP_ROOT",tmp_path)
+    calls=[]
+    def replay(command,**kwargs):
+        calls.append(command)
+        assert command[command.index("--model")+1] == "claude-sonnet-5-5"
+        return CompletedProcess(command,0,raw,"")
+    monkeypatch.setattr(cli_models.subprocess,"run",replay)
+    inputs=context["inputs"]
+    result=judge_question(inputs["question_data"],inputs["domain_context"],documentation_context=inputs["documentation_context"],
+                          option_evidence=inputs["option_evidence"],model="claude",generator_model="codex")
+    assert not result.passed and result.score==.5 and result.error_class is None
+    assert "business_context" in result.reason and "constraints_as_wants" in result.reason
+    assert len(calls)==1
+
+
+
+def test_real_exported_claude_request_replays_verbatim_full_schema(monkeypatch,tmp_path):
+    from shared.quality_gate import STYLE_CHECKS, ACCURACY_CHECKS
+    request=json.loads((FIXTURES/"judge-exported-request.json").read_text())
+    raw=(FIXTURES/"judge-exported-output.json").read_text()
+    expected=json.loads((FIXTURES/"judge-exported-verdict.json").read_text())
+    assert cli_models.parse_claude_output(raw,QuestionQualitySignature)==expected
+    assert set(expected)==set(QuestionQualitySignature.output_fields)
+    assert all(type(expected[name]) is bool for name in ACCURACY_CHECKS)
+    assert all(expected[name] is True for name in STYLE_CHECKS)
+    assert expected["verdict"]=="UNCERTAIN" and expected["evidence_supported"] is False
+    assert expected["score"]==.74
+    monkeypatch.setattr(cli_models,"CLI_TEMP_ROOT",tmp_path)
+    calls=[]
+    def replay(command,**kwargs):
+        calls.append(command)
+        assert kwargs["input"]==request["judge_prompt"]
+        assert json.loads(command[command.index("--json-schema")+1])==request["verdict_schema"]
+        return CompletedProcess(command,0,raw,"")
+    monkeypatch.setattr(cli_models.subprocess,"run",replay)
+    actual=cli_models.run_claude_request("claude",request["judge_prompt"],request["verdict_schema"])
+    assert actual==expected and len(calls)==1
+    # The frozen valid schema is not a quality PASS: existing gate still rejects.
+    from types import SimpleNamespace
+    from shared.quality_gate import judge_question
+    context=recorded_context()
+    question=json.loads((FIXTURES/"generation-output.json").read_text())
+    result=judge_question(question,context["scope"]["domain_prompt"],documentation_context="Recorded evidence excerpts",
+                          model="claude",generator_model="codex/gpt-6-astra",predictor=lambda **_:SimpleNamespace(**actual))
+    assert not result.passed and result.score==.74 and "Uncertain evidence" in result.reason
+
+
+
+def test_real_claude_uncertain_fixture_saved_in_ingest_format(monkeypatch,tmp_path):
+    from scripts import judge_requests as runner
+    fixtures=Path(__file__).parent/"fixtures/cli_models"
+    request=json.loads((fixtures/"judge-exported-request.json").read_text())
+    envelope=(fixtures/"judge-exported-output.json").read_text()
+    expected=json.loads((fixtures/"judge-exported-verdict.json").read_text())
+    requests=tmp_path/"requests"; requests.mkdir()
+    verdicts=tmp_path/"verdicts"
+    (requests/(request["candidate_id"]+".json")).write_text(json.dumps(request,ensure_ascii=False))
+    monkeypatch.setattr(cli_models,"CLI_TEMP_ROOT",tmp_path/"cli-tmp")
+    calls=[]
+    def replay(command,**kwargs):
+        calls.append(command)
+        assert kwargs["input"]==request["judge_prompt"]
+        assert json.loads(command[command.index("--json-schema")+1])==request["verdict_schema"]
+        return CompletedProcess(command,0,envelope,"")
+    monkeypatch.setattr(cli_models.subprocess,"run",replay)
+    first=runner.run_requests(requests,verdicts,parallel=1)
+    assert first.completed==1 and first.failed==0
+    saved=json.loads((verdicts/(request["candidate_id"]+".json")).read_text())
+    assert saved==expected and saved["verdict"]=="UNCERTAIN"
+    assert "passed" not in saved and "structured_output" not in saved
+    second=runner.run_requests(requests,verdicts,parallel=1)
+    assert second.skipped==1 and len(calls)==1
