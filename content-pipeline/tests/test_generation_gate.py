@@ -538,3 +538,16 @@ def test_non_dry_usage_stop_finishes_runs_without_candidate_writes(generation):
     generation[0].insert_question.assert_not_called()
     assert generation[0].update_generation_run.call_count > 0
     assert all(call.args[1]["generated_count"] == 0 for call in generation[0].update_generation_run.call_args_list)
+
+
+def test_rejected_codex_model_stops_batch_without_fallback(generation):
+    from shared.cli_models import CodexModelRejectedError
+    generation[4].side_effect = CodexModelRejectedError("Codex rejected model gpt-6.1-sol; no fallback was attempted. Cached model choices: gpt-6-astra")
+    result = invoke(generation, "--n-questions", "3", "--model", "codex/gpt-6.1-sol", "--dry-run")
+    assert result.exit_code != 0 and "no fallback was attempted" in result.output
+    payload = json.loads((generation[-1] / "pilot.json").read_text())
+    assert len(payload["candidates"]) == 1
+    assert payload["batch_stop"]["error_class"] == "CodexModelRejectedError"
+    assert generation[4].call_count == 1
+    assert generation[4].call_args.kwargs["model"] == "codex/gpt-6.1-sol"
+    generation[4].cite_mock.assert_not_called()

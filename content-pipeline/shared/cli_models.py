@@ -16,7 +16,7 @@ from shared.evidence import OptionEvidence
 from shared.model_policy import DEFAULT_CLAUDE_MODEL
 
 CLI_TIMEOUT_SECONDS = 300
-DEFAULT_CODEX_MODEL = "gpt-6.1-sol"
+DEFAULT_CODEX_MODEL = "gpt-6-astra"
 # CLI 0.153.4: read-only alone still permits file reads. Disable tool backends
 # and ambient context; the model receives only the DSPy prompt on stdin.
 CODEX_DISABLED_FEATURES = (
@@ -33,6 +33,10 @@ class CLIModelError(RuntimeError):
 
 class CLIExitError(CLIModelError):
     """CLI failed or could not start."""
+
+
+class CodexModelRejectedError(CLIExitError):
+    """The requested Codex model is unsupported; never retry another model silently."""
 
 
 class CLIUsageLimitError(CLIModelError):
@@ -101,6 +105,40 @@ def _limit(text):
     return bool(_LIMIT.search(text or ""))
 
 
+
+_MODEL_REJECTION = re.compile(
+    r"not supported when using Codex with a ChatGPT account|"
+    r"model[^\n]{0,200}(?:not supported|unsupported|not available|not found)|"
+    r"(?:unsupported|unknown|invalid) model|model_not_found", re.I,
+)
+
+
+def _codex_model_rejection(model, text):
+    if not _MODEL_REJECTION.search(text or ""):
+        return None
+    rejected = DEFAULT_CODEX_MODEL if model == "codex" else model.removeprefix("codex/")
+    # Read model names only. Never copy account identity or auth/config metadata.
+    path = Path.home() / ".codex/models_cache.json"
+    choices = []
+    try:
+        cache = json.loads(path.read_text())
+        records = cache.get("models", []) if isinstance(cache, dict) else []
+        choices = list(dict.fromkeys(
+            record["slug"] for record in records if isinstance(record, dict)
+            and record.get("visibility") == "list" and isinstance(record.get("slug"), str)
+            and re.fullmatch(r"[a-zA-Z0-9_.-]{1,80}", record["slug"])
+            and record["slug"] != rejected
+        ))
+    except (OSError, UnicodeError, ValueError, TypeError):
+        pass
+    # A stale cache is a suggestion, never an automatic fallback or proof of access.
+    safe_name = rejected if re.fullmatch(r"[a-zA-Z0-9_.-]{1,80}", rejected) else "requested model"
+    reason = f"Codex rejected model {safe_name}; no fallback was attempted."
+    reason += (" Cached model choices (availability may vary): " + ", ".join(choices)
+               if choices else " Allowed model list is unavailable; refresh Codex models_cache.json.")
+    return CodexModelRejectedError(reason)
+
+
 def parse_claude_output(text, signature):
     """Read Claude Code's structured_output, never its free-text result as a verdict."""
     try:
@@ -143,6 +181,7 @@ def run_signature(model: str, signature, inputs: dict[str, Any], *, timeout=CLI_
     Raises:
         ValueError: The model is not a subscription CLI selector.
         CLIExitError: The command cannot start or reports failure.
+        CodexModelRejectedError: Codex rejects the requested model; cached choices are reported.
         CLIUsageLimitError: A subscription usage or rate limit stops the batch.
         CLITimeoutError: The command exceeds the timeout.
         CLISchemaError: The structured output does not match the signature.
@@ -184,12 +223,19 @@ def run_signature(model: str, signature, inputs: dict[str, Any], *, timeout=CLI_
         except OSError:
             raise CLIExitError("CLI model command could not start") from None
         if result.returncode != 0:
+            if codex:
+                rejection = _codex_model_rejection(model, result.stdout + "\n" + result.stderr)
+                if rejection:
+                    raise rejection
             if _limit(result.stdout + "\n" + result.stderr):
                 raise CLIUsageLimitError("CLI subscription usage or rate limit reached; batch stopped")
             raise CLIExitError(f"CLI model command exited unsuccessfully (exit {result.returncode})")
         if claude:
             return parse_claude_output(result.stdout, signature)
         if not output.is_file():
+            rejection = _codex_model_rejection(model, result.stdout + "\n" + result.stderr)
+            if rejection:
+                raise rejection
             if _limit(result.stdout + "\n" + result.stderr):
                 raise CLIUsageLimitError("Codex subscription usage or rate limit reached; batch stopped")
             raise CLISchemaError("Codex CLI did not write its structured output")

@@ -18,8 +18,11 @@ registry. No migration or new-cert product support. Generation never publishes.
 ## Model pair
 
 The founder's current generator/citer choice is `--model codex`, using the
-existing Codex subscription (OpenAI), defaulting to `gpt-6.1-sol` at high reasoning.
-Use `codex/<model>` to override the model. The adapter ignores user config/rules,
+existing Codex subscription (OpenAI), defaulting to `gpt-6-astra` at high reasoning.
+Use `codex/<model>` to override the model. Every call passes `-m` explicitly.
+An unsupported model raises `CodexModelRejectedError` and stops the batch without
+fallback. Its message lists visible names from `~/.codex/models_cache.json` when
+readable; cached availability can be stale. The adapter ignores user config/rules,
 disables file-capable tool features and web search, and suppresses project-doc
 loading. It runs from an empty temporary directory. This is a subscription/cost
 choice, not a measured quality claim. The default independent judge is `claude`, using the

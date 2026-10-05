@@ -16,7 +16,7 @@ from shared.doc_search import search_objective_docs, documentation_context
 from shared.evidence import check_evidence
 from shared.llm_generator import generate_question, cite_question, GenerationOutputError
 from shared.llm_limits import MaxTokensTruncation
-from shared.cli_models import CLIModelError, CLIUsageLimitError
+from shared.cli_models import CLIModelError, CLIUsageLimitError, CodexModelRejectedError
 from shared.completion_diagnostics import _safe_completion
 from shared.model_policy import DEFAULT_GENERATOR_MODEL, DEFAULT_JUDGE_MODEL, require_independent_models
 from shared.quality_gate import JudgeVerdict, QUESTION_FIELDS, judge_question
@@ -243,7 +243,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             # Never copy provider exception bodies/credentials into artifacts or stdout.
             entry["error_class"] = type(exc).__name__
             reject_candidate(entry, stage, str(exc) if isinstance(exc, CLIModelError) else stage.capitalize() + " request failed")
-            if isinstance(exc, CLIUsageLimitError):
+            if isinstance(exc, (CLIUsageLimitError, CodexModelRejectedError)):
                 batch_stop = {"error_class": type(exc).__name__, "reason": str(exc), "index": index}
                 payload["batch_stop"] = batch_stop
                 break

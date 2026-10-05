@@ -66,7 +66,7 @@ def test_codex_command_schema_stdin_empty_cwd_and_cleanup(monkeypatch,tmp_path,m
         assert "OPENAI_API_KEY" not in kwargs["env"]
         assert kwargs["timeout"] == 10
         assert kwargs["capture_output"] and kwargs["text"] and not kwargs["check"]
-        assert command[command.index("-m") + 1] == "gpt-6.1-sol"
+        assert command[command.index("-m") + 1] == ("gpt-6-astra" if model == "codex" else "gpt-6.1-sol")
         assert "--ignore-user-config" in command and "--ignore-rules" in command
         assert "project_doc_max_bytes=0" in command and 'web_search="disabled"' in command
         disabled = [command[i + 1] for i, value in enumerate(command) if value == "--disable"]
@@ -180,3 +180,45 @@ def test_named_checklist_leadins_rejected_without_requirements_suffix(phrase):
 def test_mistyped_missing_or_nonresult_envelope_fails_closed(envelope):
     with pytest.raises((cli.CLIExitError, cli.CLISchemaError)):
         cli.parse_claude_output(json.dumps({**envelope, "structured_output":verdict()}), QuestionQualitySignature)
+
+
+@pytest.mark.parametrize("exit_code", [0, 1])
+def test_codex_model_rejection_reports_cache_choices_no_fallback(monkeypatch, tmp_path, exit_code):
+    monkeypatch.setattr(cli, "CLI_TEMP_ROOT", tmp_path / "requests")
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    cache = tmp_path / ".codex/models_cache.json"
+    cache.parent.mkdir()
+    cache.write_text(json.dumps({"identity":"PRIVATE account metadata", "models":[
+        {"slug":"gpt-6.1-sol", "visibility":"list"},
+        *[{"slug":name, "visibility":"list"} for name in ["gpt-6-astra","gpt-5.6-sol","gpt-5.6-terra","gpt-5.6-luna","gpt-5.5"]],
+        {"slug":"hidden-model", "visibility":"hide"},
+        {"slug":"PRIVATE transport body /", "visibility":"list"},
+    ]}))
+    calls=[]
+    def fake(command, **kwargs):
+        calls.append(command)
+        assert command[command.index("-m") + 1] == "gpt-6.1-sol"
+        return CompletedProcess(command, exit_code, "", "The 'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account. PRIVATE transport body")
+    monkeypatch.setattr(cli.subprocess,"run",fake)
+    with pytest.raises(cli.CodexModelRejectedError) as error:
+        cli.run_signature("codex/gpt-6.1-sol", PmleQuestionSignature, inputs())
+    assert len(calls) == 1
+    assert "Codex rejected model gpt-6.1-sol" in str(error.value)
+    assert "no fallback was attempted" in str(error.value)
+    for name in ["gpt-6-astra","gpt-5.6-sol","gpt-5.6-terra","gpt-5.6-luna","gpt-5.5"]:
+        assert name in str(error.value)
+    assert "PRIVATE" not in str(error.value) and "hidden-model" not in str(error.value)
+    assert list((tmp_path / "requests").iterdir()) == []
+
+
+@pytest.mark.parametrize("cache_text", [None, "invalid json", '[]', '{"models":null}', '{"models":[{"slug":99,"visibility":"list"}]}'])
+def test_codex_model_rejection_when_cache_unreadable_or_invalid(monkeypatch, tmp_path, cache_text):
+    monkeypatch.setattr(Path,"home",lambda:tmp_path)
+    if cache_text is not None:
+        cache = tmp_path / ".codex/models_cache.json"
+        cache.parent.mkdir()
+        cache.write_text(cache_text)
+    error = cli._codex_model_rejection("codex/gpt-6.1-sol", "not supported when using Codex with a ChatGPT account")
+    assert isinstance(error, cli.CodexModelRejectedError)
+    assert "Allowed model list is unavailable" in str(error)
+    assert cli._codex_model_rejection("codex", "Unrelated request failed") is None
