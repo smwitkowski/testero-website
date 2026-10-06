@@ -200,7 +200,7 @@ def test_codex_model_rejection_reports_cache_choices_no_fallback(monkeypatch, tm
     def fake(command, **kwargs):
         calls.append(command)
         assert command[command.index("-m") + 1] == "gpt-6.1-sol"
-        return CompletedProcess(command, exit_code, "", "The 'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account. PRIVATE transport body")
+        return CompletedProcess(command, exit_code, "", "ERROR: The 'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account.\nPRIVATE transport body")
     monkeypatch.setattr(cli.subprocess,"run",fake)
     with pytest.raises(cli.CodexModelRejectedError) as error:
         cli.run_signature("codex/gpt-6.1-sol", PmleQuestionSignature, inputs())
@@ -220,7 +220,7 @@ def test_codex_model_rejection_when_cache_unreadable_or_invalid(monkeypatch, tmp
         cache = tmp_path / ".codex/models_cache.json"
         cache.parent.mkdir()
         cache.write_text(cache_text)
-    error = cli._codex_model_rejection("codex/gpt-6.1-sol", "not supported when using Codex with a ChatGPT account")
+    error = cli._codex_model_rejection("codex/gpt-6.1-sol", "ERROR: The 'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account.")
     assert isinstance(error, cli.CodexModelRejectedError)
     assert "Allowed model list is unavailable" in str(error)
     assert cli._codex_model_rejection("codex", "Unrelated request failed") is None

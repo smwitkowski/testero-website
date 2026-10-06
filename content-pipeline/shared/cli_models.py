@@ -119,17 +119,71 @@ def _auth(text):
 
 
 
-_MODEL_REJECTION = re.compile(
-    r"not supported when using Codex with a ChatGPT account|"
-    r"model[^\n]{0,200}(?:not supported|unsupported|not available|not found)|"
-    r"(?:unsupported|unknown|invalid) model|model_not_found", re.I,
-)
+def _codex_errors(stderr):
+    """Read only Codex's ERROR records, never free text or echoed prompt prose."""
+    decoder = json.JSONDecoder()
+    for match in re.finditer(r"(?m)^ERROR:[ \t]*", stderr or ""):
+        tail = stderr[match.end():].lstrip()
+        if tail.startswith("{"):
+            try:
+                record, _ = decoder.raw_decode(tail)
+            except (ValueError, RecursionError):
+                continue
+            if not isinstance(record, dict) or record.get("type") not in (None, "error"):
+                continue
+            error = record.get("error", record)
+            if isinstance(error, dict):
+                yield error
+        elif tail:
+            yield {"message": tail.splitlines()[0]}
 
 
-def _codex_model_rejection(model, text):
-    if not _MODEL_REJECTION.search(text or ""):
-        return None
+def _codex_schema_error(stderr):
+    return any(error.get("code") == "invalid_json_schema" for error in _codex_errors(stderr))
+
+
+def _codex_response_schema(schema):
+    """Remove only ref annotations rejected by Codex; keep every validation rule."""
+    if isinstance(schema, list):
+        return [_codex_response_schema(value) for value in schema]
+    if not isinstance(schema, dict):
+        return schema
+    return {key: _codex_response_schema(value) for key, value in schema.items()
+            if not ("$ref" in schema and key in {"description", "title"})}
+
+
+def _codex_model_rejection(model, stderr):
     rejected = DEFAULT_CODEX_MODEL if model == "codex" else model.removeprefix("codex/")
+    # The account-specific sentence and dedicated model error codes must come
+    # from an ERROR record for this request, not a prompt/model-info substring.
+    account_message = re.compile(
+        r"The ['\"]" + re.escape(rejected)
+        + r"['\"] model is not supported when using Codex with a ChatGPT account\.", re.I
+    )
+    matched = False
+    for error in _codex_errors(stderr):
+        code, message = error.get("code"), error.get("message", "")
+        if (not isinstance(message, str) or code not in (None, "model_not_found", "unsupported_model")
+                or error.get("param") not in (None, "model")):
+            continue
+        named_model = error.get("model")
+        if named_model is not None and named_model != rejected:
+            continue
+        if account_message.fullmatch(message.strip()):
+            matched = True
+        elif code in ("model_not_found", "unsupported_model"):
+            subject = re.match(
+                r"(?:Model ['\"]([^'\"]+)['\"]|The ['\"]([^'\"]+)['\"] model) "
+                r"(?:was not found|does not exist|is not supported)\b", message.strip(), re.I
+            )
+            subject_model = (subject.group(1) or subject.group(2)) if subject else None
+            if subject_model is not None and subject_model != rejected:
+                continue
+            matched = named_model == rejected or subject_model == rejected
+        if matched:
+            break
+    if not matched:
+        return None
     # Read model names only. Never copy account identity or auth/config metadata.
     path = Path.home() / ".codex/models_cache.json"
     choices = []
@@ -239,7 +293,7 @@ def _run_cli(model, prompt, schema, signature, *, timeout, reasoning_effort="hig
         output = base / "output.json"
         if codex:
             schema_path = base / "schema.json"
-            schema_path.write_text(json.dumps(schema))
+            schema_path.write_text(json.dumps(_codex_response_schema(schema)))
             command = ["codex", "exec", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only",
                        "--output-schema", str(schema_path), "-o", str(output)]
             command += ["--ignore-user-config", "--ignore-rules", "-m",
@@ -261,9 +315,12 @@ def _run_cli(model, prompt, schema, signature, *, timeout, reasoning_effort="hig
             raise CLITimeoutError("CLI model request timed out") from None
         except OSError:
             raise CLIExitError("CLI model command could not start") from None
+        codex_errors = result.stderr.replace(prompt, "") if codex else ""
         if result.returncode != 0:
             if codex:
-                rejection = _codex_model_rejection(model, result.stdout + "\n" + result.stderr)
+                if _codex_schema_error(codex_errors):
+                    raise CLISchemaError("Codex rejected the structured output schema")
+                rejection = _codex_model_rejection(model, codex_errors)
                 if rejection:
                     raise rejection
             if _limit(result.stdout + "\n" + result.stderr):
@@ -274,7 +331,9 @@ def _run_cli(model, prompt, schema, signature, *, timeout, reasoning_effort="hig
         if claude:
             return parse_claude_output(result.stdout, signature)
         if not output.is_file():
-            rejection = _codex_model_rejection(model, result.stdout + "\n" + result.stderr)
+            if _codex_schema_error(codex_errors):
+                raise CLISchemaError("Codex rejected the structured output schema")
+            rejection = _codex_model_rejection(model, codex_errors)
             if rejection:
                 raise rejection
             if _limit(result.stdout + "\n" + result.stderr):
