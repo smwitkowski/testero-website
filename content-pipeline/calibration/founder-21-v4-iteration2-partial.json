@@ -1,0 +1,835 @@
+{
+  "version": 4,
+  "iteration": "v4-iteration2",
+  "status": "STOPPED_INVALID_SCHEMA_FREEZE",
+  "shared_call_budget": {
+    "maximum": 150,
+    "reserved": 104,
+    "completed": 82,
+    "failed": 19,
+    "unresolved": 3,
+    "remaining": 46
+  },
+  "iteration_calls_reserved": 31,
+  "gate_status_totals": {
+    "blind_solver": {
+      "PASS": 10,
+      "FAIL": 0,
+      "ERROR": 0,
+      "INTERRUPTED": 1,
+      "SKIP": 10
+    },
+    "style": {
+      "PASS": 1,
+      "FAIL": 8,
+      "ERROR": 0,
+      "INTERRUPTED": 1,
+      "SKIP": 11
+    },
+    "evidence": {
+      "PASS": 3,
+      "FAIL": 0,
+      "ERROR": 6,
+      "INTERRUPTED": 1,
+      "SKIP": 11
+    }
+  },
+  "limitation": "Not a corrected-schema validation. Gate owner announced freeze before verifying emitted JSON schema. All saved requests lacked maxLength300. Stopped immediately on revised warning. Reservations remain counted; no refund or automatic retry.",
+  "items": [
+    {
+      "item_id": 1,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "flag",
+      "source_sha256": [
+        "a23a602e2d17261dba1138064d5a3d1072c97f8a0626ebbe1800937ac9516b04",
+        "58a9424342dbf1e423e3c35515077c4987344fdb580c9b571a3ba975ccc7467e",
+        "4b79962b5046dd7621857b844c064dc0a4e0827075dc2f6a70bfbdc8d7bc566f",
+        "4d706bad6013db6cdf5005694d577e986d4f43718fbf3c1521b44651ae435561",
+        "7cfd10226b59c07b446524826486da0c251a8f3f3b468b367af095aa12657b11"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "443d4c82ffd3bef0c1c4756850974c5eab2c0fe6028a865924f3dbeeb79d6230",
+          "reason": "Self-deploying to a dedicated endpoint keeps serving in the project and VPC. Steady high traffic favors dedicated capacity for TCO. A prebuilt vLLM container avoids custom image upkeep. MaaS is multi-tenant, Cloud Run is public, and a custom container adds burden.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "cb4731537f0ac2fb798a641eebfb38e33908c643e2303191b03ee6005290649d",
+          "reason": "Opening names no concrete application. Stem stacks three requirements in the banned \"must satisfy the following\" voice. The VPC fact rules out B and D, and the no-custom-container want negates C. It uses the legacy full platform name.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "ERROR",
+          "input_sha256": "b39c36f4f25f5e4bc12875df3239b2de93053fb45f444cda46576b9a2404867b",
+          "reason": null,
+          "error_class": "CLISchemaError",
+          "reason_length": 414,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 2,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "flag",
+      "source_sha256": [
+        "4b79962b5046dd7621857b844c064dc0a4e0827075dc2f6a70bfbdc8d7bc566f",
+        "4d706bad6013db6cdf5005694d577e986d4f43718fbf3c1521b44651ae435561",
+        "223793133ee3fdb808dacb2624fa6cf2f966366a652fa17245992b0a8a4bbdbc",
+        "54c7fbea91a3fa71e7c032f3edc603c97ed00d9bd25300e8bbd8831ead0db803",
+        "a23a602e2d17261dba1138064d5a3d1072c97f8a0626ebbe1800937ac9516b04"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "7b094558d4b9b5e377bb8980f2b4cea8b6bd147901c85667727d119ab04f01b5",
+          "reason": "Gemini multimodal SFT uses JSONL with fileData Cloud Storage URIs, user and model contents, and high media resolution for subtle detail. A uses low resolution; B is Imagen (generation, not inspection); D uses unsupported inline Base64 text and a nonexistent imageQuality parameter.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "7c12dca8f06bcfd6a4ddf54d17de2ac9b7ae571b2632b463a86483a179e2bf67",
+          "reason": "Uses legacy \"Gemini Enterprise Agent Platform\" name and doc-voice \"supported platform specifications\". Hinges on mediaResolution/fileData settings trivia. B and D are throwaway distractors; A rests on a dubious pan-and-scan claim.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "ERROR",
+          "input_sha256": "4e1c96a65e1fc80fd861fb4ffa6927e37c3ac8e619ea9a2d639723bd3a5111ec",
+          "reason": null,
+          "error_class": "CLISchemaError",
+          "reason_length": 313,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 3,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "ok",
+      "source_sha256": [
+        "9ae4a198780f14c87e4e9dcfb23aea208f5c1ad28cb34fb12bd3f02c7a79aa32",
+        "3ef1f0a7b117eb4a60e91a9c0c6e7c883e4b26226502e99d5539907ecea4d2be",
+        "1265b512495cb3566b28beb6259790c366c63d29db45da4c6955c90b7aab130c",
+        "05d2ccc2e5202950152951a29215afec2848948c9039f44dc2ec669d4d87a225",
+        "69cb152447624015031844b5d468711dab9608719b005fca8d7bdee369f4c2db"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "7bca050162161aa1ae9d1f999d08a05618fb18d372a8acfca2f6d9d7e5e89184",
+          "reason": "Vertex AI Feature Store (new) design: FeatureGroup per BigQuery source table, Features for columns, then a FeatureView referencing multiple feature groups for online serving; BigQuery keeps history for point-in-time offline retrieval. Other options use legacy or invalid configurations.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "6846f020cb921fbe8e5a7a662d49fed96e34d455bae6cbb3dd3af355b5532c8d",
+          "reason": "Uses banned name \"Gemini Enterprise Agent Platform\" and names a column (feature_timestamp). The opening is a design task with no clear business purpose. The key hinges on Feature Store resource hierarchy details. B and D rest on invented or unsupported config claims, and A is a legacy throwaway.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "ERROR",
+          "input_sha256": "2d8234d5bc49f70f3d118d3a2d54b1402bbe04108169fb780f87ba351e40a469",
+          "reason": null,
+          "error_class": "CLISchemaError",
+          "reason_length": 317,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 4,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "flag",
+      "source_sha256": [
+        "21788ddcdee9c84755255676f0e5c2503e187fdc97b75144ae80b02e15e29555",
+        "9c637299f35f8e358126e7dc2568d19715feec2f7102c6370884a882a81fa1f2",
+        "a4bac323539d828eaebd444c05c76cb7244a5d9b6ea3f1d8813f1fcba581130d",
+        "bec7a45c27bb98c7cf7d5edaa9bd5ffc6f31f67096cbe3d759d517bfbdc16cb8",
+        "b4af5a3cf85a2d0d1fd47f83fc7aa9e0836ef29f3673b9d6fb75340c059a48bd"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "fea9d3c63a5c386e927b8c615ab8841d437b9ece725cbf66129b1f861612f190",
+          "reason": "BigQuery ML boosted tree models support Tree SHAP for exact local attributions via ML.EXPLAIN_PREDICT, plus global explanations via ML.GLOBAL_EXPLAIN. B isn't a BQML-trained type. C misuses ML.FEATURE_IMPORTANCE, which is global only. D isn't tree-based.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "150546194c4151d663a4c1eb1ce335dc36c924dcb11c5991e2ffaed3f4d8fa09",
+          "reason": "Stem uses \"Stakeholders have established... requirements\" with three bulleted requirements (S2/S3). It maps product features to functions, and option B claims AutoML Tables in BigQuery ML. Opening lacks a business purpose.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "a2c28e953b66ba4aa0499e786e6c29b0ca6758a86a53f2f01613977f057b3f32",
+          "reason": "The doc says boosted trees use Tree SHAP, which computes exact SHAP values, with ML.EXPLAIN_PREDICT for local and ML.GLOBAL_EXPLAIN for global attributions. It lists local functions as N/A for AutoML Tables, ML.FEATURE_IMPORTANCE and ML.ADVANCED_WEIGHTS. Logistic regression is linear.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 5,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "flag",
+      "source_sha256": [
+        "aa38d33724439e1919a0656b5434440fbd9706ef58e914db17e1170ffbbcbf32",
+        "522963fafca6578b5367cdbf2367a3d54bb41cb6666ddd2f2f3e6a9b6b34688a",
+        "56095bc3e16080bd1070572e7cd1cdbc30b429ac7b97b0ed4a99fdac30975d2c",
+        "5ef614a983678e517fb9ed0aa7b9c4e14dfc753adf52b84761c0b2fa8754cdd1",
+        "0e74c2475d1ad035baea70fbfc2f76ec610c15879db68dfbe48edd8c73711639"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "f0420766470e56b20dde153c8001c4ab6222f96605443c6d05842fe8691944fa",
+          "reason": "Cloud Deploy automatic traffic management for Cloud Run requires automaticTrafficControl: true and a manifest without a traffic stanza. Percentages [25, 50] are right because 100% is the final stable phase. A and B are wrong; D conflicts with automatic control.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "936568d339177358c38e2c93151999f0f3b85c45d0557e10461e0082e6953727",
+          "reason": "Hinge is config trivia (traffic stanza, automaticTrafficControl, percentages list). Option A uses an unrelated endpoint setting. Options B, C and D are near-clones. Stem asks about manifest and pipeline settings, with no business purpose.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "2ebb6e221a64c864356f50b7d6b3a5ed9a0e05cefcfe1d0b565e14434a1fa6dd",
+          "reason": "Docs support the key: no traffic stanza, automaticTrafficControl: true, percentages [25, 50] without 100 (100% handled by the stable phase). Each distractor breaks a documented rule, or uses an unrelated Agent Platform rolling-deployment feature (D).",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 6,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "flag",
+      "source_sha256": [
+        "ddb724100dfb8a1c7949a019accce679c50df6e6ac7b49dc2624212f6ee85ae4",
+        "0529984e68e330279ef4ae2c96508d66bb2cf9790ebfbf99cd21c952c98651d0",
+        "0ae6f85f05c24ef37453b3224e82d689ca82a77497afe0293bcf527cb9a8f487",
+        "b2cf5cb30eac3f151c6f461381653174d96de81528a5ee4f6ee30e81548e4bc2"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "10c71904e3d172b210d53fd2bf8504670db67996ab44d80a425935e41662bfa6",
+          "reason": "Custom prediction routines need a custom Handler for raw CSV deserialization and a custom Predictor for pre/postprocessing. LocalModel.build_cpr_model builds the container without a Dockerfile, and deploy_to_local_endpoint allows local testing. A uses the default handler, which can't parse CSV.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "8a34f9a57a529679753b7de41954b78c6916b6ce2f6baada178a9d2e3301b974",
+          "reason": "Uses legacy full name Gemini Enterprise Agent Platform. Stem bans a hand-written server or Dockerfile, ruling out C. Opening is abstract deployment with no application purpose. A and D are a near-pair; B is weak filler. Names CSV in stem.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "ERROR",
+          "input_sha256": "77b44c202493e70c015928653a31e1074fe34bb561f14a3864068c2b26957677",
+          "reason": null,
+          "error_class": "CLISchemaError",
+          "reason_length": 327,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 7,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "ok",
+      "source_sha256": [
+        "27fff07b100bd0c17ef571462e2900290aad6f4c0a4ab66b4115a19a96aff04a",
+        "ad754f1b45813dd077122f99272a1e9db8452a9d1dd84714bceaa14e655b0e18",
+        "3973955083c05d94a3caa828446d6cd3fed411d88420690d120bd0de37ccd6c9",
+        "532b87ace780695d886a5c307af76e94cec7a91ed2751541360e582cc6a6d5dc",
+        "67ee7d4b777ddd32c242d73d44787b3bfc90b53fe45492ac0940aaea04683359"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "1de9178729babbbbfe1d1613f36a6a8c57c1ebbcdfcd08952cc415b8bee91032",
+          "reason": "Vertex AI Pipelines (Agent Platform Pipelines) lifecycle: define KFP components/pipeline in Python, compile to YAML with kfp.compiler.Compiler, run via aiplatform.PipelineJob with template path and GCS pipeline_root. Others use Ray, raw .py, or Agent Runtime, which are incorrect.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "dc51007965b97424bc264aee4586c62e6f9983b87ac41e79409b24a0439e85c0",
+          "reason": "Stem stacks four requirements, says \"documented lifecycle\", uses the legacy full name, and has no business purpose. Options A and D are throwaway distractors, and B hinges on a file-format gotcha.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "ERROR",
+          "input_sha256": "5205bd4c4dccd4712b24b898cd0678d23d53198cda3a28bfb3dcece293d8036d",
+          "reason": null,
+          "error_class": "CLISchemaError",
+          "reason_length": 316,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 8,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "ok",
+      "source_sha256": [
+        "74e854b7026108d5b0b46764ea141c49e56ca55c3aee8a5a26d0e9ed4e89efd2",
+        "91864ab88811b0bdbfb03a45c9c6722a4aaa910c59db2bc462c2b0c35fad5ebb",
+        "d2994bba5f9ddc090a7b6a6b87a898bf1e70782d66545eaa9a467f5e5c66d4b1",
+        "b5e18dde4094c76b4f944f95b47b8c6a9c1223bb7bedae9bf05d433b2996e690",
+        "257b2996a5ac3387acc83640240e74fb83e302eb41ab95071f6ad6641bb7cb4f"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "81db558400e582e02b682b1d14b3359b7f40955ab6c2e36864c85a747034ab44",
+          "reason": "An Online Monitor evaluates sampled live traces asynchronously, scores quality and safety metrics, and bounds cost with a sampling percentage and max samples per run. A only tracks infra metrics, C is pre-deployment offline, D adds synchronous latency.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "5dca16dc1612687dc39b57eda9edfa819cfebd643fb0149419391cc5a3dd0f25",
+          "reason": "Uses the legacy full name \"Gemini Enterprise Agent Platform\" in the stem and options (S11). The stem stacks several requirements. Option D contradicts the stated no-latency need, so it is filler. The online monitoring decision itself is meaningful.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "ERROR",
+          "input_sha256": "07467d20b6edbc3878a6aac7400edee1371e7f8d451b4a4134d7e1dd1bc03918",
+          "reason": null,
+          "error_class": "CLISchemaError",
+          "reason_length": 314,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 9,
+      "round": "round4 (rules v2)",
+      "founder": "ok",
+      "source_sha256": [
+        "8a8c9911154c7d5db6913966889f430d4f47d2c74a92a8719a0c26ea6b69774f",
+        "c5c93b25fbdb247e4a2f21dfe66bf04e7e48d1412584faec9408f5e529aae961",
+        "41f4837ad208b427e4ec6fd2da0fcaddcb802777c86cf70bac6906a541cb07ae",
+        "84ea9e9797273def8814c23e68d4e22619b6dbb1cd0b40909dde298d142f04d3",
+        "91f4ee496236be094f1c1b2bff6d243fd949a711c080bbe27e67a795044bbb9a"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "9dbd4ea4ae12490ddb64cb480bc7231aafee37bd8f0d31896780fbf586115b86",
+          "reason": "Supervised tuning via a BigQuery ML remote model keeps the SQL workflow. The custom evaluation split uses the Boolean marker to select the reserved rows. C uses automatic splitting, which ignores the reserved rows. B leaves BigQuery. D is few-shot prompting, not tuning.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "PASS",
+          "input_sha256": "f4c56e40a90134ae356b56012e0e390bbc83ef9b771c04642f955a96434fddbb",
+          "reason": "Realistic tuning decision: stay in BigQuery ML versus export, and honor the reserved evaluation rows. A and C form one allowed near-pair that differs only in the split. The custom-split detail leans slightly on feature knowledge, but options are plausible and balanced.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "c1ffead5b931984283d89fff12b25c44a1f996c90be39152b5f542e26b490df5",
+          "reason": "Docs support BigQuery ML supervised Gemini tuning via CREATE MODEL AS SELECT, with CUSTOM split on a BOOL column (TRUE/NULL eval, FALSE train). AUTO_SPLIT uses all rows under 500. Studio tuning needs Cloud Storage JSONL. Prompting doesn't train.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 10,
+      "round": "round4 (rules v2)",
+      "founder": "flag",
+      "source_sha256": [
+        "7cfd10226b59c07b446524826486da0c251a8f3f3b468b367af095aa12657b11",
+        "4b79962b5046dd7621857b844c064dc0a4e0827075dc2f6a70bfbdc8d7bc566f",
+        "4d706bad6013db6cdf5005694d577e986d4f43718fbf3c1521b44651ae435561",
+        "a23a602e2d17261dba1138064d5a3d1072c97f8a0626ebbe1800937ac9516b04",
+        "1dc205402814c56674704e19f06b5fa570f7da0082b9f590b829d9c93a511026"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "69d982d46c69908ad62533cc2140040f2efb02f00c4cec03be835e8f16c3b7ad",
+          "reason": "Interactive notebook fine-tuning with revisable training code in an existing Workbench instance points to Model Garden's Open notebook on each model card. A is a managed pipeline, not interactive. C only tries out models. B adds an unnecessary Space step.",
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "INTERRUPTED",
+          "input_sha256": "928592231ef14e58cec6ff0bba347581602ca66b35747691a67a59c57367289b",
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "INTERRUPTED",
+          "input_sha256": "b38eccefa2aae25cfd90503013242756ff67477609b6c7a68d7c5200f4ae565c",
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 11,
+      "round": "round4 (rules v2)",
+      "founder": "ok",
+      "source_sha256": [
+        "84ea9e9797273def8814c23e68d4e22619b6dbb1cd0b40909dde298d142f04d3",
+        "4d706bad6013db6cdf5005694d577e986d4f43718fbf3c1521b44651ae435561",
+        "ca4e4a87a34d138ffdbc4f6149eee91fb76bdcf2c2accf6828bea67f23c9955a",
+        "41f4837ad208b427e4ec6fd2da0fcaddcb802777c86cf70bac6906a541cb07ae"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "INTERRUPTED",
+          "input_sha256": "b1cf27167743fb444a023ea4752f8daa7599092d8b60a38d990719336336f2fd",
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 12,
+      "round": "round4 (rules v2)",
+      "founder": "flag",
+      "source_sha256": [
+        "aa38d33724439e1919a0656b5434440fbd9706ef58e914db17e1170ffbbcbf32",
+        "522963fafca6578b5367cdbf2367a3d54bb41cb6666ddd2f2f3e6a9b6b34688a",
+        "56095bc3e16080bd1070572e7cd1cdbc30b429ac7b97b0ed4a99fdac30975d2c",
+        "5ef614a983678e517fb9ed0aa7b9c4e14dfc753adf52b84761c0b2fa8754cdd1",
+        "0e74c2475d1ad035baea70fbfc2f76ec610c15879db68dfbe48edd8c73711639"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 13,
+      "round": "round4 (rules v2)",
+      "founder": "ok",
+      "source_sha256": [
+        "74e854b7026108d5b0b46764ea141c49e56ca55c3aee8a5a26d0e9ed4e89efd2",
+        "91864ab88811b0bdbfb03a45c9c6722a4aaa910c59db2bc462c2b0c35fad5ebb",
+        "d2994bba5f9ddc090a7b6a6b87a898bf1e70782d66545eaa9a467f5e5c66d4b1",
+        "b5e18dde4094c76b4f944f95b47b8c6a9c1223bb7bedae9bf05d433b2996e690",
+        "257b2996a5ac3387acc83640240e74fb83e302eb41ab95071f6ad6641bb7cb4f"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 14,
+      "round": "round4 (rules v2)",
+      "founder": "flag",
+      "source_sha256": [
+        "81b24d32ed47192c7036d4294ef0269977647e9f6e6b24bdb30755a8b318ba44",
+        "10f91c667de7a5ebfb14222795c6899e4ce474df490b2766ce6c89a3bbd1f194",
+        "d2dd6f7828b63862e662822d93ad10db270bedb1ca6bc73c16ae1404ed82fc64",
+        "a62e3a532e44f3bf66df54789356e7b52a61fc8b0b156aa8e8bc504bb3d2fa4c",
+        "9f886e12df615ff42a8ce10d66593caa0ea712950640f198e382f01d752df9c7"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 15,
+      "round": "round4 (rules v2)",
+      "founder": "flag",
+      "source_sha256": [
+        "9ae4a198780f14c87e4e9dcfb23aea208f5c1ad28cb34fb12bd3f02c7a79aa32",
+        "3ef1f0a7b117eb4a60e91a9c0c6e7c883e4b26226502e99d5539907ecea4d2be",
+        "1265b512495cb3566b28beb6259790c366c63d29db45da4c6955c90b7aab130c",
+        "05d2ccc2e5202950152951a29215afec2848948c9039f44dc2ec669d4d87a225",
+        "69cb152447624015031844b5d468711dab9608719b005fca8d7bdee369f4c2db"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 16,
+      "round": "round5 (rules v3)",
+      "founder": "flag",
+      "source_sha256": [
+        "81b24d32ed47192c7036d4294ef0269977647e9f6e6b24bdb30755a8b318ba44",
+        "10f91c667de7a5ebfb14222795c6899e4ce474df490b2766ce6c89a3bbd1f194",
+        "d2dd6f7828b63862e662822d93ad10db270bedb1ca6bc73c16ae1404ed82fc64",
+        "a62e3a532e44f3bf66df54789356e7b52a61fc8b0b156aa8e8bc504bb3d2fa4c",
+        "9f886e12df615ff42a8ce10d66593caa0ea712950640f198e382f01d752df9c7"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 17,
+      "round": "round5 (rules v3)",
+      "founder": "ok",
+      "source_sha256": [
+        "7cfd10226b59c07b446524826486da0c251a8f3f3b468b367af095aa12657b11",
+        "4b79962b5046dd7621857b844c064dc0a4e0827075dc2f6a70bfbdc8d7bc566f",
+        "4d706bad6013db6cdf5005694d577e986d4f43718fbf3c1521b44651ae435561",
+        "a23a602e2d17261dba1138064d5a3d1072c97f8a0626ebbe1800937ac9516b04",
+        "1dc205402814c56674704e19f06b5fa570f7da0082b9f590b829d9c93a511026"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 18,
+      "round": "round5 (rules v3)",
+      "founder": "ok",
+      "source_sha256": [
+        "21788ddcdee9c84755255676f0e5c2503e187fdc97b75144ae80b02e15e29555",
+        "9c637299f35f8e358126e7dc2568d19715feec2f7102c6370884a882a81fa1f2",
+        "a4bac323539d828eaebd444c05c76cb7244a5d9b6ea3f1d8813f1fcba581130d",
+        "bec7a45c27bb98c7cf7d5edaa9bd5ffc6f31f67096cbe3d759d517bfbdc16cb8",
+        "b4af5a3cf85a2d0d1fd47f83fc7aa9e0836ef29f3673b9d6fb75340c059a48bd"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 19,
+      "round": "round5 (rules v3)",
+      "founder": "flag",
+      "source_sha256": [
+        "87658e26deb099324c467262c78f21e4167bc8df59e57bb57cac837c747645dd",
+        "186e04379e18ecfd2e25601f49f50fbccbc242ad204664ab5fed9262fdbe71dc",
+        "66a1367bb4d6a310ab75c6df3b7b24af865b54ea78e0598267db0241cb514a3a",
+        "5cd9e1be24704c9a7e2b3ac1d48afc63507df80251366855ea81244cecae53b7",
+        "65a916c3d558781ea8ffcf29c1e64a1b62a025a450ea5b342abe649f528b4aed"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 20,
+      "round": "round5 (rules v3)",
+      "founder": "flag",
+      "source_sha256": [
+        "3973955083c05d94a3caa828446d6cd3fed411d88420690d120bd0de37ccd6c9",
+        "27fff07b100bd0c17ef571462e2900290aad6f4c0a4ab66b4115a19a96aff04a",
+        "67ee7d4b777ddd32c242d73d44787b3bfc90b53fe45492ac0940aaea04683359",
+        "ad754f1b45813dd077122f99272a1e9db8452a9d1dd84714bceaa14e655b0e18"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        }
+      }
+    },
+    {
+      "item_id": 21,
+      "round": "round5 (rules v3)",
+      "founder": "flag",
+      "source_sha256": [
+        "74e854b7026108d5b0b46764ea141c49e56ca55c3aee8a5a26d0e9ed4e89efd2",
+        "91864ab88811b0bdbfb03a45c9c6722a4aaa910c59db2bc462c2b0c35fad5ebb",
+        "d2994bba5f9ddc090a7b6a6b87a898bf1e70782d66545eaa9a467f5e5c66d4b1",
+        "b5e18dde4094c76b4f944f95b47b8c6a9c1223bb7bedae9bf05d433b2996e690",
+        "257b2996a5ac3387acc83640240e74fb83e302eb41ab95071f6ad6641bb7cb4f"
+      ],
+      "gates": {
+        "blind_solver": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "style": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        },
+        "evidence": {
+          "status": "SKIP",
+          "input_sha256": null,
+          "reason": null,
+          "error_class": null,
+          "reason_length": null,
+          "schema_reason_bound": null
+        }
+      }
+    }
+  ]
+}

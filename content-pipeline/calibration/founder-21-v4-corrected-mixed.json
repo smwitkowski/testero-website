@@ -1,0 +1,2865 @@
+{
+  "version": 4,
+  "iteration": "v4-corrected-mixed",
+  "backend": "claude/claude-sonnet-5-5",
+  "parallel": 3,
+  "call_budget": {
+    "maximum": 150,
+    "reserved": 146,
+    "completed": 124,
+    "failed": 19,
+    "unresolved": 3,
+    "remaining": 4
+  },
+  "iteration_calls_reserved": 42,
+  "blind_style_totals": {
+    "flagged": 13,
+    "ok": 8,
+    "rejected_flagged": 12,
+    "retained_ok": 3
+  },
+  "all_gates_totals": {
+    "flagged": 13,
+    "ok": 8,
+    "rejected_flagged": 12,
+    "retained_ok": 3
+  },
+  "targets": {
+    "reject_flagged_at_least": 11,
+    "retain_ok_at_least": 6
+  },
+  "targets_met": false,
+  "mixed_provenance": true,
+  "gate_status_totals": {
+    "blind_solver": {
+      "PASS": 20,
+      "FAIL": 1,
+      "ERROR": 0,
+      "SKIP": 0
+    },
+    "style": {
+      "PASS": 4,
+      "FAIL": 17,
+      "ERROR": 0,
+      "SKIP": 0
+    },
+    "evidence": {
+      "PASS": 17,
+      "FAIL": 4,
+      "ERROR": 0,
+      "SKIP": 0
+    }
+  },
+  "founder_ok_policy_conflicts": [
+    3,
+    7,
+    8,
+    18
+  ],
+  "limitations": [
+    "Small-sample calibration, not validation or approval.",
+    "Whole round held out from founder-ok learner-only exemplars.",
+    "Frozen product documentation only; no retrieval or database access.",
+    "Founder labels/notes used only in selection and reporting, never in gate inputs.",
+    "Reservations count against budget even after interruption; no automatic retries."
+  ],
+  "items": [
+    {
+      "item_id": 1,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "flag",
+      "capture": "pmle-d025-first-30.json",
+      "exemplar_count": 5,
+      "exemplar_sha256": "f414bff903e30daac7bd92a48acf03531ee9f1b92b2384e152d71b27b5610ded",
+      "source_sha256": [
+        "a23a602e2d17261dba1138064d5a3d1072c97f8a0626ebbe1800937ac9516b04",
+        "58a9424342dbf1e423e3c35515077c4987344fdb580c9b571a3ba975ccc7467e",
+        "4b79962b5046dd7621857b844c064dc0a4e0827075dc2f6a70bfbdc8d7bc566f",
+        "4d706bad6013db6cdf5005694d577e986d4f43718fbf3c1521b44651ae435561",
+        "7cfd10226b59c07b446524826486da0c251a8f3f3b468b367af095aa12657b11"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/open-models/choose-serving-option",
+            "original_text_sha256": "58a9424342dbf1e423e3c35515077c4987344fdb580c9b571a3ba975ccc7467e",
+            "original_characters": 5986,
+            "included_characters": 5986,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                5986
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/quickstart",
+            "original_text_sha256": "7cfd10226b59c07b446524826486da0c251a8f3f3b468b367af095aa12657b11",
+            "original_characters": 11998,
+            "included_characters": 11998,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                11998
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "443d4c82ffd3bef0c1c4756850974c5eab2c0fe6028a865924f3dbeeb79d6230",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Self-deploy to a dedicated endpoint in the project/VPC meets the isolation requirement and suits steady high-volume traffic for TCO. A prebuilt optimized vLLM container avoids custom image upkeep. MaaS is multi-tenant, Spaces/Cloud Run is public, and a custom container adds the burden.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.9,
+          "choice": "A",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "443d4c82ffd3bef0c1c4756850974c5eab2c0fe6028a865924f3dbeeb79d6230",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "f0992bacf5683bf2d99c369f7bc3feffa70a7aaa090619d27a2da37bc37a5338",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "227d1eaa72d5f194e3580d436ee0240209f6fae2dae51dc562b60e55ed685ecf",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "No concrete application opening; stacked requirements list (\"must satisfy the following\"); legacy \"Gemini Enterprise Agent Platform\" name. B (public endpoints) and D (MaaS) are ruled out by literal stem facts, so distractors are weak.",
+          "checks": {
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": false,
+            "distractors_plausible": false,
+            "distractors_need_knowledge": false,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": false,
+            "constraints_as_wants": false,
+            "decisions_not_syntax": true
+          },
+          "score": 0.3,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "227d1eaa72d5f194e3580d436ee0240209f6fae2dae51dc562b60e55ed685ecf",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "2f0adbec093194a9373c2d85ae2769d3627313b7bb6b3d2dd692599c0aab96f5",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "7a6a8f37566a04dee74a076a9c84c928bd12a548d890fede6b70d37483cfc7ea",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "Docs support self-deployment for multi-tenant prohibition and VPC, lower TCO at predictable volume, prebuilt containers avoiding custom images, custom vLLM for custom logic, and the Spaces organization restriction. MaaS is serverless managed.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.9,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "7a6a8f37566a04dee74a076a9c84c928bd12a548d890fede6b70d37483cfc7ea",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "9215c3cb87c25567dc4ea2251fb8d33b8e7596d9f63101df326f76e996fb445a",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 2,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "flag",
+      "capture": "pmle-d025-second-16.json",
+      "exemplar_count": 5,
+      "exemplar_sha256": "f414bff903e30daac7bd92a48acf03531ee9f1b92b2384e152d71b27b5610ded",
+      "source_sha256": [
+        "4b79962b5046dd7621857b844c064dc0a4e0827075dc2f6a70bfbdc8d7bc566f",
+        "4d706bad6013db6cdf5005694d577e986d4f43718fbf3c1521b44651ae435561",
+        "223793133ee3fdb808dacb2624fa6cf2f966366a652fa17245992b0a8a4bbdbc",
+        "54c7fbea91a3fa71e7c032f3edc603c97ed00d9bd25300e8bbd8831ead0db803",
+        "a23a602e2d17261dba1138064d5a3d1072c97f8a0626ebbe1800937ac9516b04"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning/image",
+            "original_text_sha256": "54c7fbea91a3fa71e7c032f3edc603c97ed00d9bd25300e8bbd8831ead0db803",
+            "original_characters": 6465,
+            "included_characters": 6465,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                6465
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "7b094558d4b9b5e377bb8980f2b4cea8b6bd147901c85667727d119ab04f01b5",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Gemini multimodal SFT uses JSONL with fileData GCS URIs in user contents and expected model responses, with mediaResolution set high for fine detail. A uses LOW (wrong), B is Imagen generation (wrong task), D uses invalid Base64 text and a nonexistent imageQuality parameter.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.92,
+          "choice": "C",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "7b094558d4b9b5e377bb8980f2b4cea8b6bd147901c85667727d119ab04f01b5",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "71de35259353e15a38841ca0f64484aa7c2545527315d2063afdfc9b42793882",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "1e93bca82a6318f5ba2fbbff4ebebb1f475801ea3a8e3d37f14ddb86598d8a5c",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "Uses legacy \"Gemini Enterprise Agent Platform\" name and \"supported platform specifications\" documentation voice. Key hinges on mediaResolution setting values; A, B and D are weak or giveaway distractors. Tests settings, not an engineering decision.",
+          "checks": {
+            "decision_level": false,
+            "no_hidden_gotcha": false,
+            "current_names": false,
+            "distractors_plausible": false,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": false,
+            "scenario_clear": false,
+            "business_context": true,
+            "constraints_as_wants": false,
+            "decisions_not_syntax": false
+          },
+          "score": 0.2,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "1e93bca82a6318f5ba2fbbff4ebebb1f475801ea3a8e3d37f14ddb86598d8a5c",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "ee61eae49f9ed663bbe6feefd80e880cbb4dd93e0fb32bcca433a5458e82db1c",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "FAIL",
+          "input_sha256": "c6ba30c8a614ed1971b4dcc6f1310a4d87bb7315b8d404178c3e3a6b6ad8c29f",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "The key matches the docs: fileData with a Cloud Storage fileUri, and mediaResolution HIGH for more detail. D2 and D3 are rejected on documented facts. D1 is rejected mainly because the docs don't mention Base64 inline data or imageQuality, which is absence-based.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": false,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": false
+          },
+          "score": 0.6,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "c6ba30c8a614ed1971b4dcc6f1310a4d87bb7315b8d404178c3e3a6b6ad8c29f",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "5cb08b07615899f22024692a069658d5a839249a388e458cd6a97ba0602e5c0f",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 3,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "ok",
+      "capture": "pmle-d025-second-16.json",
+      "exemplar_count": 5,
+      "exemplar_sha256": "f414bff903e30daac7bd92a48acf03531ee9f1b92b2384e152d71b27b5610ded",
+      "source_sha256": [
+        "9ae4a198780f14c87e4e9dcfb23aea208f5c1ad28cb34fb12bd3f02c7a79aa32",
+        "3ef1f0a7b117eb4a60e91a9c0c6e7c883e4b26226502e99d5539907ecea4d2be",
+        "1265b512495cb3566b28beb6259790c366c63d29db45da4c6955c90b7aab130c",
+        "05d2ccc2e5202950152951a29215afec2848948c9039f44dc2ec669d4d87a225",
+        "69cb152447624015031844b5d468711dab9608719b005fca8d7bdee369f4c2db"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/featurestore",
+            "original_text_sha256": "3ef1f0a7b117eb4a60e91a9c0c6e7c883e4b26226502e99d5539907ecea4d2be",
+            "original_characters": 3099,
+            "included_characters": 3099,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                3099
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/featurestore/latest/create-feature",
+            "original_text_sha256": "1265b512495cb3566b28beb6259790c366c63d29db45da4c6955c90b7aab130c",
+            "original_characters": 8611,
+            "included_characters": 8611,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                8611
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/featurestore/latest/create-featureview",
+            "original_text_sha256": "05d2ccc2e5202950152951a29215afec2848948c9039f44dc2ec669d4d87a225",
+            "original_characters": 40126,
+            "included_characters": 40126,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                40126
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "7bca050162161aa1ae9d1f999d08a05618fb18d372a8acfca2f6d9d7e5e89184",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Vertex AI Feature Store (Bigtable-based) uses FeatureGroup per BigQuery source with Features, and a FeatureView can reference multiple feature groups. Time-series history is retained in BigQuery for point-in-time retrieval. The other options use legacy or invalid configurations.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.93,
+          "choice": "C",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "7bca050162161aa1ae9d1f999d08a05618fb18d372a8acfca2f6d9d7e5e89184",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "0f764880b1aa8a02e05fc03a6b174d7a6e6289afb150dfdd0df6dd778989d6e0",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "2b976d38e9f74c615ea706736b831cd53b3dc4627174023fc148366afc1a4833",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "Uses banned legacy name \"Gemini Enterprise Agent Platform\" and opens as an abstract design task with no business purpose. The key hinges on Feature Store resource-model trivia. Options B and D describe invented or broken config; A is a legacy throwaway.",
+          "checks": {
+            "decision_level": false,
+            "no_hidden_gotcha": false,
+            "current_names": false,
+            "distractors_plausible": false,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": false,
+            "constraints_as_wants": false,
+            "decisions_not_syntax": false
+          },
+          "score": 0.3,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "2b976d38e9f74c615ea706736b831cd53b3dc4627174023fc148366afc1a4833",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "0eba2ef2bd91d72a004cd0feaa8bd91106579258104effae25a78e355f4169cc",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "a154c4db521322c0972c714372f45d7845acdd3dd3c8d647dde7a75532035f91",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "Docs support the key: a feature group per BigQuery table, features per column, one feature view with multiple feature groups. Feature groups allow feature_timestamp and history; direct BigQuery sources forbid both. Weak spots: legacy Featurestore is only indirectly rejected.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.82,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "a154c4db521322c0972c714372f45d7845acdd3dd3c8d647dde7a75532035f91",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "5a9bcf327bda8eeaa246474c8fc83f504a4f173cfd49160bbebf62a48116fb4c",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 4,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "flag",
+      "capture": "pmle-d025-first-30.json",
+      "exemplar_count": 5,
+      "exemplar_sha256": "f414bff903e30daac7bd92a48acf03531ee9f1b92b2384e152d71b27b5610ded",
+      "source_sha256": [
+        "21788ddcdee9c84755255676f0e5c2503e187fdc97b75144ae80b02e15e29555",
+        "9c637299f35f8e358126e7dc2568d19715feec2f7102c6370884a882a81fa1f2",
+        "a4bac323539d828eaebd444c05c76cb7244a5d9b6ea3f1d8813f1fcba581130d",
+        "bec7a45c27bb98c7cf7d5edaa9bd5ffc6f31f67096cbe3d759d517bfbdc16cb8",
+        "b4af5a3cf85a2d0d1fd47f83fc7aa9e0836ef29f3673b9d6fb75340c059a48bd"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/bigquery/docs/xai-overview",
+            "original_text_sha256": "21788ddcdee9c84755255676f0e5c2503e187fdc97b75144ae80b02e15e29555",
+            "original_characters": 5048,
+            "included_characters": 5048,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                5048
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "fea9d3c63a5c386e927b8c615ab8841d437b9ece725cbf66129b1f861612f190",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Boosted Tree is a tree ensemble in BigQuery ML. Tree SHAP gives exact local attributions via ML.EXPLAIN_PREDICT and global ones via ML.GLOBAL_EXPLAIN. B is not a BQML model type, C misuses ML.FEATURE_IMPORTANCE, and D is not tree-based.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.9,
+          "choice": "A",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "fea9d3c63a5c386e927b8c615ab8841d437b9ece725cbf66129b1f861612f190",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "d91339334b2874c7ef8a5a976f497fdc03eb8b583978b492929fd02157a6be92",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "addfeee54ac7fa18f8ac1de2d856fd4551b165a80f35f8be8bcfcea16853148c",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "Uses banned \"Stakeholders have established... requirements\" bulleted list with three stacked requirements. Asks for model type plus explainability config, which reads as BigQuery ML function trivia. Options B and D are weak or giveaway, and the stem lacks a purpose-first opening.",
+          "checks": {
+            "decision_level": false,
+            "no_hidden_gotcha": false,
+            "current_names": true,
+            "distractors_plausible": false,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": false,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": false,
+            "decisions_not_syntax": false
+          },
+          "score": 0.3,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "addfeee54ac7fa18f8ac1de2d856fd4551b165a80f35f8be8bcfcea16853148c",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "320f5c2884fdc4f4ab217c48a5c1dc60ca48ec5987b599bd26471c92f206482e",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "3b8c5b7b3433128b4489c3af6e41dd45a7f839c7dc70b56ad7bbaad8768d7fb2",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "Doc table: Boosted trees use Tree SHAP (exact SHAP) with ML.EXPLAIN_PREDICT (local) and ML.GLOBAL_EXPLAIN (global). AutoML Tables has local N/A. Gini ML.FEATURE_IMPORTANCE is global only. Logistic Regression's ADVANCED_WEIGHTS has local N/A. Each distractor loses on a stated requirement.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.93,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "3b8c5b7b3433128b4489c3af6e41dd45a7f839c7dc70b56ad7bbaad8768d7fb2",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "e1f15a5d2335178da9b24489bd4e9dbb4741118440ce70fb078c8e20f41ad282",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 5,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "flag",
+      "capture": "pmle-d025-second-16.json",
+      "exemplar_count": 5,
+      "exemplar_sha256": "f414bff903e30daac7bd92a48acf03531ee9f1b92b2384e152d71b27b5610ded",
+      "source_sha256": [
+        "aa38d33724439e1919a0656b5434440fbd9706ef58e914db17e1170ffbbcbf32",
+        "522963fafca6578b5367cdbf2367a3d54bb41cb6666ddd2f2f3e6a9b6b34688a",
+        "56095bc3e16080bd1070572e7cd1cdbc30b429ac7b97b0ed4a99fdac30975d2c",
+        "5ef614a983678e517fb9ed0aa7b9c4e14dfc753adf52b84761c0b2fa8754cdd1",
+        "0e74c2475d1ad035baea70fbfc2f76ec610c15879db68dfbe48edd8c73711639"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/deploy/docs/deployment-strategies/canary",
+            "original_text_sha256": "aa38d33724439e1919a0656b5434440fbd9706ef58e914db17e1170ffbbcbf32",
+            "original_characters": 7603,
+            "included_characters": 7603,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                7603
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/deploy/docs/deployment-strategies/canary/cloud-run",
+            "original_text_sha256": "522963fafca6578b5367cdbf2367a3d54bb41cb6666ddd2f2f3e6a9b6b34688a",
+            "original_characters": 9123,
+            "included_characters": 9123,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                9123
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/rolling-deployment",
+            "original_text_sha256": "0e74c2475d1ad035baea70fbfc2f76ec610c15879db68dfbe48edd8c73711639",
+            "original_characters": 11346,
+            "included_characters": 11346,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                11346
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "f0420766470e56b20dde153c8001c4ab6222f96605443c6d05842fe8691944fa",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Cloud Deploy canary for Cloud Run needs automaticTrafficControl: true and a manifest without a traffic stanza. Percentages [25, 50] are right because the 100% stable phase is added automatically. A is Vertex AI, B disables automation, and D hardcodes traffic.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.9,
+          "choice": "C",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "f0420766470e56b20dde153c8001c4ab6222f96605443c6d05842fe8691944fa",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "e200ce104161efe6dc3ba69726ab399e3963c45b8d6341b555dc68c28eba42d4",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "638123f319937a53836f2a59be202b4271301bf0544ffec42d7e39646bc677d9",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "Opening lacks business purpose. Options hinge on config trivia (traffic stanza, automaticTrafficControl, percentage lists). Option A is an off-topic Vertex endpoint setting, so it is filler. Options B, C and D are near-clones.",
+          "checks": {
+            "decision_level": false,
+            "no_hidden_gotcha": false,
+            "current_names": true,
+            "distractors_plausible": false,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": false,
+            "scenario_clear": true,
+            "business_context": false,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": false
+          },
+          "score": 0.2,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "638123f319937a53836f2a59be202b4271301bf0544ffec42d7e39646bc677d9",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "3951b530bac7a4ca4ca0a4f30b8e12e6bfd19eed795d015a91903c356848dc78",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "2ae28ee554d2c1647d2f4f4c1b4cb47844bcc69332a9c25d46a9f32cd263ab0f",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "The Cloud Run canary doc supports the key: a service definition without a traffic stanza, automaticTrafficControl: true, and percentages that omit 100. The canary overview doc bars 100% for Cloud Run. The rolling-deployment doc supports rejecting maxSurgeReplicas as a Vertex-style rollout option.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.92,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "2ae28ee554d2c1647d2f4f4c1b4cb47844bcc69332a9c25d46a9f32cd263ab0f",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "8a8c0cb23db6a1635edc2739edd8a68add82c12b39e5ff5ee7afe473bb9477f0",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 6,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "flag",
+      "capture": "pmle-d025-first-30.json",
+      "exemplar_count": 5,
+      "exemplar_sha256": "f414bff903e30daac7bd92a48acf03531ee9f1b92b2384e152d71b27b5610ded",
+      "source_sha256": [
+        "ddb724100dfb8a1c7949a019accce679c50df6e6ac7b49dc2624212f6ee85ae4",
+        "0529984e68e330279ef4ae2c96508d66bb2cf9790ebfbf99cd21c952c98651d0",
+        "0ae6f85f05c24ef37453b3224e82d689ca82a77497afe0293bcf527cb9a8f487",
+        "b2cf5cb30eac3f151c6f461381653174d96de81528a5ee4f6ee30e81548e4bc2"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/custom-prediction-routines",
+            "original_text_sha256": "ddb724100dfb8a1c7949a019accce679c50df6e6ac7b49dc2624212f6ee85ae4",
+            "original_characters": 6379,
+            "included_characters": 6379,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                6379
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/architecture/ml-on-gcp-best-practices",
+            "original_text_sha256": "0ae6f85f05c24ef37453b3224e82d689ca82a77497afe0293bcf527cb9a8f487",
+            "original_characters": 36888,
+            "included_characters": 36888,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                36888
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "10c71904e3d172b210d53fd2bf8504670db67996ab44d80a425935e41662bfa6",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Custom prediction routines need a custom Handler for raw CSV deserialization and a Predictor for pre/postprocessing. LocalModel.build_cpr_model builds the container, and deploy_to_local_endpoint tests it locally. A uses the default handler, which can't parse CSV. B and C don't fit the requirements.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.93,
+          "choice": "D",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "10c71904e3d172b210d53fd2bf8504670db67996ab44d80a425935e41662bfa6",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "e3bb0e4643e5c7f8840cda5211b635a93006d19a5c7efb8348468b84796de85e",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "7fa951c82b63219369f579a851aacd785ec5073ae49f1565f5542851fe3aad16",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "Uses the legacy full name \"Gemini Enterprise Agent Platform\" (S11). The stem names CSV, JSON and Dockerfile, and it stacks several wants. It opens with a deployment task, not a business purpose. Option B is a throwaway, and A and D are a near-pair.",
+          "checks": {
+            "decision_level": true,
+            "no_hidden_gotcha": false,
+            "current_names": false,
+            "distractors_plausible": false,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": false,
+            "scenario_clear": true,
+            "business_context": false,
+            "constraints_as_wants": false,
+            "decisions_not_syntax": true
+          },
+          "score": 0.3,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "7fa951c82b63219369f579a851aacd785ec5073ae49f1565f5542851fe3aad16",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "f105068c212c1ed450546285b961e818fa5d4a486fd29d92abe81770896dcdf1",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "FAIL",
+          "input_sha256": "d6bc3e26533351c3dab2e4974fd0232a2270dcead3c4b542d8c4a933ab1ff94a",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "Key is supported: docs cover CPR, Handler for non-JSON input, build_cpr_model, deploy_to_local_endpoint, Model Registry upload. Distractor 2's rejection (prebuilt containers can't run env-var scripts or handle CSV) is undocumented. Distractor 3's 'default handler JSON-only' is only implied.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": false,
+            "evidence_supported": false,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": false
+          },
+          "score": 0.6,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "d6bc3e26533351c3dab2e4974fd0232a2270dcead3c4b542d8c4a933ab1ff94a",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "5ed9f492bae4a715641873cbe448e1a63358cfe3862ed2354005247e2ecd761b",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 7,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "ok",
+      "capture": "pmle-d025-first-30.json",
+      "exemplar_count": 5,
+      "exemplar_sha256": "f414bff903e30daac7bd92a48acf03531ee9f1b92b2384e152d71b27b5610ded",
+      "source_sha256": [
+        "27fff07b100bd0c17ef571462e2900290aad6f4c0a4ab66b4115a19a96aff04a",
+        "ad754f1b45813dd077122f99272a1e9db8452a9d1dd84714bceaa14e655b0e18",
+        "3973955083c05d94a3caa828446d6cd3fed411d88420690d120bd0de37ccd6c9",
+        "532b87ace780695d886a5c307af76e94cec7a91ed2751541360e582cc6a6d5dc",
+        "67ee7d4b777ddd32c242d73d44787b3bfc90b53fe45492ac0940aaea04683359"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/pipelines/introduction",
+            "original_text_sha256": "27fff07b100bd0c17ef571462e2900290aad6f4c0a4ab66b4115a19a96aff04a",
+            "original_characters": 13688,
+            "included_characters": 13688,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                13688
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/open-source/ray",
+            "original_text_sha256": "3973955083c05d94a3caa828446d6cd3fed411d88420690d120bd0de37ccd6c9",
+            "original_characters": 15406,
+            "included_characters": 15406,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                15406
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/pipelines/run-pipeline",
+            "original_text_sha256": "532b87ace780695d886a5c307af76e94cec7a91ed2751541360e582cc6a6d5dc",
+            "original_characters": 15748,
+            "included_characters": 15748,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                15748
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/build/runtime",
+            "original_text_sha256": "67ee7d4b777ddd32c242d73d44787b3bfc90b53fe45492ac0940aaea04683359",
+            "original_characters": 9904,
+            "included_characters": 9904,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                9904
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "1de9178729babbbbfe1d1613f36a6a8c57c1ebbcdfcd08952cc415b8bee91032",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Vertex AI Pipelines style lifecycle: define components with KFP SDK in Python, compile to YAML, run via PipelineJob with a Cloud Storage pipeline_root. It's serverless and auto-logs ML Metadata. A, B and D don't match the documented lifecycle.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.97,
+          "choice": "C",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "1de9178729babbbbfe1d1613f36a6a8c57c1ebbcdfcd08952cc415b8bee91032",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "63a416f45d47dc4599c3aeffdb32e7cf326f7ab03e3ec8153609e4d4c8f6249c",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "a24d769f7a019c565e2d7c54e85bef97be8a873474b2e28109052a22a45155d9",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "No concrete application in the opening. It stacks four requirements, says \"documented lifecycle\", and uses the legacy name \"Gemini Enterprise Agent Platform\". A and D are giveaway filler, and B turns on raw .py versus compiled YAML, which is format trivia.",
+          "checks": {
+            "decision_level": false,
+            "no_hidden_gotcha": false,
+            "current_names": false,
+            "distractors_plausible": false,
+            "distractors_need_knowledge": false,
+            "options_distinct_approaches": true,
+            "scenario_clear": false,
+            "business_context": false,
+            "constraints_as_wants": false,
+            "decisions_not_syntax": false
+          },
+          "score": 0.15,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "a24d769f7a019c565e2d7c54e85bef97be8a873474b2e28109052a22a45155d9",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "6d94f7f1f477eea24630a2d5e7b2b5cf8e8e963bdc49ab8aa2ad3579d5f2cbd1",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "FAIL",
+          "input_sha256": "76ec688c16c8484a387b36e1b48407dbd494e6f511ab5752ca77e2e8d24c2ce1",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "Docs support the key's core: define with KFP, compile to YAML, run via PipelineJob with a Cloud Storage root. They never name kfp.compiler.Compiler(). Distractor 1's claim that Ray doesn't record lineage and distractor 3's claim that raw .py can't run are inferred rather than documented.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": false,
+            "evidence_supported": false,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.7,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "76ec688c16c8484a387b36e1b48407dbd494e6f511ab5752ca77e2e8d24c2ce1",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "ad5853e290d565144d709ece648e840d32f01582d698f2856441fd7d44b82974",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 8,
+      "round": "round1-2 (Gemini writer)",
+      "founder": "ok",
+      "capture": "pmle-d025-first-30.json",
+      "exemplar_count": 5,
+      "exemplar_sha256": "f414bff903e30daac7bd92a48acf03531ee9f1b92b2384e152d71b27b5610ded",
+      "source_sha256": [
+        "74e854b7026108d5b0b46764ea141c49e56ca55c3aee8a5a26d0e9ed4e89efd2",
+        "91864ab88811b0bdbfb03a45c9c6722a4aaa910c59db2bc462c2b0c35fad5ebb",
+        "d2994bba5f9ddc090a7b6a6b87a898bf1e70782d66545eaa9a467f5e5c66d4b1",
+        "b5e18dde4094c76b4f944f95b47b8c6a9c1223bb7bedae9bf05d433b2996e690",
+        "257b2996a5ac3387acc83640240e74fb83e302eb41ab95071f6ad6641bb7cb4f"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-observability",
+            "original_text_sha256": "74e854b7026108d5b0b46764ea141c49e56ca55c3aee8a5a26d0e9ed4e89efd2",
+            "original_characters": 5573,
+            "included_characters": 5573,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                5573
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/optimize/evaluation/evaluate-online",
+            "original_text_sha256": "91864ab88811b0bdbfb03a45c9c6722a4aaa910c59db2bc462c2b0c35fad5ebb",
+            "original_characters": 7268,
+            "included_characters": 7268,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                7268
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/build/managed-agents/evaluate",
+            "original_text_sha256": "257b2996a5ac3387acc83640240e74fb83e302eb41ab95071f6ad6641bb7cb4f",
+            "original_characters": 6635,
+            "included_characters": 6635,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                6635
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "81db558400e582e02b682b1d14b3359b7f40955ab6c2e36864c85a747034ab44",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "An Online Monitor evaluates sampled live traces asynchronously, scores quality and safety metrics, and bounds cost via sampling percentage and max samples per run. A only tracks infrastructure metrics, C is pre-deployment only, and D adds synchronous latency.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.95,
+          "choice": "B",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "81db558400e582e02b682b1d14b3359b7f40955ab6c2e36864c85a747034ab44",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "9e88062804bfb53571c687dfc1d00b7d34558d6b7e0cdc00ac4f378df8f0f9d3",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "23c9c6a26228f4b5e504e377bdad702cafd3e6abbbd4cfd97648bb3e00285520",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "Stem and options use the banned full name 'Gemini Enterprise Agent Platform' instead of 'Agent Platform'. Option D is ruled out by the stem's own asynchronous, no-latency requirement, and C and A are weak fillers. The decision is reasonable but the item is mostly product matching.",
+          "checks": {
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": false,
+            "distractors_plausible": false,
+            "distractors_need_knowledge": false,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": false,
+            "decisions_not_syntax": true
+          },
+          "score": 0.3,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "23c9c6a26228f4b5e504e377bdad702cafd3e6abbbd4cfd97648bb3e00285520",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "bd97a0149b5372f396060731ec83ce8559b66e08b39352e8d53cb11a903aed84",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "09e73dd72da910aad68de4f0ad0f5740e318e7417c0c81834cb4d195392a39f6",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "Docs support the key: Cloud Trace required, async scoring of live traces, Safety metric, sampling percentage and max samples per run for cost. Distractors fail: the dashboard shows operational metrics, offline eval uses synthetic scenarios, and a synchronous proxy adds latency.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.9,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "09e73dd72da910aad68de4f0ad0f5740e318e7417c0c81834cb4d195392a39f6",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "0f629b17f4b65aa2a1b1924fe3e1d9ac84b62b0c51c6356cfa71289741c4a4a0",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 9,
+      "round": "round4 (rules v2)",
+      "founder": "ok",
+      "capture": "pmle-d025-r4-45.json",
+      "exemplar_count": 5,
+      "exemplar_sha256": "4be3ee3592d692e1a3c7fdac22ac4cd4f4a38f6316c630dcb067ea60ebd8740b",
+      "source_sha256": [
+        "8a8c9911154c7d5db6913966889f430d4f47d2c74a92a8719a0c26ea6b69774f",
+        "c5c93b25fbdb247e4a2f21dfe66bf04e7e48d1412584faec9408f5e529aae961",
+        "41f4837ad208b427e4ec6fd2da0fcaddcb802777c86cf70bac6906a541cb07ae",
+        "84ea9e9797273def8814c23e68d4e22619b6dbb1cd0b40909dde298d142f04d3",
+        "91f4ee496236be094f1c1b2bff6d243fd949a711c080bbe27e67a795044bbb9a"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create-remote-model-tuned",
+            "original_text_sha256": "8a8c9911154c7d5db6913966889f430d4f47d2c74a92a8719a0c26ea6b69774f",
+            "original_characters": 17743,
+            "included_characters": 17743,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                17743
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning/supervised-tuning/use",
+            "original_text_sha256": "41f4837ad208b427e4ec6fd2da0fcaddcb802777c86cf70bac6906a541cb07ae",
+            "original_characters": 42873,
+            "included_characters": 42873,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                42873
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning",
+            "original_text_sha256": "84ea9e9797273def8814c23e68d4e22619b6dbb1cd0b40909dde298d142f04d3",
+            "original_characters": 8734,
+            "included_characters": 8734,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                8734
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "9dbd4ea4ae12490ddb64cb480bc7231aafee37bd8f0d31896780fbf586115b86",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Supervised tuning learns from corrections. A BigQuery ML remote model keeps the SQL workflow. BigQuery ML supports a custom split using a Boolean column, so the reserved rows serve as evaluation. B leaves BigQuery, C uses random split, D is prompting only.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.88,
+          "choice": "A",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "9dbd4ea4ae12490ddb64cb480bc7231aafee37bd8f0d31896780fbf586115b86",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "705dcd1a0377b033ade4132babfa83816ff2a26b227e8c7a72d2b3e9d05d194c",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "PASS",
+          "input_sha256": "ab62f0d3b73304290779f24318b0154abd38f94132d4aeebcf685374767d3510",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "Business-first scenario with two natural wants. It tests a real choice: BigQuery ML tuning versus export to Studio versus prompting. B loses on SQL workflow disruption, C on the reserved evaluation rows, D on not tuning. Only A and C form a near-pair. The custom split is a mild feature detail.",
+          "checks": {
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true
+          },
+          "score": 0.84,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "ab62f0d3b73304290779f24318b0154abd38f94132d4aeebcf685374767d3510",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "1ae6311dc27c58a0039254fb859af6e6712924987f7b5049f2cabb9e52929dc1",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "44f92d218512cab2b5bcd0a055444ed5205f0a805a7bc015393ca6bebc76dda9",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "BigQuery ML docs support supervised Gemini tuning via CREATE MODEL ... AS SELECT. DATA_SPLIT_METHOD='CUSTOM' with a BOOL column makes TRUE/NULL rows evaluation data and FALSE rows training data. AUTO_SPLIT trains on all rows below 500. Studio needs Cloud Storage JSONL. Prompting is not tuning.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.9,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "44f92d218512cab2b5bcd0a055444ed5205f0a805a7bc015393ca6bebc76dda9",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "715e6e1cc1bbdc912b167dd83c2a672b9bca04cf91dc8fd977763dd9a09d666b",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": true,
+      "all_gates": "PASS"
+    },
+    {
+      "item_id": 10,
+      "round": "round4 (rules v2)",
+      "founder": "flag",
+      "capture": "pmle-d025-r4-45.json",
+      "exemplar_count": 5,
+      "exemplar_sha256": "4be3ee3592d692e1a3c7fdac22ac4cd4f4a38f6316c630dcb067ea60ebd8740b",
+      "source_sha256": [
+        "7cfd10226b59c07b446524826486da0c251a8f3f3b468b367af095aa12657b11",
+        "4b79962b5046dd7621857b844c064dc0a4e0827075dc2f6a70bfbdc8d7bc566f",
+        "4d706bad6013db6cdf5005694d577e986d4f43718fbf3c1521b44651ae435561",
+        "a23a602e2d17261dba1138064d5a3d1072c97f8a0626ebbe1800937ac9516b04",
+        "1dc205402814c56674704e19f06b5fa570f7da0082b9f590b829d9c93a511026"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/quickstart",
+            "original_text_sha256": "7cfd10226b59c07b446524826486da0c251a8f3f3b468b367af095aa12657b11",
+            "original_characters": 11998,
+            "included_characters": 11998,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                11998
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/use-models",
+            "original_text_sha256": "4d706bad6013db6cdf5005694d577e986d4f43718fbf3c1521b44651ae435561",
+            "original_characters": 48179,
+            "included_characters": 48179,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                48179
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "69d982d46c69908ad62533cc2140040f2efb02f00c4cec03be835e8f16c3b7ad",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Interactive notebook fine-tuning with revisable training code and minimal setup points to Model Garden's Open notebook, adapting the provided tuning notebook in Workbench. A is a pipeline, not notebook. B and C add exploratory steps that aren't needed first.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.8,
+          "choice": "D",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "69d982d46c69908ad62533cc2140040f2efb02f00c4cec03be835e8f16c3b7ad",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "5fde81fa994ae2df10c28472100029aca6d086186b8f5d7f47a8fc5c845f1c8c",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "318866f1c4118d89c03a8b411438afcd1bd95f30f68d4de647c9420309410c7e",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "The stem opens with an imperative (\"Prototype a reply-writing assistant...\"), which S10 forbids. Options lean on Model Garden UI labels (Open notebook, Try out panel), and \"first\" feels forced. The notebook-versus-pipeline decision and the B/D near-pair are otherwise acceptable.",
+          "checks": {
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true
+          },
+          "score": 0.62,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "318866f1c4118d89c03a8b411438afcd1bd95f30f68d4de647c9420309410c7e",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "443a7407ecec77ccf934537d58615d5528917979fa34a1cddc93c36b3821e822",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "FAIL",
+          "input_sha256": "644f29d3278075be2c477f0ebdd3b70111f2f3793da445b70dd36dc3d187f6e7",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "Docs support Open notebook for tuning, playground not tuning, pipeline route going to Pipelines, and Spaces unavailable for org-parented projects. They never say the Model Garden notebook opens or runs in Agent Platform Workbench; the sample notebook link points to Colab.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": false,
+            "evidence_supported": false,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.55,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "644f29d3278075be2c477f0ebdd3b70111f2f3793da445b70dd36dc3d187f6e7",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "14516303795803db5e2ca230709bb23c84b29e36015dd20675a6775f46db8ea0",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 11,
+      "round": "round4 (rules v2)",
+      "founder": "ok",
+      "capture": "pmle-d025-r4-45.json",
+      "exemplar_count": 5,
+      "exemplar_sha256": "4be3ee3592d692e1a3c7fdac22ac4cd4f4a38f6316c630dcb067ea60ebd8740b",
+      "source_sha256": [
+        "84ea9e9797273def8814c23e68d4e22619b6dbb1cd0b40909dde298d142f04d3",
+        "4d706bad6013db6cdf5005694d577e986d4f43718fbf3c1521b44651ae435561",
+        "ca4e4a87a34d138ffdbc4f6149eee91fb76bdcf2c2accf6828bea67f23c9955a",
+        "41f4837ad208b427e4ec6fd2da0fcaddcb802777c86cf70bac6906a541cb07ae"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning",
+            "original_text_sha256": "84ea9e9797273def8814c23e68d4e22619b6dbb1cd0b40909dde298d142f04d3",
+            "original_characters": 8734,
+            "included_characters": 8734,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                8734
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning/open-model-tuning",
+            "original_text_sha256": "ca4e4a87a34d138ffdbc4f6149eee91fb76bdcf2c2accf6828bea67f23c9955a",
+            "original_characters": 22741,
+            "included_characters": 22741,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                22741
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "b1cf27167743fb444a023ea4752f8daa7599092d8b60a38d990719336336f2fd",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Prompt refinement already failed, so tuning is needed. LoRA minimizes compute versus full fine-tuning. Regional job in the Netherlands (europe-west4) meets the residency policy; the global endpoint does not guarantee that. Few-shot prompting is unlikely to fix the errors.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.88,
+          "choice": "C",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "b1cf27167743fb444a023ea4752f8daa7599092d8b60a38d990719336336f2fd",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "a0ef78d7f646f2bdadefc98c3d7f3d175471d69e39dc736f2874921549c08539",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "40b7d0d199e13e2154da6039bf27e3d13e8fb9879bf7052f3c84f417f6d63ce9",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "Options A, B and C are near-clones (full vs LoRA, region vs global) of one managed SFT plan, so there are multiple minor-variant pairs. The hinge is partly region and endpoint trivia, and the stem names tuning methods.",
+          "checks": {
+            "decision_level": true,
+            "no_hidden_gotcha": false,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": false,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": false
+          },
+          "score": 0.35,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "40b7d0d199e13e2154da6039bf27e3d13e8fb9879bf7052f3c84f417f6d63ce9",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "ba838da8d0c880f63c585438356a9288e12f5dcc380a04874de328ec761572b6",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "875bd5a7e261bbe84b83bc5adc93ffa88c6d92ae53c07374067a181b655955c5",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "Docs support the key: Llama models list LoRA/PEFT and full tuning, Netherlands (europe-west4) is a region-specific option, and PEFT uses less compute. Prompting is for limited data and tuning fixes recurrent errors. Full tuning costs more. Global tuning picks the region itself.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.86,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "875bd5a7e261bbe84b83bc5adc93ffa88c6d92ae53c07374067a181b655955c5",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "206faf9c1ac538f42362fcd98b942718ce50ef0ccedd2714d6c8869345694498",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 12,
+      "round": "round4 (rules v2)",
+      "founder": "flag",
+      "capture": "pmle-d025-r4-45.json",
+      "exemplar_count": 5,
+      "exemplar_sha256": "4be3ee3592d692e1a3c7fdac22ac4cd4f4a38f6316c630dcb067ea60ebd8740b",
+      "source_sha256": [
+        "aa38d33724439e1919a0656b5434440fbd9706ef58e914db17e1170ffbbcbf32",
+        "522963fafca6578b5367cdbf2367a3d54bb41cb6666ddd2f2f3e6a9b6b34688a",
+        "56095bc3e16080bd1070572e7cd1cdbc30b429ac7b97b0ed4a99fdac30975d2c",
+        "5ef614a983678e517fb9ed0aa7b9c4e14dfc753adf52b84761c0b2fa8754cdd1",
+        "0e74c2475d1ad035baea70fbfc2f76ec610c15879db68dfbe48edd8c73711639"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/deploy/docs/deployment-strategies/canary",
+            "original_text_sha256": "aa38d33724439e1919a0656b5434440fbd9706ef58e914db17e1170ffbbcbf32",
+            "original_characters": 7603,
+            "included_characters": 7603,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                7603
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/deploy/docs/deployment-strategies/canary/cloud-run",
+            "original_text_sha256": "522963fafca6578b5367cdbf2367a3d54bb41cb6666ddd2f2f3e6a9b6b34688a",
+            "original_characters": 9123,
+            "included_characters": 9123,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                9123
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "ccb327d467dabe5cf953b53938dd24ba855a28e996f5d40b16bd2ee218f4c649",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Cloud Deploy automated canary on the existing Cloud Run service minimizes traffic-management work. Deploy analysis during canary phases gates advancement on latency. B's postdeploy runs after the deployment, so it is too late to gate phases. C replaces the service. D needs custom config.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.82,
+          "choice": "A",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "ccb327d467dabe5cf953b53938dd24ba855a28e996f5d40b16bd2ee218f4c649",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "7c32a72b1d369ddbdc6cd6d7b3d9142151c59cb604d221df77b64ac6a80ed88b",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "d8391c777cb108cc79a68671530dfb5b515d134242d9af0a802443d886d82132",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "All four options are near-clones: the same Cloud Deploy canary with one detail swapped (analysis vs postdeploy task, new vs existing service, custom config). The hinge is Cloud Deploy fine print, not a distinct engineering decision.",
+          "checks": {
+            "decision_level": false,
+            "no_hidden_gotcha": false,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": false,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": false
+          },
+          "score": 0.35,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "d8391c777cb108cc79a68671530dfb5b515d134242d9af0a802443d886d82132",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "67829836e2e87e7c7d95f3522b1106fd351b1e6eed1a71436ede244af25959d1",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "fe7a5a92e0c91563413861cc63eb046ddb7dda6e0a736b26ceb0f474dbf00a49",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "Docs support the key: Cloud Run canary updates the existing service and splits traffic automatically; deploy analysis uses Observability metrics with advanceRolloutRule. Distractor failures are documented: first deploy skips canary, postdeploy runs in stable phase, custom needs traffic config.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.9,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "fe7a5a92e0c91563413861cc63eb046ddb7dda6e0a736b26ceb0f474dbf00a49",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "1159fe0fcaafe5187f00dfd389525179f21e9b1be5f7702ebdd41efc47b647ab",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 13,
+      "round": "round4 (rules v2)",
+      "founder": "ok",
+      "capture": "pmle-d025-r4-45.json",
+      "exemplar_count": 5,
+      "exemplar_sha256": "4be3ee3592d692e1a3c7fdac22ac4cd4f4a38f6316c630dcb067ea60ebd8740b",
+      "source_sha256": [
+        "74e854b7026108d5b0b46764ea141c49e56ca55c3aee8a5a26d0e9ed4e89efd2",
+        "91864ab88811b0bdbfb03a45c9c6722a4aaa910c59db2bc462c2b0c35fad5ebb",
+        "d2994bba5f9ddc090a7b6a6b87a898bf1e70782d66545eaa9a467f5e5c66d4b1",
+        "b5e18dde4094c76b4f944f95b47b8c6a9c1223bb7bedae9bf05d433b2996e690",
+        "257b2996a5ac3387acc83640240e74fb83e302eb41ab95071f6ad6641bb7cb4f"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-observability",
+            "original_text_sha256": "74e854b7026108d5b0b46764ea141c49e56ca55c3aee8a5a26d0e9ed4e89efd2",
+            "original_characters": 5573,
+            "included_characters": 5573,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                5573
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/optimize/evaluation/evaluate-online",
+            "original_text_sha256": "91864ab88811b0bdbfb03a45c9c6722a4aaa910c59db2bc462c2b0c35fad5ebb",
+            "original_characters": 7268,
+            "included_characters": 7268,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                7268
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/optimize/evaluation/evaluate-offline",
+            "original_text_sha256": "d2994bba5f9ddc090a7b6a6b87a898bf1e70782d66545eaa9a467f5e5c66d4b1",
+            "original_characters": 5571,
+            "included_characters": 5571,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                5571
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "0d2b0e5a204c3a69b1047a050c588866aa585ca46b853960ea9588c8b2b5603a",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "An Online Monitor scores live traces continuously. Sampling with a max samples per run bounds the workload as traffic spikes. A filters by duration, which doesn't cap volume. C tracks infrastructure metrics, not quality. D is offline and not live.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.9,
+          "choice": "B",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "0d2b0e5a204c3a69b1047a050c588866aa585ca46b853960ea9588c8b2b5603a",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "7b95b8993112a54a3aaf4a7aab23a8f569766d0266e903cd1c2a76b3aa3f4ea3",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "PASS",
+          "input_sha256": "192a89e5047cb63b33c0e44a1517595e8f3c85ce15c3c5b11ccebcb59ca7c6ea",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "Realistic monitoring decision: an online monitor with sampling and a sample cap versus dashboard metrics or offline evaluation. A and B are one allowed near-pair. A's duration-filter premise is slightly strawman-like but plausible.",
+          "checks": {
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true
+          },
+          "score": 0.8,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "192a89e5047cb63b33c0e44a1517595e8f3c85ce15c3c5b11ccebcb59ca7c6ea",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "7a1d9c915e4be9b5552d2059840e7ef27a4d73a82c43a37bfd7f455d59f152e6",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "c6f42e5f0233449ef83797af9904e7e088815de6ab24622a32dff68347de5f90",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "The Online Monitor doc supports continuous async scoring of live traces, Cloud Trace as a prerequisite, and a 'Max samples per run' cap. The dashboard covers only operational metrics. Offline evaluation covers selected historical data. Duration filters only target traffic.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.9,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "c6f42e5f0233449ef83797af9904e7e088815de6ab24622a32dff68347de5f90",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "3b86187ef4a0bd6036c62ea772c8c77273cab589f213bcce12d7c888836ff3f7",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": true,
+      "all_gates": "PASS"
+    },
+    {
+      "item_id": 14,
+      "round": "round4 (rules v2)",
+      "founder": "flag",
+      "capture": "pmle-d025-r4-45.json",
+      "exemplar_count": 5,
+      "exemplar_sha256": "4be3ee3592d692e1a3c7fdac22ac4cd4f4a38f6316c630dcb067ea60ebd8740b",
+      "source_sha256": [
+        "81b24d32ed47192c7036d4294ef0269977647e9f6e6b24bdb30755a8b318ba44",
+        "10f91c667de7a5ebfb14222795c6899e4ce474df490b2766ce6c89a3bbd1f194",
+        "d2dd6f7828b63862e662822d93ad10db270bedb1ca6bc73c16ae1404ed82fc64",
+        "a62e3a532e44f3bf66df54789356e7b52a61fc8b0b156aa8e8bc504bb3d2fa4c",
+        "9f886e12df615ff42a8ce10d66593caa0ea712950640f198e382f01d752df9c7"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/document-ai/docs/setup",
+            "original_text_sha256": "d2dd6f7828b63862e662822d93ad10db270bedb1ca6bc73c16ae1404ed82fc64",
+            "original_characters": 9863,
+            "included_characters": 9863,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                9863
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/vision/docs/fulltext-annotations",
+            "original_text_sha256": "9f886e12df615ff42a8ce10d66593caa0ea712950640f198e382f01d752df9c7",
+            "original_characters": 10712,
+            "included_characters": 10712,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                10712
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "db459a16d63c6bd5170ec3fcd65e169b8e947110fc754c1600b226150299e37a",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "EU data residency requires an EU processor and endpoint (not default/US). The batch processor's service agent needs bucket read access in the other project. Document AI Toolbox converts output to Vision API format for the existing parser.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.85,
+          "choice": "D",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "db459a16d63c6bd5170ec3fcd65e169b8e947110fc754c1600b226150299e37a",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "5412e1293fd9c2ddf92c89b08ed90f66b447d033ee74a280264ad596c6f3a5a0",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "e6a476b9733b8a53031f7cc90e6524a77dfb8225e4f15f84f7bcc7b2c37c237e",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "All four options are near-clones of one plan, each changing one detail (location, identity, conversion step). The hinge is location/IAM config trivia, not distinct approaches. The stem also stacks three wants and a policy.",
+          "checks": {
+            "decision_level": false,
+            "no_hidden_gotcha": false,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": false,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": false,
+            "decisions_not_syntax": false
+          },
+          "score": 0.3,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "e6a476b9733b8a53031f7cc90e6524a77dfb8225e4f15f84f7bcc7b2c37c237e",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "07b04a2549b335614a8018cd231168a8b45bd6f893a52416fcb445cbedcbf4e0",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "6c5a1529edcc283422c5d640969e5c74106c506fa3e04d7266746228bc73b410",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "Docs support the decisive points: EU location keeps data in the EU with the eu- endpoint; cross-project input access needs Storage Object Viewer for the Document AI service agent; Toolbox converts to Vision format. Document OCR paragraph claim is undocumented but shared by all options.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.86,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "6c5a1529edcc283422c5d640969e5c74106c506fa3e04d7266746228bc73b410",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "1508fb4e8e509cf2f0b0c66f034224a450f4d795abcb79db4943b4296d26f903",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 15,
+      "round": "round4 (rules v2)",
+      "founder": "flag",
+      "capture": "pmle-d025-r4-45.json",
+      "exemplar_count": 5,
+      "exemplar_sha256": "4be3ee3592d692e1a3c7fdac22ac4cd4f4a38f6316c630dcb067ea60ebd8740b",
+      "source_sha256": [
+        "9ae4a198780f14c87e4e9dcfb23aea208f5c1ad28cb34fb12bd3f02c7a79aa32",
+        "3ef1f0a7b117eb4a60e91a9c0c6e7c883e4b26226502e99d5539907ecea4d2be",
+        "1265b512495cb3566b28beb6259790c366c63d29db45da4c6955c90b7aab130c",
+        "05d2ccc2e5202950152951a29215afec2848948c9039f44dc2ec669d4d87a225",
+        "69cb152447624015031844b5d468711dab9608719b005fca8d7bdee369f4c2db"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/featurestore/latest/create-featuregroup",
+            "original_text_sha256": "9ae4a198780f14c87e4e9dcfb23aea208f5c1ad28cb34fb12bd3f02c7a79aa32",
+            "original_characters": 6214,
+            "included_characters": 6214,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                6214
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/featurestore/latest/create-featureview",
+            "original_text_sha256": "05d2ccc2e5202950152951a29215afec2848948c9039f44dc2ec669d4d87a225",
+            "original_characters": 40126,
+            "included_characters": 40126,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                40126
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "FAIL",
+          "input_sha256": "ff39adc2f2d9d42385029812afd3470cf96fd614849d3ac7a1aa263ddd4cbb20",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Feature groups per table with dedicated service accounts fit the least-privilege policy (rules out D) and low upkeep (rules out the custom BigQuery view in C). Scoring depends on corrections to existing records, so continuous sync fits better than scheduled sync (B).",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.6,
+          "choice": "A",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "ff39adc2f2d9d42385029812afd3470cf96fd614849d3ac7a1aa263ddd4cbb20",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "180fc96e42fb55c659da87027d8098f268a55e8ba89f3c2a4658cb254f7a6949",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "6e5bf3530bb2c2e7101ded8b5efbdb49bdbaa1e0686d52c20c9b1f30285593af",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "A, B and D clone one plan and differ only by sync mode or service account, so this is a settings choice. The security incident turns a Feature Store decision into an IAM question, which S7 forbids. Only C is a distinct approach.",
+          "checks": {
+            "decision_level": false,
+            "no_hidden_gotcha": false,
+            "current_names": true,
+            "distractors_plausible": false,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": false,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": false
+          },
+          "score": 0.25,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "6e5bf3530bb2c2e7101ded8b5efbdb49bdbaa1e0686d52c20c9b1f30285593af",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "8ca6f2057a279c7f447d7c3a1ad24fff5ce0fe99748592f9d839c813c4c8066d",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "a43a58477ef9d115fdaee88abab50a1067d686b381890e42fee218dc10d24615",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "Docs support the key: feature groups are required for historical data and can be combined in one feature view. Continuous sync skips updated records, so scheduled sync is needed. Default service accounts expose source data. Direct BigQuery sources can't hold timestamps or history.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.88,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "a43a58477ef9d115fdaee88abab50a1067d686b381890e42fee218dc10d24615",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "1ff5f79455730550417eae26910249d11243ddc9b4e8531a16e939dfab083279",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 16,
+      "round": "round5 (rules v3)",
+      "founder": "flag",
+      "capture": "pmle-d025-r5-45.json",
+      "exemplar_count": 6,
+      "exemplar_sha256": "dbbf1c974c51de6d2cde1fb07ebe45b9b4d761a60086a353249630e149b8159d",
+      "source_sha256": [
+        "81b24d32ed47192c7036d4294ef0269977647e9f6e6b24bdb30755a8b318ba44",
+        "10f91c667de7a5ebfb14222795c6899e4ce474df490b2766ce6c89a3bbd1f194",
+        "d2dd6f7828b63862e662822d93ad10db270bedb1ca6bc73c16ae1404ed82fc64",
+        "a62e3a532e44f3bf66df54789356e7b52a61fc8b0b156aa8e8bc504bb3d2fa4c",
+        "9f886e12df615ff42a8ce10d66593caa0ea712950640f198e382f01d752df9c7"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/translate/docs/advanced/translate-documents",
+            "original_text_sha256": "81b24d32ed47192c7036d4294ef0269977647e9f6e6b24bdb30755a8b318ba44",
+            "original_characters": 35936,
+            "included_characters": 35936,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                35936
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "4ea56a6e9d56270a028e6f185b88e027f38f7cca50722d5fd39adcd71a3519b1",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Translating the editable DOCX directly keeps layout and style, and it avoids the PDF conversion and shadow-text removal steps that add latency. Scanned PDFs (A) lose layout fidelity. B keeps the slow workflow. D returns plain text and drops the layout.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.9,
+          "choice": "C",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "4ea56a6e9d56270a028e6f185b88e027f38f7cca50722d5fd39adcd71a3519b1",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "d6d6629e26af72442eda00c8b63945b64ca4ccec8aa8ec4a9a1e0134d736d60b",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "ef99b153fd685672c69289fbcd7f3cb50332f4971ac5f8b57bd287ad85c9705e",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "Hinges on niche Document Translation behavior (native vs scanned PDF, shadow-text removal latency) rather than a broad engineering decision. Stem names file types. A and B are near-variants of the PDF approach, and D is a weak distractor.",
+          "checks": {
+            "decision_level": false,
+            "no_hidden_gotcha": false,
+            "current_names": true,
+            "distractors_plausible": false,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": false,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": false
+          },
+          "score": 0.4,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "ef99b153fd685672c69289fbcd7f3cb50332f4971ac5f8b57bd287ad85c9705e",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "c1f92b7830d080993eacd100cceaa2cbc0fd4a7f3aeb5394e7c545607c8b9725",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "78c451a546d810ab5fd275737c492f36035fd21922fc633ef366e28faf33b1c9",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "The docs recommend translating DOCX, then converting to PDF, because DOCX layout and style are preserved better than PDF. Shadow removal increases latency, scanned PDFs lose formatting, and plain text loses layout. Only the Document AI OCR detail is not in the docs, and it isn't decisive.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.88,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "78c451a546d810ab5fd275737c492f36035fd21922fc633ef366e28faf33b1c9",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "92810126bcc116b5d02ce4f7b6e2c922ba5c094f4c3330149717f2c18cc06a90",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 17,
+      "round": "round5 (rules v3)",
+      "founder": "ok",
+      "capture": "pmle-d025-r5-45.json",
+      "exemplar_count": 6,
+      "exemplar_sha256": "dbbf1c974c51de6d2cde1fb07ebe45b9b4d761a60086a353249630e149b8159d",
+      "source_sha256": [
+        "7cfd10226b59c07b446524826486da0c251a8f3f3b468b367af095aa12657b11",
+        "4b79962b5046dd7621857b844c064dc0a4e0827075dc2f6a70bfbdc8d7bc566f",
+        "4d706bad6013db6cdf5005694d577e986d4f43718fbf3c1521b44651ae435561",
+        "a23a602e2d17261dba1138064d5a3d1072c97f8a0626ebbe1800937ac9516b04",
+        "1dc205402814c56674704e19f06b5fa570f7da0082b9f590b829d9c93a511026"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/quickstart",
+            "original_text_sha256": "7cfd10226b59c07b446524826486da0c251a8f3f3b468b367af095aa12657b11",
+            "original_characters": 11998,
+            "included_characters": 11998,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                11998
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/use-models",
+            "original_text_sha256": "4d706bad6013db6cdf5005694d577e986d4f43718fbf3c1521b44651ae435561",
+            "original_characters": 48179,
+            "included_characters": 48179,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                48179
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/explore-models",
+            "original_text_sha256": "a23a602e2d17261dba1138064d5a3d1072c97f8a0626ebbe1800937ac9516b04",
+            "original_characters": 6214,
+            "included_characters": 6214,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                6214
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/notebooks/workbench/introduction",
+            "original_text_sha256": "1dc205402814c56674704e19f06b5fa570f7da0082b9f590b829d9c93a511026",
+            "original_characters": 9954,
+            "included_characters": 9954,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                9954
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "91cd51fee06b12de932ce82180c474f8408a4e1a0e9af54c4036daf276dad130",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Model Garden model cards provide model-specific tuning notebooks that run in Workbench. Starting from them minimizes setup. B only tests responses, not tuning. C and D require building tuning code from scratch.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.9,
+          "choice": "A",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "91cd51fee06b12de932ce82180c474f8408a4e1a0e9af54c4036daf276dad130",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "fe9e748f6bd28b041fef6740af51c460058468fe4104f9357fdeae360f704815",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "PASS",
+          "input_sha256": "e043fcc57f0745f637d8ce0527db278e217afc84ccb9e21b875a970f0187cc59",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "Sound decision: reuse Model Garden tuning notebooks versus Spaces, custom pipelines, or from-scratch code. Distinct approaches, clear wants, current names. Minor risk: \"first\" framing and option C/D being heavier custom work, but plausible.",
+          "checks": {
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true
+          },
+          "score": 0.8,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "e043fcc57f0745f637d8ce0527db278e217afc84ccb9e21b875a970f0187cc59",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "1eccef92cbe18be63c826b21bce324128cb43586422adeaa5eec70338072a647",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "db91b905bec022c24435379a8c035a30ad8d8f5405811bb46be42330426e99e8",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "Docs say model cards for most open source foundation and fine-tunable models support tuning in a notebook (Open notebook). Spaces deploys a Cloud Run sample app for inference, and Workbench supports PyTorch. Running the notebooks in Workbench is only implied, via a listed Workbench tuning notebook.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.86,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "db91b905bec022c24435379a8c035a30ad8d8f5405811bb46be42330426e99e8",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "5b3c16b8abbd748b978e5ec27434a94bb5cbbc44b2af921472beb9a0e0dcee8d",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": true,
+      "all_gates": "PASS"
+    },
+    {
+      "item_id": 18,
+      "round": "round5 (rules v3)",
+      "founder": "ok",
+      "capture": "pmle-d025-r5-45.json",
+      "exemplar_count": 6,
+      "exemplar_sha256": "dbbf1c974c51de6d2cde1fb07ebe45b9b4d761a60086a353249630e149b8159d",
+      "source_sha256": [
+        "21788ddcdee9c84755255676f0e5c2503e187fdc97b75144ae80b02e15e29555",
+        "9c637299f35f8e358126e7dc2568d19715feec2f7102c6370884a882a81fa1f2",
+        "a4bac323539d828eaebd444c05c76cb7244a5d9b6ea3f1d8813f1fcba581130d",
+        "bec7a45c27bb98c7cf7d5edaa9bd5ffc6f31f67096cbe3d759d517bfbdc16cb8",
+        "b4af5a3cf85a2d0d1fd47f83fc7aa9e0836ef29f3673b9d6fb75340c059a48bd"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/bigquery/docs/xai-overview",
+            "original_text_sha256": "21788ddcdee9c84755255676f0e5c2503e187fdc97b75144ae80b02e15e29555",
+            "original_characters": 5048,
+            "included_characters": 5048,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                5048
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "4ab9122e2d3c30b2df21867e5469848fe3ca09d4042c06098179283ebf0870fe",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Per-transaction attribution vs a baseline plus global summary matches Shapley-based explainability. Boosted trees in BigQuery ML support Tree SHAP via ML.EXPLAIN_PREDICT and ML.GLOBAL_EXPLAIN. B misuses AutoML Tables; C and D give only global or significance outputs.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.93,
+          "choice": "A",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "4ab9122e2d3c30b2df21867e5469848fe3ca09d4042c06098179283ebf0870fe",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "859bada458a634a294583ca84755010814f2f044b92cf42fd2805810362f9fb2",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "ab92a523a068cfd6bad874d9fa2214e0790d2e94943458497876b01d2474c142",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "Option B is an invented or broken configuration: it names the legacy 'AutoML Tables' and pairs sampled Shapley with ML.GLOBAL_EXPLAIN. The key also turns on BigQuery ML function-name trivia, such as which functions give per-prediction versus global explanations, rather than a real tradeoff.",
+          "checks": {
+            "decision_level": false,
+            "no_hidden_gotcha": false,
+            "current_names": false,
+            "distractors_plausible": false,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": false
+          },
+          "score": 0.45,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "ab92a523a068cfd6bad874d9fa2214e0790d2e94943458497876b01d2474c142",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "ade2e644a61c06ca5645b9b4623ef1dad27348e77ac33eea40e4e651023573ed",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "11e0a48dc49ff03daf06805436d9860dbc88a73f25e9430c7f28ab273aece87e",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "The docs support the key: boosted trees use Tree SHAP, ML.EXPLAIN_PREDICT gives local attributions relative to a baseline, and ML.GLOBAL_EXPLAIN gives mean absolute attribution over the evaluation set. Each distractor loses on a documented function limit.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.9,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "11e0a48dc49ff03daf06805436d9860dbc88a73f25e9430c7f28ab273aece87e",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "6ca461fb4ad8c9a6c4f54ef08a6d21e39a8ecb4c8a2370e867d5273fe069d062",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 19,
+      "round": "round5 (rules v3)",
+      "founder": "flag",
+      "capture": "pmle-d025-r5-45.json",
+      "exemplar_count": 6,
+      "exemplar_sha256": "dbbf1c974c51de6d2cde1fb07ebe45b9b4d761a60086a353249630e149b8159d",
+      "source_sha256": [
+        "87658e26deb099324c467262c78f21e4167bc8df59e57bb57cac837c747645dd",
+        "186e04379e18ecfd2e25601f49f50fbccbc242ad204664ab5fed9262fdbe71dc",
+        "66a1367bb4d6a310ab75c6df3b7b24af865b54ea78e0598267db0241cb514a3a",
+        "5cd9e1be24704c9a7e2b3ac1d48afc63507df80251366855ea81244cecae53b7",
+        "65a916c3d558781ea8ffcf29c1e64a1b62a025a450ea5b342abe649f528b4aed"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/custom-container-requirements",
+            "original_text_sha256": "186e04379e18ecfd2e25601f49f50fbccbc242ad204664ab5fed9262fdbe71dc",
+            "original_characters": 21583,
+            "included_characters": 21583,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                21583
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/use-custom-container",
+            "original_text_sha256": "66a1367bb4d6a310ab75c6df3b7b24af865b54ea78e0598267db0241cb514a3a",
+            "original_characters": 16905,
+            "included_characters": 16905,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                16905
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/use-tpu",
+            "original_text_sha256": "5cd9e1be24704c9a7e2b3ac1d48afc63507df80251366855ea81244cecae53b7",
+            "original_characters": 7660,
+            "included_characters": 7660,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                7660
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "cf310586f7a534cfe5573cea283f925b5d1c2c68f3ba9d679dc946a60de8b5a4",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "400 QPS at 100 QPS per node requires four nodes. Setting min replicas to four provisions that capacity up front. D starts with one replica and relies on autoscaling. B uses one replica. C puts four listeners in a single container, which adds no nodes.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.85,
+          "choice": "A",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "cf310586f7a534cfe5573cea283f925b5d1c2c68f3ba9d679dc946a60de8b5a4",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "2dc830bf2aa45994d1d51d0e64292520b75a1f4ab17d42f84c718f5bb57e460f",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "55c671501359adf24fea913ef0223a02f5bf7f6f82c8bf22b5425dbc975833ce",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "Uses legacy full name \"Gemini Enterprise Agent Platform\" (S11). Decision is trivial capacity arithmetic, not a real engineering tradeoff. B and C are throwaway distractors, and A and D are a near-pair. The want to provision peak capacity is weak.",
+          "checks": {
+            "decision_level": false,
+            "no_hidden_gotcha": true,
+            "current_names": false,
+            "distractors_plausible": false,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": false,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": false
+          },
+          "score": 0.2,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "55c671501359adf24fea913ef0223a02f5bf7f6f82c8bf22b5425dbc975833ce",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "c761087f059bed74872bc767ae3be9514e0794320cb693bd0e2d7cf1f78507f3",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "fa4516c00acd6551bbb217710c1ac5032d60e5470e96aad6954619493761344e",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "TPU doc: autoscaling unsupported; minReplicaCount always used, maxReplicaCount ignored, so min=4 gives 400 predictions/s. Extra container ports have no effect. Probes check startup and readiness, not capacity. All distractors lose for supported reasons.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.93,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "fa4516c00acd6551bbb217710c1ac5032d60e5470e96aad6954619493761344e",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "a5e0217cd2fac965a25084ce8578bb951608e3674d4b937cef4f8f36b4cc76eb",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 20,
+      "round": "round5 (rules v3)",
+      "founder": "flag",
+      "capture": "pmle-d025-r5-45.json",
+      "exemplar_count": 6,
+      "exemplar_sha256": "dbbf1c974c51de6d2cde1fb07ebe45b9b4d761a60086a353249630e149b8159d",
+      "source_sha256": [
+        "3973955083c05d94a3caa828446d6cd3fed411d88420690d120bd0de37ccd6c9",
+        "27fff07b100bd0c17ef571462e2900290aad6f4c0a4ab66b4115a19a96aff04a",
+        "67ee7d4b777ddd32c242d73d44787b3bfc90b53fe45492ac0940aaea04683359",
+        "ad754f1b45813dd077122f99272a1e9db8452a9d1dd84714bceaa14e655b0e18"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/open-source/ray",
+            "original_text_sha256": "3973955083c05d94a3caa828446d6cd3fed411d88420690d120bd0de37ccd6c9",
+            "original_characters": 15406,
+            "included_characters": 15406,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                15406
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/pipelines/introduction",
+            "original_text_sha256": "27fff07b100bd0c17ef571462e2900290aad6f4c0a4ab66b4115a19a96aff04a",
+            "original_characters": 13688,
+            "included_characters": 13688,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                13688
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "761319a94b689149f12d4e30e6cf7018eed49276036f9f2fb089ca05b8b46eaf",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Startup overhead dominates repeated short Ray jobs. A persistent Ray cluster reuses compute, cached data and images, and needs no app changes. B, C and D each create or provision new infrastructure per run, or require rework.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.85,
+          "choice": "A",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "761319a94b689149f12d4e30e6cf7018eed49276036f9f2fb089ca05b8b46eaf",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "a1beecf1c5f094b99e9b2263352176b6c6f88f59c3297b1adda7b198240f20f6",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "FAIL",
+          "input_sha256": "e335471b9e727c6ac5193ab871cef2d4bdf4403234a1662a8e03aee662fc01ea",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "The stem uses the legacy full name \"Gemini Enterprise Agent Platform\", which violates S11 and S6. Otherwise the item is sound: it has a real operating-strategy decision, four distinct plausible approaches, one want, and a clear business opening.",
+          "checks": {
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": false,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true
+          },
+          "score": 0.55,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "e335471b9e727c6ac5193ab871cef2d4bdf4403234a1662a8e03aee662fc01ea",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "f8a3f6388829b3ae07e330af4389c315d621b6e00c20db1f0849693c39f8fd57",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "dfe384272a9e6227523facb7a0b19520eb5e9a724c514363a2d4457e4ac86410",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "Docs support a long-running Ray cluster for short repeated jobs: startup exceeds processing, caching, persistent until deleted, minimal code changes. Custom jobs release resources; Pipelines needs DAG/compile restructuring; delete-per-run loses persistence.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.93,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "dfe384272a9e6227523facb7a0b19520eb5e9a724c514363a2d4457e4ac86410",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "62f655dbe5d08d1298a30f8062b215498e2b6521b1cb4813160ca37466a27adb",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": false,
+      "all_gates": "FAIL"
+    },
+    {
+      "item_id": 21,
+      "round": "round5 (rules v3)",
+      "founder": "flag",
+      "capture": "pmle-d025-r5-45.json",
+      "exemplar_count": 6,
+      "exemplar_sha256": "dbbf1c974c51de6d2cde1fb07ebe45b9b4d761a60086a353249630e149b8159d",
+      "source_sha256": [
+        "74e854b7026108d5b0b46764ea141c49e56ca55c3aee8a5a26d0e9ed4e89efd2",
+        "91864ab88811b0bdbfb03a45c9c6722a4aaa910c59db2bc462c2b0c35fad5ebb",
+        "d2994bba5f9ddc090a7b6a6b87a898bf1e70782d66545eaa9a467f5e5c66d4b1",
+        "b5e18dde4094c76b4f944f95b47b8c6a9c1223bb7bedae9bf05d433b2996e690",
+        "257b2996a5ac3387acc83640240e74fb83e302eb41ab95071f6ad6641bb7cb4f"
+      ],
+      "source_integrity": "VERIFIED",
+      "quote_integrity": "VERIFIED",
+      "trimming": {
+        "enabled": false,
+        "method": "full cited sources",
+        "character_limit": 150000,
+        "sources": [
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-observability",
+            "original_text_sha256": "74e854b7026108d5b0b46764ea141c49e56ca55c3aee8a5a26d0e9ed4e89efd2",
+            "original_characters": 5573,
+            "included_characters": 5573,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                5573
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/optimize/evaluation/evaluate-online",
+            "original_text_sha256": "91864ab88811b0bdbfb03a45c9c6722a4aaa910c59db2bc462c2b0c35fad5ebb",
+            "original_characters": 7268,
+            "included_characters": 7268,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                7268
+              ]
+            ]
+          },
+          {
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/optimize/evaluation/evaluate-agents",
+            "original_text_sha256": "b5e18dde4094c76b4f944f95b47b8c6a9c1223bb7bedae9bf05d433b2996e690",
+            "original_characters": 1279,
+            "included_characters": 1279,
+            "trimmed": false,
+            "windows": [
+              [
+                0,
+                1279
+              ]
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "blind_solver": {
+          "status": "PASS",
+          "input_sha256": "a496bb5d77a2a5858c7698bf19ce39b6911c0c6e80eb25c4d86809a777db8e87",
+          "schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "reason": "Continuous detection of quality drift on live traffic with bounded cost calls for an Online Monitor that samples a percentage of traces and caps samples per run. A uses a fixed dataset, so it misses new question types. C tracks only operational metrics. D evaluates all traces, so cost is unbounded.",
+          "checks": {
+            "ambiguous_answers": false
+          },
+          "score": 0.93,
+          "choice": "B",
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": true,
+          "source_iteration": "v4-baseline-live",
+          "source_input_sha256": "a496bb5d77a2a5858c7698bf19ce39b6911c0c6e80eb25c4d86809a777db8e87",
+          "source_schema_sha256": "55bc6119595e49e2f83e5e69e59a0d76d02afc3ebb6f446618de3135b427b4dc",
+          "prompt_sha256": "8780b9a179eb78d590cc746e0b7a1c00e3915cf3b98b401b29001ad12d87fdd5",
+          "revalidated_schema_sha256": "53fb42de270e7d2b81ab1c638e50a0b0bb159a9ab66c15425fbb01f1a0d11ce6"
+        },
+        "style": {
+          "status": "PASS",
+          "input_sha256": "bdd256fff5ced6ca55cff2d6c0565331cb14efdf08b1a58e653a3721222e0e09",
+          "schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "reason": "Tests a real monitoring-strategy decision (sampled online monitor vs offline eval vs ops metrics vs unbounded eval). Distractors fail the stated wants for knowledge-based reasons. Minor: A and B are somewhat similar in framing, and the stem is slightly terse.",
+          "checks": {
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true
+          },
+          "score": 0.85,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "bdd256fff5ced6ca55cff2d6c0565331cb14efdf08b1a58e653a3721222e0e09",
+          "source_schema_sha256": "a5a10103985a44bbbaf3b85321aa3ad6b657f2a81be6eb3b9d2178d7d6fb60c1",
+          "prompt_sha256": "8a057881293f83de7207a537ca184d35361205807a8f74f5d1b4e192cb4d9b01",
+          "revalidated_schema_sha256": null
+        },
+        "evidence": {
+          "status": "PASS",
+          "input_sha256": "5b5eccda96334343f09fba549992c6b1ca87d8da850e59a7a1d0912540f1a150",
+          "schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "reason": "Docs support Online Monitors for continuous production quality-drift detection, sampling percentage, max samples per run to manage costs, and dashboard evaluation time series. Distractors map to documented operational, regression-only, and uncapped-cost mistakes.",
+          "checks": {
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "score": 0.9,
+          "choice": null,
+          "error_class": null,
+          "error_stage": null,
+          "reason_length": null,
+          "reused": false,
+          "source_iteration": "v4-corrected-mixed",
+          "source_input_sha256": "5b5eccda96334343f09fba549992c6b1ca87d8da850e59a7a1d0912540f1a150",
+          "source_schema_sha256": "855f937799bb99b5db6ddb85fa5a59743765d4309909a04eb6c3f0e8373696ea",
+          "prompt_sha256": "fd36ea2721ce63f2e8594c9164fe8dc806c10f7bd68782e44ab14978256aeb60",
+          "revalidated_schema_sha256": null
+        }
+      },
+      "blind_style_pass": true,
+      "all_gates": "PASS"
+    }
+  ]
+}

@@ -38,6 +38,20 @@ Report missing docs as `SKIP`. Keep a durable call-budget journal and cap all
 iterations at 150 calls. Targets are at least 11/13 flagged rejected and 6/8
 approved retained. Calibration is not unseen-item validation.
 
+### Calibration checkpoint (2026-10-06)
+
+The final21-item calibration rejected12/13 flagged items but retained3/8
+approved items. Rejection target met; retention target not met. Strict new naming
+alone conflicts with three unchanged approved stems (items3,7,8), leaving a
+maximum possible retention of5/8. The critic has two further approved-item
+rejections and one flagged-item miss. No rule/input was weakened to raise scores.
+The report has zero final ERROR/SKIP. Call reservations146/150; no pilot or DB
+writes. Blind results are earlier same-prompt strict-revalidated outputs;
+style/evidence are fresh under verified schema bounds. See
+`calibration/README-v4.md` and `founder-21-v4-corrected-mixed.json` for the table,
+reasons, exact request hashes and explicit mixed provenance. This is calibration,
+not unseen-item validation or founder approval.
+
 ### Exact founder pilot: generate → judge → repair → judge → dry ingest
 
 Run each command only after the preceding command finishes. If generation has
