@@ -1,0 +1,29 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "testero-pmle",
+  "version": "0.1.0",
+  "description": "Demo Google Cloud Professional Machine Learning Engineer practice with cited answer explanations.",
+  "author": {
+    "name": "Testero"
+  },
+  "keywords": [
+    "education",
+    "pmle",
+    "google-cloud",
+    "practice"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Testero PMLE Practice",
+        "shortDescription": "Practice PMLE questions with cited explanations.",
+        "longDescription": "A three-question PMLE demo. Answer one question at a time and review cited feedback with a running score.",
+        "developerName": "Testero",
+        "category": "Education",
+        "defaultPrompt": [
+          "Use Testero PMLE Practice to quiz me one question at a time."
+        ]
+      }
+    }
+  }
+}

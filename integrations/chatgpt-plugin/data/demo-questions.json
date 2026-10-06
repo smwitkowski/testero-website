@@ -1,0 +1,128 @@
+{
+ "note": "Founder-approved demo questions (2026-10-05). Prototype data only; production will use the Testero API with auth.",
+ "questions": [
+  {
+   "id": "f258a379-2f89-5804-b57a-b14fd95333c8",
+   "objective_id": "1.1:5",
+   "objective": "Fine-tuning Gemini models using BigQuery",
+   "domain_code": "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
+   "stem": "A travel company recently deployed a Gemini assistant that writes tour descriptions. Reviewers still correct recurring wording errors after several prompt revisions. A BigQuery table contains 400 package prompts paired with approved descriptions, and a Boolean column marks 80 rows reserved for evaluation. You want Gemini to learn from these corrections while minimizing changes to the team's existing SQL workflow. You also want the reserved rows used for evaluation during tuning. What should you do?",
+   "options": [
+    {
+     "label": "A",
+     "text": "Create a BigQuery ML remote model for supervised tuning of a supported Gemini model. Select the prompt–description pairs as training input and use the reviewers' marker for a custom evaluation split.",
+     "correct": true,
+     "explanation": "The company needs adaptation from labeled examples, an approach that fits its SQL workflow, and evaluation using specifically reserved rows. BigQuery ML supports supervised Gemini tuning through CREATE MODEL with an AS SELECT clause supplying prompts and target descriptions. A custom split uses a Boolean column: TRUE or NULL identifies evaluation rows, and FALSE identifies training rows. The remaining 320 training rows exceed the minimum of 10. Automatic splitting would train on all 400 rows, Agent Platform Studio introduces an export and console workflow, and prompting a pretrained model does not train it on the corrections.",
+     "doc_url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create-remote-model-tuned",
+     "doc_quote": "The DATA_SPLIT_COL value must be the name of a column of type BOOL. Rows with a value of TRUE or NULL are used as evaluation data, and rows with a value of FALSE are used as training data."
+    },
+    {
+     "label": "B",
+     "text": "Create a BigQuery ML remote model for supervised tuning of a supported Gemini model. Select the prompt–description pairs as training input and let automatic splitting assign the training and evaluation rows.",
+     "correct": false,
+     "explanation": "This fails the requirement to use the reserved rows for evaluation during tuning. BigQuery ML automatic splitting uses all rows as training data when the input contains fewer than 500 rows. With 400 rows, the reviewers' 80 reserved examples would also become training data.",
+     "doc_url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create-remote-model-tuned",
+     "doc_quote": "AUTO_SPLIT: This is the default value. This option splits the data as follows: If there are fewer than 500 rows in the input data, then all rows are used as training data."
+    },
+    {
+     "label": "C",
+     "text": "Export the prompt–description pairs and reserved evaluation rows to Cloud Storage as separate datasets. Create a supervised Gemini tuning job in Agent Platform Studio and enable validation using the reserved dataset.",
+     "correct": false,
+     "explanation": "This fails the requirement to minimize changes to the existing SQL workflow. Agent Platform Studio tuning uses dataset files in Cloud Storage and console configuration. BigQuery ML can initiate supervised tuning directly from the existing BigQuery table through SQL, avoiding that export and separate console workflow.",
+     "doc_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning/supervised-tuning/use",
+     "doc_quote": "(Optional) To get validation metrics during training, click the Enable model validation toggle. In the Validation dataset file, enter the Cloud Storage path of your validation dataset. Click Start Tuning."
+    },
+    {
+     "label": "D",
+     "text": "Create a BigQuery ML remote model over a pretrained Gemini model. Include approved descriptions as examples in generation prompts and use the reviewers' reserved rows to assess the resulting tour descriptions.",
+     "correct": false,
+     "explanation": "This fails the requirement for Gemini to learn from the corrections through model adaptation. Prompt examples guide a pretrained Gemini model's responses, while supervised fine-tuning trains on labeled examples and learns additional parameters used during inference. Assessing prompted responses does not perform that training.",
+     "doc_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning",
+     "doc_quote": "When you run a supervised fine-tuning job, the model learns additional parameters that help it encode the necessary information to perform the desired task or learn the desired behavior. These parameters are used during inference."
+    }
+   ]
+  },
+  {
+   "id": "77e1ad30-6b05-5e96-9ddb-8b841a680941",
+   "objective_id": "6.2:3",
+   "objective": "Monitoring, testing, and evaluating gen AI solutions",
+   "domain_code": "MONITORING_ML_SOLUTIONS",
+   "stem": "You are assessing answer quality for a retailer's customer-support agent as its running deployment migrates to Agent Platform. The agent uses a fully managed Gemini model, Cloud Trace is enabled, and the telemetry needed for evaluation is already being exported. Customer traffic varies sharply during promotions. You want ongoing quality scores from live conversations while keeping evaluation workload bounded as traffic grows. What should you do?",
+   "options": [
+    {
+     "label": "A",
+     "text": "Create an Online Monitor with response-quality metrics. Sample live traces and set a maximum number of samples per run to bound the evaluation workload.",
+     "correct": true,
+     "explanation": "The agent needs continuous quality assessment of live conversations and a bounded evaluation workload. Agent Platform Online Monitors asynchronously score sampled production traces using configured evaluation metrics. A maximum sample count per run caps evaluation volume as traffic grows. The model observability dashboard measures operational performance, offline evaluation assesses selected historical interactions, and duration filters select matching traces rather than cap their number.",
+     "doc_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/optimize/evaluation/evaluate-online",
+     "doc_quote": "Configure Metrics: Add the metrics you want to track continuously, such as Safety. Set Sampling: Sampling percentage: Define what percentage of your live traffic should be evaluated. Max samples per run: Set a cap to manage evaluation costs."
+    },
+    {
+     "label": "B",
+     "text": "Use the model observability dashboard to monitor the managed Gemini model. Track API error rates, first-token latency, and token throughput as indicators of answer quality.",
+     "correct": false,
+     "explanation": "This fails the answer-quality assessment requirement. The Agent Platform model observability dashboard reports operational metrics such as API errors, latency, and throughput. Those metrics measure reliability and performance rather than score the quality of conversation responses.",
+     "doc_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-observability",
+     "doc_quote": "You can check if models are responding reliably and in a timely manner by viewing API error rates, first token latencies, and token throughput."
+    },
+    {
+     "label": "C",
+     "text": "Run an offline evaluation with response-quality metrics on a fixed selection of historical conversations captured during migration. Use the resulting report to track production quality.",
+     "correct": false,
+     "explanation": "This fails the requirement for ongoing assessment of live conversations. Agent Platform offline evaluation scores selected historical traces or sessions. The resulting report covers those selected interactions; Online Monitors continuously sample and evaluate production traffic.",
+     "doc_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/optimize/evaluation/evaluate-offline",
+     "doc_quote": "by analyzing historical data captured during development or production. You can evaluate individual Traces (single execution paths) or full Sessions (multi-turn conversation histories) against a set of predefined or custom metrics."
+    },
+    {
+     "label": "D",
+     "text": "Create an Online Monitor with response-quality metrics. Filter live traces by conversation duration, and rely on that filter to bound evaluation workload as customer traffic grows.",
+     "correct": false,
+     "explanation": "This fails the requirement to keep evaluation workload bounded as traffic grows. Agent Platform duration filters determine which traces qualify for evaluation, but they do not impose a maximum sample count. Online Monitors provide a maximum-samples-per-run cap to control evaluation volume.",
+     "doc_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/optimize/evaluation/evaluate-online",
+     "doc_quote": "Filters: Enter criteria to target specific traffic. You can filter by properties such as Duration (for example, Duration > 2) or Token usage."
+    }
+   ]
+  },
+  {
+   "id": "75971450-e235-5825-918c-891db8d880d3",
+   "objective_id": "3.2:6",
+   "objective": "Fine-tuning foundational models from Agent Platform and Model Garden and when tuning should be considered",
+   "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+   "stem": "Your company's security operations assistant uses a Llama model from Model Garden to classify incident reports. A recent security incident exposed recurring errors in company-specific categories despite extensive prompt refinement. The model supports both full and parameter-efficient tuning, and analysts have prepared 600 carefully labeled complete reports representative of production traffic. You want more reliable classification while minimizing tuning compute. Company policy requires all tuning resources to stay in the Netherlands. Which approach should you use?",
+   "options": [
+    {
+     "label": "A",
+     "text": "Run region-specific managed supervised fine-tuning of the Llama model in the Netherlands using LoRA and the analyst-labeled reports, then evaluate it on complete incident reports.",
+     "correct": true,
+     "explanation": "The decision centers on recurring classification errors, tuning compute, and regional control. Agent Platform supervised fine-tuning uses labeled examples to teach the desired task, making it appropriate after prompt refinement leaves recurrent errors. LoRA updates only a subset of parameters and requires less training compute than full fine-tuning. A region-specific job in the Netherlands keeps tuning resources in the required region. Further prompting does not provide the task adaptation indicated here, full fine-tuning violates the compute-minimization goal, and global tuning cannot guarantee the required region.",
+     "doc_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning/open-model-tuning",
+     "doc_quote": "Region-specific tuning jobs are still available for users with more advanced needs (such as all resources scoped to a single region): Iowa (us-central1) Netherlands (europe-west4)"
+    },
+    {
+     "label": "B",
+     "text": "Keep the current model and expand its few-shot prompt with analyst-labeled reports, using the existing deployment to improve classification of complete incident reports.",
+     "correct": false,
+     "explanation": "This fails the task-adaptation requirement indicated by recurring classification errors after extensive prompt refinement. Agent Platform recommends moving from optimized prompting to fine-tuning when recurrent errors remain. The substantial, carefully labeled dataset supports supervised fine-tuning; prompting is best suited to limited labeled data or rapid prototyping.",
+     "doc_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning",
+     "doc_quote": "We recommend starting with prompting to find the optimal prompt. Then, move on to fine-tuning (if required) to further boost performances or fix recurrent errors."
+    },
+    {
+     "label": "C",
+     "text": "Run region-specific managed supervised fine-tuning of the Llama model in the Netherlands using full fine-tuning and the analyst-labeled reports, then evaluate it on complete incident reports.",
+     "correct": false,
+     "explanation": "This fails the goal of minimizing tuning compute. Full fine-tuning updates every model parameter and demands higher computational resources. Agent Platform supports LoRA for the selected model, which adapts only a subset of parameters and uses less training compute.",
+     "doc_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning",
+     "doc_quote": "However full fine tuning demands higher computational resources for both tuning and serving, leading to higher overall costs."
+    },
+    {
+     "label": "D",
+     "text": "Run managed supervised fine-tuning of the Llama model through the global endpoint using LoRA and the analyst-labeled reports, then evaluate it on complete incident reports.",
+     "correct": false,
+     "explanation": "This fails the policy requiring all tuning resources to remain in the Netherlands. Agent Platform global tuning selects a supported region with available capacity and creates the regional job and associated resources there. It does not guarantee the Netherlands; a region-specific tuning job provides that control.",
+     "doc_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning/open-model-tuning",
+     "doc_quote": "Global endpoint (global) is strongly recommended for launching tuning jobs; it will select a supported region with available capacity and launch a tuning job."
+    }
+   ]
+  }
+ ]
+}

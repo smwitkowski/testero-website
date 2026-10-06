@@ -7,7 +7,7 @@ export default defineConfig([
   ...nextTypeScript,
   globalIgnores([
     ".next/**", "out/**", "build/**", "next-env.d.ts",
-    "content-pipeline/**", "supabase/migrations_legacy/**",
+    "content-pipeline/**", "integrations/**", "supabase/migrations_legacy/**",
     "playwright-report/**", "test-results/**",
   ]),
 ]);
