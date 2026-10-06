@@ -20,11 +20,13 @@ from shared.evidence import check_evidence
 from shared.external_judge import (
     EXTERNAL_POLICY_MODEL, REQUEST_CHARACTER_LIMIT, build_request,
     candidate_id, candidate_storage_id, candidate_question, request_directory, validate_candidate_records,
+    validate_decision_provenance,
 )
 from shared.model_policy import require_independent_models
 from shared.validator import validate_question
 
 REQUEST_FIELDS = {"candidate_id", "objective_id", "judge_prompt", "verdict_schema", "trimming"}
+GATE_REQUEST_FIELDS = {"candidate_id", "objective_id", "gate_version", "decision_provenance_sha256", "gates", "trimming"}
 
 
 def _encode(payload):
@@ -58,8 +60,8 @@ def _validate_payload(payload):
             or not payload["candidates"] or not isinstance(payload.get("plan"), list)
             or not payload["plan"] or not isinstance(payload.get("generation_runs"), dict)):
         raise click.ClickException("Invalid external judge artifact")
-    if payload.get("judge_model") != "external" or type(payload.get("external_judge_version")) is not int or payload["external_judge_version"] != 1:
-        raise click.ClickException("Artifact must use external judge version 1")
+    if payload.get("judge_model") != "external" or type(payload.get("external_judge_version")) is not int or payload["external_judge_version"] not in (1, 2):
+        raise click.ClickException("Artifact must use a supported external judge version")
     try:
         require_independent_models(payload["model"], EXTERNAL_POLICY_MODEL)
     except (KeyError, ValueError, TypeError):
@@ -110,12 +112,16 @@ def _build_outputs(artifact, out, payload, *, force):
             scope = ingestion._scope(payload, entry)
             question = candidate_question(entry)
             candidate_storage_id(entry, scope, question)
+            if payload["external_judge_version"] == 2:
+                validate_decision_provenance(scope, entry)
             if not validate_question(question).is_valid:
                 raise ValueError()
             checked = check_evidence(entry.get("evidence"), entry.get("sources"))
             if not checked["passed"] or checked["options"] != entry["evidence"]:
                 raise ValueError()
-            request = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"])
+            from shared.quality_gate import QuestionQualitySignature
+            request = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"],
+                                    **({} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
             raw = _encode(request)
             if len(raw.decode("utf-8")) > REQUEST_CHARACTER_LIMIT:
                 raise ValueError()
@@ -227,7 +233,7 @@ def _prior_results(directories, out, ids, *, preserved_ids=()):
                 continue
             try:
                 data = ingestion._read_json(path)
-                is_request = isinstance(data, dict) and set(data) == REQUEST_FIELDS
+                is_request = isinstance(data, dict) and set(data) in (REQUEST_FIELDS, GATE_REQUEST_FIELDS)
             except (ValueError, UnicodeError, RecursionError):
                 is_request = False
             if path.stem in preserved_ids:

@@ -17,11 +17,12 @@ from shared.doc_search import search_objective_docs, documentation_context, Docu
 from shared.parallel import run_bounded
 from shared.evidence import check_evidence
 from shared.llm_generator import generate_question, cite_question, GenerationOutputError
+from shared.decision_planner import plan_decision, verify_decision, writer_decision_context, DecisionVetoError
 from shared.llm_limits import MaxTokensTruncation
 from shared.cli_models import CLIModelError, CLIUsageLimitError, CLIAuthError, CodexModelRejectedError
 from shared.completion_diagnostics import _safe_completion
 from shared.model_policy import DEFAULT_GENERATOR_MODEL, DEFAULT_JUDGE_MODEL, require_independent_models
-from shared.quality_gate import JudgeVerdict, QUESTION_FIELDS, judge_question
+from shared.quality_gate import JudgeVerdict, QUESTION_FIELDS, judge_question, judge_three_gates
 from shared.validator import validate_question
 from shared.batch_report import option_length_report, format_option_length_report, option_prefix_report, format_option_prefix_report
 from shared.external_judge import build_request, candidate_id, request_directory
@@ -123,6 +124,7 @@ def persist_candidate(client, scope, question, judge, grounding, exam, domain_id
 @click.option("--domain-code", default=None, help="Optional domain filter; otherwise use all weighted sections.")
 @click.option("--subsection", default=None, help="Optional guide subsection filter.")
 @click.option("--objective", "objective_ids", multiple=True, help="Repeatable registry objective ID; overrides weights with round-robin targets in flag order.")
+@click.option("--section-allocation", default=None, help="Comma-separated counts in included guide section order, summing to N; pilot: 4,5,6,6,5,4. Cannot combine with scope filters.")
 @click.option("--model", default=DEFAULT_GENERATOR_MODEL, show_default=True)
 @click.option("--judge-model", default=DEFAULT_JUDGE_MODEL, show_default=True, help="Use external to export judge requests and never write the DB.")
 @click.option("--difficulty", type=click.Choice(["EASY", "MEDIUM", "HARD"]), default="MEDIUM", show_default=True)
@@ -134,11 +136,16 @@ def persist_candidate(client, scope, question, judge, grounding, exam, domain_id
 @click.option("--gen-effort", type=click.Choice(["low", "medium", "high"]), default="high", show_default=True)
 @click.option("--cite-effort", type=click.Choice(["low", "medium", "high"]), default="medium", show_default=True)
 def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge_model, difficulty, dry_run, artifact, exam, seed,
-         parallel=3, gen_effort="high", cite_effort="medium"):
+         parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None):
     try:
+        allocation = None
+        if section_allocation is not None:
+            if not re.fullmatch(r"[0-9]+(?:,[0-9]+)*", section_allocation):
+                raise ValueError("Section allocation must be comma-separated nonnegative integers")
+            allocation = [int(value) for value in section_allocation.split(",")]
         generator_family, judge_family = require_independent_models(model, judge_model)
         plan = plan_questions(cert, n_questions, domain_code=domain_code, subsection=subsection, seed=seed,
-                              objective_ids=objective_ids)
+                              objective_ids=objective_ids, section_allocation=allocation)
     except ValueError as exc:
         raise click.ClickException(str(exc)) from None
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
@@ -154,12 +161,13 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                "generator_family": generator_family, "judge_family": judge_family,
                "dry_run": dry_run, "seed": seed, "requested_objective_ids": list(dict.fromkeys(objective_ids)),
                "planned_count": n_questions, "plan": plan, "candidates": [],
-               "parallel": effective_parallel, "gen_effort": gen_effort, "cite_effort": cite_effort}
+               "parallel": effective_parallel, "gen_effort": gen_effort, "cite_effort": cite_effort,
+               "rules_version": 4, "section_allocation": allocation, "decision_first": True}
     client = None if dry_run or external else database_client()
     exam = exam or ("GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert)
     payload.update({"difficulty": difficulty, "exam": exam})
     if external:
-        payload["external_judge_version"] = 1
+        payload["external_judge_version"] = 2
     domains, runs, run_counts = {}, {}, {}
     if client is not None:
         # Resolve ALL existing domains before creating any run; never seed new certs.
@@ -173,8 +181,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         for code in domains:
             run = client.create_generation_run({"exam": exam, "domain_code": code,
                 "target_count": sum(p["domain_code"] == code for p in plan), "generated_count": 0,
-                "model": model, "prompt_version": "registry-grounded-v1",
-                "notes": json.dumps({"cert_id": cert, "judge_model": judge_model})})
+                "model": model, "prompt_version": "decision-first-rules-v4",
+                "notes": json.dumps({"cert_id": cert, "judge_model": judge_model, "rules_version": 4})})
             if not run:
                 raise click.ClickException("Could not create generation run")
             runs[code], run_counts[code] = run["id"], 0
@@ -194,25 +202,52 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         nonlocal accepted, awaiting, batch_stop, next_commit
         index, scope = item
         request = None
-        entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line")},
+        entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line", "key_length_rank")},
                  "index": index, "stem": None, "options": [], "key": "A", "rationales": {},
                  "evidence": [], "citation_attempts": [], "mechanical_check": {"passed": False, "errors": ["No fetched evidence"]},
                  "judge_verdict": {"passed": False, "score": 0.0, "reason": "Not judged", "model": judge_model},
                  "accepted": False}
         if external:
             entry["candidate_id"] = candidate_id(index, scope, {})
-        stage = "documentation"
+        stage = "decision_plan"
         try:
-            sources = search_objective_docs(scope["objective_text"], scope["services"],
-                                            cache=docs_cache, objective_id=scope["objective_id"])
-            if not sources:
-                raise ValueError("No fetched documentation")
-            entry["sources"] = sources  # Local frozen text supports offline founder verification.
-            context = documentation_context(sources)
-            if not context.strip():
-                raise ValueError("No fetched documentation text")
+            entry["decision_attempts"] = []
+            feedback = ""
+            previous_decision = None
+            for decision_attempt in range(2):
+                stage = "decision_plan"
+                decision = plan_decision(scope, model=model, difficulty=difficulty,
+                    replacement_feedback=feedback, reasoning_effort=gen_effort)
+                attempt = {"plan": decision}
+                entry["decision_attempts"].append(attempt)
+                if previous_decision is not None and decision["engineering_decision"].casefold() == previous_decision.casefold():
+                    raise DecisionVetoError("Replacement must change the unsupported engineering decision")
+                stage = "documentation"
+                sources = search_objective_docs(scope["objective_text"], scope["services"],
+                    cache=docs_cache, objective_id=scope["objective_id"], decision_plan=decision)
+                if not sources:
+                    raise ValueError("No fetched documentation")
+                attempt["sources"] = sources
+                entry["sources"] = sources  # Frozen current sources for final receipts.
+                context = documentation_context(sources)
+                stage = "decision_veto"
+                proof = verify_decision(scope, decision, sources, model=model, reasoning_effort=cite_effort)
+                attempt["proof"] = proof
+                if proof["passed"]:
+                    break
+                previous_decision = decision["engineering_decision"]
+                feedback = json.dumps({"unsupported_decision": decision, "veto_reason": proof["reason"],
+                    "mechanical_errors": proof["mechanical_check"]["errors"],
+                    "instruction": "Replace the engineering decision, not the scenario with extra exceptions."})
+            else:
+                raise DecisionVetoError("Replacement decision vetoed; discard candidate")
+            # Objective text comes from the frozen reviewed registry, never the LM.
+            decision_objective = {"objective_id": scope["objective_id"], "objective_text": scope["objective_text"]}
+            scope["decision_objective"] = entry["decision_objective"] = decision_objective
+            scope["decision_plan"], scope["decision_proof"] = decision, proof
+            entry["decision_plan"], entry["decision_proof"] = decision, proof
             stage = "generation"
-            raw = generate_question(scope["domain_prompt"], context, model=model,
+            raw = generate_question(writer_decision_context(scope, decision, proof), context, model=model,
                                     difficulty=difficulty, exam_subsection=scope["subsection"],
                                     **({"reasoning_effort": gen_effort} if codex else {}))
             stage = "schema"
@@ -262,16 +297,24 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 request = build_request(entry["candidate_id"], scope, question, sources, checked["options"])
                 return  # Publish in plan order under the shared write lock.
             stage = "judge"
-            judge = judge_question(question, scope["domain_prompt"], documentation_context=context,
+            judge = judge_three_gates(question, scope["domain_prompt"], documentation_context=context,
                                    model=judge_model, generator_model=model, option_evidence=checked["options"])
             entry["judge_verdict"] = {"passed": judge.passed, "score": judge.score, "reason": judge.reason, "model": judge.model}
+            if getattr(judge, "gate_results", None) is not None:
+                entry["gate_verdicts"] = judge.gate_results
             if getattr(judge, "error_class", None):
                 entry["judge_verdict"]["error_class"] = judge.error_class
             if not judge.passed and getattr(judge, "diagnostics", None):
                 entry["judge_verdict"]["diagnostics"] = judge.diagnostics
             grounding = {k: scope[k] for k in ("cert_id", "objective_id", "guide_sha256")}
             grounding.update({"generator_model": model, "judge_model": judge_model,
-                              "evidence": checked["options"], "mechanical_check": entry["mechanical_check"]})
+                              "evidence": checked["options"], "mechanical_check": entry["mechanical_check"],
+                              "rules_version": 4, "gate_version": 4,
+                              "decision_objective": decision_objective,
+                              "decision_plan": decision, "decision_proof": proof,
+                              "key_length_rank": scope["key_length_rank"]})
+            if getattr(judge, "gate_results", None) is not None:
+                grounding["gate_verdicts"] = judge.gate_results
             entry["grounding"] = grounding
             stage = "persistence"
             stored = True if dry_run else persist_candidate(client, scope, question, judge, grounding,

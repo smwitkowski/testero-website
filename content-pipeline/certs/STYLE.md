@@ -1,8 +1,8 @@
 # Google Cloud question style: measured samples and authoring rules
 
-**Sample research retrieval date: 2026-10-04. Authoring policy updated: 2026-10-05.**
+**Sample research retrieval date: 2026-10-04. Authoring policy updated: 2026-10-06.**
 
-This document measures the official public sample forms linked by all 15 certifications on the [Google Cloud certification index](https://cloud.google.com/learn/certification). The measurements guide original, docs-grounded authoring. The rules-v3 S1–S10/O1–O5 rules below are founder authoring policy, not measured sample frequencies. Generation still creates DRAFT candidates only; it never publishes or replaces human approval.
+This document measures the official public sample forms linked by all 15 certifications on the [Google Cloud certification index](https://cloud.google.com/learn/certification). The measurements guide original, docs-grounded authoring. Rules v4 and the retained S1–S10/O1–O5 structure below are founder authoring policy, not measured sample frequencies. Generation still creates DRAFT candidates only; it never publishes or replaces human approval.
 
 ## Evidence boundary
 
@@ -69,9 +69,70 @@ The [certification pages](https://cloud.google.com/learn/certification), not sam
 
 Those are standard/beta formats, not renewal-exam claims. Versioned exam guides in the registry govern coverage; the sample sizes above do not imply shortened exams or omitted objectives.
 
+## Current founder policy: rules v4 (2026-10-06)
+
+Rules v4 adds decision-first design to S1–S10/O1–O5 below. The pipeline must
+choose an ML engineering decision before detailed product-document retrieval.
+Record the objective, engineering decision, business consequence, existing
+system, one or two decisive constraints, best action and three realistic
+mistakes. Each mistake loses for a scenario-specific reason: upkeep, cost,
+latency, risk, execution mode, metric or missing validation.
+
+Use overview and “choose between” pages to verify that plan. Documentation is a
+veto, not a source of quiz topics. If it does not support one clear best answer,
+replace the decision instead of adding unsupported-feature exceptions. Keep the
+per-option receipts and exact mechanical quote checks.
+
+- **V4.1 — Test the decision, not the feature.** Ask what an ML engineer should
+  do to achieve an outcome. No feature lists, formats or limits unless the
+  selected objective is literally about them. One clearly stated ML task.
+- **V4.2 — No gotchas.** The key cannot hinge on an unsupported-feature fact.
+  No wrong option may be wrong only because a feature does not exist.
+- **V4.3 — Practitioner difficulty.** A solid practitioner who knows Google
+  Cloud at exam-guide level can answer without memorizing a specific doc page.
+  Distractors must be credible mistakes, not “tune on the test set” or “use
+  clustering as labels”. Difficulty comes from tradeoffs, not hidden exceptions.
+- **V4.4 — Plain names.** Use “Agent Platform” in stems. Never use the full
+  “Gemini Enterprise Agent Platform” name in new learner-facing stems.
+- **V4.5 — Keep v3 structure.** Keep natural openings, distinct approaches,
+  at most two wants and no doc references. Keep option-length checks. The planner
+  assigns key-length ranks 1–4, with rank 4 longest, so about 25% of the batch
+  places the key among the longest. Ties are allowed; never pad/clamp options
+  or weaken the mechanical limits to force a rank.
+- **V4.6 — Current founder exemplars only.** Choose exemplars only from the eight `ok` items in the
+  founder-reviewed 21-item pack. They are voice/zoom references, not answer evidence.
+  Remove examples the founder later rejected. Legacy naming/detail in an
+  approved exemplar never overrides v4. Do not copy official Google samples
+  into outputs or use them as answer authority.
+
+### Three separate gates: all must pass
+
+Each gate uses a separate strict DSPy output schema and a separate Sonnet 5.5
+Claude CLI call. Scores never compensate for another gate and are never averaged.
+
+1. **Blind solver:** stem and shuffled options only, no key, rationales, docs or
+   founder verdict. It chooses an answer with confidence and flags ambiguity.
+   A key mismatch or two defensible answers fails.
+2. **Style critic:** stem/options plus current rules and approved founder
+   exemplars, no key, rationales or docs. Check zoom level, gotchas, names,
+   practitioner plausibility and all v3/v4 rules.
+3. **Evidence reviewer:** key, rationales, fetched documentation and per-option
+   receipts. Check factual support, scenario-specific losses and ambiguity.
+
+Ingestion requires all three strict passes. Missing/mistyped/extra fields,
+uncertainty, low confidence/scores and failed booleans fail closed. Historical
+single-judge verdicts do not approve v4 candidates. Repair remains one attempt
+using gate reasons; evidence-defective items stay blocked. Every repair needs
+three fresh gates. Generation/ingestion creates DRAFTs, never publication.
+
+Calibration holds out each item's entire round from exemplars. Founder labels
+and notes appear only in reports. Evidence is explicitly skipped if no matching
+frozen docs exist. Targets: reject at least 11/13 flagged items and keep at least
+6/8 approved items. This small-sample calibration is not unseen-item validation.
+
 ## Original authoring style
 
-### Founder policy, rules v3: S1–S10 and O1–O5
+### Retained structure, rules v3: S1–S10 and O1–O5 (v4 overrides above)
 
 Apply these rules to new generated candidates. Do not rewrite legacy bank rows
 or infer exam frequencies from them.
@@ -83,7 +144,7 @@ or infer exam frequencies from them.
 | S3 — Constraints as wants or policies | At most two explicit wants or policies. Do not pack extra wants into one sentence or pre-exclude a distractor with “without X” or an equivalent approach-specific ban. Let product/ML knowledge eliminate alternatives. Never use “must satisfy the following requirements” or “Stakeholders have established”. |
 | S4 — Natural task | Target about 70% “What should you do?” per batch. Rotate natural variants for the rest, with `question_line` recorded by the planner. Use a variant only when it fits the decision; do not invent a first-step premise. Every question line must end with “?” and must not name settings or config objects. |
 | S5 — Reading size | Use 50–110 words and one paragraph, two at most. This is authoring policy, not a claim about all sample lengths. |
-| S6 — Plain register | State goals in plain language. Use product names only as needed, with current short names such as Agent Platform Pipelines and Agent Platform Workbench. Use “Gemini Enterprise Agent Platform” at most once. Do not put setting names, enum values, file formats or code in the stem. |
+| S6 — Plain register | State goals in plain language. Use product names only as needed, with current short names such as Agent Platform Pipelines and Agent Platform Workbench. Use “Agent Platform”; never the full “Gemini Enterprise Agent Platform” in new stems. Do not put setting names, enum values, file formats or code in the stem. |
 | S7 — Objective-aware moment | At most half of a plan may be fresh design. For non-security objectives, rotate recent deployment, monitoring, migration, cost/latency reduction, scale growth and greenfield. Use a security incident only when the selected objective explicitly concerns security, privacy or governance. PMLE `6.1:x` and explicitly privacy-related data items are eligible. The planner records `scenario_moment` on every item and embeds the hint in its prompt. Start with an operational moment, so N=1 is not greenfield. The selected objective's actual decision must stay central; `scenario_relevant` fails when an incident wrapper displaces it. Hints never expand objective scope. |
 | S8 — No documentation voice | Never put “documented”, “documentation”, “supported specifications” or “per best practices” in the stem. Evidence belongs in receipts, not learner prose. |
 | S9 — No dated model names | No model/product version numbers unless the objective is explicitly version-specific. Prefer “a Gemini model”. |
@@ -91,7 +152,7 @@ or infer exam frequencies from them.
 | O1 — Parallel actions | Write imperative, parallel practitioner actions of similar length. Use one or two sentences, or two or three short numbered steps. |
 | O2 — Decisions, not syntax | Distinguish approach, service or sequence. Even for configuration-heavy objective 1.2:3, compare tuning/adaptation approaches and why they fit, not setting values or media resolution per image part. |
 | O3 — Knowledge-dependent alternatives | A distractor may fail a stated want when the reason needs documented product/ML knowledge. The want itself is not disqualifying. Fail if a literal fact or prohibition excludes it, such as batch for an explicit online endpoint, a policy-banned action, or prompt design when supervised-learning adaptation is required. A hand-written server can validly fail minimal maintenance when rejecting it requires knowing that custom prediction routines provide the server. Multiple distractors may fail the same want for different documented reasons; do not add a third want. The required `distractors_need_knowledge` check stays fail-closed. |
-| O4 — Length balance | Balance comparable detail, not cloned sentences or repeated scaffolding. All four options are parallel and within about ±20% of their mean word count. Never make the key uniquely longest; vary the non-key longest option and do not always tie the key for longest. The validator rejects a uniquely longest key more than 2 words ahead, or any option outside inclusive 0.75–1.25× mean. Counts use whitespace-separated words. Artifact reports include ties in the primary key-is-longest rate, record unique-longest separately, and target ≤35%. A missed batch target is reported, not a new automatic batch rejection. |
+| O4 — Length balance | Balance comparable detail, not cloned sentences or repeated scaffolding. All four options are parallel and within about ±20% of their mean word count. Never make the key uniquely longest; vary the non-key longest option and do not always tie the key for longest. The validator rejects a uniquely longest key more than 2 words ahead, or any option outside inclusive 0.75–1.25× mean. Counts use whitespace-separated words. Artifact reports include ties in the primary key-is-longest rate and record unique-longest separately. Rules v4 assigns key-length ranks with about 25% longest; ties remain allowed. A missed batch target is reported, not a new automatic batch rejection. |
 | O5 — Distinct approaches | Compare genuinely different approaches, services or sequences. At most one pair may be minor variants of one approach. Do not clone the same action and change a small setting or noun. Mechanically reject an item when three or more options share at least eight leading words. Report `option_prefix_report` using the maximum leading-word prefix shared by any three options per item, with option labels stripped: batch median target ≤2 words; the share of items with a prefix ≥6 words must be ≤10%. These batch targets are reports, not new automatic batch rejections. The required `options_distinct_approaches` judge check rejects semantic clones even when the mechanical prefix threshold is not reached. |
 
 Codex is the generator/citer choice for the founder's existing subscription, not
@@ -100,7 +161,7 @@ CLI (`claude`, Anthropic); Codex is OpenAI. An explicit OpenRouter judge remains
 a fallback. Known different-vendor families are required, and all evidence,
 schema, style and judge gates still apply. Generation is never publication.
 
-### Canonical rules-v3 judge contract
+### Historical rules-v3 single-judge contract (not v4 approval)
 
 Use one canonical DSPy verdict everywhere: 15 required fields, consisting of
 `verdict`, `score`, `reason` and these 12 exact boolean checks:

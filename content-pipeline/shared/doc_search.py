@@ -125,10 +125,23 @@ class OfficialDocsRedirectHandler(HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
+def decision_discovery_text(objective_text: str, decision_plan: dict) -> str:
+    """Retrieve proof of a planned tradeoff, preferring overviews over API trivia."""
+    actions = [decision_plan["best_action"], *(m["action"] for m in decision_plan["mistakes"])]
+    return "\n".join([
+        "Engineering decision: " + decision_plan["engineering_decision"],
+        "Existing system: " + decision_plan["existing_system"],
+        "Choose between approaches: " + " versus ".join(actions),
+        "Official overview comparison architecture when to choose guidance",
+        "Objective scope: " + objective_text,
+    ])
+
+
 def _discovery_query(objective_text: str, services: list[str]) -> str:
     """Focus objective examples without changing existing question-first queries."""
     fallback = " ".join(["Google Cloud", objective_text, ", ".join(services)])
-    if objective_text.startswith("Marked answer: ") and "\nQuestion stem: " in objective_text:
+    if ((objective_text.startswith("Marked answer: ") and "\nQuestion stem: " in objective_text)
+            or objective_text.startswith("Engineering decision: ")):
         return fallback
     pattern = r"\(\s*(?:e\.g\.\s*,?\s*|for example\b\s*[:,]?\s*)([^()]*)\)"
     examples = [match.group(1).strip() for match in re.finditer(pattern, objective_text, re.I)
@@ -251,13 +264,16 @@ def _search_objective_docs(objective_text: str, services: list[str], num_results
 
 def search_objective_docs(objective_text: str, services: list[str], *,
                           cache: DocumentationCache | None = None,
-                          objective_id: str | None = None) -> list[dict]:
+                          objective_id: str | None = None,
+                          decision_plan: dict | None = None) -> list[dict]:
     """Return fetched source records for one registry objective plus its services.
 
     Each record binds requested_url and final url to the same fetched text,
     retrieval timestamp and SHA-256 of the exact UTF-8 text. Raises when empty.
     An optional run-local cache reuses discovery and evidence, including failures.
     """
+    if decision_plan is not None:
+        objective_text = decision_discovery_text(objective_text, decision_plan)
     if cache is None:
         return _search_objective_docs(objective_text, services, 5)
     return _search_objective_docs(

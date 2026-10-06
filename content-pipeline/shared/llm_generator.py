@@ -23,6 +23,13 @@ logger = logging.getLogger(__name__)
 class PmleQuestionSignature(dspy.Signature):
     """Generate a question within the supplied certification registry objective scope.
 
+    Follow rules v4 and the verified decision plan supplied in domain_context.
+    Ask what an ML engineer should do to achieve an outcome. Test one primary
+    decision and one clear task at practitioner difficulty. Write only necessary
+    facts. Keep options at comparable granularity; difficulty comes from tradeoffs,
+    not arbitrary limits, hidden exceptions, API trivia or unsupported gotchas.
+    Use Agent Platform short names only in new learner prose. Detailed docs verify
+    the planned decision; they must not replace it with a feature distinction.
     Follow the supplied STYLE guidance and certification level. Produce exactly
     four reasonable options with one best answer and per-option explanations.
     Use the founder's purpose-first style, allowing business-first or task-first openings, at the supplied certification level.

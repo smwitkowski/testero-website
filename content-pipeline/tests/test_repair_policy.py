@@ -5,7 +5,7 @@ import pytest
 from shared.cli_models import parse_output,output_model
 from shared.llm_generator import PmleQuestionSignature
 from shared.quality_gate import QuestionQualitySignature,LEGACY_ROUND4_QUALITY_SIGNATURE
-from shared.question_style import STYLE_INSTRUCTIONS
+from shared.question_style import LEGACY_STYLE_INSTRUCTIONS_V3 as STYLE_INSTRUCTIONS
 
 FIXTURE=json.loads((Path(__file__).parent/"fixtures/round4_repair_failures.json").read_text())
 

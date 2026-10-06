@@ -51,6 +51,11 @@ def repairs(case, monkeypatch):
     return case, revise, cite
 
 
+# These fixtures describe frozen version-1 flows, never current rules-v4 approval.
+from functools import partial
+from shared.quality_gate import QuestionQualitySignature
+build_request = partial(build_request, signature=QuestionQualitySignature)
+
 def invoke(repairs, *flags):
     case = repairs[0]
     return CliRunner().invoke(repair.main, ["--artifact", str(case[0]), "--verdicts", str(case[1]), *flags])
@@ -322,7 +327,7 @@ def add_parent(repairs, index=2):
     original = payload["candidates"][0]
     scope = plan_questions(payload["cert_id"], index, objective_ids=[original["objective_id"]])[index - 1]
     entry = deepcopy(original)
-    entry.update({key: scope[key] for key in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line")})
+    entry.update({key: scope[key] for key in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line", "key_length_rank")})
     entry.update(index=index, stem=original["stem"].replace("a retailer", f"retailer number {index}"))
     entry["candidate_id"] = candidate_id(index, scope, candidate_question(entry))
     destination = case[6].with_name(entry["candidate_id"] + ".json")

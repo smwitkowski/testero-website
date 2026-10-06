@@ -25,6 +25,11 @@ def forbid_live_calls(monkeypatch):
     monkeypatch.setattr("dotenv.load_dotenv", Mock(side_effect=AssertionError("No env files")))
 
 
+# These fixtures describe frozen version-1 flows, never current rules-v4 approval.
+from functools import partial
+from shared.quality_gate import QuestionQualitySignature
+build_request = partial(build_request, signature=QuestionQualitySignature)
+
 def invoke(case, *flags):
     return CliRunner().invoke(export.main, ["--artifact", str(case[0]), *map(str, flags)])
 
@@ -198,7 +203,7 @@ def test_early_rejects_are_skipped_without_question_regeneration(case):
     second = plan_questions(payload["cert_id"], 2, objective_ids=[payload["plan"][0]["objective_id"]])[1]
     payload["plan"].append(second)
     scope = payload["plan"][1]
-    reject = {**{key: scope[key] for key in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line")},
+    reject = {**{key: scope[key] for key in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line", "key_length_rank")},
               "index": 2, "candidate_id": candidate_id(2, scope, {}), "accepted": False,
               "stem": None, "options": [], "failure_stage": "generation", "reason": "Synthetic reject"}
     payload["candidates"].append(reject)
@@ -216,7 +221,7 @@ def test_all_builds_finish_before_any_request_is_replaced(case):
     second = plan_questions(payload["cert_id"], 2, objective_ids=[payload["plan"][0]["objective_id"]])[1]
     payload["plan"].append(second)
     other = deepcopy(payload["candidates"][0])
-    other.update({key: second[key] for key in ("scenario_moment", "opening_style", "question_line")})
+    other.update({key: second[key] for key in ("scenario_moment", "opening_style", "question_line", "key_length_rank")})
     other["index"] = 2
     other["candidate_id"] = candidate_id(2, payload["plan"][1], export.candidate_question(other))
     other["sources"][0]["text_sha256"] = "0" * 64

@@ -26,7 +26,7 @@ from shared.cli_models import CLIModelError, CLIUsageLimitError
 
 from shared.completion_diagnostics import CompletionCaptureAdapter
 from shared.model_policy import DEFAULT_JUDGE_MODEL, require_independent_models
-from shared.question_style import STYLE_INSTRUCTIONS, LEGACY_STYLE_INSTRUCTIONS_V2, KNOWLEDGE_O3, PRE_REPAIR_O3
+from shared.question_style import LEGACY_STYLE_INSTRUCTIONS_V3 as STYLE_INSTRUCTIONS, LEGACY_STYLE_INSTRUCTIONS_V2, KNOWLEDGE_O3, PRE_REPAIR_O3
 from shared.llm_limits import (
     MaxTokensTruncation, TRUNCATION_REASON, reject_token_limit,
 )
@@ -156,6 +156,7 @@ class JudgeVerdict:
     model: str
     error_class: str | None = None
     diagnostics: dict[str, Any] | None = None
+    gate_results: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if (not _valid_verdict_fields(asdict(self))
@@ -168,7 +169,7 @@ class JudgeVerdict:
         return json.dumps(
             {REVIEW_NOTES_SOURCE: {"version": REVIEW_NOTES_VERSION,
                                    **{key: value for key, value in asdict(self).items()
-                                      if key not in ("error_class", "diagnostics")}}},
+                                      if key not in ("error_class", "diagnostics", "gate_results")}}},
             allow_nan=False, separators=(",", ":"),
         )
 
@@ -315,3 +316,65 @@ def judge_question(
         return fail(TRUNCATION_REASON, "MaxTokensTruncation")
     except Exception:
         return fail("Judge failed or returned invalid output")
+
+
+def judge_three_gates(
+    question_data: Mapping[str, Any], domain_context: str, *,
+    documentation_context: str = "", model: str = DEFAULT_JUDGE_MODEL,
+    generator_model: str | None = None, option_evidence: list[dict] | None = None,
+    predictors: Mapping[str, Callable[..., Any]] | None = None,
+    style_reference: str | None = None, max_tokens: int = 2000,
+) -> JudgeVerdict:
+    """Run three separate calls with isolated inputs; require every strict gate.
+
+    Injected per-gate predictors support offline tests. CLI subscription and
+    explicit OpenRouter paths use the same independent DSPy signatures.
+    """
+    from shared.gates import GATE_SIGNATURES, build_gate_inputs, aggregate_gate_verdict
+    from shared.cli_models import run_signature
+    from shared.evidence import check_evidence
+    if not isinstance(model, str) or not model.strip():
+        return JudgeVerdict(False, 0.0, "Invalid judge model", DEFAULT_JUDGE_MODEL)
+    def fail(reason, error_class=None):
+        return JudgeVerdict(False, 0.0, reason, model, error_class)
+    try:
+        if generator_model is not None:
+            require_independent_models(generator_model, model)
+        if (not isinstance(question_data, Mapping)
+                or any(not isinstance(question_data.get(name), str) or not question_data[name].strip() for name in QUESTION_FIELDS)
+                or len({" ".join(question_data[name].casefold().split()) for name in QUESTION_FIELDS[1:5]}) != 4
+                or not isinstance(domain_context, str) or not domain_context.strip()
+                or not isinstance(documentation_context, str) or not documentation_context.strip()):
+            return fail("Missing or invalid question, objective or documentation evidence")
+        if not option_evidence:
+            return fail("Missing option evidence")
+        if model == "external" and predictors is None:
+            return fail("External judge requires all three ingested gates")
+        if predictors is not None and set(predictors) != set(GATE_SIGNATURES):
+            return fail("All three independent predictors are required")
+        inputs = build_gate_inputs(question_data, domain_context, documentation_context,
+                                   option_evidence, style_reference=style_reference)
+        raw = {}
+        for name, signature in GATE_SIGNATURES.items():
+            if predictors is not None:
+                result = predictors[name](**inputs[name])
+                raw[name] = result if isinstance(result, dict) else dict(result)
+            elif model == "claude" or model.startswith("claude/"):
+                raw[name] = run_signature(model, signature, inputs[name])
+            else:
+                key = os.environ.get("OPENROUTER_API_KEY")
+                if not key:
+                    return fail("Judge credentials unavailable")
+                lm = dspy.LM(model=model, api_key=key, api_base="https://openrouter.ai/api/v1",
+                             temperature=0.0, max_tokens=max_tokens, cache=False)
+                with reject_token_limit(lm), dspy.context(adapter=dspy.JSONAdapter()):
+                    raw[name] = dict(dspy.Predict(signature)(**inputs[name], lm=lm))
+        return aggregate_gate_verdict(question_data, raw, model=model)
+    except CLIUsageLimitError:
+        raise
+    except CLIModelError as error:
+        return fail(str(error), type(error).__name__)
+    except MaxTokensTruncation:
+        return fail(TRUNCATION_REASON, "MaxTokensTruncation")
+    except Exception:
+        return fail("Three-gate judge failed or returned invalid output")

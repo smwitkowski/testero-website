@@ -1,6 +1,88 @@
 # Docs-grounded question process
 
-## Current operator flow
+## Current rules-v4 operator flow (2026-10-06)
+
+This section supersedes the historical rules-v3/v2 runbooks below for **new**
+candidates. Never overwrite old artifacts, requests, verdicts or journals.
+No live pilot, Exa retrieval, OpenRouter call or DB write is authorized by this
+code update. The founder runs the pilot separately. Do not open `.env*`.
+
+1. Allocate objectives from the current guide. For the pilot, use 30 items with
+   section quotas **4/5/6/6/5/4**. Preserve v3 opening/moment/question-line hints.
+   Assign balanced key-length ranks 1–4; rank 4 places the key among the longest
+   on about 25% of plan items. Keep option balance and unique-key lead checks.
+2. Before retrieving detailed docs, record a typed DSPy decision plan: objective,
+   engineering decision, business consequence, existing system, one or two
+   decisive constraints, best action and three realistic mistakes. The mistakes
+   lose for scenario-specific tradeoffs, not unsupported-feature gotchas.
+3. Retrieve official overview/choose-between documentation to verify that plan.
+   Use docs as a veto. Replace an unsupported/ambiguous decision instead of
+   adding obscure exceptions to its stem. Freeze fetched text/hashes/timestamps.
+4. Write one clearly stated ML task at practitioner level. Apply rules v4 in
+   `certs/STYLE.md`, with “Agent Platform” short naming and approved founder
+   exemplars only. Keep all schema, per-option receipt and exact quote checks.
+5. Export three frozen independent gate prompts/schemas. Blind sees only
+   stem/shuffled choices; style sees rules/exemplars but no key or docs; evidence
+   sees key/rationales/docs/receipts. `judge_requests.py` uses three independent
+   Sonnet 5.5 CLI calls per candidate. A failed/missing/uncertain gate blocks
+   ingestion; never average gate scores. Historical single-judge verdicts cannot
+   approve v4 content.
+6. Repair once using gate reasons, only when evidence remains supported. Keep
+   the key, source evidence, objective and lineage contracts. Judge the repair
+   with all three fresh gates. Dry ingestion never constructs a DB client.
+
+Claude calibration is the only live model work allowed in this change. The
+runner holds out each item's whole round from exemplars, never exposes founder
+labels/notes to gates and uses evidence only from an exact frozen-content match.
+Report missing docs as `SKIP`. Keep a durable call-budget journal and cap all
+iterations at 150 calls. Targets are at least 11/13 flagged rejected and 6/8
+approved retained. Calibration is not unseen-item validation.
+
+### Exact founder pilot: generate → judge → repair → judge → dry ingest
+
+Run each command only after the preceding command finishes. If generation has
+rejections (nonzero exit), inspect its artifact before continuing. Use a fresh
+filename if the path already exists; never bypass journals by copying artifacts.
+Generation needs shell `EXA_API_KEY` plus Codex login. Judging needs Claude login.
+Repair needs Codex login and frozen docs. These commands make no DB writes.
+
+```sh
+cd /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline
+
+PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/scripts/generate_all_domains.py \
+  --cert machine-learning-engineer --n-questions 30 --section-allocation 4,5,6,6,5,4 \
+  --model codex --judge-model external --parallel 3 --gen-effort high --cite-effort medium \
+  --artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-v4-pilot-30.json
+
+PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/scripts/judge_requests.py \
+  --requests /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-v4-pilot-30.judge-requests \
+  --verdicts /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-v4-pilot-30.verdicts --judge-model claude --parallel 3
+
+PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/scripts/repair_candidates.py \
+  --artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-v4-pilot-30.json \
+  --verdicts /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-v4-pilot-30.verdicts --parallel 3 --gen-effort high --cite-effort medium
+
+PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/scripts/judge_requests.py \
+  --requests /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-v4-pilot-30.judge-requests \
+  --verdicts /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-v4-pilot-30.verdicts --judge-model claude --parallel 3
+
+PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/scripts/ingest_external_verdicts.py \
+  --artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-v4-pilot-30.json \
+  --verdicts /Users/switkowski/Projects/Testero/frontend.prime-testero-content/content-pipeline/.cache/generation/pmle-d025-v4-pilot-30.verdicts --dry-run
+```
+
+The first judge invokes all three gates per schema/mechanical-PASS candidate.
+The second skips existing verdicts and judges fresh repair IDs. Invalid existing
+verdicts need manual reconciliation; never silently replace them. Inspect the
+dry-run report, actual section coverage, all-gate yield, key-length rank and
+option-prefix reports. DRAFT write ingestion and founder approval remain
+separate human decisions. No LLM gate publishes questions or retires legacy rows.
+
+## Historical rules-v3 operator flow
+
+The sections below retain earlier operator context and immutable artifact
+contracts. They are not current rules-v4 generation or approval instructions.
+
 
 The Codex and Claude subscription CLIs are authenticated and ready. The generator
 uses `--model codex` (default `gpt-6.1-sol`, generation high reasoning,

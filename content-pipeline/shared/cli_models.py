@@ -63,7 +63,7 @@ def output_model(signature):
     """Derive the strict output schema from the existing DSPy signature."""
     fields = {}
     for name, field in signature.output_fields.items():
-        annotation = list[StrictOptionEvidence] if name == "evidence" else field.annotation
+        annotation = list[StrictOptionEvidence] if name == "evidence" else field.rebuild_annotation()
         description = field.description or (field.json_schema_extra or {}).get("desc", "")
         fields[name] = (annotation, Field(description=description))
     return create_model(signature.__name__ + "CLIOutput", __config__=ConfigDict(strict=True, extra="forbid"), **fields)
@@ -214,9 +214,13 @@ def run_claude_request(model: str, prompt: str, schema: dict, *, timeout=CLI_TIM
         raise ValueError("Exported requests require a Claude CLI model")
     if not isinstance(prompt, str) or not prompt.strip():
         raise CLISchemaError("Exported judge prompt is missing")
-    if schema != output_model(QuestionQualitySignature).model_json_schema():
-        raise CLISchemaError("Exported judge schema differs from the full current rubric")
-    return _run_cli(model, prompt, schema, QuestionQualitySignature, timeout=timeout)
+    from shared.gates import GATE_SIGNATURES
+    signatures = [QuestionQualitySignature, *GATE_SIGNATURES.values()]
+    matches = [signature for signature in signatures
+               if schema == output_model(signature).model_json_schema()]
+    if len(matches) != 1:
+        raise CLISchemaError("Exported judge schema differs from the supported strict gate schemas")
+    return _run_cli(model, prompt, schema, matches[0], timeout=timeout)
 
 
 def _run_cli(model, prompt, schema, signature, *, timeout, reasoning_effort="high"):

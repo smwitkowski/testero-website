@@ -24,7 +24,7 @@ from shared.evidence import check_evidence
 from shared.external_judge import (
     EXTERNAL_JUDGE_PROVENANCE, EXTERNAL_POLICY_MODEL, build_request,
     candidate_storage_id, candidate_question, request_directory,
-    validate_candidate_records, canonical_sha256, eligible_repair_verdict,
+    validate_candidate_records, canonical_sha256, eligible_repair_verdict, validate_decision_provenance,
 )
 from shared.model_policy import require_independent_models
 from shared.quality_gate import QuestionQualitySignature, LEGACY_ROUND4_QUALITY_SIGNATURE, judge_question
@@ -92,9 +92,27 @@ def _scope(payload, entry):
         raise ValueError("Certification does not match the artifact")
     current = plan_questions(payload["cert_id"], index, objective_ids=[scope["objective_id"]])
     expected = current[index - 1]
-    # Offset is planning provenance, not rubric scope; explicit-objective replay uses zero.
-    if expected is None or {k: v for k, v in scope.items() if k != "objective_offset"} != {
-            k: v for k, v in expected.items() if k != "objective_offset"}:
+    # Deterministic registry scope stays exact; LLM decision/proof data is frozen separately.
+    provenance_fields = {"objective_offset", "decision_plan", "decision_proof", "decision_objective"}
+    for key in ("decision_plan", "decision_proof", "decision_objective", "key_length_rank"):
+        if key in scope and entry.get(key) != scope[key]:
+            raise ValueError("Candidate does not match its frozen decision provenance")
+    if "decision_objective" in scope and scope["decision_objective"] != {
+            "objective_id": expected["objective_id"], "objective_text": expected["objective_text"]}:
+        raise ValueError("Decision objective differs from the current registry")
+    if payload.get("external_judge_version") == 1 and "key_length_rank" not in scope:
+        # The exact known v3 scope predates the rank hint; no arbitrary prompt edits.
+        expected = dict(expected)
+        expected.pop("key_length_rank")
+        rank_hint = (f"\nKey length rank hint: {index % 4 or 4} of 4 (1 shortest, 4 longest)."
+                     " Distribute key ranks evenly, reaching comparable length with meaningful detail."
+                     " Rank 4 should tie one non-key option for longest; never make the key uniquely"
+                     " longest. Keep all options balanced and the mechanical two-word key lead limit.")
+        if not expected["domain_prompt"].endswith(rank_hint):
+            raise ValueError("Unknown historical rank-hint transform")
+        expected["domain_prompt"] = expected["domain_prompt"][:-len(rank_hint)]
+    if expected is None or {k: v for k, v in scope.items() if k not in provenance_fields} != {
+            k: v for k, v in expected.items() if k not in provenance_fields}:
         raise ValueError("Frozen scope differs from the current registry")
     return scope
 
@@ -103,6 +121,8 @@ def _validate_candidate(path, payload, entry):
     scope = _scope(payload, entry)
     question = candidate_question(entry)
     candidate_storage_id(entry, scope, question)
+    if payload.get("external_judge_version") == 2:
+        validate_decision_provenance(scope, entry)
     if entry.get("key") != "A" or not validate_question(question).is_valid:
         raise ValueError("Question schema validation failed")
     checked = check_evidence(entry.get("evidence"), entry.get("sources"))
@@ -125,11 +145,13 @@ def _validate_candidate(path, payload, entry):
     if hashlib.sha256(request_path.read_bytes()).hexdigest() != digest:
         raise ValueError("External judge request hash mismatch")
     frozen = _read_json(request_path)
-    rebuilt = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"])
+    v4 = payload.get("external_judge_version") == 2
+    rebuilt = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"],
+                            **({} if v4 else {"signature": QuestionQualitySignature}))
     if canonical_sha256(frozen) != canonical_sha256(rebuilt):
         # Only unchanged originals may retain the exact known preceding 14-field rubric.
         # No arbitrary old schema or historical 13-field request is accepted.
-        if "repair" in entry or canonical_sha256(frozen) != canonical_sha256(build_request(
+        if v4 or "repair" in entry or canonical_sha256(frozen) != canonical_sha256(build_request(
                 entry["candidate_id"], scope, question, entry["sources"], checked["options"],
                 signature=LEGACY_ROUND4_QUALITY_SIGNATURE)):
             raise ValueError("External request differs from frozen content or supported rubric")
@@ -146,7 +168,13 @@ def _reject(entry, stage, reason):
         entry["accepted"] = False
 
 
-def _external_decision(question, scope, sources, evidence, raw, generator_model):
+def _external_decision(question, scope, sources, evidence, raw, generator_model, *, gate_version=2):
+    require_independent_models(generator_model, EXTERNAL_POLICY_MODEL)
+    if gate_version == 2:
+        from shared.gates import aggregate_gate_verdict
+        return aggregate_gate_verdict(question, raw, model=EXTERNAL_JUDGE_PROVENANCE)
+    if gate_version != 1:
+        raise ValueError("Unsupported external judge version")
     parse_output(json.dumps(raw, allow_nan=False), QuestionQualitySignature)
     return judge_question(question, scope["domain_prompt"],
         documentation_context=documentation_context(sources),
@@ -207,7 +235,8 @@ def validate_completed_journals(payload, path):
             if scope["domain_code"] not in runs:
                 raise ValueError("Completed candidate has no created run")
             decision = _external_decision(question, scope, entry["sources"], checked["options"],
-                                          entry["external_verdict"], payload["model"])
+                                          entry["external_verdict"], payload["model"],
+                                          gate_version=payload["external_judge_version"])
             if not decision.passed:
                 raise ValueError("Completed candidate lacks a strict stored PASS")
     except Exception:
@@ -222,8 +251,9 @@ def ingest(path, verdicts, *, dry_run=False):
             or not isinstance(payload.get("plan"), list) or not payload["plan"]
             or not isinstance(payload.get("generation_runs"), dict)):
         raise click.ClickException("Invalid external judge artifact")
-    if payload.get("judge_model") != "external" or payload.get("external_judge_version") != 1:
-        raise click.ClickException("Artifact does not use external judge version 1")
+    if (payload.get("judge_model") != "external" or type(payload.get("external_judge_version")) is not int
+            or payload["external_judge_version"] not in (1, 2)):
+        raise click.ClickException("Artifact does not use a supported external judge version")
     try:
         require_independent_models(payload["model"], EXTERNAL_POLICY_MODEL)
     except (KeyError, ValueError):
@@ -256,7 +286,7 @@ def ingest(path, verdicts, *, dry_run=False):
             if verdict_path.is_symlink():
                 raise ValueError("Unsafe parent verdict path")
             raw = _read_json(verdict_path)
-            eligible_repair_verdict(raw)
+            eligible_repair_verdict(raw, gate_version=payload["external_judge_version"])
             if canonical_sha256(raw) != child["repair"]["original_verdict_sha256"]:
                 raise ValueError("Parent verdict changed after repair")
     except (ValueError, KeyError, TypeError, OSError, UnicodeError, StopIteration):
@@ -302,7 +332,8 @@ def ingest(path, verdicts, *, dry_run=False):
                             or record.get("run_id") != payload["generation_runs"].get(code)):
                         raise ValueError("Incomplete persisted run journal")
                     decision = _external_decision(question, scope, entry["sources"], checked["options"],
-                                                  entry["external_verdict"], payload["model"])
+                                                  entry["external_verdict"], payload["model"],
+                                          gate_version=payload["external_judge_version"])
                     if not decision.passed:
                         raise ValueError("Stored verdict no longer passes")
                     seen.add(normalize_stem(question["stem"]))
@@ -347,7 +378,7 @@ def ingest(path, verdicts, *, dry_run=False):
                 raise ValueError("Expected output fields")
             entry["external_verdict"] = raw
             judge = _external_decision(question, scope, entry["sources"], checked["options"],
-                                       raw, payload["model"])
+                                       raw, payload["model"], gate_version=payload["external_judge_version"])
             entry["judge_verdict"] = {"passed": judge.passed, "score": judge.score,
                                       "reason": judge.reason, "model": judge.model}
             entry["external_judge_provenance"] = EXTERNAL_JUDGE_PROVENANCE
@@ -368,6 +399,10 @@ def ingest(path, verdicts, *, dry_run=False):
         grounding = {key: scope[key] for key in ("cert_id", "objective_id", "guide_sha256")}
         grounding.update(generator_model=payload["model"], judge_model=EXTERNAL_JUDGE_PROVENANCE,
                          evidence=checked["options"], mechanical_check={"passed": True, "errors": []})
+        if payload["external_judge_version"] == 2:
+            grounding.update(gate_version=4, rules_version=4, gate_verdicts=raw,
+                             **{name: scope[name] for name in
+                                ("decision_objective", "decision_plan", "decision_proof", "key_length_rank")})
         entry["grounding"] = grounding
         entry["accepted"] = False
         pending.append((entry, scope, question, judge, grounding))

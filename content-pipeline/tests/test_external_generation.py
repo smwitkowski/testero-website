@@ -60,7 +60,7 @@ def external_generation(monkeypatch, tmp_path):
         **QUESTION, "stem": f"You manage workload number {generator.call_count}. " + QUESTION["stem"]}
     cite = Mock(side_effect=lambda *a, **kw: {"evidence": receipts()})
     monkeypatch.setattr(generate, "database_client", database)
-    monkeypatch.setattr(generate, "judge_question", judge)
+    monkeypatch.setattr(generate, "judge_three_gates", judge)
     monkeypatch.setattr(generate, "search_objective_docs", search)
     monkeypatch.setattr(generate, "generate_question", generator)
     monkeypatch.setattr(generate, "cite_question", cite)
@@ -114,14 +114,22 @@ def test_external_generation_only_queues_requests_never_calls_db_or_judge(extern
         request = read_request(env, candidate)
         assert request["candidate_id"] == candidate["candidate_id"]
         assert request["objective_id"] == OBJECTIVE
-        assert request["verdict_schema"] == output_model(QuestionQualitySignature).model_json_schema()
-        assert request["verdict_schema"]["additionalProperties"] is False
-        assert set(request["verdict_schema"]["required"]) == set(QuestionQualitySignature.output_fields)
-        prompt = request["judge_prompt"]
-        assert " ".join(QuestionQualitySignature.instructions.split()) in " ".join(prompt.split())
-        assert " ".join(STYLE_INSTRUCTIONS.split()) in " ".join(prompt.split())
-        assert candidate["stem"] in prompt and URL in prompt
-        assert all(quote in prompt for quote in QUOTES)
+        from shared.gates import GATE_SIGNATURES
+        assert artifact["external_judge_version"] == 2 and request["gate_version"] == 4
+        assert set(request["gates"]) == set(GATE_SIGNATURES)
+        for name, signature in GATE_SIGNATURES.items():
+            gate = request["gates"][name]
+            assert gate["verdict_schema"] == output_model(signature).model_json_schema()
+            assert gate["verdict_schema"]["additionalProperties"] is False
+            assert set(gate["verdict_schema"]["required"]) == set(signature.output_fields)
+            assert " ".join(signature.instructions.split()) in " ".join(gate["judge_prompt"].split())
+            assert candidate["stem"] in gate["judge_prompt"]
+        prompt = request["gates"]["evidence"]["judge_prompt"]
+        assert URL in prompt and all(quote in prompt for quote in QUOTES)
+        for name in ("blind_solver", "style"):
+            assert URL not in request["gates"][name]["judge_prompt"]
+            assert QUESTION["correct_explanation"] not in request["gates"][name]["judge_prompt"]
+        assert " ".join(STYLE_INSTRUCTIONS.split()) in " ".join(request["gates"]["style"]["judge_prompt"].split())
         assert request["trimming"]["enabled"] is False
     assert len(list((env["path"] / "batch.judge-requests").glob("*.json"))) == 3
 
@@ -209,11 +217,12 @@ def test_request_uses_exact_shared_signature_prompt_and_raw_schema():
     evidence = check_evidence(receipts(), fetched)["options"]
     ident = external_judge.candidate_id(1, scope, QUESTION)
     request = external_judge.build_request(ident, scope, QUESTION, fetched, evidence)
-    assert set(request) == {"candidate_id", "objective_id", "judge_prompt", "verdict_schema", "trimming"}
-    assert request["judge_prompt"] == signature_prompt(QuestionQualitySignature, {
-        "question_data": QUESTION, "domain_context": scope["domain_prompt"],
-        "documentation_context": documentation_context(fetched), "option_evidence": evidence})
-    assert request["verdict_schema"] == output_model(QuestionQualitySignature).model_json_schema()
+    from shared.gates import GATE_SIGNATURES, build_gate_inputs
+    assert set(request) == {"candidate_id", "objective_id", "gate_version", "gates", "trimming", "decision_provenance_sha256"}
+    inputs = build_gate_inputs(QUESTION, scope["domain_prompt"], documentation_context(fetched), evidence)
+    for name, signature in GATE_SIGNATURES.items():
+        assert request["gates"][name]["judge_prompt"] == signature_prompt(signature, inputs[name])
+        assert request["gates"][name]["verdict_schema"] == output_model(signature).model_json_schema()
     assert external_judge.request_directory(Path("/local/batch.json")) == Path("/local/batch.judge-requests")
 
 
@@ -251,10 +260,11 @@ def test_oversize_request_trims_only_sources_preserves_quotes_rubric_and_receipt
     assert len(serialized) <= external_judge.REQUEST_CHARACTER_LIMIT == 150000
     assert request["trimming"]["enabled"] is True
     assert request["trimming"]["character_limit"] == 150000
-    assert request["verdict_schema"] == output_model(QuestionQualitySignature).model_json_schema()
-    prompt = request["judge_prompt"]
-    assert " ".join(QuestionQualitySignature.instructions.split()) in " ".join(prompt.split())
-    assert " ".join(STYLE_INSTRUCTIONS.split()) in " ".join(prompt.split())
+    from shared.gates import EvidenceReviewerSignature
+    assert request["gates"]["evidence"]["verdict_schema"] == output_model(EvidenceReviewerSignature).model_json_schema()
+    prompt = request["gates"]["evidence"]["judge_prompt"]
+    assert " ".join(EvidenceReviewerSignature.instructions.split()) in " ".join(prompt.split())
+    assert " ".join(STYLE_INSTRUCTIONS.split()) in " ".join(request["gates"]["style"]["judge_prompt"].split())
     assert scope["objective_id"] in prompt
     assert QUESTION["stem"] in prompt and all(quote in prompt for quote in QUOTES)
     assert "UNCITED_DOCUMENT_SHOULD_NOT_BE_IN_PROMPT" not in prompt
@@ -328,7 +338,7 @@ def test_full_cited_text_between_old_and_new_limit_is_not_trimmed():
     size=len(json.dumps(request,indent=2,ensure_ascii=False)+"\n")
     assert 60000 < size <= external_judge.REQUEST_CHARACTER_LIMIT==150000
     assert request["trimming"]["enabled"] is False
-    assert text in request["judge_prompt"]
+    assert text in request["gates"]["evidence"]["judge_prompt"]
     assert request["trimming"]["sources"][0]["windows"]==[[0,len(text)]]
 
 
@@ -348,7 +358,7 @@ def test_largest_cited_source_is_trimmed_first_others_stay_full():
     assert request["trimming"]["enabled"]
     assert records[large["url"]]["trimmed"] and records[large["url"]]["margin"]==8000
     assert not records[small["url"]]["trimmed"]
-    assert small["text"] in request["judge_prompt"]
+    assert small["text"] in request["gates"]["evidence"]["judge_prompt"]
     assert json.dumps(fetched,sort_keys=True)==before
     assert len(json.dumps(request,indent=2,ensure_ascii=False)+"\n")<=150000
 
@@ -376,7 +386,7 @@ def test_generation_stores_and_prints_length_report_and_new_schema(external_gene
     assert report["target_max_rate"]==.35 and report["key_is_longest_rate"]==1
     assert "WARNING target exceeded" in result.output
     candidate=payload["candidates"][0]
-    schema=read_request(env,candidate)["verdict_schema"]
+    schema=read_request(env,candidate)["gates"]["style"]["verdict_schema"]
     assert "distractors_need_knowledge" in schema["required"]
 
 
@@ -389,6 +399,6 @@ def test_opening_and_question_line_hints_are_recorded_in_candidate_and_request(e
     for entry,scope in zip(payload["candidates"],payload["plan"]):
         assert entry["opening_style"]==scope["opening_style"]
         assert entry["question_line"]==scope["question_line"]
-        prompt=read_request(env,entry)["judge_prompt"]
+        prompt=read_request(env,entry)["gates"]["evidence"]["judge_prompt"]
         assert "Opening style: " + scope["opening_style"] in prompt
         assert "Question line hint: " + scope["question_line"] in prompt

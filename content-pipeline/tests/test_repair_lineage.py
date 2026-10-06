@@ -19,6 +19,11 @@ from shared.quality_gate import ACCURACY_CHECKS, LEGACY_ROUND4_QUALITY_SIGNATURE
 from test_external_ingest import case, invoke, save_input, saved
 
 
+# These fixtures describe frozen version-1 flows, never current rules-v4 approval.
+from functools import partial
+from shared.quality_gate import QuestionQualitySignature
+build_request = partial(build_request, signature=QuestionQualitySignature)
+
 def write_request(case, entry, *, signature=QuestionQualitySignature):
     path = request_directory(case[0]) / (entry["candidate_id"] + ".json")
     request = build_request(entry["candidate_id"], case[2]["plan"][entry["index"] - 1],
@@ -280,7 +285,7 @@ def test_repair_cannot_duplicate_another_original_even_if_reordered(repaired, ch
     scope = plan_questions(payload["cert_id"], 2, objective_ids=[payload["plan"][0]["objective_id"]])[1]
     payload["plan"].append(scope)
     other = deepcopy(parent)
-    other.update({key: scope[key] for key in ("scenario_moment", "opening_style", "question_line")})
+    other.update({key: scope[key] for key in ("scenario_moment", "opening_style", "question_line", "key_length_rank")})
     other["index"] = 2
     other["candidate_id"] = candidate_id(2, scope, candidate_question(other))
     write_request(repaired, other)
@@ -306,7 +311,7 @@ def completed_batch(case):
     for index, scope in enumerate(plan, 1):
         entry = deepcopy(template)
         entry.update({key: scope[key] for key in ("cert_id", "domain_code", "objective_id", "guide_sha256",
-                                                "scenario_moment", "opening_style", "question_line")})
+                                                "scenario_moment", "opening_style", "question_line", "key_length_rank")})
         entry.update(index=index, stem=f"You manage workload number {index}. " + template["stem"])
         entry["candidate_id"] = candidate_id(index, scope, candidate_question(entry))
         if index <= 12:

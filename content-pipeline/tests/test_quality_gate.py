@@ -106,7 +106,7 @@ def test_knowledge_check_is_a_typed_required_dspy_output():
 
 
 def test_shared_v2_rules_are_in_judge_instructions():
-    from shared.question_style import STYLE_INSTRUCTIONS, STYLE_RULES
+    from shared.question_style import LEGACY_STYLE_INSTRUCTIONS_V3 as STYLE_INSTRUCTIONS, LEGACY_STYLE_RULES_V3 as STYLE_RULES
 
     assert STYLE_INSTRUCTIONS in gate.QuestionQualitySignature.instructions
     for rule in (

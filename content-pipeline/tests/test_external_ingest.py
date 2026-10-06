@@ -24,7 +24,7 @@ def case(tmp_path, monkeypatch):
                 "text_sha256": hashlib.sha256(TEXT.encode()).hexdigest()}]
     evidence = check_evidence([{"option_label": label, "url": URL, "quote": quote}
                                for label, quote in zip("ABCD", QUOTES)], sources)["options"]
-    entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line")},
+    entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line", "key_length_rank")},
              "index": 1, "candidate_id": "synthetic-candidate", "key": "A", "stem": QUESTION["stem"],
              "options": [{"label": label, "text": QUESTION[field]} for label, field in zip("ABCD", generate.OPTION_FIELDS)],
              "rationales": {label: QUESTION[field] for label, field in zip("ABCD", generate.RATIONALE_FIELDS)},
@@ -62,6 +62,11 @@ def case(tmp_path, monkeypatch):
     monkeypatch.setattr("shared.cli_models.run_signature", Mock(side_effect=AssertionError("No live CLI")))
     return path, verdict_dir, payload, client, factory, raw, request_path
 
+
+# These fixtures describe frozen version-1 flows, never current rules-v4 approval.
+from functools import partial
+from shared.quality_gate import QuestionQualitySignature
+build_request = partial(build_request, signature=QuestionQualitySignature)
 
 def invoke(case, *flags):
     return CliRunner().invoke(ingest.main, ["--artifact", str(case[0]), "--verdicts", str(case[1]), *flags])
@@ -297,7 +302,7 @@ def test_completed_stems_block_pending_duplicates_even_when_reordered(case):
         extra.pop(field, None)
     second = plan_questions(payload["cert_id"], 2, objective_ids=[payload["plan"][0]["objective_id"]])[1]
     payload["plan"].append(second)
-    extra.update({key: second[key] for key in ("scenario_moment", "opening_style", "question_line")})
+    extra.update({key: second[key] for key in ("scenario_moment", "opening_style", "question_line", "key_length_rank")})
     request_path = request_directory(case[0]) / (extra["candidate_id"] + ".json")
     request_path.write_text(json.dumps(build_request(extra["candidate_id"], payload["plan"][1], QUESTION,
                                                      extra["sources"], extra["evidence"])))

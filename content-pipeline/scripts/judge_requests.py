@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from shared import cli_models
 from shared.cli_models import output_model, parse_output
 from shared.quality_gate import QuestionQualitySignature
+from shared.gates import GATE_SIGNATURES, GATE_VERSION, parse_gate_output
 
 from shared.external_judge import REQUEST_CHARACTER_LIMIT
 SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
@@ -90,18 +91,32 @@ def _read_request(path, ident, canonical):
         raise
     except (OSError, UnicodeError, ValueError, RecursionError):
         raise RequestValidationError("Request must be readable, non-symlink strict JSON") from None
-    if not isinstance(request, dict) or set(request) != {
-            "candidate_id", "objective_id", "judge_prompt", "verdict_schema", "trimming"}:
+    legacy_fields = {"candidate_id", "objective_id", "judge_prompt", "verdict_schema", "trimming"}
+    gate_fields = {"candidate_id", "objective_id", "gate_version", "decision_provenance_sha256", "gates", "trimming"}
+    if not isinstance(request, dict) or set(request) not in (legacy_fields, gate_fields):
         raise RequestValidationError("Request must contain exactly the exported request fields")
+    is_gates = set(request) == gate_fields
+    if is_gates:
+        if (type(request["gate_version"]) is not int or request["gate_version"] != GATE_VERSION
+                or not isinstance(request["decision_provenance_sha256"], str)
+                or not re.fullmatch(r"[0-9a-f]{64}", request["decision_provenance_sha256"])
+                or not isinstance(request["gates"], dict) or set(request["gates"]) != set(GATE_SIGNATURES)):
+            raise RequestValidationError("Request must contain all current independent gates")
+        for name, signature in GATE_SIGNATURES.items():
+            gate = request["gates"][name]
+            if (not isinstance(gate, dict) or set(gate) != {"judge_prompt", "verdict_schema"}
+                    or not isinstance(gate["judge_prompt"], str) or not gate["judge_prompt"].strip()
+                    or gate["verdict_schema"] != output_model(signature).model_json_schema()):
+                raise RequestValidationError("Gate request differs from the strict current schema")
     if request["candidate_id"] != ident:
         raise RequestValidationError("Request candidate ID must match its filename")
     if not isinstance(request["objective_id"], str) or not request["objective_id"].strip():
         raise RequestValidationError("Request objective ID must be nonempty text")
-    if not isinstance(request["judge_prompt"], str) or not request["judge_prompt"].strip():
+    if not is_gates and (not isinstance(request["judge_prompt"], str) or not request["judge_prompt"].strip()):
         raise RequestValidationError("Request judge prompt must be nonempty text")
     if not isinstance(request["trimming"], dict):
         raise RequestValidationError("Request trimming metadata must be an object")
-    if json.dumps(request["verdict_schema"], sort_keys=True) != json.dumps(canonical, sort_keys=True):
+    if not is_gates and json.dumps(request["verdict_schema"], sort_keys=True) != json.dumps(canonical, sort_keys=True):
         raise RequestValidationError("Request verdict schema differs from the current question quality schema")
     return request
 
@@ -210,14 +225,26 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3):
             with submission_lock:
                 if stopped.is_set():
                     return ident, "not_attempted", None
-            raw = cli_models.run_claude_request(judge_model, request["judge_prompt"], request["verdict_schema"])
-            if type(raw) is not dict:
-                raise cli_models.CLISchemaError("Invalid structured output")
-            # Validate, but save the original full dictionary, without gate metadata.
-            try:
-                parse_output(json.dumps(raw, allow_nan=False), QuestionQualitySignature)
-            except (ValueError, TypeError, RecursionError):
-                raise cli_models.CLISchemaError("Invalid structured output") from None
+            if "gates" in request:
+                raw = {}
+                for name in GATE_SIGNATURES:
+                    with submission_lock:
+                        if stopped.is_set():
+                            return ident, "not_attempted", None
+                    gate = request["gates"][name]
+                    raw[name] = cli_models.run_claude_request(judge_model, gate["judge_prompt"], gate["verdict_schema"])
+                    parse_gate_output(name, raw[name])
+            else:
+                raw = cli_models.run_claude_request(judge_model, request["judge_prompt"], request["verdict_schema"])
+                if type(raw) is not dict:
+                    raise cli_models.CLISchemaError("Invalid structured output")
+                try:
+                    parse_output(json.dumps(raw, allow_nan=False), QuestionQualitySignature)
+                except (ValueError, TypeError, RecursionError):
+                    raise cli_models.CLISchemaError("Invalid structured output") from None
+                if (type(raw["score"]) not in (int, float) or not 0 <= raw["score"] <= 1
+                        or not 0 < len(raw["reason"].strip()) <= 300):
+                    raise cli_models.CLISchemaError("Invalid structured output")
             if not _publish(destination, raw, exclusive=True):
                 return ident, "skipped", None
             try:

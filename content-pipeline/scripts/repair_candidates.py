@@ -90,8 +90,8 @@ def _validate_repair_payload(path, payload):
             or not payload["plan"] or not isinstance(payload.get("generation_runs"), dict)):
         raise click.ClickException("Invalid external judge artifact")
     if (payload.get("judge_model") != "external" or type(payload.get("external_judge_version")) is not int
-            or payload["external_judge_version"] != 1):
-        raise click.ClickException("Artifact must use external judge version 1")
+            or payload["external_judge_version"] not in (1, 2)):
+        raise click.ClickException("Artifact must use a supported external judge version")
     if (payload.get("difficulty") not in ("EASY", "MEDIUM", "HARD")
             or not isinstance(payload.get("exam"), str) or not payload["exam"].strip()):
         raise click.ClickException("Artifact lacks persistence difficulty or exam")
@@ -129,7 +129,11 @@ def _inventory(path, verdicts, payload):
                 if not verdict_path.is_file():
                     raise ValueError()
                 raw = ingestion._read_json(verdict_path)
-                eligible_repair_verdict(raw)
+                if payload["external_judge_version"] == 2:
+                    from shared.gates import eligible_gate_repair
+                    eligible_gate_repair(raw)
+                else:
+                    eligible_repair_verdict(raw, gate_version=1)
                 scope, question, checked = ingestion._validate_candidate(path, payload, entry)
                 item.update(eligible=True, reason="Supported FAIL with repairable quality defects",
                             raw=raw, scope=scope, question=question, checked=checked)
@@ -166,10 +170,14 @@ def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed
             journal["calls_started"] = 1
             _flush(path, payload)
             summary["calls_started"] += 1
+        repair_context = scope["domain_prompt"]
+        if payload["external_judge_version"] == 2:
+            from shared.decision_planner import writer_decision_context
+            repair_context = writer_decision_context(scope, entry["decision_plan"], entry["decision_proof"])
         revised = cli_models.run_signature(REPAIR_MODEL, RepairQuestionSignature, {
             "original_question": json.dumps(question, ensure_ascii=False, allow_nan=False),
             "reason": json.dumps(raw, ensure_ascii=False, allow_nan=False),
-            "domain_context": scope["domain_prompt"],
+            "domain_context": repair_context,
             "documentation_context": documentation_context(entry["sources"]),
             "difficulty": payload["difficulty"],
         }, reasoning_effort=gen_effort)
@@ -209,6 +217,9 @@ def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed
         child = {key: deepcopy(entry[key]) for key in (
             "cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment",
             "opening_style", "question_line", "index", "sources")}
+        for name in ("decision_plan", "decision_proof", "decision_objective", "key_length_rank"):
+            if name in entry:
+                child[name] = deepcopy(entry[name])
         child.update(candidate_id=ident + "-r1", key="A", stem=revised["stem"],
             options=[{"label": label, "text": revised[field]} for label, field in zip("ABCD", OPTION_FIELDS)],
             rationales={label: revised[field] for label, field in zip("ABCD", RATIONALE_FIELDS)},
@@ -224,7 +235,9 @@ def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed
                     "question_sha256": question_sha256(revised),
                     "storage_question_id": content_candidate_id(entry["index"], scope, revised),
                     "original_verdict": deepcopy(raw), "original_verdict_sha256": canonical_sha256(raw)})
-        request = build_request(child["candidate_id"], scope, revised, child["sources"], checked["options"])
+        from shared.quality_gate import QuestionQualitySignature
+        request = build_request(child["candidate_id"], scope, revised, child["sources"], checked["options"],
+                                **({} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
         with lock:
             completed[ident] = (child, request)
     except Exception as error:

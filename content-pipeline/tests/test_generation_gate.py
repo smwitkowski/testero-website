@@ -59,7 +59,7 @@ def generation(monkeypatch, tmp_path):
     generator.cite_mock = Mock(side_effect=lambda *a, **kw: {"evidence": raw["evidence"]})
     monkeypatch.setattr(generate, "cite_question", generator.cite_mock)
     judge = Mock(return_value=JudgeVerdict(True, 0.9, "Offline pass", generate.DEFAULT_JUDGE_MODEL))
-    monkeypatch.setattr(generate, "judge_question", judge)
+    monkeypatch.setattr(generate, "judge_three_gates", judge)
     return client, database, raw, search, generator, judge, tmp_path
 
 
@@ -292,7 +292,9 @@ def test_seed_cli_is_reproducible_and_recorded(generation):
     artifact = json.loads((generation[-1] / "pilot.json").read_text())
     assert artifact["seed"] == 1234
     from shared.cert_context import plan_questions
-    assert artifact["plan"] == plan_questions(generate.DEFAULT_CERT, 6, seed=1234)
+    deterministic = [{k: v for k, v in item.items() if k not in {"decision_plan", "decision_proof", "decision_objective"}}
+                     for item in artifact["plan"]]
+    assert deterministic == plan_questions(generate.DEFAULT_CERT, 6, seed=1234)
     assert all("objective_offset" in item for item in artifact["plan"])
 
 

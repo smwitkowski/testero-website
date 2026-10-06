@@ -152,3 +152,89 @@ STYLE_INSTRUCTIONS = (
 
 # Exact frozen policy text is only for matching historical original requests.
 LEGACY_STYLE_INSTRUCTIONS_V2 = STYLE_INSTRUCTIONS.replace(STYLE_RULES, LEGACY_STYLE_RULES_V2, 1)
+
+# Frozen original references are retained only for historical request verification.
+LEGACY_FOUNDER_EXEMPLARS = FOUNDER_EXEMPLARS
+LEGACY_STYLE_INSTRUCTIONS_V3 = STYLE_INSTRUCTIONS
+LEGACY_STYLE_RULES_V3 = STYLE_RULES
+
+STYLE_RULES = LEGACY_STYLE_RULES_V3 + """
+Rules v4 — decision-first practitioner difficulty:
+S11 Use Agent Platform short names only in new learner prose, never Vertex AI, AI Platform,
+or Gemini Enterprise Agent Platform. Official source URLs/quotes retain their actual names.
+S12 Ask what an ML engineer should do to achieve an outcome. Include only necessary facts.
+Test one primary engineering decision and one clear task. Difficulty comes from scenario
+tradeoffs, not arbitrary limits, hidden exceptions, API trivia, or unsupported feature gotchas.
+Choose the decision before detailed retrieval. Use overview/choose-between docs to verify it.
+If docs do not support a uniquely best action and three realistic mistakes, replace the
+unsupported decision; never add scenario exceptions or security wrappers to force the key.
+O6 Each mistake loses for a scenario-specific engineering reason (such as unnecessary
+migration, wrong execution mode, wrong metric, or missing validation). Keep all four choices
+at comparable granularity. Unsupported impossibility claims and brittle feature trivia fail.
+O7 Follow key_length_rank hints: 1 shortest, 2 second-shortest, 3 second-longest, 4 longest.
+Ranks rotate evenly across a batch, so only about 25% of keys are longest (including ties).
+Rank 4 should tie one other option for longest, never create a uniquely longest key. Keep
+O4's mechanical length balance and two-word key lead limit; do not pad or clone choices.
+"""
+STYLE_RULES = STYLE_RULES.replace(
+    'Agent Platform Pipelines, Agent Platform Workbench. Full "Gemini Enterprise Agent Platform" at\n'
+    'most once. No setting names, enum values, file formats or code in stem.',
+    'Agent Platform Pipelines, Agent Platform Workbench. Use short Agent Platform names only;\n'
+    'no legacy full names in new learner prose. No setting names, enum values, file formats or code in stem.',
+    1,
+)
+FOUNDER_EXEMPLAR_IDS = (3, 9, 11, 17, 18)
+FOUNDER_EXEMPLARS = (
+    (
+        'You are designing an ML feature management architecture using Gemini Enterprise Agent Platfo'
+        'rm Feature Store. Your team maintains feature data across two separate BigQuery tables: one '
+        'containing customer demographic attributes and the other containing customer behavioral aggr'
+        'egations. Both tables contain historical records over time with multiple rows per customer e'
+        'ntity ID, formatted as a time series using a feature_timestamp column. \n\nYou need to consoli'
+        'date features from both tables into a single endpoint to serve the latest feature values for'
+        ' low-latency online predictions, while preserving the ability to retrieve point-in-time hist'
+        'orical feature values for offline model training. \n\nWhat should you do?'
+    ),
+    (
+        'A travel company recently deployed a Gemini assistant that writes tour descriptions. Reviewe'
+        'rs still correct recurring wording errors after several prompt revisions. A BigQuery table c'
+        'ontains 400 package prompts paired with approved descriptions, and a Boolean column marks 80'
+        ' rows reserved for evaluation. You want Gemini to learn from these corrections while minimiz'
+        "ing changes to the team's existing SQL workflow. You also want the reserved rows used for ev"
+        'aluation during tuning. What should you do?'
+    ),
+    (
+        "Your company's security operations assistant uses a Llama model from Model Garden to classif"
+        'y incident reports. A recent security incident exposed recurring errors in company-specific '
+        'categories despite extensive prompt refinement. The model supports both full and parameter-e'
+        'fficient tuning, and analysts have prepared 600 carefully labeled complete reports represent'
+        'ative of production traffic. You want more reliable classification while minimizing tuning c'
+        'ompute. Company policy requires all tuning resources to stay in the Netherlands. Which appro'
+        'ach should you use?'
+    ),
+    (
+        'Your company runs a support-reply assistant, and its growing product catalog has expanded th'
+        'e terminology the assistant encounters. Your team already experiments in Agent Platform Work'
+        'bench and is considering several open foundation models from Model Garden. You want to explo'
+        're model-specific tuning code for prototypes using your support examples while minimizing th'
+        'e work to set up those experiments. What should you do first?'
+    ),
+    (
+        'You need to build a transaction fraud classifier for a payment processor using historical tr'
+        'ansactions in BigQuery. Reviewers will use its scores to investigate flagged payments, and m'
+        'odel owners will review its behavior across an evaluation dataset. You want to show how each'
+        " transaction's features contributed to its score relative to a baseline and summarize featur"
+        'e influence across the evaluation dataset. What should you do?'
+    ),
+)
+STYLE_INSTRUCTIONS = (
+    "Testero writing style, rules v4 (apply to generation and every correction):\n"
+    + STYLE_RULES
+    + "\n\nFive original founder-approved items from the fresh-review pack, all labelled ok. "
+      "They show voice and decision zoom only, not technical authority or templates. "
+      "Their exact historical wording is preserved; current rules override legacy full names "
+      "and configuration details. Use Agent Platform short names in new learner prose. "
+      "Do not copy these scenarios. Official samples and dumps are never prompted examples. "
+      "Fetched official docs are the only factual authority.\n"
+    + "\n\n".join(f"Approved item {ident}: {stem}" for ident, stem in zip(FOUNDER_EXEMPLAR_IDS, FOUNDER_EXEMPLARS))
+)

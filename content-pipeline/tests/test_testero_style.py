@@ -6,7 +6,8 @@ from types import SimpleNamespace
 import pytest
 
 from shared.llm_generator import PmleQuestionSignature, QuestionCorrectionSignature, FactualCorrectionSignature
-from shared.question_style import FOUNDER_EXEMPLARS, STYLE_RULES, STYLE_INSTRUCTIONS
+from shared.question_style import (FOUNDER_EXEMPLARS, STYLE_RULES, STYLE_INSTRUCTIONS,
+                                   LEGACY_STYLE_INSTRUCTIONS_V3, LEGACY_FOUNDER_EXEMPLARS)
 from shared import quality_gate as gate
 from shared.validator import validate_question
 
@@ -25,7 +26,7 @@ def question(stem):
                 distractor_3_explanation="Removing the model fails the requirement to keep predictions available.")
 
 
-@pytest.mark.parametrize("signature", [PmleQuestionSignature, QuestionCorrectionSignature, FactualCorrectionSignature, gate.QuestionQualitySignature])
+@pytest.mark.parametrize("signature", [PmleQuestionSignature, QuestionCorrectionSignature, FactualCorrectionSignature])
 def test_all_rules_and_five_exact_founder_exemplars_reach_all_signatures(signature):
     assert STYLE_INSTRUCTIONS in signature.instructions
     assert len(FOUNDER_EXEMPLARS) == 5
@@ -34,7 +35,13 @@ def test_all_rules_and_five_exact_founder_exemplars_reach_all_signatures(signatu
     assert all(f"O{n} " in STYLE_RULES for n in range(1, 4))
 
 
-@pytest.mark.parametrize("stem", FOUNDER_EXEMPLARS, ids=["bank", "fraud_rollout", "defects", "churn", "claims"])
+def test_historical_quality_signature_keeps_frozen_v3_style_not_current_exemplars():
+    assert LEGACY_STYLE_INSTRUCTIONS_V3 in gate.QuestionQualitySignature.instructions
+    assert all(stem in gate.QuestionQualitySignature.instructions for stem in LEGACY_FOUNDER_EXEMPLARS)
+    assert STYLE_INSTRUCTIONS not in gate.QuestionQualitySignature.instructions
+
+
+@pytest.mark.parametrize("stem", FOUNDER_EXEMPLARS, ids=["features", "sql_tuning", "efficient_tuning", "prototypes", "fraud_explainability"])
 def test_five_founder_rewrites_pass_validator(stem):
     result = validate_question(question(stem))
     assert result.is_valid, result.errors

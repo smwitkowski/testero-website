@@ -22,7 +22,7 @@ def batch(monkeypatch, tmp_path):
     monkeypatch.setattr(generate, "plan_questions", lambda cert, count, **kw: plan[:count])
     monkeypatch.setattr(generate, "search_objective_docs", lambda *a, **kw: [source()])
     monkeypatch.setattr(generate, "database_client", lambda: pytest.fail("DB forbidden"))
-    monkeypatch.setattr(generate, "judge_question", lambda *a, **kw: pytest.fail("Judge forbidden"))
+    monkeypatch.setattr(generate, "judge_three_gates", lambda *a, **kw: pytest.fail("Judge forbidden"))
     monkeypatch.setattr(generate, "cite_question", lambda *a, **kw: {"evidence": receipts()})
     def question(context, *args, **kwargs):
         index = int(context.rsplit("FAKE_INDEX=", 1)[1])

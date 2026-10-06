@@ -253,7 +253,8 @@ def _security_incident_allowed(cert_id: str, objective: dict) -> bool:
 
 def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = None,
                    subsection: str | None = None, seed: int | None = None,
-                   objective_ids: list[str] | tuple[str, ...] | None = None) -> list[dict[str, Any]]:
+                   objective_ids: list[str] | tuple[str, ...] | None = None,
+                   section_allocation: list[int] | tuple[int, ...] | None = None) -> list[dict[str, Any]]:
     """Plan weighted domains, or round-robin explicit objective IDs in input order.
 
     Explicit targets override domain weights and random offsets; duplicate IDs
@@ -265,6 +266,9 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
     Security incidents are reserved for security/privacy/governance objectives;
     PMLE permits only 6.1 or explicitly privacy-related data objectives. Other
     incident slots use scale growth, without changing objective order or scope.
+    Explicit section_allocation uses included guide section order and must sum to N;
+    it cannot be combined with objective/domain/subsection filters. Key length ranks
+    rotate evenly 1..4, with rank 4 tied longest rather than uniquely longest.
     Opening prefix families and question-line hints rotate globally without
     changing objective order, weights or scope. Hints are not wording quotas.
     """
@@ -281,6 +285,16 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
     if objective_ids is not None and (not isinstance(objective_ids, (list, tuple))
             or any(not isinstance(ident, str) or not ident.strip() for ident in objective_ids)):
         raise ValueError("Objective IDs must be a list or tuple of nonempty registry IDs")
+    if section_allocation is not None:
+        if domain_code is not None or subsection is not None or objective_ids:
+            raise ValueError("Section allocation cannot be combined with objective/domain/subsection filters")
+        if (not isinstance(section_allocation, (list, tuple))
+                or len(section_allocation) != len(domains)
+                or any(isinstance(n, bool) or not isinstance(n, int) or n < 0 for n in section_allocation)):
+            raise ValueError("Section allocation needs one nonnegative integer per included guide section")
+        largest_remainder([1], n_questions)
+        if sum(section_allocation) != n_questions:
+            raise ValueError("Section allocation must sum to n_questions")
     scoped = {code: domain["objectives"] if subsection is None else domain["subsections"][subsection]["objectives"]
               for code, domain in domains.items()}
     if any(not objectives for objectives in scoped.values()):
@@ -296,7 +310,8 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
         largest_remainder([1], n_questions)  # Reuse the existing budget validation.
         targets = [index[requested[i % len(requested)]] for i in range(n_questions)]
     else:
-        counts = largest_remainder([d["exam_weight"] for d in domains.values()], n_questions)
+        counts = (list(section_allocation) if section_allocation is not None else
+                  largest_remainder([d["exam_weight"] for d in domains.values()], n_questions))
         rng = random.Random(seed)
         for (code, domain), count in zip(domains.items(), counts):
             objectives = scoped[code]
@@ -309,6 +324,7 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
             moment = "scale growth"
         opening_style = OPENING_STYLES[index % len(OPENING_STYLES)]
         question_line = QUESTION_LINES[index % len(QUESTION_LINES)]
+        key_length_rank = index % 4 + 1
         prompt = domain_prompt(context, domain, objective["subsection"])
         prompt += f"\nTarget Objective: {objective['objective_id']}\n{objective['objective_context']}\nTest this objective specifically."
         prompt += f"\nScenario moment: {moment}."
@@ -350,11 +366,17 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
             " the scenario has no sequencing decision or introduce a false premise."
             " These are wording hints, not permission to expand the selected exam scope."
         )
+        prompt += (
+            f"\nKey length rank hint: {key_length_rank} of 4 (1 shortest, 4 longest)."
+            " Distribute key ranks evenly, reaching comparable length with meaningful detail."
+            " Rank 4 should tie one non-key option for longest; never make the key uniquely"
+            " longest. Keep all options balanced and the mechanical two-word key lead limit."
+        )
         plan.append({
             "cert_id": cert_id, "domain_code": code, "domain_name": domain["display_name"],
             "objective_id": objective["objective_id"], "guide_sha256": context["guide_sha256"],
             "objective_offset": offset, "scenario_moment": moment,
-            "opening_style": opening_style, "question_line": question_line,
+            "opening_style": opening_style, "question_line": question_line, "key_length_rank": key_length_rank,
             "objective_text": objective["objective_text"], "objective_context": objective["objective_context"],
             "services": list(objective["services"]), "subsection": objective["subsection"],
             "domain_prompt": prompt,

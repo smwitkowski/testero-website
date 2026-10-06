@@ -68,7 +68,7 @@ def question_sha256(question):
     return canonical_sha256({name: question[name] for name in QUESTION_FIELDS})
 
 
-def eligible_repair_verdict(raw):
+def eligible_repair_verdict(raw, *, gate_version=None):
     """Require a strict FAIL with intact factual checks and a repairable defect.
 
     Raises:
@@ -76,6 +76,12 @@ def eligible_repair_verdict(raw):
     """
     from shared.cli_models import parse_output
     from shared.quality_gate import ACCURACY_CHECKS
+    from shared.gates import eligible_gate_repair, GATE_SIGNATURES
+    if gate_version not in (None, 1, 2):
+        raise ValueError("Unsupported repair gate version")
+    if gate_version == 2 or (gate_version is None and isinstance(raw, dict) and set(raw) == set(GATE_SIGNATURES)):
+        eligible_gate_repair(raw)
+        return
     try:
         parsed = parse_output(json.dumps(raw, allow_nan=False), QuestionQualitySignature)
         allowed = {"distractors_need_knowledge", "constraints_as_wants", "distractors_plausible",
@@ -172,6 +178,7 @@ def _validate_candidate_records(payload):
         if "repair" not in entry:
             continue
         question, repair = candidate_question(entry), entry["repair"]
+        eligible_repair_verdict(repair.get("original_verdict"), gate_version=payload.get("external_judge_version"))
         scope = plan[entry["index"] - 1]
         candidate_storage_id(entry, scope, question)
         parent_id = repair["parent_candidate_id"]
@@ -182,6 +189,8 @@ def _validate_candidate_records(payload):
                 or parent.get("persistence_status") is not None or parent.get("inserted_question_id") is not None
                 or parent.get("persistence_validation_failed")
                 or any(entry.get(key) != parent.get(key) or parent.get(key) != scope.get(key) for key in SCOPE_FIELDS)
+                or any(entry.get(key) != parent.get(key) or parent.get(key) != scope.get(key)
+                       for key in ("decision_plan", "decision_proof", "decision_objective", "key_length_rank"))
                 or canonical_sha256(entry.get("sources")) != canonical_sha256(parent.get("sources"))):
             raise ValueError("Invalid repair parent or scope")
         parent_question = candidate_question(parent)
@@ -264,7 +273,7 @@ def _source_context(cited, evidence, trimmed_urls):
     return context, metadata
 
 
-def build_request(candidate_id, scope, question, sources, evidence, *, signature=QuestionQualitySignature):
+def build_request(candidate_id, scope, question, sources, evidence, *, signature=None):
     """Keep the rubric/schema intact; trim only fetched text around verified quotes."""
     question = {name: question[name] for name in QUESTION_FIELDS}
     checked = check_evidence(evidence, sources)
@@ -273,18 +282,69 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
     evidence = checked["options"]
     cited_urls = {item["url"] for item in evidence}
     cited = [source for source in sources if source["url"] in cited_urls]
-    schema = output_model(signature).model_json_schema()
+    from shared.gates import GATE_SIGNATURES, GATE_VERSION, build_gate_inputs
+    schema = output_model(signature).model_json_schema() if signature is not None else None
     trimmed_urls = set()
     largest_first = sorted(cited, key=lambda source: len(source["text"]), reverse=True)
     for count in range(len(largest_first) + 1):
         if count:
             trimmed_urls.add(largest_first[count - 1]["url"])
         context, trimming = _source_context(cited, evidence, trimmed_urls)
-        inputs = {"question_data": question, "domain_context": scope["domain_prompt"],
-                  "documentation_context": context, "option_evidence": evidence}
-        request = {"candidate_id": candidate_id, "objective_id": scope["objective_id"],
-                   "judge_prompt": signature_prompt(signature, inputs),
-                   "verdict_schema": schema, "trimming": trimming}
+        if signature is not None:
+            inputs = {"question_data": question, "domain_context": scope["domain_prompt"],
+                      "documentation_context": context, "option_evidence": evidence}
+            request = {"candidate_id": candidate_id, "objective_id": scope["objective_id"],
+                       "judge_prompt": signature_prompt(signature, inputs),
+                       "verdict_schema": schema, "trimming": trimming}
+        else:
+            inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence)
+            request = {"candidate_id": candidate_id, "objective_id": scope["objective_id"],
+                       "gate_version": GATE_VERSION,
+                       "decision_provenance_sha256": canonical_sha256({name: scope.get(name) for name in
+                           ("decision_objective", "decision_plan", "decision_proof", "key_length_rank")}),
+                       "gates": {name: {"judge_prompt": signature_prompt(gate_signature, inputs[name]),
+                                        "verdict_schema": output_model(gate_signature).model_json_schema()}
+                                 for name, gate_signature in GATE_SIGNATURES.items()},
+                       "trimming": trimming}
         if len(json.dumps(request, indent=2, ensure_ascii=False, allow_nan=False)) + 1 <= REQUEST_CHARACTER_LIMIT:
             return request
     raise ValueError("External request exceeds the character bound even with wide quote-centered excerpts")
+
+
+def validate_decision_provenance(scope, entry):
+    """Validate a frozen v4 decision and the original docs veto offline.
+
+    Raises:
+        ValueError: Typed plan, selected objective or verified proof is invalid.
+    """
+    from shared.decision_planner import DecisionPlan, DecisionProofSignature
+    from shared.cli_models import parse_output
+    try:
+        if (type(scope.get("key_length_rank")) is not int or not 1 <= scope["key_length_rank"] <= 4
+                or entry.get("key_length_rank") != scope["key_length_rank"]
+                or scope.get("decision_objective") != {"objective_id": scope["objective_id"],
+                                                       "objective_text": scope["objective_text"]}
+                or any(entry.get(name) != scope.get(name) for name in
+                       ("decision_objective", "decision_plan", "decision_proof"))):
+            raise ValueError()
+        plan = DecisionPlan.model_validate(scope["decision_plan"]).model_dump()
+        if plan["objective_id"] != scope["objective_id"]:
+            raise ValueError()
+        actions = [plan["best_action"], *(mistake["action"] for mistake in plan["mistakes"])]
+        if len(set(action.casefold() for action in actions)) != 4:
+            raise ValueError()
+        proof = scope["decision_proof"]
+        output_fields = set(DecisionProofSignature.output_fields)
+        if not isinstance(proof, dict) or set(proof) != output_fields | {"passed", "mechanical_check"}:
+            raise ValueError()
+        parsed = parse_output(json.dumps({name: proof[name] for name in output_fields}, allow_nan=False), DecisionProofSignature)
+        if (proof["passed"] is not True or not parsed["reason"].strip()
+                or any(parsed[name] is not True for name in
+                       ("supported", "uniquely_best", "scenario_reasons_supported", "no_feature_gotchas"))):
+            raise ValueError()
+        receipts = [{name: row[name] for name in ("option_label", "url", "quote")} for row in parsed["reasons"]]
+        checked = check_evidence(receipts, entry["sources"])
+        if (not checked["passed"] or proof["mechanical_check"] != {"passed": True, "errors": []}):
+            raise ValueError()
+    except Exception:
+        raise ValueError("Invalid frozen decision plan or docs veto proof") from None

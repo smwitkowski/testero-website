@@ -19,7 +19,7 @@ def test_real_codex_content_mixed_batch_ingests_once_with_synthetic_verdict(monk
     factory_gen = Mock(side_effect=AssertionError("No DB in external generation"))
     inline = Mock(side_effect=AssertionError("No inline judge"))
     monkeypatch.setattr(generate,"database_client",factory_gen)
-    monkeypatch.setattr(generate,"judge_question",inline)
+    monkeypatch.setattr(generate,"judge_three_gates",inline)
     monkeypatch.setattr(generate,"search_objective_docs",Mock(return_value=context["sources"]))
     monkeypatch.setattr(generate,"generate_question",Mock(return_value=question))
     monkeypatch.setattr(generate,"cite_question",Mock(return_value=citation))
@@ -36,8 +36,8 @@ def test_real_codex_content_mixed_batch_ingests_once_with_synthetic_verdict(monk
     assert first["candidate_id"] != second["candidate_id"]
     assert len(list(request_directory(artifact).glob("*.json"))) == 1
     verdicts = tmp_path / "verdicts"; verdicts.mkdir()
-    verdict = {"verdict":"PASS", "score":.9, "reason":"Synthetic verdict for contract testing, not a live factual judgment",
-               **{name:True for name in ACCURACY_CHECKS}}
+    from test_three_gates_v4 import bundle
+    verdict = bundle(question)  # Synthetic three-gate outputs, not live factual proof.
     (verdicts / (first["candidate_id"] + ".json")).write_text(json.dumps(verdict))
     client = Mock()
     client.get_domain_by_code.return_value = {"id":"fake-domain"}
