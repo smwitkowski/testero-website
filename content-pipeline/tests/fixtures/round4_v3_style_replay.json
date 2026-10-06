@@ -1,0 +1,86 @@
+{
+  "provenance": "Unchanged generated round-4 founder review items; mechanical replay only, no invented v3 verdicts.",
+  "artifact": "pmle-d025-r4-45.json",
+  "cases": [
+    {
+      "objective_id": "1.2:2",
+      "candidate_id": "ebaf70e3-a7d2-5f9a-9012-985903cc9f3a",
+      "founder_ok": false,
+      "question": {
+        "stem": "Extracting text and paragraph boundaries from scanned warranty forms supports a retailer's claims application. The team is migrating its running OCR workload from Vision API to Document AI. Batch jobs read scans from a Cloud Storage bucket in another project within the same organization, and the downstream parser expects Vision API responses. You want to keep that parser working while minimizing migration changes. Company policy does not allow document storage or processing outside the European Union. Which approach should you use?",
+        "correct_answer": "Create an EU Document AI Document OCR processor and use its EU endpoint for batch processing. Grant its service agent Storage Object Viewer on the source bucket, and convert results with Document AI Toolbox before passing them to the existing parser.",
+        "distractor_1": "Create a Document AI Document OCR processor using the default location and its matching endpoint for batch processing. Grant its service agent Storage Object Viewer on the source bucket, and convert results with Document AI Toolbox before passing them to the existing parser.",
+        "distractor_2": "Create an EU Document AI Document OCR processor and use its EU endpoint for batch processing. Grant the application's calling identity Storage Object Viewer on the source bucket, and convert results with Document AI Toolbox before passing them to the existing parser.",
+        "distractor_3": "Create an EU Document AI Document OCR processor and use its EU endpoint for batch processing. Grant its service agent Storage Object Viewer on the source bucket, and pass the returned Document AI objects directly to the existing parser for downstream processing.",
+        "correct_explanation": "The migration needs OCR results compatible with the existing parser, access to cross-project input files, and EU storage and processing. Document AI Document OCR extracts text and paragraph information. An EU processor stores and processes its resources in the EU, and requests must specify that processor's location. Granting its service agent Storage Object Viewer on the source bucket enables cross-project input access. Document AI Toolbox converts Document AI output to the Vision API format. The alternatives fail the EU policy, grant input access to the wrong principal, or pass an incompatible response format to the parser.",
+        "distractor_1_explanation": "This fails the EU storage and processing policy. Document AI stores and processes resources in a US location by default. Using the matching endpoint and converting responses does not change the processor's storage and processing location.",
+        "distractor_2_explanation": "This fails the requirement for batch jobs to read input files from the other project's bucket. Cross-project access requires Storage Object Viewer on that bucket for the Document AI service agent of the processor's project. Granting the role only to the application's calling identity does not provide that service agent access.",
+        "distractor_3_explanation": "This fails the requirement to keep the existing Vision API parser working. Document AI Document OCR returns Document AI objects containing text and page structures, whereas Vision API uses its fullTextAnnotation structure. Document AI Toolbox provides the format conversion needed before those results reach the existing parser."
+      }
+    },
+    {
+      "objective_id": "2.2:3",
+      "candidate_id": "003d2229-5d48-5daf-8a60-7985f55edbb5",
+      "founder_ok": false,
+      "question": {
+        "stem": "Prototype a reply-writing assistant for a travel company's support team using open foundation models. The company has a Google Cloud project under its organization and a new Agent Platform Workbench instance. You have sample conversations for adapting the models, and you expect to revise the training code as you explore several candidates in Model Garden. You want to fine-tune the candidates interactively in notebooks while minimizing setup work. What should you do first?",
+        "correct_answer": "Open each supported candidate's model card in Model Garden, choose Open notebook, and adapt the provided tuning notebook in Agent Platform Workbench.",
+        "distractor_1": "Open each supported candidate's model card in Model Garden, use the Try out panel, and adjust generation parameters while recording responses in Agent Platform Workbench.",
+        "distractor_2": "Open each candidate's model card in Model Garden, choose Open fine-tuning pipeline where available, and start a tuning run with your sample conversations.",
+        "distractor_3": "Open each supported candidate's model card in Model Garden, launch a Space to explore responses, and then adapt the model card's tuning notebook in Agent Platform Workbench.",
+        "correct_explanation": "The task calls for interactive notebook fine-tuning with minimal setup in the existing company project. Model Garden provides tuning notebooks through the model cards for most open source foundation and fine-tunable models. These provide a starting point instead of building the workflow from scratch. Agent Platform Workbench supplies the Jupyter environment for editing and running the code. Playground parameters do not fine-tune models, the pipeline entry point starts a pipeline workflow, and Spaces is unavailable in organization-parented projects.",
+        "distractor_1_explanation": "This fails the fine-tuning requirement. The Model Garden playground sends text prompts to predeployed endpoints and exposes generation parameters such as temperature and output length. Adjusting those parameters tests responses; it does not run notebook tuning on the sample conversations.",
+        "distractor_2_explanation": "This fails the requirement to fine-tune interactively in notebooks. Open fine-tuning pipeline takes you to Agent Platform Pipelines, where you create a pipeline run. The selected workflow does not open the tuning notebook needed for interactive training-code changes.",
+        "distractor_3_explanation": "This fails compatibility with the existing company project. Model Garden Spaces is available only for projects that are not parented by an organization. The company's project is organization-parented, so the initial Space cannot be launched there. Opening the tuning notebook directly avoids that unavailable step."
+      }
+    },
+    {
+      "objective_id": "1.1:5",
+      "candidate_id": "f258a379-2f89-5804-b57a-b14fd95333c8",
+      "founder_ok": true,
+      "question": {
+        "stem": "A travel company recently deployed a Gemini assistant that writes tour descriptions. Reviewers still correct recurring wording errors after several prompt revisions. A BigQuery table contains 400 package prompts paired with approved descriptions, and a Boolean column marks 80 rows reserved for evaluation. You want Gemini to learn from these corrections while minimizing changes to the team's existing SQL workflow. You also want the reserved rows used for evaluation during tuning. What should you do?",
+        "correct_answer": "Create a BigQuery ML remote model for supervised tuning of a supported Gemini model. Select the prompt\u2013description pairs as training input and use the reviewers' marker for a custom evaluation split.",
+        "distractor_1": "Create a BigQuery ML remote model for supervised tuning of a supported Gemini model. Select the prompt\u2013description pairs as training input and let automatic splitting assign the training and evaluation rows.",
+        "distractor_2": "Export the prompt\u2013description pairs and reserved evaluation rows to Cloud Storage as separate datasets. Create a supervised Gemini tuning job in Agent Platform Studio and enable validation using the reserved dataset.",
+        "distractor_3": "Create a BigQuery ML remote model over a pretrained Gemini model. Include approved descriptions as examples in generation prompts and use the reviewers' reserved rows to assess the resulting tour descriptions.",
+        "correct_explanation": "The company needs adaptation from labeled examples, an approach that fits its SQL workflow, and evaluation using specifically reserved rows. BigQuery ML supports supervised Gemini tuning through CREATE MODEL with an AS SELECT clause supplying prompts and target descriptions. A custom split uses a Boolean column: TRUE or NULL identifies evaluation rows, and FALSE identifies training rows. The remaining 320 training rows exceed the minimum of 10. Automatic splitting would train on all 400 rows, Agent Platform Studio introduces an export and console workflow, and prompting a pretrained model does not train it on the corrections.",
+        "distractor_1_explanation": "This fails the requirement to use the reserved rows for evaluation during tuning. BigQuery ML automatic splitting uses all rows as training data when the input contains fewer than 500 rows. With 400 rows, the reviewers' 80 reserved examples would also become training data.",
+        "distractor_2_explanation": "This fails the requirement to minimize changes to the existing SQL workflow. Agent Platform Studio tuning uses dataset files in Cloud Storage and console configuration. BigQuery ML can initiate supervised tuning directly from the existing BigQuery table through SQL, avoiding that export and separate console workflow.",
+        "distractor_3_explanation": "This fails the requirement for Gemini to learn from the corrections through model adaptation. Prompt examples guide a pretrained Gemini model's responses, while supervised fine-tuning trains on labeled examples and learns additional parameters used during inference. Assessing prompted responses does not perform that training."
+      }
+    },
+    {
+      "objective_id": "3.2:6",
+      "candidate_id": "75971450-e235-5825-918c-891db8d880d3",
+      "founder_ok": true,
+      "question": {
+        "stem": "Your company's security operations assistant uses a Llama model from Model Garden to classify incident reports. A recent security incident exposed recurring errors in company-specific categories despite extensive prompt refinement. The model supports both full and parameter-efficient tuning, and analysts have prepared 600 carefully labeled complete reports representative of production traffic. You want more reliable classification while minimizing tuning compute. Company policy requires all tuning resources to stay in the Netherlands. Which approach should you use?",
+        "correct_answer": "Run region-specific managed supervised fine-tuning of the Llama model in the Netherlands using LoRA and the analyst-labeled reports, then evaluate it on complete incident reports.",
+        "distractor_1": "Keep the current model and expand its few-shot prompt with analyst-labeled reports, using the existing deployment to improve classification of complete incident reports.",
+        "distractor_2": "Run region-specific managed supervised fine-tuning of the Llama model in the Netherlands using full fine-tuning and the analyst-labeled reports, then evaluate it on complete incident reports.",
+        "distractor_3": "Run managed supervised fine-tuning of the Llama model through the global endpoint using LoRA and the analyst-labeled reports, then evaluate it on complete incident reports.",
+        "correct_explanation": "The decision centers on recurring classification errors, tuning compute, and regional control. Agent Platform supervised fine-tuning uses labeled examples to teach the desired task, making it appropriate after prompt refinement leaves recurrent errors. LoRA updates only a subset of parameters and requires less training compute than full fine-tuning. A region-specific job in the Netherlands keeps tuning resources in the required region. Further prompting does not provide the task adaptation indicated here, full fine-tuning violates the compute-minimization goal, and global tuning cannot guarantee the required region.",
+        "distractor_1_explanation": "This fails the task-adaptation requirement indicated by recurring classification errors after extensive prompt refinement. Agent Platform recommends moving from optimized prompting to fine-tuning when recurrent errors remain. The substantial, carefully labeled dataset supports supervised fine-tuning; prompting is best suited to limited labeled data or rapid prototyping.",
+        "distractor_2_explanation": "This fails the goal of minimizing tuning compute. Full fine-tuning updates every model parameter and demands higher computational resources. Agent Platform supports LoRA for the selected model, which adapts only a subset of parameters and uses less training compute.",
+        "distractor_3_explanation": "This fails the policy requiring all tuning resources to remain in the Netherlands. Agent Platform global tuning selects a supported region with available capacity and creates the regional job and associated resources there. It does not guarantee the Netherlands; a region-specific tuning job provides that control."
+      }
+    },
+    {
+      "objective_id": "6.2:3",
+      "candidate_id": "77e1ad30-6b05-5e96-9ddb-8b841a680941",
+      "founder_ok": true,
+      "question": {
+        "stem": "You are assessing answer quality for a retailer's customer-support agent as its running deployment migrates to Agent Platform. The agent uses a fully managed Gemini model, Cloud Trace is enabled, and the telemetry needed for evaluation is already being exported. Customer traffic varies sharply during promotions. You want ongoing quality scores from live conversations while keeping evaluation workload bounded as traffic grows. What should you do?",
+        "correct_answer": "Create an Online Monitor with response-quality metrics. Sample live traces and set a maximum number of samples per run to bound the evaluation workload.",
+        "distractor_1": "Use the model observability dashboard to monitor the managed Gemini model. Track API error rates, first-token latency, and token throughput as indicators of answer quality.",
+        "distractor_2": "Run an offline evaluation with response-quality metrics on a fixed selection of historical conversations captured during migration. Use the resulting report to track production quality.",
+        "distractor_3": "Create an Online Monitor with response-quality metrics. Filter live traces by conversation duration, and rely on that filter to bound evaluation workload as customer traffic grows.",
+        "correct_explanation": "The agent needs continuous quality assessment of live conversations and a bounded evaluation workload. Agent Platform Online Monitors asynchronously score sampled production traces using configured evaluation metrics. A maximum sample count per run caps evaluation volume as traffic grows. The model observability dashboard measures operational performance, offline evaluation assesses selected historical interactions, and duration filters select matching traces rather than cap their number.",
+        "distractor_1_explanation": "This fails the answer-quality assessment requirement. The Agent Platform model observability dashboard reports operational metrics such as API errors, latency, and throughput. Those metrics measure reliability and performance rather than score the quality of conversation responses.",
+        "distractor_2_explanation": "This fails the requirement for ongoing assessment of live conversations. Agent Platform offline evaluation scores selected historical traces or sessions. The resulting report covers those selected interactions; Online Monitors continuously sample and evaluate production traffic.",
+        "distractor_3_explanation": "This fails the requirement to keep evaluation workload bounded as traffic grows. Agent Platform duration filters determine which traces qualify for evaluation, but they do not impose a maximum sample count. Online Monitors provide a maximum-samples-per-run cap to control evaluation volume."
+      }
+    }
+  ]
+}

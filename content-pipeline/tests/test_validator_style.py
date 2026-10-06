@@ -15,14 +15,16 @@ from shared.validator import _check_action_question, _compute_string_similarity,
 def question():
     return {
         "stem": (
-            "Your team runs a private application with separate operator and auditor identities. "
-            "The company requires least privilege and does not permit shared credentials. "
+            "You work for a retailer whose private application lets operators track customer orders. "
+            "Auditors review those orders using a separate identity and need to trace changes to individual operators. "
+            "You want each identity to have only the permissions needed for its work. "
+            "Company policy does not allow shared credentials. "
             "Which combination of IAM permissions should you assign?"
         ),
         "correct_answer": "Assign a custom IAM role limited to the required read permissions.",
-        "distractor_1": "Give the operator identity organization-wide owner access.",
-        "distractor_2": "Share the auditor credentials with every application operator.",
-        "distractor_3": "Remove authentication from the private application entirely.",
+        "distractor_1": "Give the operator identity organization-wide owner access across all company projects.",
+        "distractor_2": "Share the auditor credentials with every application operator across company projects.",
+        "distractor_3": "Remove authentication from the private application entirely for all company operators.",
         "correct_explanation": (
             "A custom IAM role grants only the required permissions to the named identity. "
             "This keeps the scope narrow and preserves separate audit attribution."
@@ -40,7 +42,7 @@ def test_iam_rationales_need_no_legacy_service_names(question):
     assert result.style_score == 1.0
     assert result.explanation_score == 1.0
     assert len(result.option_metrics) == 4
-    assert all(set(metric) == {"label", "is_empty"} for metric in result.option_metrics)
+    assert all(set(metric) == {"label", "is_empty", "word_count", "ratio"} for metric in result.option_metrics)
 
 
 @pytest.mark.parametrize("ending", [
@@ -52,7 +54,12 @@ def test_iam_rationales_need_no_legacy_service_names(question):
     "Which identity should receive the role?  ",
 ])
 def test_final_question_accepts_any_phrasing(question, ending):
-    question["stem"] = "Your team needs scoped permissions. Separate identities are required. " + ending
+    question["stem"] = (
+        "You work for a retailer whose private application lets operators track customer orders. "
+        "Auditors review those orders using a separate identity and need to trace changes to individual operators. "
+        "You want each identity to have only the permissions needed for its work. "
+        "Company policy does not allow shared credentials. " + ending
+    )
     assert _check_action_question(question["stem"])
     assert validate_question(question).is_valid
 
@@ -76,6 +83,9 @@ def test_parallel_legitimate_iam_choices_below_near_duplicate_threshold(question
     )
     question["correct_answer"] = common + " using roles/viewer"
     question["distractor_1"] = common + " using roles/editor"
+    count = len(question["correct_answer"].split())
+    question["distractor_2"] = " ".join(f"auditor-{index}" for index in range(count))
+    question["distractor_3"] = " ".join(f"operator-{index}" for index in range(count))
     similarity = _compute_string_similarity(question["correct_answer"], question["distractor_1"])
     assert 0.8 <= similarity < 0.97
     assert validate_question(question).is_valid
@@ -93,6 +103,8 @@ def test_exact_similarity_threshold(question, overlap, total, valid):
     # Unique synthetic tokens give an exact Jaccard boundary without mocking.
     question["correct_answer"] = " ".join(f"permission-{index}" for index in range(overlap))
     question["distractor_1"] = " ".join(f"permission-{index}" for index in range(total))
+    question["distractor_2"] = " ".join(f"auditor-{index}" for index in range(total))
+    question["distractor_3"] = " ".join(f"operator-{index}" for index in range(total))
     assert _compute_string_similarity(question["correct_answer"], question["distractor_1"]) == overlap / total
     result = validate_question(question)
     assert result.is_valid is valid
@@ -154,6 +166,13 @@ def test_banned_options_still_fail_without_scenario_keyword_rule(question):
     assert any("banned pattern" in error for error in errors)
 
 
+def _is_option_balance_error(error):
+    """Separate newly enforced option gates from existing real-content style checks."""
+    return error.startswith("Correct answer is uniquely longest") or (
+        error.startswith("Choice ") and "four-option mean" in error
+    )
+
+
 @pytest.mark.parametrize("artifact_name, count", [("pmle-pilot-6b.json", 6), ("ace-pilot-4b.json", 4)])
 def test_original_cached_pilot_content(artifact_name, count):
     artifact = Path(__file__).resolve().parents[1] / ".cache" / "generation" / artifact_name
@@ -175,7 +194,13 @@ def test_original_cached_pilot_content(artifact_name, count):
             data[f"distractor_{index}_explanation"] = candidate["rationales"][label]
         # No cleanup or normalization: validate exactly the original artifact text.
         result = validate_question(data)
-        assert result.is_valid, f"{artifact_name} item {candidate['index']}: {result.errors}"
+        if artifact_name == "pmle-pilot-6b.json" and candidate["index"] in (3, 6):
+            assert not result.is_valid
+            assert any("requirements checklist" in error for error in result.errors)
+        else:
+            assert all(_is_option_balance_error(error) for error in result.errors), (
+                f"{artifact_name} item {candidate['index']}: {result.errors}"
+            )
 
 
 REAL_THIRD_PERSON_CASES = json.loads(
@@ -184,14 +209,21 @@ REAL_THIRD_PERSON_CASES = json.loads(
 
 
 @pytest.mark.parametrize("case", REAL_THIRD_PERSON_CASES, ids=lambda item: str(item["index"]))
-def test_real_batch2_third_person_stems_pass_schema_without_rewording(case):
+def test_real_batch2_stems_follow_new_style_gate_without_rewording(case):
     question = case["question"]
     assert question["stem"].startswith("A machine learning engineer")
     assert case["schema_errors"] == ["Stem does not contain scenario indicators (e.g., 'you', 'your team', 'company', 'client')"]
     result = validate_question(question)
-    assert result.is_valid and result.errors == []
-    assert result.review_status == "UNREVIEWED"
+    assert not any("scenario indicators" in error for error in result.errors)
     assert "has_scenario" not in result.stem_metrics
+    if case["index"] in (9, 15):
+        assert not result.is_valid and result.review_status == "NEEDS_ANSWER_FIX"
+        assert any("requirements checklist" in error for error in result.errors)
+        if case["index"] == 9:
+            assert any("documentation/specification" in error for error in result.errors)
+    else:
+        assert all(_is_option_balance_error(error) for error in result.errors)
+        assert result.review_status == ("NEEDS_ANSWER_FIX" if result.errors else "UNREVIEWED")
 
 
 @pytest.mark.parametrize("case", REAL_THIRD_PERSON_CASES, ids=lambda item: str(item["index"]))

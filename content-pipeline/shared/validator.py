@@ -4,6 +4,7 @@ Validates LLM-generated questions against generic quality checks before database
 """
 
 import re
+from itertools import combinations
 from dataclasses import dataclass, field
 from typing import Dict, Any, List
 
@@ -71,6 +72,53 @@ def _check_action_question(stem: str) -> bool:
     return stem.rstrip().endswith("?")
 
 
+
+def has_human_subject_opening(stem: str) -> bool:
+    """Accept You/Your or a short third-person organization/person noun phrase."""
+    if re.match(r"^(?:You|Your)\b", stem, re.IGNORECASE):
+        return True
+    noun = (r"company|organization|organisation|team|engineer|scientist|analyst|developer|"
+            r"administrator|customer|client|manufacturer|retailer|bank|hospital|university|"
+            r"agency|manager|researcher|user|architect|operator|firm|business|department")
+    modifier = r"(?!(?:is|are|was|were|has|have|can|will|would|runs|uses|predicts|supports|helps|provides|enables|processes|handles|serves)\b)[\w'-]+"
+    return bool(re.match(r"^(?:A|An|The)\s+(?:" + modifier + r"\s+){0,5}(?:" + noun + r")\b",
+                         stem, re.IGNORECASE))
+
+
+def shared_leading_words(options: List[str]) -> int:
+    """Return the longest leading word sequence shared by any three options."""
+    tokens = []
+    for text in options:
+        text = re.sub(r"^\s*[A-D](?:[.)]|\s*[:\-])\s*", "", text, flags=re.IGNORECASE)
+        tokens.append([word.casefold().strip('.,;:!?()"') for word in text.split()])
+    longest = 0
+    for group in combinations(tokens, 3):
+        shared = 0
+        for words in zip(*group):
+            if len(set(words)) != 1:
+                break
+            shared += 1
+        longest = max(longest, shared)
+    return longest
+
+
+def _stem_style_errors(stem: str) -> List[str]:
+    """Detect narrow requirements-checklist and documentation language in stems."""
+    errors = []
+    if not has_human_subject_opening(stem):
+        errors.append("Stem opening must start with You/Your or A/An/The plus an organization or person noun")
+    checklist_patterns = (
+        r"\bmust\s+satisfy\s+the\s+following\b",
+        r"\bstakeholders\s+have\s+established\b",
+        r"\b(?:the\s+)?following\s+(?:(?:technical|compliance|interpretability)\s+(?:and\s+)?)*requirements\s*:",
+    )
+    if any(re.search(pattern, stem, re.IGNORECASE) for pattern in checklist_patterns):
+        errors.append("Stem uses a requirements checklist; phrase constraints as wants or policies")
+    if re.search(r"\b(?:documented|documentation)\b|\bsupported\s+(?:platform\s+)?specifications\b|\bper\s+best\s+practices\b", stem, re.IGNORECASE):
+        errors.append("Stem uses documentation/specification language; state the business goal in plain words")
+    return errors
+
+
 def _check_why_wrong_reasoning(explanation: str) -> bool:
     """Check if distractor explanation contains 'why wrong' reasoning.
     
@@ -111,13 +159,32 @@ def _compute_string_similarity(a: str, b: str) -> float:
     return intersection / union if union > 0 else 0.0
 
 
+def option_length_metrics(question_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Count all four options by whitespace; key_is_longest excludes ties."""
+    fields = ("correct_answer", "distractor_1", "distractor_2", "distractor_3")
+    counts = [len((question_data.get(name) or "").split()) for name in fields]
+    total = sum(counts)
+    mean = total / 4
+    next_longest = max(counts[1:])
+    return {
+        "word_counts": counts,
+        "mean": mean,
+        "ratios": [count / mean if mean else 0.0 for count in counts],
+        # Integer comparisons preserve both inclusive bounds without rounding.
+        "within_bounds": [3 * total <= 16 * count <= 5 * total for count in counts],
+        "key_is_longest": counts[0] > next_longest,
+        "key_lead_words": counts[0] - next_longest,
+    }
+
+
 def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
     """Validate LLM-generated question data against quality rubric.
     
     Validates:
     - Required fields present & non-empty
-    - Stem structure (length and final question mark); scenario quality is judged independently
-    - Option quality (non-empty, no near duplicates, no banned patterns)
+    - Stem structure (40–130 words, final question mark, narrow checklist/doc phrase rejection)
+    - Semantic business context and decision style are judged independently
+    - Option quality (non-empty, balanced word counts, no near duplicates or banned patterns)
     - Explanation quality (length, no URLs/citations, why-wrong reasoning)
     
     Args:
@@ -189,13 +256,15 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
             "has_action_question": False,
         }
         
-        # Minimum length check (20 chars is too low, use 25-30 words)
         if stem_length < 20:
             errors.append(f"Stem too short (minimum 20 characters, got {stem_length})")
             structural_score -= 0.5
-        elif word_count < 25:
-            warnings.append(f"Stem word count ({word_count}) is below recommended minimum (25 words)")
-            style_score -= 0.1
+        if not 40 <= word_count <= 130:
+            errors.append(f"Stem word count ({word_count}) must be between 40 and 130 words")
+            style_score -= 0.2
+        style_errors = _stem_style_errors(stem)
+        errors.extend(style_errors)
+        style_score -= 0.2 * len(style_errors)
         
         # Action question check
         has_action_question = _check_action_question(stem)
@@ -220,14 +289,31 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
         "D": ("distractor_3", distractor_3),
     }
     
+    length_metrics = option_length_metrics(question_data)
+    if length_metrics["key_is_longest"] and length_metrics["key_lead_words"] > 2:
+        errors.append(
+            "Correct answer is uniquely longest and exceeds the next-longest option "
+            f"by {length_metrics['key_lead_words']} words (maximum 2)"
+        )
+        style_score -= 0.2
+
     option_metrics = []
     choice_texts = []
     
-    for label, (field_name, choice_text) in choices.items():
+    for index, (label, (field_name, choice_text)) in enumerate(choices.items()):
         option_metric = {
             "label": label,
             "is_empty": False,
+            "word_count": length_metrics["word_counts"][index],
+            "ratio": length_metrics["ratios"][index],
         }
+        if not length_metrics["within_bounds"][index]:
+            errors.append(
+                f"Choice {label} word count ({option_metric['word_count']}) is outside "
+                "0.75–1.25 times the four-option mean "
+                f"({length_metrics['mean']:g})"
+            )
+            style_score -= 0.2
         
         if not choice_text or not choice_text.strip():
             errors.append(f"Choice {label} is empty")
@@ -252,6 +338,11 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
             
         option_metrics.append(option_metric)
     
+    shared_prefix = shared_leading_words(choice_texts)
+    if shared_prefix >= 8:
+        errors.append(f"Three or more choices share {shared_prefix} leading words (maximum 7)")
+        style_score -= 0.2
+
     # Reject only exact or near-duplicate options (similarity >= 0.97).
     for i, choice_a in enumerate(choice_texts):
         for j, choice_b in enumerate(choice_texts[i+1:], start=i+1):

@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional, Callable, Tuple
 import dspy
 from shared.completion_diagnostics import CompletionCaptureAdapter, MAX_RAW_RESPONSE, _safe_completion
 from shared.evidence import OptionEvidence
+from shared.question_style import STYLE_INSTRUCTIONS
 from shared.llm_limits import MaxTokensTruncation, TRUNCATION_REASON, reject_token_limit
 
 from shared.tracing import traceable_decorator
@@ -22,15 +23,32 @@ logger = logging.getLogger(__name__)
 class PmleQuestionSignature(dspy.Signature):
     """Generate a question within the supplied certification registry objective scope.
 
+    Follow rules v4 and the verified decision plan supplied in domain_context.
+    Ask what an ML engineer should do to achieve an outcome. Test one primary
+    decision and one clear task at practitioner difficulty. Write only necessary
+    facts. Keep options at comparable granularity; difficulty comes from tradeoffs,
+    not arbitrary limits, hidden exceptions, API trivia or unsupported gotchas.
+    Use Agent Platform short names only in new learner prose. Detailed docs verify
+    the planned decision; they must not replace it with a feature distinction.
     Follow the supplied STYLE guidance and certification level. Produce exactly
     four reasonable options with one best answer and per-option explanations.
-    Use a scenario only when useful for the objective; foundational questions
-    need not adopt a professional-role scenario. A is correct_answer; B, C and
+    Use the founder's purpose-first style, allowing business-first or task-first openings, at the supplied certification level.
+    A is correct_answer; B, C and
     D are distractor_1, distractor_2 and distractor_3 respectively.
     Every technical claim in all four explanations must be documented in the
     supplied sources, including claims that alternatives cannot meet a constraint.
-    Each distractor must fail one decisive constraint explicitly stated in the stem;
-    do not reject an otherwise valid option using an unstated preference.
+    Each distractor must fail a stated want for a documented product/ML reason,
+    not a literal stem contradiction or prohibition. The want can be stated, but
+    its technical failure must require knowledge. Do not invent unstated preferences.
+    Before returning, self-check all three distractors individually. No literal stem
+    fact or prohibition may exclude their approaches; each flaw must need documented
+    product/ML knowledge. A distractor can fail a stated want for that knowledge-based
+    reason, including a hand-written server when custom prediction routines provide
+    the lower-maintenance alternative. At most two wants or policies are allowed;
+    count goals joined by "and" or "while" separately when they add distinct goals.
+    Different distractors may fail the same want. Remove any "without X" or equivalent
+    clause where X is a distractor's approach. Keep the options parallel and balanced.
+    Do not add bans or facts to make the distractors easy to reject.
     Test the exact target registry objective, not a neighboring objective. For
     PMLE's model-version comparison objective 4.1:4, compare model versions using
     A/B testing or a canary; rolling
@@ -98,7 +116,7 @@ class PmleQuestionSignature(dspy.Signature):
     
     distractor_1: str = dspy.OutputField(
         description=(
-            "Plausible but incorrect solution that violates ONE specific requirement from stem. "
+            "Plausible but incorrect solution that fails a stated want for a documented product/ML reason, never a literal stem contradiction. "
             "Base on real services in documentation_context."
         )
     )
@@ -111,7 +129,7 @@ class PmleQuestionSignature(dspy.Signature):
     
     distractor_2: str = dspy.OutputField(
         description=(
-            "Plausible but incorrect solution that violates a different requirement. "
+            "Plausible but incorrect solution that fails a stated want through product/ML knowledge; it may fail the same want as another distractor. "
             "Test service choice errors or scalability limitations."
         )
     )
@@ -125,7 +143,7 @@ class PmleQuestionSignature(dspy.Signature):
     
     distractor_3: str = dspy.OutputField(
         description=(
-            "Plausible but incorrect solution that violates another requirement. "
+            "Plausible but incorrect solution that fails one of the same at most two wants through product/ML knowledge, not a literal fact or ban. "
             "Test architecture anti-patterns or operational issues."
         )
     )
@@ -205,7 +223,7 @@ class QuestionCorrectionSignature(dspy.Signature):
     
     distractor_1: str = dspy.OutputField(
         description=(
-            "Corrected plausible but incorrect solution that violates ONE specific requirement from stem. "
+            "Corrected plausible but incorrect solution that fails a stated want through product/ML knowledge, never a literal fact or ban. "
             "Base on real services in documentation_context."
         )
     )
@@ -219,7 +237,7 @@ class QuestionCorrectionSignature(dspy.Signature):
     
     distractor_2: str = dspy.OutputField(
         description=(
-            "Corrected plausible but incorrect solution that violates a different requirement. "
+            "Corrected plausible but incorrect solution that fails a stated want through product/ML knowledge; it may share the same want as another distractor. "
             "Test service choice errors or scalability limitations."
         )
     )
@@ -234,7 +252,7 @@ class QuestionCorrectionSignature(dspy.Signature):
     
     distractor_3: str = dspy.OutputField(
         description=(
-            "Corrected plausible but incorrect solution that violates another requirement. "
+            "Corrected plausible but incorrect solution that fails one of the same at most two wants through product/ML knowledge, not a literal fact or ban. "
             "Test architecture anti-patterns or operational issues."
         )
     )
@@ -320,7 +338,7 @@ class FactualCorrectionSignature(dspy.Signature):
     
     distractor_1: str = dspy.OutputField(
         description=(
-            "Corrected plausible but incorrect solution that violates ONE specific requirement from stem. "
+            "Corrected plausible but incorrect solution that fails a stated want through product/ML knowledge, never a literal fact or ban. "
             "Base on real services in documentation_context. Must be factually accurate as a distractor."
         )
     )
@@ -334,7 +352,7 @@ class FactualCorrectionSignature(dspy.Signature):
     
     distractor_2: str = dspy.OutputField(
         description=(
-            "Corrected plausible but incorrect solution that violates a different requirement. "
+            "Corrected plausible but incorrect solution that fails a stated want through product/ML knowledge; it may share the same want as another distractor. "
             "Test service choice errors or scalability limitations. Must be factually accurate as a distractor."
         )
     )
@@ -348,7 +366,7 @@ class FactualCorrectionSignature(dspy.Signature):
     
     distractor_3: str = dspy.OutputField(
         description=(
-            "Corrected plausible but incorrect solution that violates another requirement. "
+            "Corrected plausible but incorrect solution that fails one of the same at most two wants through product/ML knowledge, not a literal fact or ban. "
             "Test architecture anti-patterns or operational issues. Must be factually accurate as a distractor."
         )
     )
@@ -359,6 +377,12 @@ class FactualCorrectionSignature(dspy.Signature):
             "IMPORTANT: Do NOT include URLs, links, citations, or references. Only mention service names."
         )
     )
+
+
+# Keep these instructions identical on first generation and both correction paths.
+PmleQuestionSignature.instructions += "\n\n" + STYLE_INSTRUCTIONS
+QuestionCorrectionSignature.instructions += "\n\n" + STYLE_INSTRUCTIONS
+FactualCorrectionSignature.instructions += "\n\n" + STYLE_INSTRUCTIONS
 
 
 class GapAnalysisSignature(dspy.Signature):
@@ -780,12 +804,20 @@ def generate_question(
     difficulty: str = "MEDIUM",
     exam_subsection: str = "",
     prompt_version: Optional[str] = None,
+    *, reasoning_effort: str = "high",
 ) -> Dict[str, Any]:
     """Generate only a question; cite its finished options in a separate call."""
     from dspy.utils.exceptions import AdapterParseError
     if (not isinstance(domain_context, str) or not domain_context.strip()
             or not isinstance(documentation_context, str) or not documentation_context.strip()):
         raise ValueError("Registry objective scope and fetched documentation are required")
+    if model == "codex" or model.startswith("codex/"):
+        from shared.cli_models import run_signature
+        return run_signature(model, PmleQuestionSignature, {
+            "domain_context": domain_context, "documentation_context": documentation_context,
+            "difficulty": difficulty, "exam_subsection": exam_subsection or "",
+            "gap_analysis_guidance": "",
+        }, reasoning_effort=reasoning_effort)
     lm = _generation_lm(model, max_tokens=GENERATION_MAX_TOKENS)
     adapter = CompletionCaptureAdapter()
     predictor = dspy.ChainOfThought(PmleQuestionSignature)
@@ -817,6 +849,7 @@ def cite_question(
     check_errors: list[str] | None = None,
     *,
     max_tokens: int = 8000,
+    reasoning_effort: str = "medium",
 ) -> dict:
     """Make one citation call. Root checks and stores every attempt, then retries."""
     from dspy.utils.exceptions import AdapterParseError
@@ -835,6 +868,13 @@ def cite_question(
     }
     fetched = [{"url": source["url"], "requested_url": source.get("requested_url"),
                 "text": source["text"]} for source in sources]
+    if model == "codex" or model.startswith("codex/"):
+        from shared.cli_models import run_signature
+        return run_signature(model, CitationSignature, {
+            "finished_question": json.dumps(question, ensure_ascii=False),
+            "fetched_sources": json.dumps(fetched, ensure_ascii=False),
+            "check_errors": "\n".join(check_errors or []),
+        }, reasoning_effort=reasoning_effort)
     adapter = CompletionCaptureAdapter(preserve_receipts=True)
     try:
         lm = _generation_lm(model, max_tokens=max_tokens)
