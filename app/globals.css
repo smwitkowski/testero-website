@@ -15,6 +15,25 @@
   --destructive: #9b302c;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root:has(.certification-content) {
+    color-scheme: dark;
+    --background: #122328;
+    --foreground: #e5efee;
+    --card: #192e34;
+    --card-foreground: #e5efee;
+    --primary: #78d4c5;
+    --primary-foreground: #122328;
+    --muted: #20383e;
+    --muted-foreground: #afc5c8;
+    --border: #38535a;
+    --input: #5d7a80;
+    --ring: #78d4c5;
+    --destructive: #ffaaa2;
+  }
+  :root:has(.certification-content) ::selection { background: var(--primary); color: var(--primary-foreground); }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

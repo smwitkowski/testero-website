@@ -28,6 +28,11 @@ describe("local content loader", () => {
       expect(entry.title).not.toMatch(/success story|expert solutions|hardest|complete guide|complete 2025 guide/i);
     }
   });
+  it("keeps the historical PMLE update focused on checking current guidance", () => {
+    const entry = getBlogEntry("pmle-october-2024-exam-changes")!;
+    expect(entry.body).toContain("current official exam guide");
+    expect(entry.body).not.toMatch(/Pinecone|Weaviate|Chain-of-thought|New Cost Optimization|Production-Ready Techniques/);
+  });
   it("passes each entry's safe title, description and path to canonical/social metadata", () => {
     for (const entry of [...getBlogEntries(), ...getFaqEntries()]) {
       const metadata = pageMetadata(entry.title, entry.description, entry.href);
