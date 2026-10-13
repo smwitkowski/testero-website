@@ -83,7 +83,7 @@ def test_pilot_dry_run_exact_plan_all_candidates_and_no_database(generation, cer
     for item in artifact["candidates"]:
         assert item["cert_id"] == cert and item["objective_id"]
         assert len(item["guide_sha256"]) == 64
-        assert item["key"] == "A" and len(item["options"]) == 4
+        assert item["option_order"][item["key"]] == "A" and len(item["options"]) == 4
         assert set(item["rationales"]) == set("ABCD")
         assert item["mechanical_check"] == {"passed": True, "errors": []}
         assert len(item["evidence"]) == 4
@@ -165,7 +165,7 @@ def test_cleaned_content_is_the_judged_and_stored_content(generation):
     result = invoke(generation)
     assert result.exit_code == 0, result.output
     assert generation[5].call_args.args[0]["correct_answer"] == "Use Cloud Run for HTTP requests"
-    assert generation[0].insert_answers_batch.call_args.args[0][0]["choice_text"] == "Use Cloud Run for HTTP requests"
+    assert next(row for row in generation[0].insert_answers_batch.call_args.args[0] if row["is_correct"])["choice_text"] == "Use Cloud Run for HTTP requests"
 
 
 def test_provider_error_is_recorded_without_secret_body(generation):
@@ -262,7 +262,8 @@ def test_real_cite_step_retains_invalid_receipts_without_judge_or_database(gener
     assert len(record["options"]) == len(record["rationales"]) == 4
     assert not record["mechanical_check"]["passed"]
     assert len(record["citation_attempts"]) == 2
-    assert "error_class" not in record
+    assert record["error_class"] == "CandidateRejected"
+    assert record["error_message"] == record["reason"]
     if failure == "overlong": assert len(record["citation_attempts"][0]["evidence"][0]["quote"]) == 301
     if failure == "omitted_evidence":
         assert record["citation_attempts"][0]["parse_failure"]

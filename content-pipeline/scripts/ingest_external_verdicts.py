@@ -18,8 +18,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.generate_pmle_questions import database_client as _database_client, persist_candidate, write_artifact
 from shared.cert_context import plan_questions
 from shared.cli_models import parse_output
+from shared.completion_diagnostics import _safe_completion
 from shared.dedupe import normalize_stem
 from shared.doc_search import documentation_context
+from shared.option_order import canonical_evidence
+from shared.near_duplicates import check_near_duplicate, comparison_row, tokens
+from shared.batch_report import key_position_report, format_key_position_report, template_diversity_report
 from shared.evidence import check_evidence
 from shared.external_judge import (
     EXTERNAL_JUDGE_PROVENANCE, EXTERNAL_POLICY_MODEL, build_request,
@@ -117,49 +121,70 @@ def _scope(payload, entry):
     return scope
 
 
+class CandidateValidationError(ValueError):
+    """Local validation failed at the recorded pipeline stage."""
+
+    def __init__(self, stage, error):
+        self.stage, self.error_class = stage, type(error).__name__
+        super().__init__(_safe_completion(str(error))[:1000])
+
+
 def _validate_candidate(path, payload, entry):
-    scope = _scope(payload, entry)
-    question = candidate_question(entry)
-    candidate_storage_id(entry, scope, question)
-    if payload.get("external_judge_version") == 2:
-        validate_decision_provenance(scope, entry)
-    if entry.get("key") != "A" or not validate_question(question).is_valid:
-        raise ValueError("Question schema validation failed")
-    checked = check_evidence(entry.get("evidence"), entry.get("sources"))
-    if not checked["passed"] or checked["options"] != entry["evidence"]:
-        raise ValueError("Frozen receipts or source provenance failed validation")
-    metadata = entry.get("external_judge_request")
-    if not isinstance(metadata, dict) or not isinstance(metadata.get("path"), str):
-        raise ValueError("Missing external judge request metadata")
-    given = Path(metadata["path"])
-    if given.is_absolute() or ".." in given.parts or given.name != entry["candidate_id"] + ".json":
-        raise ValueError("Unsafe external judge request path")
-    request_path = path.parent / given
-    if not request_path.resolve().is_relative_to(path.parent.resolve()):
-        raise ValueError("Unsafe external judge request path")
-    if any(part.is_symlink() for part in (request_path, *request_path.parents)):
-        raise ValueError("External judge requests cannot be symlinks")
-    digest = metadata.get("sha256")
-    if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
-        raise ValueError("Invalid external judge request digest")
-    if hashlib.sha256(request_path.read_bytes()).hexdigest() != digest:
-        raise ValueError("External judge request hash mismatch")
-    frozen = _read_json(request_path)
-    v4 = payload.get("external_judge_version") == 2
-    rebuilt = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"],
-                            **({} if v4 else {"signature": QuestionQualitySignature}))
-    if canonical_sha256(frozen) != canonical_sha256(rebuilt):
-        # Only unchanged originals may retain the exact known preceding 14-field rubric.
-        # No arbitrary old schema or historical 13-field request is accepted.
-        if v4 or "repair" in entry or canonical_sha256(frozen) != canonical_sha256(build_request(
-                entry["candidate_id"], scope, question, entry["sources"], checked["options"],
-                signature=LEGACY_ROUND4_QUALITY_SIGNATURE)):
-            raise ValueError("External request differs from frozen content or supported rubric")
-    return scope, question, checked
+    stage = "scope"
+    try:
+        scope = _scope(payload, entry)
+        stage = "schema"
+        question = candidate_question(entry)
+        candidate_storage_id(entry, scope, question)
+        if payload.get("external_judge_version") == 2:
+            stage = "decision_veto"
+            validate_decision_provenance(scope, entry)
+        stage = "schema"
+        if not validate_question(question).is_valid:
+            raise ValueError("Question schema validation failed")
+        stage = "mechanical"
+        checked = check_evidence(canonical_evidence(entry), entry.get("sources"))
+        if not checked["passed"] or checked["options"] != canonical_evidence(entry):
+            raise ValueError("Frozen receipts or source provenance failed validation")
+        stage = "external_request"
+        metadata = entry.get("external_judge_request")
+        if not isinstance(metadata, dict) or not isinstance(metadata.get("path"), str):
+            raise ValueError("Missing external judge request metadata")
+        given = Path(metadata["path"])
+        if given.is_absolute() or ".." in given.parts or given.name != entry["candidate_id"] + ".json":
+            raise ValueError("Unsafe external judge request path")
+        request_path = path.parent / given
+        if not request_path.resolve().is_relative_to(path.parent.resolve()):
+            raise ValueError("Unsafe external judge request path")
+        if any(part.is_symlink() for part in (request_path, *request_path.parents)):
+            raise ValueError("External judge requests cannot be symlinks")
+        digest = metadata.get("sha256")
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise ValueError("Invalid external judge request digest")
+        if hashlib.sha256(request_path.read_bytes()).hexdigest() != digest:
+            raise ValueError("External judge request hash mismatch")
+        frozen = _read_json(request_path)
+        v4 = payload.get("external_judge_version") == 2
+        rebuilt = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"],
+                                **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False)} if v4 else {"signature": QuestionQualitySignature}))
+        if canonical_sha256(frozen) != canonical_sha256(rebuilt):
+            # Only unchanged originals may retain the exact known preceding 14-field rubric.
+            # No arbitrary old schema or historical 13-field request is accepted.
+            if v4 or "repair" in entry or canonical_sha256(frozen) != canonical_sha256(build_request(
+                    entry["candidate_id"], scope, question, entry["sources"], checked["options"],
+                    signature=LEGACY_ROUND4_QUALITY_SIGNATURE)):
+                raise ValueError("External request differs from frozen content or supported rubric")
+        return scope, question, checked
+
+    except (ValueError, KeyError, TypeError, OSError, UnicodeError, StopIteration) as error:
+        raise CandidateValidationError(stage, error) from None
 
 
 def _reject(entry, stage, reason):
+    reason = _safe_completion(reason)[:1000]
     entry["failure_stage"], entry["reason"] = stage, reason
+    entry.setdefault("error_class", "CandidateRejected")
+    entry["error_message"] = reason
     if stage in ("external_request", "external_verdict"):
         entry["judge_verdict"] = {"passed": False, "score": 0.0, "reason": reason,
                                   "model": EXTERNAL_JUDGE_PROVENANCE}
@@ -168,11 +193,23 @@ def _reject(entry, stage, reason):
         entry["accepted"] = False
 
 
-def _external_decision(question, scope, sources, evidence, raw, generator_model, *, gate_version=2):
+def _external_decision(question, scope, sources, evidence, raw, generator_model, *, gate_version=2, rules_version=4, argon_request=None):
     require_independent_models(generator_model, EXTERNAL_POLICY_MODEL)
     if gate_version == 2:
         from shared.gates import aggregate_gate_verdict
-        return aggregate_gate_verdict(question, raw, model=EXTERNAL_JUDGE_PROVENANCE)
+        base = raw
+        if argon_request is not None:
+            from shared.argon_gate import evaluate_argon, MODEL
+            require_independent_models(generator_model, MODEL)
+            if not isinstance(raw, dict) or set(raw) != {"blind_solver", "style", "evidence", "argon"}:
+                raise ValueError("All four gates required")
+            base = {name: raw[name] for name in ("blind_solver", "style", "evidence")}
+            passed, reason = evaluate_argon(question, raw["argon"], argon_request)
+        decision = aggregate_gate_verdict(question, base, model=EXTERNAL_JUDGE_PROVENANCE, version=rules_version)
+        if argon_request is not None and not passed:
+            from shared.quality_gate import JudgeVerdict
+            return JudgeVerdict(False, 0.0, ("Argon: " + reason)[:300], EXTERNAL_JUDGE_PROVENANCE)
+        return decision
     if gate_version != 1:
         raise ValueError("Unsupported external judge version")
     parse_output(json.dumps(raw, allow_nan=False), QuestionQualitySignature)
@@ -180,6 +217,12 @@ def _external_decision(question, scope, sources, evidence, raw, generator_model,
         documentation_context=documentation_context(sources),
         model=EXTERNAL_JUDGE_PROVENANCE, generator_model=generator_model,
         option_evidence=evidence, predictor=lambda **_: SimpleNamespace(**raw))
+
+
+def _argon_request(path, entry, payload):
+    if payload.get("argon_gate") is True:
+        return _read_json(path.parent / entry["external_judge_request"]["path"])["argon"]
+    return None
 
 
 def _run_id(payload, code):
@@ -236,7 +279,8 @@ def validate_completed_journals(payload, path):
                 raise ValueError("Completed candidate has no created run")
             decision = _external_decision(question, scope, entry["sources"], checked["options"],
                                           entry["external_verdict"], payload["model"],
-                                          gate_version=payload["external_judge_version"])
+                                          gate_version=payload["external_judge_version"], rules_version=payload.get("rules_version", 4),
+                                          argon_request=_argon_request(path, entry, payload))
             if not decision.passed:
                 raise ValueError("Completed candidate lacks a strict stored PASS")
     except Exception:
@@ -255,6 +299,8 @@ def ingest(path, verdicts, *, dry_run=False):
             or payload["external_judge_version"] not in (1, 2)):
         raise click.ClickException("Artifact does not use a supported external judge version")
     try:
+        if "argon_gate" in payload and type(payload["argon_gate"]) is not bool:
+            raise ValueError("Invalid Argon policy")
         require_independent_models(payload["model"], EXTERNAL_POLICY_MODEL)
     except (KeyError, ValueError):
         raise click.ClickException("Invalid generator/judge vendor independence") from None
@@ -304,8 +350,22 @@ def ingest(path, verdicts, *, dry_run=False):
                     repair_duplicate_ids.add(child["candidate_id"])
             except (ValueError, KeyError, TypeError):
                 continue
+    near_seen = []
+    if payload.get("rules_version") == 5:
+        bank = payload.get("existing_questions")
+        if (not isinstance(bank, dict) or set(bank) != {"sha256", "questions"} or not isinstance(bank["questions"], list)
+                or (bank["sha256"] is not None and (not isinstance(bank["sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", bank["sha256"])) )):
+            raise click.ClickException("Missing or malformed local export snapshot for near-duplicate checks")
+        for row in bank["questions"]:
+            if (not isinstance(row, dict) or set(row) != {"id", "stem", "key"}
+                    or not isinstance(row["id"], str) or not row["id"].strip()):
+                raise click.ClickException("Malformed local export snapshot")
+            tokens(row["stem"]); tokens(row["key"])
+        near_seen = list(bank["questions"])
     pending, seen = [], set()
-    # Include completed stems before pending validation, regardless of list order.
+    # Include completed content before pending validation, regardless of list order.
+    if payload.get("rules_version") == 5:
+        near_seen.extend(comparison_row(entry) for entry in payload["candidates"] if _is_complete(entry))
     for entry in payload["candidates"]:
         if _is_complete(entry):
             try:
@@ -333,7 +393,8 @@ def ingest(path, verdicts, *, dry_run=False):
                         raise ValueError("Incomplete persisted run journal")
                     decision = _external_decision(question, scope, entry["sources"], checked["options"],
                                                   entry["external_verdict"], payload["model"],
-                                          gate_version=payload["external_judge_version"])
+                                          gate_version=payload["external_judge_version"], rules_version=payload.get("rules_version", 4),
+                                          argon_request=_argon_request(path, entry, payload))
                     if not decision.passed:
                         raise ValueError("Stored verdict no longer passes")
                     seen.add(normalize_stem(question["stem"]))
@@ -348,6 +409,22 @@ def ingest(path, verdicts, *, dry_run=False):
             else:
                 click.echo(f"{ident}: already complete; no new insert")
             continue
+        # Generation rejects have no published request and must not be relabelled
+        # as invalid requests. Recover stages overwritten by older ingestion too.
+        if not entry.get("external_judge_request") and not entry.get("awaiting_external_judge"):
+            if entry.get("error_class") == "DecisionVetoError":
+                attempts = entry.get("decision_attempts", [])
+                reason = attempts[-1].get("proof", {}).get("reason") if attempts else None
+                _reject(entry, "decision_veto", reason or "Replacement decision vetoed; discard candidate")
+            elif entry.get("near_duplicate_check", {}).get("passed") is False:
+                _reject(entry, "near_duplicate", entry["near_duplicate_check"]["reason"])
+            elif not entry.get("failure_stage"):
+                _reject(entry, "external_request", "Candidate has no published external judge request")
+            else:
+                _reject(entry, entry["failure_stage"], entry.get("reason") or "Candidate rejected before external judging")
+            rejected += 1
+            click.echo(f"{ident}: generation rejected at {entry['failure_stage']}; {entry['reason']}")
+            continue
         # Previous dry-run decisions are not evidence for the current verdict file.
         entry.pop("external_verdict", None)
         entry["judge_verdict"] = {"passed": False, "score": 0.0,
@@ -355,12 +432,23 @@ def ingest(path, verdicts, *, dry_run=False):
                                   "model": EXTERNAL_JUDGE_PROVENANCE}
         try:
             scope, question, checked = _validate_candidate(path, payload, entry)
+            if payload.get("rules_version") == 5:
+                duplicate = check_near_duplicate(entry, near_seen,
+                    exclude=(ident, entry.get("repair", {}).get("parent_candidate_id")))
+                entry["near_duplicate_check"] = duplicate
+                if not duplicate["passed"]:
+                    _reject(entry, "near_duplicate", duplicate["reason"])
+                    rejected += 1
+                    click.echo(f"{ident}: rejected; {duplicate['reason']}")
+                    continue
+                near_seen.append(comparison_row(entry))
             normalized = normalize_stem(question["stem"])
             if normalized in seen or ident in repair_duplicate_ids:
                 raise ValueError("Duplicate normalized stem")
             seen.add(normalized)
-        except (ValueError, KeyError, TypeError, OSError, UnicodeError, StopIteration):
-            _reject(entry, "external_request", "Question, evidence, scope or external request validation failed")
+        except (ValueError, KeyError, TypeError, OSError, UnicodeError, StopIteration) as exc:
+            entry["error_class"] = getattr(exc, "error_class", type(exc).__name__)
+            _reject(entry, getattr(exc, "stage", "near_duplicate"), str(exc))
             rejected += 1
             click.echo(f"{ident}: rejected; {entry['reason']}")
             continue
@@ -378,14 +466,16 @@ def ingest(path, verdicts, *, dry_run=False):
                 raise ValueError("Expected output fields")
             entry["external_verdict"] = raw
             judge = _external_decision(question, scope, entry["sources"], checked["options"],
-                                       raw, payload["model"], gate_version=payload["external_judge_version"])
+                                       raw, payload["model"], gate_version=payload["external_judge_version"], rules_version=payload.get("rules_version", 4),
+                                          argon_request=_argon_request(path, entry, payload))
             entry["judge_verdict"] = {"passed": judge.passed, "score": judge.score,
                                       "reason": judge.reason, "model": judge.model}
             entry["external_judge_provenance"] = EXTERNAL_JUDGE_PROVENANCE
             entry["awaiting_external_judge"] = False
             entry["status"] = "external_judge_passed" if judge.passed else "external_judge_rejected"
-        except Exception:
-            _reject(entry, "external_verdict", "Malformed external verdict; exact output fields required")
+        except Exception as exc:
+            entry["error_class"] = type(exc).__name__
+            _reject(entry, "external_verdict", str(exc))
             rejected += 1
             click.echo(f"{ident}: rejected; {entry['reason']}")
             continue
@@ -394,21 +484,41 @@ def ingest(path, verdicts, *, dry_run=False):
             rejected += 1
             click.echo(f"{ident}: rejected; {entry['reason']}")
             continue
-        entry.pop("failure_stage", None)
-        entry.pop("reason", None)
+        for field in ("failure_stage", "reason", "error_class", "error_message"):
+            entry.pop(field, None)
         grounding = {key: scope[key] for key in ("cert_id", "objective_id", "guide_sha256")}
         grounding.update(generator_model=payload["model"], judge_model=EXTERNAL_JUDGE_PROVENANCE,
                          evidence=checked["options"], mechanical_check={"passed": True, "errors": []})
         if payload["external_judge_version"] == 2:
-            grounding.update(gate_version=4, rules_version=4, gate_verdicts=raw,
+            grounding.update(gate_version=payload.get("rules_version", 4), rules_version=payload.get("rules_version", 4), gate_verdicts=raw,
                              **{name: scope[name] for name in
                                 ("decision_objective", "decision_plan", "decision_proof", "key_length_rank")})
+        if payload.get("argon_gate") is True:
+            grounding["argon"] = raw["argon"]
+        if "option_order" in entry:
+            grounding.update(option_order=entry["option_order"], evidence=entry["evidence"])
         entry["grounding"] = grounding
         entry["accepted"] = False
         pending.append((entry, scope, question, judge, grounding))
         click.echo(f"{ident}: passing external verdict; {judge.reason}")
     payload["option_length_report"] = option_length_report(payload["candidates"])
     payload["option_prefix_report"] = option_prefix_report(payload["candidates"])
+    if payload.get("rules_version") == 5:
+        payload["all_candidate_key_position_report"] = key_position_report(payload["candidates"])
+        payload["key_position_report"] = key_position_report([entry for entry in payload["candidates"]
+            if entry["candidate_id"] not in superseded and entry.get("judge_verdict", {}).get("passed") is True
+            and not entry.get("persistence_validation_failed")])
+        payload["template_diversity_report"] = template_diversity_report([entry for entry in payload["candidates"]
+            if entry["candidate_id"] not in superseded])
+        click.echo(format_key_position_report(payload["key_position_report"]))
+        click.echo("Template diversity: " + json.dumps(payload["template_diversity_report"]))
+        _flush(path, payload)
+        if blocked:
+            raise click.ClickException("Persistence journal requires reconciliation; no new DB writes")
+        if not payload["key_position_report"]["count"]:
+            raise click.ClickException("No passing candidates; no new DB writes")
+        if payload["key_position_report"]["passed"] is False or not payload["template_diversity_report"]["passed"]:
+            raise click.ClickException("V5 batch report failed; no new DB writes")
     _flush(path, payload)
     if not dry_run and (pending or payload["generation_runs"]):
         journal = payload.setdefault("external_run_journal", {})

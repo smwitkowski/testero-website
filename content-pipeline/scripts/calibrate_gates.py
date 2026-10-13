@@ -193,13 +193,13 @@ def frozen_evidence(match, order):
 
 def gate_pass(name, raw, question):
     from shared.gates import evaluate_gate
-    return evaluate_gate(name, raw, question)[0]
+    return evaluate_gate(name, raw, question, version=4)[0]
 
 def prepare(items, artifacts):
-    from shared.gates import build_gate_inputs, GATE_SIGNATURES
+    from shared.gates import build_gate_inputs, V4_GATE_SIGNATURES as GATE_SIGNATURES
     from shared.cli_models import output_model, signature_prompt
     from shared.doc_search import documentation_context
-    from shared.question_style import STYLE_RULES
+    from shared.question_style import RULES_V4_STYLE_RULES as STYLE_RULES
     prepared = []
     for number, item in enumerate(items, 1):
         match = matching_entry(item, artifacts)

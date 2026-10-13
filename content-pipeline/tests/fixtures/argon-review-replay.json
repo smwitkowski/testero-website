@@ -1,0 +1,92 @@
+{
+  "provenance": "Explicit test-only projection of calibration/argon-review-r8-2026-10-13.json; null alternate becomes false, null fix becomes No changes needed. Not production gate receipts. Blind tests are synthetic mapped replay, not fresh calls.",
+  "reviews": [
+    {
+      "verdict": "PASS",
+      "key_correct": true,
+      "other_defensible_option": false,
+      "issues": [],
+      "fix": "No changes needed"
+    },
+    {
+      "verdict": "PASS",
+      "key_correct": true,
+      "other_defensible_option": false,
+      "issues": [],
+      "fix": "No changes needed"
+    },
+    {
+      "verdict": "REVISE",
+      "key_correct": true,
+      "other_defensible_option": false,
+      "issues": [
+        "Near-duplicate of Question 1: tests the exact same scenario (retailer demand forecasting, spreadsheet tracking) and exact same solution (Model Registry versions + aliases).",
+        "Distractor C is a strawman that simply repeats the broken state described in the stem."
+      ],
+      "fix": "Differentiate from Question 1 by focusing on how CI/CD or deployment pipelines reference mutable aliases (e.g., deploying by alias or integrating with Model Monitoring) rather than repeating the basic spreadsheet-replacement scenario."
+    },
+    {
+      "verdict": "PASS",
+      "key_correct": true,
+      "other_defensible_option": false,
+      "issues": [
+        "Could be slightly stronger by explicitly naming Custom Prediction Routines (CPR) or embedding transformations into the model graph in the option text, though the current phrasing is completely accurate."
+      ],
+      "fix": "No changes needed"
+    },
+    {
+      "verdict": "PASS",
+      "key_correct": true,
+      "other_defensible_option": false,
+      "issues": [
+        "Tests general ML systems engineering and staging validation rather than Google Cloud-specific features, makes it slightly easy by elimination."
+      ],
+      "fix": "No changes needed"
+    },
+    {
+      "verdict": "PASS",
+      "key_correct": true,
+      "other_defensible_option": false,
+      "issues": [
+        "Minor branding leak in Option B's quote ('Vertex AI Feature Store'), though the question and explanations properly use Agent Platform."
+      ],
+      "fix": "No changes needed"
+    },
+    {
+      "verdict": "PASS",
+      "key_correct": true,
+      "other_defensible_option": false,
+      "issues": [],
+      "fix": "No changes needed"
+    },
+    {
+      "verdict": "REVISE",
+      "key_correct": true,
+      "other_defensible_option": false,
+      "issues": [
+        "Tests generic benchmarking logic (measure all constraints, pick cheapest that meets SLA) rather than Google Cloud hardware architecture knowledge.",
+        "Benchmarking TPUs for single-request, low-concurrency online inference of a small prototype photo-embedding network is generally an anti-pattern compared to CPUs or L4/T4 GPUs."
+      ],
+      "fix": "Test concrete GCP accelerator selection (e.g., choosing NVIDIA L4 GPUs or CPU over multi-host TPUs for bursty, single-item online inference) rather than generic benchmarking procedure."
+    },
+    {
+      "verdict": "REVISE",
+      "key_correct": true,
+      "other_defensible_option": false,
+      "issues": [
+        "Focusing purely on matching recall without constraining precision or FPR is risky in production fraud systems (a model could trivially increase recall by flagging everything).",
+        "Tests basic ML fundamentals (class imbalance metrics + load testing) rather than specific GCP tuning or serving capabilities."
+      ],
+      "fix": "Specify 'recall at a fixed precision/false-positive rate (or AuPRC)' in Option A, or incorporate a GCP-specific serving optimization like TensorRT/ONNX compilation on Agent Platform."
+    },
+    {
+      "verdict": "PASS",
+      "key_correct": true,
+      "other_defensible_option": false,
+      "issues": [
+        "Like Q5, Q8, and Q9, leans heavily on the generic 'optimizing vs. satisficing metrics' pattern rather than GCP-specific tooling, though it is well-constructed."
+      ],
+      "fix": "No changes needed"
+    }
+  ]
+}

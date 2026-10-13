@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 DISCOVERY_HOST = "docs.cloud.google.com"
 OFFICIAL_DOC_HOSTS = frozenset({DISCOVERY_HOST, "cloud.google.com"})
 MAX_HTML_BYTES = 4 * 1024 * 1024
+OPTION_DOCUMENT_LIMIT = 2
 
 
 class DocumentationError(ValueError):
@@ -233,7 +234,8 @@ def _fetch_documentation(url: str) -> dict:
 
 def _search_objective_docs(objective_text: str, services: list[str], num_results: int,
                            *, cache: DocumentationCache | None = None,
-                           objective_id: str | None = None) -> list[dict]:
+                           objective_id: str | None = None,
+                           allow_empty: bool = False) -> list[dict]:
     if not isinstance(objective_text, str) or not objective_text.strip():
         raise DocumentationError("An objective text is required")
     if not isinstance(services, list) or any(not isinstance(s, str) for s in services):
@@ -243,7 +245,8 @@ def _search_objective_docs(objective_text: str, services: list[str], num_results
     sources = []
     urls = (_discover_urls(objective_text, services, num_results) if cache is None else
             cache._discover(objective_text, services, num_results, objective_id))
-    for url in urls:
+    for url in urls[:num_results]:
+        approved_documentation_url(url, discovery=True)
         try:
             source = _fetch_documentation(url) if cache is None else cache._fetch(url)
         except _ConflictingDocumentationError:
@@ -257,7 +260,7 @@ def _search_objective_docs(objective_text: str, services: list[str], num_results
                 raise DocumentationError("Conflicting text for one final documentation URL")
             continue
         sources.append(source)
-    if not sources:
+    if not sources and not allow_empty:
         raise DocumentationError("No official documentation was successfully fetched")
     return sources
 
@@ -271,14 +274,38 @@ def search_objective_docs(objective_text: str, services: list[str], *,
     Each record binds requested_url and final url to the same fetched text,
     retrieval timestamp and SHA-256 of the exact UTF-8 text. Raises when empty.
     An optional run-local cache reuses discovery and evidence, including failures.
+    Decision plans add at most two document fetches per option (eight extra);
+    missing support remains a veto, never permission to invent evidence.
     """
-    if decision_plan is not None:
-        objective_text = decision_discovery_text(objective_text, decision_plan)
-    if cache is None:
-        return _search_objective_docs(objective_text, services, 5)
-    return _search_objective_docs(
-        objective_text, services, 5, cache=cache, objective_id=objective_id,
-    )
+    if decision_plan is None:
+        if cache is None:
+            return _search_objective_docs(objective_text, services, 5)
+        return _search_objective_docs(objective_text, services, 5, cache=cache, objective_id=objective_id)
+
+    # Focus each option separately so the main product cannot crowd out alternatives.
+    # A run-local cache also bounds repeated URLs across the five discovery queries.
+    cache = cache if cache is not None else DocumentationCache()
+    targets = [(decision_discovery_text(objective_text, decision_plan), 5)]
+    actions = [(decision_plan["best_action"], " ".join(decision_plan["decisive_constraints"]))]
+    actions.extend((mistake["action"], mistake["scenario_reason"]) for mistake in decision_plan["mistakes"])
+    for action, reason in actions:
+        targets.append(("Engineering decision: Verify this option's named Google Cloud products and capabilities."
+                        + "\nPlanned action: " + action + "\nTradeoff to verify: " + reason
+                        + "\nOfficial overview capability limitations support lifecycle documentation",
+                        OPTION_DOCUMENT_LIMIT))
+    sources = []
+    for target, limit in targets:
+        fetched = _search_objective_docs(target, services if limit == 5 else [], limit, cache=cache,
+            objective_id=objective_id, allow_empty=True)
+        for source in fetched:
+            previous = next((row for row in sources if row["url"] == source["url"]), None)
+            if previous is None:
+                sources.append(source)
+            elif previous["text_sha256"] != source["text_sha256"]:
+                raise DocumentationError("Conflicting text for one final documentation URL")
+    if not sources:
+        raise DocumentationError("No official documentation was successfully fetched")
+    return sources
 
 
 def documentation_context(sources: list[dict]) -> str:

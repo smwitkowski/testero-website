@@ -238,3 +238,23 @@ STYLE_INSTRUCTIONS = (
       "Fetched official docs are the only factual authority.\n"
     + "\n\n".join(f"Approved item {ident}: {stem}" for ident, stem in zip(FOUNDER_EXEMPLAR_IDS, FOUNDER_EXEMPLARS))
 )
+
+RULES_V4_STYLE_INSTRUCTIONS = STYLE_INSTRUCTIONS + "\n\n" + """Rules v4: Plan decisions before retrieving docs. Docs veto unsupported decisions;
+never manufacture difficulty from fine print. Test one primary ML engineering decision.
+Use comparable-granularity alternatives representing real scenario-specific mistakes.
+No obscure exception, incidental file format or startup behavior as the main hinge.
+Do not add security merely to distinguish options. Use current short product names.
+All S1-S10/O1-O5 rules still apply. Exemplars calibrate style, not product truth.
+"""
+RULES_V4_STYLE_RULES = STYLE_RULES
+RULES_V5_ADDITIONS = """
+Rules v5 — product-specific decisions and template diversity:
+S13 Prefer decisions whose hinge is a specific Google Cloud capability, limit or trade-off.
+Do not repeat generic measure/benchmark/validate two constraints and choose whatever meets
+both. Such generic keys are capped at 20% of a batch, not a default decision template.
+O8 At least one distractor must be a plausible Google Cloud-specific alternative whose
+scenario-specific loss requires product knowledge. All distractors merely ignoring one
+stated requirement makes a reading-comprehension item, not a PMLE decision. Keep every v4 guard.
+"""
+STYLE_RULES += RULES_V5_ADDITIONS
+STYLE_INSTRUCTIONS = (STYLE_INSTRUCTIONS + RULES_V5_ADDITIONS).strip()

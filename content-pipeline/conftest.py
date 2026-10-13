@@ -62,6 +62,10 @@ def legacy_generation_stage_fixtures(request, monkeypatch):
                             for row in receipts],
                 "mechanical_check": {"passed": checked["passed"], "errors": checked["errors"]}}
 
+    # These historical suites isolate transport/publication, not new semantic or batch gates.
+    # Dedicated v5 replay tests exercise both checks without these mocks.
+    monkeypatch.setattr(generate, "check_near_duplicate", lambda *a, **kw: {"passed": True, "reason": "Synthetic infrastructure fixture"})
+    monkeypatch.setattr(generate, "key_position_report", lambda rows: {"count": len(rows), "counts": {label: 0 for label in "ABCD"}, "passed": True})
     monkeypatch.setattr(generate, "plan_decision", plan)
     monkeypatch.setattr(generate, "verify_decision", proof)
     monkeypatch.setattr(generate, "writer_decision_context", lambda scope, decision, proof: scope["domain_prompt"])

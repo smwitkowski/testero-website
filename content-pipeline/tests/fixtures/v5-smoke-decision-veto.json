@@ -1,0 +1,314 @@
+{
+  "provenance": {
+    "artifact": "pmle-d029-v5-smoke-3-20261013c.json",
+    "sha256": "f689428287684c601047ae93562d040329429f3de70c8c697da0eed71eb6503d",
+    "note": "Recorded plans and veto reasons only. Replay fetches/proofs are synthetic, not new live validation."
+  },
+  "candidates": [
+    {
+      "index": 1,
+      "attempts": [
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.1:1",
+            "engineering_decision": "Choose whether to retain online serving or use managed batch prediction for an already-running nightly demand-forecasting workload.",
+            "business_consequence": "Produce forecasts before stores open while reducing the cost of serving capacity that sits idle between nightly runs.",
+            "existing_system": "You are maintaining a retailer’s demand-forecasting model, recently deployed to an Agent Platform endpoint. Each night, a pipeline sends store-product records to the endpoint and writes forecasts to Cloud Storage. The endpoint remains provisioned between runs, and idle capacity now accounts for most serving costs. The model is already registered in Agent Platform Model Registry. You want to finish the nightly forecast run before stores open while minimizing idle serving costs. What should you do?",
+            "decisive_constraints": [
+              "You want to finish the nightly forecast run before stores open while minimizing idle serving costs."
+            ],
+            "best_action": "Run Agent Platform batch prediction jobs with the registered model for each nightly input, and remove the endpoint after switching the pipeline.",
+            "mistakes": [
+              {
+                "action": "Keep the Agent Platform endpoint, increase its replica count during the nightly forecast run, and reduce it to one replica after the run.",
+                "scenario_reason": "Increasing replicas can accelerate scoring, but retaining a provisioned replica between runs preserves the idle serving cost driving this decision."
+              },
+              {
+                "action": "Move the model into a Cloud Run service, invoke it for each store-product record from the nightly pipeline, and retire the Agent Platform endpoint.",
+                "scenario_reason": "Cloud Run can scale to zero, but migrating requires packaging a serving application and managing individual requests. Managed batch prediction can reuse the registered model for the existing bulk workload."
+              },
+              {
+                "action": "Deploy the model on GKE, schedule a nightly Kubernetes job to score all store-product records, and remove the endpoint once the job produces forecasts.",
+                "scenario_reason": "A Kubernetes job fits bulk execution, but introduces cluster capacity and job management. This workload gains no stated benefit from that migration over managed batch prediction."
+              }
+            ]
+          },
+          "proof_reason": "The documentation supports batch prediction without an endpoint and supports rejecting B because it explicitly retains an idle replica. However, no supplied documentation verifies Cloud Run scale-to-zero, its packaging requirements, or GKE job capabilities and management costs. C could also meet the stated idle-cost objective; minimizing migration or operational effort is not a stated requirement. No runtime or comparative cost evidence establishes A as uniquely best while meeting the morning deadline. The decision needs replacement because C–D rejection reasons are unverified and the stated constraints do not establish a unique answer."
+        },
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.1:1",
+            "engineering_decision": "Choose between managed API access and deploying model-serving resources for an already-running summarization application.",
+            "business_consequence": "Continue delivering customer-support case summaries while reducing engineering time spent sizing and scaling GPU serving resources.",
+            "existing_system": "You are maintaining a customer-support application that summarizes long case histories using an open model from Model Garden. Your team recently deployed the model on GKE and now spends time adjusting GPU capacity as request volume changes. Model Garden also offers managed API access to the same model. You want to continue using that model while minimizing responsibility for serving capacity. What should you do?",
+            "decisive_constraints": [
+              "You want to continue using the current model while minimizing responsibility for serving capacity."
+            ],
+            "best_action": "Switch the summarization application to the model's managed API in Model Garden, and retire the existing GKE inference deployment.",
+            "mistakes": [
+              {
+                "action": "Deploy the same model to an Agent Platform endpoint, configure autoscaling for its prediction replicas, and redirect the application to that endpoint.",
+                "scenario_reason": "An endpoint can automate replica scaling, but the team still selects serving resources and manages deployment capacity. Managed API access more directly removes the GPU-capacity work motivating this change."
+              },
+              {
+                "action": "Package the same model in a GPU-enabled Cloud Run service, configure request-based autoscaling, and redirect summarization requests to the new service.",
+                "scenario_reason": "Cloud Run can automate instance scaling, but the team still owns the model-serving application and GPU instance configuration. This migration retains serving responsibilities that managed API access transfers to the provider."
+              },
+              {
+                "action": "Move the model deployment to GKE Autopilot, configure GPU resources and horizontal autoscaling, and continue serving summarization requests through the cluster.",
+                "scenario_reason": "Autopilot reduces node-management work, but the team still configures model workloads, GPU resource requests, and workload scaling. It leaves the central serving-capacity responsibility with the application team."
+              }
+            ]
+          },
+          "proof_reason": "The supplied documentation does not establish Model Garden managed API access or its transfer of serving-capacity responsibility, so A and the comparative rejection reasons for B–D cannot be verified. The unnamed model also leaves Cloud Run GPU compatibility uncertain. Replace this decision with one whose decisive capabilities and operational tradeoffs are supported by the fetched documentation; do not reject Cloud Run by conflating request-based autoscaling with request-based billing."
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "attempts": [
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.1:2",
+            "engineering_decision": "Choose the serving container for an existing LightGBM recommendation model after monitoring reveals model-loading failures.",
+            "business_consequence": "Failed predictions interrupt product recommendations; changing the modeling framework would add retraining work and require reassessing recommendation quality.",
+            "existing_system": "Your company ranks product recommendations through an Agent Platform endpoint that previously served an XGBoost model in a prebuilt prediction container. The team recently replaced that model with a trained LightGBM ranker, and monitoring now shows model-loading failures when the deployment starts. You want to restore reliable recommendations while minimizing changes to the serving platform. You want to preserve the trained ranker while minimizing retraining work. What should you do?",
+            "decisive_constraints": [
+              "You want to restore reliable recommendations while minimizing changes to the serving platform.",
+              "You want to preserve the trained ranker while minimizing retraining work."
+            ],
+            "best_action": "Build a custom inference container with LightGBM and a prediction server, register the existing model, and deploy it to the current Agent Platform endpoint.",
+            "mistakes": [
+              {
+                "action": "Repackage the LightGBM model artifact for the prebuilt XGBoost prediction container, register it as a new model, and redeploy the existing endpoint.",
+                "scenario_reason": "The prebuilt XGBoost container supplies an XGBoost serving runtime. Repackaging a LightGBM artifact does not make it loadable by that runtime, so this approach leaves the framework mismatch unresolved."
+              },
+              {
+                "action": "Move inference to Cloud Run using a custom container with LightGBM and a prediction server, then redirect the retail application's recommendation requests to the new service.",
+                "scenario_reason": "Cloud Run can serve a custom container, but this approach adds service migration and application integration work. Agent Platform can host the required custom container on the existing endpoint."
+              },
+              {
+                "action": "Retrain the recommendation ranker with XGBoost using the same training data, package it in the prebuilt prediction container, and replace the current deployed ranking model.",
+                "scenario_reason": "Changing frameworks creates a different trained model whose recommendation quality needs reassessment. A custom container addresses the packaging problem while preserving the existing LightGBM ranker."
+              }
+            ]
+          },
+          "proof_reason": "The supplied docs support using a custom container to preserve the trained model on Agent Platform. However, no supplied documentation establishes Cloud Run's custom-container inference capability, so option C's decisive capability claim cannot be verified. The plan needs replacement or additional official evidence before all four options and A's unique fit can be validated. The framework/runtime mismatch is central to the packaging objective, rather than a narrow feature gotcha."
+        },
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.1:2",
+            "engineering_decision": "Choose the serving package for an existing XGBoost fraud classifier when monitoring reveals growing maintenance work in its custom prediction image.",
+            "business_consequence": "Maintaining an unnecessary prediction server consumes engineering time; changing the trained classifier could alter which payments are flagged for investigation.",
+            "existing_system": "Your company's payment fraud classifier runs on an Agent Platform endpoint using a custom container that installs XGBoost and implements a prediction server. Routine monitoring flags stale serving dependencies, and updating the image repeatedly consumes engineering time. The container uses the trained model's standard prediction function, while the payment application prepares requests. You want to keep fraud scores consistent while minimizing serving-image maintenance. What should you do?",
+            "decisive_constraints": [
+              "You want to keep fraud scores consistent while minimizing serving-image maintenance."
+            ],
+            "best_action": "Deploy the existing XGBoost model with a prebuilt XGBoost prediction container on the current Agent Platform endpoint, and retire the custom serving image.",
+            "mistakes": [
+              {
+                "action": "Rebuild the custom inference image from a minimal base, pin its XGBoost dependencies, and continue maintaining the prediction server for the current Agent Platform endpoint.",
+                "scenario_reason": "A smaller image and pinned dependencies can improve reproducibility, but the team still owns the prediction server and image updates. Standard XGBoost inference provides no scenario-specific reason to retain that maintenance."
+              },
+              {
+                "action": "Adapt a prebuilt XGBoost training container by adding a prediction server and startup logic, then deploy the existing fraud model to the current Agent Platform endpoint.",
+                "scenario_reason": "A training container supplies a training runtime rather than a ready prediction service. Adding serving components recreates maintenance work that a prebuilt XGBoost prediction container already addresses."
+              },
+              {
+                "action": "Retrain the fraud classifier with PyTorch, package it for a prebuilt PyTorch prediction container, and replace the current deployed model.",
+                "scenario_reason": "Changing frameworks requires training and evaluating a replacement classifier whose fraud scores may differ. The existing XGBoost model can use a framework-matched prebuilt prediction container without that migration."
+              }
+            ]
+          },
+          "proof_reason": "The decision needs replacement. At the supplied retrieval date, October 13, 2026, every listed XGBoost prediction container is past its patch and support date; continued availability does not establish maintained serving dependencies. A therefore does not demonstrably resolve the workload's maintenance problem. The scenario also leaves framework-version and artifact compatibility unverified, and the supplied docs do not establish that migration preserves fraud scores. Consequently, rejecting B and C on maintenance grounds and claiming in D that the existing model can use a prebuilt container depend on unproven assumptions. The general prebuilt-versus-custom tradeoff fits the objective, but this plan relies on hidden lifecycle and compatibility conditions."
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "attempts": [
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.1:4",
+            "engineering_decision": "You work for an online retailer whose recommendation model serves shoppers through an Agent Platform endpoint. Your team is migrating recommendation traffic to a replacement model trained on an expanded product catalog. You want to compare the replacement model's effect on shopper purchases while minimizing initial exposure to recommendations that could reduce sales. You also want to complete the rollout while minimizing changes to the running serving system. Which approach should you use?",
+            "business_consequence": "Poor recommendations could reduce purchases during migration; a controlled rollout can reveal that impact before it affects most shoppers.",
+            "existing_system": "The retailer's current recommendation model serves live shopper requests through an Agent Platform endpoint. A replacement model is ready for deployment.",
+            "decisive_constraints": [
+              "You want to compare the replacement model's effect on shopper purchases while minimizing initial exposure to recommendations that could reduce sales.",
+              "You want to complete the rollout while minimizing changes to the running serving system."
+            ],
+            "best_action": "Deploy the replacement model alongside the running model on the existing Agent Platform endpoint. Send a small traffic share to it, compare purchase conversion, and gradually increase its share.",
+            "mistakes": [
+              {
+                "action": "Move both recommendation models to Cloud Run and split traffic between service revisions. Start the replacement revision with a small share, compare purchase conversion, and gradually increase its share after review.",
+                "scenario_reason": "Cloud Run revision splitting is a plausible rollout mechanism, but moving both models adds serving migration work when Agent Platform endpoint traffic splitting can provide the staged comparison."
+              },
+              {
+                "action": "Deploy the replacement model on a separate Agent Platform endpoint and mirror requests to it. Compare recommendation scores with the running model, then migrate shopper traffic after review.",
+                "scenario_reason": "Mirrored predictions can compare model outputs, but shoppers never receive the replacement recommendations during the comparison. Their purchase behavior therefore cannot reveal the replacement model's business impact."
+              },
+              {
+                "action": "Run Agent Platform batch predictions for both models on historical shopper sessions. Compare recommendation accuracy, then deploy the replacement model and transfer all traffic after the comparison.",
+                "scenario_reason": "Historical prediction accuracy does not establish how replacement recommendations affect live purchases. Transferring all traffic also skips the limited exposure that would contain a sales regression."
+              }
+            ]
+          },
+          "proof_reason": "The supplied documentation does not verify A's decisive capability: manually splitting traffic between recommendation models on an existing model endpoint and increasing the replacement's share after conversion review. The model rolling-deployment page describes automatic migration proportional to ready replicas; the manual traffic-splitting page covers agent runtime revisions, not deployed models. B's rejection also relies on this unverified model-endpoint capability. C and D have sound business tradeoffs, but the supplied text does not establish their model-specific mirroring and batch capabilities. Replace the decision or its evidence before accepting the plan."
+        },
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.1:4",
+            "engineering_decision": "You work for an insurer whose claim classifier routes incoming claims to specialist queues through a Cloud Run service. Your team is migrating the running service to a replacement classifier packaged in a new container image. Agents record whether each claim reached the correct queue. You want to compare routing accuracy on live claims while minimizing exposure to a regression. You also want to manage the rollout while minimizing changes to the existing serving application. Which approach should you use?",
+            "business_consequence": "Incorrect routing delays claim processing and creates manual reassignment work. A controlled comparison can reveal regressions while limiting the number of affected claims.",
+            "existing_system": "A Cloud Run service runs the current claim classifier. A replacement container image is ready, and agents provide feedback on production routing accuracy. Planning hints: migration moment; You work for opening; Which approach should you use? question line; key length rank 3.",
+            "decisive_constraints": [
+              "You want to compare routing accuracy on live claims while minimizing exposure to a regression.",
+              "You want to manage the rollout while minimizing changes to the existing serving application."
+            ],
+            "best_action": "Deploy the replacement classifier as a new Cloud Run revision with no initial traffic. Route a small share to it, compare agent-confirmed routing accuracy by revision, and gradually increase its traffic share after review.",
+            "mistakes": [
+              {
+                "action": "Create a new Cloud Run revision for the replacement and direct all service traffic to it. Compare live routing accuracy with the previous revision's results, then restore that revision if accuracy falls.",
+                "scenario_reason": "Switching all traffic exposes every incoming claim to a possible regression before feedback arrives. Rollback can contain further damage but cannot undo incorrect routing that already occurred."
+              },
+              {
+                "action": "Move both claim classifiers to GKE and configure weighted routing and monitoring for their deployments. Start with a small replacement traffic share, compare agent-confirmed routing accuracy, and retain the original deployment for a quick rollback.",
+                "scenario_reason": "GKE can provide a canary architecture, but this introduces a serving migration and additional routing infrastructure. The proposed Cloud Run revision traffic split would provide the controlled comparison within the existing service."
+              },
+              {
+                "action": "Publish the replacement as a tagged Cloud Run revision and give its dedicated URL to reviewers. Compare routing accuracy on their selected claims, then move production traffic after the reviewers approve the replacement.",
+                "scenario_reason": "A tagged revision provides a direct testing route, but reviewer-selected claims do not establish performance on representative live traffic. Moving production traffic afterward skips the limited production exposure needed to detect migration regressions."
+              }
+            ]
+          },
+          "proof_reason": "A is supported, but D's rejection depends on an unstated full cutover. D says to move production traffic after reviewer approval without specifying how. The supplied documentation explicitly supports gradually migrating production traffic to a tagged revision, so tagging does not imply skipping limited production exposure. The decision needs replacement because D's stated losing reason is uncertain as written."
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "attempts": [
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.2:1",
+            "engineering_decision": "Choose how to refresh batch-derived features in an existing Agent Platform Feature Store online store.",
+            "business_consequence": "Stale customer features make recommendations less relevant; replacing online feature lookups could also increase response latency and maintenance.",
+            "existing_system": "You are managing a retail recommendation service recently deployed with Agent Platform Feature Store. Customer purchase aggregates are refreshed hourly in BigQuery, but the online store continues serving older values until an engineer initiates synchronization. Recommendation requests currently retrieve features with low latency. You want hourly feature updates to reach online serving while minimizing pipeline maintenance. You also want to preserve the service's low-latency feature lookups. What should you do?",
+            "decisive_constraints": [
+              "You want hourly feature updates to reach online serving while minimizing pipeline maintenance.",
+              "You want to preserve the service's low-latency feature lookups."
+            ],
+            "best_action": "Configure scheduled synchronization for the existing feature view so hourly BigQuery results refresh the online store through the managed feature-serving workflow.",
+            "mistakes": [
+              {
+                "action": "Build a Pub/Sub and Dataflow ingestion pipeline to publish each completed hourly feature batch into online serving through a separate streaming workflow.",
+                "scenario_reason": "Introducing streaming infrastructure for hourly batch updates adds pipeline maintenance when scheduled feature-view synchronization can refresh the existing online store."
+              },
+              {
+                "action": "Move feature retrieval to BigQuery and enable BI Engine acceleration so the recommendation service reads each hourly refresh directly through accelerated SQL queries.",
+                "scenario_reason": "BI Engine accelerates analytical queries; replacing dedicated online feature lookups with request-time SQL changes the serving path and risks its existing low latency."
+              },
+              {
+                "action": "Replace the feature store with a custom Bigtable serving layer, and maintain an hourly transfer job that copies BigQuery aggregates into serving rows.",
+                "scenario_reason": "Bigtable can support low-latency lookups, but this migration introduces a custom serving layer and transfer pipeline to solve a refresh problem within the existing managed feature store."
+              }
+            ]
+          },
+          "proof_reason": "Scheduled feature-view synchronization supports A's central approach, but the supplied evidence doesn't verify all alternatives and rejection reasons. The Dataflow notebook demonstrates reading features for stream enrichment, not ingesting hourly batches into online serving as B proposes. No supplied documentation establishes BI Engine's capabilities or C's latency tradeoff, or verifies D's custom Bigtable serving and transfer approach. The decision needs replacement or additional official evidence before A can be certified as uniquely best. The proposed maintenance tradeoffs don't rely on unsupported-feature gotchas."
+        },
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.2:1",
+            "engineering_decision": "Choose how to retrieve historical training features while retaining the deployed feature-serving architecture.",
+            "business_consequence": "Using later account activity in historical training examples can inflate fraud-detection accuracy and lead to unreliable production decisions.",
+            "existing_system": "You are managing a payment fraud classifier recently deployed with Agent Platform Feature Store. Predictions retrieve account aggregates from an online feature view. BigQuery retains timestamped historical values for those aggregates. Your team has started rebuilding the training dataset by pairing past payments with account features retrieved from the online feature view. You want historical training examples to use the feature values available when each payment occurred while minimizing feature-pipeline maintenance. What should you do?",
+            "decisive_constraints": [
+              "You want historical training examples to use the feature values available when each payment occurred while minimizing feature-pipeline maintenance."
+            ],
+            "best_action": "Build training features with point-in-time joins against BigQuery history, matching each transaction timestamp; keep Agent Platform Feature Store for prediction lookups.",
+            "mistakes": [
+              {
+                "action": "Generate training features by fetching each account from the existing online feature view, and reuse those returned values for every historical transaction.",
+                "scenario_reason": "Online feature lookups return current serving values rather than reconstructing values at each historical transaction time, allowing later account activity to leak into training."
+              },
+              {
+                "action": "Create a separate Dataflow pipeline that replays raw account events and recomputes historical aggregates, then writes a replacement training-feature table in BigQuery.",
+                "scenario_reason": "Recomputing aggregates introduces another feature pipeline to maintain even though BigQuery already retains the timestamped values needed for historical joins."
+              },
+              {
+                "action": "Enable Agent Platform Feature Store monitoring on the account features, and accept the current training join when monitored feature distributions remain stable.",
+                "scenario_reason": "Feature distribution monitoring does not establish temporal correctness for individual training examples; stable distributions can coexist with leakage from later account activity."
+              }
+            ]
+          },
+          "proof_reason": "A best fits historical correctness and minimal pipeline maintenance, and the supplied docs support historical retrieval from BigQuery versus latest-value online serving. However, no supplied documentation establishes Agent Platform Feature Store distribution monitoring or the proposed Dataflow replay capability. D's temporal-correctness criticism is logically sound, but its product capability remains unverified. The decision needs replacement or additional official evidence covering these claims."
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "attempts": [
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.1:3",
+            "engineering_decision": "Choose how to organize retrained classifier releases in a managed catalog and maintain a stable reference to the approved version during migration.",
+            "business_consequence": "Preserving release history and a stable approval reference reduces confusion when teams select fraud classifier artifacts for production.",
+            "existing_system": "You work for a payment processor whose running fraud classifier is retrained monthly. Each release is stored in a separate Cloud Storage folder, and a spreadsheet tracks the approved release. Your team is migrating this catalog to a managed Google Cloud service. You want to keep the classifier's releases together while minimizing artifact repackaging. You want reviewers to identify the approved release through a stable name as approval changes. Which approach should you use?",
+            "decisive_constraints": [
+              "You want to keep the classifier's releases together while minimizing artifact repackaging.",
+              "You want reviewers to identify the approved release through a stable name as approval changes."
+            ],
+            "best_action": "Register each release as a version of one model in Agent Platform Model Registry, and move a custom alias to the approved version after review.",
+            "mistakes": [
+              {
+                "action": "Create a separate model in Agent Platform Model Registry for each release, and use shared labels to record its classifier family and approval status.",
+                "scenario_reason": "Separate model resources fragment the classifier's version history. Shared labels categorize resources but do not provide a model version alias that follows approval changes."
+              },
+              {
+                "action": "Enable Cloud Storage object versioning for the release artifacts, and maintain one registry entry with labels identifying the currently approved artifact generation.",
+                "scenario_reason": "Object versioning tracks individual storage objects rather than registered model releases. Updating one entry's labels leaves release history and approval references dependent on external bookkeeping."
+              },
+              {
+                "action": "Package each classifier release as a container image in Artifact Registry, and use repository grouping and a movable image tag to identify the release approved for production.",
+                "scenario_reason": "Artifact Registry organizes container artifacts, so this introduces repackaging to manage existing model files. Model Registry versions and aliases address the catalog migration directly."
+              }
+            ]
+          },
+          "proof_reason": "The supplied docs support A's model versions and movable custom aliases, and B's distinction between labels and aliases. They do not document Cloud Storage object versioning or Artifact Registry repository grouping and movable image tags, so C and D's decisive capability claims and rejection reasons cannot be fully verified. The decision needs replacement or additional official evidence before A can be certified as uniquely best."
+        },
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.1:3",
+            "engineering_decision": "Choose how to bring existing BigQuery ML models into a shared model catalog during an inventory migration.",
+            "business_consequence": "Analysts can discover existing demand models centrally while preserving the retailer's established SQL training workflow.",
+            "existing_system": "You work for a retailer whose stores use daily demand predictions from boosted-tree models trained in BigQuery ML. Your team is migrating its spreadsheet model inventory to a shared catalog as more analysts maintain these models. You want a searchable inventory of trained models while minimizing changes to the existing training workflow. Which approach should you use?",
+            "decisive_constraints": [
+              "You want a searchable inventory of trained models while minimizing changes to the existing training workflow."
+            ],
+            "best_action": "Register the existing BigQuery ML models in Agent Platform Model Registry through the BigQuery ML integration, and continue training them in BigQuery.",
+            "mistakes": [
+              {
+                "action": "Rebuild the models with Agent Platform custom training, register the resulting models in Model Registry, and move future training there.",
+                "scenario_reason": "Moving training introduces unnecessary model reconstruction and workflow migration. BigQuery ML integration offers a direct registration path for the existing models."
+              },
+              {
+                "action": "Catalog the BigQuery ML training runs in Agent Platform Experiments, record model identifiers as parameters, and browse experiment records for discovery.",
+                "scenario_reason": "Experiments organizes experimental runs and their results. Recording model identifiers there leaves the model inventory dependent on manual bookkeeping instead of creating registered model resources."
+              },
+              {
+                "action": "Export the trained BigQuery ML models, prepare compatible serving containers, and upload the exported artifacts to Agent Platform Model Registry for shared discovery.",
+                "scenario_reason": "Manual export and container preparation add artifact management work to the catalog migration. Direct BigQuery ML registration avoids that work while retaining the existing training workflow."
+              }
+            ]
+          },
+          "proof_reason": "A's direct registration path and B's unnecessary training migration are supported. However, the supplied documentation does not establish Experiments' capabilities or C's rejection reason, nor does it verify exporting these boosted-tree models and registering their artifacts with compatible containers for D. The TensorFlow import tutorial does not establish that capability. Replace the unsupported distractors or supply relevant official documentation before treating A as the verified unique best answer."
+        }
+      ]
+    }
+  ],
+  "additional_provenance": {
+    "artifact": "pmle-d029-v5-smoke-3-20261013d.json",
+    "sha256": "c2afaa00c6a1ae3371fca30561d7e06519acd65b9eaf3cfd37d1cef425d26eda",
+    "note": "Only vetoed candidate plans/reasons; passed candidate separately replayed through external request construction."
+  }
+}

@@ -1,4 +1,4 @@
-"""Rules-v4 independent DSPy gates and learner-only projections."""
+"""Versioned v4/v5 independent DSPy gates and learner-only projections."""
 from __future__ import annotations
 
 import hashlib
@@ -12,7 +12,7 @@ import dspy
 
 from shared.question_style import STYLE_INSTRUCTIONS
 
-GATE_VERSION = 4
+GATE_VERSION = 5
 PASS_THRESHOLD = 0.8
 Reason = Annotated[str, StringConstraints(min_length=1, max_length=300)]
 
@@ -107,9 +107,34 @@ class EvidenceReviewerSignature(dspy.Signature):
     supported_decision_hinge: bool = dspy.OutputField(desc="The key's decisive facts are supported. No distractor loses only because it claims an unsupported feature or undocumented feature absence; it must represent a real scenario-specific engineering mistake.")
 
 
-GATE_SIGNATURES = {"blind_solver": BlindSolverSignature, "style": StyleCriticSignature,
-                   "evidence": EvidenceReviewerSignature}
-STYLE_CHECKS = tuple(name for name, field in StyleCriticSignature.output_fields.items() if field.annotation is bool)
+V4_GATE_SIGNATURES = {"blind_solver": BlindSolverSignature, "style": StyleCriticSignature,
+                      "evidence": EvidenceReviewerSignature}
+
+
+class ProductStyleCriticSignature(StyleCriticSignature):
+    """Keep every v4 guard and explicitly reject reading-comprehension templates.
+
+    Prefer hinges requiring specific Google Cloud capability, limit or trade-off
+    knowledge. At least one plausible distractor must be a Google Cloud-specific
+    alternative, not merely ignore a stated requirement. Flag generic benchmark/
+    validate against two constraints then choose whichever meets both; they are
+    capped at 20% per batch and cannot substitute for product knowledge.
+    """
+    product_knowledge_hinge: bool = dspy.OutputField(desc="Decision requires specific Google Cloud capabilities, limits or trade-offs.")
+    cloud_specific_alternative: bool = dspy.OutputField(desc="At least one plausible Google Cloud-specific distractor requires product knowledge to reject.")
+    generic_validation_key: bool = dspy.OutputField(desc="True when likely best action is generic measure/benchmark/validate two constraints then choose whatever meets both, rather than a product-specific decision.")
+
+
+ProductStyleCriticSignature.instructions = StyleCriticSignature.instructions + "\n\n" + ProductStyleCriticSignature.instructions
+GATE_SIGNATURES = {**V4_GATE_SIGNATURES, "style": ProductStyleCriticSignature}
+
+
+def gate_signatures(version=GATE_VERSION):
+    if version not in (4, 5):
+        raise ValueError("Unsupported rules gate version")
+    return V4_GATE_SIGNATURES if version == 4 else GATE_SIGNATURES
+STYLE_CHECKS = tuple(name for name, field in ProductStyleCriticSignature.output_fields.items()
+                     if field.annotation is bool and name != "generic_validation_key")
 EVIDENCE_CHECKS = tuple(name for name, field in EvidenceReviewerSignature.output_fields.items() if field.annotation is bool)
 OPTION_FIELDS = ("correct_answer", "distractor_1", "distractor_2", "distractor_3")
 V4_ADDITIONS = """Rules v4: Plan decisions before retrieving docs. Docs veto unsupported decisions;
@@ -124,7 +149,7 @@ All S1-S10/O1-O5 rules still apply. Exemplars calibrate style, not product truth
 def default_style_reference():
     """Load the current reference without altering historical rubric constants."""
     from shared import question_style
-    return getattr(question_style, "RULES_V4_STYLE_INSTRUCTIONS", question_style.STYLE_INSTRUCTIONS + "\n\n" + V4_ADDITIONS)
+    return question_style.STYLE_INSTRUCTIONS
 
 
 def blind_choice_map(question):
@@ -151,10 +176,10 @@ def build_gate_inputs(question, domain_context, documentation_context, option_ev
                          "option_evidence": option_evidence}}
 
 
-def parse_gate_output(name, raw):
+def parse_gate_output(name, raw, *, version=GATE_VERSION):
     """Require exact fields/types and bounded numbers/reasons for one gate."""
     from shared.cli_models import parse_output, CLISchemaError
-    data = parse_output(json.dumps(raw, allow_nan=False), GATE_SIGNATURES[name])
+    data = parse_output(json.dumps(raw, allow_nan=False), gate_signatures(version)[name])
     numeric = data["confidence" if name == "blind_solver" else "score"]
     if (type(numeric) not in (int, float) or not math.isfinite(numeric) or not 0 <= numeric <= 1
             or not 0 < len(data["reason"].strip()) <= 300):
@@ -162,9 +187,9 @@ def parse_gate_output(name, raw):
     return data
 
 
-def evaluate_gate(name, raw, question):
+def evaluate_gate(name, raw, question, *, version=GATE_VERSION):
     """Return (passed, concrete reason); no score can compensate for a failure."""
-    data = parse_gate_output(name, raw)
+    data = parse_gate_output(name, raw, version=version)
     if name == "blind_solver":
         passed = (data["verdict"] == "PASS" and data["confidence"] >= PASS_THRESHOLD
                   and data["ambiguous_answers"] is False
@@ -173,19 +198,21 @@ def evaluate_gate(name, raw, question):
         if blind_choice_map(question)[data["choice"]] != "A": failures.append("wrong key")
         if data["ambiguous_answers"]: failures.append("ambiguous answers")
     else:
-        checks = STYLE_CHECKS if name == "style" else EVIDENCE_CHECKS
+        checks = (tuple(k for k, field in gate_signatures(version)["style"].output_fields.items()
+                        if field.annotation is bool and k != "generic_validation_key")
+                  if name == "style" else EVIDENCE_CHECKS)
         failures = [check for check in checks if data[check] is not True]
         passed = data["verdict"] == "PASS" and data["score"] >= PASS_THRESHOLD and not failures
     prefix = (", ".join(failures) + ": ") if failures else ""
     return passed, prefix + data["reason"]
 
 
-def aggregate_gate_verdict(question, raw, *, model="claude"):
+def aggregate_gate_verdict(question, raw, *, model="claude", version=GATE_VERSION):
     """All three independent gates must strictly PASS; never average scores."""
     from shared.quality_gate import JudgeVerdict
     if not isinstance(raw, dict) or set(raw) != set(GATE_SIGNATURES):
         raise ValueError("All three strict gate outputs are required")
-    results = {name: evaluate_gate(name, raw[name], question) for name in GATE_SIGNATURES}
+    results = {name: evaluate_gate(name, raw[name], question, version=version) for name in GATE_SIGNATURES}
     score = min(raw[name]["confidence" if name == "blind_solver" else "score"] for name in GATE_SIGNATURES)
     failed = [name + ": " + reason for name, (passed, reason) in results.items() if not passed]
     return JudgeVerdict(not failed, float(score), ("; ".join(failed) if failed else "All three independent gates passed")[:300], model,
@@ -196,7 +223,8 @@ def eligible_gate_repair(raw):
     """Allow one style/blind repair only when the strict evidence gate passes."""
     if not isinstance(raw, dict) or set(raw) != set(GATE_SIGNATURES):
         raise ValueError("All three gate outputs required for repair")
-    data = {name: parse_gate_output(name, raw[name]) for name in GATE_SIGNATURES}
+    version = 5 if "generic_validation_key" in raw["style"] else 4
+    data = {name: parse_gate_output(name, raw[name], version=version) for name in GATE_SIGNATURES}
     evidence = data["evidence"]
     if (evidence["verdict"] != "PASS" or evidence["score"] < PASS_THRESHOLD
             or any(evidence[name] is not True for name in EVIDENCE_CHECKS)

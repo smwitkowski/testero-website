@@ -1,5 +1,111 @@
 # Docs-grounded question process
 
+## Current rules-v5 operator flow (2026-10-13)
+
+This supersedes v4 **for new candidates**. No live generation, retrieval, Argon
+call, or database write is authorized by this code change. The commands below
+are the next founder-operated run, not work performed in this PR. Keep every
+v4 guard and use fresh artifact names. Historical v4 requests remain v4.
+
+1. Plan one product-specific engineering decision before documentation retrieval.
+   Prefer specific Google Cloud capability/limit/trade-off knowledge. Include
+   at least one plausible Google Cloud-specific alternative. Reject choices
+   eliminated only by reading a literal requirement. Generic benchmark/validate
+   two constraints then pick whichever meets both keys are capped at **20%** of
+   passing candidates; they still must pass the product-knowledge style gate.
+2. Retrieve official documentation as a veto, write, and verify exact receipts
+   as in v4. Before the veto, add a separate discovery query for the best action
+   and each distractor's named products/capabilities and proposed tradeoff. Each
+   option fetches at most **2** discovered official documents: **8 extra**, or
+   **13 total** with the existing 5-document main query per decision attempt.
+   A run-local cache shares repeated URLs and failures; results merge by final URL
+   with conflicting text rejected. Missing option evidence stays a veto, not a
+   guessed URL, synthetic receipt or automatic approval. Lifecycle dates matter:
+   do not key answers on deprecated/unsupported containers; continued availability
+   does not establish support at the retrieval date. Then shuffle **stored** options deterministically using SHA256 of
+   the candidate ID and a local random generator. Store the label mapping, key,
+   rationales and receipt labels together. Judges use reconstructed canonical
+   fields; blind/style projections have a separate learner-only shuffle.
+3. Reject mechanical near-duplicates within the batch and against a local
+   ACTIVE/DRAFT export. `--existing-questions` accepts a JSON list or
+   `{"questions": [...]}`. Rows need `id` (or `candidate_id`), `status`, `stem`,
+   and either `options` with `label`/`text` plus `key`, or `answers` with
+   `choice_text`/`is_correct`. RETIRED rows are excluded. Missing/invalid active
+   rows block. The artifact freezes a comparison snapshot and export SHA256.
+   Without this flag only within-batch checks run; no database is read.
+4. Report stored key counts. **Any position above 40% fails at N>=10 eligible
+   candidates**. Smaller nonempty samples are informational, not cap failures;
+   malformed keys and real candidate failures still block. With zero eligible candidates the report is
+   **not available** (`passed: null`), not a key-position failure. The batch still
+   fails for its real candidate/veto failure; ingest blocks an empty passing set. A random deterministic shuffle does not
+   guarantee a passing distribution. Inspect failures; never hand-edit mappings.
+   Generation reports all option-bearing candidates; ingest gates nonsuperseded
+   passing candidates before any new question writes. Repaired children get their
+   own ID-seeded mapping. Inline generation also gates the passing subset before writes. All-candidate
+   diagnostics remain available separately. Existing inline failed-DRAFT review
+   retention is unchanged; the actual inline write population also must meet the
+   key-position cap. The template cap governs passing questions, not failed drafts.
+5. Keep three independent Claude gates. Optional `--argon-gate` adds two separate
+   calls to exact model **`openrouter/google/gemini-4-argon`** via the existing
+   OpenRouter path. Blind sees only learner stem/choices. Independent full review
+   sees frozen key/rationales/docs/receipts and current style, not Claude verdicts
+   or the blind answer. Frozen request policy must match the judge runner flag.
+   Requires a non-Google generator for independent vendor review and shell
+   `OPENROUTER_API_KEY`; never read an env file.
+6. With Argon enabled **all four gates must pass**: strict blind correct answer,
+   confidence >=0.8 and no ambiguity, plus review PASS, correct key, no credible
+   alternative, no issues. Missing/malformed/REVISE/REJECT/wrong-model or
+   mismatched request receipts block ordinary ingest and completed-journal replay.
+   Automatic repair is disabled for Argon payloads; generate fresh fully judged
+   candidates instead. Without Argon, bounded v4-style repair remains available.
+
+### Dedupe calibration and offline evidence
+
+`tests/fixtures/batch7-8-dedupe.json` contains the 18 accepted/persisted batch7/8
+items with source SHA256 provenance. NFKC + casefold normalization, `[a-z0-9]+`
+tokens, the fixed stopword set in `shared/near_duplicates.py`, and unique-token
+Jaccard separately for stem (S) and correct option (K) give `min(S,K)`.
+Reject at **>=0.20**. Of **153 pairs**, only the known batch8 retailer Model
+Registry alias pair is flagged: **S=0.23880597014925373**, **K=0.4090909090909091**.
+Highest other score: **0.16216216216216217**. This small replay calibration is not
+universal duplicate detection validation.
+
+`calibration/argon-review-r8-2026-10-13.json` is retained as historical review,
+not admissible gate receipts: blind positions/key hashes were not frozen by this
+policy. The test-only review projection records null-to-boolean/fix conversion;
+blind replay is synthetic. Strict bounded schema rejects incompatible recorded
+reviews rather than silently repairing them. No fresh Argon validation occurred.
+
+### Exact next live commands (founder only, no writes)
+
+Prepare a reviewed local ACTIVE/DRAFT export at the path below first. Run from
+this v5 checkout with Codex/Claude login and shell EXA/OpenRouter credentials.
+Use a new basename if any artifact/request/verdict exists. A nonzero result means
+inspect and stop; do not bypass a failed report or reuse an old journal.
+
+```sh
+cd /Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline
+
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/generate_all_domains.py \
+  --cert machine-learning-engineer --n-questions 30 --section-allocation 4,5,6,6,5,4 \
+  --model codex --judge-model external --parallel 3 --gen-effort high --cite-effort medium \
+  --existing-questions .cache/generation/pmle-active-draft-export.json --argon-gate \
+  --artifact .cache/generation/pmle-d029-v5-pilot-30.json
+
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/judge_requests.py \
+  --requests .cache/generation/pmle-d029-v5-pilot-30.judge-requests \
+  --verdicts .cache/generation/pmle-d029-v5-pilot-30.verdicts \
+  --judge-model claude --parallel 3 --argon-gate
+
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/ingest_external_verdicts.py \
+  --artifact .cache/generation/pmle-d029-v5-pilot-30.json \
+  --verdicts .cache/generation/pmle-d029-v5-pilot-30.verdicts --dry-run
+```
+
+Do not remove `--dry-run` without separate founder approval. Omitting Argon must
+be an explicit new-run choice: omit the flag from both generation and judging,
+never remove frozen policy from an existing artifact.
+
 ## Current rules-v4 operator flow (2026-10-06)
 
 This section supersedes the historical rules-v3/v2 runbooks below for **new**
@@ -339,7 +445,10 @@ Each option needs fresh exact A–D URL/quote receipts, with quote membership
 checked against its own frozen fetched text. Quote membership is provenance,
 not semantic proof. Requests use full cited text first, bounded at 150,000
 serialized characters; oversized sources use largest-first fixed ±8,000-character
-quote windows, never narrower windows to fit. Schema or mechanical failures
+quote windows. Historical/non-Argon windows never narrow to fit. Only an
+oversized rules-v5 Argon bundle retries at ±4,000 characters after the wide
+windows fail; it preserves quotes, rubric/schema and fetch hashes, and still
+fails above the unchanged cap. Schema or mechanical failures
 never reach judging. Do not weaken these gates to recover a PASS.
 
 #### Commands, in order
@@ -688,8 +797,10 @@ SHA-256 of its exact bytes. Candidates are **not accepted and not published**
 while awaiting a verdict. Requests include the full fetched official source
 text first, up to 150000 serialized characters. If needed, the largest cited
 sources are trimmed one at a time to quote-centered windows with 8000 characters
-on each side. Windows are merged; they are never narrowed to squeeze a request
-under the limit. A request that still exceeds the limit fails closed. Per-source
+on each side. Windows are merged. Historical/non-Argon requests never narrow
+these windows; only oversized rules-v5 Argon bundles retry at 4000 characters
+per side, preserving verified quotes, rubrics, schemas and fetch hashes. A
+request that still exceeds the unchanged limit fails closed. Per-source
 trimming flags, offsets and hashes are recorded. A quote match alone is not
 semantic proof or a judge PASS. Inspect failed candidate records; schema or
 mechanical rejects must not be sent for judging.
@@ -1087,3 +1198,31 @@ or bot wall, and keep only aggregate notes in `certs/STYLE.md`. Dump items are n
 stored, prompted, used as few-shot examples, or treated as an answer key.
 Write original questions. Never commit official sample stems/options/keys or raw
 Forms. Samples are style evidence, not answer authority or live-exam frequencies.
+
+### Failed frozen-request recovery (rules v5)
+
+Failure records in `<verdicts>/.failures/<candidate-id>.json` include `sub_call`
+(`claude.blind_solver/style/evidence`, `argon.blind/review`, local validation or
+publication), exception class, a safe categorical message, and SHA256 of the
+exact safely read request bytes. Provider exception bodies and prompt echoes
+are withheld. Typed token-limit failures are explicit; no token budget changes
+or automatic retries are introduced. Generation/ingestion rejection records
+keep their actual stage, class and bounded/redacted local message. A supported
+proof still does not bypass the near-duplicate veto.
+
+Retry only the failed candidate in the **original** directories; do not copy
+prompts, delete successful verdicts or regenerate questions:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/judge_requests.py \
+  --requests .cache/generation/pmle-d029-v5-smoke-6-20261013e.judge-requests \
+  --verdicts .cache/generation/pmle-d029-v5-smoke-6-20261013e.verdicts \
+  --argon-gate --parallel 1 \
+  --candidate-id 555ef068-8003-5edc-ad5a-83fd2aa6cc1b
+```
+
+This is a founder/coordinator-only live operation, **not** run by offline repair.
+The selector is repeatable; absent IDs fail closed. A retry reruns all calls for
+the selected candidate; complete verdicts are skipped unchanged. A complete
+atomic verdict replaces no existing result and clears that candidate's failure
+record only after publication. No partial sub-call output is used as evidence.

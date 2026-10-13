@@ -13,6 +13,9 @@ import click
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from shared.cert_context import DEFAULT_CERT, plan_questions
 from shared.dedupe import normalize_stem, strip_markdown
+from shared.option_order import store_options
+from shared.near_duplicates import load_export, check_near_duplicate, comparison_row
+from shared.batch_report import key_position_report, format_key_position_report, template_diversity_report
 from shared.doc_search import search_objective_docs, documentation_context, DocumentationCache
 from shared.parallel import run_bounded
 from shared.evidence import check_evidence
@@ -79,6 +82,8 @@ def reject_candidate(entry, stage, reason):
     """Record a bounded gate reason without exposing provider exception bodies."""
     entry["failure_stage"] = stage
     entry["reason"] = _safe_completion(reason)[:1000]
+    entry.setdefault("error_class", "CandidateRejected")
+    entry["error_message"] = entry["reason"]
 
 
 def persist_candidate(client, scope, question, judge, grounding, exam, domain_id, run_id, difficulty,
@@ -101,16 +106,17 @@ def persist_candidate(client, scope, question, judge, grounding, exam, domain_id
         on_question_inserted(saved["id"])
     if question_id is not None and saved["id"] != question_id:
         raise ValueError("Inserted question ID does not match its idempotency key")
+    order = grounding.get("option_order", dict(zip("ABCD", "ABCD")))
     options = [{"question_id": saved["id"], "choice_label": label,
-                "choice_text": question[field], "is_correct": label == "A",
-                "explanation_text": question[rationale]}
-               for label, field, rationale in zip("ABCD", OPTION_FIELDS, RATIONALE_FIELDS)]
+                "choice_text": question[OPTION_FIELDS["ABCD".index(origin)]], "is_correct": origin == "A",
+                "explanation_text": question[RATIONALE_FIELDS["ABCD".index(origin)]]}
+               for label, origin in order.items()]
     answers = client.insert_answers_batch(options)
     if not answers or len(answers) != 4:
         return False
     explanation = client.insert_explanation({
         "question_id": saved["id"], "explanation_text": "\n\n".join(
-            f"{label}: {question[field]}" for label, field in zip("ABCD", RATIONALE_FIELDS)),
+            f"{label}: {question[RATIONALE_FIELDS['ABCD'.index(origin)]]}" for label, origin in order.items()),
         "doc_links": list(dict.fromkeys(e["url"] for e in grounding["evidence"])),
     })
     if not explanation:
@@ -124,6 +130,8 @@ def persist_candidate(client, scope, question, judge, grounding, exam, domain_id
 @click.option("--domain-code", default=None, help="Optional domain filter; otherwise use all weighted sections.")
 @click.option("--subsection", default=None, help="Optional guide subsection filter.")
 @click.option("--objective", "objective_ids", multiple=True, help="Repeatable registry objective ID; overrides weights with round-robin targets in flag order.")
+@click.option("--argon-gate", is_flag=True, help="Freeze mandatory independent Gemini 4 Argon blind/full review requests.")
+@click.option("--existing-questions", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Local ACTIVE/DRAFT question export for near-duplicate veto; no DB access.")
 @click.option("--section-allocation", default=None, help="Comma-separated counts in included guide section order, summing to N; pilot: 4,5,6,6,5,4. Cannot combine with scope filters.")
 @click.option("--model", default=DEFAULT_GENERATOR_MODEL, show_default=True)
 @click.option("--judge-model", default=DEFAULT_JUDGE_MODEL, show_default=True, help="Use external to export judge requests and never write the DB.")
@@ -136,8 +144,13 @@ def persist_candidate(client, scope, question, judge, grounding, exam, domain_id
 @click.option("--gen-effort", type=click.Choice(["low", "medium", "high"]), default="high", show_default=True)
 @click.option("--cite-effort", type=click.Choice(["low", "medium", "high"]), default="medium", show_default=True)
 def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge_model, difficulty, dry_run, artifact, exam, seed,
-         parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None):
+         parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None, existing_questions=None, argon_gate=False):
     try:
+        if argon_gate:
+            if judge_model != "external":
+                raise ValueError("Argon gate requires external judging")
+            require_independent_models(model, "openrouter/google/gemini-4-argon")
+        bank = load_export(existing_questions) if existing_questions else {"sha256": None, "questions": []}
         allocation = None
         if section_allocation is not None:
             if not re.fullmatch(r"[0-9]+(?:,[0-9]+)*", section_allocation):
@@ -162,7 +175,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                "dry_run": dry_run, "seed": seed, "requested_objective_ids": list(dict.fromkeys(objective_ids)),
                "planned_count": n_questions, "plan": plan, "candidates": [],
                "parallel": effective_parallel, "gen_effort": gen_effort, "cite_effort": cite_effort,
-               "rules_version": 4, "section_allocation": allocation, "decision_first": True}
+               "rules_version": 5, "section_allocation": allocation, "decision_first": True,
+               "existing_questions": bank, "argon_gate": argon_gate}
     client = None if dry_run or external else database_client()
     exam = exam or ("GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert)
     payload.update({"difficulty": difficulty, "exam": exam})
@@ -181,8 +195,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         for code in domains:
             run = client.create_generation_run({"exam": exam, "domain_code": code,
                 "target_count": sum(p["domain_code"] == code for p in plan), "generated_count": 0,
-                "model": model, "prompt_version": "decision-first-rules-v4",
-                "notes": json.dumps({"cert_id": cert, "judge_model": judge_model, "rules_version": 4})})
+                "model": model, "prompt_version": "decision-first-rules-v5",
+                "notes": json.dumps({"cert_id": cert, "judge_model": judge_model, "rules_version": 5})})
             if not run:
                 raise click.ClickException("Could not create generation run")
             runs[code], run_counts[code] = run["id"], 0
@@ -190,6 +204,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     payload["generation_runs"] = runs
     seen = set()
     accepted = 0
+    pending_inline = []
     awaiting = 0
     batch_stop = None
     stop_event = Event()
@@ -240,7 +255,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     "mechanical_errors": proof["mechanical_check"]["errors"],
                     "instruction": "Replace the engineering decision, not the scenario with extra exceptions."})
             else:
-                raise DecisionVetoError("Replacement decision vetoed; discard candidate")
+                raise DecisionVetoError("Replacement decision vetoed; discard candidate: " + proof["reason"])
             # Objective text comes from the frozen reviewed registry, never the LM.
             decision_objective = {"objective_id": scope["objective_id"], "objective_text": scope["objective_text"]}
             scope["decision_objective"] = entry["decision_objective"] = decision_objective
@@ -252,8 +267,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                                     **({"reasoning_effort": gen_effort} if codex else {}))
             stage = "schema"
             question = clean_question(raw)
-            if external:
-                entry["candidate_id"] = candidate_id(index, scope, question)
+            entry["candidate_id"] = candidate_id(index, scope, question)
             entry.update({"stem": question["stem"], "options": [
                 {"label": label, "text": question[field]} for label, field in zip("ABCD", OPTION_FIELDS)],
                 "rationales": {label: question[field] for label, field in zip("ABCD", RATIONALE_FIELDS)}})
@@ -283,8 +297,13 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             if not checked["passed"]:
                 reject_candidate(entry, "mechanical", "Mechanical evidence check failed: " + "; ".join(checked["errors"]))
                 return
-            entry["evidence"] = checked["options"]
+            store_options(entry, question, checked["options"])
             if not external:
+                entry["near_duplicate_check"] = check_near_duplicate(entry, bank["questions"] +
+                    [comparison_row(row) for row in payload["candidates"] if row.get("near_duplicate_check", {}).get("passed")])
+                if not entry["near_duplicate_check"]["passed"]:
+                    reject_candidate(entry, "near_duplicate", entry["near_duplicate_check"]["reason"])
+                    return
                 normalized = normalize_stem(question["stem"])
                 if normalized in seen:
                     entry["duplicate"] = True
@@ -294,7 +313,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             if external:
                 stage = "external_request"
                 entry["candidate_id"] = candidate_id(index, scope, question)
-                request = build_request(entry["candidate_id"], scope, question, sources, checked["options"])
+                request = build_request(entry["candidate_id"], scope, question, sources, checked["options"], argon_gate=argon_gate)
                 return  # Publish in plan order under the shared write lock.
             stage = "judge"
             judge = judge_three_gates(question, scope["domain_prompt"], documentation_context=context,
@@ -308,8 +327,9 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 entry["judge_verdict"]["diagnostics"] = judge.diagnostics
             grounding = {k: scope[k] for k in ("cert_id", "objective_id", "guide_sha256")}
             grounding.update({"generator_model": model, "judge_model": judge_model,
-                              "evidence": checked["options"], "mechanical_check": entry["mechanical_check"],
-                              "rules_version": 4, "gate_version": 4,
+                              "evidence": entry["evidence"], "option_order": entry["option_order"],
+                              "mechanical_check": entry["mechanical_check"],
+                              "rules_version": 5, "gate_version": 5,
                               "decision_objective": decision_objective,
                               "decision_plan": decision, "decision_proof": proof,
                               "key_length_rank": scope["key_length_rank"]})
@@ -317,8 +337,9 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 grounding["gate_verdicts"] = judge.gate_results
             entry["grounding"] = grounding
             stage = "persistence"
-            stored = True if dry_run else persist_candidate(client, scope, question, judge, grounding,
-                exam, domains[scope["domain_code"]], runs[scope["domain_code"]], difficulty)
+            stored = True  # Batch reports must pass before any question write.
+            if not dry_run:
+                pending_inline.append((entry, scope, question, judge, grounding))
             entry["accepted"] = judge.passed and stored
             if not judge.passed:
                 reject_candidate(entry, "judge", judge.reason)
@@ -326,13 +347,14 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     entry["reason"] += "; candidate persistence also failed"
             elif not stored:
                 reject_candidate(entry, stage, "Candidate persistence failed; founder approval remains blocked")
-            if client is not None and stored:
-                run_counts[scope["domain_code"]] += 1
             accepted += int(entry["accepted"])
         except Exception as exc:
-            # Never copy provider exception bodies/credentials into artifacts or stdout.
+            # External request construction is local; provider failures stay generic.
             entry["error_class"] = type(exc).__name__
-            reject_candidate(entry, stage, str(exc) if isinstance(exc, CLIModelError) else stage.capitalize() + " request failed")
+            if stage == "external_request":
+                entry["error_message"] = _safe_completion(str(exc))[:1000]
+            reject_candidate(entry, stage, str(exc) if stage == "external_request" or isinstance(exc, (CLIModelError, DecisionVetoError))
+                             else stage.capitalize() + " request failed")
             if isinstance(exc, (CLIUsageLimitError, CLIAuthError, CodexModelRejectedError)):
                 stop_event.set()  # Stop admission now, not after ordered publication.
                 with write_lock:
@@ -351,8 +373,13 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 try:
                     if request is not None:
                         try:
+                            entry["near_duplicate_check"] = check_near_duplicate(entry, bank["questions"] +
+                                [comparison_row(row) for row in payload["candidates"] if row.get("near_duplicate_check", {}).get("passed")])
                             normalized = normalize_stem(entry["stem"])
-                            if normalized in seen:
+                            if not entry["near_duplicate_check"]["passed"]:
+                                entry["duplicate"] = True
+                                reject_candidate(entry, "near_duplicate", entry["near_duplicate_check"]["reason"])
+                            elif normalized in seen:
                                 entry["duplicate"] = True
                                 reject_candidate(entry, "duplicate", "Duplicate normalized stem within this batch")
                             else:
@@ -370,10 +397,11 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                         except Exception as exc:
                             entry["error_class"] = type(exc).__name__
                             entry.pop("external_judge_request", None)
-                            reject_candidate(entry, "external_request", "External request publication failed; inspect local artifacts")
+                            reject_candidate(entry, "external_request_publication", _safe_completion(str(exc))[:1000])
                     if not entry["accepted"] and not entry.get("awaiting_external_judge") and not entry.get("reason") and not entry.get("error_class"):
                         reject_candidate(entry, stage, stage.capitalize() + " failed before acceptance")
                     payload["candidates"].append(entry)
+                    payload["key_position_report"] = key_position_report(payload["candidates"])
                     payload["option_length_report"] = option_length_report(payload["candidates"])
                     payload["option_prefix_report"] = option_prefix_report(payload["candidates"])
                     write_artifact(artifact, payload)
@@ -382,15 +410,46 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     commit_order.notify_all()
 
     run_bounded(enumerate(plan, 1), process_candidate, effective_parallel, stop_event)
+    if not external:
+        payload["all_candidate_key_position_report"] = payload["key_position_report"]
+        payload["key_position_report"] = key_position_report([entry for entry in payload["candidates"]
+            if entry.get("judge_verdict", {}).get("passed") is True])
+        payload["template_diversity_report"] = template_diversity_report(payload["candidates"])
+        # Inline mode retains failed DRAFTs for review; gate that write population too.
+        payload["write_key_position_report"] = key_position_report([entry for entry, *_ in pending_inline]) if pending_inline else payload["key_position_report"]
+    reports_pass = payload["key_position_report"]["passed"] and (external or
+        (payload["write_key_position_report"]["passed"] and (not payload["template_diversity_report"]["count"] or payload["template_diversity_report"]["passed"])))
+    for entry, scope, question, judge, grounding in pending_inline:
+        try:
+            stored = reports_pass and persist_candidate(client, scope, question, judge, grounding,
+                exam, domains[scope["domain_code"]], runs[scope["domain_code"]], difficulty)
+        except Exception as exc:
+            stored = False
+            entry["error_class"] = type(exc).__name__
+        entry["accepted"] = judge.passed and stored
+        if stored:
+            run_counts[scope["domain_code"]] += 1
+        else:
+            reject_candidate(entry, "persistence", "Batch report blocked writes" if not reports_pass else "Candidate persistence failed; inspect for partial writes")
+        write_artifact(artifact, payload)
+    if pending_inline:
+        accepted = sum(entry["accepted"] for entry in payload["candidates"])
+    if not external:
+        write_artifact(artifact, payload)
     if client is not None:
         for code, run_id in runs.items():
             if not client.update_generation_run(run_id, {"generated_count": run_counts[code], "completed_at": datetime.now(timezone.utc).isoformat()}):
                 raise click.ClickException("Run completion failed; founder approval remains blocked")
+    click.echo(format_key_position_report(payload["key_position_report"]))
     click.echo(format_option_length_report(payload["option_length_report"]))
     click.echo(format_option_prefix_report(payload["option_prefix_report"]))
     click.echo(f"Accepted {accepted}/{n_questions}; artifact: {artifact}")
     if batch_stop:
         raise click.ClickException(batch_stop["reason"])
+    if payload["key_position_report"]["passed"] is False or (not external and payload["write_key_position_report"]["passed"] is False):
+        raise click.ClickException("Key-position batch report failed; invalid keys or a position above 40% at N>=10 blocks the batch")
+    if not external and payload["template_diversity_report"]["count"] and not payload["template_diversity_report"]["passed"]:
+        raise click.ClickException("Template-diversity batch report failed; generic validation keys exceed 20%")
     if external:
         click.echo(f"Awaiting external judge {awaiting}/{n_questions}; requests: {request_directory(artifact)}; no DB writes")
         if awaiting != n_questions:

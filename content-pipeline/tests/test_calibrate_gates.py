@@ -21,7 +21,7 @@ def valid_raw(name, q):
     if name == "blind_solver":
         choice = next(label for label, original in gates.blind_choice_map(q).items() if original == "A")
         return {"verdict": "PASS", "choice": choice, "confidence": .9, "ambiguous_answers": False, "reason": "Unique decision"}
-    checks = gates.STYLE_CHECKS if name == "style" else gates.EVIDENCE_CHECKS
+    checks = tuple(k for k, field in gates.V4_GATE_SIGNATURES["style"].output_fields.items() if field.annotation is bool) if name == "style" else gates.EVIDENCE_CHECKS
     return {"verdict": "PASS", "score": .9, "reason": "Supported decision", **dict.fromkeys(checks, True)}
 
 
