@@ -30,6 +30,7 @@ RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/app/fonts/OFL.txt ./licenses/IBM-Plex-Sans-OFL.txt
 # Blog, FAQ, catalog, and approved-gated legal Markdown are read at runtime.
 COPY --from=builder --chown=nextjs:nodejs /app/content ./content
 USER nextjs

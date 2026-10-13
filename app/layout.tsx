@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { DEFAULT_DESCRIPTION, pageMetadata, SITE_ORIGIN } from "@/lib/seo";
 import { SiteHeader } from "@/components/site-header";
 import { SiteChrome } from "@/components/site-chrome";
@@ -7,7 +7,16 @@ import { SiteFooter } from "@/components/site-footer";
 import { AnalyticsProvider } from "@/components/analytics-provider";
 import "./globals.css";
 
-const ibmPlexSans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-ibm-plex-sans", display: "swap" });
+const ibmPlexSans = localFont({
+  src: [
+    { path: "./fonts/IBMPlexSans-Regular-Latin1.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/IBMPlexSans-Medium-Latin1.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/IBMPlexSans-SemiBold-Latin1.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/IBMPlexSans-Italic-Latin1.woff2", weight: "400", style: "italic" },
+  ],
+  variable: "--font-ibm-plex-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   ...pageMetadata("PMLE readiness diagnostic", DEFAULT_DESCRIPTION, "/"),
