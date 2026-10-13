@@ -36,7 +36,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      - run: npm run build
+      - name: Build production app (including pull requests)
+        run: npm run build
 
   # PR checks never contact production or push images.
   build:
