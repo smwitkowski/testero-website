@@ -33,6 +33,19 @@ def canonical_hash(value):
                                     separators=(",", ":")).encode()).hexdigest()
 
 
+@pytest.fixture
+def synthetic_transport_case():
+    """Derive transport-only inputs; do not claim a new semantic judgment."""
+    case = deepcopy(CASES[0])
+    case["name"] = "synthetic-pmle-transport-derivative"
+    # Distinct option openings remove the prohibited nine-word shared prefix.
+    # All receipts and the reduced recorded verdict remain mocks for plumbing.
+    for field, opening in (("distractor_2", "Invoke"), ("distractor_3", "Use")):
+        assert case["question"][field].startswith("Call ")
+        case["question"][field] = opening + case["question"][field][4:]
+    return case
+
+
 def install_replay(monkeypatch, case, receipts=None):
     search = Mock(return_value=deepcopy(case["sources"]))
     monkeypatch.setattr(bank, "search_objective_docs", search)
@@ -57,8 +70,40 @@ def run(case, question=None, scope=None, **kwargs):
 def test_real_accepted_and_rejected_replay(monkeypatch, case):
     lm, search, judge = install_replay(monkeypatch, case)
     result = run(case)
-    assert result["passed"] is case["accepted"]
     assert result["question"] == case["question"]
+    if case["name"] == "pmle-pilot-6d-candidate-1":
+        # Historically accepted, but its unchanged option prefix now fails O5.
+        assert case["accepted"] and not result["passed"]
+        assert not result["schema_check"]["passed"]
+        assert result["schema_check"]["errors"] == [
+            "Three or more choices share 9 leading words (maximum 7)"]
+        assert result["reasons"] == result["schema_check"]["errors"]
+        assert result["sources"] == [] and result["citation_attempts"] == []
+        assert result["judge_verdict"]["reason"] == "Not judged"
+        search.assert_not_called(); judge.assert_not_called()
+        assert lm.history == []
+        return
+    assert result["passed"] is case["accepted"]
+    if case["name"] == "ace-pilot-4d-candidate-1":
+        # This unchanged real question now fails O4 before citation or judging.
+        assert not result["schema_check"]["passed"]
+        assert any("four-option mean" in error or "uniquely longest" in error
+                   for error in result["schema_check"]["errors"])
+        assert result["sources"] == [] and result["citation_attempts"] == []
+        search.assert_not_called(); judge.assert_not_called()
+        assert lm.history == []
+        return
+    if case["name"] == "pmle-pilot-6d-candidate-3":
+        # This real recorded stem is unchanged. The new checklist gate now stops
+        # it before retrieval; do not manufacture a new judge output or sources.
+        assert not case["accepted"] and not result["schema_check"]["passed"]
+        assert any("requirements checklist" in error for error in result["schema_check"]["errors"])
+        assert result["sources"] == [] and result["citation_attempts"] == []
+        assert result["judge_verdict"]["reason"] == "Not judged"
+        search.assert_not_called()
+        judge.assert_not_called()
+        assert lm.history == []
+        return
     assert result["sources"] == case["sources"]
     assert result["schema_check"] == case["schema_check"]
     assert result["mechanical_check"] == case["mechanical_check"] == {"passed": True, "errors": []}
@@ -109,8 +154,8 @@ def test_fixture_provenance_and_frozen_inputs():
 
 
 @pytest.mark.parametrize("eventual_pass", [True, False])
-def test_real_citation_retries_once_without_regeneration(monkeypatch, eventual_pass):
-    case = CASES[0]
+def test_synthetic_citation_retries_once_without_regeneration(monkeypatch, eventual_pass, synthetic_transport_case):
+    case = synthetic_transport_case
     good = deepcopy(case["citation_attempts"][0]["evidence"])
     bad = deepcopy(good)
     bad[0]["quote"] = "This sentence is absent from the recorded fetched source."
@@ -168,18 +213,18 @@ def test_bad_input_fails_before_retrieval(monkeypatch, defect):
     ("check_evidence", "Mechanical evidence check"),
     ("judge_question", "Independent judge"),
 ])
-def test_transport_exception_bodies_never_enter_results(monkeypatch, service, stage):
-    install_replay(monkeypatch, CASES[0])
+def test_transport_exception_bodies_never_enter_results(monkeypatch, service, stage, synthetic_transport_case):
+    install_replay(monkeypatch, synthetic_transport_case)
     monkeypatch.setattr(bank, service, Mock(side_effect=RuntimeError("PRIVATE provider payload Authorization: Bearer secret")))
-    result = run(CASES[0])
+    result = run(synthetic_transport_case)
     assert not result["passed"] and result["reasons"] == [stage + " failed"]
     assert "PRIVATE" not in json.dumps(result)
     assert "secret" not in json.dumps(result)
 
 
 @pytest.mark.parametrize("defect", ["empty", "hash", "missing_text"])
-def test_invalid_fetched_sources_never_reach_citation_or_judge(monkeypatch, defect):
-    case = CASES[0]
+def test_invalid_fetched_sources_never_reach_citation_or_judge(monkeypatch, defect, synthetic_transport_case):
+    case = synthetic_transport_case
     _, search, judge = install_replay(monkeypatch, case)
     sources = deepcopy(case["sources"])
     if defect == "empty": sources = []
@@ -194,10 +239,10 @@ def test_invalid_fetched_sources_never_reach_citation_or_judge(monkeypatch, defe
     judge.assert_not_called()
 
 
-def test_input_immutability_exact_text_and_no_file_writes(monkeypatch):
+def test_input_immutability_exact_text_and_no_file_writes(monkeypatch, synthetic_transport_case):
     import builtins
     import dotenv
-    case = CASES[0]
+    case = synthetic_transport_case
     _, _, judge = install_replay(monkeypatch, case)
     q, scope = deepcopy(case["question"]), deepcopy(case["scope"])
     q["stem"] = "  " + q["stem"] + "  "
@@ -234,16 +279,16 @@ def test_import_has_no_database_environment_or_generation_calls(monkeypatch):
 
 
 @pytest.mark.parametrize("verdict", [SimpleNamespace(passed=True), JudgeVerdict(True, 0.9, "Wrong model", "openrouter/openai/gpt-4o")])
-def test_malformed_or_wrong_model_judge_verdict_fails_closed(monkeypatch, verdict):
-    _, _, judge = install_replay(monkeypatch, CASES[0])
+def test_malformed_or_wrong_model_judge_verdict_fails_closed(monkeypatch, verdict, synthetic_transport_case):
+    _, _, judge = install_replay(monkeypatch, synthetic_transport_case)
     judge.return_value = verdict
-    result = run(CASES[0])
+    result = run(synthetic_transport_case)
     assert result["mechanical_check"]["passed"] and not result["passed"]
     assert result["reasons"]
 
 
-def test_failed_judge_diagnostics_are_retained_by_read_only_audit(monkeypatch):
-    case = CASES[0]
+def test_failed_judge_diagnostics_are_retained_by_read_only_audit(monkeypatch, synthetic_transport_case):
+    case = synthetic_transport_case
     _, _, judge = install_replay(monkeypatch, case)
     diagnostics = {"raw_response": "Actual failed judge completion " + "z" * 9000,
                    "finish_reason": "stop", "usage": {"completion_tokens": 100}}
@@ -255,8 +300,8 @@ def test_failed_judge_diagnostics_are_retained_by_read_only_audit(monkeypatch):
     assert "diagnostics" not in json.loads(judge.return_value.to_review_notes())["content_pipeline_judge"]
 
 
-def test_failed_citation_diagnostics_remain_complete_in_read_only_audit(monkeypatch):
-    case = CASES[0]
+def test_failed_citation_diagnostics_remain_complete_in_read_only_audit(monkeypatch, synthetic_transport_case):
+    case = synthetic_transport_case
     _, _, judge = install_replay(monkeypatch, case)
     diagnostics = {"raw_response": "Actual failed citation completion " + "z" * 9000,
                    "finish_reason": "stop", "usage": {"completion_tokens": 100}}

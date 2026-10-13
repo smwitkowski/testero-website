@@ -1,0 +1,21 @@
+{
+  "origin": "Actual round-3 Claude CLI verdict; no new check was recorded",
+  "candidate_id": "33fea696-f5d5-525c-b364-be984e527922",
+  "index": 4,
+  "verdict_sha256": "0bdf21c0e860ae832630472585c586b44b91405b2151239cef75da2512c22a2e",
+  "verdict": {
+    "verdict": "PASS",
+    "correct_answer_accurate": true,
+    "distractors_incorrect": true,
+    "distractors_plausible": true,
+    "explanations_accurate": true,
+    "scenario_relevant": true,
+    "scenario_clear": true,
+    "evidence_supported": true,
+    "business_context": true,
+    "constraints_as_wants": true,
+    "decisions_not_syntax": true,
+    "score": 0.82,
+    "reason": "The image tuning doc supports part-level media resolution overriding the global setting on Gemini 3, and says higher resolution means more detail and more tokens. Weaknesses: the stem has an awkward opening phrase, and distractor 3 (untuned Gemma) is somewhat weak."
+  }
+}

@@ -13,7 +13,10 @@ import re
 import socket
 import ssl
 import time
+from concurrent.futures import Future
+from copy import deepcopy
 from datetime import datetime, timezone
+from threading import Lock
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -28,6 +31,74 @@ MAX_HTML_BYTES = 4 * 1024 * 1024
 
 class DocumentationError(ValueError):
     """No trustworthy fetched documentation is available."""
+
+
+class _ConflictingDocumentationError(DocumentationError):
+    """Fetched aliases disagree about the text at one final URL."""
+
+
+class DocumentationCache:
+    """Thread-safe discovery and fetched evidence for one generation run.
+
+    Each key is loaded once, including failures. Unrelated keys run in parallel.
+    Construct a fresh instance for each run; no cache is shared at module level.
+    Returned values are deep copies, so callers cannot change cached evidence.
+    """
+
+    def __init__(self):
+        self._lock = Lock()
+        self._discoveries = {}
+        self._documents = {}
+        self._final_documents = {}
+
+    def _singleflight(self, entries, key, load):
+        # Publish the future before loading, without holding the lock during I/O.
+        with self._lock:
+            future = entries.get(key)
+            owner = future is None
+            if owner:
+                future = Future()
+                entries[key] = future
+        if owner:
+            try:
+                future.set_result(deepcopy(load()))
+            except BaseException as exc:
+                future.set_exception(exc)
+        return deepcopy(future.result())
+
+    def _discover(self, objective_text, services, num_results, objective_id):
+        key = (objective_id, objective_text, tuple(services), num_results)
+        return self._singleflight(
+            self._discoveries, key,
+            lambda: _discover_urls(objective_text, services, num_results),
+        )
+
+    def _fetch(self, url):
+        def load():
+            # A final URL may itself be discovered after an alias was fetched.
+            with self._lock:
+                previous = self._final_documents.get(url)
+                if previous is not None:
+                    source = deepcopy(previous)
+                    source["requested_url"] = url
+                    return source
+            source = _fetch_documentation(url)
+            with self._lock:
+                previous = self._final_documents.get(source["url"])
+                if previous is None:
+                    self._final_documents[source["url"]] = deepcopy(source)
+                else:
+                    if previous["text_sha256"] != source["text_sha256"]:
+                        raise _ConflictingDocumentationError(
+                            "Conflicting text for one final documentation URL"
+                        )
+                    # Different aliases share exact evidence and retrieval time.
+                    requested_url = source["requested_url"]
+                    source = deepcopy(previous)
+                    source["requested_url"] = requested_url
+            return source
+
+        return self._singleflight(self._documents, url, load)
 
 
 def approved_documentation_url(url: str, *, discovery: bool = False) -> str:
@@ -54,10 +125,23 @@ class OfficialDocsRedirectHandler(HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
+def decision_discovery_text(objective_text: str, decision_plan: dict) -> str:
+    """Retrieve proof of a planned tradeoff, preferring overviews over API trivia."""
+    actions = [decision_plan["best_action"], *(m["action"] for m in decision_plan["mistakes"])]
+    return "\n".join([
+        "Engineering decision: " + decision_plan["engineering_decision"],
+        "Existing system: " + decision_plan["existing_system"],
+        "Choose between approaches: " + " versus ".join(actions),
+        "Official overview comparison architecture when to choose guidance",
+        "Objective scope: " + objective_text,
+    ])
+
+
 def _discovery_query(objective_text: str, services: list[str]) -> str:
     """Focus objective examples without changing existing question-first queries."""
     fallback = " ".join(["Google Cloud", objective_text, ", ".join(services)])
-    if objective_text.startswith("Marked answer: ") and "\nQuestion stem: " in objective_text:
+    if ((objective_text.startswith("Marked answer: ") and "\nQuestion stem: " in objective_text)
+            or objective_text.startswith("Engineering decision: ")):
         return fallback
     pattern = r"\(\s*(?:e\.g\.\s*,?\s*|for example\b\s*[:,]?\s*)([^()]*)\)"
     examples = [match.group(1).strip() for match in re.finditer(pattern, objective_text, re.I)
@@ -147,7 +231,9 @@ def _fetch_documentation(url: str) -> dict:
     }
 
 
-def _search_objective_docs(objective_text: str, services: list[str], num_results: int) -> list[dict]:
+def _search_objective_docs(objective_text: str, services: list[str], num_results: int,
+                           *, cache: DocumentationCache | None = None,
+                           objective_id: str | None = None) -> list[dict]:
     if not isinstance(objective_text, str) or not objective_text.strip():
         raise DocumentationError("An objective text is required")
     if not isinstance(services, list) or any(not isinstance(s, str) for s in services):
@@ -155,9 +241,13 @@ def _search_objective_docs(objective_text: str, services: list[str], num_results
     if num_results < 1:
         raise DocumentationError("At least one documentation result is required")
     sources = []
-    for url in _discover_urls(objective_text, services, num_results):
+    urls = (_discover_urls(objective_text, services, num_results) if cache is None else
+            cache._discover(objective_text, services, num_results, objective_id))
+    for url in urls:
         try:
-            source = _fetch_documentation(url)
+            source = _fetch_documentation(url) if cache is None else cache._fetch(url)
+        except _ConflictingDocumentationError:
+            raise
         except Exception as exc:
             logger.warning("Could not fetch discovered documentation %s: %s", url, exc)
             continue
@@ -172,13 +262,23 @@ def _search_objective_docs(objective_text: str, services: list[str], num_results
     return sources
 
 
-def search_objective_docs(objective_text: str, services: list[str]) -> list[dict]:
+def search_objective_docs(objective_text: str, services: list[str], *,
+                          cache: DocumentationCache | None = None,
+                          objective_id: str | None = None,
+                          decision_plan: dict | None = None) -> list[dict]:
     """Return fetched source records for one registry objective plus its services.
 
     Each record binds requested_url and final url to the same fetched text,
     retrieval timestamp and SHA-256 of the exact UTF-8 text. Raises when empty.
+    An optional run-local cache reuses discovery and evidence, including failures.
     """
-    return _search_objective_docs(objective_text, services, 5)
+    if decision_plan is not None:
+        objective_text = decision_discovery_text(objective_text, decision_plan)
+    if cache is None:
+        return _search_objective_docs(objective_text, services, 5)
+    return _search_objective_docs(
+        objective_text, services, 5, cache=cache, objective_id=objective_id,
+    )
 
 
 def documentation_context(sources: list[dict]) -> str:

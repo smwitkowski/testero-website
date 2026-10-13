@@ -24,11 +24,43 @@ def canonical_hash(value):
                                     separators=(",", ":")).encode()).hexdigest()
 
 
+def synthetic_transport_question():
+    """Use a labelled synthetic opening, never repair the historical question."""
+    case = next(c for c in CASES if c["question_id"].startswith("0f701a7e"))
+    question = deepcopy(case["recorded"]["question"])
+    assert question["stem"].startswith("A streaming service wants")
+    question["stem"] = question["stem"].replace("A streaming service wants", "Your company wants", 1)
+    return question
+
+
 @pytest.mark.parametrize("case", HEALTHY_CITATIONS, ids=lambda c: c["question_id"][:8])
-def test_live_true_defect_and_retrieval_miss_still_fail_with_recorded_docs(monkeypatch, case):
+def test_historical_questions_fail_schema_before_recorded_docs(monkeypatch, case):
     recorded = case["recorded"]
-    question = recorded["question"]
     before = deepcopy(case)
+    search = Mock()
+    factory = Mock()
+    judge = Mock()
+    monkeypatch.setattr(bank, "search_objective_docs", search)
+    monkeypatch.setattr(llm_generator, "_generation_lm", factory)
+    monkeypatch.setattr(bank, "judge_question", judge)
+    result = bank.check_existing_question(deepcopy(recorded["question"]), deepcopy(case["scope"]),
+                                          judge_model=recorded["judge_verdict"]["model"])
+    expected = "uniquely longest" if case["question_id"].startswith("9783e3d9") else "Stem opening"
+    assert not result["schema_check"]["passed"]
+    assert any(expected in error for error in result["schema_check"]["errors"])
+    assert not result["passed"] and result["question"] == recorded["question"] and case == before
+    assert result["reasons"] == result["schema_check"]["errors"]
+    assert result["sources"] == [] and result["citation_attempts"] == []
+    assert result["judge_verdict"]["reason"] == "Not judged"
+    search.assert_not_called(); judge.assert_not_called(); factory.assert_not_called()
+
+
+def test_synthetic_retrieval_miss_still_fails_with_recorded_docs(monkeypatch):
+    # This derivative tests plumbing only; it is not a replay or a semantic PASS.
+    case = next(c for c in CASES if c["question_id"].startswith("0f701a7e"))
+    recorded = case["recorded"]
+    before = deepcopy(case)
+    question = synthetic_transport_question()
     search = Mock(return_value=deepcopy(recorded["sources"]))
     monkeypatch.setattr(bank, "search_objective_docs", search)
     lm = DummyLM([{"evidence": attempt["evidence"]} for attempt in recorded["citation_attempts"]])
@@ -36,8 +68,9 @@ def test_live_true_defect_and_retrieval_miss_still_fail_with_recorded_docs(monke
     monkeypatch.setattr(llm_generator, "_generation_lm", factory)
     judge = Mock(return_value=JudgeVerdict(**recorded["judge_verdict"]))
     monkeypatch.setattr(bank, "judge_question", judge)
-    result = bank.check_existing_question(deepcopy(question), deepcopy(case["scope"]))
-    assert result["schema_check"] == recorded["schema_check"]
+    result = bank.check_existing_question(question, deepcopy(case["scope"]),
+                                          judge_model=recorded["judge_verdict"]["model"])
+    assert result["schema_check"] == {"passed": True, "errors": []}
     assert result["mechanical_check"] == recorded["mechanical_check"] == {"passed": True, "errors": []}
     assert result["judge_verdict"] == recorded["judge_verdict"]
     assert not result["passed"] and result["reasons"] == [recorded["judge_verdict"]["reason"]]
@@ -57,14 +90,8 @@ def test_live_true_defect_and_retrieval_miss_still_fail_with_recorded_docs(monke
     assert result["relevance_scope"]["kind"] == "exam_blueprint"
     assert judge.call_args.kwargs["max_tokens"] == bank.AUDIT_JUDGE_MAX_TOKENS == 4000
     assert factory.call_args.kwargs["max_tokens"] == bank.AUDIT_CITATION_MAX_TOKENS == 16000
-    if case["question_id"].startswith("9783e3d9"):
-        assert question["distractor_1_explanation"].endswith("larger re")
-        assert "truncated mid-sentence" in result["reasons"][0]
-    else:
-        assert "MATRIX_FACTORIZATION" in query and "BigQuery ML" in services
-        # The old frozen docs still lack necessary facts. Changing the query must
-        # not retroactively turn missing evidence into a PASS.
-        assert "never mention matrix factorization" in result["reasons"][0]
+    assert "MATRIX_FACTORIZATION" in query and "BigQuery ML" in services
+    assert "never mention matrix factorization" in result["reasons"][0]
 
 
 def test_live_fixture_provenance_full_sources_and_partial_completion():
@@ -89,7 +116,7 @@ def test_live_fixture_provenance_full_sources_and_partial_completion():
 
 def test_question_services_not_lexical_services_and_missing_mapping_is_allowed(monkeypatch):
     case = next(c for c in CASES if c["question_id"].startswith("0f701a7e"))
-    question = case["recorded"]["question"]
+    question = synthetic_transport_question()
     scope = {"cert_id": case["scope"]["cert_id"], "guide_sha256": case["scope"]["guide_sha256"]}
     search = Mock(return_value=[])
     monkeypatch.setattr(bank, "search_objective_docs", search)
@@ -114,7 +141,7 @@ def test_citation_truncation_is_recorded_and_never_judged(monkeypatch):
     monkeypatch.setattr(bank, "cite_question", citation)
     judge = Mock()
     monkeypatch.setattr(bank, "judge_question", judge)
-    result = bank.check_existing_question(case["recorded"]["question"], case["scope"])
+    result = bank.check_existing_question(synthetic_transport_question(), case["scope"])
     assert not result["passed"] and not result["mechanical_check"]["passed"]
     assert result["error_class"] == "MaxTokensTruncation"
     assert citation.call_count == 1
@@ -123,20 +150,20 @@ def test_citation_truncation_is_recorded_and_never_judged(monkeypatch):
 
 
 def test_judge_truncation_is_explicit_on_row_and_never_passes(monkeypatch):
-    case = HEALTHY_CITATIONS[0]
+    case = next(c for c in CASES if c["question_id"].startswith("0f701a7e"))
     recorded = case["recorded"]
     monkeypatch.setattr(bank, "search_objective_docs", Mock(return_value=recorded["sources"]))
     monkeypatch.setattr(bank, "cite_question", Mock(return_value={"evidence": recorded["evidence"]}))
     monkeypatch.setattr(bank, "judge_question", Mock(return_value=JudgeVerdict(
         False, 0.0, "LM completion reached its token limit", bank.DEFAULT_JUDGE_MODEL,
         error_class="MaxTokensTruncation")))
-    result = bank.check_existing_question(recorded["question"], case["scope"])
+    result = bank.check_existing_question(synthetic_transport_question(), case["scope"])
     assert result["mechanical_check"]["passed"] and not result["passed"]
     assert result["error_class"] == result["judge_verdict"]["error_class"] == "MaxTokensTruncation"
 
 
 def test_token_limit_is_terminal_even_if_later_valid_receipts_are_available(monkeypatch):
-    case = next(c for c in CASES if c["question_id"].startswith("9783e3d9"))
+    case = next(c for c in CASES if c["question_id"].startswith("0f701a7e"))
     recorded = case["recorded"]
     monkeypatch.setattr(bank, "search_objective_docs", Mock(return_value=recorded["sources"]))
     citation = Mock(side_effect=[
@@ -146,7 +173,7 @@ def test_token_limit_is_terminal_even_if_later_valid_receipts_are_available(monk
     monkeypatch.setattr(bank, "cite_question", citation)
     judge = Mock(return_value=JudgeVerdict(**recorded["judge_verdict"]))
     monkeypatch.setattr(bank, "judge_question", judge)
-    result = bank.check_existing_question(recorded["question"], case["scope"])
+    result = bank.check_existing_question(synthetic_transport_question(), case["scope"])
     assert [a["mechanical_check"]["passed"] for a in result["citation_attempts"]] == [False]
     assert result["error_class"] == result["citation_attempts"][0]["error_class"] == "MaxTokensTruncation"
     assert citation.call_count == 1

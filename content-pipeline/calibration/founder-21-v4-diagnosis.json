@@ -1,0 +1,55 @@
+{
+  "version": 4,
+  "kind": "bounded-manual-diagnostic",
+  "original_iteration": "v4-baseline-live",
+  "calls_before": 63,
+  "manual_calls": 10,
+  "calls_after": 73,
+  "remaining_budget": 77,
+  "baseline_counts": {
+    "reserved": 63,
+    "completed": 53,
+    "failed": 10
+  },
+  "diagnostic_counts": {
+    "reserved": 73,
+    "completed": 60,
+    "failed": 13
+  },
+  "observed_failures": [
+    {
+      "item_id": 7,
+      "gate": "evidence",
+      "error_class": "CLISchemaError",
+      "stage": "local_validation",
+      "reason_length": 307,
+      "input_sha256": "5205bd4c4dccd4712b24b898cd0678d23d53198cda3a28bfb3dcece293d8036d"
+    },
+    {
+      "item_id": 12,
+      "gate": "evidence",
+      "error_class": "CLISchemaError",
+      "stage": "local_validation",
+      "reason_length": 371,
+      "input_sha256": "ad84c89cffbf9c7681a3acca4d40b567e7e9787a108d41287407f5fb74e1c577"
+    },
+    {
+      "item_id": 20,
+      "gate": "evidence",
+      "error_class": "CLISchemaError",
+      "stage": "local_validation",
+      "reason_length": 354,
+      "input_sha256": "806f540f534825b35f872f890397ad6af698ea62baea2e4c60d4c00ccba2ac7b"
+    }
+  ],
+  "finding": "Remaining three retries returned structured fields but failed the strict local 300-character reason bound. No truncation or waiver applied.",
+  "request_changes_since_baseline": {
+    "style_reference": [
+      "S6 full-name allowance revised to short-name-only; S11 was already short-name-only in baseline."
+    ],
+    "schemas_changed": false,
+    "evidence_prompts_changed": false
+  },
+  "retry_policy": "Explicit manual ERROR-only retry; original request/schema hashes preserved; valid FAIL/UNCERTAIN outputs never retried. Original failure records archived before replacement.",
+  "next_iteration": "One fresh full pass only after strict reason maxLength300 schema and generic O3/O5 clarifications; authorized total136calls."
+}
