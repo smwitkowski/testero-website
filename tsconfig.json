@@ -37,7 +37,6 @@
   ],
   "exclude": [
     "node_modules",
-    "content-pipeline",
-    "supabase/migrations_legacy"
+    "content-pipeline"
   ]
 }
