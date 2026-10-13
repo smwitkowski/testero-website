@@ -8,6 +8,35 @@ are the next founder-operated run, not work performed in this PR. Keep every
 v4 guard and use fresh artifact names. Historical v4 requests remain v4.
 
 1. Plan one product-specific engineering decision before documentation retrieval.
+   Planning gets at most **12** earlier scenario summaries plus keyed actions,
+   each text field truncated to **240 characters**. Prefer earlier in-flight
+   plans and recent committed same-objective candidates, then exactly mapped
+   export rows. Unmapped rows with zero objective-vocabulary overlap are omitted
+   and remaining fallback rows are labelled `unmapped_export_hint`.
+   `--existing-questions` may include `objective_id`; legacy unmapped exports use
+   objective-vocabulary relevance-ranked hints, not verified objective mappings.
+   Choose a materially different business context **and** decision, not a rename.
+   Concurrent first plans can still collide; the full-bank near-duplicate veto
+   remains authoritative and unchanged.
+   Each candidate has at most **3** decision attempts (previously 2). Replacements
+   receive all prior veto reasons, unsupported plans and mechanical errors; they
+   must change the decision rather than add exceptions or repeat any vetoed
+   decision. All attempts, feedback, attempt count and veto reasons are frozen in
+   candidate provenance. Every replacement still needs fresh supported proof.
+   On a terminal decision veto or near-duplicate, remaining admissions for that
+   objective rotate within its section to objectives with fewer successes, then
+   fewer reserved admissions, with stable registry-order ties. Failed objectives
+   are eligible only below their
+   fair share (`ceil(section slots / eligible objectives)`). If all are exhausted,
+   spread unavoidable slots with the same ordering. A failed original slot prefers
+   another eligible objective; it stays on the original only if alternatives are
+   exhausted or the pool is a singleton. Explicit objective flags and
+   domain/subsection filters bound the eligible pool; section slot counts and
+   global presentation hints stay fixed. External awaiting candidates count as
+   provisional successes for scheduling only, never as accepted quality results.
+   In-flight reservations prevent tie pileups; already admitted work drains.
+   The artifact records actual scopes and each retarget's original objective.
+   A seed reproduces the initial plan, not timing-dependent adaptive outcomes.
    Prefer specific Google Cloud capability/limit/trade-off knowledge. Include
    at least one plausible Google Cloud-specific alternative. Reject choices
    eliminated only by reading a literal requirement. Generic benchmark/validate
@@ -39,8 +68,10 @@ v4 guard and use fresh artifact names. Historical v4 requests remain v4.
    **not available** (`passed: null`), not a key-position failure. The batch still
    fails for its real candidate/veto failure; ingest blocks an empty passing set. A random deterministic shuffle does not
    guarantee a passing distribution. Inspect failures; never hand-edit mappings.
-   Generation reports all option-bearing candidates; ingest gates nonsuperseded
-   passing candidates before any new question writes. Repaired children get their
+   Generation enforces the key-position report on accepted/persisted candidates
+   only; rejected and awaiting candidates do not cause a cap failure. Generated
+   option-bearing counts remain a separately labelled informational report. Ingest
+   gates nonsuperseded passing candidates before any new question writes. Repaired children get their
    own ID-seeded mapping. Inline generation also gates the passing subset before writes. All-candidate
    diagnostics remain available separately. Existing inline failed-DRAFT review
    retention is unchanged; the actual inline write population also must meet the
@@ -75,6 +106,22 @@ not admissible gate receipts: blind positions/key hashes were not frozen by this
 policy. The test-only review projection records null-to-boolean/fix conversion;
 blind replay is synthetic. Strict bounded schema rejects incompatible recorded
 reviews rather than silently repairing them. No fresh Argon validation occurred.
+
+### Yield replay (offline)
+
+`tests/fixtures/yield/serving.json` and `scaling.json` are allowlisted, redacted
+projections of the two real 30-candidate batches, with source filenames and exact
+SHA256 hashes. No fetched docs, model transport logs or persistence journals are
+copied. Recorded outcomes are **5/30** and **4/30** accepted; **32/60** terminal
+decision vetoes and **9/60** near-duplicates. Their generated key populations
+were 16 and 12, with D=7/16 and D=5/12; accepted counts are below the unchanged
+10-item cap minimum. Replay tests check real prompt history, prior veto reasons,
+rotation and key counts; synthetic scheduling/third-attempt composition is
+explicitly labelled. No veto is turned into a live supported decision.
+These changes are expected to reduce repetition and repeated proof mistakes,
+not establish a measured yield gain. A third attempt raises the per-candidate
+worst-case decision/retrieval budget by **50%**. No gate or retrieval-per-attempt
+cap changes. Future authorized live batches must measure all-gate yield and cost.
 
 ### Exact next live commands (founder only, no writes)
 

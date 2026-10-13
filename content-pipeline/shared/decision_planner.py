@@ -51,11 +51,19 @@ class DecisionPlanSignature(dspy.Signature):
     No sources are supplied at this stage; proposals are unverified, not evidence.
     Follow current short Agent Platform names. If a previous decision is vetoed,
     replace its decision and alternatives; do not retain it with extra constraints,
-    prohibitions, security wrappers or exception-padding. Hints never expand scope.
+    prohibitions, security wrappers or exception-padding. Use the previous veto reason
+    to avoid unverifiable decisive claims and clearly distinguish defensible alternatives.
+    Choose a materially different business context AND engineering decision from
+    existing_scenarios; changing names or numbers is not enough. These are diversity
+    hints, not factual evidence or permission to weaken any gate. Unmapped export
+    hints may be unrelated; do not treat their objective attribution as verified
+    or avoid a valid objective decision solely because of an unrelated hint.
+    Hints never expand scope.
     """
     objective_scope: str = dspy.InputField()
     difficulty: str = dspy.InputField()
     replacement_feedback: str = dspy.InputField(desc="Empty initially; previous unsupported decision and veto on replacement")
+    existing_scenarios: str = dspy.InputField(desc="Bounded scenario summaries and keyed actions to avoid repeating")
     plan: DecisionPlan = dspy.OutputField()
 
 
@@ -121,9 +129,10 @@ def _predict(signature, inputs, model, reasoning_effort):
         raise GenerationOutputError(adapter.raw_response, adapter.capture.failure()) from None
 
 
-def plan_decision(scope, *, model, difficulty="MEDIUM", replacement_feedback="", reasoning_effort="high", predictor=None):
+def plan_decision(scope, *, model, difficulty="MEDIUM", replacement_feedback="", existing_scenarios=(), reasoning_effort="high", predictor=None):
     inputs = {"objective_scope": scope["domain_prompt"], "difficulty": difficulty,
-              "replacement_feedback": replacement_feedback}
+              "replacement_feedback": replacement_feedback,
+              "existing_scenarios": json.dumps(existing_scenarios, ensure_ascii=False)}
     from shared.cli_models import output_model
     output = predictor(**inputs) if predictor else _predict(DecisionPlanSignature, inputs, model, reasoning_effort)
     plan = output_model(DecisionPlanSignature).model_validate(output).model_dump()["plan"]

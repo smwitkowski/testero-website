@@ -112,7 +112,9 @@ def test_missing_option_docs_do_not_invent_receipts(monkeypatch):
 
 def test_zero_candidates_reports_unavailable_and_preserves_real_failure(monkeypatch, tmp_path):
     row = FIXTURE["candidates"][0]
-    plans = iter(attempt["plan"] for attempt in row["attempts"])
+    # A third attempt now exists; replay the first vetoed plan so no invented support
+    # or iterator exhaustion can replace the real fail-closed decision rejection.
+    plans = iter([*(attempt["plan"] for attempt in row["attempts"]), row["attempts"][0]["plan"]])
     reasons = iter(attempt["proof_reason"] for attempt in row["attempts"])
     monkeypatch.setattr(generate, "ARTIFACT_ROOT", tmp_path)
     monkeypatch.setattr(generate, "plan_decision", lambda *a, **kw: next(plans))
@@ -233,7 +235,9 @@ def test_recorded_smoke_argon_request_fits_without_changing_frozen_candidate(mon
     assert result.exit_code == 0, result.output
     saved = json.loads(artifact.read_text())
     assert saved["candidates"][0]["awaiting_external_judge"] is True
-    assert saved["key_position_report"]["enforced"] is False
+    assert saved["key_position_report"]["count"] == 0
+    assert saved["key_position_report"]["passed"] is None
+    assert saved["all_candidate_key_position_report"]["count"] == 1
     request_file = next(artifact.with_name("batch.judge-requests").glob("*.json"))
     assert "argon" in json.loads(request_file.read_text())
     # A failed local builder exposes a bounded/redacted message, not just ValueError.

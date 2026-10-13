@@ -11,7 +11,8 @@ import sys
 import click
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from shared.cert_context import DEFAULT_CERT, plan_questions
+from shared.cert_context import DEFAULT_CERT, plan_questions, load_cert_context
+from shared.yield_planning import existing_scenarios, ObjectiveRotation
 from shared.dedupe import normalize_stem, strip_markdown
 from shared.option_order import store_options
 from shared.near_duplicates import load_export, check_near_duplicate, comparison_row
@@ -212,6 +213,27 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     commit_order = Condition(write_lock)
     next_commit = 1
     docs_cache = DocumentationCache()
+    planning_history = {}
+    objective_rotations = {}
+    registry = load_cert_context(cert)
+    pools = {code: [obj["objective_id"] for obj in domain["objectives"]
+                   if (not subsection or obj["subsection"] == subsection)
+                   and (not objective_ids or obj["objective_id"] in objective_ids)]
+             for code, domain in registry["domains"].items()
+             if any(item["domain_code"] == code for item in plan)}
+    rotation = ObjectiveRotation(plan, pools)
+
+    def admissions():
+        for index, original in enumerate(plan, 1):
+            with write_lock:
+                selected, fair_share = rotation.select(original, payload["candidates"])
+                scope = original
+                if selected != original["objective_id"]:
+                    scope = plan_questions(cert, index, objective_ids=[selected])[-1]
+                    objective_rotations[index] = {"from": original["objective_id"], "to": selected,
+                                                  "fair_share": fair_share}
+                    plan[index - 1] = scope
+            yield index, scope
 
     def process_candidate(item):
         nonlocal accepted, awaiting, batch_stop, next_commit
@@ -222,21 +244,32 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                  "evidence": [], "citation_attempts": [], "mechanical_check": {"passed": False, "errors": ["No fetched evidence"]},
                  "judge_verdict": {"passed": False, "score": 0.0, "reason": "Not judged", "model": judge_model},
                  "accepted": False}
+        if index in objective_rotations:
+            entry["objective_rotation"] = objective_rotations[index]
         if external:
             entry["candidate_id"] = candidate_id(index, scope, {})
         stage = "decision_plan"
         try:
             entry["decision_attempts"] = []
             feedback = ""
-            previous_decision = None
-            for decision_attempt in range(2):
+            vetoed_decisions = []
+            veto_feedback = []
+            for decision_attempt in range(3):
                 stage = "decision_plan"
+                with write_lock:
+                    summaries = existing_scenarios(scope, bank["questions"], payload["candidates"],
+                        [decision for earlier, decision in sorted(planning_history.items()) if earlier < index])
                 decision = plan_decision(scope, model=model, difficulty=difficulty,
-                    replacement_feedback=feedback, reasoning_effort=gen_effort)
-                attempt = {"plan": decision}
+                    replacement_feedback=feedback, existing_scenarios=summaries, reasoning_effort=gen_effort)
+                attempt = {"attempt": decision_attempt + 1, "replacement_feedback": feedback,
+                           "existing_scenarios": summaries, "plan": decision}
+                with write_lock:
+                    planning_history[index] = decision
                 entry["decision_attempts"].append(attempt)
-                if previous_decision is not None and decision["engineering_decision"].casefold() == previous_decision.casefold():
-                    raise DecisionVetoError("Replacement must change the unsupported engineering decision")
+                if decision["engineering_decision"].casefold() in vetoed_decisions:
+                    stage = "decision_veto"
+                    attempt["proof"] = {"passed": False, "reason": "Replacement must change the unsupported engineering decision"}
+                    raise DecisionVetoError(attempt["proof"]["reason"])
                 stage = "documentation"
                 sources = search_objective_docs(scope["objective_text"], scope["services"],
                     cache=docs_cache, objective_id=scope["objective_id"], decision_plan=decision)
@@ -250,10 +283,11 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 attempt["proof"] = proof
                 if proof["passed"]:
                     break
-                previous_decision = decision["engineering_decision"]
-                feedback = json.dumps({"unsupported_decision": decision, "veto_reason": proof["reason"],
-                    "mechanical_errors": proof["mechanical_check"]["errors"],
-                    "instruction": "Replace the engineering decision, not the scenario with extra exceptions."})
+                vetoed_decisions.append(decision["engineering_decision"].casefold())
+                veto_feedback.append({"unsupported_decision": decision, "veto_reason": proof["reason"],
+                                      "mechanical_errors": proof["mechanical_check"]["errors"]})
+                feedback = json.dumps({"previous_vetoes": veto_feedback,
+                    "instruction": "Replace the engineering decision, not the scenario with extra exceptions. Avoid the unverifiable claim and make each distractor clearly wrong on documented tradeoffs."})
             else:
                 raise DecisionVetoError("Replacement decision vetoed; discard candidate: " + proof["reason"])
             # Objective text comes from the frozen reviewed registry, never the LM.
@@ -332,6 +366,9 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                               "rules_version": 5, "gate_version": 5,
                               "decision_objective": decision_objective,
                               "decision_plan": decision, "decision_proof": proof,
+                              "decision_attempt_count": len(entry["decision_attempts"]),
+                              "decision_veto_reasons": [attempt["proof"]["reason"] for attempt in entry["decision_attempts"]
+                                                        if not attempt.get("proof", {}).get("passed", True)],
                               "key_length_rank": scope["key_length_rank"]})
             if getattr(judge, "gate_results", None) is not None:
                 grounding["gate_verdicts"] = judge.gate_results
@@ -400,8 +437,14 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                             reject_candidate(entry, "external_request_publication", _safe_completion(str(exc))[:1000])
                     if not entry["accepted"] and not entry.get("awaiting_external_judge") and not entry.get("reason") and not entry.get("error_class"):
                         reject_candidate(entry, stage, stage.capitalize() + " failed before acceptance")
+                    planning_history.pop(index, None)
+                    entry["decision_attempt_count"] = len(entry.get("decision_attempts", []))
+                    entry["decision_veto_reasons"] = [attempt["proof"]["reason"] for attempt in entry.get("decision_attempts", [])
+                                                      if not attempt.get("proof", {}).get("passed", True)]
                     payload["candidates"].append(entry)
-                    payload["key_position_report"] = key_position_report(payload["candidates"])
+                    payload["all_candidate_key_position_report"] = key_position_report(payload["candidates"])
+                    payload["key_position_report"] = key_position_report([row for row in payload["candidates"]
+                        if row.get("accepted") is True or row.get("persisted") is True])
                     payload["option_length_report"] = option_length_report(payload["candidates"])
                     payload["option_prefix_report"] = option_prefix_report(payload["candidates"])
                     write_artifact(artifact, payload)
@@ -409,9 +452,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     next_commit += 1
                     commit_order.notify_all()
 
-    run_bounded(enumerate(plan, 1), process_candidate, effective_parallel, stop_event)
+    run_bounded(admissions(), process_candidate, effective_parallel, stop_event)
     if not external:
-        payload["all_candidate_key_position_report"] = payload["key_position_report"]
         payload["key_position_report"] = key_position_report([entry for entry in payload["candidates"]
             if entry.get("judge_verdict", {}).get("passed") is True])
         payload["template_diversity_report"] = template_diversity_report(payload["candidates"])
@@ -427,6 +469,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             stored = False
             entry["error_class"] = type(exc).__name__
         entry["accepted"] = judge.passed and stored
+        entry["persisted"] = bool(stored)
         if stored:
             run_counts[scope["domain_code"]] += 1
         else:
@@ -434,6 +477,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         write_artifact(artifact, payload)
     if pending_inline:
         accepted = sum(entry["accepted"] for entry in payload["candidates"])
+        payload["key_position_report"] = key_position_report([entry for entry in payload["candidates"]
+            if entry["accepted"] or entry.get("persisted") is True])
     if not external:
         write_artifact(artifact, payload)
     if client is not None:
@@ -441,6 +486,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             if not client.update_generation_run(run_id, {"generated_count": run_counts[code], "completed_at": datetime.now(timezone.utc).isoformat()}):
                 raise click.ClickException("Run completion failed; founder approval remains blocked")
     click.echo(format_key_position_report(payload["key_position_report"]))
+    generated_report = payload["all_candidate_key_position_report"]
+    click.echo(f"Generated key positions (informational only): {generated_report['counts']}; N={generated_report['count']}")
     click.echo(format_option_length_report(payload["option_length_report"]))
     click.echo(format_option_prefix_report(payload["option_prefix_report"]))
     click.echo(f"Accepted {accepted}/{n_questions}; artifact: {artifact}")

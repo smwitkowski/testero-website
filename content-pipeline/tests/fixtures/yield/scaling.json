@@ -1,0 +1,695 @@
+{
+  "source": "pmle-d033-v5-scaling-30-b10.json",
+  "source_sha256": "1392e06dd2b6bc91757a8d5c8c50851550d73ef7233409c77ddf98687add4038",
+  "projection": "Allowlisted public learner content, decision plans and proof reasons only. No docs, transport logs, journals or credentials. Existing bank objective IDs absent; candidate objective IDs are recorded.",
+  "objective_ids": [
+    "machine-learning-engineer:standard:3.1:1",
+    "machine-learning-engineer:standard:3.1:2",
+    "machine-learning-engineer:standard:3.1:3",
+    "machine-learning-engineer:standard:3.1:4",
+    "machine-learning-engineer:standard:3.2:1",
+    "machine-learning-engineer:standard:3.2:2",
+    "machine-learning-engineer:standard:3.2:3",
+    "machine-learning-engineer:standard:3.2:4",
+    "machine-learning-engineer:standard:3.2:5",
+    "machine-learning-engineer:standard:3.2:6",
+    "machine-learning-engineer:standard:3.3:1",
+    "machine-learning-engineer:standard:3.3:2"
+  ],
+  "candidates": [
+    {
+      "index": 2,
+      "candidate_id": "16ddc0c2-c13f-5d3f-b118-f461cb516c59",
+      "objective_id": "machine-learning-engineer:standard:3.1:2",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "stem": null,
+      "options": [],
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "decision_attempts": [
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:3.1:2",
+            "engineering_decision": "Choose the Google Cloud product that simplifies an existing daily churn-model workflow by bringing training and scoring to warehouse data.",
+            "business_consequence": "Reduce recurring operational effort for retention-campaign predictions while preserving the team's investment in SQL feature preparation.",
+            "existing_system": "Your company runs a daily customer-churn classifier for retention campaigns. Customer attributes and labeled outcomes are stored in BigQuery. A custom boosted-tree training job exports these tables and writes scores back to the warehouse. Monitoring shows that data transfers and management of training workers consume much of the refresh effort, while predictive quality remains acceptable. Analysts already prepare features in SQL. You want to simplify daily model refreshes while minimizing changes to that SQL workflow. What should you do?",
+            "decisive_constraints": [
+              "You want to simplify daily model refreshes while minimizing changes to the existing SQL workflow."
+            ],
+            "best_action": "Move boosted-tree training and daily scoring to BigQuery ML, reusing the existing feature tables and maintaining the workflow in SQL.",
+            "mistakes": [
+              {
+                "action": "Adopt Agent Platform AutoML for tabular classification, exporting the prepared features for training and loading daily batch predictions back into BigQuery.",
+                "scenario_reason": "AutoML offers managed model development, but moving this already-effective classifier introduces a separate training and prediction workflow. BigQuery ML more directly addresses the observed transfer overhead and preserves SQL-based work."
+              },
+              {
+                "action": "Orchestrate the existing training and scoring jobs with Agent Platform Pipelines, retaining separate data-transfer steps and custom training code for every daily refresh.",
+                "scenario_reason": "Pipelines can coordinate the jobs, but orchestration alone retains the transfers and custom model code responsible for recurring effort. The primary opportunity is changing where training and scoring occur."
+              },
+              {
+                "action": "Train and score a Spark boosted-tree classifier on Dataproc, reading BigQuery features through its connector and returning daily predictions.",
+                "scenario_reason": "Dataproc provides distributed processing, but introduces Spark code and cluster lifecycle management for a workload whose observed problem is operational overhead. It adds migration work without bringing model development into the team's SQL workflow."
+              }
+            ]
+          },
+          "proof": {
+            "passed": false,
+            "reason": "A's SQL-based boosted-tree training and scoring are supported, but the complete decision needs replacement. D uses the outdated Dataproc name and assumes cluster lifecycle management, although the supplied documentation identifies Managed Service for Apache Spark with both cluster and serverless deployments. Its connector documentation also does not establish boosted-tree classifier support. Therefore D's capability and rejection reason cannot be fully verified. BigQuery ML boosted trees are externally trained in Agent Platform, so bringing the workflow into SQL must not imply that training physically remains in BigQuery or eliminates all underlying transfers.",
+            "mechanical_check": {
+              "passed": false,
+              "errors": [
+                "Evidence must contain A, B, C and D exactly once"
+              ]
+            }
+          }
+        },
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:3.1:2",
+            "engineering_decision": "Choose the product for orchestrating an existing image-classifier refresh so failed downstream steps can be rerun while reusing unchanged preprocessing results.",
+            "business_consequence": "Reduce wasted computation and recovery effort when refreshing the package-damage classifier used to route parcels for inspection.",
+            "existing_system": "Your company runs a package-damage classifier that is refreshed weekly using tested Python steps for image feature extraction, training, and evaluation. Monitoring shows that a failed training run causes the entire refresh to restart, repeating expensive feature extraction even when the images are unchanged. The team currently runs the steps together in a scheduled notebook. You want to make refreshes easier to recover while minimizing repeated computation. What should you do?",
+            "decisive_constraints": [
+              "You want to make refreshes easier to recover while minimizing repeated computation."
+            ],
+            "best_action": "Convert the existing Python steps into Agent Platform Pipelines components, track dataset versions as inputs, and enable caching to reuse unchanged preparation results.",
+            "mistakes": [
+              {
+                "action": "Rebuild the classifier with Agent Platform AutoML, retain image preparation in a scheduled notebook, and rerun the managed training job after failures.",
+                "scenario_reason": "AutoML addresses model development, but the observed problem concerns recovery and reuse across existing Python steps. Replacing the classifier introduces model migration and evaluation work while leaving preprocessing outside the component workflow."
+              },
+              {
+                "action": "Train a replacement classifier in BigQuery ML using extracted image features, schedule SQL training, and retain separate Python jobs for feature preparation and evaluation.",
+                "scenario_reason": "BigQuery ML offers SQL-based model development, but replacing training does not coordinate recovery or reuse across the existing Python stages. It adds a model migration while leaving the expensive feature-extraction problem unresolved."
+              },
+              {
+                "action": "Keep the refresh in Agent Platform Workbench, schedule the complete notebook to retry failed runs, and persist intermediate outputs for inspection after each execution.",
+                "scenario_reason": "Scheduled notebook execution can automate retries, but rerunning the complete notebook still repeats feature extraction. Persisting outputs for inspection does not establish component-level reuse; Pipelines caching targets that need when component inputs remain unchanged."
+              }
+            ]
+          },
+          "proof": {
+            "passed": false,
+            "reason": "The supplied docs support Pipelines orchestration and Python components, but don't establish the decisive claim that enabling caching reuses preprocessing across runs when dataset-version inputs remain unchanged. The explicit failure-recovery documentation describes a Preview feature with potentially limited support; the plan doesn't distinguish that feature from ordinary cached execution. Workbench scheduling is documented, but automatic retries aren't established. The decision needs replacement because its decisive caching behavior and all rejection reasons cannot be verified from the supplied evidence.",
+            "mechanical_check": {
+              "passed": false,
+              "errors": [
+                "Evidence must contain A, B, C and D exactly once"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "candidate_id": "c6e21ce5-b563-5a8d-9616-e2906d68ed52",
+      "objective_id": "machine-learning-engineer:standard:3.2:1",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": true,
+      "stem": "You are maintaining a demand-forecasting model for a retailer whose expanding store network produces more sales records. Training data resides in one unpartitioned BigQuery table. Daily training runs extract different sales-date windows, and these queries have become increasingly expensive. You want to reduce the operational overhead of training-data extraction, including table-management work, and accurately estimate bytes scanned before each extraction runs. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Copy the sales data into a BigQuery table partitioned by sales date. Filter that column for each training window, and use dry runs to estimate bytes scanned."
+        },
+        {
+          "label": "B",
+          "text": "Create BigQuery logical views that filter the sales table for each training date window. Extract training examples through those views, and use dry runs to estimate the underlying queries' scans."
+        },
+        {
+          "label": "C",
+          "text": "Split the sales data into separate BigQuery tables named by sales date. Extract each training window using wildcard queries with constant date-suffix bounds, and estimate scans with dry runs."
+        },
+        {
+          "label": "D",
+          "text": "Reorganize the sales data in a BigQuery table clustered by sales date. Apply date-range filters for each training window, and use dry runs to estimate the bytes scanned."
+        }
+      ],
+      "key": "A",
+      "decision_attempts": [
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:3.2:1",
+            "engineering_decision": "Choose how to organize a growing image corpus and its annotations across Cloud Storage and BigQuery for model training.",
+            "business_consequence": "Poor data organization increases storage duplication and delays training on newly collected defect examples.",
+            "existing_system": "You are maintaining a product-defect image classifier for a manufacturer. Factory expansion has increased the training corpus substantially. Images reside on a shared file server, while annotations and stable image identifiers reside in BigQuery. Analysts use SQL to select training subsets, but copying the selected images onto training machines takes increasingly longer. What should you do?",
+            "decisive_constraints": [
+              "You want to organize the growing training corpus for efficient subset retrieval while minimizing duplicate image storage."
+            ],
+            "best_action": "Store images in Cloud Storage and keep their object references and annotations in BigQuery, joining them by a stable image identifier.",
+            "mistakes": [
+              {
+                "action": "Store encoded image bytes and annotations together in BigQuery, and select training examples with SQL queries that return the complete image payloads.",
+                "scenario_reason": "BigQuery remains useful for selecting annotations, but routing the growing binary image corpus through analytical queries adds payload processing and retrieval overhead compared with object storage."
+              },
+              {
+                "action": "Move images onto persistent disks attached to GKE training workers, and retain annotations in BigQuery with paths pointing to each worker's local image copies.",
+                "scenario_reason": "Worker-specific disk copies multiply storage and synchronization work as training grows, preserving the copying bottleneck instead of providing a shared canonical image corpus."
+              },
+              {
+                "action": "Upload images to Cloud Storage and migrate annotations into Firestore documents, using document queries to assemble the image references needed for each training run.",
+                "scenario_reason": "Migrating annotations replaces an established SQL subset-selection workflow with document-oriented queries and adds migration work without improving the storage of the image corpus."
+              }
+            ]
+          },
+          "proof": {
+            "passed": false,
+            "reason": "A fits the objective, and the supplied docs support Cloud Storage images linked to structured BigQuery data. However, they don't establish B's encoded-payload storage capability or its claimed retrieval disadvantage. The Firestore receipt covers migration from MongoDB-compatible databases, not BigQuery annotations or document-based subset selection, so it doesn't verify D's decisive claims. C's duplication concern follows from its explicit worker-specific copies. The decision needs replacement because all alternative capabilities and rejection reasons aren't verified, leaving A's unique superiority unestablished. The proposed tradeoffs don't rely on unsupported-feature gotchas.",
+            "mechanical_check": {
+              "passed": false,
+              "errors": [
+                "Evidence must contain A, B, C and D exactly once"
+              ]
+            }
+          }
+        },
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:3.2:1",
+            "engineering_decision": "Choose how to organize growing sales training data in BigQuery for repeated date-range extractions.",
+            "business_consequence": "Increasing extraction costs and table-management overhead make daily demand-forecast training more expensive to operate.",
+            "existing_system": "You are maintaining a demand-forecasting model for a retailer whose expanding store network produces more sales records. Training data resides in one unpartitioned BigQuery table. Daily training runs extract different sales-date windows, and those queries have become increasingly expensive. You want to reduce extraction overhead while minimizing table-management work. You also want to estimate the data scanned by each extraction before running it. What should you do?",
+            "decisive_constraints": [
+              "You want to reduce extraction overhead while minimizing table-management work.",
+              "You want to estimate the data scanned by each extraction before running it."
+            ],
+            "best_action": "Partition the BigQuery sales table by sales date, and filter the partition column to extract each training window with predictable scan costs.",
+            "mistakes": [
+              {
+                "action": "Create a separate BigQuery table for each sales date, and query matching tables for each training window using wildcard queries with bounded date suffixes.",
+                "scenario_reason": "Date sharding can restrict the selected dates, but each shard adds table metadata and permission-check overhead. Partitioning provides date-based organization with less table-management work."
+              },
+              {
+                "action": "Cluster the existing BigQuery table by sales date, and retain date-range filters so training queries can prune irrelevant storage blocks when extracting each training window.",
+                "scenario_reason": "Clustering can reduce scans, but block pruning is determined during execution. Its pre-execution scan estimates are less precise than estimates based on selecting date partitions."
+              },
+              {
+                "action": "Create a BigQuery logical view for each training date window, and extract examples through those views while keeping the source table's current physical storage organization.",
+                "scenario_reason": "Logical views store query definitions rather than reorganizing or materializing the sales data. They preserve the underlying extraction costs and add view maintenance as training windows change."
+              }
+            ]
+          },
+          "proof": {
+            "passed": true,
+            "reason": "A best fits date-window training-data organization, reduced scanning, low ongoing table-management overhead, and predictable pre-execution estimates. B adds shard overhead, C offers less accurate estimates, and D leaves physical storage unchanged. Partitioning the existing data requires creating a replacement table; A does not claim in-place conversion.",
+            "mechanical_check": {
+              "passed": true,
+              "errors": []
+            }
+          }
+        }
+      ],
+      "near_duplicate_check": {
+        "passed": true,
+        "threshold": 0.2,
+        "method": "min(stem token Jaccard, correct-option token Jaccard), NFKC/casefold/stopwords",
+        "matches": [],
+        "reason": "No near-duplicate scenario and decision"
+      }
+    },
+    {
+      "index": 8,
+      "candidate_id": "b3ebbb0e-0c16-5527-a6a4-5d1aca8f1d35",
+      "objective_id": "machine-learning-engineer:standard:3.2:4",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "stem": "You recently deployed a retail demand forecaster whose scheduled retraining runs on Agent Platform custom training. The jobs use a dedicated service account and now fail while loading training examples from Cloud Storage. Worker logs show permission-denied errors, although the engineer submitting the jobs can read the same objects. Repeated runs fail at the same point, delaying updated forecasts. You want to restore reliable retraining while minimizing changes to the existing training workflow. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Grant the job submitter Service Account User on the dedicated service account. Then rerun the existing custom training job so the submitter can attach that account to the training workers."
+        },
+        {
+          "label": "B",
+          "text": "Move scheduled retraining to Kubeflow on GKE using the existing training container. Configure a workload service account with read access to the training-data bucket, and run the scheduled retraining workload there."
+        },
+        {
+          "label": "C",
+          "text": "Resubmit the failed Agent Platform custom training job using its existing service account and training-data bucket. Allow another attempt to recover from a temporary access failure during data loading."
+        },
+        {
+          "label": "D",
+          "text": "Grant Storage Object Viewer on the training-data bucket to the job's dedicated service account. Then rerun the existing Agent Platform custom training job so its workers can read the training examples."
+        }
+      ],
+      "key": "D",
+      "failure_stage": "judge",
+      "decision_attempts": [
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:3.2:4",
+            "engineering_decision": "Choose how to resolve a custom training failure caused by loading a growing image dataset into host memory.",
+            "business_consequence": "Failed retraining prevents the product-image classifier from learning new catalog items; inappropriate infrastructure changes increase cost without correcting the input-loading problem.",
+            "existing_system": "You recently deployed a product-image classifier, and its scheduled retraining runs on Agent Platform custom training. After the image collection in Cloud Storage grew, retraining began failing before the first epoch. The input code loads the entire collection into memory. Worker logs report that the process was killed; host-memory usage reaches its limit while GPU memory remains well below capacity. You want to restore reliable retraining while minimizing compute cost. What should you do?",
+            "decisive_constraints": [
+              "You want to restore reliable retraining while minimizing compute cost."
+            ],
+            "best_action": "Change the input pipeline to stream image batches from Cloud Storage with bounded buffering, then rerun training on the existing Agent Platform worker configuration as the image collection continues growing.",
+            "mistakes": [
+              {
+                "action": "Switch the Agent Platform training worker to a GPU with more device memory, then rerun the existing image-loading code to give training more room for the growing image collection.",
+                "scenario_reason": "GPU device memory does not hold the image collection loaded into host memory. Increasing accelerator memory targets the wrong resource and adds cost."
+              },
+              {
+                "action": "Configure additional Agent Platform training worker replicas, then rerun the current image-loading code to distribute the growing image collection across workers and reduce the memory needed by each replica.",
+                "scenario_reason": "Adding worker replicas does not automatically shard the dataset or rewrite the input loader. Each replica can still load the entire collection and exhaust its host memory."
+              },
+              {
+                "action": "Move the retraining workload to Kubeflow on GKE, preserving its current image-loading code and GPU allocation while using Kubernetes to manage worker restarts whenever the training process is killed.",
+                "scenario_reason": "Moving orchestration platforms leaves the dataset-loading behavior intact. Restarting workers repeats the memory failure, while the migration introduces additional operational work."
+              }
+            ]
+          },
+          "proof": {
+            "passed": false,
+            "reason": "The scenario targets training-failure troubleshooting, but the supplied documentation does not establish bounded image streaming from Cloud Storage or directly support B's host-versus-device-memory rejection. Distributed-training documentation supports requiring code changes for C, and restart behavior supports D's underlying tradeoff. However, B leaves the replacement machine configuration unspecified; a GPU change could also increase host memory, so its rejection is not conclusive. Replace the decision with one whose decisive capability claims and all three losing reasons are supported by the supplied evidence.",
+            "mechanical_check": {
+              "passed": false,
+              "errors": [
+                "Evidence must contain A, B, C and D exactly once"
+              ]
+            }
+          }
+        },
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:3.2:4",
+            "engineering_decision": "Resolve a custom training data-access failure by correcting permissions for the job's runtime service account.",
+            "business_consequence": "Failed retraining delays updated retail demand forecasts; changing execution platforms would add operational work to resolve a data-access problem.",
+            "existing_system": "You recently deployed a retail demand forecaster whose scheduled retraining runs on Agent Platform custom training. The jobs use a dedicated service account and now fail while loading training examples from Cloud Storage. Worker logs show permission-denied errors, although the engineer submitting the jobs can read the same objects. Repeated runs fail at the same point. You want to restore reliable retraining while minimizing changes to the existing training workflow. What should you do?",
+            "decisive_constraints": [
+              "You want to restore reliable retraining while minimizing changes to the existing training workflow."
+            ],
+            "best_action": "Grant the custom training service account Storage Object Viewer on the training-data bucket, then rerun the existing Agent Platform job so its workers can read the data using their runtime identity.",
+            "mistakes": [
+              {
+                "action": "Grant the job submitter Service Account User on the custom training service account, then rerun the existing Agent Platform job so the submitter can authorize workers to act as that account.",
+                "scenario_reason": "Service Account User permits acting as a service account; it does not give that account permission to read bucket objects. The failure occurs during worker data access, after submission succeeds."
+              },
+              {
+                "action": "Resubmit the failed custom training job with its existing service account and data location, allowing repeated attempts to recover from a temporary Cloud Storage access failure during worker startup.",
+                "scenario_reason": "Consistent permission-denied errors across repeated runs indicate an authorization problem. Retrying with the same identity and permissions repeats the failure and delays updated forecasts."
+              },
+              {
+                "action": "Move scheduled retraining to Kubeflow on GKE, using a workload service account with bucket access and the existing training container to restore data loading through a different execution platform.",
+                "scenario_reason": "A correctly authorized GKE workload could read the data, but the migration adds cluster and pipeline management. Correcting the existing training service account's bucket access addresses the failure with fewer workflow changes."
+              }
+            ]
+          },
+          "proof": {
+            "passed": true,
+            "reason": "A directly addresses the runtime identity's data-access failure with the fewest workflow changes. B changes attachment permissions rather than bucket access; C leaves the failing authorization unchanged; D can provide access but requires unnecessary migration work. The decision tests training-failure troubleshooting without relying on feature exceptions or a dated container.",
+            "mechanical_check": {
+              "passed": true,
+              "errors": []
+            }
+          }
+        }
+      ],
+      "near_duplicate_check": {
+        "passed": true,
+        "threshold": 0.2,
+        "method": "min(stem token Jaccard, correct-option token Jaccard), NFKC/casefold/stopwords",
+        "matches": [],
+        "reason": "No near-duplicate scenario and decision"
+      }
+    },
+    {
+      "index": 20,
+      "candidate_id": "e6368e1b-52a5-5667-8229-8307bdf41ce4",
+      "objective_id": "machine-learning-engineer:standard:3.2:4",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "stem": "You are training a retail demand forecasting model for inventory planning with an established Agent Platform custom training job. As sales history grows, runs now stop while loading data from Cloud Storage. Worker logs report exhausted host memory, although accelerator memory remains below capacity. The input code loads the entire history into an in-memory array before creating batches; earlier runs completed on the same workers. You want to restore reliable training as sales history grows while minimizing recurring compute costs. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Migrate the demand forecasting training job to Kubeflow on GKE and use Kubernetes to manage worker recovery. Preserve the full-history input loader and automatically restart workers after processes exhaust available host memory."
+        },
+        {
+          "label": "B",
+          "text": "Select an accelerator with more device memory for the Agent Platform custom training job. Keep the existing full-history input loader and batch size when retraining on the growing sales dataset."
+        },
+        {
+          "label": "C",
+          "text": "Increase host memory for each Agent Platform custom training worker to accommodate the current sales history. Keep the full-history input loader and select larger workers as the dataset grows."
+        },
+        {
+          "label": "D",
+          "text": "Update the existing Agent Platform custom training job to stream sales examples through Cloud Storage FUSE in bounded batches. Replace the full-history array with bounded shuffle and prefetch buffers, then rerun training."
+        }
+      ],
+      "key": "D",
+      "failure_stage": "near_duplicate",
+      "decision_attempts": [
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:3.2:4",
+            "engineering_decision": "Choose a remedy for host-memory failures in the growing demand forecasting training workload. What should you do?",
+            "business_consequence": "Failed retraining delays updated inventory forecasts; repeatedly increasing worker capacity raises recurring training costs.",
+            "existing_system": "You are training a retail demand forecasting model with an established Agent Platform custom training job. As sales history grows, runs now stop while loading training data from Cloud Storage. Worker logs report exhausted host memory, while accelerator memory remains below capacity. The input code loads the entire history into an in-memory array before creating batches. Earlier runs completed on the same worker configuration.",
+            "decisive_constraints": [
+              "You want to restore reliable training as sales history grows while minimizing recurring compute costs."
+            ],
+            "best_action": "Stream training examples from Cloud Storage in bounded batches, and replace full-dataset materialization with bounded shuffling and prefetching in the existing Agent Platform custom training job for demand forecasting.",
+            "mistakes": [
+              {
+                "action": "Select a higher-memory accelerator for the Agent Platform custom training job, and retain the current input code and batch size when retraining on the complete growing retail sales history.",
+                "scenario_reason": "Accelerator memory and worker host memory serve different allocations. Increasing accelerator memory does not address the full-dataset array exhausting host memory during input loading."
+              },
+              {
+                "action": "Increase the host memory of each Agent Platform custom training worker and continue loading the complete sales history into memory before batching, resizing workers again as the dataset grows.",
+                "scenario_reason": "Larger workers can provide temporary relief, but preserving full-dataset materialization makes memory demand grow with sales history and requires recurring capacity increases."
+              },
+              {
+                "action": "Migrate the forecasting training job to Kubeflow on GKE, and preserve its full-dataset input loader while using Kubernetes to restart workers whenever a training process fails.",
+                "scenario_reason": "Changing orchestration and restarting workers preserves the allocation that causes failure. The migration adds operational work while retries encounter the same memory exhaustion."
+              }
+            ]
+          },
+          "proof": {
+            "passed": true,
+            "reason": "A addresses the identified full-dataset host-memory allocation while avoiding repeated capacity increases. B targets accelerator memory, C preserves memory growth, and D retries the unchanged failing loader. The decision stays within training-failure troubleshooting and requires no particular container version.",
+            "mechanical_check": {
+              "passed": true,
+              "errors": []
+            }
+          }
+        }
+      ],
+      "near_duplicate_check": {
+        "passed": false,
+        "threshold": 0.2,
+        "method": "min(stem token Jaccard, correct-option token Jaccard), NFKC/casefold/stopwords",
+        "matches": [
+          {
+            "matched_id": "b3ebbb0e-0c16-5527-a6a4-5d1aca8f1d35",
+            "stem_score": 0.2345679012345679,
+            "key_score": 0.2631578947368421,
+            "score": 0.2345679012345679
+          }
+        ],
+        "reason": "Near-duplicate scenario and decision"
+      }
+    }
+  ],
+  "existing_questions": [],
+  "outcomes": [
+    {
+      "index": 1,
+      "objective_id": "machine-learning-engineer:standard:3.1:1",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "B",
+      "failure_stage": "judge",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 2,
+      "objective_id": "machine-learning-engineer:standard:3.1:2",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 3,
+      "objective_id": "machine-learning-engineer:standard:3.1:3",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 4,
+      "objective_id": "machine-learning-engineer:standard:3.1:4",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 5,
+      "objective_id": "machine-learning-engineer:standard:3.2:1",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": true,
+      "key": "A",
+      "failure_stage": null,
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 6,
+      "objective_id": "machine-learning-engineer:standard:3.2:2",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 7,
+      "objective_id": "machine-learning-engineer:standard:3.2:3",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": true,
+      "key": "B",
+      "failure_stage": null,
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 8,
+      "objective_id": "machine-learning-engineer:standard:3.2:4",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "D",
+      "failure_stage": "judge",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 9,
+      "objective_id": "machine-learning-engineer:standard:3.2:5",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 10,
+      "objective_id": "machine-learning-engineer:standard:3.2:6",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "D",
+      "failure_stage": "judge",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 11,
+      "objective_id": "machine-learning-engineer:standard:3.3:1",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 12,
+      "objective_id": "machine-learning-engineer:standard:3.3:2",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 13,
+      "objective_id": "machine-learning-engineer:standard:3.1:1",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "B",
+      "failure_stage": "judge",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 14,
+      "objective_id": "machine-learning-engineer:standard:3.1:2",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 15,
+      "objective_id": "machine-learning-engineer:standard:3.1:3",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 16,
+      "objective_id": "machine-learning-engineer:standard:3.1:4",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 17,
+      "objective_id": "machine-learning-engineer:standard:3.2:1",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": true,
+      "key": "C",
+      "failure_stage": null,
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 18,
+      "objective_id": "machine-learning-engineer:standard:3.2:2",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 19,
+      "objective_id": "machine-learning-engineer:standard:3.2:3",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": true,
+      "key": "A",
+      "failure_stage": null,
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 20,
+      "objective_id": "machine-learning-engineer:standard:3.2:4",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "D",
+      "failure_stage": "near_duplicate",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 21,
+      "objective_id": "machine-learning-engineer:standard:3.2:5",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 22,
+      "objective_id": "machine-learning-engineer:standard:3.2:6",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 23,
+      "objective_id": "machine-learning-engineer:standard:3.3:1",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 24,
+      "objective_id": "machine-learning-engineer:standard:3.3:2",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 25,
+      "objective_id": "machine-learning-engineer:standard:3.1:1",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "D",
+      "failure_stage": "judge",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 26,
+      "objective_id": "machine-learning-engineer:standard:3.1:2",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 27,
+      "objective_id": "machine-learning-engineer:standard:3.1:3",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 28,
+      "objective_id": "machine-learning-engineer:standard:3.1:4",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "C",
+      "failure_stage": "judge",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 29,
+      "objective_id": "machine-learning-engineer:standard:3.2:1",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "D",
+      "failure_stage": "near_duplicate",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 30,
+      "objective_id": "machine-learning-engineer:standard:3.2:2",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    }
+  ]
+}
