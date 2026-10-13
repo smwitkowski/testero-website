@@ -1,19 +1,28 @@
-# Testero v2 working rules
+# Testero working rules
 
-Read `../hq/v2-spec.md`, `../hq/business.md`, and decisions D-014, D-017,
-D-019 first. Work on `prime/v2`; Phases 1–4 implement the fresh app.
+v2 is live on testero.ai (D-023). Business context and decisions live in
+`../hq/` (business.md, decisions.md, operating-plan.md); read the relevant
+decisions before product changes. Agents may read `hq/` including
+`hq/drafts`, but never publish `hq/drafts` content to the site.
+
+## Workflow
+
+- Work on a feature branch (`prime/<name>` or `chore/<name>`), push it and open
+  a PR against `main`. Never merge: merging to `main` auto-deploys to prod and
+  needs founder approval (D-005).
+- Keep commits small, with explicit owned paths.
+- One worker per worktree; never edit another worktree.
 
 ## Safety
 
-- Preserve `content-pipeline/`, original blog blobs and archived migrations.
-- Never touch main `frontend` or frozen `frontend.v2-preview` / port 3100.
 - Read no `.env*` except `.env.example`. Never print, write or commit credentials.
-- Local Supabase only: project `testero-v2`, API 56541, DB 56542. No `link`,
-  `db push`, `--linked`, `--project-ref`, remote services, cloud calls or git push.
-- Use `scripts/local.mjs` for generated credentials in child memory and fake
-  Stripe SDK transport on 56545. PostHog stays disabled locally.
-- Use root dev port 3000. One owner runs DB/build/dev; stop dev before build.
-- Keep commits small, `v2:` prefix, explicit owned paths with `git commit --only`.
+- No prod database writes and no `supabase db push`, `link` or `--project-ref`
+  against prod. Migrations go in `supabase/migrations/` and the coordinator
+  applies them after merge.
+- Local dev uses `scripts/local.mjs` (local Supabase, fake Stripe transport).
+- Preserve `content-pipeline/` (active question generator) and the original
+  blog blobs used by hash-locked editorial versions.
+- Stay at <=25 direct runtime dependencies.
 
 ## Architecture
 
@@ -26,21 +35,18 @@ session creation. Stripe signed webhooks alone grant passes; refund tombstones
 and payment-intent locks beat replay and out-of-order receipt writes.
 
 Public content is local Markdown rendered as safe React nodes, never raw HTML.
-Original blogs are archived byte-identically; explicit hash-locked editorial
-versions remove prohibited claims. Legal body requires literal `approved: true`
-in the two `content/legal` files. Never read or publish `hq/drafts`.
+Explicit hash-locked editorial versions remove prohibited claims. Legal body
+requires literal `approved: true` in the two `content/legal` files.
 No testimonials, invented statistics, pass guarantees or hours-saved claims.
 Keep independent/not affiliated with Google positioning.
 
 ## Verification
 
-Use this package environment: `npm run lint`, `npm run typecheck`, `npm test`,
-`npm run test:db:local`, `npm run test:e2e:local`, and placeholder-only `npm run
-build` (README). Verify money/access/auth/scoring/selection/content safety and
-old-URL enumeration. No committed marketing-page suite. Keep the three actual
-local browser flows. Do not infer live Stripe/cloud validation from fixtures.
-Stay at <=25 direct runtime dependencies; one owner updates package/lock files.
-Generate database types from local v2 only, never old `database.types.ts`.
+Run in a clean env before finishing: `env -i PATH="$PATH" HOME="$HOME" CI=true
+npm test`, `npm run lint`, `npm run typecheck`, and `docker build .`. Use
+`npm run test:db:local` / `npm run test:e2e:local` when touching DB or flows.
+Do not infer live Stripe/cloud validation from fixtures. Generate database
+types from local v2 only.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
