@@ -23,7 +23,6 @@ export function ScoreReport({ score, correctAnswers, totalQuestions }: Pick<Diag
     </div>
     <p className="text-sm text-muted-foreground"><span>{correctAnswers} of {totalQuestions} correct</span>{score < 70 && <> · {70 - score} points to Ready</>}</p>
     <ScoreBar score={score} />
-    <p className="text-xs leading-relaxed text-muted-foreground">Study guidance, not a prediction of your official exam result.</p>
   </section>;
 }
 

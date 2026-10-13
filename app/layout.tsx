@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
 import { DEFAULT_DESCRIPTION, pageMetadata, SITE_ORIGIN } from "@/lib/seo";
 import { SiteHeader } from "@/components/site-header";
+import { SiteChrome } from "@/components/site-chrome";
 import { SiteFooter } from "@/components/site-footer";
 import { AnalyticsProvider } from "@/components/analytics-provider";
 import "./globals.css";
@@ -25,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-10 focus:bg-card focus:p-4">Skip to content</a>
           <SiteHeader />
           <main id="main-content" className="mx-auto min-h-[calc(100vh-12rem)] max-w-[1120px] px-5 py-10 sm:px-8 sm:py-16">{children}</main>
-          <SiteFooter />
+          <SiteChrome><SiteFooter /></SiteChrome>
         </AnalyticsProvider>
       </body>
     </html>

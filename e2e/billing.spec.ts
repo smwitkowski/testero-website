@@ -97,7 +97,10 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     await page.goto("/login?next=%2Fdashboard");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
+    const loginResponse = page.waitForResponse(response => response.url().endsWith("/api/auth/login") && response.request().method() === "POST");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    expect((await loginResponse).status()).toBe(200);
+    await expect(page).toHaveURL(/\/dashboard(?:\?.*)?$/, { timeout: 15_000 });
     await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
 
     const diagnostic = await page.request.post("/api/diagnostic", { data: {} });

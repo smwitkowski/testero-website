@@ -101,6 +101,9 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
       expect(progress.currentQuestion?.ordinal).toBe(index + 1);
       expect(seen.has(progress.currentQuestion!.id)).toBe(false);
       seen.add(progress.currentQuestion!.id);
+      await expect(page.getByRole("navigation", { name: "Main navigation" })).toHaveCount(0);
+      await expect(page.getByRole("contentinfo")).toHaveCount(0);
+      await expect(page.locator("header").getByText(`${index} of 20 answered`, { exact: true })).toBeVisible();
       if (index === 0) await captureV3(page, "diagnostic-question");
       if (index === 3) {
         await page.reload();
@@ -121,6 +124,9 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
     await expect(page).toHaveURL(new RegExp(`/diagnostic/${sessionId}/results$`));
     await expect(page.getByRole("heading", { name: "PMLE readiness report", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Score by domain", exact: true })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
+    await expect(page.getByRole("contentinfo")).toBeVisible();
+    await expect(page.locator("main").getByText(/Study guidance, not a prediction/i)).toHaveCount(1);
     await captureV3(page, "diagnostic-results");
     const resultResponse = await page.request.get(`${api}/results`);
     expect(resultResponse.status()).toBe(200);

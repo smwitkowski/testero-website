@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { DiagnosticAnswerResponse, DiagnosticProgress } from "@/lib/diagnostic/types";
 import { trackDiagnostic, trackDiagnosticAnswer } from "@/lib/analytics/client";
+import { SiteLogo } from "@/components/site-logo";
 import { Button } from "@/components/ui/button";
 import { PMLE_BLUEPRINT_MAP } from "@/lib/constants/pmle-blueprint";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -70,17 +71,21 @@ export function DiagnosticSession({ sessionId }: { sessionId: string }) {
     }
   }
 
-  if (error || answerError) return <DiagnosticError message={error || answerError!} onRetry={retry} />;
-  if (!data || data.status === "completed") return <DiagnosticLoading message={data ? "Opening your results…" : "Loading your saved progress…"} />;
+  const header = <header className="mx-auto flex max-w-[760px] flex-wrap items-center justify-between gap-3 border-b border-border pb-5">
+    <SiteLogo />
+    <span className="text-sm text-muted-foreground" aria-live="polite">{data ? `${data.answeredCount} of ${data.totalQuestions} answered` : "Loading progress…"}</span>
+  </header>;
+  if (error || answerError) return <div className="space-y-6">{header}<DiagnosticError message={error || answerError!} onRetry={retry} /></div>;
+  if (!data || data.status === "completed") return <div className="space-y-6">{header}<DiagnosticLoading message={data ? "Opening your results…" : "Loading your saved progress…"} /></div>;
   const question = data.currentQuestion;
-  if (!question) return <DiagnosticError message="Your next question could not be loaded. Retry to load your saved progress." onRetry={retry} />;
+  if (!question) return <div className="space-y-6">{header}<DiagnosticError message="Your next question could not be loaded. Retry to load your saved progress." onRetry={retry} /></div>;
 
   return (
     <div className="mx-auto max-w-[760px] space-y-6">
+      {header}
       <div className="space-y-3">
         <div className="flex flex-wrap justify-between gap-2 text-sm text-muted-foreground">
           <span>Question {question.ordinal} of {data.totalQuestions}</span>
-          <span>{data.answeredCount} answered</span>
         </div>
         <div role="progressbar" aria-label="Diagnostic progress" aria-valuemin={0} aria-valuemax={data.totalQuestions} aria-valuenow={data.answeredCount} className="h-2 overflow-hidden rounded border border-input bg-border">
           <div className="h-full bg-primary" style={{ width: `${data.answeredCount / data.totalQuestions * 100}%` }} />

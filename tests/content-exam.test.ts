@@ -47,6 +47,8 @@ describe("exam preparation availability", () => {
       expect((html.match(/>Coming soon</g) ?? []).length).toBe(entries.filter(e => isComingSoon(e.exam)).length);
     }
     const home = renderToStaticMarkup(createElement(HomePage));
+    expect(home.indexOf('id="questions"')).toBeGreaterThan(home.indexOf('id="domains"'));
+    expect(home.indexOf('id="questions"')).toBeLessThan(home.indexOf('id="pass"'));
     for (const entry of getFaqEntries()) expect(home.includes(entry.href)).toBe(!isComingSoon(entry.exam));
   });
 });
