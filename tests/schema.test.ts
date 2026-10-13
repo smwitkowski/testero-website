@@ -19,8 +19,8 @@ describe("v2 baseline security and replay contracts", () => {
     expect(sql).toContain("IF NOT EXISTS (SELECT 1 FROM pg_policies");
     expect(sql).not.toMatch(/CREATE INDEX (?!IF NOT EXISTS)/i);
   });
-  it("preserves production UUID content contracts and unrelated legacy objects", () => {
-    // Production also has bigint questions_legacy and a stale diagnostic RPC.
+  it("preserves production UUID content contracts and leaves legacy cleanup to a later migration", () => {
+    // The pre-cutover schema has bigint questions_legacy and a stale diagnostic RPC.
     // Canonical questions and domains are UUIDs; never adapt them to that RPC.
     for (const table of ["exam_domains", "questions", "answers", "explanations", "question_generation_runs"]) {
       const definition = sql.match(new RegExp(`CREATE TABLE IF NOT EXISTS public\\.${table} \\(([\\s\\S]*?)\\n\\);`))?.[1];
@@ -156,5 +156,37 @@ describe("local educational seed", () => {
     expect(seed.match(/ON CONFLICT DO NOTHING;/g)).toHaveLength(186);
     expect(seed).not.toMatch(/INSERT INTO (auth\.users|public\.(payment_history|user_subscriptions|pmle_passes))/);
     expect(seed).toContain("LOCAL DEVELOPMENT ONLY");
+  });
+});
+
+describe("approved legacy cleanup safety", () => {
+  const cleanup = readFileSync("supabase/migrations/20261013000000_drop_legacy_tables.sql", "utf8");
+  const statements = cleanup.replace(/--[^\n]*/g, "").trim().split(";").map(s => s.trim()).filter(Boolean);
+
+  it("uses an explicit transactional drop list without broad or cascading deletes", () => {
+    expect(statements[0]).toBe("BEGIN");
+    expect(statements.at(-1)).toBe("COMMIT");
+    for (const statement of statements.slice(1, -1)) {
+      expect(statement).toMatch(/^(?:DROP (?:TABLE|VIEW) IF EXISTS public\.\w+|DROP FUNCTION IF EXISTS public\.\w+\([A-Z, ]+\)|ALTER TABLE IF EXISTS public\.waitlist_entries\s+DROP CONSTRAINT IF EXISTS waitlist_entries_converted_user_id_fkey)$/);
+    }
+    expect(cleanup).not.toMatch(/\bCASCADE\s*;/i);
+    expect(statements.filter(s => s.startsWith("DROP TABLE"))).toHaveLength(27);
+    expect(statements.filter(s => s.startsWith("DROP FUNCTION"))).toHaveLength(3);
+    expect(statements.filter(s => s.startsWith("DROP VIEW"))).toHaveLength(1);
+  });
+
+  it("keeps baseline objects, both waitlists and canonical trigger helpers", () => {
+    const baselineObjects = [...sql.matchAll(/CREATE (?:TABLE IF NOT EXISTS|OR REPLACE FUNCTION) public\.(\w+)/g)]
+      .map(match => match[1]);
+    const droppedObjects = [...cleanup.matchAll(/DROP (?:TABLE|VIEW|FUNCTION) IF EXISTS public\.(\w+)/g)]
+      .map(match => match[1]);
+    for (const name of [...baselineObjects, "waitlist", "waitlist_entries", "upsert_question_answers",
+      "update_updated_at_column", "update_questions_updated_at", "user_statistics"]) {
+      expect(droppedObjects).not.toContain(name);
+    }
+    expect(cleanup).not.toMatch(/DROP (?:COLUMN|TRIGGER|SCHEMA)/i);
+    expect(statements.filter(s => s.startsWith("ALTER TABLE"))).toEqual([
+      "ALTER TABLE IF EXISTS public.waitlist_entries\n  DROP CONSTRAINT IF EXISTS waitlist_entries_converted_user_id_fkey",
+    ]);
   });
 });
