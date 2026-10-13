@@ -1,5 +1,100 @@
 # Docs-grounded question process
 
+## Current rules-v5 operator flow (2026-10-13)
+
+This supersedes v4 **for new candidates**. No live generation, retrieval, Argon
+call, or database write is authorized by this code change. The commands below
+are the next founder-operated run, not work performed in this PR. Keep every
+v4 guard and use fresh artifact names. Historical v4 requests remain v4.
+
+1. Plan one product-specific engineering decision before documentation retrieval.
+   Prefer specific Google Cloud capability/limit/trade-off knowledge. Include
+   at least one plausible Google Cloud-specific alternative. Reject choices
+   eliminated only by reading a literal requirement. Generic benchmark/validate
+   two constraints then pick whichever meets both keys are capped at **20%** of
+   passing candidates; they still must pass the product-knowledge style gate.
+2. Retrieve official documentation as a veto, write, and verify exact receipts
+   as in v4. Then shuffle **stored** options deterministically using SHA256 of
+   the candidate ID and a local random generator. Store the label mapping, key,
+   rationales and receipt labels together. Judges use reconstructed canonical
+   fields; blind/style projections have a separate learner-only shuffle.
+3. Reject mechanical near-duplicates within the batch and against a local
+   ACTIVE/DRAFT export. `--existing-questions` accepts a JSON list or
+   `{"questions": [...]}`. Rows need `id` (or `candidate_id`), `status`, `stem`,
+   and either `options` with `label`/`text` plus `key`, or `answers` with
+   `choice_text`/`is_correct`. RETIRED rows are excluded. Missing/invalid active
+   rows block. The artifact freezes a comparison snapshot and export SHA256.
+   Without this flag only within-batch checks run; no database is read.
+4. Report stored key counts. **Any position above 40% fails**, including small
+   batches (one/two items cannot pass). A random deterministic shuffle does not
+   guarantee a passing distribution. Inspect failures; never hand-edit mappings.
+   Generation reports all option-bearing candidates; ingest gates nonsuperseded
+   passing candidates before any new question writes. Repaired children get their
+   own ID-seeded mapping. Inline generation also gates the passing subset before writes. All-candidate
+   diagnostics remain available separately. Existing inline failed-DRAFT review
+   retention is unchanged; the actual inline write population also must meet the
+   key-position cap. The template cap governs passing questions, not failed drafts.
+5. Keep three independent Claude gates. Optional `--argon-gate` adds two separate
+   calls to exact model **`openrouter/google/gemini-4-argon`** via the existing
+   OpenRouter path. Blind sees only learner stem/choices. Independent full review
+   sees frozen key/rationales/docs/receipts and current style, not Claude verdicts
+   or the blind answer. Frozen request policy must match the judge runner flag.
+   Requires a non-Google generator for independent vendor review and shell
+   `OPENROUTER_API_KEY`; never read an env file.
+6. With Argon enabled **all four gates must pass**: strict blind correct answer,
+   confidence >=0.8 and no ambiguity, plus review PASS, correct key, no credible
+   alternative, no issues. Missing/malformed/REVISE/REJECT/wrong-model or
+   mismatched request receipts block ordinary ingest and completed-journal replay.
+   Automatic repair is disabled for Argon payloads; generate fresh fully judged
+   candidates instead. Without Argon, bounded v4-style repair remains available.
+
+### Dedupe calibration and offline evidence
+
+`tests/fixtures/batch7-8-dedupe.json` contains the 18 accepted/persisted batch7/8
+items with source SHA256 provenance. NFKC + casefold normalization, `[a-z0-9]+`
+tokens, the fixed stopword set in `shared/near_duplicates.py`, and unique-token
+Jaccard separately for stem (S) and correct option (K) give `min(S,K)`.
+Reject at **>=0.20**. Of **153 pairs**, only the known batch8 retailer Model
+Registry alias pair is flagged: **S=0.23880597014925373**, **K=0.4090909090909091**.
+Highest other score: **0.16216216216216217**. This small replay calibration is not
+universal duplicate detection validation.
+
+`calibration/argon-review-r8-2026-10-13.json` is retained as historical review,
+not admissible gate receipts: blind positions/key hashes were not frozen by this
+policy. The test-only review projection records null-to-boolean/fix conversion;
+blind replay is synthetic. Strict bounded schema rejects incompatible recorded
+reviews rather than silently repairing them. No fresh Argon validation occurred.
+
+### Exact next live commands (founder only, no writes)
+
+Prepare a reviewed local ACTIVE/DRAFT export at the path below first. Run from
+this v5 checkout with Codex/Claude login and shell EXA/OpenRouter credentials.
+Use a new basename if any artifact/request/verdict exists. A nonzero result means
+inspect and stop; do not bypass a failed report or reuse an old journal.
+
+```sh
+cd /Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline
+
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/generate_all_domains.py \
+  --cert machine-learning-engineer --n-questions 30 --section-allocation 4,5,6,6,5,4 \
+  --model codex --judge-model external --parallel 3 --gen-effort high --cite-effort medium \
+  --existing-questions .cache/generation/pmle-active-draft-export.json --argon-gate \
+  --artifact .cache/generation/pmle-d029-v5-pilot-30.json
+
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/judge_requests.py \
+  --requests .cache/generation/pmle-d029-v5-pilot-30.judge-requests \
+  --verdicts .cache/generation/pmle-d029-v5-pilot-30.verdicts \
+  --judge-model claude --parallel 3 --argon-gate
+
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/ingest_external_verdicts.py \
+  --artifact .cache/generation/pmle-d029-v5-pilot-30.json \
+  --verdicts .cache/generation/pmle-d029-v5-pilot-30.verdicts --dry-run
+```
+
+Do not remove `--dry-run` without separate founder approval. Omitting Argon must
+be an explicit new-run choice: omit the flag from both generation and judging,
+never remove frozen policy from an existing artifact.
+
 ## Current rules-v4 operator flow (2026-10-06)
 
 This section supersedes the historical rules-v3/v2 runbooks below for **new**
