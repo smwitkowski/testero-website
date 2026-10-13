@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { captureV3 } from "./v3-capture";
 import { assertRestoredSession, assertRestoredPaidReview } from "./prod-bank";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
@@ -15,7 +16,7 @@ function noPaidContent(value: unknown) {
   }
 }
 test("local signed webhook grants paid explanations and unlimited practice; refund wins over replay", async ({ page, browser }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(process.env.TESTERO_V3_SCREENSHOTS ? 240_000 : 120_000);
   const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!);
   expect(url.hostname).toBe("127.0.0.1"); expect(url.port).toBe("56541");
   expect(process.env.TESTERO_LOCAL_STRIPE).toBe("1");
@@ -32,7 +33,7 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
   const eventIds: string[] = [], paymentIds: string[] = [];
   const foreign = await browser.newContext();
   const failures: string[] = [];
-  const directory = "/tmp/testero-v2-phase3-visual";
+  const directory = process.env.TESTERO_V3_SCREENSHOTS ?? "/tmp/testero-v2-phase3-visual";
   await mkdir(directory, { recursive: true });
   page.on("pageerror", error => failures.push(error.message));
   page.on("request", request => { if (!["127.0.0.1", "localhost"].includes(new URL(request.url()).hostname)) failures.push("External browser request"); });
@@ -96,8 +97,11 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     await page.goto("/login?next=%2Fdashboard");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
+    const loginResponse = page.waitForResponse(response => response.url().endsWith("/api/auth/login") && response.request().method() === "POST");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Your study dashboard", exact: true })).toBeVisible();
+    expect((await loginResponse).status()).toBe(200);
+    await expect(page).toHaveURL(/\/dashboard(?:\?.*)?$/, { timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
 
     const diagnostic = await page.request.post("/api/diagnostic", { data: {} });
     expect(diagnostic.status()).toBe(201);
@@ -128,6 +132,7 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     expect(destination.origin).toBe("http://127.0.0.1:3000");
     const sessionId = destination.searchParams.get("session_id")!;
     await expect(page.getByText(/Your payment is processing/)).toBeVisible();
+    await captureV3(page, "checkout-success");
     expect(await (await page.request.get(`/api/billing/status?session_id=${sessionId}`)).json()).toEqual({ status: "processing", accessUntil: null });
     const before = await service.from("pmle_passes").select("id").eq("user_id", userId);
     expect(before.data).toHaveLength(0);
@@ -149,6 +154,7 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     await expect(page.getByRole("button", { name: "Manage legacy subscription", exact: true })).toHaveCount(0);
     expect((await page.request.post("/api/billing/portal", { data: {} })).status()).toBe(403);
     await layout("account-paid");
+    await captureV3(page, "account");
     await page.goto(`/diagnostic/${diagnosticId}/results`);
     await expect(page.getByRole("heading", { name: "Question review", exact: true })).toBeVisible();
     await expect(page.getByText("Explanation", { exact: true }).first()).toBeVisible();
@@ -173,6 +179,7 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     await page.getByRole("button", { name: "Submit answer", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Option explanations", exact: true })).toBeVisible();
     await layout("practice-paid");
+    await captureV3(page, "practice-feedback");
     const first = await service.from("session_items").select("id,selected_label").eq("session_id", paidPracticeId).eq("ordinal", 1).single();
     const withContent = await page.request.post(`/api/practice/${paidPracticeId}/answer`, { data: { itemId: first.data!.id, selectedLabel: first.data!.selected_label } });
     expect((await withContent.json()).feedback.optionExplanations).toHaveLength(4);

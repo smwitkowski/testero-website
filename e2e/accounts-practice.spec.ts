@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { captureV3 } from "./v3-capture";
 import { assertRestoredSession } from "./prod-bank";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
@@ -45,9 +46,9 @@ async function mailLink(request: APIRequestContext, email: string, type: "signup
 }
 
 test("local account confirmation claims only owned diagnostics, practices five, and blocks further free starts", async ({ page, browser }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(process.env.TESTERO_V3_SCREENSHOTS ? 240_000 : 120_000);
   const service = localSetup();
-  const visualDirectory = "/tmp/testero-v2-phase2-visual";
+  const visualDirectory = process.env.TESTERO_V3_SCREENSHOTS ?? "/tmp/testero-v2-phase2-visual";
   await mkdir(visualDirectory, { recursive: true });
   async function checkLayout(name: string) {
     for (const width of [320, 1280]) {
@@ -86,7 +87,7 @@ test("local account confirmation claims only owned diagnostics, practices five, 
       const progress = await (await page.request.get(`/api/diagnostic/${diagnosticId}`)).json() as DiagnosticProgress;
       expect(progress.currentQuestion!.ordinal).toBe(ordinal);
       const response = await page.request.post(`/api/diagnostic/${diagnosticId}/answer`, { data: { itemId: progress.currentQuestion!.id, selectedLabel: progress.currentQuestion!.options[0].label } });
-      expect(response.status()).toBe(200);
+      expect(response.status(), (await response.text()).slice(0, 180)).toBe(200);
     }
     const anonymousResult = await (await page.request.get(`/api/diagnostic/${diagnosticId}/results`)).json() as DiagnosticResult;
     expect(anonymousResult.review).toBeUndefined();
@@ -107,7 +108,7 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     const confirmation = await mailLink(page.request, email, "signup");
     await page.goto(confirmation);
     await expect(page).toHaveURL(/\/dashboard(?:\?.*)?$/);
-    await expect(page.getByRole("heading", { name: "Your study dashboard", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
     const users = await service.auth.admin.listUsers({ page: 1, perPage: 1000 });
     const account = users.data.users.find(user => user.email === email);
     expect(account?.email_confirmed_at).toBeTruthy();
@@ -124,9 +125,19 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     const authCookies = (await page.context().cookies()).filter(cookie => cookie.name.includes("-auth-token") && !cookie.name.includes("code-verifier"));
     expect(authCookies.length).toBeGreaterThan(0);
     expect(authCookies.every(cookie => cookie.httpOnly)).toBe(true);
-    await expect(page.getByRole("heading", { name: "Your domain breakdown", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Latest diagnostic by domain", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /^Practice / })).toHaveCount(2);
     await checkLayout("dashboard");
+    await captureV3(page, "dashboard");
+    if (process.env.TESTERO_V3_SCREENSHOTS) {
+      for (const width of [768, 820, 1024]) {
+        await page.setViewportSize({ width, height: 900 });
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+        const domainWidth = await page.locator("table tbody th").first().evaluate(cell => cell.getBoundingClientRect().width);
+        expect(domainWidth).toBeGreaterThan(140);
+        await page.screenshot({ path: `${process.env.TESTERO_V3_SCREENSHOTS}/dashboard-${width}.png`, fullPage: true });
+      }
+    }
     await page.getByRole("link", { name: "View diagnostic results", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Question review", exact: true })).toBeVisible();
     await expect(page.locator("#question-review-heading + ol > li")).toHaveCount(20);
@@ -142,10 +153,10 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     await expect(page).toHaveURL(new RegExp(`/practice/${practiceId}$`));
     for (let ordinal = 1; ordinal <= 5; ordinal++) {
       await expect(page.getByText(`Question ${ordinal} of 5`, { exact: true })).toBeVisible();
-      if (ordinal === 1) await checkLayout("practice");
+      if (ordinal === 1) { await checkLayout("practice"); await captureV3(page, "practice-question"); }
       const progress = await (await page.request.get(`/api/practice/${practiceId}`)).json() as DiagnosticProgress;
       expect(progress.currentQuestion!.ordinal).toBe(ordinal);
-      expect(Object.keys(progress.currentQuestion!).sort()).toEqual(["id", "ordinal", "stem", "options"].sort());
+      expect(Object.keys(progress.currentQuestion!).sort()).toEqual(["id", "ordinal", "domainCode", "stem", "options"].sort());
       noExplanations(progress);
       await page.getByRole("radio").first().check();
       const answerResponse = page.waitForResponse(response => response.url().endsWith(`/api/practice/${practiceId}/answer`) && response.request().method() === "POST");
@@ -162,6 +173,7 @@ test("local account confirmation claims only owned diagnostics, practices five, 
       else await page.getByRole("link", { name: "View summary", exact: true }).click();
     }
     await expect(page.getByRole("heading", { name: "Your practice summary", exact: true })).toBeVisible();
+    await captureV3(page, "practice-summary");
     await expect(page.locator("#question-review-heading + ol > li")).toHaveCount(5);
     await checkLayout("summary");
     const summaryResponse = await page.request.get(`/api/practice/${practiceId}/summary`);
@@ -193,7 +205,7 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Your study dashboard", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
     expect((await (await page.request.get(`/api/diagnostic/${diagnosticId}/results`)).json()).review).toHaveLength(20);
 
     await page.goto("/forgot-password");
@@ -209,10 +221,12 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     const recovery = await mailLink(page.request, email, "recovery");
     await page.goto(recovery);
     await expect(page).toHaveURL(/\/reset-password$/);
+    await captureV3(page, "reset-password");
     const newPassword = `${password}-new`;
     await page.getByLabel("New password", { exact: true }).fill(newPassword);
     await page.getByRole("button", { name: "Update password", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Your study dashboard", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/dashboard(?:\?.*)?$/, { timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
     await page.getByRole("link", { name: "Account", exact: true }).click();
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page).toHaveURL("http://127.0.0.1:3000/");
@@ -220,7 +234,7 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(newPassword);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Your study dashboard", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
     expect(failures).toEqual([]);
   } finally {
     await foreign.close();

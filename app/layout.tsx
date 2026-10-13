@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
+import { IBM_Plex_Sans } from "next/font/google";
 import { DEFAULT_DESCRIPTION, pageMetadata, SITE_ORIGIN } from "@/lib/seo";
 import { SiteHeader } from "@/components/site-header";
+import { SiteChrome } from "@/components/site-chrome";
 import { SiteFooter } from "@/components/site-footer";
 import { AnalyticsProvider } from "@/components/analytics-provider";
 import "./globals.css";
+
+const ibmPlexSans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-ibm-plex-sans", display: "swap" });
 
 export const metadata: Metadata = {
   ...pageMetadata("PMLE readiness diagnostic", DEFAULT_DESCRIPTION, "/"),
@@ -17,12 +21,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen font-sans antialiased">
+      <body className={`${ibmPlexSans.variable} min-h-screen font-sans antialiased`}>
         <AnalyticsProvider>
           <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-10 focus:bg-card focus:p-4">Skip to content</a>
           <SiteHeader />
-          <main id="main-content" className="mx-auto max-w-3xl px-5 py-10 sm:px-8 sm:py-16">{children}</main>
-          <SiteFooter />
+          <main id="main-content" className="mx-auto min-h-[calc(100vh-12rem)] max-w-[1120px] px-5 py-10 sm:px-8 sm:py-16">{children}</main>
+          <SiteChrome><SiteFooter /></SiteChrome>
         </AnalyticsProvider>
       </body>
     </html>

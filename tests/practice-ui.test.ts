@@ -48,6 +48,11 @@ describe("practice HTTP boundary", () => {
 });
 
 describe("dashboard and practice states", () => {
+  it.each([["D3", "D3"], ["unknown", "D0"]])("selects only a supported requested domain %s", (requestedDomain, selected) => {
+    const html = renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: [], remaining: 5, requestedDomain }));
+    expect(html).toContain(`value="${selected}" selected=""`);
+    expect(html).not.toContain('value="unknown"');
+  });
   it("shows a genuine empty diagnostic with a diagnostic link and all six practice domains", () => {
     const html = renderToStaticMarkup(createElement(DashboardPanel, { data: empty }));
     expect(html).toContain("Take a diagnostic");

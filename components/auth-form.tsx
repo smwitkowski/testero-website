@@ -10,6 +10,7 @@ const labels: Record<AuthMode, string> = {
 };
 export function AuthForm({ mode, next = "/dashboard", confirmationFailed = false }: { mode: AuthMode; next?: string; confirmationFailed?: boolean }) {
   const [pending, setPending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(confirmationFailed ? "Unable to confirm this link. Please sign in or request a new link." : "");
   const [message, setMessage] = useState("");
   const emailRequired = mode !== "reset-password";
@@ -41,9 +42,9 @@ export function AuthForm({ mode, next = "/dashboard", confirmationFailed = false
       {message ? <div role="status" className="rounded-md border border-border bg-muted p-4 leading-relaxed"><h2 className="mb-2 text-xl font-semibold">Check your email</h2>{message}</div> : (
         <form onSubmit={submit} className="space-y-5">
           <fieldset disabled={pending} className="space-y-5">
-            {emailRequired && <div className="space-y-2"><label htmlFor="email" className="block text-sm font-medium">Email</label><input id="email" name="email" type="email" autoComplete="email" required maxLength={254} className="min-h-11 w-full rounded-md border border-input bg-background px-3 focus-visible:outline-2 focus-visible:outline-ring" /></div>}
-            {passwordRequired && <div className="space-y-2"><label htmlFor="password" className="block text-sm font-medium">{mode === "reset-password" ? "New password" : "Password"}</label><input id="password" name="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={8} maxLength={72} aria-describedby="password-help" className="min-h-11 w-full rounded-md border border-input bg-background px-3 focus-visible:outline-2 focus-visible:outline-ring" /><p id="password-help" className="text-sm text-muted-foreground">Use 8–72 characters.</p></div>}
-            <Button type="submit" disabled={pending}>{pending ? "Please wait…" : labels[mode]}</Button>
+            {emailRequired && <div className="space-y-2"><label htmlFor="email" className="block text-sm font-medium">Email</label><input id="email" name="email" type="email" autoComplete="email" required maxLength={254} className="min-h-12 w-full rounded-md border border-input bg-card px-3 focus-visible:outline-2 focus-visible:outline-ring" /></div>}
+            {passwordRequired && <div className="space-y-2"><label htmlFor="password" className="block text-sm font-medium">{mode === "reset-password" ? "New password" : "Password"}</label><input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={8} maxLength={72} aria-describedby="password-help" className="min-h-12 w-full rounded-md border border-input bg-card px-3 focus-visible:outline-2 focus-visible:outline-ring" /><div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1"><p id="password-help" className="text-sm text-muted-foreground">Use 8–72 characters.</p><button type="button" aria-controls="password" aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)} className="inline-flex min-h-12 items-center text-sm font-medium text-primary">{showPassword ? "Hide password" : "Show password"}</button></div></div>}
+            <Button type="submit" disabled={pending} className="w-full">{pending ? "Please wait…" : labels[mode]}</Button>
           </fieldset>
         </form>
       )}

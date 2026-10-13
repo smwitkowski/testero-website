@@ -11,9 +11,10 @@ import { createServiceSupabaseClient } from "@/lib/supabase/service";
 export const metadata: Metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ signup?: string }> }) {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ signup?: string; domain?: string }> }) {
   const user = await requireUser("/dashboard");
-  const confirmedSignup = (await searchParams).signup === "confirmed";
+  const query = await searchParams;
+  const confirmedSignup = query.signup === "confirmed";
   let data;
   try {
     const client = createServiceSupabaseClient();
@@ -24,5 +25,5 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     // A failed load is not an empty dashboard. Retry repeats the idempotent claim.
   }
   if (!data) return <DashboardLoadError />;
-  return <>{confirmedSignup && <SignupAnalytics userId={user.id} />}<DashboardPanel data={data} /></>;
+  return <>{confirmedSignup && <SignupAnalytics userId={user.id} />}<DashboardPanel data={data} requestedDomain={query.domain} /></>;
 }

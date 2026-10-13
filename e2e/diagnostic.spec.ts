@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { captureV3 } from "./v3-capture";
 import { assertRestoredSession } from "./prod-bank";
 import { createClient } from "@supabase/supabase-js";
 import type { DiagnosticProgress, DiagnosticAnswerResponse, DiagnosticResult } from "../lib/diagnostic/types";
@@ -18,6 +19,7 @@ function noAnswerKeys(value: unknown) {
 }
 
 test("anonymous 20-question diagnostic persists snapshots and exposes aggregate results only", async ({ page, context, browser }) => {
+  if (process.env.TESTERO_V3_SCREENSHOTS) test.setTimeout(180_000);
   assertLocalDatabase();
   const failures: string[] = [];
   page.on("pageerror", error => failures.push(error.message));
@@ -25,9 +27,40 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
     const url = new URL(request.url());
     if (!["127.0.0.1", "localhost"].includes(url.hostname)) failures.push(`Unexpected external request: ${url.hostname}`);
   });
+  if (process.env.TESTERO_V3_SCREENSHOTS) {
+    for (const route of ["/", "/pricing", "/signup", "/login", "/forgot-password", "/blog", "/faq", "/terms", "/privacy"]) {
+      await page.goto(route);
+      await expect(page.locator("main h1")).toBeVisible();
+      expect(await page.locator("body").evaluate(body => getComputedStyle(body).fontFamily)).toContain("IBM Plex Sans");
+      await captureV3(page, route === "/" ? "home" : route.slice(1));
+      if (route === "/signup") {
+        const signupTab = page.getByRole("tab", { name: "Create account", exact: true });
+        const loginTab = page.getByRole("tab", { name: "Sign in", exact: true });
+        await signupTab.focus();
+        await page.keyboard.press("ArrowRight");
+        await expect(loginTab).toBeFocused();
+        await expect(loginTab).toHaveAttribute("aria-selected", "true");
+        await page.keyboard.press("ArrowLeft");
+        await expect(signupTab).toBeFocused();
+        await page.keyboard.press("End");
+        await expect(loginTab).toBeFocused();
+        await page.keyboard.press("Home");
+        await expect(signupTab).toBeFocused();
+      }
+      if (route === "/blog" || route === "/faq") {
+        const articles = await page.locator("main li h2 a").evaluateAll(links => links.map(link => link.getAttribute("href")!));
+        for (const article of articles) {
+          await page.goto(article);
+          await expect(page.locator("main h1")).toBeVisible();
+          await captureV3(page, article.slice(1).replaceAll("/", "-"));
+        }
+      }
+    }
+  }
   await page.goto("/diagnostic");
+  await captureV3(page, "diagnostic");
   const createdResponse = page.waitForResponse(response => response.url().endsWith("/api/diagnostic") && response.request().method() === "POST");
-  await page.getByRole("button", { name: "Start 20-question diagnostic" }).click();
+  await page.getByRole("button", { name: "Begin diagnostic" }).click();
   const created = await createdResponse;
   expect(created.status()).toBe(201);
   const { sessionId } = await created.json() as { sessionId: string };
@@ -44,7 +77,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
     expect(first.totalQuestions).toBe(20);
     noAnswerKeys(first);
     const earlyResults = await page.request.get(`${api}/results`);
-    expect(earlyResults.status()).toBe(409);
+    expect(earlyResults.status(), (await earlyResults.text()).slice(0, 180)).toBe(409);
 
     const foreign = await browser.newContext();
     try {
@@ -68,6 +101,10 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
       expect(progress.currentQuestion?.ordinal).toBe(index + 1);
       expect(seen.has(progress.currentQuestion!.id)).toBe(false);
       seen.add(progress.currentQuestion!.id);
+      await expect(page.getByRole("navigation", { name: "Main navigation" })).toHaveCount(0);
+      await expect(page.getByRole("contentinfo")).toHaveCount(0);
+      await expect(page.locator("header").getByText(`${index} of 20 answered`, { exact: true })).toBeVisible();
+      if (index === 0) await captureV3(page, "diagnostic-question");
       if (index === 3) {
         await page.reload();
         await expect(page.getByText("Question 4 of 20", { exact: true })).toBeVisible();
@@ -85,8 +122,12 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
       noAnswerKeys(answer);
     }
     await expect(page).toHaveURL(new RegExp(`/diagnostic/${sessionId}/results$`));
-    await expect(page.getByRole("heading", { name: "Your PMLE readiness", exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Your domain breakdown", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "PMLE readiness report", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Score by domain", exact: true })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
+    await expect(page.getByRole("contentinfo")).toBeVisible();
+    await expect(page.locator("main").getByText(/Study guidance, not a prediction/i)).toHaveCount(1);
+    await captureV3(page, "diagnostic-results");
     const resultResponse = await page.request.get(`${api}/results`);
     expect(resultResponse.status()).toBe(200);
     const result = await resultResponse.json() as DiagnosticResult;
@@ -111,7 +152,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
     expect(completed.currentQuestion).toBeNull();
     expect(completed.status).toBe("completed");
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Your PMLE readiness", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "PMLE readiness report", exact: true })).toBeVisible();
     expect(await (await page.request.get(`${api}/results`)).json()).toEqual(result);
     const anonymous = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
     for (const table of ["questions", "answers", "explanations", "session_items"]) {
