@@ -9,9 +9,9 @@ import { trackPractice } from "@/lib/analytics/client";
 import { Button } from "@/components/ui/button";
 import { practiceRequest, practiceError, type PracticeRequestError } from "@/components/practice-resource";
 
-export function PracticeStart({ domains, weakestDomains, remaining, hasPaidAccess = false }: Pick<DashboardData, "domains" | "weakestDomains"> & { remaining: number; hasPaidAccess?: boolean }) {
+export function PracticeStart({ domains, weakestDomains, remaining, hasPaidAccess = false, requestedDomain }: Pick<DashboardData, "domains" | "weakestDomains"> & { remaining: number; hasPaidAccess?: boolean; requestedDomain?: string }) {
   const router = useRouter();
-  const [domainCode, setDomainCode] = useState(domains[0]?.domainCode ?? "");
+  const [domainCode, setDomainCode] = useState(domains.find(domain => domain.domainCode === requestedDomain)?.domainCode ?? domains[0]?.domainCode ?? "");
   const [pending, setPending] = useState(false);
   const [exhausted, setExhausted] = useState(false);
   const [error, setError] = useState<PracticeRequestError | null>(null);
@@ -42,7 +42,7 @@ export function PracticeStart({ domains, weakestDomains, remaining, hasPaidAcces
   }
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void start(domainCode); }
 
-  return <section aria-labelledby="practice-start-heading" className="space-y-5">
+  return <section aria-labelledby="practice-start-heading" className="space-y-5 rounded-lg border border-border bg-card p-5 sm:p-7">
     <h2 id="practice-start-heading" className="text-xl font-semibold">Targeted practice</h2>
     <p className="leading-relaxed text-muted-foreground">{hasPaidAccess ? "Your paid access includes unlimited practice sessions. Each session has 5 questions and focuses on one domain." : "Free accounts get 5 practice questions each week. Each session focuses on one domain."}</p>
     {!hasPaidAccess && <p className="text-sm text-muted-foreground">{remaining} free practice questions remaining this week</p>}
@@ -53,15 +53,15 @@ export function PracticeStart({ domains, weakestDomains, remaining, hasPaidAcces
       <p role="alert" className="text-destructive">{error.message} Reload your dashboard before starting another session.</p>
       {error.status === 401 ? <Button asChild><Link href="/login?next=%2Fdashboard">Sign in</Link></Button> : <Button onClick={() => window.location.reload()}>Reload dashboard</Button>}
     </div> : <>
-      {weakestDomains.length > 0 && <div className="space-y-3">
-        <h3 className="font-medium">Practice your weakest domains</h3>
+      {weakestDomains.length > 0 && <div className="on-dark space-y-3 rounded-lg bg-foreground p-5 text-card sm:p-6">
+        <h3 className="text-sm font-medium text-on-dark-secondary">Recommended next step</h3>
         <div className="flex flex-col items-start gap-3">
-          {weakestDomains.map(domain => <Button key={domain.domainCode} disabled={pending} onClick={() => void start(domain.domainCode)} className="max-w-full whitespace-normal text-left">Practice {domain.domainName}</Button>)}
+          {weakestDomains.map(domain => <Button key={domain.domainCode} disabled={pending} onClick={() => void start(domain.domainCode)} className="max-w-full border border-card bg-card whitespace-normal text-left text-foreground hover:bg-muted">Practice {domain.domainName}</Button>)}
         </div>
       </div>}
       <form onSubmit={submit} className="space-y-3" aria-busy={pending}>
         <label htmlFor="practice-domain" className="block text-sm font-medium">Practice domain</label>
-        <select id="practice-domain" value={domainCode} onChange={event => setDomainCode(event.target.value)} disabled={pending} className="min-h-11 w-full rounded-md border border-input bg-card px-3 py-3 text-foreground">
+        <select id="practice-domain" value={domainCode} onChange={event => setDomainCode(event.target.value)} disabled={pending} className="min-h-12 w-full rounded-md border border-input bg-card px-3 py-3 text-foreground">
           {domains.map(domain => <option key={domain.domainCode} value={domain.domainCode}>{domain.domainName}</option>)}
         </select>
         <Button type="submit" disabled={pending || !domainCode}>{pending ? "Starting practice…" : "Start practice"}</Button>
