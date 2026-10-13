@@ -41,6 +41,7 @@ describe("non-destructive deployment configuration", () => {
     expect(docker).toContain('CMD ["node", "server.js"]');
     const ignored = read(".dockerignore").split(/\r?\n/);
     expect(ignored).toContain("content-pipeline");
+    expect(ignored).toContain("tests");
     expect(ignored).not.toContain("content");
   });
   it("defines exactly the eight supported application configuration values", () => {
