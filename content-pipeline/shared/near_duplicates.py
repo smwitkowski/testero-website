@@ -58,7 +58,9 @@ def load_export(path):
         raise ValueError("Export must contain a question list")
     if any(row.get("status") not in ("ACTIVE", "DRAFT", "RETIRED") for row in rows):
         raise ValueError("Export question status must be ACTIVE, DRAFT or RETIRED")
-    selected = [comparison_row(row) for row in rows if row["status"] in ("ACTIVE", "DRAFT")]
+    selected = [{**comparison_row(row),
+                 **({"objective_id": row["objective_id"]} if isinstance(row.get("objective_id"), str) and row["objective_id"].strip() else {})}
+                for row in rows if row["status"] in ("ACTIVE", "DRAFT")]
     if len({row["id"] for row in selected}) != len(selected):
         raise ValueError("Duplicate export question IDs")
     return {"sha256": hashlib.sha256(raw).hexdigest(), "questions": selected}

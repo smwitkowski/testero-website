@@ -1,0 +1,773 @@
+{
+  "source": "pmle-d029-v5-serving-30-20261013f.json",
+  "source_sha256": "eff3b3bf1559cebf940994420865cfa43bb514a3d9d2ec99b2c74a8c5e594b02",
+  "projection": "Allowlisted public learner content, decision plans and proof reasons only. No docs, transport logs, journals or credentials. Existing bank objective IDs absent; candidate objective IDs are recorded.",
+  "objective_ids": [
+    "machine-learning-engineer:standard:4.1:1",
+    "machine-learning-engineer:standard:4.1:2",
+    "machine-learning-engineer:standard:4.1:3",
+    "machine-learning-engineer:standard:4.1:4",
+    "machine-learning-engineer:standard:4.1:5",
+    "machine-learning-engineer:standard:4.2:1",
+    "machine-learning-engineer:standard:4.2:2",
+    "machine-learning-engineer:standard:4.2:3",
+    "machine-learning-engineer:standard:4.2:4",
+    "machine-learning-engineer:standard:4.2:5"
+  ],
+  "candidates": [
+    {
+      "index": 1,
+      "candidate_id": "6ed34881-2456-55fe-9f8c-af92eda3bfd0",
+      "objective_id": "machine-learning-engineer:standard:4.1:1",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "stem": null,
+      "options": [],
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "decision_attempts": [
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.1:1",
+            "engineering_decision": "You are running a retailer\u2019s nightly demand forecasts with an XGBoost model recently deployed to an Agent Platform endpoint. A scheduled worker scores the catalog in a few hours, and serving machines remain provisioned until the next run. The model is already in Model Registry, and scoring inputs arrive in Cloud Storage each evening. You want forecasts ready by morning while minimizing idle compute costs. You want to keep recurring scoring operations simple while minimizing infrastructure maintenance. What should you do?",
+            "business_consequence": "The retailer needs timely forecasts for inventory planning, but maintaining serving capacity between nightly runs increases costs.",
+            "existing_system": "A registered XGBoost model serves nightly catalog predictions through an Agent Platform online endpoint. A scheduled worker submits inputs from Cloud Storage, leaving the endpoint idle between runs.",
+            "decisive_constraints": [
+              "You want forecasts ready by morning while minimizing idle compute costs.",
+              "You want to keep recurring scoring operations simple while minimizing infrastructure maintenance."
+            ],
+            "best_action": "Run nightly Agent Platform batch prediction jobs using the registered model, and retire the endpoint once the scoring workflow has switched.",
+            "mistakes": [
+              {
+                "action": "Retain the Agent Platform online endpoint, reduce its minimum serving capacity, and have the scheduled worker continue sending the catalog for nightly predictions.",
+                "scenario_reason": "Reducing provisioned capacity can lower costs, but retains idle serving resources for a workload that only needs periodic inference. Managed batch prediction better matches this execution pattern."
+              },
+              {
+                "action": "Package the model in a Cloud Run job, schedule execution each evening, and replace the endpoint workflow with a custom program that processes the catalog.",
+                "scenario_reason": "Cloud Run jobs plausibly fit periodic processing, but require the team to package inference and manage catalog processing and result handling. Agent Platform batch prediction can reuse the registered model with less operational work."
+              },
+              {
+                "action": "Move inference to GKE, schedule a nightly scoring job, and configure the cluster to reduce its compute capacity after the catalog has been processed.",
+                "scenario_reason": "Scheduled GKE workloads can perform batch inference, but introducing cluster administration and custom scoring orchestration adds maintenance for an existing model whose workload fits managed batch prediction."
+              }
+            ]
+          },
+          "proof": {
+            "passed": false,
+            "reason": "The supplied docs support managed batch prediction from a registered model and the fit of asynchronous inference for nightly scoring. However, they don't establish Cloud Run jobs' scheduling and execution capabilities or substantiate C's comparative operational burden. Generic Cloud Run container support doesn't verify that alternative. The existing XGBoost model's batch compatibility also isn't established. A is plausible, but all decisive claims and rejection reasons aren't verified, so the decision needs replacement or additional evidence.",
+            "mechanical_check": {
+              "passed": false,
+              "errors": [
+                "Evidence must contain A, B, C and D exactly once"
+              ]
+            }
+          }
+        },
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.1:1",
+            "engineering_decision": "You are operating a rental marketplace's photo-classification feature, recently deployed as a CPU-based HTTP container on GKE. The application sends prediction requests when hosts upload property photos. Traffic arrives in brief bursts, with long quiet periods, but the cluster continues running between them. You want to classify uploads on demand while minimizing idle compute costs. You want to retain the container's existing HTTP interface while minimizing infrastructure maintenance. What should you do?",
+            "business_consequence": "The marketplace needs photo classifications during uploads, but its intermittent traffic leaves serving infrastructure idle and creates ongoing cluster maintenance work.",
+            "existing_system": "A recently deployed HTTP container performs CPU-based photo classification on GKE. The application calls it during uploads, and the cluster remains running through long gaps between requests.",
+            "decisive_constraints": [
+              "You want to classify uploads on demand while minimizing idle compute costs.",
+              "You want to retain the container's existing HTTP interface while minimizing infrastructure maintenance."
+            ],
+            "best_action": "Deploy the existing HTTP container to Cloud Run and let it scale to zero between photo-classification requests.",
+            "mistakes": [
+              {
+                "action": "Retain the GKE deployment, enable workload and node autoscaling, and continue managing cluster capacity for the application's intermittent prediction traffic.",
+                "scenario_reason": "Autoscaling can reduce resource use, but retaining GKE preserves cluster administration for a single request-serving container. Cloud Run's managed request serving and scaling better fit the desired reduction in infrastructure maintenance."
+              },
+              {
+                "action": "Move the model to an Agent Platform online endpoint, maintain provisioned serving replicas between bursts, and adapt the application's prediction integration.",
+                "scenario_reason": "This proposed endpoint arrangement retains serving capacity during quiet periods and introduces prediction-interface adaptation. It adds migration work where the existing HTTP container already fits Cloud Run's service execution model."
+              },
+              {
+                "action": "Run the prediction container on Cloud Run with a continuously warm instance pool, and route application requests through that pool.",
+                "scenario_reason": "Keeping instances warm can reduce startup delay, but reserves idle capacity during the workload's long quiet periods. The scenario prioritizes idle compute savings and supplies no startup-latency constraint that justifies that trade-off."
+              }
+            ]
+          },
+          "proof": {
+            "passed": false,
+            "reason": "Cloud Run's scale-to-zero behavior and lower operational overhead support A, and the supplied documentation supports the tradeoffs rejecting B and D. However, it does not establish Agent Platform online serving for this custom classifier, provisioned-replica behavior, or the claimed need to adapt its prediction interface. The agent architecture documentation does not verify those claims. Because C's capabilities and rejection reason remain unsupported, the decision needs replacement or direct official endpoint documentation before approval.",
+            "mechanical_check": {
+              "passed": false,
+              "errors": [
+                "Evidence must contain A, B, C and D exactly once"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "candidate_id": "5e1dd14b-4878-529b-b6d0-395e0a8391ea",
+      "objective_id": "machine-learning-engineer:standard:4.1:3",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "stem": "You work for a retailer whose demand forecasts determine store replenishment. The forecasting service already runs on Cloud Run, and successive trained releases are stored in separate Cloud Storage folders. Your team is migrating the release catalog to Agent Platform Model Registry. You want to keep releases grouped by forecasting model while minimizing catalog clutter. You also want a stable reference to the approved release while minimizing changes for catalog consumers. Which approach should you use?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Record releases as artifacts in Agent Platform ML Metadata and group them in a forecasting context. Store the approved artifact identifier as a context attribute."
+        },
+        {
+          "label": "B",
+          "text": "Import each release as a version of one Agent Platform Model Registry model. Retain version IDs and move an approved alias to the selected version after each approval."
+        },
+        {
+          "label": "C",
+          "text": "Create a separate Model Registry model for every forecasting release. Label each model with its forecasting family and approval state, and have catalog consumers select releases using those labels."
+        },
+        {
+          "label": "D",
+          "text": "Keep one registered model version and replace artifacts at its Cloud Storage location after approval. Record previous release locations in the model description for catalog consumers."
+        }
+      ],
+      "key": "B",
+      "failure_stage": "near_duplicate",
+      "decision_attempts": [
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.1:3",
+            "engineering_decision": "Choose how to organize successive forecasting releases and reference the approved release in Agent Platform Model Registry.",
+            "business_consequence": "Preserve release traceability and simplify approval changes for teams consuming the forecasting model catalog.",
+            "existing_system": "You work for a retailer whose demand forecasts determine store replenishment. The forecasting service already runs on Cloud Run, and successive trained releases are stored in separate Cloud Storage folders. Your team is migrating the release catalog to Agent Platform Model Registry. You want to keep releases grouped by forecasting model while minimizing catalog clutter. You also want a stable reference to the approved release while minimizing changes for catalog consumers. Which approach should you use?",
+            "decisive_constraints": [
+              "You want to keep releases grouped by forecasting model while minimizing catalog clutter.",
+              "You want a stable reference to the approved release while minimizing changes for catalog consumers."
+            ],
+            "best_action": "Register successive releases as versions of one Model Registry model, retain their version identifiers, and move an approved alias to the selected version after each approval.",
+            "mistakes": [
+              {
+                "action": "Create a separate Model Registry model for every release, attach labels identifying the forecasting family and approval state, and have catalog consumers select releases by those labels.",
+                "scenario_reason": "Separate model resources fragment the release family. Labels require custom selection logic instead of providing a model version alias that consumers can keep referencing as approvals change."
+              },
+              {
+                "action": "Maintain one registered model version, replace the artifacts at its Cloud Storage location after each approval, and record previous release locations in the model description.",
+                "scenario_reason": "Replacing artifacts collapses distinct releases into one registered identity. A description listing old locations does not establish separate registry versions that consumers can inspect and reference."
+              },
+              {
+                "action": "Record releases as artifacts in Agent Platform ML Metadata, group them in a forecasting context, and store the approved artifact identifier as a context attribute.",
+                "scenario_reason": "ML Metadata organizes artifact lineage, but this approach substitutes custom metadata conventions for Model Registry model versions and aliases, increasing catalog management and consumer integration work."
+              }
+            ]
+          },
+          "proof": {
+            "passed": true,
+            "reason": "A directly satisfies release grouping and a stable approved-release reference using documented versions and mutable aliases. B fragments the catalog, C omits distinct registered release versions, and D requires custom metadata conventions. These are engineering tradeoffs, not unsupported-feature exceptions. No container support dates affect this decision.",
+            "mechanical_check": {
+              "passed": true,
+              "errors": []
+            }
+          }
+        }
+      ],
+      "near_duplicate_check": {
+        "passed": false,
+        "threshold": 0.2,
+        "method": "min(stem token Jaccard, correct-option token Jaccard), NFKC/casefold/stopwords",
+        "matches": [
+          {
+            "matched_id": "420f7f83-b69a-5c8e-9621-b293c171fedc",
+            "stem_score": 0.2153846153846154,
+            "key_score": 0.2,
+            "score": 0.2
+          },
+          {
+            "matched_id": "060fbb68-b02a-5928-80ad-9146b569e0b5",
+            "stem_score": 0.22388059701492538,
+            "key_score": 0.2692307692307692,
+            "score": 0.22388059701492538
+          }
+        ],
+        "reason": "Near-duplicate scenario and decision"
+      }
+    },
+    {
+      "index": 4,
+      "candidate_id": "f0f4d346-881f-5aa9-99d9-e70c43ab4cde",
+      "objective_id": "machine-learning-engineer:standard:4.1:4",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": true,
+      "stem": "You manage product recommendations for an online retailer. The storefront calls a Cloud Run service, and returning customers often request recommendations several times before buying. Your team has prepared a candidate model that uses less compute per request. Purchases are tracked per customer, so the team needs to compare model versions before adopting the cheaper candidate. You want to estimate the candidate's effect on customer purchases while minimizing changes to the running serving setup. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Configure Cloud Run to split traffic evenly between the current and candidate revisions. Let the platform route each recommendation request, record which revision handled it, and compare customer purchase conversion and serving cost attributed to each revision."
+        },
+        {
+          "label": "B",
+          "text": "Mirror production recommendation requests to a separate candidate Cloud Run service. Keep displaying the current model's recommendations, compare prediction agreement and serving cost on the same customer inputs, and promote the candidate when those measurements indicate acceptable performance."
+        },
+        {
+          "label": "C",
+          "text": "Send all production traffic to the candidate Cloud Run revision. Compare customer purchase conversion and serving cost with the previous week's results, keep the candidate if those metrics improve, and restore the previous revision if customer purchase conversion declines."
+        },
+        {
+          "label": "D",
+          "text": "Deploy the candidate as a tagged Cloud Run revision. Randomly assign customers to two persistent groups in the application, route each group to its revision URL across sessions, and compare customer purchase conversion and serving cost between the groups."
+        }
+      ],
+      "key": "D",
+      "decision_attempts": [
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.1:4",
+            "engineering_decision": "Choose a canary rollout strategy that compares a smaller recommendation model with the running version using concurrent production traffic.",
+            "business_consequence": "Faster hotel recommendations could improve the customer experience, but promoting a weaker model could reduce completed bookings.",
+            "existing_system": "You manage a hotel recommendation service running on an Agent Platform endpoint. Your team has prepared a smaller candidate model to reduce response times. Application events identify which model generated each recommendation and whether the customer completed a booking. You want to reduce recommendation latency while minimizing declines in booking conversion. You want to compare versions on live customer traffic while minimizing changes to the serving system. What should you do?",
+            "decisive_constraints": [
+              "You want to reduce recommendation latency while minimizing declines in booking conversion.",
+              "You want to compare versions on live customer traffic while minimizing changes to the serving system."
+            ],
+            "best_action": "Deploy the candidate alongside the current model on the existing Agent Platform endpoint, route a small traffic share to it, and increase that share after comparing booking conversion and response latency.",
+            "mistakes": [
+              {
+                "action": "Migrate both recommendation models to GKE, configure weighted routing through an ingress, and gradually increase candidate traffic after comparing booking conversion and response latency across the two separately managed model services.",
+                "scenario_reason": "GKE provides a plausible weighted rollout architecture, but migrating the running service adds infrastructure and routing work when the proposed managed endpoint traffic split can handle the comparison."
+              },
+              {
+                "action": "Deploy the candidate on a separate Agent Platform endpoint, mirror production requests to both versions, and choose the candidate after comparing prediction differences and response latency on identical inputs.",
+                "scenario_reason": "Mirroring can compare predictions and latency, but customers only see the current model's recommendations. It cannot establish the candidate's effect on completed bookings."
+              },
+              {
+                "action": "Replace the current model with the candidate on the existing Agent Platform endpoint, compare overall booking conversion and response latency with last week's averages, and roll back if either deteriorates.",
+                "scenario_reason": "Full replacement exposes all customers immediately, and historical averages confound model effects with changes in customer traffic or hotel availability. A concurrent baseline makes the comparison more reliable."
+              }
+            ]
+          },
+          "proof": {
+            "passed": false,
+            "reason": "The supplied docs don't establish A's decisive capability: deploying two recommendation models on one Agent Platform model endpoint and controlling their traffic percentages independently. The revisions documentation covers agents, while rolling deployment documents automatic replacement rather than a controlled canary comparison. Consequently, B's rejection based on an equivalent managed endpoint capability and A's uniquely best status remain unverified. C and D have sound engineering tradeoffs, but the decision needs replacement or direct model-endpoint traffic-splitting evidence.",
+            "mechanical_check": {
+              "passed": false,
+              "errors": [
+                "Evidence must contain A, B, C and D exactly once"
+              ]
+            }
+          }
+        },
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.1:4",
+            "engineering_decision": "Choose customer-level A/B routing to compare recommendation versions when repeated requests contribute to a customer-level purchase outcome.",
+            "business_consequence": "A cheaper recommendation model could reduce serving costs, but an unreliable comparison could conceal a decline in customer purchases.",
+            "existing_system": "You manage product recommendations for an online retailer. The storefront calls a Cloud Run service, and returning customers often request recommendations several times before buying. Your team has prepared a candidate model that uses less compute per request. Purchases are tracked per customer, so the team needs a live comparison before adopting the cheaper version. You want to estimate the candidate's effect on customer purchases while minimizing changes to the running serving setup. What should you do?",
+            "decisive_constraints": [
+              "You want to estimate the candidate's effect on customer purchases while minimizing changes to the running serving setup."
+            ],
+            "best_action": "Deploy the candidate as a tagged Cloud Run revision, assign customers consistently to two experimental groups in the application, and route each group to its revision URL before comparing purchase conversion and serving cost.",
+            "mistakes": [
+              {
+                "action": "Configure Cloud Run to split traffic evenly between the current and candidate revisions, let the platform select a revision for each recommendation request, and compare customer purchase conversion and serving cost across both versions.",
+                "scenario_reason": "Cloud Run traffic percentages distribute requests rather than establish persistent customer experiment groups. Returning customers can receive recommendations from both versions, weakening attribution of their purchases to either model."
+              },
+              {
+                "action": "Mirror production recommendation requests to a candidate Cloud Run service, continue displaying the current model's recommendations, and promote the candidate after comparing prediction agreement and compute cost on the same customer inputs.",
+                "scenario_reason": "Shadow requests can compare predictions and resource use, but customers never act on the candidate's recommendations. Prediction agreement does not establish its effect on purchases, and mirroring adds serving work."
+              },
+              {
+                "action": "Replace the current Cloud Run revision with the candidate for all customers, compare customer purchase conversion and serving cost against the previous week's results, and restore the previous revision if conversion declines.",
+                "scenario_reason": "Sequential results confound the model change with changes in promotions, inventory, and customer traffic. Full replacement also exposes every customer before a concurrent comparison establishes the candidate's purchase performance."
+              }
+            ]
+          },
+          "proof": {
+            "passed": true,
+            "reason": "A uniquely fits the customer-level purchase outcome by keeping customers in consistent, concurrent experiment groups while retaining Cloud Run. B mixes customer exposure, C never exposes customers to candidate recommendations, and D lacks a concurrent control. The supplied docs support tagged revision routing and experiment segregation; no container support dates or unsupported-feature exceptions determine the answer.",
+            "mechanical_check": {
+              "passed": true,
+              "errors": []
+            }
+          }
+        }
+      ],
+      "near_duplicate_check": {
+        "passed": true,
+        "threshold": 0.2,
+        "method": "min(stem token Jaccard, correct-option token Jaccard), NFKC/casefold/stopwords",
+        "matches": [],
+        "reason": "No near-duplicate scenario and decision"
+      }
+    },
+    {
+      "index": 9,
+      "candidate_id": "256a0f91-abc3-52a5-ba0c-4810caae76cb",
+      "objective_id": "machine-learning-engineer:standard:4.2:4",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "stem": "You are operating a product-image search service whose embedding model runs on a GPU-backed Agent Platform endpoint. During shopping peaks, monitoring shows growing request queues and high GPU utilization, but CPU utilization remains low and replicas stay at their minimum. The autoscaling policy uses CPU utilization, and the maximum replica count has spare capacity. Accelerator demand drops between peaks. You want serving capacity to follow demand while minimizing changes to serving operations. How should you address this issue?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Migrate the embedding model to a GPU-backed GKE cluster and configure a Horizontal Pod Autoscaler using GPU utilization to adjust serving capacity during shopping peaks."
+        },
+        {
+          "label": "B",
+          "text": "Raise the existing Agent Platform endpoint's minimum replica count to cover peak search demand, retaining CPU-utilization autoscaling to keep that capacity available between shopping peaks."
+        },
+        {
+          "label": "C",
+          "text": "Switch the existing Agent Platform endpoint to GPU-utilization autoscaling, retaining its replica bounds so capacity increases and decreases with accelerator demand."
+        },
+        {
+          "label": "D",
+          "text": "Increase the existing Agent Platform endpoint's maximum replica count, retaining CPU-utilization autoscaling so the deployment has room to add capacity during shopping peaks."
+        }
+      ],
+      "key": "C",
+      "failure_stage": "judge",
+      "decision_attempts": [
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.2:4",
+            "engineering_decision": "Choose an autoscaling signal that makes the existing serving backend respond to its GPU-bound workload.",
+            "business_consequence": "Insufficient replicas delay product-image searches during shopping peaks, while permanently provisioning peak capacity increases idle accelerator cost.",
+            "existing_system": "You are operating a product-image search service whose embedding model runs on a GPU-backed Agent Platform endpoint. Monitoring shows growing request queues and busy GPUs during shopping peaks, but CPU utilization remains low and replica count stays at its minimum. The autoscaling policy tracks CPU load, and the replica ceiling has spare capacity. You want to keep searches responsive while minimizing idle accelerator cost. You want to handle growing throughput while minimizing changes to serving operations. How should you address this issue?",
+            "decisive_constraints": [
+              "You want to keep searches responsive while minimizing idle accelerator cost.",
+              "You want to handle growing throughput while minimizing changes to serving operations."
+            ],
+            "best_action": "Configure GPU-utilization autoscaling on the existing Agent Platform endpoint so replica count follows accelerator load as image-search traffic increases.",
+            "mistakes": [
+              {
+                "action": "Increase the endpoint's maximum replica limit and retain CPU utilization as the autoscaling signal so additional capacity can handle rising image-search traffic.",
+                "scenario_reason": "The existing ceiling already has spare capacity. Raising it does not trigger additional replicas when the selected CPU signal remains low."
+              },
+              {
+                "action": "Move the image-embedding model to GKE and implement GPU-aware pod autoscaling to handle increased search throughput on a separately managed serving cluster.",
+                "scenario_reason": "This introduces a serving migration and cluster operations when the existing managed endpoint can scale using GPU utilization."
+              },
+              {
+                "action": "Raise the endpoint's minimum replica count to cover peak image-search traffic and keep those replicas available throughout the day to absorb sudden demand.",
+                "scenario_reason": "A permanent peak-capacity floor can relieve queues but pays for idle GPUs between shopping peaks instead of scaling with accelerator demand."
+              }
+            ]
+          },
+          "proof": {
+            "passed": true,
+            "reason": "A corrects the documented CPU-only scaling failure on the existing GPU-backed endpoint. B leaves that failure unchanged, C adds unnecessary migration and serving operations, and D retains idle peak capacity. The decision tests throughput-driven serving autoscaling without relying on unsupported features or container support dates.",
+            "mechanical_check": {
+              "passed": true,
+              "errors": []
+            }
+          }
+        }
+      ],
+      "near_duplicate_check": {
+        "passed": true,
+        "threshold": 0.2,
+        "method": "min(stem token Jaccard, correct-option token Jaccard), NFKC/casefold/stopwords",
+        "matches": [],
+        "reason": "No near-duplicate scenario and decision"
+      }
+    },
+    {
+      "index": 14,
+      "candidate_id": "4e53814b-387f-5565-9be8-5b8dec22c730",
+      "objective_id": "machine-learning-engineer:standard:4.1:4",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "stem": null,
+      "options": [],
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "decision_attempts": [
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.1:4",
+            "engineering_decision": "Your company is building a product recommendation service for its online store. The team has connected the storefront to an Agent Platform endpoint in its prelaunch environment and registered baseline and candidate model versions. Offline evaluation favors the candidate, but its effect on shoppers is still uncertain. You want to compare the versions on live traffic while minimizing customer exposure to the candidate. You also want to reuse the serving integration while minimizing application and infrastructure changes. What should you do?",
+            "business_consequence": "A controlled rollout can reveal whether the candidate improves purchases while limiting lost sales if its recommendations perform poorly.",
+            "existing_system": "The new storefront integration uses an Agent Platform endpoint in a prelaunch environment. Baseline and candidate recommendation models are registered and have undergone offline evaluation.",
+            "decisive_constraints": [
+              "You want to compare recommendation versions on live traffic while minimizing customer exposure to the candidate.",
+              "You want to reuse the serving integration while minimizing application and infrastructure changes."
+            ],
+            "best_action": "Deploy both recommendation versions to one Agent Platform endpoint, assign the candidate a small traffic share, and compare version-level outcomes before increasing its share.",
+            "mistakes": [
+              {
+                "action": "Serve the recommendation versions from separate Agent Platform endpoints, implement random routing in the storefront, and adjust application routing weights as candidate performance becomes clearer.",
+                "scenario_reason": "This can implement a canary, but it adds application routing and endpoint management that the existing endpoint's model traffic splitting can handle."
+              },
+              {
+                "action": "Package both recommendation versions as Cloud Run revisions, configure weighted revision traffic, and expand the candidate revision's share as its observed recommendation performance improves.",
+                "scenario_reason": "Cloud Run revision splitting is a plausible rollout mechanism, but moving inference there adds serving packaging and integration changes despite the existing Agent Platform setup."
+              },
+              {
+                "action": "Run the recommendation service on GKE, replace baseline replicas through a rolling update, and compare recommendation outcomes during the deployment.",
+                "scenario_reason": "A rolling update progressively replaces replicas rather than maintaining a controlled candidate traffic share for comparison. It also introduces cluster operations for this new service."
+              }
+            ]
+          },
+          "proof": {
+            "passed": false,
+            "reason": "The supplied docs don't establish A's decisive capability: configurable traffic splitting between registered model versions on one prediction endpoint. Agent runtime revision splitting concerns reasoningEngine resources, while the model rolling-deployment page describes replacement rather than an independently controlled canary. B's rejection consequently relies on an unverified capability. D's replica rolling-update behavior is also unverified: the GKE sources cover Gateway traffic splitting and cluster/node upgrades, not application Deployment rolling updates. Cloud Run splitting is supported, but A cannot be established as uniquely best. The decision needs replacement or directly applicable evidence; agent/model capability conflation cannot supply that evidence.",
+            "mechanical_check": {
+              "passed": false,
+              "errors": [
+                "Evidence must contain A, B, C and D exactly once"
+              ]
+            }
+          }
+        },
+        {
+          "plan": {
+            "objective_id": "machine-learning-engineer:standard:4.1:4",
+            "engineering_decision": "Your company is building a support-ticket prioritization service on Cloud Run. The team has prepared baseline and candidate classifiers as containers, and offline evaluation favors the candidate. The first production launch will send incoming tickets through the service. You want to compare the classifiers using real ticket outcomes while minimizing the impact of a weaker candidate. You also want to keep serving operations simple as the team adjusts exposure. What should you do?",
+            "business_consequence": "A controlled rollout can establish whether the candidate improves ticket prioritization while limiting delays caused by incorrect rankings and allowing a quick return to the baseline.",
+            "existing_system": "The new ticket application integrates with a Cloud Run service in a prelaunch environment. Baseline and candidate classifier containers are ready for the first production launch.",
+            "decisive_constraints": [
+              "You want to compare the classifiers using real ticket outcomes while minimizing the impact of a weaker candidate.",
+              "You want to keep serving operations simple as the team adjusts exposure."
+            ],
+            "best_action": "Deploy both classifiers as Cloud Run revisions, assign the candidate a small traffic share, and adjust that share after comparing production outcomes while retaining the baseline for rollback.",
+            "mistakes": [
+              {
+                "action": "Publish the candidate as a tagged Cloud Run revision, retain the baseline's service traffic allocation, and compare revision outcomes as support tickets reach the service.",
+                "scenario_reason": "A revision tag provides a direct address for targeted requests; it does not assign the candidate a share of requests arriving at the service address. This rollout would not produce the intended production comparison."
+              },
+              {
+                "action": "Deploy the classifiers to separate Agent Platform endpoints, implement weighted request routing in the existing ticket application, and compare production outcomes before gradually shifting incoming requests toward the candidate endpoint.",
+                "scenario_reason": "This approach can implement a controlled comparison, but it introduces a serving migration and application routing logic when Cloud Run revision traffic allocation fits the prepared containers and existing integration."
+              },
+              {
+                "action": "Move the classifier containers to a GKE cluster, deploy each behind its own service, and configure Gateway traffic weights to compare production outcomes before progressively expanding the candidate's share of requests.",
+                "scenario_reason": "GKE Gateway traffic weighting is a plausible canary mechanism, but introducing cluster, service, and Gateway operations adds unnecessary infrastructure work for this Cloud Run workload."
+              }
+            ]
+          },
+          "proof": {
+            "passed": false,
+            "reason": "The supplied docs support A's revision traffic splitting and rollback, B's failure to allocate production traffic through tagging alone, and D's additional Gateway infrastructure. However, no supplied documentation verifies deploying these classifier containers to Agent Platform endpoints in C. Its capability and scenario-specific rejection therefore remain unverified, preventing approval of the complete decision. Replace the unsupported alternative or supply official evidence for it.",
+            "mechanical_check": {
+              "passed": false,
+              "errors": [
+                "Evidence must contain A, B, C and D exactly once"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "existing_questions": [
+    {
+      "id": "420f7f83-b69a-5c8e-9621-b293c171fedc",
+      "stem": "You work for a retailer whose running demand-forecasting model guides inventory purchases. As the business grows, your team retrains more frequently. The current release is registered in Agent Platform Model Registry, but newer artifacts accumulate in storage directories, and a shared spreadsheet tracks the production release. You want to retain identifiable releases with clear references to production and candidate versions while minimizing manual release bookkeeping. Which approach should you use?",
+      "key": "Register each retrained artifact as a new version of the existing Agent Platform Model Registry model and assign production and candidate aliases."
+    },
+    {
+      "id": "060fbb68-b02a-5928-80ad-9146b569e0b5",
+      "stem": "You work for a retailer whose production demand forecasts guide inventory replenishment. During a monitoring review, your team struggled to connect a drop in forecast quality to the correct model release. Retraining runs produce new artifacts, but each release has a separate registry entry and approval status lives in a spreadsheet. You want to keep retrained releases together in a traceable model history while minimizing manual bookkeeping. Which approach should you use?",
+      "key": "Register each retrained demand model as a version under one Agent Platform Model Registry entry, and assign movable aliases to identify the approved and previous releases."
+    }
+  ],
+  "outcomes": [
+    {
+      "index": 1,
+      "objective_id": "machine-learning-engineer:standard:4.1:1",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 2,
+      "objective_id": "machine-learning-engineer:standard:4.1:2",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 3,
+      "objective_id": "machine-learning-engineer:standard:4.1:3",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "B",
+      "failure_stage": "near_duplicate",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 4,
+      "objective_id": "machine-learning-engineer:standard:4.1:4",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": true,
+      "key": "D",
+      "failure_stage": null,
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 5,
+      "objective_id": "machine-learning-engineer:standard:4.1:5",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "B",
+      "failure_stage": "near_duplicate",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 6,
+      "objective_id": "machine-learning-engineer:standard:4.2:1",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "near_duplicate",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 7,
+      "objective_id": "machine-learning-engineer:standard:4.2:2",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "D",
+      "failure_stage": "near_duplicate",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 8,
+      "objective_id": "machine-learning-engineer:standard:4.2:3",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 9,
+      "objective_id": "machine-learning-engineer:standard:4.2:4",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "C",
+      "failure_stage": "judge",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 10,
+      "objective_id": "machine-learning-engineer:standard:4.2:5",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 11,
+      "objective_id": "machine-learning-engineer:standard:4.1:1",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 12,
+      "objective_id": "machine-learning-engineer:standard:4.1:2",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": true,
+      "key": "B",
+      "failure_stage": null,
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 13,
+      "objective_id": "machine-learning-engineer:standard:4.1:3",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": true,
+      "key": "D",
+      "failure_stage": null,
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 14,
+      "objective_id": "machine-learning-engineer:standard:4.1:4",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 15,
+      "objective_id": "machine-learning-engineer:standard:4.1:5",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 16,
+      "objective_id": "machine-learning-engineer:standard:4.2:1",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 17,
+      "objective_id": "machine-learning-engineer:standard:4.2:2",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "D",
+      "failure_stage": "judge",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 18,
+      "objective_id": "machine-learning-engineer:standard:4.2:3",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "D",
+      "failure_stage": "judge",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 19,
+      "objective_id": "machine-learning-engineer:standard:4.2:4",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "D",
+      "failure_stage": "near_duplicate",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 20,
+      "objective_id": "machine-learning-engineer:standard:4.2:5",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 21,
+      "objective_id": "machine-learning-engineer:standard:4.1:1",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": true,
+      "key": "C",
+      "failure_stage": null,
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 22,
+      "objective_id": "machine-learning-engineer:standard:4.1:2",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": true,
+      "key": "B",
+      "failure_stage": null,
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 23,
+      "objective_id": "machine-learning-engineer:standard:4.1:3",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "D",
+      "failure_stage": "near_duplicate",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 24,
+      "objective_id": "machine-learning-engineer:standard:4.1:4",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 25,
+      "objective_id": "machine-learning-engineer:standard:4.1:5",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "near_duplicate",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 26,
+      "objective_id": "machine-learning-engineer:standard:4.2:1",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 27,
+      "objective_id": "machine-learning-engineer:standard:4.2:2",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 28,
+      "objective_id": "machine-learning-engineer:standard:4.2:3",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    },
+    {
+      "index": 29,
+      "objective_id": "machine-learning-engineer:standard:4.2:4",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "C",
+      "failure_stage": "judge",
+      "options": [
+        {}
+      ]
+    },
+    {
+      "index": 30,
+      "objective_id": "machine-learning-engineer:standard:4.2:5",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "accepted": false,
+      "key": "A",
+      "failure_stage": "decision_veto",
+      "options": []
+    }
+  ]
+}

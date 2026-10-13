@@ -53,7 +53,7 @@ def test_typed_plan_has_required_decision_fields_and_no_documentation_input():
     assert set(DecisionPlan.model_fields) == {
         "objective_id", "engineering_decision", "business_consequence", "existing_system",
         "decisive_constraints", "best_action", "mistakes"}
-    assert set(DecisionPlanSignature.input_fields) == {"objective_scope", "difficulty", "replacement_feedback"}
+    assert set(DecisionPlanSignature.input_fields) == {"objective_scope", "difficulty", "replacement_feedback", "existing_scenarios"}
     assert output_model(DecisionPlanSignature).model_json_schema()["additionalProperties"] is False
     for constraints, mistakes in [([], 3), (["one", "two", "three"], 3), (["one"], 2), (["one"], 4)]:
         data = decision()
@@ -224,11 +224,38 @@ def test_repeated_or_second_unsupported_decision_discarded_before_writer(pipelin
         **proof(False), "passed": False, "mechanical_check": {"passed": False, "errors": []}})
     result = invoke()
     assert result.exit_code != 0
-    assert len(calls) == 2
+    assert len(calls) == (2 if repeat_decision else 3)
     assert "writer" not in events and "citation" not in events
     entry = json.loads((path / "batch.json").read_text())["candidates"][0]
     assert not entry["accepted"] and "external_judge_request" not in entry
 
+
+
+@pytest.mark.parametrize("repeat_first", [False, True])
+def test_third_attempt_support_or_repeating_first_veto(pipeline, monkeypatch, repeat_first):
+    events, path, invoke = pipeline
+    decisions = iter([decision("First unsupported"), decision("Second unsupported"),
+                      decision("First unsupported") if repeat_first else decision()])
+    feedback = []
+    def planner(*a, **kw):
+        feedback.append(kw["replacement_feedback"])
+        return next(decisions)
+    monkeypatch.setattr(generate, "plan_decision", planner)
+    proofs = iter([False, False, True])
+    monkeypatch.setattr(generate, "verify_decision", lambda *a, **kw: dict(proof(value := next(proofs)),
+        passed=value, mechanical_check={"passed": value, "errors": []}))
+    result = invoke()
+    assert result.exit_code == int(repeat_first), result.output
+    assert len(feedback) == 3
+    assert all(text in feedback[2] for text in ("First unsupported", "Second unsupported"))
+    entry = json.loads((path / "batch.json").read_text())["candidates"][0]
+    assert entry["decision_attempt_count"] == 3
+    assert entry.get("awaiting_external_judge", False) is not repeat_first
+    if repeat_first:
+        assert entry["failure_stage"] == "decision_veto"
+        assert "writer" not in events
+    else:
+        assert entry["decision_proof"]["passed"] is True
 
 @pytest.mark.parametrize("passed", [True, False])
 def test_inline_raw_gate_bundle_and_decision_provenance_retained(pipeline, monkeypatch, passed):
