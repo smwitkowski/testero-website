@@ -71,7 +71,7 @@ export async function readDiagnostic(client: SupabaseClient, id: string, credent
   return {
     sessionId: session.id, status: completed ? "completed" : "in_progress",
     totalQuestions: session.question_count, answeredCount,
-    currentQuestion: current ? { id: current.id, ordinal: current.ordinal, stem: current.stem, options: current.options.map(option => ({ label: option.label, text: option.text })) } : null,
+    currentQuestion: current ? { id: current.id, ordinal: current.ordinal, domainCode: current.domain_code, stem: current.stem, options: current.options.map(option => ({ label: option.label, text: option.text })) } : null,
   };
 }
 

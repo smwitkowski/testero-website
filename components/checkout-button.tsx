@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { trackCheckoutStarted } from "@/lib/analytics/client";
+import { analyticsHeaders, trackCheckoutStarted } from "@/lib/analytics/client";
 import { Button } from "@/components/ui/button";
 
 /** Only accept the destination returned by the verified billing API. */
@@ -22,7 +22,7 @@ export function checkoutDestination(value: unknown): string | null {
 export async function beginCheckout(): Promise<string> {
   const response = await fetch("/api/billing/checkout", {
     method: "POST", cache: "no-store", credentials: "same-origin",
-    headers: { "Content-Type": "application/json" }, body: "{}",
+    headers: { "Content-Type": "application/json", ...analyticsHeaders() }, body: "{}",
   });
   if (!response.ok) throw new Error(response.status === 401 ? "Please sign in again before starting checkout." : "Checkout is unavailable. Please retry.");
   const result = await response.json();

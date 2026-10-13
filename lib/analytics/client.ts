@@ -12,9 +12,10 @@ export function initializeAnalytics() {
     capture_pageview: false,
     capture_pageleave: false,
     autocapture: false,
-    disable_session_recording: true,
+    disable_session_recording: false,
+    session_recording: { maskAllInputs: true, maskTextSelector: "*" },
     person_profiles: "identified_only",
-    persistence: "memory",
+    persistence: "localStorage+cookie",
   });
   initialized = true;
 }
@@ -24,7 +25,7 @@ export function trackPageview(path: string) {
 }
 
 export function trackDiagnostic(event: "diagnostic_started" | "diagnostic_completed", sessionId: string) {
-  if (initialized) posthog.capture(event, { session_id: sessionId });
+  if (initialized) posthog.capture(event, { session_id: sessionId, $insert_id: `${event}:${sessionId}` });
 }
 
 export function trackSignupCompleted() {
@@ -35,4 +36,25 @@ export function trackPractice(sessionId: string) {
 }
 export function trackCheckoutStarted() {
   if (initialized) posthog.capture("checkout_started", { plan_name: "PMLE Pass" });
+}
+
+export function identifyAnalytics(userId: string) {
+  initializeAnalytics();
+  if (initialized && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) posthog.identify(userId);
+}
+
+export function resetAnalytics() {
+  if (initialized) posthog.reset();
+}
+
+export function analyticsHeaders(): Record<string, string> {
+  initializeAnalytics();
+  if (!initialized) return {};
+  return { "X-PostHog-Distinct-Id": posthog.get_distinct_id() };
+}
+
+export function trackDiagnosticAnswer(sessionId: string, ordinal: number, domainCode: string) {
+  if (initialized) posthog.capture("diagnostic_question_answered", {
+    session_id: sessionId, ordinal, domain_code: domainCode,
+  });
 }

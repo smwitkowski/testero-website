@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { DiagnosticAnswerResponse, DiagnosticProgress } from "@/lib/diagnostic/types";
-import { trackDiagnostic } from "@/lib/analytics/client";
+import { trackDiagnostic, trackDiagnosticAnswer } from "@/lib/analytics/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DiagnosticError, DiagnosticLoading } from "@/components/diagnostic-state";
@@ -50,6 +50,7 @@ export function DiagnosticSession({ sessionId }: { sessionId: string }) {
         body: JSON.stringify({ itemId: question.id, selectedLabel: selected }), signal,
       });
       if (signal.aborted) return;
+      trackDiagnosticAnswer(sessionId, question.ordinal, question.domainCode);
       if (result.completed) {
         completed = true;
         trackDiagnostic("diagnostic_completed", sessionId);

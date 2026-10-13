@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { scheduleFunnelEvent } from "@/lib/analytics/server";
+vi.mock("@/lib/analytics/server", () => ({ scheduleFunnelEvent: vi.fn() }));
 import { POST as start } from "@/app/api/diagnostic/route";
 import { GET as read } from "@/app/api/diagnostic/[sessionId]/route";
 import { POST as answer } from "@/app/api/diagnostic/[sessionId]/answer/route";
@@ -242,4 +244,21 @@ describe("diagnostic confirmed credentials", () => {
     mocks.getUser.mockResolvedValue({ data: { user: { id: "untrusted-user", email_confirmed_at: "2026-10-03T12:00:00Z" } }, error: { message: "secret auth error" } });
     expect(await diagnosticCredentials()).toEqual({ userId: null, anonymousToken: null });
   });
+});
+
+it("tracks successful creation and completed answers only", async () => {
+  await start(request());
+  expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_started", sessionId, { session_id: sessionId });
+  vi.mocked(scheduleFunnelEvent).mockClear();
+  await answer(request({ itemId, selectedLabel: "A" }), context);
+  expect(scheduleFunnelEvent).not.toHaveBeenCalled();
+  vi.mocked(answerDiagnostic).mockResolvedValue({ answeredCount: 20, totalQuestions: 20, completed: true });
+  await answer(request({ itemId, selectedLabel: "A" }), context);
+  expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_completed", sessionId, { session_id: sessionId });
+  vi.mocked(scheduleFunnelEvent).mockClear();
+  vi.mocked(createDiagnostic).mockRejectedValue(new DiagnosticError(503, "Unavailable"));
+  await start(request());
+  vi.mocked(answerDiagnostic).mockRejectedValue(new DiagnosticError(409, "Conflict"));
+  await answer(request({ itemId, selectedLabel: "A" }), context);
+  expect(scheduleFunnelEvent).not.toHaveBeenCalled();
 });

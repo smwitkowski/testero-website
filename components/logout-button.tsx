@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { resetAnalytics } from "@/lib/analytics/client";
 import { Button } from "@/components/ui/button";
 export function LogoutButton() {
   const [pending, setPending] = useState(false);
@@ -10,6 +11,7 @@ export function LogoutButton() {
     try {
       const response = await fetch("/api/auth/logout", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
       if (!response.ok) { setError("Unable to sign out. Please try again."); return; }
+      resetAnalytics();
       // Reload to drop cached protected server-component data after cookie clearing.
       window.location.assign(new URL("/", window.location.origin).href);
     } catch { setError("Unable to sign out. Please try again."); }

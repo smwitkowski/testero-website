@@ -17,7 +17,7 @@ vi.mock("react", async importOriginal => {
 vi.mock("@/lib/auth/session", () => ({ getVerifiedUser: mocks.user }));
 vi.mock("@/lib/auth/require-user", () => ({ requireUser: mocks.requireUser }));
 vi.mock("@/lib/billing/paid-access", () => ({ getPaidAccess: mocks.access }));
-vi.mock("@/lib/analytics/client", () => ({ trackCheckoutStarted: mocks.checkoutEvent }));
+vi.mock("@/lib/analytics/client", () => ({ trackCheckoutStarted: mocks.checkoutEvent, analyticsHeaders: () => ({ "X-PostHog-Distinct-Id": "anonymous-id" }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 const free: PaidAccess = { hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null };
 const paid: PaidAccess = { hasPaidAccess: true, isLegacySubscriber: false, accessUntil: "2027-01-01T00:00:00Z", pass: { id: "pass", paid_at: "2026-10-03T00:00:00Z", expires_at: "2027-01-01T00:00:00Z", refunded_at: null } };
@@ -86,7 +86,7 @@ describe("billing browser boundary", () => {
   it("posts only {} and tracks checkout_started only for the actual Stripe redirect", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ href: "https://checkout.stripe.com/c/pay/test" })));
     expect(await beginCheckout()).toBe("https://checkout.stripe.com/c/pay/test"); expect(mocks.checkoutEvent).toHaveBeenCalledOnce();
-    expect(fetch).toHaveBeenCalledWith("/api/billing/checkout", expect.objectContaining({ method: "POST", body: "{}", cache: "no-store", credentials: "same-origin" }));
+    expect(fetch).toHaveBeenCalledWith("/api/billing/checkout", expect.objectContaining({ method: "POST", body: "{}", cache: "no-store", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-PostHog-Distinct-Id": "anonymous-id" } }));
     mocks.checkoutEvent.mockClear();
     vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ href: "/account", alreadyActive: true })));
     expect(await beginCheckout()).toBe("/account"); expect(mocks.checkoutEvent).not.toHaveBeenCalled();

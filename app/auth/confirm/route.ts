@@ -1,3 +1,4 @@
+import { scheduleFunnelEvent } from "@/lib/analytics/server";
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getVerifiedUser, claimVerifiedDiagnostics } from "@/lib/auth/session";
@@ -28,6 +29,7 @@ export async function GET(request: Request) {
     const flow = data.type ?? data.flow;
     if (flow === "recovery") return destination(request, "/reset-password");
     await claimVerifiedDiagnostics(user);
+    if (flow === "signup") scheduleFunnelEvent(request, "signup_completed", user.id, {}, `signup_completed:${user.id}`);
     return destination(request, flow === "signup" ? signupDestination(data.next) : data.next);
   } catch { return invalid(); }
 }
