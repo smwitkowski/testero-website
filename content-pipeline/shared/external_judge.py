@@ -16,6 +16,7 @@ from shared.quality_gate import QUESTION_FIELDS, QuestionQualitySignature
 EXTERNAL_POLICY_MODEL = "anthropic/claude-sonnet-5.5"
 REQUEST_CHARACTER_LIMIT = 150000
 QUOTE_WINDOW_MARGIN = 8000
+ARGON_QUOTE_WINDOW_MARGIN = 4000
 
 
 def request_directory(artifact_path):
@@ -231,7 +232,7 @@ def _merge_windows(windows):
     return merged
 
 
-def _source_context(cited, evidence, trimmed_urls):
+def _source_context(cited, evidence, trimmed_urls, *, margin=QUOTE_WINDOW_MARGIN):
     excerpts, records = [], []
     for source in cited:
         text = source["text"]
@@ -248,8 +249,8 @@ def _source_context(cited, evidence, trimmed_urls):
             if item["url"] == source["url"]:
                 quote = normalize_whitespace(item["quote"])
                 start = normalized.index(quote)
-                windows.append([max(0, start - QUOTE_WINDOW_MARGIN),
-                                min(len(normalized), start + len(quote) + QUOTE_WINDOW_MARGIN)])
+                windows.append([max(0, start - margin),
+                                min(len(normalized), start + len(quote) + margin)])
         windows = _merge_windows(windows)
         # If the wide windows cover everything, retain the original full fetch.
         if windows == [[0, len(normalized)]]:
@@ -262,7 +263,7 @@ def _source_context(cited, evidence, trimmed_urls):
         record.update({"trimmed": True, "excerpt_sha256": digest,
                        "normalized_characters": len(normalized),
                        "included_characters": sum(end-start for start, end in windows),
-                       "margin": QUOTE_WINDOW_MARGIN, "windows": windows})
+                       "margin": margin, "windows": windows})
         records.append(record)
     enabled = any(record["trimmed"] for record in records)
     metadata = {"enabled": enabled,
@@ -292,10 +293,14 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
     schema = output_model(signature).model_json_schema() if signature is not None else None
     trimmed_urls = set()
     largest_first = sorted(cited, key=lambda source: len(source["text"]), reverse=True)
-    for count in range(len(largest_first) + 1):
-        if count:
+    # The optional full Argon review repeats documentation. Only that bundle may
+    # retry with smaller, still-wide windows; historical requests keep 8000.
+    for count in range(len(largest_first) + 1 + int(argon_gate)):
+        tighter_argon = count > len(largest_first)
+        if count and not tighter_argon:
             trimmed_urls.add(largest_first[count - 1]["url"])
-        context, trimming = _source_context(cited, evidence, trimmed_urls)
+        context, trimming = _source_context(cited, evidence, trimmed_urls,
+            margin=ARGON_QUOTE_WINDOW_MARGIN if tighter_argon else QUOTE_WINDOW_MARGIN)
         if signature is not None:
             inputs = {"question_data": question, "domain_context": scope["domain_prompt"],
                       "documentation_context": context, "option_evidence": evidence}

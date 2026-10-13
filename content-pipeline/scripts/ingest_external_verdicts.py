@@ -475,7 +475,9 @@ def ingest(path, verdicts, *, dry_run=False):
         _flush(path, payload)
         if blocked:
             raise click.ClickException("Persistence journal requires reconciliation; no new DB writes")
-        if not payload["key_position_report"]["passed"] or not payload["template_diversity_report"]["passed"]:
+        if not payload["key_position_report"]["count"]:
+            raise click.ClickException("No passing candidates; no new DB writes")
+        if payload["key_position_report"]["passed"] is False or not payload["template_diversity_report"]["passed"]:
             raise click.ClickException("V5 batch report failed; no new DB writes")
     _flush(path, payload)
     if not dry_run and (pending or payload["generation_runs"]):

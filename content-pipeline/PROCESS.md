@@ -14,7 +14,15 @@ v4 guard and use fresh artifact names. Historical v4 requests remain v4.
    two constraints then pick whichever meets both keys are capped at **20%** of
    passing candidates; they still must pass the product-knowledge style gate.
 2. Retrieve official documentation as a veto, write, and verify exact receipts
-   as in v4. Then shuffle **stored** options deterministically using SHA256 of
+   as in v4. Before the veto, add a separate discovery query for the best action
+   and each distractor's named products/capabilities and proposed tradeoff. Each
+   option fetches at most **2** discovered official documents: **8 extra**, or
+   **13 total** with the existing 5-document main query per decision attempt.
+   A run-local cache shares repeated URLs and failures; results merge by final URL
+   with conflicting text rejected. Missing option evidence stays a veto, not a
+   guessed URL, synthetic receipt or automatic approval. Lifecycle dates matter:
+   do not key answers on deprecated/unsupported containers; continued availability
+   does not establish support at the retrieval date. Then shuffle **stored** options deterministically using SHA256 of
    the candidate ID and a local random generator. Store the label mapping, key,
    rationales and receipt labels together. Judges use reconstructed canonical
    fields; blind/style projections have a separate learner-only shuffle.
@@ -25,8 +33,11 @@ v4 guard and use fresh artifact names. Historical v4 requests remain v4.
    `choice_text`/`is_correct`. RETIRED rows are excluded. Missing/invalid active
    rows block. The artifact freezes a comparison snapshot and export SHA256.
    Without this flag only within-batch checks run; no database is read.
-4. Report stored key counts. **Any position above 40% fails**, including small
-   batches (one/two items cannot pass). A random deterministic shuffle does not
+4. Report stored key counts. **Any position above 40% fails at N>=10 eligible
+   candidates**. Smaller nonempty samples are informational, not cap failures;
+   malformed keys and real candidate failures still block. With zero eligible candidates the report is
+   **not available** (`passed: null`), not a key-position failure. The batch still
+   fails for its real candidate/veto failure; ingest blocks an empty passing set. A random deterministic shuffle does not
    guarantee a passing distribution. Inspect failures; never hand-edit mappings.
    Generation reports all option-bearing candidates; ingest gates nonsuperseded
    passing candidates before any new question writes. Repaired children get their
@@ -434,7 +445,10 @@ Each option needs fresh exact A–D URL/quote receipts, with quote membership
 checked against its own frozen fetched text. Quote membership is provenance,
 not semantic proof. Requests use full cited text first, bounded at 150,000
 serialized characters; oversized sources use largest-first fixed ±8,000-character
-quote windows, never narrower windows to fit. Schema or mechanical failures
+quote windows. Historical/non-Argon windows never narrow to fit. Only an
+oversized rules-v5 Argon bundle retries at ±4,000 characters after the wide
+windows fail; it preserves quotes, rubric/schema and fetch hashes, and still
+fails above the unchanged cap. Schema or mechanical failures
 never reach judging. Do not weaken these gates to recover a PASS.
 
 #### Commands, in order
@@ -783,8 +797,10 @@ SHA-256 of its exact bytes. Candidates are **not accepted and not published**
 while awaiting a verdict. Requests include the full fetched official source
 text first, up to 150000 serialized characters. If needed, the largest cited
 sources are trimmed one at a time to quote-centered windows with 8000 characters
-on each side. Windows are merged; they are never narrowed to squeeze a request
-under the limit. A request that still exceeds the limit fails closed. Per-source
+on each side. Windows are merged. Historical/non-Argon requests never narrow
+these windows; only oversized rules-v5 Argon bundles retry at 4000 characters
+per side, preserving verified quotes, rubrics, schemas and fetch hashes. A
+request that still exceeds the unchanged limit fails closed. Per-source
 trimming flags, offsets and hashes are recorded. A quote match alone is not
 semantic proof or a judge PASS. Inspect failed candidate records; schema or
 mechanical rejects must not be sent for judging.

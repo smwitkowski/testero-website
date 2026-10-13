@@ -46,6 +46,8 @@ class DecisionPlanSignature(dspy.Signature):
     keys are capped at 20% per batch. Prefer unnecessary
     migration, wrong execution mode, wrong metric, or missing validation over
     feature gotchas, arbitrary limits, syntax trivia, or hidden exceptions.
+    Do not key answers on deprecated or unsupported serving containers. Prefer
+    currently supported approaches; fetched lifecycle dates must veto outdated plans.
     No sources are supplied at this stage; proposals are unverified, not evidence.
     Follow current short Agent Platform names. If a previous decision is vetoed,
     replace its decision and alternatives; do not retain it with extra constraints,
@@ -77,6 +79,8 @@ class DecisionProofSignature(dspy.Signature):
     case-sensitive quote <=300 characters from that URL's own text. These receipts
     prove provenance only; final evidence review remains independent. On a veto,
     reasons may be empty and reason must explain why the decision needs replacement.
+    Verify container patch/support dates against the supplied retrieval timestamp. Availability alone does not prove current support;
+    deprecated containers cannot establish a supported best action.
     """
     objective_scope: str = dspy.InputField()
     proposed_plan: str = dspy.InputField()

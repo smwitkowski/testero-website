@@ -20,7 +20,7 @@ def _field(value, name, default=None):
 
 
 def _safe_completion(completion: str) -> str:
-    """Redact and cap actual completion text, never requests or exception bodies."""
+    """Redact and cap completion text or local error messages, never provider bodies."""
     text = re.sub(
         r"(?im)^.*(?:authorization|proxy-authorization|x-api-key|api[_-]?key|"
         r"set-cookie|cookie|password|passwd|client[_-]?secret|access[_-]?token|"

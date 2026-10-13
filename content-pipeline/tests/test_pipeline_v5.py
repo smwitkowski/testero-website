@@ -47,7 +47,7 @@ def test_key_position_report_boundary_and_failure():
     assert key_position_report(rows)["passed"]
     assert key_position_report(rows)["counts"] == {"A": 4, "B": 2, "C": 2, "D": 2}
     assert not key_position_report(rows + [{"options": [{}], "key": "A"}])["passed"]
-    assert not key_position_report([])["passed"]
+    assert key_position_report([])["passed"] is None
 
 
 def test_dedupe_calibration_only_known_batch8_pair_flagged():
@@ -193,15 +193,15 @@ def prepare_v5(case, *, argon=False):
     return request, raw
 
 
-def test_real_ingest_batch_cap_blocks_before_database(v4):
+def test_real_ingest_small_batch_report_is_informational(v4):
     case, _, _ = v4
     prepare_v5(case)
     result = invoke(case)
-    assert result.exit_code == 1 and "batch report failed" in result.output
-    case[4].assert_not_called()
+    assert result.exit_code == 0, result.output
     payload = saved(case)
     assert payload["key_position_report"]["count"] == 1
-    assert not payload["key_position_report"]["passed"]
+    assert payload["key_position_report"]["passed"] is True
+    assert payload["key_position_report"]["enforced"] is False
 
 
 def test_real_ingest_export_duplicate_blocks_before_database(v4):
@@ -223,7 +223,7 @@ def test_real_ingest_export_duplicate_blocks_before_database(v4):
 def test_argon_completed_journal_replay_blocks_tampered_receipts(v4, monkeypatch, defect):
     case, _, _ = v4
     request, raw = prepare_v5(case, argon=True)
-    # N1 integration fixture isolates receipt replay from the separately tested cap.
+    # Isolate receipt replay from the separately tested batch report.
     monkeypatch.setattr(ingest, "key_position_report", lambda rows: {"count": len(rows), "counts": {k: 0 for k in "ABCD"}, "passed": True})
     result = invoke(case)
     assert result.exit_code == 0, result.output
@@ -289,7 +289,8 @@ def test_inline_batch_report_blocks_question_writes(pipeline, monkeypatch):
     client.create_generation_run.return_value = {"id": "run"}
     client.update_generation_run.return_value = True
     monkeypatch.setattr(generate, "database_client", lambda: client)
-    monkeypatch.setattr(generate, "key_position_report", key_position_report)
+    # Exercise the real N>=10 blocking report through this one-row write harness.
+    monkeypatch.setattr(generate, "key_position_report", lambda rows: key_position_report(list(rows) * 10))
     monkeypatch.setattr(generate, "judge_three_gates", lambda *a, **kw: aggregate_gate_verdict(QUESTION, bundle(QUESTION)))
     result = invoke_pipeline("--judge-model", "claude")
     assert result.exit_code == 1 and "Key-position batch report failed" in result.output

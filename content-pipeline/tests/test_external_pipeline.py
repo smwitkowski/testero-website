@@ -49,7 +49,7 @@ def test_real_codex_content_mixed_batch_ingests_once_with_synthetic_verdict(monk
     client.update_generation_run.return_value = True
     factory = Mock(return_value=client)
     monkeypatch.setattr(ingest,"database_client",factory)
-    # One passing row cannot meet the real <=40% cap; this test isolates write replay.
+    # This infrastructure test isolates write replay from batch policy.
     monkeypatch.setattr(ingest, "key_position_report", lambda rows: {"count": len(rows), "counts": {label: 0 for label in "ABCD"}, "passed": True})
     flags = ["--artifact",str(artifact),"--verdicts",str(verdicts)]
     dry = CliRunner().invoke(ingest.main, [*flags,"--dry-run"])

@@ -347,9 +347,12 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 reject_candidate(entry, stage, "Candidate persistence failed; founder approval remains blocked")
             accepted += int(entry["accepted"])
         except Exception as exc:
-            # Never copy provider exception bodies/credentials into artifacts or stdout.
+            # External request construction is local; provider failures stay generic.
             entry["error_class"] = type(exc).__name__
-            reject_candidate(entry, stage, str(exc) if isinstance(exc, CLIModelError) else stage.capitalize() + " request failed")
+            if stage == "external_request":
+                entry["error_message"] = _safe_completion(str(exc))[:1000]
+            reject_candidate(entry, stage, str(exc) if stage == "external_request" or isinstance(exc, CLIModelError)
+                             else stage.capitalize() + " request failed")
             if isinstance(exc, (CLIUsageLimitError, CLIAuthError, CodexModelRejectedError)):
                 stop_event.set()  # Stop admission now, not after ordered publication.
                 with write_lock:
@@ -441,8 +444,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     click.echo(f"Accepted {accepted}/{n_questions}; artifact: {artifact}")
     if batch_stop:
         raise click.ClickException(batch_stop["reason"])
-    if not payload["key_position_report"]["passed"] or (not external and not payload["write_key_position_report"]["passed"]):
-        raise click.ClickException("Key-position batch report failed; any position above 40% blocks the batch")
+    if payload["key_position_report"]["passed"] is False or (not external and payload["write_key_position_report"]["passed"] is False):
+        raise click.ClickException("Key-position batch report failed; invalid keys or a position above 40% at N>=10 blocks the batch")
     if not external and payload["template_diversity_report"]["count"] and not payload["template_diversity_report"]["passed"]:
         raise click.ClickException("Template-diversity batch report failed; generic validation keys exceed 20%")
     if external:
