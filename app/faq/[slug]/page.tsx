@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExamAvailabilityNotice } from "@/components/exam-availability";
 import { notFound } from "next/navigation";
 import { MarkdownContent } from "@/components/markdown-content";
 import { getFaqEntry, getFaqEntries } from "@/lib/content/loader";
@@ -16,9 +17,10 @@ export default async function FaqArticlePage({ params }: PageProps) {
   const { slug } = await params;
   const entry = getFaqEntry(slug);
   if (!entry) notFound();
-  return <article className="space-y-8">
-    <Link href="/faq" className="text-sm font-medium text-primary hover:underline">← Back to faq</Link>
-    <header className="space-y-3"><h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">{entry.title}</h1>{entry.publishedAt && <p className="text-sm text-muted-foreground">Originally published <time dateTime={entry.publishedAt}>{entry.publishedAt}</time></p>}</header>
+  return <article className="certification-content space-y-8">
+    <Link href="/faq" className="text-sm font-medium text-primary hover:underline">← Back to FAQ</Link>
+    <header className="space-y-3"><h1 className="text-pretty text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">{entry.title}</h1>{entry.publishedAt && <p className="text-sm text-muted-foreground">Originally published <time dateTime={entry.publishedAt}>{entry.publishedAt}</time></p>}</header>
+    <ExamAvailabilityNotice exam={entry.exam} />
     {entry.editorialNotice && <aside aria-label="Editorial notice" className="rounded-lg border border-border bg-muted p-5 text-sm leading-relaxed"><p className="mb-2 font-semibold">Editorial notice</p><p>{entry.editorialNotice}</p></aside>}
     <p className="rounded-lg border border-border bg-muted p-5 text-sm leading-relaxed">Historical certification answer. Exam fees, formats, registration providers, and program requirements can change. Check the linked sources and <a className="text-primary underline" href="https://cloud.google.com/learn/certification">current official Google Cloud guidance</a> before booking or choosing a course. No certification or preparation tool guarantees a job or salary increase.</p>
     <MarkdownContent content={entry.body} />

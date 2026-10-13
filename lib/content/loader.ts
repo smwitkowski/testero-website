@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import catalog from "@/content/catalog.json";
+import { contentExam } from "@/lib/content/exam";
 import { parseFrontmatter, safeHref } from "@/lib/content/markdown";
 import { BLOG_EDITORIAL_NOTICE, BLOG_PUBLICATION_OVERLAYS, FAQ_PUBLICATION_OVERLAYS } from "@/lib/content/editorial";
 
@@ -12,6 +13,7 @@ export interface ContentEntry {
   title: string;
   description: string;
   body: string;
+  exam: string;
   citations: string[];
   publishedAt?: string;
   editorialNotice?: string;
@@ -31,7 +33,7 @@ export function getBlogEntries(): ContentEntry[] {
     if (!overlay || createHash("sha256").update(document.source).digest("hex") !== overlay.sourceSha256) {
       throw new Error(`Blog source requires editorial review: ${item.slug}`);
     }
-    return { ...item, title: overlay.title, description: overlay.description, body: overlay.body,
+    return { ...item, exam: contentExam(item), title: overlay.title, description: overlay.description, body: overlay.body,
       citations: overlay.citations, editorialNotice: BLOG_EDITORIAL_NOTICE,
       publishedAt: typeof document.attributes.publishedAt === "string" ? document.attributes.publishedAt : undefined };
   });
@@ -67,7 +69,7 @@ export function getFaqEntries(): ContentEntry[] {
     const plainDescription = body.split("\n\n")[0].replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/[*_`]/g, "");
     const description = plainDescription.length > 180
       ? plainDescription.slice(0, 177).replace(/\s+\S*$/, "") + "…" : plainDescription;
-    return { ...item, description, body, editorialNotice: publication.editorialNotice,
+    return { ...item, exam: contentExam(item), description, body, editorialNotice: publication.editorialNotice,
       citations: Array.isArray(sources) ? sources.filter((value) => typeof value === "string" && safeHref(value)) : [] };
   });
 }
