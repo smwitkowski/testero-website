@@ -38,7 +38,12 @@ class DecisionPlanSignature(dspy.Signature):
     Ask what an ML engineer should do to achieve an outcome. Choose one primary
     decision within the exact objective. Record the business consequence, existing
     system and one or two decisive constraints. Propose a best action and three
-    real mistakes with scenario-specific losing reasons. Prefer unnecessary
+    real mistakes with scenario-specific losing reasons. Prefer a hinge that turns
+    on specific Google Cloud capabilities, limits or trade-offs. At least one
+    mistake must be a plausible Google Cloud-specific alternative requiring product
+    knowledge to reject, not merely ignore a stated requirement. Avoid generic
+    benchmark/validate two constraints then choose whichever meets both; these
+    keys are capped at 20% per batch. Prefer unnecessary
     migration, wrong execution mode, wrong metric, or missing validation over
     feature gotchas, arbitrary limits, syntax trivia, or hidden exceptions.
     No sources are supplied at this stage; proposals are unverified, not evidence.

@@ -13,7 +13,7 @@ from scripts import export_judge_requests as exporter, repair_candidates as repa
 from shared import cli_models
 from shared.external_judge import build_request, candidate_question
 from shared.gates import (
-    GATE_SIGNATURES, STYLE_CHECKS, EVIDENCE_CHECKS, build_gate_inputs,
+    V4_GATE_SIGNATURES, GATE_SIGNATURES, STYLE_CHECKS, EVIDENCE_CHECKS, build_gate_inputs,
     blind_choice_map, parse_gate_output, aggregate_gate_verdict, eligible_gate_repair,
 )
 from shared.quality_gate import judge_three_gates, QuestionQualitySignature
@@ -21,12 +21,13 @@ from test_external_ingest import case, save_input, saved
 from test_generation_gate import QUESTION
 
 
-def bundle(question=QUESTION):
+def bundle(question=QUESTION, *, version=5):
     key = next(label for label, original in blind_choice_map(question).items() if original == "A")
     return {"blind_solver": {"verdict": "PASS", "choice": key, "confidence": .9,
                              "ambiguous_answers": False, "reason": "Synthetic unique choice"},
             "style": {"verdict": "PASS", "score": .9, "reason": "Synthetic meaningful decision",
-                      **{name: True for name in STYLE_CHECKS}},
+                      **({name: True for name in STYLE_CHECKS} | {"generic_validation_key": False} if version == 5 else
+                         {name: True for name, field in V4_GATE_SIGNATURES["style"].output_fields.items() if field.annotation is bool})},
             "evidence": {"verdict": "PASS", "score": .9, "reason": "Synthetic complete support",
                          **{name: True for name in EVIDENCE_CHECKS}}}
 
@@ -35,6 +36,7 @@ def bundle(question=QUESTION):
 def v4(case):
     payload, entry = case[2], case[2]["candidates"][0]
     payload["external_judge_version"] = 2
+    payload["rules_version"] = 4
     scope = payload["plan"][0]
     provenance = {
         "key_length_rank": scope["key_length_rank"],
@@ -51,11 +53,11 @@ def v4(case):
                                         "scenario_reason": "Synthetic scenario reason"} for receipt in entry["evidence"]]},
     }
     scope.update(deepcopy(provenance)); entry.update(deepcopy(provenance))
-    request = build_request(entry["candidate_id"], payload["plan"][0], QUESTION, entry["sources"], entry["evidence"])
+    request = build_request(entry["candidate_id"], payload["plan"][0], QUESTION, entry["sources"], entry["evidence"], gate_version=4)
     case[6].write_text(json.dumps(request, ensure_ascii=False))
     entry["external_judge_request"]["sha256"] = hashlib.sha256(case[6].read_bytes()).hexdigest()
     save_input(case)
-    raw = bundle()
+    raw = bundle(version=4)
     (case[1] / (entry["candidate_id"] + ".json")).write_text(json.dumps(raw))
     return case, raw, request
 
@@ -316,7 +318,7 @@ def test_v4_one_attempt_repair_keeps_provenance_and_requires_fresh_three_gates(m
     dry_flags = ["--artifact", str(case[0]), "--verdicts", str(case[1]), "--dry-run"]
     missing = CliRunner().invoke(ingest.main, dry_flags)
     assert missing.exit_code == 1  # Mechanical repair is not a judge approval.
-    fresh = bundle(candidate_question(child))
+    fresh = bundle(candidate_question(child), version=4)
     (case[1] / (child["candidate_id"] + ".json")).write_text(json.dumps(fresh))
     good = CliRunner().invoke(ingest.main, dry_flags)
     assert good.exit_code == 0, good.output

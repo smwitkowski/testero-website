@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Judge frozen external requests with one Claude CLI call per candidate."""
+"""Run frozen independent Claude gates and optional Argon blind/full review."""
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -20,7 +20,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from shared import cli_models
 from shared.cli_models import output_model, parse_output
 from shared.quality_gate import QuestionQualitySignature
-from shared.gates import GATE_SIGNATURES, GATE_VERSION, parse_gate_output
+from shared.gates import GATE_SIGNATURES, GATE_VERSION, parse_gate_output, gate_signatures
+from shared import argon_gate as argon
 
 from shared.external_judge import REQUEST_CHARACTER_LIMIT
 SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
@@ -93,16 +94,16 @@ def _read_request(path, ident, canonical):
         raise RequestValidationError("Request must be readable, non-symlink strict JSON") from None
     legacy_fields = {"candidate_id", "objective_id", "judge_prompt", "verdict_schema", "trimming"}
     gate_fields = {"candidate_id", "objective_id", "gate_version", "decision_provenance_sha256", "gates", "trimming"}
-    if not isinstance(request, dict) or set(request) not in (legacy_fields, gate_fields):
+    if not isinstance(request, dict) or set(request) not in (legacy_fields, gate_fields, gate_fields | {"argon"}):
         raise RequestValidationError("Request must contain exactly the exported request fields")
-    is_gates = set(request) == gate_fields
+    is_gates = set(request) in (gate_fields, gate_fields | {"argon"})
     if is_gates:
-        if (type(request["gate_version"]) is not int or request["gate_version"] != GATE_VERSION
+        if (type(request["gate_version"]) is not int or request["gate_version"] not in (4, 5)
                 or not isinstance(request["decision_provenance_sha256"], str)
                 or not re.fullmatch(r"[0-9a-f]{64}", request["decision_provenance_sha256"])
                 or not isinstance(request["gates"], dict) or set(request["gates"]) != set(GATE_SIGNATURES)):
             raise RequestValidationError("Request must contain all current independent gates")
-        for name, signature in GATE_SIGNATURES.items():
+        for name, signature in gate_signatures(request["gate_version"]).items():
             gate = request["gates"][name]
             if (not isinstance(gate, dict) or set(gate) != {"judge_prompt", "verdict_schema"}
                     or not isinstance(gate["judge_prompt"], str) or not gate["judge_prompt"].strip()
@@ -118,6 +119,8 @@ def _read_request(path, ident, canonical):
         raise RequestValidationError("Request trimming metadata must be an object")
     if not is_gates and json.dumps(request["verdict_schema"], sort_keys=True) != json.dumps(canonical, sort_keys=True):
         raise RequestValidationError("Request verdict schema differs from the current question quality schema")
+    if "argon" in request:
+        argon.validate_request(request["argon"])
     return request
 
 
@@ -186,7 +189,7 @@ def _record_verdict_directory(requests, verdicts):
             raise click.ClickException("Cannot record verdict-directory registry safely") from None
 
 
-def run_requests(requests, verdicts, *, judge_model="claude", parallel=3):
+def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_gate=False):
     """Run a resumable locked batch, submitting at most parallel requests at once."""
     if not isinstance(judge_model, str) or judge_model not in ALLOWED_MODELS:
         raise click.ClickException("Only claude or claude/claude-sonnet-5-5 is allowed by current ingestion provenance")
@@ -218,6 +221,8 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3):
             return ident, "skipped", None
         try:
             request = _read_request(path, ident, canonical)
+            if ("argon" in request) != argon_gate:
+                raise RequestValidationError("Argon flag must match the frozen request policy")
             if os.path.lexists(destination):
                 return ident, "skipped", None
             # Admit each call under the same lock that latches usage stops.
@@ -233,7 +238,7 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3):
                             return ident, "not_attempted", None
                     gate = request["gates"][name]
                     raw[name] = cli_models.run_claude_request(judge_model, gate["judge_prompt"], gate["verdict_schema"])
-                    parse_gate_output(name, raw[name])
+                    parse_gate_output(name, raw[name], version=request["gate_version"])
             else:
                 raw = cli_models.run_claude_request(judge_model, request["judge_prompt"], request["verdict_schema"])
                 if type(raw) is not dict:
@@ -245,6 +250,8 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3):
                 if (type(raw["score"]) not in (int, float) or not 0 <= raw["score"] <= 1
                         or not 0 < len(raw["reason"].strip()) <= 300):
                     raise cli_models.CLISchemaError("Invalid structured output")
+            if argon_gate:
+                raw["argon"] = argon.run_argon(request["argon"])
             if not _publish(destination, raw, exclusive=True):
                 return ident, "skipped", None
             try:
@@ -315,9 +322,10 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3):
 @click.option("--verdicts", required=True, type=click.Path(path_type=Path))
 @click.option("--judge-model", default="claude", show_default=True)
 @click.option("--parallel", default=3, type=click.IntRange(1, 4), show_default=True)
-def main(requests, verdicts, judge_model, parallel):
+@click.option("--argon-gate", is_flag=True, help="Require and run frozen independent Gemini 4 Argon blind/full requests via OpenRouter.")
+def main(requests, verdicts, judge_model, parallel, argon_gate):
     """Save raw Claude verdicts for frozen requests; never generate or ingest rows."""
-    summary = run_requests(requests, verdicts, judge_model=judge_model, parallel=parallel)
+    summary = run_requests(requests, verdicts, judge_model=judge_model, parallel=parallel, argon_gate=argon_gate)
     if summary.failed or summary.usage_stopped or summary.remaining:
         raise click.exceptions.Exit(1)
 

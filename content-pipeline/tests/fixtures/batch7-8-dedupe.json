@@ -1,0 +1,440 @@
+{
+  "provenance": {
+    "pmle-d029-v4-next-30-20261013a.json": "12810f219f07f45f0a538dbe5bbfafd616c77938af5310cef4946910282b308b",
+    "pmle-d029-v4-serving-30-20261013b.json": "bf3e660e599af7b6000af1db0f6e5a9081fe13d733df4183be9986954c09091d"
+  },
+  "questions": [
+    {
+      "candidate_id": "3ee5b00d-5f2c-510c-a121-6c2e08c13dec",
+      "stem": "Your company is migrating a customer-retention classifier from Cloud Run to Agent Platform. Several retention applications call the current service, where Python code encodes account attributes before XGBoost prediction and maps scores to risk labels afterward. The transformations work in production, and your team has representative requests and responses for migration checks. You want to preserve the classifier's request and response behavior while minimizing custom serving-code maintenance. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Implement custom prediction routines that reuse the Python preprocessing, XGBoost prediction, and postprocessing in a Predictor. Build the container with Agent Platform SDK for Python, check local inference against representative requests and responses, and deploy to an endpoint."
+        },
+        {
+          "label": "B",
+          "text": "Write a custom HTTP prediction server that reuses the Python transformations and XGBoost model. Implement its request handling and health checks, package it in a custom container, validate representative requests and responses, and deploy to an Agent Platform endpoint."
+        },
+        {
+          "label": "C",
+          "text": "Move the Python preprocessing and postprocessing into each retention application. Export the model for an Agent Platform XGBoost prebuilt container, deploy it to an endpoint, and validate each application's behavior against representative requests and responses."
+        },
+        {
+          "label": "D",
+          "text": "Reimplement the XGBoost classifier and Python transformations as a TensorFlow serving graph. Export it for the Agent Platform TensorFlow prebuilt container, validate the reimplemented model and both transformations against representative requests and responses, and deploy it to an endpoint."
+        }
+      ],
+      "key": "A",
+      "batch": 7
+    },
+    {
+      "candidate_id": "7244c09a-eaed-5a4f-b764-522c50c4424e",
+      "stem": "You need to improve feature retrieval for a grocery delivery estimator your team recently deployed. Two BigQuery tables contain store preparation and courier availability features, both keyed by delivery zone. Each table is registered as a separate feature group in Agent Platform Feature Store. The application currently fetches separate feature views and joins their results for each estimate. You want to retrieve combined features with low latency while minimizing maintenance of duplicate feature data. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Create a consolidated feature view in Agent Platform Feature Store using the required features from both existing feature groups. Sync the view, then update the estimator to fetch combined features by delivery zone."
+        },
+        {
+          "label": "B",
+          "text": "Retain the two existing feature views and fetch them concurrently for each delivery estimate. Join the returned feature values in the estimator using the delivery zone as the shared identifier."
+        },
+        {
+          "label": "C",
+          "text": "Materialize a joined copy of both source tables in BigQuery and refresh it as source data changes. Register that table as a new feature group and serve estimates through a feature view over it."
+        },
+        {
+          "label": "D",
+          "text": "Query both source tables in BigQuery for each delivery estimate. Filter the records for the requested delivery zone, join their feature values in SQL, and return the combined result to the estimator."
+        }
+      ],
+      "key": "A",
+      "batch": 7
+    },
+    {
+      "candidate_id": "790af438-7ce9-5813-9eb0-f8058364c59a",
+      "stem": "Your company trains a TensorFlow demand-forecasting model each night to guide store replenishment. The dense neural network runs on a GPU, and training accounts for most of the forecasting workflow's compute bill. Stores receive forecasts each morning, and the team uses an existing validation target to judge model quality. You want to reduce training cost while minimizing missed morning forecast deadlines. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Benchmark representative end-to-end training runs on CPUs, GPUs, and TPUs to the existing validation target. Select the lowest-cost configuration that reaches the target before the morning forecast deadline."
+        },
+        {
+          "label": "B",
+          "text": "Move training to Cloud TPU based on advertised peak matrix throughput. Estimate overnight training savings from accelerator specifications and retain the current model and optimizer settings for scheduled runs."
+        },
+        {
+          "label": "C",
+          "text": "Switch training to CPUs selected for their low hourly price. Estimate savings from machine rates and retain the existing model and overnight training schedule."
+        },
+        {
+          "label": "D",
+          "text": "Replace the current GPU using isolated matrix-operation benchmarks to compare candidate GPUs. Select the device with the highest kernel throughput and estimate training savings from its expected speedup on those benchmarks."
+        }
+      ],
+      "key": "A",
+      "batch": 7
+    },
+    {
+      "candidate_id": "a38621be-d293-5dce-8df0-35e79615d611",
+      "stem": "You recently expanded an online retailer's recommendation service to new customer segments, and shopper traffic is growing. The application serves the current model, and your team has deployed a candidate separately after promising offline results. Changes in the shopper mix make historical purchase rates difficult to compare. You want to measure the candidate's effect on purchases while minimizing bias from the changing traffic mix. How should you address this issue?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Randomly assign shoppers to stable cohorts with App Lifecycle Manager feature flags, route each cohort to one deployment, and record purchases by cohort. Compare concurrent purchase rates before selecting the model version to retain."
+        },
+        {
+          "label": "B",
+          "text": "Switch all shoppers to the candidate for an observation period and record their purchases. Compare its purchase rate with the current model's rate from the preceding period, then retain the version with the higher rate."
+        },
+        {
+          "label": "C",
+          "text": "Evaluate both model versions on a larger historical dataset and compare ranking metrics across customer segments. Select the version with the strongest aggregate ranking results to serve the growing production audience."
+        },
+        {
+          "label": "D",
+          "text": "Mirror live requests to the candidate while displaying the current model's recommendations to shoppers. Compare response latency and prediction distributions on that traffic, then select the version to serve all shoppers."
+        }
+      ],
+      "key": "A",
+      "batch": 7
+    },
+    {
+      "candidate_id": "07af49eb-940c-5737-bf95-52b3e0409ca5",
+      "stem": "You are managing demand forecasts that a grocery retailer uses to set store replenishment orders. The running model on Agent Platform Inference uses fitted feature transformations before inference and converts predictions into item quantities afterward. As more stores request forecasts, your team has moved these steps into a revised serving container. The model weights are unchanged, and production traffic will switch soon. You want to preserve forecast values while minimizing rollout errors. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Test the revised container in staging with representative raw requests and expected final item quantities. Compare preprocessing and postprocessing results with the existing pipeline, and approve the change when they match."
+        },
+        {
+          "label": "B",
+          "text": "Evaluate the unchanged model using previously transformed validation examples and compare forecast accuracy with its baseline. Approve the revised serving container when model accuracy remains consistent with the existing implementation."
+        },
+        {
+          "label": "C",
+          "text": "Compare average final item quantities across stores from the revised container with historical production averages. Approve the serving change when the aggregate forecast distribution remains consistent with previous production results."
+        },
+        {
+          "label": "D",
+          "text": "Load-test the revised container at projected request volumes and compare serving latency and error rates with production. Approve the serving change when these operational metrics remain consistent with the existing implementation."
+        }
+      ],
+      "key": "A",
+      "batch": 7
+    },
+    {
+      "candidate_id": "994fce9b-c6ea-53d9-b4d2-c51877b5e968",
+      "stem": "You are operating product recommendation models for an online retailer. Several models use the same customer purchase aggregates, but training jobs and prediction services calculate them independently from transaction data in BigQuery. As traffic grows, these repeated calculations increase serving latency and processing costs. Your team already uses Agent Platform Feature Store for other customer features. You want to reuse consistent purchase features across training and serving while minimizing repeated computation. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Materialize purchase aggregates in one BigQuery feature table and register them in Agent Platform Feature Store. Use the table for training and a synchronized feature view for online serving."
+        },
+        {
+          "label": "B",
+          "text": "Centralize purchase aggregation in a shared Python library used by every training job and prediction service. Combine each consumer's calculated aggregates with the customer features already in Agent Platform Feature Store."
+        },
+        {
+          "label": "C",
+          "text": "Move purchase aggregation to Apache Spark with separate pipelines for training and prediction requests. Register each pipeline's outputs in Agent Platform Feature Store and provide them to the corresponding model consumers."
+        },
+        {
+          "label": "D",
+          "text": "Retrain the recommendation models to use raw customer transaction histories instead of purchase aggregates. Keep Agent Platform Feature Store for the remaining customer attributes and process transaction histories within each prediction workload."
+        }
+      ],
+      "key": "A",
+      "batch": 7
+    },
+    {
+      "candidate_id": "a6eb59e1-680c-56fc-87da-90bca2689bf0",
+      "stem": "Your company uses an XGBoost model to estimate delivery times at checkout. Monitoring shows that identical shipment details receive different estimates across applications. The model runs in an Agent Platform prebuilt container, while each client separately transforms shipment features and converts predicted log delivery times into hours. These client implementations have diverged. You want consistent input and output processing across clients while minimizing the code your team needs to implement and maintain. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Package the existing model with shared preprocessing and postprocessing using custom inference routines. Test the container locally against the training pipeline's transformations, then deploy it to an Agent Platform endpoint."
+        },
+        {
+          "label": "B",
+          "text": "Publish a shared client library containing feature transformations and conversion of predictions into hours. Release library updates independently in each checkout application, retaining the existing Agent Platform prebuilt container for inference."
+        },
+        {
+          "label": "C",
+          "text": "Build a custom HTTP server that loads the existing model and performs shared preprocessing and postprocessing. Implement request handling and health checks, then deploy it in an Agent Platform custom container."
+        },
+        {
+          "label": "D",
+          "text": "Retrain the estimator using raw shipment fields and delivery times in hours. Export the replacement artifacts, deploy them through an Agent Platform prebuilt container, and remove client transformation code."
+        }
+      ],
+      "key": "A",
+      "batch": 7
+    },
+    {
+      "candidate_id": "8e5dde45-912d-54a1-a443-19557cdb0bdb-r1",
+      "stem": "You are maintaining a recently deployed Gemini assistant that summarizes warranty claims for service agents. Your team fine-tunes candidates using approved claim summaries in BigQuery. The latest candidate has lower training loss, and BigQuery contains another set of representative claims paired with approved summaries that the team set aside for model review. You want to reduce summary corrections while minimizing additional tuning compute. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Compare the candidate and deployed model on reserved claims for accuracy and completeness, and promote the candidate only if its summaries improve."
+        },
+        {
+          "label": "B",
+          "text": "Use validation token accuracy to compare tuned candidates in Agent Platform Studio, and promote the highest-scoring model for generating warranty claim summaries for agents."
+        },
+        {
+          "label": "C",
+          "text": "Run another BigQuery tuning job with additional epochs, then compare both models on reserved claims and promote the new candidate if summary quality improves."
+        },
+        {
+          "label": "D",
+          "text": "Compare the candidate and deployed model on the approved tuning examples for accuracy and completeness, and promote the candidate if its summaries improve there."
+        }
+      ],
+      "key": "A",
+      "batch": 7
+    },
+    {
+      "candidate_id": "758cc679-909f-5e3d-96b3-ed3ab3d51219",
+      "stem": "You are running a loan-default classifier on Agent Platform for a lender that uses scores to prioritize application reviews. As traffic grows and serving capacity expands, checks show that replicas produce different model input vectors for identical applications. Training uses fitted numeric normalization and categorical encoding artifacts, but inference preprocessing maintains its transformations separately. You want consistent inference inputs across replicas while minimizing retraining. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Reuse the training-fitted normalization and encoding artifacts in each replica's inference preprocessing. Validate raw-application transformations against a fixed set of training-reference examples."
+        },
+        {
+          "label": "B",
+          "text": "Recompute normalization statistics from each replica's recent applications and retain the existing categorical encoding. Validate the model's predictions using applications handled by that replica."
+        },
+        {
+          "label": "C",
+          "text": "Adjust score calibration and decision thresholds on each replica using its recent applications. Validate the changes by checking that aggregate review rates match the lender's historical target."
+        },
+        {
+          "label": "D",
+          "text": "Test each serving replica with already transformed application vectors and compare its predictions with the trained model's outputs. Approve the serving changes when these prediction comparisons agree."
+        }
+      ],
+      "key": "A",
+      "batch": 8
+    },
+    {
+      "candidate_id": "e9d9f655-0e9e-5f84-9ccb-896961705543",
+      "stem": "You need to build a demand forecasting service for a retailer's replenishment application. Warehouse planners will use its forecasts to decide how much stock to order. The custom-trained forecasting model is ready, and the application backend runs in a Google Cloud VPC. Your team already uses Agent Platform for managed model deployment. You want to keep prediction access within the application's private network while minimizing serving infrastructure maintenance. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Deploy the forecasting model to an Agent Platform private endpoint using Private Service Connect, and connect the application's VPC to its service attachment through a forwarding rule for prediction requests."
+        },
+        {
+          "label": "B",
+          "text": "Deploy the forecasting model to an Agent Platform public endpoint, and use a dedicated service account to authenticate prediction requests from the replenishment application's VPC backend."
+        },
+        {
+          "label": "C",
+          "text": "Configure a managed Secure Web Proxy service in the application's VPC, and route prediction requests through that proxy to an authenticated Agent Platform public endpoint using a service account."
+        },
+        {
+          "label": "D",
+          "text": "Package the forecasting model in a serving container, deploy it on a private GKE Standard cluster, and expose predictions to the replenishment application through an internal Application Load Balancer in the application's VPC."
+        }
+      ],
+      "key": "A",
+      "batch": 8
+    },
+    {
+      "candidate_id": "420f7f83-b69a-5c8e-9621-b293c171fedc",
+      "stem": "You work for a retailer whose running demand-forecasting model guides inventory purchases. As the business grows, your team retrains more frequently. The current release is registered in Agent Platform Model Registry, but newer artifacts accumulate in storage directories, and a shared spreadsheet tracks the production release. You want to retain identifiable releases with clear references to production and candidate versions while minimizing manual release bookkeeping. Which approach should you use?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Register each retrained artifact as a new version of the existing Agent Platform Model Registry model and assign production and candidate aliases."
+        },
+        {
+          "label": "B",
+          "text": "Create a separate Agent Platform Model Registry model for each retraining run, and use labels plus a release inventory to track production and candidate releases."
+        },
+        {
+          "label": "C",
+          "text": "Keep each retrained artifact in a separate storage directory, and maintain a shared release spreadsheet with links identifying the production release and each candidate release."
+        },
+        {
+          "label": "D",
+          "text": "Organize retrained releases by serving container image tags, and maintain a deployment release log mapping those tags to production and candidate model artifacts."
+        }
+      ],
+      "key": "A",
+      "batch": 8
+    },
+    {
+      "candidate_id": "c90d0792-551e-5530-9e04-9d451bc3f607",
+      "stem": "You are tuning a payment processor's fraud classifier as transaction volume grows. The running model is approaching its serving capacity, and your team has produced several candidates through retraining and model compression. Fraudulent transactions make up a small fraction of traffic. You have labeled transactions held out from training and recorded production traffic available for testing. You want to increase serving throughput while minimizing missed fraud. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Benchmark each candidate on the serving hardware using representative production traffic, and measure fraud recall on held-out transactions. Select a candidate that increases throughput while matching or exceeding the current production model's recall."
+        },
+        {
+          "label": "B",
+          "text": "Rank the candidates by overall classification accuracy on held-out transactions, and benchmark their throughput using representative production traffic. Deploy the highest-accuracy candidate whose measured serving throughput exceeds that of the current production model."
+        },
+        {
+          "label": "C",
+          "text": "Choose the candidate with the smallest saved model artifact, and compare its fraud recall on held-out transactions with the current production model. Deploy it if recall matches or improves."
+        },
+        {
+          "label": "D",
+          "text": "Rank the candidates by training loss, and benchmark their throughput on the serving hardware using representative production traffic. Deploy the lowest-loss candidate whose throughput exceeds the current production model's throughput."
+        }
+      ],
+      "key": "A",
+      "batch": 8
+    },
+    {
+      "candidate_id": "9c808102-5404-5660-ab0e-d22d1a7b87c5",
+      "stem": "You are reducing inspection delays for a manufacturer whose image-based defect detection service runs on Agent Platform. Preprocessing resizes and normalizes images, and postprocessing converts model scores into pass-or-fail decisions. The existing model performs well. Your team has proposed faster implementations of both transformations, with promising results from isolated timing tests. You want to preserve defect-detection quality while minimizing prediction latency. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Benchmark the current and proposed inference pipelines in staging on representative labeled raw images. Compare final pass-or-fail decisions, detection quality, and end-to-end latency before adopting the faster transformations."
+        },
+        {
+          "label": "B",
+          "text": "Evaluate the unchanged model using stored preprocessed test images. Compare model accuracy and inference latency with production measurements, then deploy the faster preprocessing and postprocessing if these model-level results remain acceptable."
+        },
+        {
+          "label": "C",
+          "text": "Measure each replacement transformation separately across representative inspection image sizes. Add their processing times and select the fastest combination, then deploy both transformations together with the existing model to reduce prediction latency."
+        },
+        {
+          "label": "D",
+          "text": "Retrain the model using images produced by the faster preprocessing implementation. Compare its test accuracy with the current model, then deploy the retrained model and both replacement transformations if their model accuracies match."
+        }
+      ],
+      "key": "A",
+      "batch": 8
+    },
+    {
+      "candidate_id": "ed3e2b33-59ea-5c6d-b237-dafa278e869d",
+      "stem": "Your company runs a delivery-time prediction service that retrieves current driver workload features from Agent Platform Feature Store. Feature jobs update workload throughout the day and retain timestamped history in BigQuery. As delivery volume grows, your team expands training to several months of orders, but the pipeline attaches each driver's most recent workload values to every historical order. You want training features to reflect what was available at each prediction time while minimizing changes to the running feature-serving system. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Join historical orders to BigQuery feature history using point-in-time lookups, selecting each driver's latest workload values available at the prediction time. Keep Agent Platform Feature Store serving current values for live predictions."
+        },
+        {
+          "label": "B",
+          "text": "Fetch driver workload features through the existing Agent Platform Feature Store online lookup when assembling historical training examples. Reuse that lookup for live predictions so both paths retrieve features through the same interface."
+        },
+        {
+          "label": "C",
+          "text": "Aggregate each driver's complete BigQuery feature history into a representative workload profile, then join that profile to historical orders for training. Keep Agent Platform Feature Store serving current workload values for live predictions."
+        },
+        {
+          "label": "D",
+          "text": "Derive daily driver workload snapshots from BigQuery history and join historical orders to the preceding day's snapshot. Continue serving current features through Agent Platform Feature Store for live predictions."
+        }
+      ],
+      "key": "A",
+      "batch": 8
+    },
+    {
+      "candidate_id": "00649ff6-c21b-5aa2-99f1-6312b906bfe9",
+      "stem": "You are managing a retailer's recommendation model, recently deployed on a GPU-backed Agent Platform Inference endpoint with a fixed replica count. During promotions, queued requests delay shoppers while GPU utilization stays high and CPU utilization remains low. Between promotions, traffic drops and serving capacity sits idle. You want serving capacity to follow changing request throughput while minimizing the operational work needed to scale the service. How should you address this issue?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Configure GPU-based autoscaling on the existing endpoint, and validate minimum and maximum replica counts with representative traffic load tests."
+        },
+        {
+          "label": "B",
+          "text": "Provision a fixed number of GPU replicas sized for peak promotional traffic, and keep those replicas running during quieter periods."
+        },
+        {
+          "label": "C",
+          "text": "Move the serving container to a Google Kubernetes Engine cluster, and configure GPU-based horizontal pod autoscaling for the recommendation inference replicas."
+        },
+        {
+          "label": "D",
+          "text": "Enable autoscaling based only on CPU utilization on the existing endpoint, and validate replica limits using representative traffic load tests."
+        }
+      ],
+      "key": "A",
+      "batch": 8
+    },
+    {
+      "candidate_id": "2e3684ad-0dce-5944-9551-0c4be92471fc",
+      "stem": "Your company uses a model to estimate delivery arrival times in its customer app. The latest retraining reduced validation error, but production monitoring shows slower prediction responses. Your team has an existing Agent Platform Pipelines workflow, held-out delivery records, and recorded app traffic it can replay. You want to meet the app's prediction response-time target while minimizing delivery-estimation error. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Tune model complexity across training trials. Measure validation error and tail prediction latency by replaying representative app traffic in staging, then deploy the candidate with the lowest error that meets the response-time target."
+        },
+        {
+          "label": "B",
+          "text": "Expand the training dataset and increase model capacity across training trials. Compare estimation error on held-out delivery records, then deploy the candidate with the lowest error after confirming its offline evaluation results against the current production model."
+        },
+        {
+          "label": "C",
+          "text": "Tune training batch sizes and worker counts across pipeline runs. Compare training duration and validation error, then deploy the model from the fastest training run that preserves the current model's validation error."
+        },
+        {
+          "label": "D",
+          "text": "Evaluate candidate models with large offline prediction batches on the serving hardware. Compare predictions processed per second and estimation error on held-out deliveries, then deploy the highest-throughput candidate after checking its estimation error against the current model."
+        }
+      ],
+      "key": "A",
+      "batch": 8
+    },
+    {
+      "candidate_id": "2db303eb-0a41-5cfc-adda-14ce797de603-r1",
+      "stem": "You work for a retailer whose production demand forecasts guide inventory replenishment. During a monitoring review, your team struggled to connect a drop in forecast quality to the correct model release. Retraining runs produce new artifacts, but each release has a separate registry entry and approval status lives in a spreadsheet. You want to keep retrained releases together in a traceable model history while minimizing manual bookkeeping. Which approach should you use?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Register each retrained demand model as a version under one Agent Platform Model Registry entry, and assign movable aliases to identify the approved and previous releases."
+        },
+        {
+          "label": "B",
+          "text": "Use Knowledge Catalog to find registered demand models, and apply release-date and approval-status labels in Agent Platform Model Registry to organize and track retrained releases."
+        },
+        {
+          "label": "C",
+          "text": "Run retraining through Agent Platform Pipelines, and maintain approval information alongside artifact lineage to track demand model releases and their training and evaluation runs."
+        },
+        {
+          "label": "D",
+          "text": "Build a release catalog from endpoint deployment records, and identify approved and previous demand model releases by matching deployed model identifiers with monitoring records for each production deployment."
+        }
+      ],
+      "key": "A",
+      "batch": 8
+    },
+    {
+      "candidate_id": "79eb7314-5a5e-5596-bb05-1f7776a8d722-r1",
+      "stem": "You recently started building an image-search service for an online retailer. Your team has trained a prototype neural network that converts uploaded product photos into embeddings and is choosing hardware for the new serving backend. Requests will arrive individually, with short bursts during promotions. You want to keep the 95th-percentile inference latency below 200 milliseconds while minimizing serving compute cost. What should you do?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Benchmark compatible CPU, GPU, and TPU serving configurations using individual requests and representative promotional bursts. Choose the configuration with the lowest total serving compute cost that meets the 95th-percentile latency target."
+        },
+        {
+          "label": "B",
+          "text": "Benchmark GPU serving configurations using individual requests and representative promotional bursts. Choose the configuration with the lowest 95th-percentile latency, then calculate total serving compute cost for the required replicas."
+        },
+        {
+          "label": "C",
+          "text": "Benchmark compatible CPU, GPU, and TPU configurations at sustained load to compare throughput per unit of compute cost. Choose the most efficient configuration and size replicas for expected promotional traffic."
+        },
+        {
+          "label": "D",
+          "text": "Compare CPU instance advertised hourly prices and select the cheapest machine type. Benchmark individual requests and promotional bursts, then increase its replica count until the 95th-percentile latency meets the serving target."
+        }
+      ],
+      "key": "A",
+      "batch": 8
+    }
+  ]
+}

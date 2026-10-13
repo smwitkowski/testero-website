@@ -21,6 +21,7 @@ from shared import cli_models
 from shared.parallel import run_bounded
 from shared.batch_report import option_length_report, option_prefix_report
 from shared.dedupe import normalize_stem
+from shared.option_order import store_options
 from shared.doc_search import documentation_context
 from shared.evidence import check_evidence
 from shared.external_judge import (
@@ -95,6 +96,8 @@ def _validate_repair_payload(path, payload):
     if (payload.get("difficulty") not in ("EASY", "MEDIUM", "HARD")
             or not isinstance(payload.get("exam"), str) or not payload["exam"].strip()):
         raise click.ClickException("Artifact lacks persistence difficulty or exam")
+    if payload.get("argon_gate") is True:
+        raise click.ClickException("Argon-enabled automatic repair is not supported; generate fresh candidates with all four gates")
     try:
         require_independent_models(payload["model"], EXTERNAL_POLICY_MODEL)
         validate_candidate_records(payload)
@@ -235,9 +238,11 @@ def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed
                     "question_sha256": question_sha256(revised),
                     "storage_question_id": content_candidate_id(entry["index"], scope, revised),
                     "original_verdict": deepcopy(raw), "original_verdict_sha256": canonical_sha256(raw)})
+        if payload.get("rules_version") == 5:
+            store_options(child, revised, checked["options"])
         from shared.quality_gate import QuestionQualitySignature
         request = build_request(child["candidate_id"], scope, revised, child["sources"], checked["options"],
-                                **({} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
+                                **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False)} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
         with lock:
             completed[ident] = (child, request)
     except Exception as error:

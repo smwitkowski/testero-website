@@ -115,7 +115,7 @@ def test_external_generation_only_queues_requests_never_calls_db_or_judge(extern
         assert request["candidate_id"] == candidate["candidate_id"]
         assert request["objective_id"] == OBJECTIVE
         from shared.gates import GATE_SIGNATURES
-        assert artifact["external_judge_version"] == 2 and request["gate_version"] == 4
+        assert artifact["external_judge_version"] == 2 and request["gate_version"] == 5
         assert set(request["gates"]) == set(GATE_SIGNATURES)
         for name, signature in GATE_SIGNATURES.items():
             gate = request["gates"][name]

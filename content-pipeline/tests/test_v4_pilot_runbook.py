@@ -39,7 +39,7 @@ def test_pilot_is_exact_thirty_item_section_plan_and_three_gate_external_flow():
 
 def test_process_and_standalone_pilot_commands_match_exactly():
     process = (Path(__file__).parents[1] / "PROCESS.md").read_text()
-    current = process.split("## Historical rules-v3 operator flow", 1)[0]
+    current = process.split("## Current rules-v4 operator flow", 1)[1].split("## Historical rules-v3 operator flow", 1)[0]
     block = current.split("```sh\n", 1)[1].split("```", 1)[0]
     parsed = [shlex.split(line.replace("\\\n", " ")) for line in block.split("\n\n") if line.strip()]
     assert parsed == commands()

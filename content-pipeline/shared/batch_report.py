@@ -109,3 +109,31 @@ def format_option_prefix_report(report):
     return (f"Option prefixes: median {report['median_shared_leading_words']} (target <=2); "
             f">=6 shared words {report['shared_at_least_6_count']}/{report['count']} "
             f"({text}, target <=10%){warning}{stages}")
+
+
+KEY_POSITION_MAX_RATE = 0.40
+GENERIC_KEY_MAX_RATE = 0.20
+
+
+def key_position_report(candidates):
+    entries = [entry for entry in candidates if entry.get("options")]
+    counts = {label: sum(entry.get("key") == label for entry in entries) for label in "ABCD"}
+    total = len(entries)
+    return {"count": total, "counts": counts, "target_max_rate": KEY_POSITION_MAX_RATE,
+            "passed": bool(total) and sum(counts.values()) == total
+                      and all(count / total <= KEY_POSITION_MAX_RATE for count in counts.values())}
+
+
+def format_key_position_report(report):
+    return ("Key positions: " + ", ".join(f"{label}={count}/{report['count']}" for label, count in report["counts"].items())
+            + f"; max <=40%; {'PASS' if report['passed'] else 'FAIL'}")
+
+
+def template_diversity_report(candidates):
+    entries = [entry for entry in candidates if entry.get("judge_verdict", {}).get("passed") is True
+               and entry.get("persistence_status") != "superseded"]
+    generic = sum(entry.get("external_verdict", entry.get("gate_verdicts", {})).get("style", {}).get(
+        "generic_validation_key") is True for entry in entries)
+    total = len(entries)
+    return {"count": total, "generic_count": generic, "target_max_rate": GENERIC_KEY_MAX_RATE,
+            "passed": bool(total) and generic / total <= GENERIC_KEY_MAX_RATE}

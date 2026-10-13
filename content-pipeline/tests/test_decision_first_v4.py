@@ -148,6 +148,7 @@ def test_current_exemplars_approved_only_and_legacy_style_frozen():
 @pytest.fixture
 def pipeline(monkeypatch, tmp_path):
     events = []
+    monkeypatch.setattr(generate, "key_position_report", lambda rows: {"count": len(rows), "counts": {label: 0 for label in "ABCD"}, "passed": True})
     monkeypatch.setattr(generate, "ARTIFACT_ROOT", tmp_path)
     monkeypatch.setattr(generate, "database_client", lambda: pytest.fail("DB forbidden"))
     monkeypatch.setattr(generate, "judge_three_gates", lambda *a, **kw: pytest.fail("inline judge forbidden"))
@@ -176,7 +177,7 @@ def test_generation_order_plan_retrieval_veto_writer_citation_then_frozen_reques
     assert result.exit_code == 0, result.output
     assert events == ["plan", "retrieval", "proof", "writer", "citation"]
     artifact = json.loads((path / "batch.json").read_text())
-    assert artifact["rules_version"] == 4 and artifact["external_judge_version"] == 2
+    assert artifact["rules_version"] == 5 and artifact["external_judge_version"] == 2
     entry = artifact["candidates"][0]
     assert entry["decision_plan"] == artifact["plan"][0]["decision_plan"]
     assert entry["decision_objective"] == {"objective_id": OBJECTIVE, "objective_text": artifact["plan"][0]["objective_text"]}
@@ -247,7 +248,7 @@ def test_inline_raw_gate_bundle_and_decision_provenance_retained(pipeline, monke
     assert entry["accepted"] is passed
     assert entry["gate_verdicts"] == raw
     assert entry["grounding"]["gate_verdicts"] == raw
-    assert entry["grounding"]["gate_version"] == entry["grounding"]["rules_version"] == 4
+    assert entry["grounding"]["gate_version"] == entry["grounding"]["rules_version"] == 5
     assert entry["grounding"]["decision_plan"] == entry["decision_plan"]
     assert entry["grounding"]["decision_proof"]["passed"] is True
     assert entry["grounding"]["key_length_rank"] == 1

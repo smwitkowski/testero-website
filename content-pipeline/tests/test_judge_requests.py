@@ -319,7 +319,7 @@ def test_cli_defaults_limits_summary_and_nonzero_failures(monkeypatch, dirs):
     command = ["--requests", str(requests), "--verdicts", str(results)]
     invocation = CliRunner().invoke(runner.main, command)
     assert invocation.exit_code == 1
-    assert calls == [{"judge_model": "claude", "parallel": 3}]
+    assert calls == [{"judge_model": "claude", "parallel": 3, "argon_gate": False}]
     assert CliRunner().invoke(runner.main, command + ["--parallel", "5"]).exit_code == 2
     assert CliRunner().invoke(runner.main, ["--help"]).exit_code == 0
 

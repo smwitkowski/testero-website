@@ -16,6 +16,7 @@ import click
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts import ingest_external_verdicts as ingestion
 from scripts import judge_requests as runner
+from shared.option_order import canonical_evidence
 from shared.evidence import check_evidence
 from shared.external_judge import (
     EXTERNAL_POLICY_MODEL, REQUEST_CHARACTER_LIMIT, build_request,
@@ -116,12 +117,12 @@ def _build_outputs(artifact, out, payload, *, force):
                 validate_decision_provenance(scope, entry)
             if not validate_question(question).is_valid:
                 raise ValueError()
-            checked = check_evidence(entry.get("evidence"), entry.get("sources"))
-            if not checked["passed"] or checked["options"] != entry["evidence"]:
+            checked = check_evidence(canonical_evidence(entry), entry.get("sources"))
+            if not checked["passed"] or checked["options"] != canonical_evidence(entry):
                 raise ValueError()
             from shared.quality_gate import QuestionQualitySignature
             request = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"],
-                                    **({} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
+                                    **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False)} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
             raw = _encode(request)
             if len(raw.decode("utf-8")) > REQUEST_CHARACTER_LIMIT:
                 raise ValueError()

@@ -33,8 +33,12 @@ def candidate_id(index, scope, question):
 
 def candidate_question(entry):
     """Rebuild the exact cleaned A-key question without cleaning it a second time."""
-    if entry.get("key") != "A":
-        raise ValueError("External candidate must have key A")
+    from shared.option_order import option_order
+    order = entry.get("option_order", dict(zip("ABCD", "ABCD")))
+    if (set(order) != set("ABCD") or set(order.values()) != set("ABCD")
+            or ("option_order" in entry and order != option_order(entry["candidate_id"]))
+            or entry.get("key") != next(label for label, origin in order.items() if origin == "A")):
+        raise ValueError("Invalid stored option order or key")
     options = entry.get("options")
     rationales = entry.get("rationales")
     if (not isinstance(options, list) or len(options) != 4
@@ -42,10 +46,11 @@ def candidate_question(entry):
             or sorted(item.get("label", "") for item in options) != list("ABCD")
             or not isinstance(rationales, dict) or set(rationales) != set("ABCD")):
         raise ValueError("External candidate must contain exact A-D options and rationales")
-    mapping = {item["label"]: item.get("text") for item in options}
+    mapping = {order[item["label"]]: item.get("text") for item in options}
+    canonical_rationales = {order[label]: text for label, text in rationales.items()}
     question = {"stem": entry.get("stem")}
     for label, answer, rationale in zip("ABCD", QUESTION_FIELDS[1:5], QUESTION_FIELDS[5:]):
-        question[answer], question[rationale] = mapping[label], rationales[label]
+        question[answer], question[rationale] = mapping[label], canonical_rationales[label]
     if any(not isinstance(value, str) or not value.strip() for value in question.values()):
         raise ValueError("External candidate has missing or mistyped question fields")
     return {name: question[name] for name in QUESTION_FIELDS}
@@ -273,7 +278,7 @@ def _source_context(cited, evidence, trimmed_urls):
     return context, metadata
 
 
-def build_request(candidate_id, scope, question, sources, evidence, *, signature=None):
+def build_request(candidate_id, scope, question, sources, evidence, *, signature=None, gate_version=5, argon_gate=False):
     """Keep the rubric/schema intact; trim only fetched text around verified quotes."""
     question = {name: question[name] for name in QUESTION_FIELDS}
     checked = check_evidence(evidence, sources)
@@ -282,7 +287,8 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
     evidence = checked["options"]
     cited_urls = {item["url"] for item in evidence}
     cited = [source for source in sources if source["url"] in cited_urls]
-    from shared.gates import GATE_SIGNATURES, GATE_VERSION, build_gate_inputs
+    from shared.gates import gate_signatures, build_gate_inputs
+    signatures = gate_signatures(gate_version)
     schema = output_model(signature).model_json_schema() if signature is not None else None
     trimmed_urls = set()
     largest_first = sorted(cited, key=lambda source: len(source["text"]), reverse=True)
@@ -297,15 +303,22 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
                        "judge_prompt": signature_prompt(signature, inputs),
                        "verdict_schema": schema, "trimming": trimming}
         else:
-            inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence)
+            from shared.question_style import RULES_V4_STYLE_INSTRUCTIONS
+            inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence,
+                                       style_reference=RULES_V4_STYLE_INSTRUCTIONS if gate_version == 4 else None)
             request = {"candidate_id": candidate_id, "objective_id": scope["objective_id"],
-                       "gate_version": GATE_VERSION,
+                       "gate_version": gate_version,
                        "decision_provenance_sha256": canonical_sha256({name: scope.get(name) for name in
                            ("decision_objective", "decision_plan", "decision_proof", "key_length_rank")}),
                        "gates": {name: {"judge_prompt": signature_prompt(gate_signature, inputs[name]),
                                         "verdict_schema": output_model(gate_signature).model_json_schema()}
-                                 for name, gate_signature in GATE_SIGNATURES.items()},
+                                 for name, gate_signature in signatures.items()},
                        "trimming": trimming}
+        if argon_gate:
+            if signature is not None or gate_version != 5:
+                raise ValueError("Argon requires rules-v5 independent gate requests")
+            from shared.argon_gate import build_argon_request
+            request["argon"] = build_argon_request(question, scope, context, evidence)
         if len(json.dumps(request, indent=2, ensure_ascii=False, allow_nan=False)) + 1 <= REQUEST_CHARACTER_LIMIT:
             return request
     raise ValueError("External request exceeds the character bound even with wide quote-centered excerpts")
