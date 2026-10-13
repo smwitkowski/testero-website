@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getFaqEntries } from "@/lib/content/loader";
 import { pageMetadata } from "@/lib/seo";
+import { isComingSoon } from "@/lib/content/exam";
 
 export const metadata = pageMetadata("Know where to focus your PMLE study", "Take a free PMLE diagnostic, find your weakest exam domains, and practice with a free account or PMLE Pass.", "/");
 
@@ -12,7 +13,7 @@ const steps = [
 ];
 
 export default function HomePage() {
-  const faqs = getFaqEntries().slice(0, 3);
+  const faqs = getFaqEntries().filter((entry) => !isComingSoon(entry.exam)).slice(0, 3);
   return <div className="mx-auto max-w-4xl space-y-14">
     <header className="max-w-3xl space-y-6 border-b border-border pb-10">
       <p className="text-sm font-semibold uppercase tracking-widest text-primary">PMLE preparation · Google Cloud</p>

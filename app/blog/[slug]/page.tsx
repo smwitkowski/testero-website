@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExamAvailabilityNotice } from "@/components/exam-availability";
 import { notFound } from "next/navigation";
 import { MarkdownContent } from "@/components/markdown-content";
 import { getBlogEntry, getBlogEntries } from "@/lib/content/loader";
@@ -16,9 +17,10 @@ export default async function BlogArticlePage({ params }: PageProps) {
   const { slug } = await params;
   const entry = getBlogEntry(slug);
   if (!entry) notFound();
-  return <article className="space-y-8">
+  return <article className="certification-content space-y-8">
     <Link href="/blog" className="text-sm font-medium text-primary hover:underline">← Back to blog</Link>
-    <header className="space-y-3"><h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">{entry.title}</h1>{entry.publishedAt && <p className="text-sm text-muted-foreground">Originally published <time dateTime={entry.publishedAt}>{entry.publishedAt}</time></p>}</header>
+    <header className="space-y-3"><h1 className="text-pretty text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">{entry.title}</h1>{entry.publishedAt && <p className="text-sm text-muted-foreground">Originally published <time dateTime={entry.publishedAt}>{entry.publishedAt}</time></p>}</header>
+    <ExamAvailabilityNotice exam={entry.exam} />
     {entry.editorialNotice && <aside aria-label="Editorial notice" className="rounded-lg border border-border bg-muted p-5 text-sm leading-relaxed"><p className="mb-2 font-semibold">Editorial notice</p><p>{entry.editorialNotice}</p></aside>}
     
     <MarkdownContent content={entry.body} />
