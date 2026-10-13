@@ -69,7 +69,6 @@ D-017, D-019. No invented statistics, testimonials, pass guarantees or hours sav
 - [Launch checklist](docs/launch-checklist.md): human approval and cutover gates.
 - [Runtime setup](docs/deployment/v2-runtime.md): GitHub/Cloud Run/Secret Manager.
 - [Stripe setup](docs/deployment/stripe-setup.md): product, webhook and test-mode QA.
-- [Phase 4 proof](docs/v2-phase4-verification.md): measured local evidence.
 
 PR checks run lint/types/units/build. A push to `main` builds an image and deploys
 with merged environment and secret bindings. Private keys are runtime-only.
