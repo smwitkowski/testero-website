@@ -44,6 +44,10 @@ describe("non-destructive deployment configuration", () => {
     expect(ignored).toContain("tests");
     expect(ignored).not.toContain("content");
   });
+  it("does not restrict PostHog ingestion or recorder assets with an app CSP", () => {
+    for (const path of ["next.config.ts", "proxy.ts"])
+      expect(read(path)).not.toMatch(/Content-Security-Policy/i);
+  });
   it("defines exactly the eight supported application configuration values", () => {
     const names = read(".env.example").split(/\r?\n/)
       .filter(line => /^[A-Z][A-Z_0-9]*=/.test(line)).map(line => line.split("=")[0]).sort();

@@ -137,7 +137,7 @@ describe("ownership-first reads and results", () => {
     const db = database();
     const result = await readDiagnostic(db.client, sessionId, credentials, now);
     expect(result).toEqual({ sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 0,
-      currentQuestion: { id: itemId, ordinal: 1, stem: "Secret stem 0", options: [{ label: "A", text: "Display only" }, { label: "B", text: "Other" }] } });
+      currentQuestion: { id: itemId, ordinal: 1, domainCode: "A", stem: "Secret stem 0", options: [{ label: "A", text: "Display only" }, { label: "B", text: "Other" }] } });
     expect(JSON.stringify(result)).not.toMatch(/is_correct|correct_label|explanation|domain_code/);
   });
   it("reads the next unanswered item without exposing previous questions", async () => {

@@ -87,7 +87,7 @@ export async function readPractice(client: SupabaseClient, id: string, userId: s
   const current = completed ? null : rows.find(row => row.answered_at === null);
   if (!completed && !current) throw unavailable();
   return { sessionId: id, status: completed ? "completed" : "in_progress", totalQuestions: session.question_count, answeredCount,
-    currentQuestion: current ? { id: current.id, ordinal: current.ordinal, stem: current.stem, options: current.options.map(option => ({ label: option.label, text: option.text })) } : null };
+    currentQuestion: current ? { id: current.id, ordinal: current.ordinal, domainCode: current.domain_code, stem: current.stem, options: current.options.map(option => ({ label: option.label, text: option.text })) } : null };
 }
 export async function answerPractice(client: SupabaseClient, id: string, userId: string, itemId: string, selectedLabel: string, now = Date.now()): Promise<PracticeAnswerResponse> {
   const session = await ownedPractice(client, id, userId, now);

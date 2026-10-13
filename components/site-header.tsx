@@ -1,11 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
-import { hasVerifiedNavigationSession } from "@/lib/auth/navigation";
+import { AnalyticsIdentity } from "@/components/analytics-identity";
+import { verifiedNavigationUserId } from "@/lib/auth/navigation";
 
 export async function SiteHeader() {
-  const signedIn = await hasVerifiedNavigationSession();
+  const userId = await verifiedNavigationUserId();
+  const signedIn = !!userId;
   return (
     <header className="border-b border-border bg-card">
+      {userId && <AnalyticsIdentity userId={userId} />}
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-4 sm:px-8">
         <Link href="/" className="flex shrink-0 items-center gap-2 text-lg font-semibold" aria-label="Testero home">
           <Image src="/logo.svg" alt="" width={32} height={30} priority />Testero

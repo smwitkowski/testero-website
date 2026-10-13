@@ -3,6 +3,7 @@ import type { ExamReadinessTier } from "@/lib/readiness";
 export interface DiagnosticQuestion {
   id: string;
   ordinal: number;
+  domainCode: string;
   stem: string;
   options: { label: string; text: string }[];
 }

@@ -11,7 +11,7 @@ export const AUTH_MESSAGES = {
   unauthenticated: "Please sign in to continue.",
   confirmation: "Unable to confirm this link. Please sign in or request a new link.",
 } as const;
-export function authResponse(body: { message: string; href?: string } | { error: string }, status = 200) {
+export function authResponse(body: { message: string; href?: string; userId?: string } | { error: string }, status = 200) {
   return NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 }
 export class AuthRequestError extends Error { constructor(public status: number) { super("Invalid auth request"); } }

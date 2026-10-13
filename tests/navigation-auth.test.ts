@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { hasVerifiedNavigationSession } from "@/lib/auth/navigation";
+import { verifiedNavigationUserId } from "@/lib/auth/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const mocks = vi.hoisted(() => ({
@@ -28,7 +28,7 @@ describe("verified account state for navigation", () => {
     [{ name: "foreign-auth-token", value: "fake" }],
   ].map((cookies) => ({ cookies })))("anonymous/non-auth cookies do not create a client %#", async ({ cookies }) => {
     mocks.cookies = cookies;
-    expect(await hasVerifiedNavigationSession()).toBe(false);
+    expect(await verifiedNavigationUserId()).toBeNull();
     expect(createServerSupabaseClient).not.toHaveBeenCalled();
     expect(mocks.getUser).not.toHaveBeenCalled();
   });
@@ -44,7 +44,7 @@ describe("verified account state for navigation", () => {
     mocks.cookies = [{ name: "sb-local-auth-token", value: "fake-cookie" }];
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", url);
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", key);
-    expect(await hasVerifiedNavigationSession()).toBe(false);
+    expect(await verifiedNavigationUserId()).toBeNull();
     expect(createServerSupabaseClient).not.toHaveBeenCalled();
     expect(mocks.getUser).not.toHaveBeenCalled();
   });
@@ -52,7 +52,7 @@ describe("verified account state for navigation", () => {
   it.each(["sb-local-auth-token", "sb-local-auth-token.0", "sb-local-auth-token.1"])
     ("accepts a verified user with configured local auth cookie %s", async (name) => {
       mocks.cookies = [{ name, value: "opaque-cookie" }];
-      expect(await hasVerifiedNavigationSession()).toBe(true);
+      expect(await verifiedNavigationUserId()).toBe("verified-user");
       expect(createServerSupabaseClient).toHaveBeenCalledOnce();
       expect(mocks.getUser).toHaveBeenCalledOnce();
     });
@@ -60,31 +60,31 @@ describe("verified account state for navigation", () => {
   it("does not trust the auth cookie when server verification returns no user", async () => {
     mocks.cookies = [{ name: "sb-local-auth-token", value: "fake-cookie" }];
     mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
-    expect(await hasVerifiedNavigationSession()).toBe(false);
+    expect(await verifiedNavigationUserId()).toBeNull();
   });
 
   it("denies a verification error even if a user object is present", async () => {
     mocks.cookies = [{ name: "sb-local-auth-token", value: "fake-cookie" }];
     mocks.getUser.mockResolvedValue({ data: { user: { id: "unverified-user" } }, error: { message: "verification failed" } });
-    expect(await hasVerifiedNavigationSession()).toBe(false);
+    expect(await verifiedNavigationUserId()).toBeNull();
   });
 
   it("does not advertise protected navigation to an unconfirmed account", async () => {
     mocks.cookies = [{ name: "sb-local-auth-token", value: "opaque-cookie" }];
     mocks.getUser.mockResolvedValue({ data: { user: { id: "unconfirmed-user", email_confirmed_at: null } }, error: null });
-    expect(await hasVerifiedNavigationSession()).toBe(false);
+    expect(await verifiedNavigationUserId()).toBeNull();
   });
 
   it("returns signed-out on thrown auth failure", async () => {
     mocks.cookies = [{ name: "sb-local-auth-token", value: "fake-cookie" }];
     mocks.getUser.mockRejectedValue(new Error("local auth unavailable"));
-    expect(await hasVerifiedNavigationSession()).toBe(false);
+    expect(await verifiedNavigationUserId()).toBeNull();
   });
 
   it("returns signed-out if client creation throws", async () => {
     mocks.cookies = [{ name: "sb-local-auth-token", value: "fake-cookie" }];
     vi.mocked(createServerSupabaseClient).mockRejectedValue(new Error("configuration unavailable"));
-    expect(await hasVerifiedNavigationSession()).toBe(false);
+    expect(await verifiedNavigationUserId()).toBeNull();
     expect(mocks.getUser).not.toHaveBeenCalled();
   });
 });

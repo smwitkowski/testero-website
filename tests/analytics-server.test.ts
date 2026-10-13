@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { trackPurchaseCompleted } from "@/lib/analytics/server";
+import { captureFunnelEvent, scheduleFunnelEvent, trackPurchaseCompleted } from "@/lib/analytics/server";
+const afterMock = vi.hoisted(() => vi.fn());
+vi.mock("next/server", () => ({ after: afterMock }));
 const fetchMock = vi.fn();
 beforeEach(() => {
+  afterMock.mockReset();
   fetchMock.mockReset().mockResolvedValue(new Response("{}", { status: 200 }));
   vi.stubGlobal("fetch", fetchMock);
   vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "unit-public-placeholder");
@@ -32,5 +35,48 @@ describe("server purchase analytics", () => {
   it("cannot undo a grant when the analytics transport fails", async () => {
     fetchMock.mockRejectedValue(new Error("transport unavailable"));
     await expect(trackPurchaseCompleted("cs_test_opaque")).resolves.toBeUndefined();
+  });
+});
+
+describe("server funnel analytics", () => {
+  it("uses the custom ingestion host, safe fields and stable completion ID", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    await captureFunnelEvent("diagnostic_completed", "browser-id", { session_id: "session-id" });
+    expect(timeout).toHaveBeenCalledWith(1000);
+    timeout.mockRestore();
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://127.0.0.1:56546/i/v0/e/");
+    expect(JSON.parse(init.body)).toEqual({ api_key: "unit-public-placeholder", event: "diagnostic_completed", properties: {
+      distinct_id: "browser-id", source: "server", $process_person_profile: false, session_id: "session-id", $insert_id: "server:diagnostic_completed:session-id",
+    } });
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    expect(init.cache).toBe("no-store");
+  });
+  it("defaults the ingestion host and skips disabled analytics", async () => {
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "");
+    await captureFunnelEvent("signup_completed", "user-id");
+    expect(fetchMock.mock.calls[0][0]).toBe("https://us.i.posthog.com/i/v0/e/");
+    fetchMock.mockClear(); vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "");
+    await captureFunnelEvent("signup_completed", "user-id");
+    scheduleFunnelEvent(new Request("http://localhost"), "signup_completed", "user-id");
+    expect(fetchMock).not.toHaveBeenCalled(); expect(afterMock).not.toHaveBeenCalled();
+  });
+  it("defers capture, uses bounded telemetry identity and falls back for invalid headers", async () => {
+    scheduleFunnelEvent(new Request("http://localhost", { headers: { "X-PostHog-Distinct-Id": "browser_123" } }), "signup_completed", "user-id");
+    expect(fetchMock).not.toHaveBeenCalled();
+    await afterMock.mock.calls[0][0]();
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).properties.distinct_id).toBe("browser_123");
+    scheduleFunnelEvent(new Request("http://localhost", { headers: { "X-PostHog-Distinct-Id": "learner@example.com" } }), "signup_completed", "user-id");
+    await afterMock.mock.calls[1][0]();
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).properties.distinct_id).toBe("user-id");
+    scheduleFunnelEvent(new Request("http://localhost"), "diagnostic_completed", "session-id", { session_id: "session-id" });
+    await afterMock.mock.calls[2][0]();
+    expect(JSON.parse(fetchMock.mock.calls[2][1].body).properties.distinct_id).toBe("session-id");
+  });
+  it("isolates scheduling, transport and timeout failures", async () => {
+    afterMock.mockImplementation(() => { throw new Error("no request context"); });
+    expect(() => scheduleFunnelEvent(new Request("http://localhost"), "signup_completed", "user-id")).not.toThrow();
+    fetchMock.mockRejectedValue(new DOMException("timeout", "TimeoutError"));
+    await expect(captureFunnelEvent("signup_completed", "user-id")).resolves.toBeUndefined();
   });
 });

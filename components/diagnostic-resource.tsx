@@ -1,9 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { analyticsHeaders } from "@/lib/analytics/client";
 
 export async function diagnosticRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(path, { ...init, cache: "no-store", credentials: "same-origin" });
+  const headers = new Headers(init.headers);
+  if (init.method === "POST") {
+    for (const [name, value] of Object.entries(analyticsHeaders())) headers.set(name, value);
+  }
+  const response = await fetch(path, { ...init, headers, cache: "no-store", credentials: "same-origin" });
   if (!response.ok) {
     if (response.status === 401 || response.status === 403 || response.status === 404) {
       throw new Error("This diagnostic is not available in this browser. Return to the start to begin a new one.");

@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { scheduleFunnelEvent } from "@/lib/analytics/server";
+vi.mock("@/lib/analytics/server", () => ({ scheduleFunnelEvent: vi.fn() }));
 import { POST as signup } from "@/app/api/auth/signup/route";
 import { POST as login } from "@/app/api/auth/login/route";
 import { POST as forgot } from "@/app/api/auth/forgot-password/route";
@@ -65,7 +67,7 @@ describe("auth writes", () => {
   it("login verifies getUser before claiming with raw cookie and server identity", async () => {
     mocks.cookie = "a".repeat(64);
     const response = await login(req({ ...valid, next: "/practice" }));
-    expect(await response.json()).toEqual({ message: "Signed in.", href: "/practice" });
+    expect(await response.json()).toEqual({ message: "Signed in.", href: "/practice", userId: verified.id });
     expect(mocks.getUser).toHaveBeenCalledOnce();
     expect(claimAnonymousDiagnostics).toHaveBeenCalledWith({ marker: "service" }, verified.id, mocks.cookie);
     expect(mocks.getUser.mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(claimAnonymousDiagnostics).mock.invocationCallOrder[0]);
@@ -158,4 +160,16 @@ describe("email confirmation and PKCE", () => {
     expect(response.headers.get("location")).toBe("http://127.0.0.1:3000/login?message=confirmation-failed");
     if (kind !== "claim-error") expect(createServiceSupabaseClient).not.toHaveBeenCalled();
   });
+});
+
+it("tracks only successful verified signup confirmations", async () => {
+  await signup(req(valid));
+  await confirm(callback("token_hash=abcdefghijklmnop&type=recovery&next=/dashboard"));
+  expect(scheduleFunnelEvent).not.toHaveBeenCalled();
+  await confirm(callback("token_hash=abcdefghijklmnop&type=signup&next=/dashboard"));
+  expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "signup_completed", verified.id, {}, `signup_completed:${verified.id}`);
+  vi.mocked(scheduleFunnelEvent).mockClear();
+  mocks.getUser.mockResolvedValue({ error: null, data: { user: null } });
+  await confirm(callback("token_hash=abcdefghijklmnop&type=signup&next=/dashboard"));
+  expect(scheduleFunnelEvent).not.toHaveBeenCalled();
 });

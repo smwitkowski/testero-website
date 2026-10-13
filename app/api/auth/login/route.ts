@@ -12,6 +12,6 @@ export async function POST(request: Request) {
     const user = await getVerifiedUser(supabase);
     if (!user) return authResponse({ error: AUTH_MESSAGES.credentials }, 401);
     await claimVerifiedDiagnostics(user);
-    return authResponse({ message: "Signed in.", href: data.next });
+    return authResponse({ message: "Signed in.", href: data.next, userId: user.id });
   } catch (error) { return authErrorResponse(error); }
 }
