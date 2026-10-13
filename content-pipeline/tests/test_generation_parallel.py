@@ -166,7 +166,7 @@ def test_request_publication_failure_retains_rejected_index_and_drains_others(ba
         nonlocal failed
         if destination.parent.name == "batch.judge-requests" and not failed:
             failed = True
-            raise OSError("PRIVATE local error must not leak")
+            raise OSError("Disk full\nAuthorization: Bearer sk-sensitive-test-token")
         original_write(destination, payload)
     monkeypatch.setattr(generate, "write_artifact", write)
     result = invoke("batch", 8, "--parallel", "3")
@@ -174,10 +174,11 @@ def test_request_publication_failure_retains_rejected_index_and_drains_others(ba
     payload = json.loads((path / "batch.json").read_text())
     assert [c["index"] for c in payload["candidates"]] == list(range(1, 9))
     rejected = payload["candidates"][0]
-    assert rejected["failure_stage"] == "external_request"
+    assert rejected["failure_stage"] == "external_request_publication"
     assert rejected["error_class"] == "OSError"
     assert "external_judge_request" not in rejected
     assert not rejected.get("awaiting_external_judge")
-    assert "PRIVATE" not in json.dumps(payload) + result.output
+    assert "sk-sensitive-test-token" not in json.dumps(payload) + result.output
+    assert "Disk full" in rejected["error_message"]
     assert len(list((path / "batch.judge-requests").glob("*.json"))) == 7
     assert all(c.get("awaiting_external_judge") for c in payload["candidates"][1:])

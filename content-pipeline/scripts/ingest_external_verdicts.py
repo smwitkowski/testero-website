@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.generate_pmle_questions import database_client as _database_client, persist_candidate, write_artifact
 from shared.cert_context import plan_questions
 from shared.cli_models import parse_output
+from shared.completion_diagnostics import _safe_completion
 from shared.dedupe import normalize_stem
 from shared.doc_search import documentation_context
 from shared.option_order import canonical_evidence
@@ -120,49 +121,70 @@ def _scope(payload, entry):
     return scope
 
 
+class CandidateValidationError(ValueError):
+    """Local validation failed at the recorded pipeline stage."""
+
+    def __init__(self, stage, error):
+        self.stage, self.error_class = stage, type(error).__name__
+        super().__init__(_safe_completion(str(error))[:1000])
+
+
 def _validate_candidate(path, payload, entry):
-    scope = _scope(payload, entry)
-    question = candidate_question(entry)
-    candidate_storage_id(entry, scope, question)
-    if payload.get("external_judge_version") == 2:
-        validate_decision_provenance(scope, entry)
-    if not validate_question(question).is_valid:
-        raise ValueError("Question schema validation failed")
-    checked = check_evidence(canonical_evidence(entry), entry.get("sources"))
-    if not checked["passed"] or checked["options"] != canonical_evidence(entry):
-        raise ValueError("Frozen receipts or source provenance failed validation")
-    metadata = entry.get("external_judge_request")
-    if not isinstance(metadata, dict) or not isinstance(metadata.get("path"), str):
-        raise ValueError("Missing external judge request metadata")
-    given = Path(metadata["path"])
-    if given.is_absolute() or ".." in given.parts or given.name != entry["candidate_id"] + ".json":
-        raise ValueError("Unsafe external judge request path")
-    request_path = path.parent / given
-    if not request_path.resolve().is_relative_to(path.parent.resolve()):
-        raise ValueError("Unsafe external judge request path")
-    if any(part.is_symlink() for part in (request_path, *request_path.parents)):
-        raise ValueError("External judge requests cannot be symlinks")
-    digest = metadata.get("sha256")
-    if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
-        raise ValueError("Invalid external judge request digest")
-    if hashlib.sha256(request_path.read_bytes()).hexdigest() != digest:
-        raise ValueError("External judge request hash mismatch")
-    frozen = _read_json(request_path)
-    v4 = payload.get("external_judge_version") == 2
-    rebuilt = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"],
-                            **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False)} if v4 else {"signature": QuestionQualitySignature}))
-    if canonical_sha256(frozen) != canonical_sha256(rebuilt):
-        # Only unchanged originals may retain the exact known preceding 14-field rubric.
-        # No arbitrary old schema or historical 13-field request is accepted.
-        if v4 or "repair" in entry or canonical_sha256(frozen) != canonical_sha256(build_request(
-                entry["candidate_id"], scope, question, entry["sources"], checked["options"],
-                signature=LEGACY_ROUND4_QUALITY_SIGNATURE)):
-            raise ValueError("External request differs from frozen content or supported rubric")
-    return scope, question, checked
+    stage = "scope"
+    try:
+        scope = _scope(payload, entry)
+        stage = "schema"
+        question = candidate_question(entry)
+        candidate_storage_id(entry, scope, question)
+        if payload.get("external_judge_version") == 2:
+            stage = "decision_veto"
+            validate_decision_provenance(scope, entry)
+        stage = "schema"
+        if not validate_question(question).is_valid:
+            raise ValueError("Question schema validation failed")
+        stage = "mechanical"
+        checked = check_evidence(canonical_evidence(entry), entry.get("sources"))
+        if not checked["passed"] or checked["options"] != canonical_evidence(entry):
+            raise ValueError("Frozen receipts or source provenance failed validation")
+        stage = "external_request"
+        metadata = entry.get("external_judge_request")
+        if not isinstance(metadata, dict) or not isinstance(metadata.get("path"), str):
+            raise ValueError("Missing external judge request metadata")
+        given = Path(metadata["path"])
+        if given.is_absolute() or ".." in given.parts or given.name != entry["candidate_id"] + ".json":
+            raise ValueError("Unsafe external judge request path")
+        request_path = path.parent / given
+        if not request_path.resolve().is_relative_to(path.parent.resolve()):
+            raise ValueError("Unsafe external judge request path")
+        if any(part.is_symlink() for part in (request_path, *request_path.parents)):
+            raise ValueError("External judge requests cannot be symlinks")
+        digest = metadata.get("sha256")
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise ValueError("Invalid external judge request digest")
+        if hashlib.sha256(request_path.read_bytes()).hexdigest() != digest:
+            raise ValueError("External judge request hash mismatch")
+        frozen = _read_json(request_path)
+        v4 = payload.get("external_judge_version") == 2
+        rebuilt = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"],
+                                **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False)} if v4 else {"signature": QuestionQualitySignature}))
+        if canonical_sha256(frozen) != canonical_sha256(rebuilt):
+            # Only unchanged originals may retain the exact known preceding 14-field rubric.
+            # No arbitrary old schema or historical 13-field request is accepted.
+            if v4 or "repair" in entry or canonical_sha256(frozen) != canonical_sha256(build_request(
+                    entry["candidate_id"], scope, question, entry["sources"], checked["options"],
+                    signature=LEGACY_ROUND4_QUALITY_SIGNATURE)):
+                raise ValueError("External request differs from frozen content or supported rubric")
+        return scope, question, checked
+
+    except (ValueError, KeyError, TypeError, OSError, UnicodeError, StopIteration) as error:
+        raise CandidateValidationError(stage, error) from None
 
 
 def _reject(entry, stage, reason):
+    reason = _safe_completion(reason)[:1000]
     entry["failure_stage"], entry["reason"] = stage, reason
+    entry.setdefault("error_class", "CandidateRejected")
+    entry["error_message"] = reason
     if stage in ("external_request", "external_verdict"):
         entry["judge_verdict"] = {"passed": False, "score": 0.0, "reason": reason,
                                   "model": EXTERNAL_JUDGE_PROVENANCE}
@@ -387,6 +409,22 @@ def ingest(path, verdicts, *, dry_run=False):
             else:
                 click.echo(f"{ident}: already complete; no new insert")
             continue
+        # Generation rejects have no published request and must not be relabelled
+        # as invalid requests. Recover stages overwritten by older ingestion too.
+        if not entry.get("external_judge_request") and not entry.get("awaiting_external_judge"):
+            if entry.get("error_class") == "DecisionVetoError":
+                attempts = entry.get("decision_attempts", [])
+                reason = attempts[-1].get("proof", {}).get("reason") if attempts else None
+                _reject(entry, "decision_veto", reason or "Replacement decision vetoed; discard candidate")
+            elif entry.get("near_duplicate_check", {}).get("passed") is False:
+                _reject(entry, "near_duplicate", entry["near_duplicate_check"]["reason"])
+            elif not entry.get("failure_stage"):
+                _reject(entry, "external_request", "Candidate has no published external judge request")
+            else:
+                _reject(entry, entry["failure_stage"], entry.get("reason") or "Candidate rejected before external judging")
+            rejected += 1
+            click.echo(f"{ident}: generation rejected at {entry['failure_stage']}; {entry['reason']}")
+            continue
         # Previous dry-run decisions are not evidence for the current verdict file.
         entry.pop("external_verdict", None)
         entry["judge_verdict"] = {"passed": False, "score": 0.0,
@@ -408,8 +446,9 @@ def ingest(path, verdicts, *, dry_run=False):
             if normalized in seen or ident in repair_duplicate_ids:
                 raise ValueError("Duplicate normalized stem")
             seen.add(normalized)
-        except (ValueError, KeyError, TypeError, OSError, UnicodeError, StopIteration):
-            _reject(entry, "external_request", "Question, evidence, scope or external request validation failed")
+        except (ValueError, KeyError, TypeError, OSError, UnicodeError, StopIteration) as exc:
+            entry["error_class"] = getattr(exc, "error_class", type(exc).__name__)
+            _reject(entry, getattr(exc, "stage", "near_duplicate"), str(exc))
             rejected += 1
             click.echo(f"{ident}: rejected; {entry['reason']}")
             continue
@@ -434,8 +473,9 @@ def ingest(path, verdicts, *, dry_run=False):
             entry["external_judge_provenance"] = EXTERNAL_JUDGE_PROVENANCE
             entry["awaiting_external_judge"] = False
             entry["status"] = "external_judge_passed" if judge.passed else "external_judge_rejected"
-        except Exception:
-            _reject(entry, "external_verdict", "Malformed external verdict; exact output fields required")
+        except Exception as exc:
+            entry["error_class"] = type(exc).__name__
+            _reject(entry, "external_verdict", str(exc))
             rejected += 1
             click.echo(f"{ident}: rejected; {entry['reason']}")
             continue
@@ -444,8 +484,8 @@ def ingest(path, verdicts, *, dry_run=False):
             rejected += 1
             click.echo(f"{ident}: rejected; {entry['reason']}")
             continue
-        entry.pop("failure_stage", None)
-        entry.pop("reason", None)
+        for field in ("failure_stage", "reason", "error_class", "error_message"):
+            entry.pop(field, None)
         grounding = {key: scope[key] for key in ("cert_id", "objective_id", "guide_sha256")}
         grounding.update(generator_model=payload["model"], judge_model=EXTERNAL_JUDGE_PROVENANCE,
                          evidence=checked["options"], mechanical_check={"passed": True, "errors": []})

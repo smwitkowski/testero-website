@@ -25,3 +25,19 @@ The 150,000-character request cap, rubric/schema, verified quotes and original
 fetch hashes remain. This builds the replay at 134,329 characters; it does not
 exercise the live Argon model. Local request-construction failures now retain
 bounded/redacted exception messages; provider exception bodies stay generic.
+
+## Smoke 3 diagnostics and resume replay
+
+Request fixture `v5-smoke3-argon-request.json` is the exact public-content frozen
+request for `555ef068-8003-5edc-ad5a-83fd2aa6cc1b`, SHA256
+`9878217a2b5f207045a36efa26f9bf65ee707b1557ab21af88ac6414937cfecf`. Credential-pattern check found
+no keys; no provider response/log bodies are included. Five synthetic failing
+sub-call replays verify safe stage/class messages and candidate-only recovery;
+this does not establish which historical live sub-call failed.
+
+`v5-smoke3-candidate-failures.json` records rejected candidates and frozen local
+bank with source SHA256. The 4.1:3 proof passed, then dedupe correctly rejected
+it at score **0.25** against `420f7f83-b69a-5c8e-9621-b293c171fedc`.
+Ingestion had overwritten that stage and three decision vetoes with missing
+request errors; replay preserves/restores the true generation rejection stages.
+No gates, model choices, quotas, token budgets or dedupe thresholds changed.

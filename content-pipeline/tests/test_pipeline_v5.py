@@ -141,7 +141,8 @@ def test_argon_runner_two_separate_calls_and_no_leakage(monkeypatch):
     assert "correct_answer" not in calls[0][1]["judge_prompt"]
     assert "correct_explanation" not in calls[0][1]["judge_prompt"]
     monkeypatch.setattr(argon_gate, "run_call", Mock(side_effect=CLISchemaError("Malformed output")))
-    with pytest.raises(CLISchemaError): run_argon(request)
+    with pytest.raises(argon_gate.ArgonCallError) as failure: run_argon(request)
+    assert failure.value.call == "blind" and isinstance(failure.value.error, CLISchemaError)
 
 
 def test_four_gate_aggregate_requires_argon_and_every_claude_gate():

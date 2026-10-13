@@ -262,7 +262,8 @@ def test_real_cite_step_retains_invalid_receipts_without_judge_or_database(gener
     assert len(record["options"]) == len(record["rationales"]) == 4
     assert not record["mechanical_check"]["passed"]
     assert len(record["citation_attempts"]) == 2
-    assert "error_class" not in record
+    assert record["error_class"] == "CandidateRejected"
+    assert record["error_message"] == record["reason"]
     if failure == "overlong": assert len(record["citation_attempts"][0]["evidence"][0]["quote"]) == 301
     if failure == "omitted_evidence":
         assert record["citation_attempts"][0]["parse_failure"]

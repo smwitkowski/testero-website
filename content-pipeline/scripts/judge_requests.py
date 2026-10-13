@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -22,6 +23,8 @@ from shared.cli_models import output_model, parse_output
 from shared.quality_gate import QuestionQualitySignature
 from shared.gates import GATE_SIGNATURES, GATE_VERSION, parse_gate_output, gate_signatures
 from shared import argon_gate as argon
+from shared.completion_diagnostics import _safe_completion
+from shared.llm_limits import MaxTokensTruncation
 
 from shared.external_judge import REQUEST_CHARACTER_LIMIT
 SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
@@ -75,7 +78,7 @@ def batch_lock(verdicts):
         os.close(fd)
 
 
-def _read_request(path, ident, canonical):
+def _read_request(path, ident, canonical, *, with_digest=False):
     flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
     try:
         fd = os.open(path, flags)
@@ -121,7 +124,7 @@ def _read_request(path, ident, canonical):
         raise RequestValidationError("Request verdict schema differs from the current question quality schema")
     if "argon" in request:
         argon.validate_request(request["argon"])
-    return request
+    return (request, hashlib.sha256(raw).hexdigest()) if with_digest else request
 
 
 def _publish(path, payload, *, exclusive):
@@ -148,7 +151,9 @@ def _publish(path, payload, *, exclusive):
 def _safe_failure(error):
     # Never copy arbitrary exception messages, CLI logs, prompts or environment data.
     if isinstance(error, RequestValidationError):
-        return "RequestValidationError", "Frozen request validation failed; check ID, size, prompt and current schema"
+        return "RequestValidationError", _safe_completion(str(error))[:1000]
+    if isinstance(error, MaxTokensTruncation):
+        return "MaxTokensTruncation", "LM completion reached its token limit"
     for name, message in (
         ("CLIUsageLimitError", "Claude subscription usage or rate limit reached; batch stopped"),
         ("CLIAuthError", "Claude CLI authentication failed; authenticate before rerunning"),
@@ -159,7 +164,24 @@ def _safe_failure(error):
         error_type = getattr(cli_models, name, None)
         if error_type is not None and isinstance(error, error_type):
             return name, message
-    return "RequestRunnerError", "Request could not be completed or saved"
+    # Provider exceptions can contain prompt echoes, transport bodies or secrets.
+    # Preserve their class, not their body; use only a known safe category.
+    messages = {
+        "AuthenticationError": "Provider authentication failed",
+        "PermissionDeniedError": "Provider access denied",
+        "NotFoundError": "Provider model or endpoint unavailable",
+        "RateLimitError": "Provider rate limit reached",
+        "BadRequestError": "Provider rejected request parameters",
+        "APIConnectionError": "Provider connection failed",
+        "APITimeoutError": "Provider request timed out",
+        "TimeoutError": "Request timed out",
+        "ValueError": "Request or response value validation failed",
+        "TypeError": "Request or response type validation failed",
+        "OSError": "Local request or verdict file operation failed",
+    }
+    name = type(error).__name__
+    name = name if re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,79}", name) else "RequestRunnerError"
+    return name, messages.get(name, "Sub-call failed; provider exception body withheld")
 
 
 def _record_verdict_directory(requests, verdicts):
@@ -189,7 +211,7 @@ def _record_verdict_directory(requests, verdicts):
             raise click.ClickException("Cannot record verdict-directory registry safely") from None
 
 
-def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_gate=False):
+def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_gate=False, candidate_ids=()):
     """Run a resumable locked batch, submitting at most parallel requests at once."""
     if not isinstance(judge_model, str) or judge_model not in ALLOWED_MODELS:
         raise click.ClickException("Only claude or claude/claude-sonnet-5-5 is allowed by current ingestion provenance")
@@ -210,6 +232,13 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
         raise click.ClickException("Cannot prepare request and verdict directories") from None
     if any(not SAFE_ID.fullmatch(path.stem) for path in paths):
         raise click.ClickException("Request filenames must contain safe candidate IDs")
+    if candidate_ids:
+        if any(not isinstance(ident, str) or not SAFE_ID.fullmatch(ident) for ident in candidate_ids):
+            raise click.ClickException("Candidate selection requires safe request IDs")
+        selected = set(candidate_ids)
+        if selected - {path.stem for path in paths}:
+            raise click.ClickException("Selected candidate has no frozen request file")
+        paths = [path for path in paths if path.stem in selected]
     canonical = output_model(QuestionQualitySignature).model_json_schema()
     summary = Summary(remaining=len(paths))
     stopped, submission_lock = Event(), Lock()
@@ -219,8 +248,9 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
         destination = verdicts / (ident + ".json")
         if os.path.lexists(destination):
             return ident, "skipped", None
+        sub_call, request_sha256 = "request_validation", None
         try:
-            request = _read_request(path, ident, canonical)
+            request, request_sha256 = _read_request(path, ident, canonical, with_digest=True)
             if ("argon" in request) != argon_gate:
                 raise RequestValidationError("Argon flag must match the frozen request policy")
             if os.path.lexists(destination):
@@ -236,10 +266,12 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
                     with submission_lock:
                         if stopped.is_set():
                             return ident, "not_attempted", None
+                    sub_call = "claude." + name
                     gate = request["gates"][name]
                     raw[name] = cli_models.run_claude_request(judge_model, gate["judge_prompt"], gate["verdict_schema"])
                     parse_gate_output(name, raw[name], version=request["gate_version"])
             else:
+                sub_call = "claude.quality"
                 raw = cli_models.run_claude_request(judge_model, request["judge_prompt"], request["verdict_schema"])
                 if type(raw) is not dict:
                     raise cli_models.CLISchemaError("Invalid structured output")
@@ -251,7 +283,9 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
                         or not 0 < len(raw["reason"].strip()) <= 300):
                     raise cli_models.CLISchemaError("Invalid structured output")
             if argon_gate:
+                sub_call = "argon.validation"
                 raw["argon"] = argon.run_argon(request["argon"])
+            sub_call = "verdict_publication"
             if not _publish(destination, raw, exclusive=True):
                 return ident, "skipped", None
             try:
@@ -260,11 +294,15 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
                 pass
             return ident, "completed", None
         except Exception as error:
-            failure = _safe_failure(error)
+            if isinstance(error, argon.ArgonCallError):
+                sub_call, error = "argon." + error.call, error.error
+            error_class, message = _safe_failure(error)
+            failure = error_class, f"{sub_call}: {message}"
             if failure[0] == "CLIUsageLimitError":
                 with submission_lock:
                     stopped.set()
             record = {"candidate_id": ident, "error_class": failure[0], "message": failure[1],
+                      "sub_call": sub_call, "request_sha256": request_sha256,
                       "judge_model": judge_model, "ts": datetime.now(timezone.utc).isoformat()}
             try:
                 _publish(verdicts / ".failures" / (ident + ".json"), record, exclusive=False)
@@ -323,9 +361,10 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
 @click.option("--judge-model", default="claude", show_default=True)
 @click.option("--parallel", default=3, type=click.IntRange(1, 4), show_default=True)
 @click.option("--argon-gate", is_flag=True, help="Require and run frozen independent Gemini 4 Argon blind/full requests via OpenRouter.")
-def main(requests, verdicts, judge_model, parallel, argon_gate):
+@click.option("--candidate-id", "candidate_ids", multiple=True, help="Retry only these frozen candidate IDs in the original directories.")
+def main(requests, verdicts, judge_model, parallel, argon_gate, candidate_ids):
     """Save raw Claude verdicts for frozen requests; never generate or ingest rows."""
-    summary = run_requests(requests, verdicts, judge_model=judge_model, parallel=parallel, argon_gate=argon_gate)
+    summary = run_requests(requests, verdicts, judge_model=judge_model, parallel=parallel, argon_gate=argon_gate, candidate_ids=candidate_ids)
     if summary.failed or summary.usage_stopped or summary.remaining:
         raise click.exceptions.Exit(1)
 

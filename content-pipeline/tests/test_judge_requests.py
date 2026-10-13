@@ -89,9 +89,10 @@ def test_safe_failure_classes_no_retry_and_resumable_success(monkeypatch, dirs, 
     assert summary.failed == 1 and len(calls) == 1
     assert not (results / "candidate-1.json").exists()
     record = json.loads((results / ".failures/candidate-1.json").read_text())
-    assert set(record) == {"candidate_id", "error_class", "message", "judge_model", "ts"}
+    assert set(record) == {"candidate_id", "error_class", "message", "sub_call", "request_sha256", "judge_model", "ts"}
+    assert record["sub_call"] == "claude.quality" and len(record["request_sha256"]) == 64
     assert record["candidate_id"] == "candidate-1" and record["judge_model"] == "claude"
-    assert record["error_class"] == ("RequestRunnerError" if failure is RuntimeError else failure.__name__)
+    assert record["error_class"] == failure.__name__
     assert "SECRET" not in json.dumps(record) + capsys.readouterr().out
     fake_backend(monkeypatch, lambda *a: verdict())
     assert runner.run_requests(requests, results).completed == 1
@@ -319,7 +320,7 @@ def test_cli_defaults_limits_summary_and_nonzero_failures(monkeypatch, dirs):
     command = ["--requests", str(requests), "--verdicts", str(results)]
     invocation = CliRunner().invoke(runner.main, command)
     assert invocation.exit_code == 1
-    assert calls == [{"judge_model": "claude", "parallel": 3, "argon_gate": False}]
+    assert calls == [{"judge_model": "claude", "parallel": 3, "argon_gate": False, "candidate_ids": ()}]
     assert CliRunner().invoke(runner.main, command + ["--parallel", "5"]).exit_code == 2
     assert CliRunner().invoke(runner.main, ["--help"]).exit_code == 0
 
@@ -376,11 +377,11 @@ def test_usage_latch_blocks_worker_still_reading_request(monkeypatch, dirs):
     original_publish = runner._publish
     calls = []
 
-    def blocked_read(path, *args):
+    def blocked_read(path, *args, **kwargs):
         if path.stem == "candidate-1":
             reading_b.set()
             assert release_b.wait(timeout=5)
-        return original_read(path, *args)
+        return original_read(path, *args, **kwargs)
 
     def published_usage(path, payload, **kwargs):
         if payload.get("error_class") == "CLIUsageLimitError":

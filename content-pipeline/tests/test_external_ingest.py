@@ -316,7 +316,7 @@ def test_completed_stems_block_pending_duplicates_even_when_reordered(case):
     assert case[3].insert_question.call_count == 1
     assert not saved(case)["candidates"][0]["accepted"]
     # Request validation above passed; the ingest loop rejects the duplicate stem.
-    assert saved(case)["candidates"][0]["failure_stage"] == "external_request"
+    assert saved(case)["candidates"][0]["failure_stage"] == "near_duplicate"
 
 
 @pytest.mark.parametrize("failure", ["missing", "malformed_json", "schema"])

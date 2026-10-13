@@ -82,6 +82,8 @@ def reject_candidate(entry, stage, reason):
     """Record a bounded gate reason without exposing provider exception bodies."""
     entry["failure_stage"] = stage
     entry["reason"] = _safe_completion(reason)[:1000]
+    entry.setdefault("error_class", "CandidateRejected")
+    entry["error_message"] = entry["reason"]
 
 
 def persist_candidate(client, scope, question, judge, grounding, exam, domain_id, run_id, difficulty,
@@ -253,7 +255,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     "mechanical_errors": proof["mechanical_check"]["errors"],
                     "instruction": "Replace the engineering decision, not the scenario with extra exceptions."})
             else:
-                raise DecisionVetoError("Replacement decision vetoed; discard candidate")
+                raise DecisionVetoError("Replacement decision vetoed; discard candidate: " + proof["reason"])
             # Objective text comes from the frozen reviewed registry, never the LM.
             decision_objective = {"objective_id": scope["objective_id"], "objective_text": scope["objective_text"]}
             scope["decision_objective"] = entry["decision_objective"] = decision_objective
@@ -351,7 +353,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             entry["error_class"] = type(exc).__name__
             if stage == "external_request":
                 entry["error_message"] = _safe_completion(str(exc))[:1000]
-            reject_candidate(entry, stage, str(exc) if stage == "external_request" or isinstance(exc, CLIModelError)
+            reject_candidate(entry, stage, str(exc) if stage == "external_request" or isinstance(exc, (CLIModelError, DecisionVetoError))
                              else stage.capitalize() + " request failed")
             if isinstance(exc, (CLIUsageLimitError, CLIAuthError, CodexModelRejectedError)):
                 stop_event.set()  # Stop admission now, not after ordered publication.
@@ -395,7 +397,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                         except Exception as exc:
                             entry["error_class"] = type(exc).__name__
                             entry.pop("external_judge_request", None)
-                            reject_candidate(entry, "external_request", "External request publication failed; inspect local artifacts")
+                            reject_candidate(entry, "external_request_publication", _safe_completion(str(exc))[:1000])
                     if not entry["accepted"] and not entry.get("awaiting_external_judge") and not entry.get("reason") and not entry.get("error_class"):
                         reject_candidate(entry, stage, stage.capitalize() + " failed before acceptance")
                     payload["candidates"].append(entry)

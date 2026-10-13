@@ -33,6 +33,14 @@ class ArgonReviewSignature(dspy.Signature):
 SIGNATURES = {"blind": BlindSolverSignature, "review": ArgonReviewSignature}
 
 
+class ArgonCallError(RuntimeError):
+    """Identify the failed call without copying a provider exception body."""
+
+    def __init__(self, call, error):
+        self.call, self.error = call, error
+        super().__init__(f"Argon {call} call failed ({type(error).__name__})")
+
+
 def build_argon_request(question, scope, context, evidence):
     inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence)
     full = {**inputs["evidence"], "style_reference": inputs["style"]["style_reference"]}
@@ -74,14 +82,18 @@ def validate_request(request):
 
 def run_argon(request):
     validate_request(request)
-    outputs = {name: run_call(name, gate) for name, gate in request["calls"].items()}
-    # Validate strictly before publication even for a negative verdict.
+    outputs = {}
     for name, signature in SIGNATURES.items():
-        outputs[name] = parse_output(json.dumps(outputs[name], allow_nan=False), signature)
-    from shared.gates import parse_gate_output
-    parse_gate_output("blind_solver", outputs["blind"])
-    if not outputs["review"]["fix"].strip() or any(not issue.strip() for issue in outputs["review"]["issues"]):
-        raise CLISchemaError("Empty Argon issue or fix")
+        try:
+            raw = run_call(name, request["calls"][name])
+            outputs[name] = parse_output(json.dumps(raw, allow_nan=False), signature)
+            if name == "blind":
+                from shared.gates import parse_gate_output
+                parse_gate_output("blind_solver", outputs[name])
+            elif not outputs[name]["fix"].strip() or any(not issue.strip() for issue in outputs[name]["issues"]):
+                raise CLISchemaError("Empty Argon issue or fix")
+        except Exception as error:
+            raise ArgonCallError(name, error) from None
     return {"model": MODEL, "version": 1, "request_sha256": canonical_sha256(request), **outputs}
 
 

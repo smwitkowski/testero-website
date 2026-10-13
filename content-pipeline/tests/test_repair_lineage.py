@@ -296,7 +296,7 @@ def test_repair_cannot_duplicate_another_original_even_if_reordered(repaired, ch
     assert result.exit_code == 1
     repaired[4].assert_not_called()
     after = next(entry for entry in saved(repaired)["candidates"] if entry["candidate_id"] == child["candidate_id"])
-    assert after["failure_stage"] == "external_request"
+    assert after["failure_stage"] == "near_duplicate"
 
 
 @pytest.fixture

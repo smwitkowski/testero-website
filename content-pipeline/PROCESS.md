@@ -1198,3 +1198,31 @@ or bot wall, and keep only aggregate notes in `certs/STYLE.md`. Dump items are n
 stored, prompted, used as few-shot examples, or treated as an answer key.
 Write original questions. Never commit official sample stems/options/keys or raw
 Forms. Samples are style evidence, not answer authority or live-exam frequencies.
+
+### Failed frozen-request recovery (rules v5)
+
+Failure records in `<verdicts>/.failures/<candidate-id>.json` include `sub_call`
+(`claude.blind_solver/style/evidence`, `argon.blind/review`, local validation or
+publication), exception class, a safe categorical message, and SHA256 of the
+exact safely read request bytes. Provider exception bodies and prompt echoes
+are withheld. Typed token-limit failures are explicit; no token budget changes
+or automatic retries are introduced. Generation/ingestion rejection records
+keep their actual stage, class and bounded/redacted local message. A supported
+proof still does not bypass the near-duplicate veto.
+
+Retry only the failed candidate in the **original** directories; do not copy
+prompts, delete successful verdicts or regenerate questions:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/judge_requests.py \
+  --requests .cache/generation/pmle-d029-v5-smoke-6-20261013e.judge-requests \
+  --verdicts .cache/generation/pmle-d029-v5-smoke-6-20261013e.verdicts \
+  --argon-gate --parallel 1 \
+  --candidate-id 555ef068-8003-5edc-ad5a-83fd2aa6cc1b
+```
+
+This is a founder/coordinator-only live operation, **not** run by offline repair.
+The selector is repeatable; absent IDs fail closed. A retry reruns all calls for
+the selected candidate; complete verdicts are skipped unchanged. A complete
+atomic verdict replaces no existing result and clears that candidate's failure
+record only after publication. No partial sub-call output is used as evidence.
