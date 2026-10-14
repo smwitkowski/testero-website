@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DomainScores, ScoreBar } from "@/components/readiness-report";
-import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
+import { PMLE_BLUEPRINT, PMLE_BLUEPRINT_MAP } from "@/lib/constants/pmle-blueprint";
 import { pageMetadata } from "@/lib/seo";
 import { getFaqEntries } from "@/lib/content/loader";
 import { isComingSoon } from "@/lib/content/exam";
 
-export const metadata = pageMetadata("Know where to focus your PMLE study", "Take a free PMLE diagnostic, find your weakest exam domains, and practice with a free account or PMLE Pass.", "/");
+// The root layout's "%s | Testero" template does not apply to its own page.
+export const metadata = { ...pageMetadata("Know where to focus your PMLE study", "Take a free PMLE diagnostic, find your weakest exam domains, and practice with a free account or PMLE Pass.", "/"), title: { absolute: "Know where to focus your PMLE study | Testero" } };
 
 const steps = [
   { title: "Take the diagnostic", cost: "Free", body: "20 scenario questions across the six exam domains. No account needed." },
@@ -14,10 +15,10 @@ const steps = [
   { title: "Practice your weakest domain", cost: "Free or PMLE Pass", body: "Free accounts get 5 practice questions a week. PMLE Pass adds explanations and unlimited sessions." },
 ];
 const sampleDomains = [
-  { domainCode: "pipelines", domainName: "Automating and orchestrating ML pipelines", total: 3, correct: 1, percentage: 33 },
-  { domainCode: "serving", domainName: "Serving and scaling models", total: 3, correct: 2, percentage: 67 },
-  { domainCode: "data", domainName: "Collaborating to manage data and models", total: 4, correct: 3, percentage: 75 },
-];
+  { domainCode: "AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES", total: 3, correct: 1, percentage: 33 },
+  { domainCode: "SERVING_AND_SCALING_MODELS", total: 3, correct: 2, percentage: 67 },
+  { domainCode: "COLLABORATING_TO_MANAGE_DATA_AND_MODELS", total: 4, correct: 3, percentage: 75 },
+].map(domain => ({ ...domain, domainName: PMLE_BLUEPRINT_MAP[domain.domainCode].displayName }));
 
 export default function HomePage() {
   const faqs = getFaqEntries().filter((entry) => !isComingSoon(entry.exam)).slice(0, 3);

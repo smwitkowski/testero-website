@@ -44,7 +44,7 @@ describe("exam preparation availability", () => {
   it("tags only non-PMLE index items and selects only PMLE homepage teasers", () => {
     for (const [Page, entries] of [[BlogPage, getBlogEntries()], [FaqPage, getFaqEntries()]] as const) {
       const html = renderToStaticMarkup(createElement(Page));
-      expect((html.match(/>Coming soon</g) ?? []).length).toBe(entries.filter(e => isComingSoon(e.exam)).length);
+      expect((html.match(/>Not on Testero yet</g) ?? []).length).toBe(entries.filter(e => isComingSoon(e.exam)).length);
     }
     const home = renderToStaticMarkup(createElement(HomePage));
     expect(home.indexOf('id="questions"')).toBeGreaterThan(home.indexOf('id="domains"'));

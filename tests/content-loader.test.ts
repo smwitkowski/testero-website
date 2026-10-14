@@ -53,9 +53,9 @@ describe("local content loader", () => {
     const source = readFileSync(`content/faq/${slug}.md`, "utf8");
     const originalBody = parseFrontmatter(source).body;
     const overlay = FAQ_PUBLICATION_OVERLAYS[slug];
-    const replacement = overlay.replacements[0];
     const published = faqDocumentForPublication(slug, source);
-    expect(published.body).toBe(originalBody.replace(replacement.original, replacement.replacement));
+    expect(published.body).toBe(overlay.replacements.reduce((body, { original, replacement }) => body.replace(original, replacement), originalBody));
+    expect(published.body).not.toMatch(/widely considered worth the investment/);
     expect(published.body).not.toContain("among the highest earners");
     expect(published.editorialNotice).toBe(overlay.notice);
     expect(getFaqEntry(slug)?.editorialNotice).toBe(overlay.notice);
@@ -64,9 +64,11 @@ describe("local content loader", () => {
     const untouchedSource = readFileSync(`content/faq/${untouchedSlug}.md`, "utf8");
     expect(faqDocumentForPublication(untouchedSlug, untouchedSource)).toEqual({ body: parseFrontmatter(untouchedSource).body });
   });
-  it("audits exactly three FAQ sources and leaves all text outside each narrow replacement unchanged", () => {
+  it("audits exactly six FAQ sources and leaves all text outside each narrow replacement unchanged", () => {
     expect(Object.keys(FAQ_PUBLICATION_OVERLAYS).sort()).toEqual([
-      "is-google-cloud-certification-worth-it", "is-google-data-analytics-certification-worth-it", "what-is-google-cloud-certification",
+      "how-do-you-register-for-google-cloud-certification", "how-much-does-google-cloud-digital-leader-cost",
+      "is-google-cloud-certification-worth-it", "is-google-data-analytics-certification-worth-it",
+      "is-the-google-professional-machine-learning-engineer-certification-worth-it", "what-is-google-cloud-certification",
     ]);
     for (const [slug, overlay] of Object.entries(FAQ_PUBLICATION_OVERLAYS)) {
       const source = readFileSync(`content/faq/${slug}.md`, "utf8");
@@ -75,10 +77,25 @@ describe("local content loader", () => {
         expect(expected.split(replacement.original)).toHaveLength(2);
         expected = expected.replace(replacement.original, replacement.replacement);
       }
-      expect(faqDocumentForPublication(slug, source)).toEqual({ body: expected, editorialNotice: overlay.notice });
+      expect(faqDocumentForPublication(slug, source)).toEqual({ body: expected, editorialNotice: overlay.notice, ...(overlay.citations ? { citations: overlay.citations } : {}) });
       expect(() => faqDocumentForPublication(slug, source.replace("Google", "Changed"))).toThrow("FAQ source requires editorial review");
       expect(getFaqEntry(slug)?.editorialNotice).toBe(overlay.notice);
     }
+  });
+  it("removes unsourced value claims and known-broken citations", () => {
+    const faqs = getFaqEntries();
+    for (const entry of faqs) {
+      expect(entry.body).not.toMatch(/highly valuable|widely considered/);
+      expect(entry.citations.join(" ")).not.toMatch(/answer\/9907651|coursera\.org\/professional-certificates\/google-cloud-digital-leader|datacamp\.blog/);
+    }
+  });
+  it("ends FAQ excerpts at a sentence boundary when the first sentence fits", async () => {
+    const { sentenceExcerpt } = await import("@/lib/content/loader");
+    expect(sentenceExcerpt("Short.")).toBe("Short.");
+    expect(sentenceExcerpt(`${"a".repeat(100)}. ${"b".repeat(100)}.`)).toBe(`${"a".repeat(100)}.`);
+    expect(sentenceExcerpt(`${"word ".repeat(50)}end. Next.`)).toBe(`${"word ".repeat(50)}end.`);
+    expect(sentenceExcerpt(`${"word ".repeat(80)}end.`)).toMatch(/word…$/);
+    for (const entry of getFaqEntries()) expect(entry.description).toMatch(/[.!?]$/);
   });
   it("shows FAQ citations while replacing legacy hub destinations", () => {
     for (const entry of getFaqEntries()) {

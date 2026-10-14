@@ -33,7 +33,7 @@ export function DiagnosticResults({ sessionId }: { sessionId: string }) {
     <section aria-labelledby="domains-heading" className="space-y-5 rounded-lg border border-border bg-card p-5 sm:p-7">
       <h2 id="domains-heading" className="text-xl font-semibold">Score by domain</h2>
       <DomainScores domains={orderedDomains} />
-      <p className="text-sm leading-relaxed text-muted-foreground">Each domain has only a few questions. Treat lower scores as a guide to where to look, not a full measure of your knowledge. Tied scores keep their original domain order.</p>
+      <p className="text-sm leading-relaxed text-muted-foreground">Each domain has only a few questions. Treat lower scores as a guide to where to look, not a full measure of your knowledge. Domains with the same score are listed in exam-guide order.</p>
     </section>
     {data.review && <QuestionReviewList review={data.review} />}
     {!data.review && <section className="space-y-3"><h2 className="text-xl font-semibold">Review your answers</h2><p className="leading-relaxed text-muted-foreground">Your full score, readiness tier, and domain breakdown are available without an account. Create an account to see your questions and start free practice.</p><Button variant="outline" asChild><Link href={`/signup?next=${encodeURIComponent(`/diagnostic/${sessionId}/results`)}`}>Create an account to see your questions</Link></Button></section>}
