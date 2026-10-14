@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PaidAccess } from "@/lib/billing/paid-access";
 import { Button } from "@/components/ui/button";
+import { accessDate, daysLeft } from "@/lib/billing/dates";
 
 /** A restored tab must recheck access after a refund or expiry. */
 export function useFreshAccessOnFocus() {
@@ -15,16 +16,16 @@ export function useFreshAccessOnFocus() {
   }, []);
 }
 
-export function accessDate(value: string | null): string | null {
-  if (!value || !Number.isFinite(Date.parse(value))) return null;
-  return new Date(value).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
-}
+export { accessDate, daysLeft };
 
 export function PassStatus({ access }: { access: PaidAccess }) {
   if (access.unavailable) return <p role="alert">Your access status could not be verified. Please reload to retry.</p>;
   const until = access.hasPaidAccess && access.pass ? accessDate(access.pass.expires_at) : null;
+  const refunded = !access.hasPaidAccess ? accessDate(access.refundedAt ?? null) : null;
+  const remaining = until ? daysLeft(access.pass!.expires_at) : 0;
   return <div className="space-y-2">
-    {until ? <p>Access until <time dateTime={access.pass!.expires_at}>{until}</time></p>
+    {refunded && <p>Your PMLE Pass was refunded on <time dateTime={access.refundedAt}>{refunded}</time>.</p>}
+    {until ? <p>Access until <time dateTime={access.pass!.expires_at}>{until}</time> <span className="text-muted-foreground">({remaining === 1 ? "1 day" : `${remaining} days`} left)</span></p>
       : access.isLegacySubscriber && access.hasPaidAccess ? <p>Active legacy subscription</p>
       : <p>Free account. 5 practice questions each week.</p>}
   </div>;

@@ -197,3 +197,32 @@ describe("bounded checkout verification and authoritative focus reload", () => {
     expect(listeners.has("focus")).toBe(false);
   });
 });
+
+describe("QA 2026-10-14 pass display", () => {
+  it("pricing shows an owned pass with a practice link instead of the buy button", async () => {
+    mocks.user.mockResolvedValue({ id: "verified" });
+    mocks.access.mockResolvedValue(paid);
+    const html = renderToStaticMarkup(await PricingPage());
+    expect(html).toContain("You have PMLE Pass until <time");
+    expect(html).toContain("January 1, 2027");
+    expect(html).toContain('href="/dashboard"');
+    expect(html).not.toContain("Get PMLE Pass — $39");
+  });
+  it("pricing keeps checkout when access is unavailable or free", async () => {
+    mocks.user.mockResolvedValue({ id: "verified" });
+    for (const access of [free, { ...free, unavailable: true }]) {
+      mocks.access.mockResolvedValue(access);
+      expect(renderToStaticMarkup(await PricingPage())).toContain("Get PMLE Pass — $39");
+    }
+  });
+  it("shows days left and a refund note", () => {
+    vi.useFakeTimers({ now: Date.parse("2026-12-30T12:00:00Z") });
+    try {
+      expect(renderToStaticMarkup(createElement(PassStatus, { access: paid }))).toMatch(/January 1, 2027<\/time> <span[^>]*>\(2 days left\)/);
+      const refunded = renderToStaticMarkup(createElement(PassStatus, { access: { ...free, refundedAt: "2026-10-05T09:00:00Z" } }));
+      expect(refunded).toContain("Your PMLE Pass was refunded on <time");
+      expect(refunded).toContain("October 5, 2026");
+      expect(refunded).toContain("Free account.");
+    } finally { vi.useRealTimers(); }
+  });
+});

@@ -25,7 +25,7 @@ export function DashboardPanel({ data, requestedDomain }: { data: DashboardData;
       <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
       <p className="leading-relaxed text-muted-foreground">Use your latest diagnostic to choose what to study next.</p>
     </section>
-    {data.paidAccess.unavailable ? <section className="space-y-3"><p role="alert">Your access status could not be verified. Reload before starting practice.</p><Button onClick={() => window.location.reload()}>Reload dashboard</Button></section> : <PracticeStart requestedDomain={requestedDomain} domains={data.domains} weakestDomains={data.weakestDomains} remaining={data.quota.remaining} hasPaidAccess={data.paidAccess.hasPaidAccess} />}
+    {data.paidAccess.unavailable ? <section className="space-y-3"><p role="alert">Your access status could not be verified. Reload before starting practice.</p><Button onClick={() => window.location.reload()}>Reload dashboard</Button></section> : <PracticeStart requestedDomain={requestedDomain} domains={data.domains} weakestDomains={data.weakestDomains} remaining={data.quota.remaining} quotaWeekStart={data.quota.weekStart} hasPaidAccess={data.paidAccess.hasPaidAccess} />}
     {diagnostic ? <>
       <div className="grid items-start gap-6 lg:grid-cols-[0.8fr_1.5fr]">
         <div className="space-y-4"><ScoreReport score={diagnostic.score} correctAnswers={diagnostic.correctAnswers} totalQuestions={diagnostic.totalQuestions} /><Link href={`/diagnostic/${encodeURIComponent(diagnostic.sessionId)}/results`} className="inline-block text-sm font-medium text-primary underline">View diagnostic results</Link></div>

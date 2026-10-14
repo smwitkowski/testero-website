@@ -9,9 +9,17 @@ import { trackPractice } from "@/lib/analytics/client";
 import { Button } from "@/components/ui/button";
 import { practiceRequest, practiceError, type PracticeRequestError } from "@/components/practice-resource";
 
-export function PracticeStart({ domains, weakestDomains, remaining, hasPaidAccess = false, requestedDomain }: Pick<DashboardData, "domains" | "weakestDomains"> & { remaining: number; hasPaidAccess?: boolean; requestedDomain?: string }) {
+/** The free allowance resets 7 days after the UTC week start (Monday 00:00 UTC). */
+export function quotaResetDate(weekStart?: string): string | null {
+  const start = weekStart && /^\d{4}-\d{2}-\d{2}$/.test(weekStart) ? Date.parse(`${weekStart}T00:00:00Z`) : NaN;
+  if (!Number.isFinite(start)) return null;
+  return new Date(start + 7 * 86_400_000).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
+}
+
+export function PracticeStart({ domains, weakestDomains, remaining, hasPaidAccess = false, requestedDomain, quotaWeekStart }: Pick<DashboardData, "domains" | "weakestDomains"> & { remaining: number; hasPaidAccess?: boolean; requestedDomain?: string; quotaWeekStart?: string }) {
+  const resetsOn = quotaResetDate(quotaWeekStart);
   const router = useRouter();
-  const [domainCode, setDomainCode] = useState(domains.find(domain => domain.domainCode === requestedDomain)?.domainCode ?? domains[0]?.domainCode ?? "");
+  const [domainCode, setDomainCode] = useState(domains.find(domain => domain.domainCode === requestedDomain)?.domainCode ?? domains.find(domain => domain.domainCode === weakestDomains[0]?.domainCode)?.domainCode ?? domains[0]?.domainCode ?? "");
   const [pending, setPending] = useState(false);
   const [exhausted, setExhausted] = useState(false);
   const [error, setError] = useState<PracticeRequestError | null>(null);
@@ -47,7 +55,7 @@ export function PracticeStart({ domains, weakestDomains, remaining, hasPaidAcces
     <p className="leading-relaxed text-muted-foreground">{hasPaidAccess ? "Your paid access includes unlimited practice sessions. Each session has 5 questions and focuses on one domain." : "Free accounts get 5 practice questions each week. Each session focuses on one domain."}</p>
     {!hasPaidAccess && <p className="text-sm text-muted-foreground">{remaining} free practice questions remaining this week</p>}
     {exhausted || (!hasPaidAccess && remaining < 5) ? <div className="space-y-3">
-      <p role="status">You have used your 5 free practice questions for this week. Your free allowance resets next week.</p>
+      <p role="status">You have used your 5 free practice questions for this week. {resetsOn ? `Your free allowance resets on ${resetsOn} at 00:00 UTC.` : "Your free allowance resets next week."}</p>
       <Button asChild><Link href="/pricing">Upgrade to PMLE Pass</Link></Button>
     </div> : error ? <div className="space-y-3">
       <p role="alert" className="text-destructive">{error.message} Reload your dashboard before starting another session.</p>

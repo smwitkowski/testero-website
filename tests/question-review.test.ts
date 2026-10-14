@@ -44,3 +44,12 @@ describe("shared question review", () => {
     expect(html).not.toContain("Incorrect");
   });
 });
+
+describe("paid review explanations", () => {
+  it("shows a correct-option explanation that repeats the question explanation only once", () => {
+    const review = { ...mapReview(source), explanation: "Because A.", options: [{ label: "A", text: "First", explanation: " Because A. " }, { label: "B", text: "Second", explanation: "B is wrong." }] };
+    const html = renderToStaticMarkup(createElement(QuestionReviewList, { review: [review] }));
+    expect(html.match(/Because A\./g)).toHaveLength(1);
+    expect(html).toContain("B is wrong.");
+  });
+});
