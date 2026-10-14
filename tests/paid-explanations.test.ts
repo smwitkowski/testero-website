@@ -21,7 +21,7 @@ describe("server-only explanation whitelist and shuffled snapshot mapping", () =
     expect(result.get("second")).toEqual(result.get("item"));
     expect(database.from.mock.calls).toEqual([["answers"], ["explanations"]]);
     expect(database.from.mock.results[0].value.in).toHaveBeenCalledWith("question_id", [questionId]);
-    expect(database.from.mock.results[0].value.select).toHaveBeenCalledWith("question_id,choice_text,explanation_text");
+    expect(database.from.mock.results[0].value.select).toHaveBeenCalledWith("question_id,choice_label,choice_text,explanation_text");
     expect(database.from.mock.results[1].value.select).toHaveBeenCalledWith("question_id,explanation_text");
     const review = addPaidReview(mapReview({ ...item, ordinal: 1, stem: "Stem", selected_label: "A", correct_label: "B", is_correct: false, domain_code: "A", domain_name: "Domain" }), result.get(item.id));
     expect(review.options[0]).toEqual({ label: "A", text: "Wrong", explanation: "Why wrong" });
@@ -42,5 +42,17 @@ describe("server-only explanation whitelist and shuffled snapshot mapping", () =
   it("throws no SDK errors and makes no bank request for missing trusted ids", async () => {
     expect((await loadPaidExplanations(db(answers, explanations, undefined, true).client, [item])).size).toBe(0);
     const database = db(); expect((await loadPaidExplanations(database.client, [{ ...item, question_id: undefined }, { ...item, question_id: "bad" }])).size).toBe(0); expect(database.from).not.toHaveBeenCalled();
+  });
+});
+
+describe("explanation letters follow the displayed order", () => {
+  it("rewrites bank letters in question and option explanations without touching stored rows", async () => {
+    // Bank: A = Correct, B = Wrong. Display: A = Wrong, B = Correct.
+    const bankAnswers = [{ question_id: questionId, choice_label: "A", choice_text: "Correct", explanation_text: "Distractor B: see A." }, { question_id: questionId, choice_label: "B", choice_text: "Wrong", explanation_text: "Correct Answer (A) beats B." }];
+    const bankExplanation = [{ question_id: questionId, explanation_text: "Correct Answer (A): fits.\nDistractor B: fails.\n\nA: Fits.\n\nB: Fails." }];
+    const result = (await loadPaidExplanations(db(bankAnswers, bankExplanation).client, [item])).get("item")!;
+    expect(result.explanation).toBe("Correct Answer (B): fits.\nDistractor A: fails.\n\nB: Fits.\n\nA: Fails.");
+    expect(result.optionExplanations).toEqual([{ label: "A", text: "Wrong", explanation: "Correct Answer (B) beats B." }, { label: "B", text: "Correct", explanation: "Distractor A: see A." }]);
+    expect(bankExplanation[0].explanation_text).toBe("Correct Answer (A): fits.\nDistractor B: fails.\n\nA: Fits.\n\nB: Fails.");
   });
 });
