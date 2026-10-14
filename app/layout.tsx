@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { DEFAULT_DESCRIPTION, pageMetadata, SITE_ORIGIN } from "@/lib/seo";
 import { SiteHeader } from "@/components/site-header";
@@ -26,6 +26,9 @@ export const metadata: Metadata = {
   alternates: undefined,
   icons: { icon: "/logo.svg" },
 };
+
+// Lets env(safe-area-inset-bottom) work for the pinned diagnostic action bar on notched phones.
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -103,14 +103,17 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
       seen.add(progress.currentQuestion!.id);
       await expect(page.getByRole("navigation", { name: "Main navigation" })).toHaveCount(0);
       await expect(page.getByRole("contentinfo")).toHaveCount(0);
-      await expect(page.locator("header").getByText(`${index} of 20 answered`, { exact: true })).toBeVisible();
+      await expect(page.getByText(/of 20 answered/)).toHaveCount(0);
+      await expect(page.getByRole("progressbar", { name: "Diagnostic progress" })).toHaveAttribute("aria-valuenow", String(index));
+      await expect(page.getByText("Halfway there. Your domain picture is taking shape.", { exact: true })).toHaveCount(index === 10 ? 1 : 0);
+      await expect(page.getByText("Answers can’t be changed after you submit.")).toHaveCount(0);
       if (index === 0) {
         await captureV3(page, "diagnostic-question");
         // B2: the primary button focus ring contrasts with both the blue fill and the page.
         await page.getByRole("radio").first().focus();
         await page.keyboard.press("ArrowDown");
         await page.keyboard.press("Tab");
-        const submit = page.getByRole("button", { name: "Submit answer" });
+        const submit = page.getByRole("button", { name: "Next question" });
         await expect(submit).toBeFocused();
         const ring = await submit.evaluate(element => { const style = getComputedStyle(element); return { outline: style.outlineColor, width: style.outlineWidth, shadow: style.boxShadow }; });
         expect(ring).toEqual({ outline: "rgb(16, 24, 40)", width: "3px", shadow: "rgb(255, 255, 255) 0px 0px 0px 3px" });
@@ -128,9 +131,24 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
         expect(reloaded.currentQuestion).toEqual(progress.currentQuestion);
         expect(reloaded.answeredCount).toBe(3);
       }
+      const nextName = index === 19 ? "See my results" : "Next question";
+      if (index === 1) {
+        // Selecting does not commit: change the pick, then Next sends the final one.
+        const radios = page.getByRole("radio");
+        await radios.nth(0).check();
+        await radios.nth(1).check();
+        await expect(radios.nth(1)).toBeChecked();
+        await expect(radios.nth(0)).not.toBeChecked();
+        expect(await (await page.request.get(api)).json()).toMatchObject({ answeredCount: 1 });
+        const sent = page.waitForRequest(request => request.url().endsWith(`${api}/answer`));
+        await page.getByRole("button", { name: nextName }).click();
+        expect(JSON.parse((await sent).postData()!).selectedLabel).toBe(progress.currentQuestion!.options[1].label);
+        await expect(page.getByText("Question 3 of 20", { exact: true })).toBeVisible();
+        continue;
+      }
       await page.getByRole("radio").first().check();
       const acceptedResponse = page.waitForResponse(response => response.url().endsWith(`${api}/answer`) && response.request().method() === "POST");
-      await page.getByRole("button", { name: "Submit answer" }).click();
+      await page.getByRole("button", { name: nextName }).click();
       const accepted = await acceptedResponse;
       expect(accepted.status()).toBe(200);
       const answer = await accepted.json() as DiagnosticAnswerResponse;
@@ -154,7 +172,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
     expect(result.domainBreakdown.reduce((sum, domain) => sum + domain.correct, 0)).toBe(result.correctAnswers);
     expect(Object.keys(result).sort()).toEqual(["sessionId", "score", "totalQuestions", "correctAnswers", "readiness", "domainBreakdown"].sort());
     await expect(page.getByRole("radio")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Submit answer" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Next question|See my results/ })).toHaveCount(0);
     await expect(page.getByText(`${result.correctAnswers} of 20 correct`, { exact: true })).toBeVisible();
 
     const { data: rows, error } = await service.from("session_items").select("id,ordinal,is_correct,answered_at").eq("session_id", sessionId).order("ordinal");
