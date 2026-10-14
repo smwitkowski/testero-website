@@ -66,8 +66,25 @@ v4 guard and use fresh artifact names. Historical v4 requests remain v4.
    candidates**. Smaller nonempty samples are informational, not cap failures;
    malformed keys and real candidate failures still block. With zero eligible candidates the report is
    **not available** (`passed: null`), not a key-position failure. The batch still
-   fails for its real candidate/veto failure; ingest blocks an empty passing set. A random deterministic shuffle does not
-   guarantee a passing distribution. Inspect failures; never hand-edit mappings.
+   fails for its real candidate/veto failure; ingest blocks an empty passing set.
+   At v5 external ingest, after validating all gates, sort the nonsuperseded eligible
+   candidates by candidate ID. SHA256 of their compact JSON ID list seeds a local
+   A–D permutation; assign key slots round-robin and swap each generated key into
+   its slot. No position exceeds `ceil(N/4)`. The 40% cap and N>=10 enforcement
+   remain unchanged as a safety assertion. N=1–3 also works. Generation's independent
+   ID-seeded shuffle remains, but ingest is authoritative for stored order.
+   `option_balance` records version 1, population SHA256 and zero-based ordinal;
+   `option_order` still maps stored labels to canonical generator/judge labels.
+   Texts, rationales and receipt labels move together. Canonical content, request
+   hashes and raw gate verdicts stay unchanged: verdict labels refer to the frozen
+   judge projections, **not** stored answer labels. Reports, including measured
+   `key_length_rank_report` (word counts; ties use the shortest rank), are re-derived
+   after balancing; the frozen authoring rank hint is not changed.
+   Existing generated artifacts can be ingested without regeneration or re-judging.
+   Dry-run/write/replay of the same eligible cohort uses the same assignments.
+   A changed cohort after any completed write, or an old completed unbalanced
+   layout, requires reconciliation; never relabel already stored DB rows.
+   Partial/unknown write journals remain blocked. Never hand-edit mappings.
    Generation enforces the key-position report on accepted/persisted candidates
    only; rejected and awaiting candidates do not cause a cap failure. Generated
    option-bearing counts remain a separately labelled informational report. Ingest

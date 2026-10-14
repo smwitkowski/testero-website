@@ -34,12 +34,8 @@ def candidate_id(index, scope, question):
 
 def candidate_question(entry):
     """Rebuild the exact cleaned A-key question without cleaning it a second time."""
-    from shared.option_order import option_order
-    order = entry.get("option_order", dict(zip("ABCD", "ABCD")))
-    if (set(order) != set("ABCD") or set(order.values()) != set("ABCD")
-            or ("option_order" in entry and order != option_order(entry["candidate_id"]))
-            or entry.get("key") != next(label for label, origin in order.items() if origin == "A")):
-        raise ValueError("Invalid stored option order or key")
+    from shared.option_order import stored_order
+    order = stored_order(entry)
     options = entry.get("options")
     rationales = entry.get("rationales")
     if (not isinstance(options, list) or len(options) != 4
