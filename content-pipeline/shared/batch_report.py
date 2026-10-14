@@ -162,10 +162,25 @@ def format_key_position_report(report):
 
 
 def template_diversity_report(candidates):
-    entries = [entry for entry in candidates if entry.get("judge_verdict", {}).get("passed") is True
+    from shared.objective_style import allows_ml_practice
+    passing = [entry for entry in candidates if entry.get("judge_verdict", {}).get("passed") is True
                and entry.get("persistence_status") != "superseded"]
+    entries = [entry for entry in passing if not allows_ml_practice(entry.get("style_policy"))]
     generic = sum(entry.get("external_verdict", entry.get("gate_verdicts", {})).get("style", {}).get(
         "generic_validation_key") is True for entry in entries)
     total = len(entries)
     return {"count": total, "generic_count": generic, "target_max_rate": GENERIC_KEY_MAX_RATE,
-            "passed": bool(total) and generic / total <= GENERIC_KEY_MAX_RATE}
+            "passed": bool(passing) and (not total or generic / total <= GENERIC_KEY_MAX_RATE)}
+
+
+def ml_practice_report(candidates):
+    """Count actual style judgments under the frozen objective allowance."""
+    from shared.objective_style import allows_ml_practice
+    entries = [entry for entry in candidates if
+               "style" in entry.get("external_verdict", entry.get("gate_verdicts", {}))
+               and entry.get("persistence_status") != "superseded"]
+    allowed = [entry for entry in entries if allows_ml_practice(entry.get("style_policy"))]
+    return {"version": "5.1", "judged_count": len(entries),
+            "allowance_judged_count": len(allowed),
+            "by_objective": {ident: sum(entry["objective_id"] == ident for entry in allowed)
+                             for ident in sorted({entry["objective_id"] for entry in allowed})}}

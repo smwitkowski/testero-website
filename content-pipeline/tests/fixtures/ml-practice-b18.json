@@ -1,0 +1,77 @@
+{
+  "projection": "Exact learner stem/shuffled choices from judge request and recorded style outputs only; no docs, key, rationales, transport or DB journals.",
+  "candidates": [
+    {
+      "candidate_id": "5a0c6bf1-6ced-53b7-843b-ac89d823d5bb",
+      "objective_id": "machine-learning-engineer:standard:5.2:2",
+      "stem": "Your company uses a spoilage classifier to prioritize pallet inspections at food distribution centers. Expansion into more product categories has increased automated releases through Cloud Build, which deploys candidates when overall validation accuracy improves. Recent candidates pass this gate, but inspectors report more missed spoilage in temperature-sensitive categories that represent a small share of the evaluation data. Your training pipeline retains labeled evaluation examples for every category. You want to automate releases while minimizing missed spoilage across product categories. What should you do first?",
+      "options": {
+        "A": "Add prediction integration tests to the Cloud Build deployment workflow. Deploy a candidate after its serving container loads successfully, returns valid scores, and passes typical prediction request checks.",
+        "B": "Enable Agent Platform Model Monitoring for deployed candidates to detect input feature drift. Make Cloud Build roll back releases when feature distributions exceed their configured drift alert thresholds.",
+        "C": "Add category-level spoilage recall checks to the pipeline's evaluation stage. Make Cloud Build deploy a candidate only after every product category meets its predefined recall threshold.",
+        "D": "Raise the overall validation accuracy threshold used by Cloud Build. Deploy a candidate when its combined accuracy across all product categories exceeds the stricter threshold."
+      },
+      "style": {
+        "verdict": "FAIL",
+        "score": 0.55,
+        "reason": "Clear scenario and a sound ML decision (per-category recall gate instead of overall accuracy). But the hinge is generic evaluation practice, not a Google Cloud capability. Options A and D mostly ignore the stated problem, so the item leans toward reading comprehension.",
+        "decision_level": true,
+        "no_hidden_gotcha": true,
+        "current_names": true,
+        "distractors_plausible": true,
+        "distractors_need_knowledge": true,
+        "options_distinct_approaches": true,
+        "scenario_clear": true,
+        "business_context": true,
+        "constraints_as_wants": true,
+        "decisions_not_syntax": true,
+        "product_knowledge_hinge": false,
+        "cloud_specific_alternative": true,
+        "generic_validation_key": true
+      },
+      "source": {
+        "batch": "pmle-d033-v5-pipelines-30-b18",
+        "verdict_file": "5a0c6bf1-6ced-53b7-843b-ac89d823d5bb.json",
+        "verdict_sha256": "7da977eedff0b63ba91437fb3edf4e788f99690d335475b85cc38ba9676e27d3",
+        "request_file": "5a0c6bf1-6ced-53b7-843b-ac89d823d5bb.json",
+        "request_sha256": "c4a00e107ee3b91b6c7caf870700fdfbbe11271ea2352d762d37905f43472ef2"
+      }
+    },
+    {
+      "candidate_id": "3337a1ec-140f-5412-b3c1-10e879c5a676",
+      "objective_id": "machine-learning-engineer:standard:5.1:3",
+      "stem": "Your company runs a pipe-leak classifier for a water utility using pressure sensors that report different units. Monitoring shows inconsistent feature values when production readings are replayed for training. The Dataflow batch job converts units before clipping values, while a separately maintained Dataflow streaming job clips values before conversion. Both jobs use Apache Beam, and the classifier consumes their prepared features. You want consistent preprocessing between training and serving while minimizing the code your team maintains. What should you do?",
+      "options": {
+        "A": "Rewrite both preprocessing jobs in Apache Spark on Managed Service for Apache Spark. Share unit conversion followed by clipping across historical and incoming readings, regenerate the training features, and retrain the existing pipe-leak classifier.",
+        "B": "Add Agent Platform Model Monitoring to compare serving feature distributions with the training baseline. Keep the preprocessing jobs and trigger classifier retraining on sensor readings whenever monitoring alerts indicate feature skew.",
+        "C": "Move training preprocessing to BigQuery SQL and retain Dataflow for incoming readings. Implement conversion followed by clipping separately in both systems, add parity tests for preprocessing changes, regenerate the training features, and retrain the classifier.",
+        "D": "Create a reusable Apache Beam transform that converts pressure units before clipping values, and use it in both existing Dataflow jobs. Regenerate the training features with this transform and retrain the pipe-leak classifier."
+      },
+      "style": {
+        "verdict": "FAIL",
+        "score": 0.4,
+        "reason": "Key is obvious: share one Beam transform across two Beam jobs. No real Google Cloud product hinge. Distractors are weak: Spark rewrite is needless migration, monitoring doesn't fix the cause, and the dual-implementation option repeats the problem. Reads as comprehension.",
+        "decision_level": true,
+        "no_hidden_gotcha": true,
+        "current_names": true,
+        "distractors_plausible": false,
+        "distractors_need_knowledge": true,
+        "options_distinct_approaches": true,
+        "scenario_clear": true,
+        "business_context": true,
+        "constraints_as_wants": true,
+        "decisions_not_syntax": true,
+        "product_knowledge_hinge": false,
+        "cloud_specific_alternative": false,
+        "generic_validation_key": false
+      },
+      "source": {
+        "batch": "pmle-d033-v5-pipelines-30-b18",
+        "verdict_file": "3337a1ec-140f-5412-b3c1-10e879c5a676.json",
+        "verdict_sha256": "64e32d6f19df3f54e24130d351f07573baeef8cc84935e726c73e5907fe307ac",
+        "request_file": "3337a1ec-140f-5412-b3c1-10e879c5a676.json",
+        "request_sha256": "a7ab722cabc146b6470a49b89f7b1e144f62dc7ab76fc9a4f3b33ace879f8a05"
+      }
+    }
+  ]
+}

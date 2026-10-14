@@ -97,9 +97,19 @@ def _read_request(path, ident, canonical, *, with_digest=False):
         raise RequestValidationError("Request must be readable, non-symlink strict JSON") from None
     legacy_fields = {"candidate_id", "objective_id", "judge_prompt", "verdict_schema", "trimming"}
     gate_fields = {"candidate_id", "objective_id", "gate_version", "decision_provenance_sha256", "gates", "trimming"}
-    if not isinstance(request, dict) or set(request) not in (legacy_fields, gate_fields, gate_fields | {"argon"}):
+    modern_fields = (gate_fields, gate_fields | {"argon"}, gate_fields | {"style_policy"},
+                     gate_fields | {"argon", "style_policy"})
+    if not isinstance(request, dict) or set(request) not in (legacy_fields, *modern_fields):
         raise RequestValidationError("Request must contain exactly the exported request fields")
-    is_gates = set(request) in (gate_fields, gate_fields | {"argon"})
+    is_gates = set(request) in modern_fields
+    if "style_policy" in request:
+        from shared.objective_style import validate_style_policy
+        try:
+            validate_style_policy(request["style_policy"], request["objective_id"])
+            if request["gate_version"] != 5:
+                raise ValueError("Style policy requires rules v5")
+        except ValueError:
+            raise RequestValidationError("Invalid frozen style policy") from None
     if is_gates:
         if (type(request["gate_version"]) is not int or request["gate_version"] not in (4, 5)
                 or not isinstance(request["decision_provenance_sha256"], str)

@@ -234,7 +234,9 @@ def _prior_results(directories, out, ids, *, preserved_ids=()):
                 continue
             try:
                 data = ingestion._read_json(path)
-                is_request = isinstance(data, dict) and set(data) in (REQUEST_FIELDS, GATE_REQUEST_FIELDS)
+                is_request = isinstance(data, dict) and set(data) in (REQUEST_FIELDS, GATE_REQUEST_FIELDS,
+                    GATE_REQUEST_FIELDS | {"argon"}, GATE_REQUEST_FIELDS | {"style_policy"},
+                    GATE_REQUEST_FIELDS | {"argon", "style_policy"})
             except (ValueError, UnicodeError, RecursionError):
                 is_request = False
             if path.stem in preserved_ids:
