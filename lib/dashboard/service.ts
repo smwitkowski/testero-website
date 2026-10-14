@@ -6,6 +6,7 @@ import { computeResult } from "@/lib/diagnostic/scoring";
 import { DiagnosticError } from "@/lib/diagnostic/http";
 import { freePracticeQuota } from "@/lib/practice/service";
 import type { DashboardData } from "@/lib/dashboard/types";
+import { weakestFirst } from "@/lib/readiness";
 
 export async function loadDashboard(client: SupabaseClient, userId: string, now = Date.now()): Promise<DashboardData> {
   const unavailable = () => new DiagnosticError(503, "Your dashboard is unavailable. Please try again.");
@@ -24,7 +25,7 @@ export async function loadDashboard(client: SupabaseClient, userId: string, now 
   return {
     paidAccess: await getPaidAccess(userId, client, now),
     diagnostic,
-    weakestDomains: diagnostic ? [...diagnostic.domainBreakdown].sort((a, b) => a.percentage - b.percentage || a.domainCode.localeCompare(b.domainCode)).slice(0, 2) : [],
+    weakestDomains: diagnostic ? weakestFirst(diagnostic.domainBreakdown).slice(0, 2) : [],
     domains,
     openPractice: pending ? { sessionId: pending.id, domainName: domains.find(domain => domain.domainCode === pendingCode)?.domainName ?? "Your selected domain" } : null,
     quota: await freePracticeQuota(client, userId, new Date(now)),

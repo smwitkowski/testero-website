@@ -34,7 +34,7 @@ export default function HomePage() {
         <figcaption className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"><span className="font-medium uppercase tracking-wide">Sample readiness report</span><span>20 questions</span></figcaption>
         <div className="flex flex-wrap items-baseline gap-3"><span className="text-[52px] font-semibold leading-none">55</span><span className="text-muted-foreground">/ 100</span><span className="ml-auto rounded border border-input px-2 py-0.5 text-xs font-medium">Tier: Building</span></div>
         <ScoreBar score={55} />
-        <div><DomainScores domains={sampleDomains} sample /><p className="pt-2 text-xs text-muted-foreground">3 of 6 domains shown. Sample data, not a user result.</p></div>
+        <div><DomainScores domains={sampleDomains} /><p className="pt-2 text-xs text-muted-foreground">3 of 6 domains shown. Sample data, not a user result.</p></div>
       </figure>
     </section>
     <section aria-labelledby="how-it-works" className="space-y-7">
