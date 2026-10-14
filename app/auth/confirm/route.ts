@@ -12,9 +12,12 @@ function destination(request: Request, path: string) {
   return response;
 }
 export async function GET(request: Request) {
-  const invalid = () => destination(request, "/login?message=confirmation-failed");
+  let failedFlow: string | undefined;
+  // An expired reset link leads to a new reset request; any other failure offers a new confirmation email.
+  const invalid = () => destination(request, failedFlow === "recovery" ? "/forgot-password?message=confirmation-failed" : "/login?message=confirmation-failed");
   try {
     const params = new URL(request.url).searchParams;
+    failedFlow = params.get("type") ?? params.get("flow") ?? undefined;
     if ([...params.keys()].some(key => params.getAll(key).length !== 1)) return invalid();
     const parsed = confirmationSchema.safeParse(Object.fromEntries(params));
     if (!parsed.success) return invalid();

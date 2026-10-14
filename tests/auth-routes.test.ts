@@ -6,13 +6,14 @@ import { POST as login } from "@/app/api/auth/login/route";
 import { POST as forgot } from "@/app/api/auth/forgot-password/route";
 import { POST as reset } from "@/app/api/auth/reset-password/route";
 import { POST as logout } from "@/app/api/auth/logout/route";
+import { POST as resend } from "@/app/api/auth/resend/route";
 import { GET as confirm } from "@/app/auth/confirm/route";
 import { AUTH_MESSAGES } from "@/lib/auth/errors";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { claimAnonymousDiagnostics } from "@/lib/auth/claim";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 const mocks = vi.hoisted(() => ({
-  signUp: vi.fn(), signInWithPassword: vi.fn(), resetPasswordForEmail: vi.fn(), updateUser: vi.fn(), signOut: vi.fn(),
+  signUp: vi.fn(), resend: vi.fn(), signInWithPassword: vi.fn(), resetPasswordForEmail: vi.fn(), updateUser: vi.fn(), signOut: vi.fn(),
   getUser: vi.fn(), verifyOtp: vi.fn(), exchangeCodeForSession: vi.fn(),
   cookie: undefined as string | undefined,
 }));
@@ -26,7 +27,7 @@ function req(body: unknown, origin = "http://127.0.0.1:3000") { return new Reque
 function callback(query: string) { return new Request(`http://127.0.0.1:3000/auth/confirm?${query}`); }
 beforeEach(() => {
   mocks.cookie = undefined;
-  for (const key of ["signUp", "signInWithPassword", "resetPasswordForEmail", "updateUser", "signOut", "verifyOtp", "exchangeCodeForSession"] as const) mocks[key].mockReset().mockResolvedValue({ error: null, data: { user: verified } });
+  for (const key of ["signUp", "resend", "signInWithPassword", "resetPasswordForEmail", "updateUser", "signOut", "verifyOtp", "exchangeCodeForSession"] as const) mocks[key].mockReset().mockResolvedValue({ error: null, data: { user: verified } });
   mocks.getUser.mockReset().mockResolvedValue({ error: null, data: { user: verified } });
   vi.mocked(createServerSupabaseClient).mockReset().mockResolvedValue({ auth: mocks } as unknown as Awaited<ReturnType<typeof createServerSupabaseClient>>);
   vi.mocked(claimAnonymousDiagnostics).mockReset().mockResolvedValue(1);
@@ -172,4 +173,44 @@ it("tracks only successful verified signup confirmations", async () => {
   mocks.getUser.mockResolvedValue({ error: null, data: { user: null } });
   await confirm(callback("token_hash=abcdefghijklmnop&type=signup&next=/dashboard"));
   expect(scheduleFunnelEvent).not.toHaveBeenCalled();
+});
+
+describe("unconfirmed sign-in and resend", () => {
+  it("tells a correct-password unconfirmed user to confirm, without claims", async () => {
+    mocks.cookie = "a".repeat(64);
+    mocks.signInWithPassword.mockResolvedValue({ error: { code: "email_not_confirmed", message: "Email not confirmed" } });
+    const response = await login(req(valid));
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: AUTH_MESSAGES.unconfirmed, unconfirmed: true });
+    expect(claimAnonymousDiagnostics).not.toHaveBeenCalled();
+  });
+  it("keeps wrong-password responses generic", async () => {
+    mocks.signInWithPassword.mockResolvedValue({ error: { code: "invalid_credentials", message: "Invalid login credentials" } });
+    const response = await login(req(valid));
+    expect(response.status).toBe(401); expect(await response.json()).toEqual({ error: AUTH_MESSAGES.credentials });
+  });
+  it.each(["sent", "error", "throw"])("resend is generic for %s", async kind => {
+    if (kind === "error") mocks.resend.mockResolvedValue({ error: { message: "rate limited learner@example.com" } });
+    if (kind === "throw") mocks.resend.mockRejectedValue(new Error("private"));
+    const response = await resend(req({ email: valid.email, next: "//evil.example" }));
+    expect(response.status).toBe(200); expect(await response.json()).toEqual({ message: AUTH_MESSAGES.resend });
+    expect(mocks.resend).toHaveBeenCalledWith({ type: "signup", email: valid.email, options: { emailRedirectTo: "http://127.0.0.1:3000/auth/confirm?next=%2Fdashboard&flow=signup" } });
+  });
+  it("rejects foreign-origin resend before the client", async () => {
+    expect((await resend(req({ email: valid.email }, "https://evil.example"))).status).toBe(403);
+    expect(createServerSupabaseClient).not.toHaveBeenCalled();
+  });
+  it("sends failed recovery links to a new reset request", async () => {
+    mocks.verifyOtp.mockResolvedValue({ error: { message: "expired" } });
+    let response = await confirm(callback(`token_hash=${"a".repeat(64)}&type=recovery&next=/reset-password`));
+    expect(response.headers.get("location")).toBe("http://127.0.0.1:3000/forgot-password?message=confirmation-failed");
+    response = await confirm(callback("type=recovery"));
+    expect(response.headers.get("location")).toBe("http://127.0.0.1:3000/forgot-password?message=confirmation-failed");
+  });
+  it("accepts the production template links", async () => {
+    let response = await confirm(callback(`token_hash=pkce_${"a".repeat(56)}&type=signup&next=/dashboard`));
+    expect(response.headers.get("location")).toBe("http://127.0.0.1:3000/dashboard?signup=confirmed");
+    response = await confirm(callback(`token_hash=pkce_${"a".repeat(56)}&type=recovery&next=/reset-password`));
+    expect(response.headers.get("location")).toBe("http://127.0.0.1:3000/reset-password");
+  });
 });
