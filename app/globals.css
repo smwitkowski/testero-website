@@ -52,6 +52,9 @@ a { text-underline-offset: 0.2em; }
 #main-content > section > a.bg-primary { min-height: 48px; border-radius: 6px; }
 input { accent-color: var(--primary); }
 :focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
+/* Primary fills: a white band against the blue fill (7.6:1) and a dark ring against light pages (16:1).
+   No transition, or the ring starts as the white text color. */
+.bg-primary:focus-visible { outline-color: var(--foreground); box-shadow: 0 0 0 3px var(--card); transition: none; }
 .on-dark :focus-visible { outline-color: var(--card); }
 .answer-option:has(:focus-visible) { outline: 3px solid var(--ring); outline-offset: 3px; }
 .answer-option:has(:checked) { border-color: var(--primary); background: var(--muted); }

@@ -41,6 +41,17 @@ export async function createDiagnostic(client: SupabaseClient, token: string, no
   return data;
 }
 
+/** The owner's newest unexpired, unfinished diagnostic, so "Begin" can offer to resume it. */
+export async function findOpenDiagnostic(client: SupabaseClient, credentials: OwnerCredentials, now = Date.now()): Promise<string | null> {
+  const ownerHash = hashAnonymousToken(credentials.anonymousToken);
+  if (credentials.userId ? !UUID.test(credentials.userId) : !ownerHash) return null;
+  const base = client.from("study_sessions").select(SESSION_FIELDS).eq("kind", "diagnostic").is("completed_at", null).gt("expires_at", new Date(now).toISOString());
+  const owned = credentials.userId ? base.eq("user_id", credentials.userId) : base.is("user_id", null).eq("anonymous_owner_hash", ownerHash!);
+  const { data, error } = await owned.order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const session = data as StudySession | null;
+  return !error && session && ownsSession(session, credentials) ? session.id : null;
+}
+
 async function ownedSession(client: SupabaseClient, id: string, credentials: OwnerCredentials, now: number): Promise<StudySession> {
   if (!UUID.test(id)) throw new DiagnosticError(404, "Diagnostic not found");
   const { data, error } = await client.from("study_sessions").select(SESSION_FIELDS).eq("id", id).eq("kind", "diagnostic").maybeSingle();

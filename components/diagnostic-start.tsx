@@ -8,7 +8,7 @@ import { trackDiagnostic } from "@/lib/analytics/client";
 import { Button } from "@/components/ui/button";
 import { diagnosticRequest, requestError } from "@/components/diagnostic-resource";
 
-export function DiagnosticStart() {
+export function DiagnosticStart({ resumeId = null }: { resumeId?: string | null }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,10 +52,17 @@ export function DiagnosticStart() {
       <div className="p-4 sm:px-5"><dt className="text-sm text-muted-foreground">Time</dt><dd className="text-2xl font-semibold">~15 min</dd></div>
       <div className="p-4 sm:px-5"><dt className="text-sm text-muted-foreground">Domains</dt><dd className="text-2xl font-semibold">6</dd></div>
     </dl>
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+    {resumeId ? <section aria-labelledby="resume-heading" className="space-y-3 rounded-lg border border-border bg-card p-5">
+      <h2 id="resume-heading" className="font-semibold">You have a diagnostic in progress</h2>
+      <p className="text-sm text-muted-foreground">Your saved answers are kept. Starting over begins a new set of 20 questions.</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button asChild><Link href={`/diagnostic/${encodeURIComponent(resumeId)}`}>Resume diagnostic</Link></Button>
+        <Button variant="outline" onClick={start} disabled={pending}>{pending ? "Starting diagnostic…" : error ? "Retry start" : "Start over"}</Button>
+      </div>
+    </section> : <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
       <Button onClick={start} disabled={pending}>{pending ? "Starting diagnostic…" : error ? "Retry start" : "Begin diagnostic"}</Button>
       <span className="text-sm text-muted-foreground">No account required.</span>
-    </div>
+    </div>}
     {error && <p role="alert" className="text-sm leading-relaxed text-destructive">{error}</p>}
     {pending && <p role="status" className="text-sm text-muted-foreground">Preparing your questions…</p>}
     <p className="leading-relaxed text-muted-foreground">Questions appear one at a time. Answers are recorded as you go and can&apos;t be changed once submitted. Results are shown at the end. Keep cookies enabled.</p>
