@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { answerLabel, createAnswerSnapshot, resolveAnswerOrder, shuffleArray } from "@/lib/questions/answer-order";
+import { answerLabel, createAnswerSnapshot, relabelExplanation, resolveAnswerOrder, shuffleArray } from "@/lib/questions/answer-order";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -71,5 +71,21 @@ describe("server-owned answer ID validation", () => {
     null, "first", ["first"], ["first", "first"], ["first", "missing"], [1, "second"],
   ].map((order) => ({ order })))("rejects invalid order %#", ({ order }) => {
     expect(resolveAnswerOrder(answers, order)).toBeNull();
+  });
+});
+
+describe("explanation letter references", () => {
+  const map = new Map([["A", "C"], ["B", "A"], ["C", "D"], ["D", "B"]]);
+  it("rewrites legacy labels to displayed letters without chaining", () => {
+    expect(relabelExplanation("Correct Answer (A): Use BigQuery ML.\nDistractor B: Too slow. Distractor C: Costly. Option D is wrong.", map))
+      .toBe("Correct Answer (C): Use BigQuery ML.\nDistractor A: Too slow. Distractor D: Costly. Option B is wrong.");
+  });
+  it("rewrites paragraph-leading letters and leaves prose alone", () => {
+    expect(relabelExplanation("A: Fails latency.\n\nB: Correct. Use a GPU (A100) for Plan A.\n\nD) Fails cost.", map))
+      .toBe("C: Fails latency.\n\nA: Correct. Use a GPU (A100) for Plan A.\n\nB) Fails cost.");
+  });
+  it("leaves unmapped letters as written", () => {
+    expect(relabelExplanation("Distractor E: n/a", map)).toBe("Distractor E: n/a");
+    expect(relabelExplanation("Pick the option a user can audit.", map)).toBe("Pick the option a user can audit.");
   });
 });

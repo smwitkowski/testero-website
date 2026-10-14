@@ -151,7 +151,13 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     await page.reload(); await expect(page.getByText("Your PMLE Pass is active.", { exact: true })).toBeVisible();
     await page.getByRole("link", { name: "View account", exact: true }).click();
     await expect(page.getByText(/Access until/)).toBeVisible();
+    await expect(page.getByText(/\((89|90) days left\)/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Manage legacy subscription", exact: true })).toHaveCount(0);
+    await page.goto("/pricing");
+    await expect(page.getByText(/You have PMLE Pass until/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Get PMLE Pass — $39", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Go to practice", exact: true })).toHaveAttribute("href", "/dashboard");
+    await page.goto("/account");
     expect((await page.request.post("/api/billing/portal", { data: {} })).status()).toBe(403);
     await layout("account-paid");
     await captureV3(page, "account");
@@ -208,6 +214,7 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     await page.goto("/dashboard");
     await expect(page.getByRole("link", { name: "Upgrade to PMLE Pass", exact: true })).toBeVisible();
     await expect(page.getByLabel("Practice domain", { exact: true })).toHaveCount(0);
+    await expect(page.getByText(/Your PMLE Pass was refunded on/)).toBeVisible();
     await layout("dashboard-refunded");
     await page.goto(destination.href);
     await expect(page.getByText(/This payment was refunded/)).toBeVisible();
@@ -215,6 +222,7 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     const legacy = await service.from("user_subscriptions").insert({ user_id: userId, stripe_customer_id: `cus_local_legacy_${randomUUID().replaceAll("-", "")}`, stripe_subscription_id: `sub_local_${randomUUID().replaceAll("-", "")}`, status: "active", current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() });
     expect(legacy.error).toBeNull();
     await page.goto("/account");
+    await expect(page.getByText(/Your PMLE Pass was refunded on/)).toHaveCount(0);
     await expect(page.getByText("Active legacy subscription", { exact: true })).toBeVisible();
     const portalResponse = page.waitForResponse(response => response.url().endsWith("/api/billing/portal") && response.request().method() === "POST");
     await page.getByRole("button", { name: "Manage legacy subscription", exact: true }).click();

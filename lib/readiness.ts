@@ -107,6 +107,28 @@ export function getDomainTier(score: number): DomainTier {
 }
 
 /**
+ * Diagnostic domain status from the raw count. Domains get only 3-4 questions, so
+ * "Focus area" means 0-1 correct and "Solid" means none wrong; 2/3 and 3/4 are both
+ * "Developing". Larger samples fall back to the percentage tiers.
+ */
+export function getDomainStatus(correct: number, total: number): DomainTierId {
+  if (total > 4) return getDomainTier(total ? Math.round(correct / total * 100) : 0).id;
+  return correct <= 1 ? "critical" : correct === total ? "strong" : "moderate";
+}
+
+const STATUS_RANK: Record<DomainTierId, number> = { critical: 0, moderate: 1, strong: 2 };
+
+/** Weakest first: status, then accuracy, then the caller's order (exam-guide order from scoring). */
+export function weakestFirst<T extends { correct: number; total: number; percentage: number }>(domains: readonly T[]): T[] {
+  return [...domains].sort((a, b) => STATUS_RANK[getDomainStatus(a.correct, a.total)] - STATUS_RANK[getDomainStatus(b.correct, b.total)] || a.percentage - b.percentage);
+}
+
+/** Whole questions needed to reach Ready (70), never "points". */
+export function questionsToReady(score: number, totalQuestions: number): number {
+  return score >= EXAM_BUILDING_THRESHOLD || totalQuestions <= 0 ? 0 : Math.ceil((EXAM_BUILDING_THRESHOLD - score) * totalQuestions / 100 - 1e-9);
+}
+
+/**
  * Exam readiness tier color mapping.
  * 
  * Returns Tailwind color names for use in complete class names.

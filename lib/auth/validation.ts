@@ -6,6 +6,7 @@ const next = z.string().max(2048).optional().transform(value => safeNext(value))
 export const signupSchema = z.object({ email, password, next }).strict();
 export const loginSchema = signupSchema;
 export const forgotPasswordSchema = z.object({ email, next }).strict();
+export const resendSchema = forgotPasswordSchema;
 export const resetPasswordSchema = z.object({ password }).strict();
 export const logoutSchema = z.object({}).strict();
 export const confirmationSchema = z.object({

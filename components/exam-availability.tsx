@@ -3,7 +3,7 @@ import { isComingSoon, PMLE_EXAM } from "@/lib/content/exam";
 
 export function ComingSoonTag({ exam }: { exam: string }) {
   if (!isComingSoon(exam)) return null;
-  return <span className="inline-flex rounded border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">Coming soon</span>;
+  return <span className="inline-flex rounded border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">Not on Testero yet</span>;
 }
 
 export function ExamAvailabilityNotice({ exam }: { exam: string }) {

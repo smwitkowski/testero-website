@@ -9,9 +9,12 @@ export const AUTH_MESSAGES = {
   recovery: "Check your email for a reset link. If an account is eligible, you will receive an email.",
   unavailable: "Unable to complete this request. Please try again.",
   unauthenticated: "Please sign in to continue.",
-  confirmation: "Unable to confirm this link. Please sign in or request a new link.",
+  confirmation: "This confirmation link has expired or was already used. Sign in, or request a new confirmation email below.",
+  recoveryLink: "This reset link has expired or was already used. Request a new one below.",
+  unconfirmed: "Your email address isn’t confirmed yet. Check your inbox for the confirmation link, or request a new one.",
+  resend: "If this address has an unconfirmed Testero account, we’ve sent a new confirmation link.",
 } as const;
-export function authResponse(body: { message: string; href?: string; userId?: string } | { error: string }, status = 200) {
+export function authResponse(body: { message: string; href?: string; userId?: string } | { error: string; unconfirmed?: true }, status = 200) {
   return NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 }
 export class AuthRequestError extends Error { constructor(public status: number) { super("Invalid auth request"); } }

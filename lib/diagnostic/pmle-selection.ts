@@ -60,6 +60,33 @@ export interface SelectionResult {
 const MIN_POOL_THRESHOLD = 5;
 
 /**
+ * Questions created from this date come from the current doc-grounded pipeline.
+ * The 2026-10-14 bank export splits exactly here (100 new, 111 legacy). generation_run_id
+ * exists in the schema but its population on legacy rows is unverified, so the date is the marker.
+ */
+export const DIAGNOSTIC_NEW_SINCE = '2026-10-04T00:00:00Z';
+
+export interface SelectionPreferences {
+  /** Prefer questions created at or after this ISO time. */
+  newSince?: string;
+  /** Prefer questions this owner has not seen in earlier diagnostics. */
+  seenQuestionIds?: ReadonlySet<string>;
+}
+
+/**
+ * Random pick that prefers, in order: new+unseen, new+seen, legacy+unseen, legacy+seen.
+ * A thin preferred pool therefore falls back to the full pool for that domain.
+ */
+export function pickPreferred<T extends { id: string; created_at?: string | null }>(pool: T[], count: number, preferences: SelectionPreferences = {}): T[] {
+  const since = preferences.newSince ? Date.parse(preferences.newSince) : NaN;
+  const tier = (question: T) =>
+    (Number.isFinite(since) && !(question.created_at && Date.parse(question.created_at) >= since) ? 2 : 0)
+    + (preferences.seenQuestionIds?.has(question.id) ? 1 : 0);
+  // Array.prototype.sort is stable, so each tier keeps its shuffled order.
+  return shuffleArray(pool).sort((a, b) => tier(a) - tier(b)).slice(0, count);
+}
+
+/**
  * Calculate domain targets from blueprint weights
  * Uses largest remainder method for fair rounding
  * 
@@ -155,7 +182,8 @@ export function calculateDomainTargets(
  */
 export async function selectPmleQuestionsByBlueprint(
   supabase: SupabaseClient,
-  totalQuestions: number
+  totalQuestions: number,
+  preferences: SelectionPreferences = {}
 ): Promise<SelectionResult> {
   // Step 1: Get domain availability counts
   const { data: domainCounts, error: countError } = await supabase
@@ -237,6 +265,7 @@ export async function selectPmleQuestionsByBlueprint(
         id,
         stem,
         difficulty,
+        created_at,
         answers(choice_label, choice_text, is_correct)
       `)
       .eq('exam', 'GCP_PM_ML_ENG')
@@ -269,8 +298,7 @@ export async function selectPmleQuestionsByBlueprint(
     }
 
     // Randomize and select target count
-    const shuffled = shuffleArray(domainQuestions.filter((q) => hasValidAnswers(q.answers)));
-    const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
+    const selected = pickPreferred(domainQuestions.filter((q) => hasValidAnswers(q.answers)), targetCount, preferences);
 
     interface DomainQuestionRow {
       id: string;

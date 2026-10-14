@@ -15,6 +15,8 @@ export interface PaidAccess {
   accessUntil: string | null;
   /** Only an unexpired, unrefunded pass. */
   pass: PmlePass | null;
+  /** Latest refund time, only when no paid access remains. Display only; never grants or denies access. */
+  refundedAt?: string;
   /** Verification failed. Never interpret this as permission to charge. */
   unavailable?: boolean;
 }
@@ -66,6 +68,8 @@ export async function readPaidAccess(userId: string, client?: SupabaseClient, no
     // Whitelist metadata; never return provider/customer identifiers.
     access.pass = { id: pass.id, paid_at: pass.paid_at, expires_at: pass.expires_at, refunded_at: null };
   }
+  const refunds = passes.flatMap(row => row.refunded_at ? [row.refunded_at] : []).sort((a, b) => Date.parse(b) - Date.parse(a));
+  if (!access.hasPaidAccess && refunds[0]) access.refundedAt = refunds[0];
   return access;
 }
 

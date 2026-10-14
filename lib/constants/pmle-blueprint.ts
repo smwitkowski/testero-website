@@ -84,6 +84,17 @@ export function getPmleDomainConfig(domainCode: string): PmleDomainConfig | unde
   return PMLE_BLUEPRINT_MAP[domainCode];
 }
 
+/** Official exam-guide domain name for display. Stored DB names are snapshots and may differ. */
+export function domainDisplayName(domainCode: string, fallback: string): string {
+  return PMLE_BLUEPRINT_MAP[domainCode]?.displayName ?? fallback;
+}
+
+/** Exam-guide position; unknown codes sort last. */
+export function domainOrder(domainCode: string): number {
+  const index = PMLE_BLUEPRINT.findIndex(domain => domain.domainCode === domainCode);
+  return index === -1 ? PMLE_BLUEPRINT.length : index;
+}
+
 /**
  * Validate that blueprint weights sum to approximately 1.0
  * (allowing for small rounding differences)

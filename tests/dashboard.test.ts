@@ -47,7 +47,7 @@ describe("owned dashboard aggregates", () => {
     const database = db({ latest: { id: sessionId, question_count: 6 }, pending: { id: "practice-id", domain_codes: [PMLE_BLUEPRINT[0].domainCode] }, used: 5 });
     const result = await loadDashboard(database.client, userId, now);
     expect(result.diagnostic).toMatchObject({ sessionId, score: 67, correctAnswers: 4, totalQuestions: 6 });
-    expect(result.weakestDomains.map(domain => domain.domainCode)).toEqual(["B", "C"]);
+    expect(result.weakestDomains.map(domain => domain.domainCode)).toEqual(["C", "B"]); // Ties keep scoring order: exam-guide order, unknown codes as stored.
     expect(result.openPractice).toEqual({ sessionId: "practice-id", domainName: PMLE_BLUEPRINT[0].displayName }); expect(result.quota.remaining).toBe(0);
     const sessions = database.calls.filter(call => call.table === "study_sessions");
     expect(sessions).toHaveLength(2);

@@ -104,8 +104,24 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
       await expect(page.getByRole("navigation", { name: "Main navigation" })).toHaveCount(0);
       await expect(page.getByRole("contentinfo")).toHaveCount(0);
       await expect(page.locator("header").getByText(`${index} of 20 answered`, { exact: true })).toBeVisible();
-      if (index === 0) await captureV3(page, "diagnostic-question");
+      if (index === 0) {
+        await captureV3(page, "diagnostic-question");
+        // B2: the primary button focus ring contrasts with both the blue fill and the page.
+        await page.getByRole("radio").first().focus();
+        await page.keyboard.press("ArrowDown");
+        await page.keyboard.press("Tab");
+        const submit = page.getByRole("button", { name: "Submit answer" });
+        await expect(submit).toBeFocused();
+        const ring = await submit.evaluate(element => { const style = getComputedStyle(element); return { outline: style.outlineColor, width: style.outlineWidth, shadow: style.boxShadow }; });
+        expect(ring).toEqual({ outline: "rgb(16, 24, 40)", width: "3px", shadow: "rgb(255, 255, 255) 0px 0px 0px 3px" });
+      }
       if (index === 3) {
+        // B5: starting again from /diagnostic offers to resume this browser's session.
+        await page.goto("/diagnostic");
+        await expect(page.getByRole("button", { name: "Begin diagnostic" })).toHaveCount(0);
+        await expect(page.getByRole("button", { name: "Start over" })).toBeVisible();
+        await page.getByRole("link", { name: "Resume diagnostic", exact: true }).click();
+        await expect(page).toHaveURL(new RegExp(`/diagnostic/${sessionId}$`));
         await page.reload();
         await expect(page.getByText("Question 4 of 20", { exact: true })).toBeVisible();
         const reloaded = await (await page.request.get(api)).json() as DiagnosticProgress;

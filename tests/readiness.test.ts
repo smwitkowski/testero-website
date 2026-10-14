@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getDomainTier, getExamReadinessTier } from "@/lib/readiness";
+import { getDomainStatus, getDomainTier, getExamReadinessTier, questionsToReady, weakestFirst } from "@/lib/readiness";
 
 describe("ported readiness tiers", () => {
   it.each([
@@ -26,5 +26,26 @@ describe("ported readiness tiers", () => {
     }
     expect(getExamReadinessTier(85).description)
       .toBe("Well-prepared for the exam. Continue practicing to maintain your knowledge.");
+  });
+});
+
+describe("diagnostic domain honesty", () => {
+  it.each([
+    [0, 3, "critical"], [1, 3, "critical"], [2, 3, "moderate"], [3, 3, "strong"],
+    [0, 4, "critical"], [1, 4, "critical"], [2, 4, "moderate"], [3, 4, "moderate"], [4, 4, "strong"],
+  ])("%s of %s is %s, with the same rule for 3 and 4 questions", (correct, total, id) => {
+    expect(getDomainStatus(Number(correct), Number(total))).toBe(id);
+  });
+  it("orders weakest first by status, accuracy, then the given exam-guide order", () => {
+    const domains = [
+      { domainCode: "first", correct: 2, total: 3, percentage: 67 },
+      { domainCode: "second", correct: 3, total: 4, percentage: 75 },
+      { domainCode: "third", correct: 1, total: 4, percentage: 25 },
+      { domainCode: "fourth", correct: 2, total: 3, percentage: 67 },
+    ];
+    expect(weakestFirst(domains).map(domain => domain.domainCode)).toEqual(["third", "first", "fourth", "second"]);
+  });
+  it.each([[55, 20, 3], [65, 20, 1], [69, 20, 1], [70, 20, 0], [0, 20, 14]])("score %s of %s questions needs ≈%s questions to Ready", (score, total, needed) => {
+    expect(questionsToReady(Number(score), Number(total))).toBe(needed);
   });
 });

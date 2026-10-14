@@ -37,3 +37,21 @@ export function resolveAnswerOrder<T extends { id: unknown }>(
   const ordered = optionOrder.map((id) => byId.get(id));
   return ordered.every((answer): answer is T => answer !== undefined) ? ordered : null;
 }
+
+// "Correct Answer (A)", "Distractor B", "Option C", "answer D" and a paragraph-leading "A:" or "A)".
+// Letters are uppercase only, so prose such as "an option a user picks" is untouched.
+const LETTER_REFERENCE = /(\b(?:[Cc]orrect [Aa]nswer|[Aa]nswer|[Dd]istractor|[Oo]ption|[Cc]hoice)\s*\(?)([A-Z])(?![A-Za-z0-9])|((?:^|\n)[ \t]*)([A-Z])(?=[:)]\s)/g;
+
+/**
+ * Stored explanations name options by their bank letters, but display order is shuffled.
+ * Rewrite letter references to the displayed letters in one pass (so A->B and B->A never
+ * chain). Letters with no mapping are left as written. Display only: never persist the result.
+ */
+export function relabelExplanation(text: string, displayLabelFor: ReadonlyMap<string, string>): string {
+  return text.replace(LETTER_REFERENCE, (match, prefix: string | undefined, letter: string | undefined, linePrefix: string | undefined, lineLetter: string | undefined) => {
+    const original = letter ?? lineLetter!;
+    const shown = displayLabelFor.get(original);
+    if (!shown) return match;
+    return letter !== undefined ? `${prefix}${shown}` : `${linePrefix}${shown}`;
+  });
+}

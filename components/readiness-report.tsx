@@ -1,5 +1,5 @@
 import type { DiagnosticResult } from "@/lib/diagnostic/types";
-import { getDomainTier, getExamReadinessTier } from "@/lib/readiness";
+import { getDomainStatus, getExamReadinessTier, questionsToReady, weakestFirst } from "@/lib/readiness";
 
 export function ScoreBar({ score }: { score: number }) {
   return <div className="space-y-3 pt-2">
@@ -21,33 +21,31 @@ export function ScoreReport({ score, correctAnswers, totalQuestions }: Pick<Diag
       <p className="text-[52px] font-semibold leading-none">{score}<span className="ml-3 text-base font-normal text-muted-foreground">/ 100</span></p>
       <span className="ml-auto rounded border border-input px-2 py-0.5 text-sm font-medium">Tier: {tier.label}</span>
     </div>
-    <p className="text-sm text-muted-foreground"><span>{correctAnswers} of {totalQuestions} correct</span>{score < 70 && <> · {70 - score} points to Ready</>}</p>
+    <p className="text-sm text-muted-foreground"><span>{correctAnswers} of {totalQuestions} correct</span>{questionsToReady(score, totalQuestions) > 0 && <> · ≈{questionsToReady(score, totalQuestions)} {questionsToReady(score, totalQuestions) === 1 ? "question" : "questions"} to Ready</>}</p>
     <ScoreBar score={score} />
   </section>;
 }
 
-export function DomainStatus({ percentage }: { percentage: number }) {
-  const tier = getDomainTier(percentage).id;
+export function DomainStatus({ correct, total }: { correct: number; total: number }) {
   const statuses = {
     critical: { label: "Focus area", className: "bg-focus-area-background text-focus-area" },
     moderate: { label: "Developing", className: "bg-muted text-body" },
     strong: { label: "Solid", className: "bg-solid-background text-solid" },
   };
-  const status = statuses[tier];
+  const status = statuses[getDomainStatus(correct, total)];
   return <span className={`inline-block whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium sm:text-sm ${status.className}`}>{status.label}</span>;
 }
 
-export function DomainScores({ domains, sample = false }: { domains: DiagnosticResult["domainBreakdown"]; sample?: boolean }) {
-  const ordered = [...domains].sort((a, b) => a.percentage - b.percentage);
+export function DomainScores({ domains }: { domains: DiagnosticResult["domainBreakdown"] }) {
+  const ordered = weakestFirst(domains);
   return <table className="w-full table-fixed border-collapse text-sm sm:text-base">
-    <caption className="sr-only">Domain scores, weakest first</caption>
+    <caption className="sr-only">Domain results, weakest first. Each domain has only a few questions, so these are early signals.</caption>
     <thead className="text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-      <tr><th scope="col" className="pb-3 font-medium">Domain</th>{!sample && <th scope="col" className="hidden w-20 pb-3 font-medium sm:table-cell">Correct</th>}<th scope="col" className="w-14 pb-3 text-right font-medium sm:w-20">Score</th><th scope="col" className="w-24 pb-3 pl-2 font-medium sm:w-28 sm:pl-4">Status</th></tr>
+      <tr><th scope="col" className="pb-3 font-medium">Domain</th><th scope="col" className="w-24 pb-3 text-right font-medium sm:w-32">Correct <span className="block normal-case tracking-normal">early signal</span></th><th scope="col" className="w-24 pb-3 pl-2 align-top font-medium sm:w-28 sm:pl-4">Status</th></tr>
     </thead>
     <tbody>{ordered.map(domain => <tr key={domain.domainCode} className="border-t border-border">
-      <th scope="row" className="py-3 pr-2 text-left align-top font-normal leading-relaxed">{domain.domainName}{!sample && <span className="mt-1 block text-xs text-muted-foreground sm:hidden">{domain.correct} of {domain.total} correct</span>}</th>
-      {!sample && <td className="hidden py-3 align-top text-sm text-muted-foreground sm:table-cell">{domain.correct} of {domain.total}</td>}
-      <td className="py-3 text-right align-top font-semibold">{domain.percentage}%</td><td className="py-3 pl-2 align-top sm:pl-4"><DomainStatus percentage={domain.percentage} /></td>
+      <th scope="row" className="py-3 pr-2 text-left align-top font-normal leading-relaxed">{domain.domainName}</th>
+      <td className="py-3 text-right align-top font-semibold">{domain.correct} of {domain.total}</td><td className="py-3 pl-2 align-top sm:pl-4"><DomainStatus correct={domain.correct} total={domain.total} /></td>
     </tr>)}</tbody>
   </table>;
 }

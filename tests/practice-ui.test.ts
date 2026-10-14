@@ -146,3 +146,15 @@ describe("practice explanation display boundary", () => {
     expect(html).toContain("Correct answer: A"); expect(html).not.toMatch(/Explanation|Saved-answer|Saved option/);
   });
 });
+
+describe("QA 2026-10-14 practice start", () => {
+  it("defaults the domain select to the weakest domain unless one was requested", () => {
+    const weakest = [{ domainCode: "D4", domainName: "Domain 4", total: 3, correct: 0, percentage: 0 }];
+    expect(renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: weakest, remaining: 5 }))).toContain('value="D4" selected=""');
+    expect(renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: weakest, remaining: 5, requestedDomain: "D2" }))).toContain('value="D2" selected=""');
+  });
+  it("shows the quota reset date", () => {
+    const html = renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: [], remaining: 0, quotaWeekStart: "2026-10-12" }));
+    expect(html).toContain("Your free allowance resets on Monday, October 19 at 00:00 UTC.");
+  });
+});

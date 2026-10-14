@@ -2,7 +2,7 @@ import "server-only";
 import { getPaidAccess } from "@/lib/billing/paid-access";
 import { loadPaidExplanations, addPaidReview } from "@/lib/billing/explanations";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { selectPmleQuestionsByBlueprint, hasValidAnswers } from "@/lib/diagnostic/pmle-selection";
+import { DIAGNOSTIC_NEW_SINCE, selectPmleQuestionsByBlueprint, hasValidAnswers } from "@/lib/diagnostic/pmle-selection";
 import { createAnswerSnapshot } from "@/lib/questions/answer-order";
 import { computeResult } from "@/lib/diagnostic/scoring";
 import { hashAnonymousToken, ownsSession, type OwnerCredentials, type SessionOwner } from "@/lib/diagnostic/ownership";
@@ -21,11 +21,25 @@ const SESSION_FIELDS = "id,user_id,anonymous_owner_hash,question_count,expires_a
 const ITEM_FIELDS = "id,ordinal,stem,options,domain_code,domain_name,is_correct,answered_at";
 const unavailable = () => new DiagnosticError(503, "The diagnostic is unavailable. Please try again.");
 
+/** Questions from this owner's earlier diagnostics. Freshness is best effort: errors mean "none seen". */
+export async function seenDiagnosticQuestions(client: SupabaseClient, userId: string | null, ownerHash: string | null): Promise<Set<string>> {
+  try {
+    const sessions = client.from("study_sessions").select("id").eq("kind", "diagnostic");
+    const { data, error } = await (userId ? sessions.eq("user_id", userId) : sessions.is("user_id", null).eq("anonymous_owner_hash", ownerHash!))
+      .order("created_at", { ascending: false }).limit(50);
+    if (error || !Array.isArray(data) || !data.length) return new Set();
+    const { data: items, error: itemError } = await client.from("session_items").select("question_id").in("session_id", data.map(row => row.id));
+    if (itemError || !Array.isArray(items)) return new Set();
+    return new Set(items.flatMap(item => typeof item.question_id === "string" ? [item.question_id] : []));
+  } catch { return new Set(); }
+}
+
 export async function createDiagnostic(client: SupabaseClient, token: string, now = Date.now(), userId: string | null = null): Promise<string> {
   const ownerHash = userId === null ? hashAnonymousToken(token) : null;
   if (userId === null ? !ownerHash : !UUID.test(userId)) throw new DiagnosticError(400, "Invalid diagnostic owner");
+  const seenQuestionIds = await seenDiagnosticQuestions(client, userId, ownerHash);
   let selected;
-  try { selected = await selectPmleQuestionsByBlueprint(client, DIAGNOSTIC_LENGTH); }
+  try { selected = await selectPmleQuestionsByBlueprint(client, DIAGNOSTIC_LENGTH, { newSince: DIAGNOSTIC_NEW_SINCE, seenQuestionIds }); }
   catch { throw unavailable(); }
   if (selected.questions.length !== DIAGNOSTIC_LENGTH || new Set(selected.questions.map(q => q.id)).size !== DIAGNOSTIC_LENGTH) throw unavailable();
   const items = selected.questions.map(question => {
@@ -39,6 +53,17 @@ export async function createDiagnostic(client: SupabaseClient, token: string, no
   });
   if (error || typeof data !== "string" || !UUID.test(data)) throw unavailable();
   return data;
+}
+
+/** The owner's newest unexpired, unfinished diagnostic, so "Begin" can offer to resume it. */
+export async function findOpenDiagnostic(client: SupabaseClient, credentials: OwnerCredentials, now = Date.now()): Promise<string | null> {
+  const ownerHash = hashAnonymousToken(credentials.anonymousToken);
+  if (credentials.userId ? !UUID.test(credentials.userId) : !ownerHash) return null;
+  const base = client.from("study_sessions").select(SESSION_FIELDS).eq("kind", "diagnostic").is("completed_at", null).gt("expires_at", new Date(now).toISOString());
+  const owned = credentials.userId ? base.eq("user_id", credentials.userId) : base.is("user_id", null).eq("anonymous_owner_hash", ownerHash!);
+  const { data, error } = await owned.order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const session = data as StudySession | null;
+  return !error && session && ownsSession(session, credentials) ? session.id : null;
 }
 
 async function ownedSession(client: SupabaseClient, id: string, credentials: OwnerCredentials, now: number): Promise<StudySession> {

@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PaidQuestionReview, QuestionReview } from "@/lib/diagnostic/types";
+import { relabelExplanation } from "@/lib/questions/answer-order";
 
 export interface ExplanationItem {
   id: string;
@@ -25,7 +26,7 @@ export async function loadPaidExplanations(client: SupabaseClient, items: Explan
   if (!ids.length) return result;
   try {
     const { data: answers, error: answerError } = await client.from("answers")
-      .select("question_id,choice_text,explanation_text").in("question_id", ids);
+      .select("question_id,choice_label,choice_text,explanation_text").in("question_id", ids);
     const { data: explanations, error: explanationError } = await client.from("explanations")
       .select("question_id,explanation_text").in("question_id", ids);
     if (answerError || explanationError || !Array.isArray(answers) || !Array.isArray(explanations)) return result;
@@ -39,11 +40,17 @@ export async function loadPaidExplanations(client: SupabaseClient, items: Explan
           || new Set(item.options.map(option => option.text)).size !== item.options.length
           || new Set(canonical.map(answer => answer.choice_text)).size !== canonical.length
           || item.options.some(option => !canonical.some(answer => answer.choice_text === option.text))) continue;
+      // Bank letter -> displayed letter, matched by immutable option text.
+      const displayLabelFor = new Map(canonical.flatMap(answer => {
+        const shown = item.options.find(option => option.text === answer.choice_text)?.label;
+        return typeof answer.choice_label === "string" && shown ? [[answer.choice_label.trim().toUpperCase(), shown] as const] : [];
+      }));
+      const relabel = (text: string) => relabelExplanation(text, displayLabelFor);
       const content: PaidExplanation = {};
-      if (nonblank(questionExplanations[0]?.explanation_text)) content.explanation = questionExplanations[0].explanation_text;
+      if (nonblank(questionExplanations[0]?.explanation_text)) content.explanation = relabel(questionExplanations[0].explanation_text);
       const options = item.options.flatMap(option => {
         const answer = canonical.find(answer => answer.choice_text === option.text)!;
-        return nonblank(answer.explanation_text) ? [{ label: option.label, text: option.text, explanation: answer.explanation_text }] : [];
+        return nonblank(answer.explanation_text) ? [{ label: option.label, text: option.text, explanation: relabel(answer.explanation_text) }] : [];
       });
       if (options.length) content.optionExplanations = options;
       if (content.explanation || content.optionExplanations) result.set(item.id, content);

@@ -66,3 +66,13 @@ describe("anonymous diagnostic aggregate scoring", () => {
     expect(items).toEqual([item("A", true), item("B", false)]);
   });
 });
+
+describe("exam-guide domain display", () => {
+  it("uses official names and lists domains in exam-guide order", () => {
+    const result = computeResult("s", [
+      { domain_code: "MONITORING_ML_SOLUTIONS", domain_name: "Monitoring ML Solutions", is_correct: false },
+      { domain_code: "ARCHITECTING_LOW_CODE_ML_SOLUTIONS", domain_name: "Old name", is_correct: false },
+    ]);
+    expect(result.domainBreakdown.map(domain => domain.domainName)).toEqual(["Architecting low-code AI solutions", "Monitoring AI solutions"]);
+  });
+});
