@@ -73,24 +73,32 @@ export function DiagnosticSession({ sessionId }: { sessionId: string }) {
 
   const header = <header className="mx-auto flex max-w-[760px] flex-wrap items-center justify-between gap-3 border-b border-border pb-5">
     <SiteLogo />
-    <span className="text-sm text-muted-foreground" aria-live="polite">{data ? `${data.answeredCount} of ${data.totalQuestions} answered` : "Loading progress…"}</span>
   </header>;
   if (error || answerError) return <div className="space-y-6">{header}<DiagnosticError message={error || answerError!} onRetry={retry} /></div>;
   if (!data || data.status === "completed") return <div className="space-y-6">{header}<DiagnosticLoading message={data ? "Opening your results…" : "Loading your saved progress…"} /></div>;
   const question = data.currentQuestion;
   if (!question) return <div className="space-y-6">{header}<DiagnosticError message="Your next question could not be loaded. Retry to load your saved progress." onRetry={retry} /></div>;
 
+  // ~45s per remaining question (this one included), rounded up; hidden under a minute.
+  const secondsLeft = (data.totalQuestions - data.answeredCount) * 45;
+  const minutesLeft = secondsLeft >= 60 ? Math.ceil(secondsLeft / 60) : 0;
+  const last = question.ordinal === data.totalQuestions;
+  // Shown only while answering question 11, i.e. right after the 10th answer was committed.
+  const halfway = data.answeredCount === 10 && question.ordinal === 11;
+
   return (
-    <div className="mx-auto max-w-[760px] space-y-6">
+    <div className="mx-auto max-w-[760px] space-y-6 pb-28 sm:pb-0">
       {header}
       <div className="space-y-3">
         <div className="flex flex-wrap justify-between gap-2 text-sm text-muted-foreground">
           <span>Question {question.ordinal} of {data.totalQuestions}</span>
+          {minutesLeft > 0 && <span>~{minutesLeft} min left</span>}
         </div>
         <div role="progressbar" aria-label="Diagnostic progress" aria-valuemin={0} aria-valuemax={data.totalQuestions} aria-valuenow={data.answeredCount} className="h-2 overflow-hidden rounded border border-input bg-border">
           <div className="h-full bg-primary" style={{ width: `${data.answeredCount / data.totalQuestions * 100}%` }} />
         </div>
       </div>
+      {halfway && <p role="status" className="halfway-note rounded-md border border-border bg-muted px-4 py-3 text-sm font-medium">Halfway there. Your domain picture is taking shape.</p>}
       <Card>
         <CardHeader className="space-y-4"><p className="text-sm text-muted-foreground">{PMLE_BLUEPRINT_MAP[question.domainCode]?.displayName ?? question.domainCode}</p><h1 ref={heading} tabIndex={-1} className="whitespace-pre-line text-lg font-normal leading-relaxed sm:text-xl">{question.stem}</h1></CardHeader>
         <CardContent>
@@ -104,9 +112,9 @@ export function DiagnosticSession({ sessionId }: { sessionId: string }) {
                 </label>
               ))}
             </fieldset>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <p className="text-sm text-muted-foreground">Answers can’t be changed after you submit.</p>
-              <Button type="submit" disabled={!selected || pending}>{pending ? "Saving answer…" : "Submit answer"}</Button>
+            {/* Pinned to the bottom of the viewport on phones; inline from sm up. */}
+            <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-card px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:flex sm:justify-end sm:border-0 sm:bg-transparent sm:p-0">
+              <Button type="submit" className="w-full sm:w-auto" disabled={!selected || pending}>{pending ? "Saving answer…" : last ? "See my results" : "Next question"}</Button>
             </div>
             {pending && <p role="status" className="text-sm text-muted-foreground">Saving your answer…</p>}
           </form>
