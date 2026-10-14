@@ -68,7 +68,9 @@ def test_real_codex_content_mixed_batch_ingests_once_with_synthetic_verdict(monk
     assert row["status"] == "DRAFT"
     notes=json.loads(row["review_notes"])
     assert notes["content_pipeline_judge"]["model"] == EXTERNAL_JUDGE_PROVENANCE
-    assert notes["grounding"]["evidence"] == first["evidence"]
+    assert notes["grounding"]["evidence"] == dry_payload["candidates"][0]["evidence"]
+    from shared.option_order import canonical_evidence
+    assert canonical_evidence(dry_payload["candidates"][0]) == canonical_evidence(first)
     from scripts.review_batch import grounding_errors
     assert grounding_errors({"review_notes": row["review_notes"]}) == []
     assert client.update_question_review.call_args.args[2] == "GOOD"

@@ -21,7 +21,7 @@ from shared.cli_models import parse_output
 from shared.completion_diagnostics import _safe_completion
 from shared.dedupe import normalize_stem
 from shared.doc_search import documentation_context
-from shared.option_order import canonical_evidence
+from shared.option_order import canonical_evidence, balance_options
 from shared.near_duplicates import check_near_duplicate, comparison_row, tokens
 from shared.batch_report import key_position_report, format_key_position_report, template_diversity_report
 from shared.evidence import check_evidence
@@ -33,7 +33,7 @@ from shared.external_judge import (
 from shared.model_policy import require_independent_models
 from shared.quality_gate import QuestionQualitySignature, LEGACY_ROUND4_QUALITY_SIGNATURE, judge_question
 from shared.validator import validate_question
-from shared.batch_report import option_length_report, format_option_length_report, option_prefix_report, format_option_prefix_report
+from shared.batch_report import option_length_report, format_option_length_report, option_prefix_report, format_option_prefix_report, key_length_rank_report
 
 BLOCKED_STATES = {"inserting", "inserted", "complete", "failed_partial", "unknown"}
 
@@ -501,7 +501,17 @@ def ingest(path, verdicts, *, dry_run=False):
         entry["accepted"] = False
         pending.append((entry, scope, question, judge, grounding))
         click.echo(f"{ident}: passing external verdict; {judge.reason}")
+    if payload.get("rules_version") == 5 and not blocked:
+        eligible = [entry for entry in payload["candidates"]
+                    if entry["candidate_id"] not in superseded
+                    and entry.get("judge_verdict", {}).get("passed") is True
+                    and not entry.get("persistence_validation_failed")]
+        try:
+            balance_options(eligible)
+        except ValueError:
+            raise click.ClickException("Persisted option layout requires reconciliation; no new DB writes") from None
     payload["option_length_report"] = option_length_report(payload["candidates"])
+    payload["key_length_rank_report"] = key_length_rank_report(payload["candidates"])
     payload["option_prefix_report"] = option_prefix_report(payload["candidates"])
     if payload.get("rules_version") == 5:
         payload["all_candidate_key_position_report"] = key_position_report(payload["candidates"])
@@ -597,6 +607,7 @@ def ingest(path, verdicts, *, dry_run=False):
                 blocked += 1
                 click.echo(f"{entry['candidate_id']}: {entry['reason']}")
             payload["option_length_report"] = option_length_report(payload["candidates"])
+            payload["key_length_rank_report"] = key_length_rank_report(payload["candidates"])
             payload["option_prefix_report"] = option_prefix_report(payload["candidates"])
             _flush(path, payload)
         try:

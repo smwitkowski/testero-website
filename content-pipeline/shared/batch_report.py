@@ -40,6 +40,30 @@ def option_length_report(candidates):
             "accepted": _summarize([entry for entry in candidates if entry.get("accepted") is True])}
 
 
+def key_length_rank_report(candidates):
+    """Measure stored key word-length ranks; tied keys use their shortest rank."""
+    def summarize(entries):
+        counts = {str(rank): 0 for rank in range(1, 5)}
+        for entry in entries:
+            options = entry.get("options")
+            if (not isinstance(options, list) or len(options) != 4
+                    or any(not isinstance(row, dict) or not isinstance(row.get("text"), str)
+                           or not isinstance(row.get("label"), str)
+                           or row["label"] not in list("ABCD") for row in options)):
+                continue
+            lengths = {row["label"]: len(row["text"].split()) for row in options}
+            if set(lengths) != set("ABCD") or entry.get("key") not in lengths:
+                continue
+            rank = 1 + sum(length < lengths[entry["key"]] for length in lengths.values())
+            counts[str(rank)] += 1
+        return {"count": sum(counts.values()), "counts": counts}
+    return {"definition": "1 shortest, 4 longest; ties use the shortest rank",
+            **summarize(candidates),
+            "passing": summarize([entry for entry in candidates
+                                  if entry.get("judge_verdict", {}).get("passed") is True]),
+            "accepted": summarize([entry for entry in candidates if entry.get("accepted") is True])}
+
+
 def format_option_length_report(report):
     """Format the stored definition and target without hiding ties or empty samples."""
     rate = report["key_is_longest_rate"]
