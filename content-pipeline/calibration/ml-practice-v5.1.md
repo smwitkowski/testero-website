@@ -83,3 +83,9 @@ IDs below have prefix `machine-learning-engineer:standard:`.
 | 6.2:1 | no | Configuring and using Model Monitoring on Gemini Enterprise Agent Platform to establish continuous evaluation metrics for production models | Configuring/using Agent Platform Model Monitoring is expressly the task. |
 | 6.2:2 | yes | Monitoring for common issues (e.g., training-serving skew, data drift, concept drift, and feature attribution drift) | Training-serving skew and drift types/diagnosis are general ML monitoring knowledge. |
 | 6.2:3 | yes | Monitoring, testing, and evaluating gen AI solutions | Gen AI monitoring/testing/evaluation is generic model-quality practice without a mandatory product. |
+
+## Coordinator narrowing (2026-10-14, D-034)
+
+The worker's 24-objective list was narrowed to 9 before merge. The other 15 name or depend on specific Google Cloud products or services (Experiments/ML Metadata, Cloud Build CI/CD, accelerator and hardware selection, Model Monitoring issue types, notebook environments, rollout mechanisms, data ingestion and privacy tooling, gen-AI evaluation services, inference processing), where the exam expects product knowledge. They keep the full v5 style checks.
+
+Allowed: 2.3:2 evaluation metrics, 3.1:1 model type choice, 3.1:4 interpretability techniques, 3.2:4 troubleshooting training failures, 3.2:5 hyperparameter tuning, 5.1:1 validating data and models, 5.1:3 consistent preprocessing, 5.2:1 retraining policy, 6.1:2 responsible AI practices.

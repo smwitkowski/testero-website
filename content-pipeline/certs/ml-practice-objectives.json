@@ -2,56 +2,20 @@
   "version": "5.1",
   "guide_sha256": "bee925a0fb365488f57fee26b1fca8cdfc82e67fdb8753afb0472c2d3b257701",
   "objectives": {
-    "machine-learning-engineer:standard:2.1:1": {
-      "text": "Organizing and exploring different data types (e.g., tabular, text, and images) for efficient experimenting, training, and serving"
-    },
-    "machine-learning-engineer:standard:2.1:4": {
-      "text": "Ensuring data privacy and handling sensitive information (e.g., personally identifiable information [PII])"
-    },
-    "machine-learning-engineer:standard:2.2:1": {
-      "text": "Applying collaboration and security best practices when setting up and running notebook environments"
-    },
     "machine-learning-engineer:standard:2.3:2": {
       "text": "Evaluating predictive and gen AI solutions (e.g., model evaluation metrics and LLM-as-a-judge)"
-    },
-    "machine-learning-engineer:standard:2.3:3": {
-      "text": "Tracking and comparing model artifacts, versions, and lineage (e.g., Experiments on Agent Platform and Gemini Enterprise Agent Platform ML Metadata)"
     },
     "machine-learning-engineer:standard:3.1:1": {
       "text": "Choosing the model type (e.g., ARIMA, DNN, and LLM)"
     },
-    "machine-learning-engineer:standard:3.1:3": {
-      "text": "Choosing the deployment strategy"
-    },
     "machine-learning-engineer:standard:3.1:4": {
       "text": "Modeling techniques given interpretability requirements"
-    },
-    "machine-learning-engineer:standard:3.2:2": {
-      "text": "Ingesting structured and unstructured data from various sources into training pipelines"
     },
     "machine-learning-engineer:standard:3.2:4": {
       "text": "Troubleshooting ML model training failures"
     },
     "machine-learning-engineer:standard:3.2:5": {
       "text": "Hyperparameter tuning"
-    },
-    "machine-learning-engineer:standard:3.3:1": {
-      "text": "Evaluation of compute and accelerator options (e.g., CPU, GPU, and TPU)"
-    },
-    "machine-learning-engineer:standard:3.3:2": {
-      "text": "Understanding the options for distributed training on GPUs and TPUs using data and model parallelism strategies"
-    },
-    "machine-learning-engineer:standard:4.1:4": {
-      "text": "Implementing model rollout strategies (e.g., A /B testing and canary deployments) to compare model versions"
-    },
-    "machine-learning-engineer:standard:4.1:5": {
-      "text": "Developing solutions for inference preprocessing and postprocessing"
-    },
-    "machine-learning-engineer:standard:4.2:3": {
-      "text": "Choosing appropriate hardware (e.g., CPU, GPU, TPU, and edge)"
-    },
-    "machine-learning-engineer:standard:4.2:5": {
-      "text": "Tuning ML models for training and serving in production"
     },
     "machine-learning-engineer:standard:5.1:1": {
       "text": "Validating data and models"
@@ -62,17 +26,8 @@
     "machine-learning-engineer:standard:5.2:1": {
       "text": "Determining an appropriate retraining policy"
     },
-    "machine-learning-engineer:standard:5.2:2": {
-      "text": "Deploying models in continuous integration, continuous delivery, and continuous training (CI/CD/CT) pipelines (e.g., Cloud Build)"
-    },
     "machine-learning-engineer:standard:6.1:2": {
       "text": "Aligning with responsible AI practices (e.g., monitoring for bias)"
-    },
-    "machine-learning-engineer:standard:6.2:2": {
-      "text": "Monitoring for common issues (e.g., training-serving skew, data drift, concept drift, and feature attribution drift)"
-    },
-    "machine-learning-engineer:standard:6.2:3": {
-      "text": "Monitoring, testing, and evaluating gen AI solutions"
     }
   }
 }
