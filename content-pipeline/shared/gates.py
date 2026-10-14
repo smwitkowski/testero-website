@@ -11,6 +11,7 @@ from pydantic import StringConstraints
 import dspy
 
 from shared.question_style import STYLE_INSTRUCTIONS
+from shared.objective_style import allows_ml_practice, policy_instructions, RELAXED_STYLE_CHECKS
 
 GATE_VERSION = 5
 PASS_THRESHOLD = 0.8
@@ -161,7 +162,7 @@ def blind_choice_map(question):
     return dict(zip("ABCD", labels))
 
 
-def build_gate_inputs(question, domain_context, documentation_context, option_evidence, *, style_reference=None):
+def build_gate_inputs(question, domain_context, documentation_context, option_evidence, *, style_reference=None, style_policy=None):
     """Explicit allowlists prevent answer/evidence leakage to learner-only gates."""
     from shared.quality_gate import QUESTION_FIELDS
     mapping = blind_choice_map(question)
@@ -170,7 +171,8 @@ def build_gate_inputs(question, domain_context, documentation_context, option_ev
     learner = {"stem": question["stem"], "options": options}
     return {"blind_solver": {**learner, "options": dict(options)},
             "style": {**learner, "options": dict(options),
-                      "style_reference": default_style_reference() if style_reference is None else style_reference},
+                      "style_reference": (default_style_reference() if style_reference is None else style_reference)
+                                         + policy_instructions(style_policy)},
             "evidence": {"question_data": {name: question[name] for name in QUESTION_FIELDS},
                          "domain_context": domain_context, "documentation_context": documentation_context,
                          "option_evidence": option_evidence}}
@@ -187,7 +189,7 @@ def parse_gate_output(name, raw, *, version=GATE_VERSION):
     return data
 
 
-def evaluate_gate(name, raw, question, *, version=GATE_VERSION):
+def evaluate_gate(name, raw, question, *, version=GATE_VERSION, style_policy=None):
     """Return (passed, concrete reason); no score can compensate for a failure."""
     data = parse_gate_output(name, raw, version=version)
     if name == "blind_solver":
@@ -201,19 +203,32 @@ def evaluate_gate(name, raw, question, *, version=GATE_VERSION):
         checks = (tuple(k for k, field in gate_signatures(version)["style"].output_fields.items()
                         if field.annotation is bool and k != "generic_validation_key")
                   if name == "style" else EVIDENCE_CHECKS)
-        failures = [check for check in checks if data[check] is not True]
+        relaxed = name == "style" and version == 5 and allows_ml_practice(style_policy)
+        failures = [check for check in checks if data[check] is not True
+                    and not (relaxed and check in RELAXED_STYLE_CHECKS)]
         passed = data["verdict"] == "PASS" and data["score"] >= PASS_THRESHOLD and not failures
+        # Recorded v5 aggregate FAIL/score can be caused solely by the waived checks.
+        # Keep raw verdicts and scores intact; never waive UNCERTAIN or a required check.
+        waived_failure = relaxed and (data["product_knowledge_hinge"] is False
+                                     or data["cloud_specific_alternative"] is False
+                                     or data["generic_validation_key"] is True)
+        if waived_failure and not failures and data["verdict"] != "UNCERTAIN":
+            passed = True
     prefix = (", ".join(failures) + ": ") if failures else ""
     return passed, prefix + data["reason"]
 
 
-def aggregate_gate_verdict(question, raw, *, model="claude", version=GATE_VERSION):
+def aggregate_gate_verdict(question, raw, *, model="claude", version=GATE_VERSION, style_policy=None):
     """All three independent gates must strictly PASS; never average scores."""
     from shared.quality_gate import JudgeVerdict
     if not isinstance(raw, dict) or set(raw) != set(GATE_SIGNATURES):
         raise ValueError("All three strict gate outputs are required")
-    results = {name: evaluate_gate(name, raw[name], question, version=version) for name in GATE_SIGNATURES}
-    score = min(raw[name]["confidence" if name == "blind_solver" else "score"] for name in GATE_SIGNATURES)
+    results = {name: evaluate_gate(name, raw[name], question, version=version, style_policy=style_policy) for name in GATE_SIGNATURES}
+    scores = [raw[name]["confidence" if name == "blind_solver" else "score"]
+              for name in GATE_SIGNATURES
+              if not (name == "style" and version == 5 and allows_ml_practice(style_policy)
+                      and results[name][0] and raw[name]["score"] < PASS_THRESHOLD)]
+    score = min(scores)
     failed = [name + ": " + reason for name, (passed, reason) in results.items() if not passed]
     return JudgeVerdict(not failed, float(score), ("; ".join(failed) if failed else "All three independent gates passed")[:300], model,
                         gate_results=json.loads(json.dumps(raw, allow_nan=False)))

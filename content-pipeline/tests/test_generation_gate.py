@@ -293,7 +293,7 @@ def test_seed_cli_is_reproducible_and_recorded(generation):
     artifact = json.loads((generation[-1] / "pilot.json").read_text())
     assert artifact["seed"] == 1234
     from shared.cert_context import plan_questions
-    deterministic = [{k: v for k, v in item.items() if k not in {"decision_plan", "decision_proof", "decision_objective"}}
+    deterministic = [{k: v for k, v in item.items() if k not in {"decision_plan", "decision_proof", "decision_objective", "style_policy"}}
                      for item in artifact["plan"]]
     assert deterministic == plan_questions(generate.DEFAULT_CERT, 6, seed=1234)
     assert all("objective_offset" in item for item in artifact["plan"])

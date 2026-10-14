@@ -1,5 +1,38 @@
 # Docs-grounded question process
 
+## Current rules-v5.1 objective allowance (2026-10-14)
+
+For **new candidates**, freeze `style_policy` version `5.1` on the plan,
+candidate, external request and persisted grounding. The reviewed list in
+`certs/ml-practice-objectives.json` allows general ML/MLOps hinges on 24 PMLE
+objectives. Per-objective inclusion/exclusion reasons are in
+`calibration/ml-practice-v5.1.md`; unknown objectives and other certs default off.
+Prefer realistic Google Cloud context, but sound ML practice may decide the key.
+
+Only `product_knowledge_hinge`, `cloud_specific_alternative` and
+`generic_validation_key` are descriptive rather than rejecting checks for those
+objectives. Keep every other style check, especially knowledge-dependent plausible
+distractors, distinct approaches, clear scenarios, current names and constraints
+as wants. A telegraphing stem still fails. The generic-key 20% report applies to
+passing **non-allowance** candidates; allowance rows neither count against it nor
+dilute its denominator. No evidence, blind solver, Argon, near-duplicate, retrieval
+or key-balancing change. Argon frozen prompts and strict verdict policy are unchanged.
+
+`ml_practice_report` counts actual style judgments under the allowance, including
+style failures, not merely planned/awaiting candidates. Preserve raw style outputs;
+the deterministic style evaluation can ignore a recorded FAIL/low score attributable
+to a relaxed check only when every remaining check is true. UNCERTAIN still blocks.
+Malformed/missing fields block. The derived aggregate score uses the unwaived gate scores
+when the waived recorded style score is below 0.8; raw style score is preserved. Fresh prompts score the required checks normally.
+Historical artifacts without `style_policy` retain exact v5 policy and requests;
+no b18 artifact, request or verdict is rewritten or ingested by this PR.
+
+Offline fixtures replay two b18 learner/style projections with original request
+and verdict SHA256 hashes. One recorded style-only rejection passes under the
+allowance; the weak-distractor rejection stays failed. This is not measured live
+yield or approval: all remaining independent gates and founder review still apply.
+No API calls, keys, env-file reads or database writes are authorized here.
+
 ## Current rules-v5 operator flow (2026-10-13)
 
 This supersedes v4 **for new candidates**. No live generation, retrieval, Argon

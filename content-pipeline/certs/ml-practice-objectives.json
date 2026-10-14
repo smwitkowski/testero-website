@@ -1,0 +1,33 @@
+{
+  "version": "5.1",
+  "guide_sha256": "bee925a0fb365488f57fee26b1fca8cdfc82e67fdb8753afb0472c2d3b257701",
+  "objectives": {
+    "machine-learning-engineer:standard:2.3:2": {
+      "text": "Evaluating predictive and gen AI solutions (e.g., model evaluation metrics and LLM-as-a-judge)"
+    },
+    "machine-learning-engineer:standard:3.1:1": {
+      "text": "Choosing the model type (e.g., ARIMA, DNN, and LLM)"
+    },
+    "machine-learning-engineer:standard:3.1:4": {
+      "text": "Modeling techniques given interpretability requirements"
+    },
+    "machine-learning-engineer:standard:3.2:4": {
+      "text": "Troubleshooting ML model training failures"
+    },
+    "machine-learning-engineer:standard:3.2:5": {
+      "text": "Hyperparameter tuning"
+    },
+    "machine-learning-engineer:standard:5.1:1": {
+      "text": "Validating data and models"
+    },
+    "machine-learning-engineer:standard:5.1:3": {
+      "text": "Ensuring consistent data preprocessing between training and serving"
+    },
+    "machine-learning-engineer:standard:5.2:1": {
+      "text": "Determining an appropriate retraining policy"
+    },
+    "machine-learning-engineer:standard:6.1:2": {
+      "text": "Aligning with responsible AI practices (e.g., monitoring for bias)"
+    }
+  }
+}

@@ -56,7 +56,7 @@ def candidate_question(entry):
 REPAIR_FIELDS = {"parent_candidate_id", "attempt", "parent_question_sha256", "question_sha256",
                  "storage_question_id", "original_verdict", "original_verdict_sha256"}
 SCOPE_FIELDS = ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment",
-                "opening_style", "question_line")
+                "opening_style", "question_line", "style_policy")
 
 
 def canonical_sha256(value):
@@ -285,6 +285,12 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
     cited_urls = {item["url"] for item in evidence}
     cited = [source for source in sources if source["url"] in cited_urls]
     from shared.gates import gate_signatures, build_gate_inputs
+    from shared.objective_style import validate_style_policy
+    policy = scope.get("style_policy")
+    if "style_policy" in scope:
+        validate_style_policy(policy, scope["objective_id"])
+        if signature is not None or gate_version != 5:
+            raise ValueError("Rules v5.1 policy requires v5 independent gates")
     signatures = gate_signatures(gate_version)
     schema = output_model(signature).model_json_schema() if signature is not None else None
     trimmed_urls = set()
@@ -306,7 +312,8 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
         else:
             from shared.question_style import RULES_V4_STYLE_INSTRUCTIONS
             inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence,
-                                       style_reference=RULES_V4_STYLE_INSTRUCTIONS if gate_version == 4 else None)
+                                       style_reference=RULES_V4_STYLE_INSTRUCTIONS if gate_version == 4 else None,
+                                       style_policy=policy)
             request = {"candidate_id": candidate_id, "objective_id": scope["objective_id"],
                        "gate_version": gate_version,
                        "decision_provenance_sha256": canonical_sha256({name: scope.get(name) for name in
@@ -315,6 +322,8 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
                                         "verdict_schema": output_model(gate_signature).model_json_schema()}
                                  for name, gate_signature in signatures.items()},
                        "trimming": trimming}
+        if policy is not None:
+            request["style_policy"] = policy
         if argon_gate:
             if signature is not None or gate_version != 5:
                 raise ValueError("Argon requires rules-v5 independent gate requests")

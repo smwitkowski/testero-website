@@ -324,6 +324,7 @@ def judge_three_gates(
     generator_model: str | None = None, option_evidence: list[dict] | None = None,
     predictors: Mapping[str, Callable[..., Any]] | None = None,
     style_reference: str | None = None, max_tokens: int = 2000,
+    style_policy: dict | None = None,
 ) -> JudgeVerdict:
     """Run three separate calls with isolated inputs; require every strict gate.
 
@@ -353,7 +354,7 @@ def judge_three_gates(
         if predictors is not None and set(predictors) != set(GATE_SIGNATURES):
             return fail("All three independent predictors are required")
         inputs = build_gate_inputs(question_data, domain_context, documentation_context,
-                                   option_evidence, style_reference=style_reference)
+                                   option_evidence, style_reference=style_reference, style_policy=style_policy)
         raw = {}
         for name, signature in GATE_SIGNATURES.items():
             if predictors is not None:
@@ -369,7 +370,7 @@ def judge_three_gates(
                              temperature=0.0, max_tokens=max_tokens, cache=False)
                 with reject_token_limit(lm), dspy.context(adapter=dspy.JSONAdapter()):
                     raw[name] = dict(dspy.Predict(signature)(**inputs[name], lm=lm))
-        return aggregate_gate_verdict(question_data, raw, model=model)
+        return aggregate_gate_verdict(question_data, raw, model=model, style_policy=style_policy)
     except CLIUsageLimitError:
         raise
     except CLIModelError as error:

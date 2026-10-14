@@ -12,6 +12,8 @@ import click
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from shared.cert_context import DEFAULT_CERT, plan_questions, load_cert_context
+from shared.objective_style import style_policy
+from shared.batch_report import ml_practice_report
 from shared.yield_planning import existing_scenarios, ObjectiveRotation
 from shared.dedupe import normalize_stem, strip_markdown
 from shared.option_order import store_options
@@ -176,7 +178,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                "dry_run": dry_run, "seed": seed, "requested_objective_ids": list(dict.fromkeys(objective_ids)),
                "planned_count": n_questions, "plan": plan, "candidates": [],
                "parallel": effective_parallel, "gen_effort": gen_effort, "cite_effort": cite_effort,
-               "rules_version": 5, "section_allocation": allocation, "decision_first": True,
+               "rules_version": 5, "style_policy_version": "5.1", "section_allocation": allocation, "decision_first": True,
                "existing_questions": bank, "argon_gate": argon_gate}
     client = None if dry_run or external else database_client()
     exam = exam or ("GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert)
@@ -238,8 +240,10 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     def process_candidate(item):
         nonlocal accepted, awaiting, batch_stop, next_commit
         index, scope = item
+        scope["style_policy"] = style_policy(scope["objective_id"])
         request = None
         entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line", "key_length_rank")},
+                 "style_policy": scope["style_policy"],
                  "index": index, "stem": None, "options": [], "key": "A", "rationales": {},
                  "evidence": [], "citation_attempts": [], "mechanical_check": {"passed": False, "errors": ["No fetched evidence"]},
                  "judge_verdict": {"passed": False, "score": 0.0, "reason": "Not judged", "model": judge_model},
@@ -351,7 +355,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 return  # Publish in plan order under the shared write lock.
             stage = "judge"
             judge = judge_three_gates(question, scope["domain_prompt"], documentation_context=context,
-                                   model=judge_model, generator_model=model, option_evidence=checked["options"])
+                                   model=judge_model, generator_model=model, option_evidence=checked["options"],
+                                   style_policy=scope["style_policy"])
             entry["judge_verdict"] = {"passed": judge.passed, "score": judge.score, "reason": judge.reason, "model": judge.model}
             if getattr(judge, "gate_results", None) is not None:
                 entry["gate_verdicts"] = judge.gate_results
@@ -363,7 +368,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             grounding.update({"generator_model": model, "judge_model": judge_model,
                               "evidence": entry["evidence"], "option_order": entry["option_order"],
                               "mechanical_check": entry["mechanical_check"],
-                              "rules_version": 5, "gate_version": 5,
+                              "rules_version": 5, "gate_version": 5, "style_policy": scope["style_policy"],
                               "decision_objective": decision_objective,
                               "decision_plan": decision, "decision_proof": proof,
                               "decision_attempt_count": len(entry["decision_attempts"]),
@@ -445,6 +450,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     payload["all_candidate_key_position_report"] = key_position_report(payload["candidates"])
                     payload["key_position_report"] = key_position_report([row for row in payload["candidates"]
                         if row.get("accepted") is True or row.get("persisted") is True])
+                    payload["ml_practice_report"] = ml_practice_report(payload["candidates"])
                     payload["option_length_report"] = option_length_report(payload["candidates"])
                     payload["option_prefix_report"] = option_prefix_report(payload["candidates"])
                     write_artifact(artifact, payload)
@@ -485,6 +491,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         for code, run_id in runs.items():
             if not client.update_generation_run(run_id, {"generated_count": run_counts[code], "completed_at": datetime.now(timezone.utc).isoformat()}):
                 raise click.ClickException("Run completion failed; founder approval remains blocked")
+    click.echo("ML practice allowance: " + json.dumps(payload["ml_practice_report"]))
     click.echo(format_key_position_report(payload["key_position_report"]))
     generated_report = payload["all_candidate_key_position_report"]
     click.echo(f"Generated key positions (informational only): {generated_report['counts']}; N={generated_report['count']}")

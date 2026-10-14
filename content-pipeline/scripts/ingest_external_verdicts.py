@@ -17,6 +17,8 @@ import click
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.generate_pmle_questions import database_client as _database_client, persist_candidate, write_artifact
 from shared.cert_context import plan_questions
+from shared.objective_style import validate_style_policy
+from shared.batch_report import ml_practice_report
 from shared.cli_models import parse_output
 from shared.completion_diagnostics import _safe_completion
 from shared.dedupe import normalize_stem
@@ -97,7 +99,14 @@ def _scope(payload, entry):
     current = plan_questions(payload["cert_id"], index, objective_ids=[scope["objective_id"]])
     expected = current[index - 1]
     # Deterministic registry scope stays exact; LLM decision/proof data is frozen separately.
-    provenance_fields = {"objective_offset", "decision_plan", "decision_proof", "decision_objective"}
+    provenance_fields = {"objective_offset", "decision_plan", "decision_proof", "decision_objective", "style_policy"}
+    policy = scope.get("style_policy")
+    if payload.get("style_policy_version") == "5.1":
+        validate_style_policy(policy, scope["objective_id"])
+    elif policy is not None or entry.get("style_policy") is not None:
+        raise ValueError("Style policy requires frozen rules v5.1 batch provenance")
+    if entry.get("style_policy") != policy:
+        raise ValueError("Candidate differs from its frozen style policy")
     for key in ("decision_plan", "decision_proof", "decision_objective", "key_length_rank"):
         if key in scope and entry.get(key) != scope[key]:
             raise ValueError("Candidate does not match its frozen decision provenance")
@@ -205,7 +214,8 @@ def _external_decision(question, scope, sources, evidence, raw, generator_model,
                 raise ValueError("All four gates required")
             base = {name: raw[name] for name in ("blind_solver", "style", "evidence")}
             passed, reason = evaluate_argon(question, raw["argon"], argon_request)
-        decision = aggregate_gate_verdict(question, base, model=EXTERNAL_JUDGE_PROVENANCE, version=rules_version)
+        decision = aggregate_gate_verdict(question, base, model=EXTERNAL_JUDGE_PROVENANCE, version=rules_version,
+                                          style_policy=scope.get("style_policy"))
         if argon_request is not None and not passed:
             from shared.quality_gate import JudgeVerdict
             return JudgeVerdict(False, 0.0, ("Argon: " + reason)[:300], EXTERNAL_JUDGE_PROVENANCE)
@@ -493,6 +503,8 @@ def ingest(path, verdicts, *, dry_run=False):
             grounding.update(gate_version=payload.get("rules_version", 4), rules_version=payload.get("rules_version", 4), gate_verdicts=raw,
                              **{name: scope[name] for name in
                                 ("decision_objective", "decision_plan", "decision_proof", "key_length_rank")})
+        if scope.get("style_policy") is not None:
+            grounding["style_policy"] = scope["style_policy"]
         if payload.get("argon_gate") is True:
             grounding["argon"] = raw["argon"]
         if "option_order" in entry:
@@ -521,6 +533,8 @@ def ingest(path, verdicts, *, dry_run=False):
         payload["template_diversity_report"] = template_diversity_report([entry for entry in payload["candidates"]
             if entry["candidate_id"] not in superseded])
         click.echo(format_key_position_report(payload["key_position_report"]))
+        payload["ml_practice_report"] = ml_practice_report(payload["candidates"])
+        click.echo("ML practice allowance: " + json.dumps(payload["ml_practice_report"]))
         click.echo("Template diversity: " + json.dumps(payload["template_diversity_report"]))
         _flush(path, payload)
         if blocked:

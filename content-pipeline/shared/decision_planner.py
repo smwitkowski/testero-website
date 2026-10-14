@@ -130,7 +130,8 @@ def _predict(signature, inputs, model, reasoning_effort):
 
 
 def plan_decision(scope, *, model, difficulty="MEDIUM", replacement_feedback="", existing_scenarios=(), reasoning_effort="high", predictor=None):
-    inputs = {"objective_scope": scope["domain_prompt"], "difficulty": difficulty,
+    from shared.objective_style import policy_instructions
+    inputs = {"objective_scope": scope["domain_prompt"] + policy_instructions(scope.get("style_policy")), "difficulty": difficulty,
               "replacement_feedback": replacement_feedback,
               "existing_scenarios": json.dumps(existing_scenarios, ensure_ascii=False)}
     from shared.cli_models import output_model
@@ -165,7 +166,8 @@ def writer_decision_context(scope, plan, proof):
     """Render verified decision hints; docs must not displace the primary task."""
     if not proof.get("passed"):
         raise DecisionVetoError("Unsupported decision must not reach the writer")
-    return (scope["domain_prompt"] + "\n\nVerified decision plan (write this decision, not documentation trivia):\n"
+    from shared.objective_style import policy_instructions
+    return (scope["domain_prompt"] + policy_instructions(scope.get("style_policy")) + "\n\nVerified decision plan (write this decision, not documentation trivia):\n"
             + json.dumps(plan, ensure_ascii=False) + "\nVerified scenario reasons:\n"
             + json.dumps(proof["reasons"], ensure_ascii=False)
             + "\nKeep one clear task and comparable option granularity. Do not add wants, exceptions, "
