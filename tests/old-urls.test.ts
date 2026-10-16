@@ -7,6 +7,11 @@ import manifest from "@/content/legacy-url-manifest.json";
 import { publicPaths, SITE_ORIGIN } from "@/lib/seo";
 import { getLegacyRedirect, legacyPaths, nextLegacyRedirects, redirectRules, resolveLegacyPath } from "@/lib/navigation/legacy-redirects";
 import nextConfig from "../next.config";
+import { getRedirectUrl, unstable_getResponseFromNextConfig } from "next/experimental/testing/server";
+import sitemap from "@/app/sitemap";
+import { generateStaticParams } from "@/app/blog/[slug]/page";
+import { getBlogEntries, getBlogEntry, getFaqEntries } from "@/lib/content/loader";
+import { relatedPmleGuides } from "@/lib/content/related";
 
 const root = resolve(import.meta.dirname, "..");
 function extractLocations(xml: string): string[] {
@@ -110,4 +115,47 @@ describe("legacy redirects run in Next config before auth", () => {
 
   it.each(["https://evil.example/content", "//evil.example", "/%2Fevil.example", "/content/%2e%2e/login", "/content/%5cevil", "/content/%zz", "/content?next=https://evil.example"])
     ("does not resolve unsafe or external input %s", path => { expect(getLegacyRedirect(path)).toBeUndefined(); });
+});
+
+describe("retired PMLE articles", () => {
+  const replacements = [
+    ["pmle-october-2024-exam-changes", "/blog/pmle-exam-changes-june-2026"],
+    ["accelerated-google-ml-certification-30-day-success-story-2025", "/blog/pmle-study-plan-by-domain"],
+  ] as const;
+
+  it.each(replacements)("permanently redirects %s in Next config without a chain", async (slug, destination) => {
+    const path = `/blog/${slug}`;
+    const response = await unstable_getResponseFromNextConfig({ url: `${SITE_ORIGIN}${path}`, nextConfig });
+    expect(response.status).toBe(308);
+    expect(getRedirectUrl(response)).toBe(`${SITE_ORIGIN}${destination}`);
+    expect(getLegacyRedirect(destination)).toBeUndefined();
+    for (const prefix of ["blog", "spoke", "spokes"]) {
+      for (const extension of ["", ".md"]) {
+        expect(resolveLegacyPath(`/content/${prefix}/${slug}${extension}`)).toEqual({ path: destination, status: 308 });
+      }
+    }
+    expect(getBlogEntry(destination.slice("/blog/".length))).toBeDefined();
+  });
+
+  it.each(["", ".md"])("sends the retired success-story brief%s directly to the study plan", extension => {
+    expect(resolveLegacyPath(`/content/briefs/accelerated-ml-cert-success${extension}`))
+      .toEqual({ path: "/blog/pmle-study-plan-by-domain", status: 308 });
+  });
+
+  it("unpublishes both articles from all public content surfaces while preserving their source files", () => {
+    const entries = [...getBlogEntries(), ...getFaqEntries()];
+    for (const [slug] of replacements) {
+      const path = `/blog/${slug}`;
+      expect(getBlogEntry(slug)).toBeUndefined();
+      expect(generateStaticParams()).not.toContainEqual({ slug });
+      expect(publicPaths).not.toContain(path);
+      expect(sitemap().map(entry => entry.url)).not.toContain(`${SITE_ORIGIN}${path}`);
+      expect(relatedPmleGuides().map(entry => entry.href)).not.toContain(path);
+      for (const entry of entries) {
+        expect(entry.href).not.toBe(path);
+        expect(entry.body).not.toContain(path);
+      }
+      expect(existsSync(resolve(root, "content/blog", `${slug}.md`))).toBe(true);
+    }
+  });
 });
