@@ -9,7 +9,7 @@ describe("local content loader", () => {
   it("returns all preserved catalog routes with bodies and safe publication metadata", () => {
     const blogs = getBlogEntries();
     const faqs = getFaqEntries();
-    expect(blogs).toHaveLength(5);
+    expect(blogs).toHaveLength(15);
     expect(faqs).toHaveLength(9);
     for (const entry of [...blogs, ...faqs]) {
       expect(entry.body.length).toBeGreaterThan(300);
@@ -18,7 +18,7 @@ describe("local content loader", () => {
       expect(entry.citations.length).toBeGreaterThan(0);
       expect(entry.href).toMatch(/^\/(blog|faq)\/[a-z0-9-]+$/);
     }
-    for (const entry of blogs) {
+    for (const entry of blogs.filter(entry => entry.republished)) {
       expect(entry.editorialNotice).toContain("Edited historical article");
       expect(entry.body).toBe(BLOG_PUBLICATION_OVERLAYS[entry.slug].body);
       expect(entry.body + entry.description).not.toMatch(/Sarah|85%|20\+ hours|40\+ hours|50,000|2,000|pass in 30 days|proven blueprint|expert review/i);
@@ -27,6 +27,32 @@ describe("local content loader", () => {
       expect(entry.title).toBe(BLOG_PUBLICATION_OVERLAYS[entry.slug].title);
       expect(entry.title).not.toMatch(/success story|expert solutions|hardest|complete guide|complete 2025 guide/i);
     }
+  });
+  it("publishes reviewed current articles without historical notices", () => {
+    const entries = getBlogEntries().filter(entry => !entry.republished);
+    expect(entries).toHaveLength(10);
+    for (const entry of entries) {
+      const document = parseFrontmatter(readFileSync(`content/blog/${entry.slug}.md`, "utf8"));
+      expect(entry.body).toBe(document.body);
+      expect(entry.title).toBe(document.attributes.title);
+      expect(entry.description).toBe(document.attributes.description);
+      expect(entry.editorialNotice).toBeUndefined();
+      expect(entry.title.length).toBeLessThanOrEqual(60);
+      expect(entry.description.length).toBeLessThanOrEqual(150);
+      expect(entry.publishedAt).toBe("2026-10-16");
+      expect(entry.updatedAt).toBe("2026-10-16");
+      expect(entry.body).toContain("Last checked October 16, 2026");
+      expect(entry.body).toContain("Testero is independent and not affiliated with Google.");
+    }
+  });
+  it("separates the certification path comparison from the personal picker", () => {
+    const entry = getBlogEntry("google-cloud-certification-path")!;
+    expect(entry.href).toBe("/blog/google-cloud-certification-path");
+    expect(entry.title).toBe("Google Cloud certification path: all 15 certs compared");
+    const picker = "[Want a personal shortlist? Try the certification picker](/tools/which-google-cloud-certification)";
+    expect(entry.body).toContain(picker);
+    expect(entry.body.indexOf(picker)).toBeLessThan(entry.body.indexOf("## How the certification paths fit together"));
+    expect(entry.body).toContain("related paths, not a required ladder");
   });
   it("keeps the historical PMLE update focused on checking current guidance", () => {
     const entry = getBlogEntry("pmle-october-2024-exam-changes")!;

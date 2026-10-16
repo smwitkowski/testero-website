@@ -28,9 +28,9 @@ describe("exam preparation availability", () => {
     expect(notice).toContain('href="/diagnostic"');
     expect(notice).toContain(PMLE_EXAM);
   });
-  it("shows notices near the top of all nine non-PMLE pages, including mixed-platform and general topics", async () => {
+  it("shows notices near the top of all non-PMLE pages, including mixed-platform and general topics", async () => {
     const entries = [...getBlogEntries(), ...getFaqEntries()];
-    expect(entries.filter(e => isComingSoon(e.exam))).toHaveLength(9);
+    expect(entries.filter(e => isComingSoon(e.exam))).toHaveLength(13);
     for (const entry of entries) {
       const Page = entry.href.startsWith("/blog/") ? BlogArticlePage : FaqArticlePage;
       const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ slug: entry.slug }) }));
@@ -40,6 +40,21 @@ describe("exam preparation availability", () => {
         expect(position).toBeLessThan(html.indexOf("Sources and current guidance"));
         expect(html).toContain(certificationForExam(entry.exam) || entry.exam === "other Google Cloud certifications" ? `Diagnostic coming for ${entry.exam}` : `Prep for ${entry.exam} is not available`);
       } else expect(position).toBe(-1);
+    }
+  });
+  it("renders current articles with dated BlogPosting data and certification-specific final CTAs", async () => {
+    for (const entry of getBlogEntries().filter(entry => !entry.republished)) {
+      const html = renderToStaticMarkup(await BlogArticlePage({ params: Promise.resolve({ slug: entry.slug }) }));
+      expect(html).not.toContain("(historical source)");
+      expect(html).not.toContain("Edited historical article");
+      const scripts = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+      const nodes = scripts.flatMap(match => JSON.parse(match[1])["@graph"] ?? []);
+      expect(nodes.find(node => node["@type"] === "BlogPosting")).toMatchObject({
+        headline: entry.title, datePublished: entry.publishedAt, dateModified: entry.updatedAt,
+      });
+      const footer = html.slice(html.lastIndexOf("<footer"));
+      const cert = certificationForExam(entry.exam);
+      expect(footer).toContain(`href="${isComingSoon(entry.exam) ? cert ? `/certifications/${cert.cert_id}` : "/certifications" : "/diagnostic"}"`);
     }
   });
   it("tags only non-PMLE index items and selects only PMLE homepage teasers", () => {

@@ -10,6 +10,12 @@ export type LegacyRedirectRule = {
 /** Frozen inventory from every sitemap-*.xml at the referenced PMLE commit. */
 export const legacyPaths: readonly string[] = manifest.paths;
 
+// D-031 proposals only. Founder approval required before adding explicit 301s:
+// /blog/pmle-october-2024-exam-changes -> /blog/pmle-exam-changes-june-2026
+// /blog/accelerated-google-ml-certification-30-day-success-story-2025 -> /blog/pmle-study-plan-by-domain
+// Keep /blog/5-hardest-pmle-questions: no like-for-like replacement in this PR.
+// These are not entries in redirectRules and do not change live routing.
+
 /** Next runs these 308 redirects before proxy/auth. Specific content rules precede fallback. */
 export const redirectRules: readonly LegacyRedirectRule[] = [
   {"source": "/practice/question/:path*", "destination": "/dashboard", "permanent": true, "reason": "Single-question practice retired; start a domain session from dashboard."},
