@@ -14,7 +14,7 @@ export default function CertificationsPage() {
       <p className="text-sm font-semibold uppercase tracking-wider text-primary">Google Cloud certification directory</p>
       <h1 className="text-pretty text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">Find the exam that fits your next step.</h1>
       <p className="text-lg leading-relaxed text-body">Compare official exam facts and guide sections across foundational, associate and professional credentials. PMLE practice is available now; other diagnostics are coming.</p>
-      <p className="text-sm text-muted-foreground">Last checked <time dateTime={checked}>{checked}</time>. A sourced snapshot, not live registration advice. Testero is independent and not affiliated with Google.</p>
+      <p className="text-sm text-muted-foreground">Facts are from Google&apos;s official pages, last checked <time dateTime={checked}>{checked}</time>. Check Google before booking.</p>
     </header>
     <nav aria-label="Certification levels" className="flex flex-wrap gap-x-6 gap-y-3 border-y border-border py-4 text-sm font-semibold">{["foundational", "associate", "professional"].map(level => <a key={level} href={`#${level}`} className="py-2 text-primary underline">{level[0].toUpperCase() + level.slice(1)}</a>)}</nav>
     {["foundational", "associate", "professional"].map(level => <section key={level} id={level} className="scroll-mt-8 space-y-4">

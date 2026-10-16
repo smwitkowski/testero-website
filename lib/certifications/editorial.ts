@@ -24,7 +24,7 @@ export const certificationEditorial: Record<string, { audience: string; steps: s
       "Start with the standard exam guide and give each section a concrete organizational example. For digital transformation, describe a problem worth solving; for data and AI, explain what information or capability would make the proposed change useful.",
       "Use Google Cloud Skills Boost learning activities for practical business exploration. Compare a modernization scenario with keeping an existing approach, noting operational responsibilities, security concerns, and costs to investigate. Treat hands-on exploration as learning support, not an assumed prerequisite.",
       "Try the official sample questions and explain why the scenario calls for one approach over another. These examples illustrate the question format; they do not establish full coverage, difficulty, or readiness.",
-      "Check which assessment path you intend to take before planning registration. The registry distinguishes standard, renewal, and skills renewal options; do not assume that their formats or eligibility details are interchangeable."
+      "Check which assessment path you intend to take before planning registration. Google offers standard, renewal, and skills renewal options; do not assume that their formats or eligibility details are interchangeable."
     ]
   },
   "agentic-architect": {
@@ -33,7 +33,7 @@ export const certificationEditorial: Record<string, { audience: string; steps: s
       "Read the beta guide and separate low-code agent construction, coding agents, and custom agents into distinct study areas. Write down where each approach could fit a real workflow and where additional control or evaluation would be needed.",
       "Select Google Cloud Skills Boost labs related to agent development and deployment. Keep a record of the inputs, tools, and permissions used in each exercise, then examine how a failed or unexpected action would be detected.",
       "Use the official sample questions to practice interpreting workflow requirements. Explain the evaluation or governance consequence of each choice instead of assuming that a more autonomous design is always preferable.",
-      "Review the current official assessment announcements before committing to a schedule. The recorded beta includes required labs as well as the exam; confirm the applicable windows and completion instructions rather than treating optional study labs as those required assessment components."
+      "Review the current official assessment announcements before committing to a schedule. The beta assessment includes required labs as well as the exam; confirm the applicable windows and completion instructions rather than treating optional study labs as those required assessment components."
     ]
   },
   "machine-learning-engineer": {
@@ -66,7 +66,7 @@ export const certificationEditorial: Record<string, { audience: string; steps: s
   "data-engineer": {
     "audience": "Data Engineer is aimed at people designing and operating data systems, not only querying their outputs. The guide follows data through processing design, ingestion, storage, analysis, and automated maintenance. It fits engineers who must balance how data arrives with how reliably and efficiently others can use it. A useful preparation project should therefore include operational decisions and changes over time, rather than ending as soon as the first successful result appears.",
     "steps": [
-      "Check whether you are preparing for the standard or renewal exam and open the corresponding guide. The registry includes both guides and a separate skills renewal option; verify the path rather than transferring format assumptions between them.",
+      "Check whether you are preparing for the standard or renewal exam and open the corresponding guide. Google provides both guides and a separate skills renewal option; verify the path rather than transferring format assumptions between them.",
       "Sketch a data processing system with explicit ingestion, storage, and analysis needs. Compare design choices against those requirements and identify the conditions that would make you reconsider a choice as volume or usage changes.",
       "Use Google Cloud Skills Boost labs to practice moving and transforming data, then inspect how the workflow is maintained. Include a failed input or interrupted run in your reasoning so that recovery receives attention alongside initial setup.",
       "Work through the official sample questions and link unfamiliar decisions back to the relevant guide section. Close your review by explaining how you would automate the workload and detect degraded results; sample answers alone are not evidence of complete preparation."
@@ -75,7 +75,7 @@ export const certificationEditorial: Record<string, { audience: string; steps: s
   "cloud-architect": {
     "audience": "This exam is for people making cloud architecture decisions across business needs, infrastructure, security, and implementation. It fits roles that must explain why a design is appropriate, not merely show that its components can be deployed. The standard guide also addresses technical and business processes and operational excellence. Preparation should make room for competing requirements, because an architecture that solves one problem can introduce cost, delivery, or operational difficulties elsewhere.",
     "steps": [
-      "Select the guide for your intended assessment. Standard and renewal guides are recorded separately and their section coverage differs; the skills renewal option is another path to check rather than a reason to assume all assessments share one outline.",
+      "Select the guide for your intended assessment. Standard and renewal guides have different section coverage; the skills renewal option is another path to check rather than a reason to assume all assessments share one outline.",
       "Develop a short architecture proposal from a business scenario. Describe constraints, compare alternatives, and explain the security and compliance implications. Follow the proposal through provisioning and implementation so that design choices have an operational consequence.",
       "Choose Google Cloud Skills Boost labs that expose the infrastructure behind your proposal. After completing an exercise, explain what you would change for different availability, access, or management needs instead of repeating the lab design unchanged.",
       "Use the official sample questions to rehearse requirement-driven decisions. When reviewing an answer, state which requirement it satisfies and which tradeoff remains, then return to the guide to check areas that your preferred architecture did not exercise."
@@ -111,7 +111,7 @@ export const certificationEditorial: Record<string, { audience: string; steps: s
   "cloud-engineer": {
     "audience": "Cloud Engineer is an associate credential for people implementing and maintaining Google Cloud environments. The guide connects initial setup and planning to successful operation, access, and security. It fits practitioners whose responsibilities cross several services and who need to make routine changes with a clear understanding of their effects. Preparation should build confidence in following a requirement through configuration and verification, rather than just recognizing service names or console screens.",
     "steps": [
-      "Confirm your intended assessment path before choosing a study outline. The registry lists standard, renewal, and skills renewal variants, with separate standard and renewal guides. Use the applicable guide and check the current official details for that path.",
+      "Confirm your intended assessment path before choosing a study outline. Google lists standard, renewal, and skills renewal variants, with separate standard and renewal guides. Use the applicable guide and check the current official details for that path.",
       "Build a small solution through Google Cloud Skills Boost labs, starting with environment setup and continuing through deployment. Keep a record of configuration choices and explain which requirement each choice satisfies instead of collecting commands without context.",
       "Work through the official sample questions and identify the operational task in each scenario. When an answer is unfamiliar, return to the relevant guide area and practice the reasoning behind the action rather than memorizing its wording.",
       "Review how you would keep the solution running after deployment. Include access checks and a troubleshooting sequence, and describe what evidence would distinguish an environment problem from an application problem before you change either one."

@@ -16,13 +16,23 @@ test("certification directory is responsive and stores private, idempotent launc
   await mkdir(screenshots, { recursive: true });
   for (const width of [1280, 375]) {
     await page.setViewportSize({ width, height: 900 });
-    for (const [slug, heading] of [["", "Find the exam that fits your next step."], ["/machine-learning-engineer", "Professional Machine Learning Engineer"], ["/cloud-engineer", "Associate Cloud Engineer"]]) {
+    for (const [slug, heading] of [["", "Find the exam that fits your next step."], ["/machine-learning-engineer", "Professional Machine Learning Engineer"], ["/cloud-engineer", "Associate Cloud Engineer"], ["/cloud-architect", "Professional Cloud Architect"]]) {
       const response = await page.goto(`/certifications${slug}`);
       expect(response?.status()).toBe(200);
       expect(response?.headers()["cache-control"]).toMatch(/s-maxage=300(?:,|$)/);
       expect(response?.headers()["set-cookie"]).toBeUndefined();
       await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      if (slug && width === 375) {
+        const summary = await page.getByRole("list", { name: "Exam summary", exact: true }).boundingBox();
+        const diagnostic = await page.getByRole("complementary", { name: "Diagnostic availability" }).boundingBox();
+        const audience = await page.getByRole("heading", { name: "Who this exam is for" }).boundingBox();
+        expect(summary).not.toBeNull(); expect(diagnostic).not.toBeNull(); expect(audience).not.toBeNull();
+        expect(diagnostic!.y).toBeGreaterThanOrEqual(summary!.y + summary!.height);
+        expect(diagnostic!.y - (summary!.y + summary!.height)).toBeLessThanOrEqual(40);
+        expect(audience!.y).toBeGreaterThan(diagnostic!.y + diagnostic!.height);
+        if (slug !== "/machine-learning-engineer") await expect(page.getByRole("button", { name: "Notify me", exact: true })).toBeVisible();
+      }
       await page.screenshot({ path: path.join(screenshots, `${slug.slice(1) || "index"}-${width}.png`), fullPage: true });
     }
   }
@@ -47,6 +57,6 @@ test("certification directory is responsive and stores private, idempotent launc
     expect(bad.status()).toBe(400);
     expect((await anon.from("cert_waitlist").select("id")).error).not.toBeNull();
     expect((await anon.from("cert_waitlist").insert({ email, cert_id: "cloud-developer" })).error).not.toBeNull();
-    console.log("PASS responsive index/PMLE/ACE1280+375; new+duplicate+invalid;1 stored row;UTM; anon read/write denied");
+    console.log("PASS responsive index/PMLE/ACE/PCA1280+375;mobile summary/form/audience order; new+duplicate+invalid;1 stored row;UTM; anon read/write denied");
   } finally { expect((await service.from("cert_waitlist").delete().eq("email", email)).error).toBeNull(); }
 });

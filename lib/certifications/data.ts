@@ -29,6 +29,7 @@ export interface Certification {
   missing_fields: string[]; not_stated_notes: string[];
   assessment_components?: string[]; lab_deadline?: { date: string; source_url: string };
   recommended_experience?: string;
+  recommended_experience_source?: { url: string; retrieved_at: string };
 }
 export function getCertification(certId: string): Certification | undefined {
   const entry = certifications.find(cert => cert.cert_id === certId);
@@ -49,14 +50,44 @@ export function fact(value: unknown): string {
   return String(value);
 }
 export const label = (value: string) => value.replaceAll("_", " ").replace(/^./, char => char.toUpperCase());
-export function variantFacts(exam: ExamVariant) {
+export function deliveryLabel(value: string | null) {
+  if (value && /online.proctored/i.test(value) && /onsite.proctored|testing center/i.test(value)) return "Online proctored or at a test center";
+  return value;
+}
+export function guideLabel(variant: string) {
+  if (variant === "standard") return "Exam guide";
+  if (variant === "renewal") return "Renewal exam guide";
+  return `${label(variant)} exam guide`;
+}
+export function questionCount(exam: ExamVariant) {
   const count = exam.question_count;
+  return count ? `${count.approximate ? "~" : ""}${count.min === count.max ? count.min : `${count.min}–${count.max}`}` : null;
+}
+export function examSummary(exam: ExamVariant) {
   return [
+    exam.duration_minutes === null ? `Duration: ${notStated}` : `${exam.duration_minutes / 60} ${exam.duration_minutes === 60 ? "hour" : "hours"}`,
+    questionCount(exam) ? `${questionCount(exam)} questions` : `Questions: ${notStated}`,
+    exam.price_usd === null ? `Price: ${notStated}` : `$${exam.price_usd}${/tax/i.test(exam.price_stated ?? "") ? " + tax" : ""}`,
+    exam.languages_stated || exam.languages?.length ? fact(exam.languages_stated ?? exam.languages) : `Languages: ${notStated}`,
+    exam.validity_stated ? `Valid for ${exam.validity_stated}` : null,
+  ].filter((value): value is string => value !== null);
+}
+export function skillsRenewalSummary(exam: ExamVariant) {
+  if (exam.variant !== "skills_renewal" || !exam.format_stated || exam.duration_minutes !== null || exam.question_count !== null) return null;
+  return `Skills renewal: complete designated courses or skill badges${exam.validity_stated ? `; renews for ${exam.validity_stated}` : ""}.`;
+}
+export function variantFacts(exam: ExamVariant) {
+  const core = new Set(["Duration", "Question count", "Languages", "Price (USD)"]);
+  const hasCaseStudies = !!(exam.case_studies_per_exam || exam.case_studies_stated || exam.case_study_names?.length);
+  const rows: [string, unknown][] = [
     ["Duration", exam.duration_stated ?? (exam.duration_minutes === null ? null : `${exam.duration_minutes} minutes`)],
-    ["Question count", count ? `${count.approximate ? "Approximately " : ""}${count.min === count.max ? count.min : `${count.min}–${count.max}`}` : null],
-    ["Question types", exam.question_types?.map(label)], ["Format", exam.format_stated],
-    ["Languages", exam.languages_stated ?? exam.languages], ["Price (USD)", exam.price_stated ?? (exam.price_usd === null ? null : `$${exam.price_usd}`)],
-    ["Delivery", exam.delivery_stated], ["Validity", exam.validity_stated],
-    ["Case studies per exam", exam.case_studies_stated ?? exam.case_studies_per_exam], ["Case study names", exam.case_study_names],
-  ].map(([name, value]) => [String(name), fact(value)]);
+    ["Question count", questionCount(exam)],
+    ["Question types", exam.question_types?.map(label)],
+    ...(!exam.question_types?.length ? [["Format", exam.format_stated] as [string, unknown]] : []),
+    ["Languages", exam.languages_stated ?? exam.languages],
+    ["Price (USD)", exam.price_stated ?? (exam.price_usd === null ? null : `$${exam.price_usd}`)],
+    ["Delivery", deliveryLabel(exam.delivery_stated)], ["Validity", exam.validity_stated],
+    ...(hasCaseStudies ? [["Case studies per exam", exam.case_studies_per_exam ?? exam.case_studies_stated], ["Case study format", exam.case_studies_per_exam ? exam.case_studies_stated : null], ["Case study names", exam.case_study_names]] as [string, unknown][] : []),
+  ];
+  return rows.map(([name, value]) => [name, fact(value)]).filter(([name, value]) => value !== notStated || core.has(name));
 }
