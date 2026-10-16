@@ -18,10 +18,10 @@ export async function trackPurchaseCompleted(checkoutId: string) {
   } catch { /* Analytics must never change payment fulfillment or expose billing errors. */ }
 }
 
-type FunnelEvent = "diagnostic_started" | "diagnostic_completed" | "signup_completed" | "checkout_started";
+type FunnelEvent = "diagnostic_started" | "diagnostic_completed" | "signup_completed" | "checkout_started" | "cert_waitlist_joined";
 
 /** Analytics scheduling and transport failures never change a successful response. */
-export function scheduleFunnelEvent(request: Request, event: FunnelEvent, fallbackId: string, properties: { session_id?: string; plan_name?: string } = {}, insertId?: string) {
+export function scheduleFunnelEvent(request: Request, event: FunnelEvent, fallbackId: string, properties: { session_id?: string; plan_name?: string; cert_id?: string } = {}, insertId?: string) {
   if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return;
   try {
     const suppliedId = request.headers.get("X-PostHog-Distinct-Id");
@@ -30,7 +30,7 @@ export function scheduleFunnelEvent(request: Request, event: FunnelEvent, fallba
   } catch { /* A missing after context must not affect the response. */ }
 }
 
-export async function captureFunnelEvent(event: FunnelEvent, distinctId: string, properties: { session_id?: string; plan_name?: string } = {}, insertId?: string) {
+export async function captureFunnelEvent(event: FunnelEvent, distinctId: string, properties: { session_id?: string; plan_name?: string; cert_id?: string } = {}, insertId?: string) {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   if (!key) return;
   try {
@@ -41,6 +41,7 @@ export async function captureFunnelEvent(event: FunnelEvent, distinctId: string,
         distinct_id: distinctId, source: "server", $process_person_profile: false,
         ...(properties.session_id ? { session_id: properties.session_id } : {}),
         ...(properties.plan_name ? { plan_name: properties.plan_name } : {}),
+        ...(properties.cert_id ? { cert_id: properties.cert_id } : {}),
         ...(insertId || properties.session_id || event === "signup_completed"
           ? { $insert_id: `server:${insertId || `${event}:${properties.session_id || distinctId}`}` } : {}),
       } }),

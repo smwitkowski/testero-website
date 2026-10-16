@@ -1,0 +1,151 @@
+{
+  "date": "2026-10-16",
+  "branch": "prime/cert-hub-1016",
+  "pr": 242,
+  "depends_on_pr": 241,
+  "source_commits": [
+    "2c75184",
+    "527f15c",
+    "bf08fec"
+  ],
+  "editorial_words": {
+    "cloud-network-engineer": 200,
+    "associate-google-workspace-administrator": 210,
+    "cloud-digital-leader": 211,
+    "agentic-architect": 220,
+    "machine-learning-engineer": 215,
+    "data-practitioner": 217,
+    "cloud-devops-engineer": 212,
+    "data-engineer": 218,
+    "cloud-architect": 213,
+    "security-operations-engineer": 218,
+    "cloud-security-engineer": 216,
+    "cloud-database-engineer": 219,
+    "cloud-engineer": 216,
+    "generative-ai-leader": 228,
+    "cloud-developer": 219
+  },
+  "facts_verified": {
+    "certification_pages": 15,
+    "http_200": 15,
+    "recommended_experience_populated": 14,
+    "recommended_experience_unstated": [
+      "generative-ai-leader"
+    ],
+    "exam_code_added": 0,
+    "validity_added": 0,
+    "scope": "experience/code/validity only; old certification checked dates preserved"
+  },
+  "gate_logs": {
+    "tests": "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/tests-accepted.log",
+    "lint": "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/lint-accepted.log",
+    "types": "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/types-accepted.log",
+    "build": "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/build-accepted.log",
+    "docker": "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/docker-accepted.log"
+  },
+  "static_routes": {
+    "/certifications": 300,
+    "/certifications/agentic-architect": 300,
+    "/certifications/associate-google-workspace-administrator": 300,
+    "/certifications/cloud-architect": 300,
+    "/certifications/cloud-database-engineer": 300,
+    "/certifications/cloud-developer": 300,
+    "/certifications/cloud-devops-engineer": 300,
+    "/certifications/cloud-digital-leader": 300,
+    "/certifications/cloud-engineer": 300,
+    "/certifications/cloud-network-engineer": 300,
+    "/certifications/cloud-security-engineer": 300,
+    "/certifications/data-engineer": 300,
+    "/certifications/data-practitioner": 300,
+    "/certifications/generative-ai-leader": 300,
+    "/certifications/machine-learning-engineer": 300,
+    "/certifications/security-operations-engineer": 300
+  },
+  "screenshots": [
+    "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/screenshots/cloud-architect-1280.png",
+    "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/screenshots/cloud-architect-375.png",
+    "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/screenshots/cloud-engineer-1280.png",
+    "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/screenshots/cloud-engineer-375.png",
+    "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/screenshots/index-1280.png",
+    "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/screenshots/index-375.png",
+    "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/screenshots/machine-learning-engineer-1280.png",
+    "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/screenshots/machine-learning-engineer-375.png"
+  ],
+  "runtime_constants_changed": false,
+  "production_writes": false,
+  "merged": false,
+  "deployed": false,
+  "gate_exit_codes": {
+    "tests": 0,
+    "lint": 0,
+    "types": 0,
+    "build": 0,
+    "docker": 0
+  },
+  "browser": {
+    "passed": 1,
+    "duration_seconds": 3.0,
+    "log": "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/browser-accepted.log"
+  },
+  "auth_cache": {
+    "passed": 1,
+    "duration_seconds": 8.7,
+    "log": "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/auth-cache.log"
+  },
+  "local_db": {
+    "passed": true,
+    "log": "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/db.log"
+  },
+  "seo": {
+    "pages": 34,
+    "passed": true,
+    "log": "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/schema-accepted.log"
+  },
+  "review": {
+    "blockers": 0,
+    "report": "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/independent-review.md",
+    "low_notes": "recommendation metadata now asserted; notices bounded to checked time; footer confirms independent positioning"
+  },
+  "initial_lighthouse_mobile": {
+    "cloud-engineer": {
+      "scores": {
+        "performance": 96,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "cls": 0
+    },
+    "cloud-architect": {
+      "scores": {
+        "performance": 95,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "cls": 0
+    }
+  },
+  "lighthouse_mobile": {
+    "cloud-engineer": {
+      "scores": {
+        "performance": 96,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "cls": 0,
+      "json": "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/lh-ace-accepted.json"
+    },
+    "cloud-architect": {
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "cls": 0,
+      "json": "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/polish/lh-pca-accepted.json"
+    }
+  }
+}

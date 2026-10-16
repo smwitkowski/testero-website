@@ -35,7 +35,7 @@ describe("SEO function contracts", () => {
     const entries = sitemap();
     const indexable = publicPaths.filter(path => path !== "/terms" && path !== "/privacy");
     expect(entries.map(entry => entry.url)).toEqual(indexable.map(canonicalUrl));
-    expect(entries).toHaveLength(19);
+    expect(entries).toHaveLength(35);
     expect(new Set(entries.map(entry => entry.url)).size).toBe(entries.length);
     for (const entry of entries) {
       const url = new URL(entry.url);

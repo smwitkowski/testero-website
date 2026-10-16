@@ -2,6 +2,8 @@ import type { MetadataRoute } from "next";
 import { canonicalUrl, publicPaths } from "@/lib/seo";
 import { getBlogEntries, getFaqEntries, getLegalDocument } from "@/lib/content/loader";
 
+import { catalogCheckedDate, checkedDate, getCertification } from "@/lib/certifications/data";
+
 const BUILD_TIME = process.env.TESTERO_BUILD_TIME;
 
 export const revalidate = 300;
@@ -15,6 +17,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     return true;
     }).map(path => {
     const article = articles.find(entry => entry.href === path);
-    return { url: canonicalUrl(path), lastModified: article ? article.updatedAt ?? article.publishedAt : BUILD_TIME };
+    const cert = path.startsWith("/certifications/") ? getCertification(path.split("/")[2]) : undefined;
+    const certDate = path === "/certifications" ? catalogCheckedDate() : cert ? checkedDate(cert) : undefined;
+    return { url: canonicalUrl(path), lastModified: certDate ?? (article ? article.updatedAt ?? article.publishedAt : BUILD_TIME) };
   });
 }
