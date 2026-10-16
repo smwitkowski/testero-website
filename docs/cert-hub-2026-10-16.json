@@ -214,5 +214,10 @@
       ]
     }
   },
-  "logs": "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub"
+  "logs": "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub",
+  "polish": {
+    "report": "cert-hub-polish-2026-10-16.json",
+    "source_verification_scope": "experience/code/validity only, original guide bodies and general checked dates preserved",
+    "recommended_experience_populated": 14
+  }
 }
