@@ -1,6 +1,8 @@
 import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 const execute = promisify(execFile);
+const testFile = process.argv[2] || "e2e/cache-policy.spec.ts";
+if (!["e2e/cache-policy.spec.ts", "e2e/certifications.spec.ts"].includes(testFile)) throw new Error("Unsupported local verification suite");
 const { stdout } = await execute("supabase", ["status", "-o", "json"]);
 const local = JSON.parse(stdout);
 const api = new URL(local.API_URL);
@@ -11,7 +13,7 @@ let started = false;
 const output = chunk => {
  if (started || !chunk.toString().includes("Ready")) return;
  started = true;
- const test = spawn("npx", ["playwright", "test", "e2e/cache-policy.spec.ts"], { env, stdio: "inherit" });
+ const test = spawn("npx", ["playwright", "test", testFile], { env, stdio: "inherit" });
  test.on("exit", code => { process.kill(-server.pid, "SIGTERM"); process.exitCode = code ?? 1; });
 };
 server.stdout.on("data", output);

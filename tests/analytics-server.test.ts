@@ -80,3 +80,8 @@ describe("server funnel analytics", () => {
     await expect(captureFunnelEvent("signup_completed", "user-id")).resolves.toBeUndefined();
   });
 });
+
+ it("waitlist capture includes only the cert and opaque identity, not email", async () => {
+  await captureFunnelEvent("cert_waitlist_joined", "opaque-interest", { cert_id: "cloud-engineer" });
+  expect(JSON.parse(fetchMock.mock.calls[0][1].body).properties).toEqual({ distinct_id: "opaque-interest", source: "server", $process_person_profile: false, cert_id: "cloud-engineer" });
+});

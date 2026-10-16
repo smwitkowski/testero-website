@@ -70,7 +70,7 @@ test("confirmed account and diagnostic responses stay private while public HTML 
       await other.getByRole("button", { name: "Update password", exact: true }).click();
       await expect(other).toHaveURL(/\/dashboard(?:\?.*)?$/);
     } finally { await freshContext.close(); }
-    for (const path of ["/", "/blog", "/blog/5-hardest-pmle-questions", "/faq", "/faq/how-long-is-the-google-ml-engineer-exam", "/pricing"]) {
+    for (const path of ["/", "/blog", "/blog/5-hardest-pmle-questions", "/faq", "/faq/how-long-is-the-google-ml-engineer-exam", "/pricing", "/certifications", "/certifications/cloud-engineer", "/certifications/machine-learning-engineer"]) {
       const response = await authenticatedRequest.get(path);
       expect(response.status()).toBe(200);
       expect(response.headers()["cache-control"]).toMatch(/s-maxage=300(?:,|$)/);

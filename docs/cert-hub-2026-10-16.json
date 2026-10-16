@@ -1,0 +1,218 @@
+{
+  "date": "2026-10-16",
+  "branch": "prime/cert-hub-1016",
+  "depends_on_pr": 241,
+  "migration": "supabase/migrations/20261016000000_cert_waitlist.sql",
+  "migration_applied": "local only; sole pending migration verified before migration up --local",
+  "tests": {
+    "files": 51,
+    "passed": 942
+  },
+  "ssg_routes": [
+    "/certifications",
+    "/certifications/agentic-architect",
+    "/certifications/associate-google-workspace-administrator",
+    "/certifications/cloud-architect",
+    "/certifications/cloud-database-engineer",
+    "/certifications/cloud-developer",
+    "/certifications/cloud-devops-engineer",
+    "/certifications/cloud-digital-leader",
+    "/certifications/cloud-engineer",
+    "/certifications/cloud-network-engineer",
+    "/certifications/cloud-security-engineer",
+    "/certifications/data-engineer",
+    "/certifications/data-practitioner",
+    "/certifications/generative-ai-leader",
+    "/certifications/machine-learning-engineer",
+    "/certifications/security-operations-engineer"
+  ],
+  "shared_cache": "s-maxage=300, stale-while-revalidate=86100",
+  "json_ld_checked_pages": 34,
+  "lighthouse_mobile": {
+    "http://127.0.0.1:3116/certifications": {
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "cls": 0
+    },
+    "http://127.0.0.1:3116/certifications/cloud-engineer": {
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "cls": 0
+    }
+  },
+  "screenshots": [
+    "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/screenshots/cloud-engineer-1280.png",
+    "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/screenshots/cloud-engineer-375.png",
+    "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/screenshots/index-1280.png",
+    "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/screenshots/index-375.png",
+    "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/screenshots/machine-learning-engineer-1280.png",
+    "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub/screenshots/machine-learning-engineer-375.png"
+  ],
+  "missing_facts": {
+    "agentic-architect": {
+      "missing_fields": [],
+      "not_stated_notes": [
+        "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+        "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions."
+      ]
+    },
+    "associate-google-workspace-administrator": {
+      "missing_fields": [
+        "exam_variants.standard.validity_stated"
+      ],
+      "not_stated_notes": [
+        "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+        "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+        "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+      ]
+    },
+    "cloud-architect": {
+      "missing_fields": [
+        "exam_variants.skills_renewal.duration_minutes",
+        "exam_variants.skills_renewal.question_count",
+        "exam_variants.skills_renewal.question_types",
+        "exam_variants.skills_renewal.languages",
+        "exam_variants.skills_renewal.price_usd"
+      ],
+      "not_stated_notes": [
+        "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+        "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions."
+      ]
+    },
+    "cloud-database-engineer": {
+      "missing_fields": [
+        "exam_variants.standard.validity_stated"
+      ],
+      "not_stated_notes": [
+        "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+        "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+        "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+      ]
+    },
+    "cloud-developer": {
+      "missing_fields": [
+        "exam_variants.standard.validity_stated"
+      ],
+      "not_stated_notes": [
+        "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+        "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+        "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+      ]
+    },
+    "cloud-devops-engineer": {
+      "missing_fields": [
+        "exam_variants.standard.validity_stated"
+      ],
+      "not_stated_notes": [
+        "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+        "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+        "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+      ]
+    },
+    "cloud-digital-leader": {
+      "missing_fields": [
+        "exam_variants.skills_renewal.duration_minutes",
+        "exam_variants.skills_renewal.question_count",
+        "exam_variants.skills_renewal.question_types",
+        "exam_variants.skills_renewal.languages",
+        "exam_variants.skills_renewal.price_usd"
+      ],
+      "not_stated_notes": [
+        "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+        "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions."
+      ]
+    },
+    "cloud-engineer": {
+      "missing_fields": [
+        "exam_variants.skills_renewal.duration_minutes",
+        "exam_variants.skills_renewal.question_count",
+        "exam_variants.skills_renewal.question_types",
+        "exam_variants.skills_renewal.languages",
+        "exam_variants.skills_renewal.price_usd"
+      ],
+      "not_stated_notes": [
+        "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+        "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions."
+      ]
+    },
+    "cloud-network-engineer": {
+      "missing_fields": [
+        "exam_variants.standard.validity_stated"
+      ],
+      "not_stated_notes": [
+        "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+        "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+        "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+      ]
+    },
+    "cloud-security-engineer": {
+      "missing_fields": [
+        "exam_variants.standard.validity_stated"
+      ],
+      "not_stated_notes": [
+        "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+        "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+        "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+      ]
+    },
+    "data-engineer": {
+      "missing_fields": [
+        "exam_variants.skills_renewal.duration_minutes",
+        "exam_variants.skills_renewal.question_count",
+        "exam_variants.skills_renewal.question_types",
+        "exam_variants.skills_renewal.languages",
+        "exam_variants.skills_renewal.price_usd"
+      ],
+      "not_stated_notes": [
+        "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+        "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions."
+      ]
+    },
+    "data-practitioner": {
+      "missing_fields": [
+        "exam_variants.standard.validity_stated"
+      ],
+      "not_stated_notes": [
+        "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+        "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+        "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+      ]
+    },
+    "generative-ai-leader": {
+      "missing_fields": [],
+      "not_stated_notes": [
+        "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+        "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions."
+      ]
+    },
+    "machine-learning-engineer": {
+      "missing_fields": [
+        "exam_variants.standard.validity_stated"
+      ],
+      "not_stated_notes": [
+        "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+        "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+        "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+      ]
+    },
+    "security-operations-engineer": {
+      "missing_fields": [
+        "exam_variants.standard.validity_stated"
+      ],
+      "not_stated_notes": [
+        "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
+        "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+        "Certification validity is not stated on this fetched certification page. Linked Support FAQs are outside the approved fetch hosts; no validity is inferred from level."
+      ]
+    }
+  },
+  "logs": "/Users/switkowski/.local/state/prime-workers/testero-seo-tech.d/cert-hub"
+}

@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ComingSoonTag, ExamAvailabilityNotice } from "@/components/exam-availability";
+import { certificationForExam } from "@/lib/certifications/catalog";
 import { contentExam, isComingSoon, PMLE_EXAM } from "@/lib/content/exam";
 import { getBlogEntries, getFaqEntries } from "@/lib/content/loader";
 import HomePage from "@/app/page";
@@ -22,7 +23,7 @@ describe("exam preparation availability", () => {
       expect(renderToStaticMarkup(createElement(Component, { exam: PMLE_EXAM }))).toBe("");
     }
     const notice = renderToStaticMarkup(createElement(ExamAvailabilityNotice, { exam: "A future certificate" }));
-    expect(notice).toContain("Prep for A future certificate is coming soon");
+    expect(notice).toContain("Prep for A future certificate is not available");
     expect(notice).toContain("not available on Testero yet");
     expect(notice).toContain('href="/diagnostic"');
     expect(notice).toContain(PMLE_EXAM);
@@ -37,14 +38,14 @@ describe("exam preparation availability", () => {
       if (isComingSoon(entry.exam)) {
         expect(position).toBeGreaterThan(html.indexOf("</header>"));
         expect(position).toBeLessThan(html.indexOf("Sources and current guidance"));
-        expect(html).toContain(`Prep for ${entry.exam} is coming soon`);
+        expect(html).toContain(certificationForExam(entry.exam) || entry.exam === "other Google Cloud certifications" ? `Diagnostic coming for ${entry.exam}` : `Prep for ${entry.exam} is not available`);
       } else expect(position).toBe(-1);
     }
   });
   it("tags only non-PMLE index items and selects only PMLE homepage teasers", () => {
     for (const [Page, entries] of [[BlogPage, getBlogEntries()], [FaqPage, getFaqEntries()]] as const) {
       const html = renderToStaticMarkup(createElement(Page));
-      expect((html.match(/>Not on Testero yet</g) ?? []).length).toBe(entries.filter(e => isComingSoon(e.exam)).length);
+      expect((html.match(/>(?:Diagnostic coming|Not on Testero yet)</g) ?? []).length).toBe(entries.filter(e => isComingSoon(e.exam)).length);
     }
     const home = renderToStaticMarkup(createElement(HomePage));
     expect(home.indexOf('id="questions"')).toBeGreaterThan(home.indexOf('id="domains"'));
