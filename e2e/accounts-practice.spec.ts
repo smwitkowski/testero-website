@@ -48,7 +48,7 @@ async function mailLink(request: APIRequestContext, email: string, type: "signup
 test("local account confirmation claims only owned diagnostics, practices five, and blocks further free starts", async ({ page, browser }) => {
   test.setTimeout(process.env.TESTERO_V3_SCREENSHOTS ? 240_000 : 120_000);
   const service = localSetup();
-  const visualDirectory = process.env.TESTERO_V3_SCREENSHOTS ?? "/tmp/testero-v2-phase2-visual";
+  const visualDirectory = process.env.TESTERO_V3_SCREENSHOTS ?? "test-results/accounts-visual";
   await mkdir(visualDirectory, { recursive: true });
   async function checkLayout(name: string) {
     for (const width of [320, 1280]) {
@@ -98,7 +98,7 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     ids.push(foreignId);
     await assertRestoredSession(service, foreignId);
 
-    await page.goto("/signup?next=%2Fdashboard");
+    await page.goto(`/signup?next=${encodeURIComponent(`/diagnostic/${diagnosticId}/results`)}`);
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Create account", exact: true }).click();
@@ -107,7 +107,9 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     expect(before.data!.user_id).toBeNull();
     const confirmation = await mailLink(page.request, email, "signup");
     await page.goto(confirmation);
-    await expect(page).toHaveURL(/\/dashboard(?:\?.*)?$/);
+    await expect(page).toHaveURL(new RegExp(`/diagnostic/${diagnosticId}/results\\?signup=confirmed$`));
+    await expect(page.getByRole("heading", { name: "Question review", exact: true })).toBeVisible();
+    await page.goto("/dashboard");
     await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
     const users = await service.auth.admin.listUsers({ page: 1, perPage: 1000 });
     const account = users.data.users.find(user => user.email === email);
@@ -225,7 +227,13 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     const newPassword = `${password}-new`;
     await page.getByLabel("New password", { exact: true }).fill(newPassword);
     await page.getByRole("button", { name: "Update password", exact: true }).click();
-    await expect(page).toHaveURL(/\/dashboard(?:\?.*)?$/, { timeout: 15_000 });
+    await expect(page.getByRole("status").filter({ hasText: "Password updated" })).toContainText("Password updated", { timeout: 15_000 });
+    if (new URL(page.url()).pathname === "/login") {
+      await expect(page.getByRole("status")).toContainText("Please sign in again");
+      await page.getByLabel("Email", { exact: true }).fill(email);
+      await page.getByLabel("Password", { exact: true }).fill(newPassword);
+      await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    }
     await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
     await page.getByRole("link", { name: "Account", exact: true }).click();
     await page.getByRole("button", { name: "Sign out", exact: true }).click();

@@ -8,8 +8,6 @@ export async function POST(request: Request) {
     const data = await authBody(request, loginSchema);
     const supabase = await createServerSupabaseClient();
     const { error } = await supabase.auth.signInWithPassword({ email: data.email, password: data.password });
-    // Supabase reports an unconfirmed email only after the password matched, so this does not reveal accounts.
-    if (error?.code === "email_not_confirmed") return authResponse({ error: AUTH_MESSAGES.unconfirmed, unconfirmed: true }, 403);
     if (error) return authResponse({ error: AUTH_MESSAGES.credentials }, 401);
     const user = await getVerifiedUser(supabase);
     if (!user) return authResponse({ error: AUTH_MESSAGES.credentials }, 401);

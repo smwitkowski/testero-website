@@ -54,6 +54,10 @@ describe("auth writes", () => {
     expect(createServiceSupabaseClient).not.toHaveBeenCalled();
     expect(mocks.signUp).toHaveBeenCalledWith({ ...valid, options: { emailRedirectTo: "http://127.0.0.1:3000/auth/confirm?next=%2Fdashboard&flow=signup" } });
   });
+  it("passes the intended results path into the signup email callback", async () => {
+    await signup(req({ ...valid, next: "/diagnostic/owned/results" }));
+    expect(mocks.signUp).toHaveBeenCalledWith({ ...valid, options: { emailRedirectTo: "http://127.0.0.1:3000/auth/confirm?next=%2Fdiagnostic%2Fowned%2Fresults&flow=signup" } });
+  });
   it.each(["known", "unknown", "throw"])("forgot password is generic for %s", async kind => {
     if (kind === "unknown") mocks.resetPasswordForEmail.mockResolvedValue({ error: { message: "Unknown user learner@example.com" } });
     if (kind === "throw") mocks.resetPasswordForEmail.mockRejectedValue(new Error("private"));
@@ -103,7 +107,7 @@ describe("auth writes", () => {
   });
   it("reset updates password only and sanitizes SDK errors", async () => {
     let response = await reset(req({ password: valid.password }));
-    expect(await response.json()).toEqual({ message: "Your password has been updated.", href: "/dashboard" });
+    expect(await response.json()).toEqual({ message: "Your password has been updated.", href: "/dashboard?message=password-updated" });
     expect(mocks.updateUser).toHaveBeenCalledWith({ password: valid.password });
     mocks.updateUser.mockResolvedValue({ error: { message: "private password" } });
     response = await reset(req({ password: valid.password }));
@@ -123,6 +127,17 @@ describe("auth writes", () => {
   });
 });
 describe("email confirmation and PKCE", () => {
+  it.each([
+    ["", "/dashboard"],
+    ["http://127.0.0.1:3000/auth/confirm?next=%2Fdiagnostic%2Fowned%2Fresults&flow=signup", "/diagnostic/owned/results"],
+    ["/auth/confirm?next=%2Fpricing&flow=signup", "/pricing"],
+    ["https://evil.example/auth/confirm?next=%2Fpricing", "/dashboard"],
+    ["http://127.0.0.1:3000/auth/confirm?next=https%3A%2F%2Fevil.example", "/dashboard"],
+  ])("validates the signup email RedirectTo envelope %#", async (redirectTo, path) => {
+    const response = await confirm(callback(`token_hash=${"a".repeat(64)}&type=signup&redirect_to=${encodeURIComponent(redirectTo)}`));
+    expect(response.headers.get("location")).toBe(`http://127.0.0.1:3000${path}?signup=confirmed`);
+  });
+
   it.each(["", "type=signup", "token_hash=bad&type=signup", `token_hash=${"a".repeat(64)}&type=email`, "code=abcdefgh&code=ijklmnop", "code=abcdefgh&unknown=field"])("rejects invalid parameters before SDK %#", async query => {
     const response = await confirm(callback(query));
     expect(response.status).toBe(303); expect(response.headers.get("location")).toBe("http://127.0.0.1:3000/login?message=confirmation-failed");
@@ -176,12 +191,12 @@ it("tracks only successful verified signup confirmations", async () => {
 });
 
 describe("unconfirmed sign-in and resend", () => {
-  it("tells a correct-password unconfirmed user to confirm, without claims", async () => {
+  it("keeps correct-password unconfirmed login indistinguishable from invalid credentials", async () => {
     mocks.cookie = "a".repeat(64);
     mocks.signInWithPassword.mockResolvedValue({ error: { code: "email_not_confirmed", message: "Email not confirmed" } });
     const response = await login(req(valid));
-    expect(response.status).toBe(403);
-    expect(await response.json()).toEqual({ error: AUTH_MESSAGES.unconfirmed, unconfirmed: true });
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: AUTH_MESSAGES.credentials });
     expect(claimAnonymousDiagnostics).not.toHaveBeenCalled();
   });
   it("keeps wrong-password responses generic", async () => {

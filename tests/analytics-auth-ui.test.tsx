@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { FormEvent, ReactElement } from "react";
+import { createElement, type FormEvent, type ReactElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { AuthForm } from "@/components/auth-form";
 import { LogoutButton } from "@/components/logout-button";
 import { AnalyticsIdentity } from "@/components/analytics-identity";
@@ -62,4 +63,11 @@ it("identifies the verified server user when the identity component mounts", () 
   const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   expect(AnalyticsIdentity({ userId })).toBeNull();
   expect(mocks.identify.mock.calls).toEqual([[userId]]);
+});
+
+it("offers a confirmation resend without revealing account state", () => {
+  const html = renderToStaticMarkup(createElement(AuthForm, { mode: "login" }));
+  expect(html).toContain("Didn’t get the confirmation email?");
+  expect(html).toContain("Resend confirmation email");
+  expect(html).not.toContain("isn’t confirmed yet");
 });

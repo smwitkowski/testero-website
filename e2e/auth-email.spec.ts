@@ -27,7 +27,12 @@ async function mailLinks(request: APIRequestContext, email: string, type: "signu
         if (candidate.pathname !== "/auth/confirm" || candidate.searchParams.get("type") !== type) continue;
         expect(candidate.origin).toBe("http://127.0.0.1:3000");
         expect(candidate.searchParams.get("token_hash")).toBeTruthy();
-        expect(candidate.searchParams.get("next")).toBe(type === "signup" ? "/dashboard" : "/reset-password");
+        if (type === "signup") {
+          const redirectTo = new URL(candidate.searchParams.get("redirect_to")!);
+          expect(redirectTo.origin).toBe(candidate.origin);
+          expect(redirectTo.pathname).toBe("/auth/confirm");
+          expect(redirectTo.searchParams.get("next")).toBe("/dashboard");
+        } else expect(candidate.searchParams.get("next")).toBe("/reset-password");
         links.push(candidate.href);
       }
     }
@@ -55,17 +60,17 @@ test("confirm and reset links work in another browser; unconfirmed sign-in and e
     await expect(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
     const [firstSignup] = await mailLinks(page.request, email, "signup", 1);
 
-    // B3: the right password on an unconfirmed account explains why and offers resend.
+    // Unconfirmed and wrong-password attempts show the same message and resend form.
     await page.goto("/login");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page.getByText(/isn’t confirmed yet/)).toBeVisible();
-    await expect(page.getByLabel("Email address", { exact: true })).toHaveValue(email);
+    await expect(page.getByText("Unable to sign in. Check your details and try again.", { exact: true })).toBeVisible();
+    await page.getByLabel("Email address", { exact: true }).fill(email);
     // Supabase enforces a per-user email interval (1s locally, 60s by default hosted).
     await page.waitForTimeout(2_000);
     await page.getByRole("button", { name: "Resend confirmation email", exact: true }).click();
-    await expect(page.getByText(/sent a new confirmation link/)).toBeVisible();
+    await expect(page.getByText(/If an account exists, we sent a new confirmation link/)).toBeVisible();
     const [latestSignup] = await mailLinks(page.request, email, "signup", 2);
     expect(latestSignup).not.toBe(firstSignup);
 
@@ -75,7 +80,7 @@ test("confirm and reset links work in another browser; unconfirmed sign-in and e
     await page.getByLabel("Password", { exact: true }).fill(`${password}-wrong`);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page.getByText("Unable to sign in. Check your details and try again.", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Resend confirmation email", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Resend confirmation email", exact: true })).toBeVisible();
 
     // B1: the newest link confirms in a browser that never requested it.
     await inFreshBrowser(browser, async other => {
@@ -103,7 +108,8 @@ test("confirm and reset links work in another browser; unconfirmed sign-in and e
       await expect(other).toHaveURL(/\/reset-password$/);
       await other.getByLabel("New password", { exact: true }).fill(newPassword);
       await other.getByRole("button", { name: "Update password", exact: true }).click();
-      await expect(other).toHaveURL(/\/dashboard(?:\?.*)?$/, { timeout: 15_000 });
+      await expect(other.getByRole("status").filter({ hasText: "Password updated" })).toContainText("Password updated", { timeout: 15_000 });
+      await expect(other).toHaveURL(/\/(?:dashboard|login)\?.*password-updated/);
     });
     // A used reset link sends the reader to request a new one.
     await inFreshBrowser(browser, async other => {
@@ -122,4 +128,10 @@ test("confirm and reset links work in another browser; unconfirmed sign-in and e
     const userId = users.data.users.find(user => user.email === email)?.id;
     if (userId) expect((await service.auth.admin.deleteUser(userId)).error).toBeNull();
   }
+});
+
+test("a post-reset dashboard bounce explains that the password changed", async ({ page }) => {
+  await page.goto("/dashboard?message=password-updated");
+  await expect(page).toHaveURL(/\/login\?next=/);
+  await expect(page.getByRole("status").filter({ hasText: "Password updated" })).toHaveText("Password updated. Please sign in again with your new password.");
 });

@@ -14,6 +14,15 @@ export function safeNext(value: unknown, fallback = "/dashboard"): string {
   }
   return fallback;
 }
+/** Extract only the local next path from our signup email callback URL. */
+export function confirmationNext(redirectTo: string | undefined, origin: string, next: string): string {
+  if (!redirectTo) return safeNext(next);
+  try {
+    const callback = new URL(redirectTo, origin);
+    if (callback.origin !== origin || callback.username || callback.password || callback.pathname !== "/auth/confirm" || callback.searchParams.getAll("next").length !== 1) return "/dashboard";
+    return safeNext(callback.searchParams.get("next"));
+  } catch { return "/dashboard"; }
+}
 export function signupDestination(next: string): string {
   const url = new URL(safeNext(next), "https://internal.invalid");
   url.searchParams.set("signup", "confirmed");

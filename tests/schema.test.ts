@@ -139,7 +139,7 @@ describe("Phase 2 strict quota and bulk claim", () => {
     for (const [template, type] of [["confirmation", "signup"], ["recovery", "recovery"]]) {
       const html = readFileSync(`supabase/templates/${template}.html`, "utf8");
       expect(config).toContain(`content_path = "./supabase/templates/${template}.html"`);
-      expect(html).toContain(`{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=${type}&amp;next=${type === "signup" ? "/dashboard" : "/reset-password"}"`);
+      expect(html).toContain(`{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=${type}&amp;${type === "signup" ? "redirect_to={{ .RedirectTo | urlquery }}" : "next=/reset-password"}"`);
       expect(html).not.toMatch(/\.Token\b|enter the code/i);
       expect(html).not.toContain(".ConfirmationURL");
     }

@@ -49,7 +49,7 @@ export function DiagnosticStart({ resumeId = null }: { resumeId?: string | null 
     </header>
     <dl className="grid grid-cols-3 divide-x divide-border rounded-lg border border-border bg-card">
       <div className="p-4 sm:px-5"><dt className="text-sm text-muted-foreground">Questions</dt><dd className="text-2xl font-semibold">20</dd></div>
-      <div className="p-4 sm:px-5"><dt className="text-sm text-muted-foreground">Time</dt><dd className="text-2xl font-semibold">~15 min</dd></div>
+      <div className="p-4 sm:px-5"><dt className="text-sm text-muted-foreground">Time</dt><dd className="text-2xl font-semibold">~20 min</dd></div>
       <div className="p-4 sm:px-5"><dt className="text-sm text-muted-foreground">Domains</dt><dd className="text-2xl font-semibold">6</dd></div>
     </dl>
     {resumeId ? <section aria-labelledby="resume-heading" className="space-y-3 rounded-lg border border-border bg-card p-5">

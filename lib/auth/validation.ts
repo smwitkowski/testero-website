@@ -15,6 +15,7 @@ export const confirmationSchema = z.object({
   code: z.string().regex(/^[A-Za-z0-9_-]{8,2048}$/).optional(),
   flow: z.enum(["signup", "recovery"]).optional(),
   next,
+  redirect_to: z.string().max(8192).optional(),
 }).strict().superRefine((value, context) => {
   const hashFlow = !!value.token_hash && !!value.type && !value.code;
   const codeFlow = !!value.code && !value.token_hash && !value.type;

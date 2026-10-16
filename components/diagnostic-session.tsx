@@ -79,8 +79,8 @@ export function DiagnosticSession({ sessionId }: { sessionId: string }) {
   const question = data.currentQuestion;
   if (!question) return <div className="space-y-6">{header}<DiagnosticError message="Your next question could not be loaded. Retry to load your saved progress." onRetry={retry} /></div>;
 
-  // ~45s per remaining question (this one included), rounded up; hidden under a minute.
-  const secondsLeft = (data.totalQuestions - data.answeredCount) * 45;
+  // ~60s per remaining question (this one included), rounded up; hidden under a minute.
+  const secondsLeft = (data.totalQuestions - data.answeredCount) * 60;
   const minutesLeft = secondsLeft >= 60 ? Math.ceil(secondsLeft / 60) : 0;
   const last = question.ordinal === data.totalQuestions;
   // Shown only while answering question 11, i.e. right after the 10th answer was committed.

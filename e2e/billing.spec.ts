@@ -33,7 +33,7 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
   const eventIds: string[] = [], paymentIds: string[] = [];
   const foreign = await browser.newContext();
   const failures: string[] = [];
-  const directory = process.env.TESTERO_V3_SCREENSHOTS ?? "/tmp/testero-v2-phase3-visual";
+  const directory = process.env.TESTERO_V3_SCREENSHOTS ?? "test-results/billing-visual";
   await mkdir(directory, { recursive: true });
   page.on("pageerror", error => failures.push(error.message));
   page.on("request", request => { if (!["127.0.0.1", "localhost"].includes(new URL(request.url()).hostname)) failures.push("External browser request"); });
@@ -188,7 +188,9 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     await captureV3(page, "practice-feedback");
     const first = await service.from("session_items").select("id,selected_label").eq("session_id", paidPracticeId).eq("ordinal", 1).single();
     const withContent = await page.request.post(`/api/practice/${paidPracticeId}/answer`, { data: { itemId: first.data!.id, selectedLabel: first.data!.selected_label } });
-    expect((await withContent.json()).feedback.optionExplanations).toHaveLength(4);
+    const liveFeedback = (await withContent.json()).feedback as PracticeAnswerResponse["feedback"];
+    expect(liveFeedback.optionExplanations).toHaveLength(4);
+    await expect(page.getByText(liveFeedback.explanation!, { exact: true })).toHaveCount(1);
     await completePractice(paidPracticeIds[1], true);
 
     const refunded = await fixture("refund", { paymentIntentId: paid.intent.id });
