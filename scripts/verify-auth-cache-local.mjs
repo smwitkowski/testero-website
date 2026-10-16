@@ -1,0 +1,19 @@
+import { execFile, spawn } from "node:child_process";
+import { promisify } from "node:util";
+const execute = promisify(execFile);
+const { stdout } = await execute("supabase", ["status", "-o", "json"]);
+const local = JSON.parse(stdout);
+const api = new URL(local.API_URL);
+if (api.hostname !== "127.0.0.1" || api.port !== "56541") throw new Error("Loopback local only");
+const env = { ...process.env, NEXT_PUBLIC_SUPABASE_URL: local.API_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY: local.ANON_KEY, SUPABASE_SERVICE_ROLE_KEY: local.SERVICE_ROLE_KEY, NEXT_PUBLIC_POSTHOG_KEY: "", PLAYWRIGHT_MANAGED_SERVER: "1", PORT: "3000" };
+const server = spawn("npm", ["run", "start"], { env, stdio: ["ignore", "pipe", "pipe"], detached: true });
+let started = false;
+const output = chunk => {
+ if (started || !chunk.toString().includes("Ready")) return;
+ started = true;
+ const test = spawn("npx", ["playwright", "test", "e2e/cache-policy.spec.ts"], { env, stdio: "inherit" });
+ test.on("exit", code => { process.kill(-server.pid, "SIGTERM"); process.exitCode = code ?? 1; });
+};
+server.stdout.on("data", output);
+server.stderr.on("data", chunk => { if (!started) output(chunk); });
+server.on("exit", code => { if (!started) { console.error("Built server did not start"); process.exitCode=code ?? 1; } });

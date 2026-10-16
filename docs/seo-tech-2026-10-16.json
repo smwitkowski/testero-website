@@ -252,5 +252,6 @@
     }
   },
   "cacheHeaderBefore": "private, no-cache, no-store, max-age=0, must-revalidate",
-  "baselineNote": "Blog and post baseline ran concurrently; final measurements ran sequentially. Single local runs, not production field data."
+  "baselineNote": "Blog and post baseline ran concurrently; final measurements ran sequentially. Single local runs, not production field data.",
+  "cacheHeadersAfterInitialPr": "Historical initial PR policy only; superseded by ISR300 in follow-up"
 }
