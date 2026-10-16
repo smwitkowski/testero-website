@@ -35,7 +35,7 @@ describe("SEO function contracts", () => {
     const entries = sitemap();
     const indexable = publicPaths.filter(path => path !== "/terms" && path !== "/privacy");
     expect(entries.map(entry => entry.url)).toEqual(indexable.map(canonicalUrl));
-    expect(entries).toHaveLength(45);
+    expect(entries).toHaveLength(indexable.length);
     expect(entries.map(entry => entry.url)).toContain(canonicalUrl("/blog/google-cloud-certification-path"));
     expect(new Set(entries.map(entry => entry.url)).size).toBe(entries.length);
     for (const entry of entries) {

@@ -63,3 +63,9 @@ input { accent-color: var(--primary); }
 }
 .halfway-note { animation: halfway-in 0.4s ease-out; }
 @keyframes halfway-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+@media print {
+  body:has(.certification-tool) { background: white; color: black; }
+  body:has(.certification-tool) > header, body:has(.certification-tool) footer { display: none !important; }
+  #main-content:has(.certification-tool) { max-width: none; padding: 0; }
+}

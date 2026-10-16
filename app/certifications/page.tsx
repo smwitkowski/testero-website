@@ -16,6 +16,7 @@ export default function CertificationsPage() {
       <p className="text-lg leading-relaxed text-body">Compare official exam facts and guide sections across foundational, associate and professional credentials. PMLE practice is available now; other diagnostics are coming.</p>
       <p className="text-sm text-muted-foreground">Facts are from Google&apos;s official pages, last checked <time dateTime={checked}>{checked}</time>. Check Google before booking.</p>
     </header>
+    <p className="leading-7 text-body">Not sure where to start? <Link href="/tools" className="text-primary underline">Use the free certification picker, study planner and guide tracker</Link>.</p>
     <nav aria-label="Certification levels" className="flex flex-wrap gap-x-6 gap-y-3 border-y border-border py-4 text-sm font-semibold">{["foundational", "associate", "professional"].map(level => <a key={level} href={`#${level}`} className="py-2 text-primary underline">{level[0].toUpperCase() + level.slice(1)}</a>)}</nav>
     {["foundational", "associate", "professional"].map(level => <section key={level} id={level} className="scroll-mt-8 space-y-4">
       <div className="flex items-baseline justify-between gap-4"><h2 className="text-2xl font-semibold capitalize">{level}</h2><span className="text-sm text-muted-foreground">{certifications.filter(cert => cert.level === level).length} credentials</span></div>

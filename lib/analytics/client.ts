@@ -1,6 +1,7 @@
 "use client";
 
 import posthog from "posthog-js";
+import { certifications } from "@/lib/certifications/catalog";
 
 let initialized = false;
 let recordingEnabled = false;
@@ -38,7 +39,9 @@ export function initializeAnalytics(path = typeof window === "undefined" ? "/" :
 }
 
 export function trackPageview(path: string) {
-  if (initialized) posthog.capture("$pageview", { $current_url: `${window.location.origin}${path}` });
+  const publicPath = path.split(/[?#]/)[0];
+  const safePath = publicPath === "/tools" || publicPath.startsWith("/tools/") ? publicPath : path;
+  if (initialized) posthog.capture("$pageview", { $current_url: `${window.location.origin}${safePath}` });
 }
 
 export function trackDiagnostic(event: "diagnostic_started" | "diagnostic_completed", sessionId: string) {
@@ -73,5 +76,14 @@ export function analyticsHeaders(): Record<string, string> {
 export function trackDiagnosticAnswer(sessionId: string, ordinal: number, domainCode: string) {
   if (initialized) posthog.capture("diagnostic_question_answered", {
     session_id: sessionId, ordinal, domain_code: domainCode,
+  });
+}
+
+export type CertificationTool = "cert-picker" | "study-plan" | "exam-guide-changes";
+export function trackTool(event: "tool_used" | "tool_result_viewed", tool: CertificationTool, certId?: string) {
+  initializeAnalytics();
+  if (initialized) posthog.capture(event, {
+    tool, ...(certifications.some(cert => cert.cert_id === certId) ? { cert_id: certId } : {}),
+    $current_url: typeof window === "undefined" ? undefined : `${window.location.origin}${window.location.pathname}`,
   });
 }

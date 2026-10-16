@@ -1,0 +1,6 @@
+export const tools = [
+  { slug: "which-google-cloud-certification", title: "Which Google Cloud certification should you take?", description: "Answer five questions to compare Google Cloud certifications by role, experience and focus. Share your shortlist without sharing personal details.", label: "Certification picker", summary: "Match your role and experience to a shortlist of credentials, with Google's experience guidance beside each match." },
+  { slug: "study-plan", title: "Google Cloud certification study plan builder", description: "Create a week-by-week Google Cloud certification study plan using official exam guide weights, your exam date and weekly study hours.", label: "Study plan builder", summary: "Turn your exam date and weekly hours into a printable schedule across the official exam guide sections." },
+  { slug: "exam-guide-changes", title: "Google Cloud exam guide changes and updates", description: "Track Google Cloud certification exam guide versions, effective dates and upcoming changes. Find official sources and last-checked dates.", label: "Exam guide tracker", summary: "Check guide versions, announcements and upcoming changes across every certification in the registry." },
+] as const;
+export const toolPaths = ["/tools", ...tools.map(tool => `/tools/${tool.slug}`)];
