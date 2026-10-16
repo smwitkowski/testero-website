@@ -28,7 +28,7 @@ export default function HomePage() {
         <p className="text-sm font-medium text-muted-foreground">Google Cloud Professional Machine Learning Engineer (PMLE)</p>
         <h1 className="text-4xl font-semibold leading-[1.15] tracking-tight sm:text-[46px]">Find out where you stand on the PMLE exam.</h1>
         <p className="text-lg leading-relaxed text-muted-foreground">A free 20-question diagnostic measures your readiness across all six exam domains and tells you which one to study first.</p>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 pt-1"><Button asChild><Link href="/diagnostic">Start the free diagnostic</Link></Button><span className="text-sm text-muted-foreground">20 questions · about 15 minutes · no account needed</span></div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 pt-1"><Button asChild><Link href="/diagnostic">Start the free diagnostic</Link></Button><span className="text-sm text-muted-foreground">20 questions · about 20 minutes · no account needed</span></div>
       </div>
       <figure aria-label="Sample readiness report" className="space-y-6 rounded-lg border border-border bg-card p-5 sm:p-7">
         <figcaption className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"><span className="font-medium uppercase tracking-wide">Sample readiness report</span><span>20 questions</span></figcaption>

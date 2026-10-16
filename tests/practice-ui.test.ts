@@ -135,6 +135,17 @@ describe("practice explanation display boundary", () => {
     expect(html).toContain("First snapshot"); expect(html).toContain("Correct answer: A");
     expect(html).not.toContain("Submit answer");
   });
+  it("shows duplicate correct-option and question explanations only once", () => {
+    state.progress = { sessionId: "owned", status: "in_progress", answeredCount: 0, totalQuestions: 5, currentQuestion: question };
+    vi.mocked(useState).mockImplementationOnce(() => ["B", vi.fn()] as never)
+      .mockImplementationOnce(() => [false, vi.fn()] as never)
+      .mockImplementationOnce(() => [{ answeredCount: 1, totalQuestions: 5, completed: false, feedback: { ...feedback,
+        optionExplanations: [{ label: "A", text: "First snapshot", explanation: `  ${feedback.explanation}  ` }, { label: "B", text: "Second", explanation: "Distinct distractor reason" }],
+      } }, vi.fn()] as never);
+    const html = renderToStaticMarkup(createElement(PracticeSession, { sessionId: "owned" }));
+    expect(html.split(feedback.explanation)).toHaveLength(2);
+    expect(html).toContain("Distinct distractor reason");
+  });
   it("does not invent explanations for free saved-answer feedback", () => {
     state.progress = { sessionId: "owned", status: "in_progress", answeredCount: 0, totalQuestions: 5, currentQuestion: question };
     const { explanation: _explanation, optionExplanations: _optionExplanations, ...freeFeedback } = feedback;

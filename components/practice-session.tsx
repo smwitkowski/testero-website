@@ -81,13 +81,16 @@ export function PracticeSession({ sessionId }: { sessionId: string }) {
         <form onSubmit={submit} className="space-y-6" aria-busy={pending}>
           <fieldset disabled={pending || !!answer} className="space-y-3">
             <legend className="mb-3 text-sm font-medium">Choose one answer</legend>
-            {question.options.map(option => <label key={option.label} className={`answer-option flex min-h-14 items-start gap-3 rounded-md border p-4 leading-relaxed ${answer ? "cursor-default" : "cursor-pointer"} ${selected === option.label ? "border-primary bg-muted" : "border-input hover:bg-muted/50"}`}>
+            {question.options.map(option => {
+              const explanation = answer?.feedback.optionExplanations?.find(explanation => explanation.label === option.label);
+              return <label key={option.label} className={`answer-option flex min-h-14 items-start gap-3 rounded-md border p-4 leading-relaxed ${answer ? "cursor-default" : "cursor-pointer"} ${selected === option.label ? "border-primary bg-muted" : "border-input hover:bg-muted/50"}`}>
               <input type="radio" name="answer" value={option.label} checked={selected === option.label} onChange={() => setSelected(option.label)} className="mt-1.5 size-4 shrink-0" />
-              <span><span className="mr-2 font-semibold">{option.label}.</span>{answer?.feedback.optionExplanations?.find(explanation => explanation.label === option.label)?.text ?? option.text}
+              <span><span className="mr-2 font-semibold">{option.label}.</span>{explanation?.text ?? option.text}
                 {answer && (option.label === answer.feedback.correctLabel || option.label === answer.feedback.selectedLabel) && <span className="mt-2 block text-sm font-semibold">{option.label === answer.feedback.correctLabel ? "Correct answer" : "Your answer"}</span>}
-                {answer?.feedback.optionExplanations?.find(explanation => explanation.label === option.label)?.explanation && <span className="mt-2 block whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{answer.feedback.optionExplanations.find(explanation => explanation.label === option.label)!.explanation}</span>}
+                {explanation?.explanation && explanation.explanation.trim() !== answer?.feedback.explanation?.trim() && <span className="mt-2 block whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{explanation.explanation}</span>}
               </span>
-            </label>)}
+            </label>;
+            })}
           </fieldset>
           {!answer && <Button type="submit" disabled={!selected || pending}>{pending ? "Saving answer…" : "Submit answer"}</Button>}
           {pending && <p role="status" className="text-sm text-muted-foreground">Saving your answer…</p>}

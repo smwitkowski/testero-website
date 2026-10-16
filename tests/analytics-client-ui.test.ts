@@ -1,5 +1,6 @@
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
-import type { ReactElement } from "react";
+import { createElement, type ReactElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { DiagnosticSession } from "@/components/diagnostic-session";
 import { diagnosticRequest } from "@/components/diagnostic-resource";
 
@@ -40,4 +41,9 @@ it("does not capture question answered when saving fails", async () => {
   mocks.request.mockRejectedValue(new Error("Save failed"));
   await formIn(DiagnosticSession({ sessionId: "session" }))!.props.onSubmit({ preventDefault: vi.fn() });
   expect(mocks.answer).not.toHaveBeenCalled(); expect(mocks.completed).not.toHaveBeenCalled();
+});
+
+it("estimates one minute per remaining diagnostic question", () => {
+  const html = renderToStaticMarkup(createElement(DiagnosticSession, { sessionId: "session" }));
+  expect(html).toContain("~18 min left");
 });
