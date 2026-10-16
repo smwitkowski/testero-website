@@ -76,6 +76,15 @@ describe("Supabase proxy preview guard and verified refresh", () => {
     expect(mocks.getUser).not.toHaveBeenCalled();
   });
 
+  it.each(["/", "/blog", "/blog/post", "/faq", "/faq/answer", "/pricing"])("never refreshes auth or emits cookies on shared content %s", async path => {
+    const response = await proxy(new NextRequest(`http://127.0.0.1:3000${path}`, { headers: { Cookie: "sb-local-auth-token.0=stale-token" } }));
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(mocks.getUser).not.toHaveBeenCalled();
+  });
+  it.each(["/dashboard", "/account", "/practice/id", "/api/auth/navigation", "/api/billing/access"])("retains verified refresh on private route %s", async path => {
+    await proxy(new NextRequest(`http://127.0.0.1:3000${path}`, { headers: { Cookie: "sb-local-auth-token.0=stale-token" } }));
+    expect(mocks.getUser).toHaveBeenCalledOnce();
+  });
   it("verifies configured auth with getUser, never trusting getSession", async () => {
     const response = await proxy(request());
     expect(response.headers.get("x-middleware-next")).toBe("1");

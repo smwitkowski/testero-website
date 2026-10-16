@@ -39,11 +39,11 @@ describe("verified billing pages", () => {
     expect(html).toContain('href="/signup?next=/pricing"'); expect(html).toContain('href="/diagnostic"');
     expect(html).not.toMatch(/Phase 3|preview|coming soon/i);
   });
-  it("renders checkout only for the verified server user", async () => {
-    mocks.user.mockResolvedValue({ id: "verified" });
-    const html = renderToStaticMarkup(await PricingPage());
-    expect(html).toContain("Get PMLE Pass"); expect(html).not.toContain("/signup");
-    expect(mocks.user).toHaveBeenCalledOnce();
+  it("renders shared pricing without requesting private account data on the server", () => {
+    const html = renderToStaticMarkup(PricingPage());
+    expect(html).toContain("/signup?next=/pricing");
+    expect(mocks.user).not.toHaveBeenCalled();
+    expect(mocks.access).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
   });
   it("requires auth before checking account access freshly", async () => {
@@ -199,21 +199,12 @@ describe("bounded checkout verification and authoritative focus reload", () => {
 });
 
 describe("QA 2026-10-14 pass display", () => {
-  it("pricing shows an owned pass with a practice link instead of the buy button", async () => {
+  it("does not put one user's pass expiry into shared pricing HTML", () => {
     mocks.user.mockResolvedValue({ id: "verified" });
     mocks.access.mockResolvedValue(paid);
-    const html = renderToStaticMarkup(await PricingPage());
-    expect(html).toContain("You have PMLE Pass until <time");
-    expect(html).toContain("January 1, 2027");
-    expect(html).toContain('href="/dashboard"');
-    expect(html).not.toContain("Get PMLE Pass — $39");
-  });
-  it("pricing keeps checkout when access is unavailable or free", async () => {
-    mocks.user.mockResolvedValue({ id: "verified" });
-    for (const access of [free, { ...free, unavailable: true }]) {
-      mocks.access.mockResolvedValue(access);
-      expect(renderToStaticMarkup(await PricingPage())).toContain("Get PMLE Pass — $39");
-    }
+    const html = renderToStaticMarkup(PricingPage());
+    expect(html).not.toContain("January 1, 2027");
+    expect(mocks.access).not.toHaveBeenCalled();
   });
   it("shows days left and a refund note", () => {
     vi.useFakeTimers({ now: Date.parse("2026-12-30T12:00:00Z") });

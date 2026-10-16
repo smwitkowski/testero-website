@@ -1,15 +1,11 @@
 import Link from "next/link";
 import { SiteChrome } from "@/components/site-chrome";
 import { SiteLogo } from "@/components/site-logo";
-import { AnalyticsIdentity } from "@/components/analytics-identity";
-import { verifiedNavigationUserId } from "@/lib/auth/navigation";
+import { AccountNavigation, NavigationIdentity } from "@/components/account-navigation";
 
-export async function SiteHeader() {
-  const userId = await verifiedNavigationUserId();
-  const signedIn = !!userId;
+export function SiteHeader() {
   return (
-    <>
-      {userId && <AnalyticsIdentity userId={userId} />}
+    <NavigationIdentity>
       <SiteChrome><header className="border-b border-border bg-card">
       <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-x-8 gap-y-3 px-5 py-4 sm:px-8">
         <SiteLogo />
@@ -18,11 +14,10 @@ export async function SiteHeader() {
           <Link href="/pricing" className="inline-flex min-h-12 items-center py-2 hover:text-primary">Pricing</Link>
           <Link href="/faq" className="inline-flex min-h-12 items-center py-2 hover:text-primary">FAQ</Link>
           <Link href="/blog" className="inline-flex min-h-12 items-center py-2 hover:text-primary">Blog</Link>
-          <Link href={signedIn ? "/dashboard" : "/login"} className="inline-flex min-h-12 items-center rounded-md border border-input px-3.5 py-2 text-foreground hover:bg-muted">{signedIn ? "Dashboard" : "Sign in"}</Link>
-          {signedIn && <Link href="/account" className="inline-flex min-h-12 items-center py-2 hover:text-primary">Account</Link>}
+          <AccountNavigation />
         </nav>
       </div>
     </header></SiteChrome>
-    </>
+    </NavigationIdentity>
   );
 }

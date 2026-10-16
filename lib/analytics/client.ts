@@ -3,16 +3,33 @@
 import posthog from "posthog-js";
 
 let initialized = false;
+let recordingEnabled = false;
 
-export function initializeAnalytics() {
+function appRecordingRoute(path: string): boolean {
+  return /^\/(diagnostic|practice|dashboard|account|checkout)(?:\/|$)/.test(path);
+}
+
+export function configureAnalyticsForPath(path: string) {
+  initializeAnalytics(path);
+  if (!initialized) return;
+  const enabled = appRecordingRoute(path);
+  if (enabled === recordingEnabled) return;
+  posthog.set_config({ disable_session_recording: !enabled });
+  if (!enabled) posthog.stopSessionRecording();
+  recordingEnabled = enabled;
+}
+
+export function initializeAnalytics(path = typeof window === "undefined" ? "/" : window.location.pathname) {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   if (!key || initialized) return;
+  recordingEnabled = appRecordingRoute(path);
   posthog.init(key, {
     api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
     capture_pageview: false,
     capture_pageleave: false,
     autocapture: false,
-    disable_session_recording: false,
+    disable_session_recording: !recordingEnabled,
+    disable_surveys: true,
     session_recording: { maskAllInputs: true, maskTextSelector: "*" },
     person_profiles: "identified_only",
     persistence: "localStorage+cookie",

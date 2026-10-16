@@ -2,13 +2,13 @@
 
 import { Suspense, useEffect, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { initializeAnalytics, trackPageview } from "@/lib/analytics/client";
+import { configureAnalyticsForPath, trackPageview } from "@/lib/analytics/client";
 
 function Pageviews() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   useEffect(() => {
-    initializeAnalytics();
+    configureAnalyticsForPath(pathname);
     const query = searchParams.toString();
     trackPageview(`${pathname}${query ? `?${query}` : ""}`);
   }, [pathname, searchParams]);

@@ -1,20 +1,10 @@
 import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
-import { getVerifiedUser } from "@/lib/auth/session";
-import { getPaidAccess } from "@/lib/billing/paid-access";
-import { accessDate } from "@/lib/billing/dates";
-import { CheckoutButton } from "@/components/checkout-button";
+import { PricingAction } from "@/components/pricing-action";
 import { Button } from "@/components/ui/button";
 
 export const metadata = pageMetadata("PMLE Pass pricing", "PMLE Pass: $39 one-time for 90 days of explanations and unlimited five-question practice sessions. No auto-renew; 7-day refund window.", "/pricing");
-export const dynamic = "force-dynamic";
-export default async function PricingPage() {
-  const user = await getVerifiedUser();
-  // Display only: checkout still rechecks access server-side and never double-charges.
-  const access = user ? await getPaidAccess(user.id) : null;
-  const passUntil = access?.hasPaidAccess && access.pass ? accessDate(access.pass.expires_at) : null;
-  const owned = passUntil ? <>You have PMLE Pass until <time dateTime={access!.pass!.expires_at}>{passUntil}</time>.</>
-    : access?.hasPaidAccess && access.isLegacySubscriber ? <>Your active subscription already includes PMLE Pass features.</> : null;
+export default function PricingPage() {
   return <div className="mx-auto max-w-[916px] space-y-10">
     <header className="space-y-3"><h1 className="text-3xl font-semibold tracking-tight">Pricing</h1><p className="text-lg leading-relaxed text-muted-foreground">Start free. Buy PMLE Pass when you want full explanations and unlimited practice.</p></header>
     <div className="grid gap-6 md:grid-cols-2">
@@ -27,7 +17,7 @@ export default async function PricingPage() {
         <div className="space-y-3"><h2 id="paid-plan" className="text-xl font-semibold">PMLE Pass</h2><p className="text-sm text-on-dark-secondary">90 days of access</p><p className="text-4xl font-semibold">$39 <span className="text-base font-normal text-on-dark-secondary">USD, one-time</span></p></div>
         <ul className="list-disc space-y-3 pl-5 text-on-dark-secondary"><li>Everything in Free</li><li>Explanations for the question and every option after answering</li><li>Unlimited 5-question practice sessions from the current question bank</li><li>Practice by domain, including your weakest</li></ul>
         <dl className="space-y-4 text-sm"><div><dt className="font-semibold">No auto-renewal</dt><dd className="text-on-dark-secondary">Access ends after 90 days. You are not charged again.</dd></div><div><dt className="font-semibold">7-day refund window</dt><dd className="text-on-dark-secondary">A refund ends pass access. Contact <a href="mailto:support@testero.ai" className="underline">support@testero.ai</a>.</dd></div><div><dt className="font-semibold">PMLE only</dt><dd className="text-on-dark-secondary">One exam, all six domains.</dd></div></dl>
-        <div className="mt-auto">{owned ? <div className="space-y-3"><p role="status" className="font-semibold">{owned}</p><Button asChild><Link href="/dashboard">Go to practice</Link></Button></div> : user ? <CheckoutButton /> : <Button asChild><Link href="/signup?next=/pricing">Create an account to get PMLE Pass</Link></Button>}</div>
+        <div className="mt-auto"><PricingAction /></div>
       </section>
     </div>
     <section aria-labelledby="pricing-questions" className="space-y-5"><h2 id="pricing-questions" className="text-2xl font-semibold">Questions</h2><div className="grid gap-x-8 gap-y-6 sm:grid-cols-2">{[
