@@ -7,7 +7,7 @@ export async function proxy(request: NextRequest) {
   if (["/api/billing/webhook", "/api/health"].includes(request.nextUrl.pathname)) return response;
   const pathname = request.nextUrl.pathname;
   // Shared content responses must never carry personalized refresh cookies.
-  if (["/", "/blog", "/faq", "/pricing", "/certifications", "/robots.txt", "/sitemap.xml"].includes(pathname) || pathname.startsWith("/blog/") || pathname.startsWith("/faq/") || pathname.startsWith("/certifications/")) return response;
+  if (["/", "/blog", "/faq", "/pricing", "/certifications", "/tools", "/robots.txt", "/sitemap.xml"].includes(pathname) || pathname.startsWith("/blog/") || pathname.startsWith("/faq/") || pathname.startsWith("/certifications/") || pathname.startsWith("/tools/")) return response;
   if (!request.cookies.getAll().some(cookie => cookie.name.startsWith("sb-") && cookie.name.includes("-auth-token"))) return response;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

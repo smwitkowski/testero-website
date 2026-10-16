@@ -10,6 +10,7 @@ export function SiteFooter() {
           <Link href="/faq" className="inline-flex min-h-12 items-center hover:text-primary hover:underline">FAQ</Link>
           <Link href="/blog" className="inline-flex min-h-12 items-center hover:text-primary hover:underline">Blog</Link>
           <Link href="/certifications" className="inline-flex min-h-12 items-center hover:text-primary hover:underline">Certifications</Link>
+          <Link href="/tools" className="inline-flex min-h-12 items-center hover:text-primary hover:underline">Free tools</Link>
           <a href="mailto:support@testero.ai" className="inline-flex min-h-12 items-center hover:text-primary hover:underline sm:ml-auto">support@testero.ai</a>
         </nav>
         <p>Independent exam preparation. Not affiliated with or endorsed by Google.</p>

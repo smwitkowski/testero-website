@@ -71,6 +71,20 @@ describe("private analytics event wiring", () => {
     expect(sdk.reset).toHaveBeenCalledOnce();
     expect(analytics.analyticsHeaders()).toEqual({ "X-PostHog-Distinct-Id": "anonymous-id" });
   });
+  it("captures only tool IDs and allowlisted certification IDs, never input values or URL fragments", async () => {
+    const analytics = await import("@/lib/analytics/client");
+    vi.stubGlobal("window", { location: { origin: "https://testero.ai", pathname: "/tools/study-plan", search: "?email=private@example.com", hash: "#private" } });
+    analytics.initializeAnalytics();
+    analytics.trackPageview("/tools/study-plan?email=private@example.com#private");
+    analytics.trackTool("tool_used", "study-plan", "machine-learning-engineer");
+    analytics.trackTool("tool_result_viewed", "cert-picker", "private@example.com");
+    expect(sdk.capture.mock.calls).toEqual([
+      ["$pageview", { $current_url: "https://testero.ai/tools/study-plan" }],
+      ["tool_used", { tool: "study-plan", cert_id: "machine-learning-engineer", $current_url: "https://testero.ai/tools/study-plan" }],
+      ["tool_result_viewed", { tool: "cert-picker", $current_url: "https://testero.ai/tools/study-plan" }],
+    ]);
+    vi.unstubAllGlobals();
+  });
   it("captures exactly the allowed answer metadata", async () => {
     const analytics = await import("@/lib/analytics/client");
     analytics.initializeAnalytics(); analytics.trackDiagnosticAnswer("session", 3, "D2");
