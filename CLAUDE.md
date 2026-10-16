@@ -31,7 +31,7 @@ Supabase SSR verifies `getUser` plus confirmed email; httpOnly cookie hashes
 bind anonymous diagnostics and atomic account claims. Anonymous results are
 aggregate-only. Free review has no explanations. All explanations require fresh,
 fail-closed paid access on the server. The database rechecks paid/free quota at
-session creation. Stripe signed webhooks alone grant passes; refund tombstones
+session creation. Stripe signed webhooks and authenticated server-verified checkout returns grant passes; refund tombstones
 and payment-intent locks beat replay and out-of-order receipt writes.
 
 Public content is local Markdown rendered as safe React nodes, never raw HTML.

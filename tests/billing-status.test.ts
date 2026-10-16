@@ -2,25 +2,26 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/billing/status/route";
 import { getPaidAccess } from "@/lib/billing/paid-access";
 import { getVerifiedUser } from "@/lib/auth/session";
-const m = vi.hoisted(() => ({ from: vi.fn(), select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn() }));
+const m = vi.hoisted(() => ({ from: vi.fn(), select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn(), session: vi.fn() }));
+vi.mock("@/lib/stripe/stripe-service", () => ({ StripeService: class { retrieveCheckoutSession = m.session; } }));
 vi.mock("@/lib/auth/session", () => ({ getVerifiedUser: vi.fn() }));
 vi.mock("@/lib/billing/paid-access", async original => ({ ...await original<typeof import("@/lib/billing/paid-access")>(), getPaidAccess: vi.fn() }));
 vi.mock("@/lib/supabase/service", () => ({ createServiceSupabaseClient: () => m }));
 function req(query = "session_id=cs_test_owned") { return new Request(`http://localhost:3000/api/billing/status?${query}`); }
 const passId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const paidAt = "2020-01-01T00:00:00Z";
-beforeEach(() => { vi.mocked(getPaidAccess).mockResolvedValue({ hasPaidAccess: true, isLegacySubscriber: false, accessUntil: null, pass: null }); vi.mocked(getVerifiedUser).mockResolvedValue({ id: "user", email_confirmed_at: "confirmed" } as never); m.from.mockReturnValue(m); m.select.mockReturnValue(m); m.eq.mockReturnValue(m); m.maybeSingle.mockResolvedValue({ data: null, error: null }); });
-describe("owned read-only checkout status", () => {
+beforeEach(() => { vi.mocked(getPaidAccess).mockResolvedValue({ hasPaidAccess: true, isLegacySubscriber: false, accessUntil: null, pass: null }); vi.mocked(getVerifiedUser).mockResolvedValue({ id: "user", email_confirmed_at: "confirmed" } as never); m.from.mockReturnValue(m); m.select.mockReturnValue(m); m.eq.mockReturnValue(m); m.maybeSingle.mockResolvedValue({ data: null, error: null }); m.session.mockResolvedValue({ id: "cs_test_owned", metadata: { user_id: "other" } }); });
+describe("owned checkout status", () => {
   it("requires auth before parsing untrusted session id", async () => { vi.mocked(getVerifiedUser).mockResolvedValue(null); const r = await GET(req("")); expect(r.status).toBe(401); expect(m.from).not.toHaveBeenCalled(); expect(r.headers.get("cache-control")).toBe("private, no-store"); });
   it.each(["", "session_id=bad", "session_id=cs_a&session_id=cs_b", "session_id=cs_%3Cscript%3E", `session_id=cs_${"a".repeat(241)}`])("rejects missing, ambiguous, or malformed id %s", async query => { expect((await GET(req(query))).status).toBe(400); expect(m.from).not.toHaveBeenCalled(); });
-  it("returns processing for unknown or not-owned without any Stripe call/grant", async () => { const r = await GET(req()); expect(await r.json()).toEqual({ status: "processing", accessUntil: null }); expect(m.from).toHaveBeenCalledExactlyOnceWith("pmle_passes"); expect(m.select).toHaveBeenCalledWith("id, paid_at, expires_at, refunded_at"); expect(m.eq).toHaveBeenCalledWith("user_id", "user"); expect(m.eq).toHaveBeenCalledWith("stripe_checkout_session_id", "cs_test_owned"); expect(r.headers.get("cache-control")).toBe("private, no-store"); });
+  it("returns processing for another user after one bounded Stripe retrieve", async () => { const r = await GET(req()); expect(await r.json()).toEqual({ status: "processing", accessUntil: null }); expect(m.from).toHaveBeenCalledExactlyOnceWith("pmle_passes"); expect(m.select).toHaveBeenCalledWith("id, paid_at, expires_at, refunded_at, stripe_payment_intent_id, purchase_completed_at"); expect(m.session).toHaveBeenCalledExactlyOnceWith("cs_test_owned"); expect(m.eq).toHaveBeenCalledWith("user_id", "user"); expect(m.eq).toHaveBeenCalledWith("stripe_checkout_session_id", "cs_test_owned"); expect(r.headers.get("cache-control")).toBe("private, no-store"); });
   it.each([ ["active", "2099-01-01T00:00:00Z", null], ["expired", "2020-01-02T00:00:00Z", null], ["refunded", "2099-01-01T00:00:00Z", "2026-01-01T00:00:00Z"] ])("reports %s from durable owned pass row", async (status, expires_at, refunded_at) => { m.maybeSingle.mockResolvedValue({ data: { id: passId, paid_at: paidAt, expires_at, refunded_at }, error: null }); expect(await (await GET(req())).json()).toEqual({ status, accessUntil: expires_at }); });
   it("fails closed before reporting any owned active pass when either access source fails", async () => { vi.mocked(getPaidAccess).mockResolvedValue({ hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null, unavailable: true }); m.maybeSingle.mockResolvedValue({ data: { id: passId, paid_at: paidAt, expires_at: "2099-01-01T00:00:00Z", refunded_at: null }, error: null }); const r = await GET(req()); expect(r.status).toBe(503); expect(m.from).not.toHaveBeenCalled(); expect(r.headers.get("cache-control")).toBe("private, no-store"); });
   it.each(["legacy", "passes"])("real shared access checker returns 503 on %s DB read failure", async source => {
     const actual = await vi.importActual<typeof import("@/lib/billing/paid-access")>("@/lib/billing/paid-access");
     vi.mocked(getPaidAccess).mockImplementationOnce(actual.getPaidAccess);
     vi.mocked(getVerifiedUser).mockResolvedValue({ id: passId, email_confirmed_at: "confirmed" } as never);
-    const legacy = { select: vi.fn(), eq: vi.fn(), limit: vi.fn(), maybeSingle: vi.fn() };
+    const legacy = { select: vi.fn(), eq: vi.fn(), limit: vi.fn(), maybeSingle: vi.fn(), session: vi.fn() };
     legacy.select.mockReturnValue(legacy); legacy.eq.mockReturnValue(legacy); legacy.limit.mockReturnValue(legacy);
     legacy.maybeSingle.mockResolvedValue({ data: { status: "active", current_period_end: null }, error: source === "legacy" ? { message: "DB failure" } : null });
     const passes = { select: vi.fn(), eq: vi.fn(), order: vi.fn() };

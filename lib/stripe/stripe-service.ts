@@ -62,6 +62,5 @@ export class StripeService {
     if (!permitted) throw new Error("Invalid portal URL");
     return session;
   }
-  retrieveSubscription(id: string) { return this.stripe.subscriptions.retrieve(id); }
   constructWebhookEvent(payload: string | Buffer, signature: string, secret: string) { return this.stripe.webhooks.constructEvent(payload, signature, secret); }
 }

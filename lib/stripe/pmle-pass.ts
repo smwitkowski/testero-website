@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { StripeService } from "./stripe-service";
+import { trackPurchaseCompleted } from "@/lib/analytics/server";
 
 export const PASS_DURATION_MS = 90 * 24 * 60 * 60 * 1000;
 
@@ -77,7 +78,7 @@ export async function refundPmlePass(
   if (error) throw error;
 }
 
-/** Webhook-only fulfillment; browser redirects never grant access. */
+/** Fulfillment requires server-retrieved Stripe payment and product verification. */
 export async function grantPmlePass(
   service: StripeService,
   supabase: SupabaseClient,
@@ -112,4 +113,32 @@ export async function grantPmlePass(
   )
     throw new Error("Pass ownership mismatch");
   return { pass, refunded: Boolean(pass.refunded_at || payment.refunded || current.refunded) };
+}
+
+/** Shared by signed webhooks and authenticated return reconciliation. */
+export async function fulfillCheckoutSession(
+  stripe: StripeService,
+  db: SupabaseClient,
+  session: Stripe.Checkout.Session
+) {
+  const result = await grantPmlePass(stripe, db, session);
+  // Receipt ownership and refund state are derived under the payment-intent lock.
+  const { error } = await db.rpc("record_pmle_pass_payment", {
+    p_stripe_payment_intent_id: stripeId(session.payment_intent),
+    p_amount: session.amount_total ?? 0,
+    p_currency: session.currency ?? "usd",
+  });
+  if (error) throw error;
+  if (!result.refunded) {
+    // Atomic claim across return/webhook races. Analytics remains best effort:
+    // a crash after this claim can lose an event, but cannot affect paid access.
+    const { data: claimed, error: claimError } = await db.from("pmle_passes")
+      .update({ purchase_completed_at: new Date().toISOString() })
+      .eq("id", result.pass.id).eq("user_id", session.metadata!.user_id)
+      .eq("stripe_checkout_session_id", session.id).is("refunded_at", null).is("purchase_completed_at", null)
+      .select("id").maybeSingle();
+    if (claimError) throw claimError;
+    if (claimed) await trackPurchaseCompleted(session.id);
+  }
+  return result;
 }
