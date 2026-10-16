@@ -131,7 +131,7 @@ describe("practice explanation display boundary", () => {
       .mockImplementationOnce(() => [false, vi.fn()] as never)
       .mockImplementationOnce(() => [{ answeredCount: 1, totalQuestions: 5, completed: false, feedback }, vi.fn()] as never);
     const html = renderToStaticMarkup(createElement(PracticeSession, { sessionId: "owned" }));
-    expect(html).toContain("Saved-answer explanation"); expect(html).toContain("Saved option explanation");
+    expect(html).not.toContain("Saved-answer explanation"); expect(html).toContain("Saved option explanation");
     expect(html).toContain("First snapshot"); expect(html).toContain("Correct answer: A");
     expect(html).not.toContain("Submit answer");
   });
@@ -145,6 +145,31 @@ describe("practice explanation display boundary", () => {
     const html = renderToStaticMarkup(createElement(PracticeSession, { sessionId: "owned" }));
     expect(html.split(feedback.explanation)).toHaveLength(2);
     expect(html).toContain("Distinct distractor reason");
+  });
+  it("shows each option rationale once when the question explanation aggregates all options", () => {
+    const options = [{ label: "A", text: "First" }, { label: "B", text: "Second" }, { label: "C", text: "Third" }, { label: "D", text: "Fourth" }];
+    state.progress = { sessionId: "owned", status: "in_progress", answeredCount: 0, totalQuestions: 5, currentQuestion: { ...question, options } };
+    const optionExplanations = options.map(option => ({ ...option, explanation: `Reason for ${option.text}.` }));
+    vi.mocked(useState).mockImplementationOnce(() => ["B", vi.fn()] as never)
+      .mockImplementationOnce(() => [false, vi.fn()] as never)
+      .mockImplementationOnce(() => [{ answeredCount: 1, totalQuestions: 5, completed: false, feedback: { ...feedback,
+        explanation: optionExplanations.map(option => `${option.label}: ${option.explanation}`).join("\n\n"), optionExplanations,
+      } }, vi.fn()] as never);
+    const html = renderToStaticMarkup(createElement(PracticeSession, { sessionId: "owned" }));
+    for (const option of optionExplanations) expect(html.split(option.explanation)).toHaveLength(2);
+    expect(html).toContain("Option explanations");
+    expect(html).not.toContain(">Explanation</h2>");
+    expect(html).toContain("Next question");
+  });
+  it.each([undefined, []])("keeps the question explanation when option rationales are %j", optionExplanations => {
+    state.progress = { sessionId: "owned", status: "in_progress", answeredCount: 0, totalQuestions: 5, currentQuestion: question };
+    vi.mocked(useState).mockImplementationOnce(() => ["B", vi.fn()] as never)
+      .mockImplementationOnce(() => [false, vi.fn()] as never)
+      .mockImplementationOnce(() => [{ answeredCount: 1, totalQuestions: 5, completed: true, feedback: { ...feedback, optionExplanations } }, vi.fn()] as never);
+    const html = renderToStaticMarkup(createElement(PracticeSession, { sessionId: "owned" }));
+    expect(html.split(feedback.explanation)).toHaveLength(2);
+    expect(html).not.toContain("Option explanations");
+    expect(html).toContain("View summary");
   });
   it("does not invent explanations for free saved-answer feedback", () => {
     state.progress = { sessionId: "owned", status: "in_progress", answeredCount: 0, totalQuestions: 5, currentQuestion: question };

@@ -77,7 +77,7 @@ export function PracticeSession({ sessionId }: { sessionId: string }) {
           <p className="text-lg font-semibold">{answer.feedback.isCorrect ? "Correct" : "Incorrect"}. You chose {answer.feedback.selectedLabel}; the correct answer is {answer.feedback.correctLabel}.</p>
           <p className="text-sm"><span className="font-medium">Correct answer: {answer.feedback.correctLabel}.</span> {correctOption?.text}</p>
         </div>}
-        {answer?.feedback.optionExplanations && <h2 className="font-semibold">Option explanations</h2>}
+        {!!answer?.feedback.optionExplanations?.length && <h2 className="font-semibold">Option explanations</h2>}
         <form onSubmit={submit} className="space-y-6" aria-busy={pending}>
           <fieldset disabled={pending || !!answer} className="space-y-3">
             <legend className="mb-3 text-sm font-medium">Choose one answer</legend>
@@ -87,7 +87,7 @@ export function PracticeSession({ sessionId }: { sessionId: string }) {
               <input type="radio" name="answer" value={option.label} checked={selected === option.label} onChange={() => setSelected(option.label)} className="mt-1.5 size-4 shrink-0" />
               <span><span className="mr-2 font-semibold">{option.label}.</span>{explanation?.text ?? option.text}
                 {answer && (option.label === answer.feedback.correctLabel || option.label === answer.feedback.selectedLabel) && <span className="mt-2 block text-sm font-semibold">{option.label === answer.feedback.correctLabel ? "Correct answer" : "Your answer"}</span>}
-                {explanation?.explanation && explanation.explanation.trim() !== answer?.feedback.explanation?.trim() && <span className="mt-2 block whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{explanation.explanation}</span>}
+                {explanation?.explanation && <span className="mt-2 block whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{explanation.explanation}</span>}
               </span>
             </label>;
             })}
@@ -96,7 +96,7 @@ export function PracticeSession({ sessionId }: { sessionId: string }) {
           {pending && <p role="status" className="text-sm text-muted-foreground">Saving your answer…</p>}
         </form>
         {answer && <div className="space-y-4 border-t border-border pt-5">
-          {answer.feedback.explanation && <section className="space-y-2"><h2 className="font-semibold">Explanation</h2><p className="whitespace-pre-line leading-relaxed">{answer.feedback.explanation}</p></section>}
+          {!answer.feedback.optionExplanations?.length && answer.feedback.explanation && <section className="space-y-2"><h2 className="font-semibold">Explanation</h2><p className="whitespace-pre-line leading-relaxed">{answer.feedback.explanation}</p></section>}
           {answer.completed ? <Button asChild><Link href={summaryPath}>View summary</Link></Button> : <Button onClick={nextQuestion}>Next question</Button>}
         </div>}
       </CardContent>
