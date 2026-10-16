@@ -14,6 +14,7 @@ export function SiteHeader() {
           <Link href="/pricing" className="inline-flex min-h-12 items-center py-2 hover:text-primary">Pricing</Link>
           <Link href="/faq" className="inline-flex min-h-12 items-center py-2 hover:text-primary">FAQ</Link>
           <Link href="/blog" className="inline-flex min-h-12 items-center py-2 hover:text-primary">Blog</Link>
+          <Link href="/certifications" className="inline-flex min-h-12 items-center py-2 hover:text-primary">Certifications</Link>
           <AccountNavigation />
         </nav>
       </div>

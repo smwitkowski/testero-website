@@ -29,7 +29,7 @@ export default async function BlogArticlePage({ params }: PageProps) {
     
     <MarkdownContent content={entry.body} />
     <section aria-label="Sources" className="space-y-3 border-t border-border pt-6"><h2 className="text-xl font-semibold">Sources and current guidance</h2><ul className="list-disc space-y-2 pl-6">{entry.citations.map((href) => <li key={href}><a href={href} className="break-words text-sm text-primary underline underline-offset-4" rel="noopener noreferrer">{href}</a></li>)}</ul></section>
-    <RelatedPmleGuides excludeHref={entry.href} />
+    <RelatedPmleGuides excludeHref={entry.href} exam={entry.exam} />
     <footer className="space-y-3 border-t border-border pt-6"><p className="text-sm text-muted-foreground">Testero is independent and not affiliated with Google. Our diagnostic and practice cover PMLE only. A readiness score is a study signal, not an exam-outcome guarantee.</p><Link href="/diagnostic" className="inline-flex rounded-lg bg-primary px-5 py-3 font-medium text-primary-foreground hover:opacity-90">Start free PMLE diagnostic</Link></footer>
   </article>;
 }
