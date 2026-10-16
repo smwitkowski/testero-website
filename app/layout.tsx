@@ -29,6 +29,9 @@ const ibmPlexSansOptional = localFont({
   preload: false,
 });
 
+// Bound shared HTML freshness across deployments; private routes opt out via dynamic rendering.
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   ...pageMetadata("PMLE readiness diagnostic", DEFAULT_DESCRIPTION, "/"),
   metadataBase: new URL(SITE_ORIGIN),

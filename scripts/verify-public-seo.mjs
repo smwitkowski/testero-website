@@ -8,7 +8,7 @@ for (const path of paths) {
   const response = await fetch(`${base}${path}`);
   assert.equal(response.status, 200, path);
   const cache = response.headers.get("cache-control");
-  assert(cache && !/private|no-store/.test(cache), `${path}: ${cache}`);
+  assert(cache && /s-maxage=300(?:,|$)/.test(cache) && !/private|no-store/.test(cache), `${path}: ${cache}`);
   assert(!response.headers.has("set-cookie"), path);
   const html = await response.text();
   const data = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(match => JSON.parse(match[1]));

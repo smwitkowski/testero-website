@@ -4,6 +4,8 @@ import { getBlogEntries, getFaqEntries, getLegalDocument } from "@/lib/content/l
 
 const BUILD_TIME = process.env.TESTERO_BUILD_TIME;
 
+export const revalidate = 300;
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const articles = [...getBlogEntries(), ...getFaqEntries()];
   // Unapproved legal placeholders are public but noindex, so omit until approved.

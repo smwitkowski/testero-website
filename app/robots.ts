@@ -7,6 +7,8 @@ export const privatePaths = [
   "/verify-email", "/admin/", "/results/",
 ];
 
+export const revalidate = 300;
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: { userAgent: "*", allow: "/", disallow: privatePaths },
