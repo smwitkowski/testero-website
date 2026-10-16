@@ -10,14 +10,12 @@ export type LegacyRedirectRule = {
 /** Frozen inventory from every sitemap-*.xml at the referenced PMLE commit. */
 export const legacyPaths: readonly string[] = manifest.paths;
 
-// D-031 proposals only. Founder approval required before adding explicit 301s:
-// /blog/pmle-october-2024-exam-changes -> /blog/pmle-exam-changes-june-2026
-// /blog/accelerated-google-ml-certification-30-day-success-story-2025 -> /blog/pmle-study-plan-by-domain
 // Keep /blog/5-hardest-pmle-questions: no like-for-like replacement in this PR.
-// These are not entries in redirectRules and do not change live routing.
 
 /** Next runs these 308 redirects before proxy/auth. Specific content rules precede fallback. */
 export const redirectRules: readonly LegacyRedirectRule[] = [
+  {"source": "/blog/pmle-october-2024-exam-changes", "destination": "/blog/pmle-exam-changes-june-2026", "permanent": true, "reason": "Outdated PMLE article retired in favor of current guidance."},
+  {"source": "/blog/accelerated-google-ml-certification-30-day-success-story-2025", "destination": "/blog/pmle-study-plan-by-domain", "permanent": true, "reason": "Outdated PMLE article retired in favor of current guidance."},
   {"source": "/practice/question/:path*", "destination": "/dashboard", "permanent": true, "reason": "Single-question practice retired; start a domain session from dashboard."},
   {"source": "/practice/session/:path*", "destination": "/dashboard", "permanent": true, "reason": "Legacy sessions are not migrated."},
   {"source": "/dashboard/settings/:path*", "destination": "/account", "permanent": true, "reason": "Account and pass status now live together."},
@@ -42,18 +40,18 @@ export const redirectRules: readonly LegacyRedirectRule[] = [
   {"source": "/content/hub/google-professional-machine-learning-engineer-certification-roadmap-2025.md", "destination": "/faq/is-the-google-professional-machine-learning-engineer-certification-worth-it", "permanent": true, "reason": "Closest retained article for the retired hub."},
   {"source": "/content/hub/the-2025-google-cloud-digital-leader-certification-roadmap", "destination": "/blog/google-cloud-digital-leader-certification", "permanent": true, "reason": "Closest retained article for the retired hub."},
   {"source": "/content/hub/the-2025-google-cloud-digital-leader-certification-roadmap.md", "destination": "/blog/google-cloud-digital-leader-certification", "permanent": true, "reason": "Closest retained article for the retired hub."},
-  {"source": "/content/blog/accelerated-google-ml-certification-30-day-success-story-2025", "destination": "/blog/accelerated-google-ml-certification-30-day-success-story-2025", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
-  {"source": "/content/blog/accelerated-google-ml-certification-30-day-success-story-2025.md", "destination": "/blog/accelerated-google-ml-certification-30-day-success-story-2025", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
-  {"source": "/content/spoke/accelerated-google-ml-certification-30-day-success-story-2025", "destination": "/blog/accelerated-google-ml-certification-30-day-success-story-2025", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
-  {"source": "/content/spoke/accelerated-google-ml-certification-30-day-success-story-2025.md", "destination": "/blog/accelerated-google-ml-certification-30-day-success-story-2025", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
-  {"source": "/content/spokes/accelerated-google-ml-certification-30-day-success-story-2025", "destination": "/blog/accelerated-google-ml-certification-30-day-success-story-2025", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
-  {"source": "/content/spokes/accelerated-google-ml-certification-30-day-success-story-2025.md", "destination": "/blog/accelerated-google-ml-certification-30-day-success-story-2025", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
-  {"source": "/content/blog/pmle-october-2024-exam-changes", "destination": "/blog/pmle-october-2024-exam-changes", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
-  {"source": "/content/blog/pmle-october-2024-exam-changes.md", "destination": "/blog/pmle-october-2024-exam-changes", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
-  {"source": "/content/spoke/pmle-october-2024-exam-changes", "destination": "/blog/pmle-october-2024-exam-changes", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
-  {"source": "/content/spoke/pmle-october-2024-exam-changes.md", "destination": "/blog/pmle-october-2024-exam-changes", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
-  {"source": "/content/spokes/pmle-october-2024-exam-changes", "destination": "/blog/pmle-october-2024-exam-changes", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
-  {"source": "/content/spokes/pmle-october-2024-exam-changes.md", "destination": "/blog/pmle-october-2024-exam-changes", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
+  {"source": "/content/blog/accelerated-google-ml-certification-30-day-success-story-2025", "destination": "/blog/pmle-study-plan-by-domain", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
+  {"source": "/content/blog/accelerated-google-ml-certification-30-day-success-story-2025.md", "destination": "/blog/pmle-study-plan-by-domain", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
+  {"source": "/content/spoke/accelerated-google-ml-certification-30-day-success-story-2025", "destination": "/blog/pmle-study-plan-by-domain", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
+  {"source": "/content/spoke/accelerated-google-ml-certification-30-day-success-story-2025.md", "destination": "/blog/pmle-study-plan-by-domain", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
+  {"source": "/content/spokes/accelerated-google-ml-certification-30-day-success-story-2025", "destination": "/blog/pmle-study-plan-by-domain", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
+  {"source": "/content/spokes/accelerated-google-ml-certification-30-day-success-story-2025.md", "destination": "/blog/pmle-study-plan-by-domain", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
+  {"source": "/content/blog/pmle-october-2024-exam-changes", "destination": "/blog/pmle-exam-changes-june-2026", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
+  {"source": "/content/blog/pmle-october-2024-exam-changes.md", "destination": "/blog/pmle-exam-changes-june-2026", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
+  {"source": "/content/spoke/pmle-october-2024-exam-changes", "destination": "/blog/pmle-exam-changes-june-2026", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
+  {"source": "/content/spoke/pmle-october-2024-exam-changes.md", "destination": "/blog/pmle-exam-changes-june-2026", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
+  {"source": "/content/spokes/pmle-october-2024-exam-changes", "destination": "/blog/pmle-exam-changes-june-2026", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
+  {"source": "/content/spokes/pmle-october-2024-exam-changes.md", "destination": "/blog/pmle-exam-changes-june-2026", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
   {"source": "/content/blog/5-hardest-pmle-questions", "destination": "/blog/5-hardest-pmle-questions", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
   {"source": "/content/blog/5-hardest-pmle-questions.md", "destination": "/blog/5-hardest-pmle-questions", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
   {"source": "/content/spoke/5-hardest-pmle-questions", "destination": "/blog/5-hardest-pmle-questions", "permanent": true, "reason": "Keep legacy article links on the current blog URL."},
@@ -76,8 +74,8 @@ export const redirectRules: readonly LegacyRedirectRule[] = [
   {"source": "/content/briefs/google-ml-engineer-cert-worth-it.md", "destination": "/faq/is-the-google-professional-machine-learning-engineer-certification-worth-it", "permanent": true, "reason": "Closest retained article for the retired brief."},
   {"source": "/content/briefs/google-ml-engineer-cert-worth-it_formatted", "destination": "/faq/is-the-google-professional-machine-learning-engineer-certification-worth-it", "permanent": true, "reason": "Closest retained article for the retired brief."},
   {"source": "/content/briefs/google-ml-engineer-cert-worth-it_formatted.md", "destination": "/faq/is-the-google-professional-machine-learning-engineer-certification-worth-it", "permanent": true, "reason": "Closest retained article for the retired brief."},
-  {"source": "/content/briefs/accelerated-ml-cert-success", "destination": "/blog/accelerated-google-ml-certification-30-day-success-story-2025", "permanent": true, "reason": "Closest retained article for the retired brief."},
-  {"source": "/content/briefs/accelerated-ml-cert-success.md", "destination": "/blog/accelerated-google-ml-certification-30-day-success-story-2025", "permanent": true, "reason": "Closest retained article for the retired brief."},
+  {"source": "/content/briefs/accelerated-ml-cert-success", "destination": "/blog/pmle-study-plan-by-domain", "permanent": true, "reason": "Closest retained article for the retired brief."},
+  {"source": "/content/briefs/accelerated-ml-cert-success.md", "destination": "/blog/pmle-study-plan-by-domain", "permanent": true, "reason": "Closest retained article for the retired brief."},
   {"source": "/content/briefs/gcp-vs-aws-ml-cert-comparison", "destination": "/blog/pmle-vs-aws-ml-vs-azure-ai", "permanent": true, "reason": "Closest retained article for the retired brief."},
   {"source": "/content/briefs/gcp-vs-aws-ml-cert-comparison.md", "destination": "/blog/pmle-vs-aws-ml-vs-azure-ai", "permanent": true, "reason": "Closest retained article for the retired brief."},
   {"source": "/content/briefs/gcp-vs-azure-ml-cert-comparison", "destination": "/blog/pmle-vs-aws-ml-vs-azure-ai", "permanent": true, "reason": "Closest retained article for the retired brief."},

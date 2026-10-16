@@ -9,7 +9,7 @@ describe("local content loader", () => {
   it("returns all preserved catalog routes with bodies and safe publication metadata", () => {
     const blogs = getBlogEntries();
     const faqs = getFaqEntries();
-    expect(blogs).toHaveLength(15);
+    expect(blogs).toHaveLength(13);
     expect(faqs).toHaveLength(9);
     for (const entry of [...blogs, ...faqs]) {
       expect(entry.body.length).toBeGreaterThan(300);
@@ -53,11 +53,6 @@ describe("local content loader", () => {
     expect(entry.body).toContain(picker);
     expect(entry.body.indexOf(picker)).toBeLessThan(entry.body.indexOf("## How the certification paths fit together"));
     expect(entry.body).toContain("related paths, not a required ladder");
-  });
-  it("keeps the historical PMLE update focused on checking current guidance", () => {
-    const entry = getBlogEntry("pmle-october-2024-exam-changes")!;
-    expect(entry.body).toContain("current official exam guide");
-    expect(entry.body).not.toMatch(/Pinecone|Weaviate|Chain-of-thought|New Cost Optimization|Production-Ready Techniques/);
   });
   it("passes each entry's safe title, description and path to canonical/social metadata", () => {
     for (const entry of [...getBlogEntries(), ...getFaqEntries()]) {
