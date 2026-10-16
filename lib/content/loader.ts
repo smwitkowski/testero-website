@@ -36,7 +36,8 @@ export function getBlogEntries(): ContentEntry[] {
       throw new Error(`Blog source requires editorial review: ${item.slug}`);
     }
     return { ...item, exam: contentExam(item), title: overlay.title, description: overlay.description, body: overlay.body,
-      citations: overlay.citations, editorialNotice: BLOG_EDITORIAL_NOTICE,
+      citations: overlay.citations, republished: overlay.historical !== false,
+      editorialNotice: overlay.historical === false ? undefined : BLOG_EDITORIAL_NOTICE,
       publishedAt: typeof document.attributes.publishedAt === "string" ? document.attributes.publishedAt : undefined,
       updatedAt: typeof document.attributes.updatedAt === "string" ? document.attributes.updatedAt : undefined };
   });

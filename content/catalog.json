@@ -1,6 +1,60 @@
 {
   "blog": [
     {
+      "slug": "pmle-exam-changes-june-2026",
+      "title": "PMLE exam changes: June 2026 guide explained",
+      "href": "/blog/pmle-exam-changes-june-2026"
+    },
+    {
+      "slug": "pmle-exam-domains-weights",
+      "title": "PMLE exam domains and weights explained (2026)",
+      "href": "/blog/pmle-exam-domains-weights"
+    },
+    {
+      "slug": "vertex-ai-agent-platform-name-mapping",
+      "title": "Vertex AI to Agent Platform: PMLE Name Mapping",
+      "href": "/blog/vertex-ai-agent-platform-name-mapping"
+    },
+    {
+      "slug": "pmle-exam-format-cost-languages-2026",
+      "title": "PMLE Exam Format, Cost, and Languages in 2026",
+      "href": "/blog/pmle-exam-format-cost-languages-2026"
+    },
+    {
+      "slug": "pmle-passing-score",
+      "title": "PMLE Passing Score: What Google Actually Reports",
+      "href": "/blog/pmle-passing-score"
+    },
+    {
+      "slug": "pmle-study-plan-by-domain",
+      "title": "PMLE study plan by domain: use your diagnostic results",
+      "href": "/blog/pmle-study-plan-by-domain"
+    },
+    {
+      "slug": "ace-exam-guide-2026",
+      "title": "Associate Cloud Engineer exam guide (2026)",
+      "href": "/blog/ace-exam-guide-2026",
+      "exam": "Associate Cloud Engineer"
+    },
+    {
+      "slug": "pca-exam-guide-2026",
+      "title": "Professional Cloud Architect exam guide (2026)",
+      "href": "/blog/pca-exam-guide-2026",
+      "exam": "Professional Cloud Architect"
+    },
+    {
+      "slug": "pde-exam-guide-2026",
+      "title": "Professional Data Engineer exam guide (2026)",
+      "href": "/blog/pde-exam-guide-2026",
+      "exam": "Professional Data Engineer"
+    },
+    {
+      "slug": "which-google-cloud-certification",
+      "title": "Which Google Cloud certification should I take?",
+      "href": "/blog/which-google-cloud-certification",
+      "exam": "other Google Cloud certifications"
+    },
+    {
       "slug": "accelerated-google-ml-certification-30-day-success-story-2025",
       "title": "Accelerated Google ML Certification: 30-Day Success Story (2025)",
       "href": "/blog/accelerated-google-ml-certification-30-day-success-story-2025"
