@@ -15,7 +15,7 @@ function noPaidContent(value: unknown) {
     noPaidContent(child);
   }
 }
-test("local signed webhook grants paid explanations and unlimited practice; refund wins over replay", async ({ page, browser }) => {
+test("local return fulfillment grants paid explanations and unlimited practice; refund wins over replay", async ({ page, browser }) => {
   test.setTimeout(process.env.TESTERO_V3_SCREENSHOTS ? 240_000 : 120_000);
   const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!);
   expect(url.hostname).toBe("127.0.0.1"); expect(url.port).toBe("56541");
@@ -141,11 +141,17 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     expect((await retryCheckout.json()).href).toBe(destination.href);
     const paid = await fixture("pay", { sessionId });
     paymentIds.push(paid.intent.id);
-    const completionId = await deliver("checkout.session.completed", paid.session);
+    // Stripe is paid, but no webhook was delivered. The authenticated return repairs access.
+    const recovered = await page.request.get(`/api/billing/status?session_id=${sessionId}`);
+    expect(recovered.status()).toBe(200);
+    expect((await recovered.json()).status).toBe("active");
     const pass = await service.from("pmle_passes").select("id,paid_at,expires_at,refunded_at").eq("user_id", userId).single();
     expect(pass.error).toBeNull(); expect(pass.data!.refunded_at).toBeNull();
     expect(Date.parse(pass.data!.expires_at) - Date.parse(pass.data!.paid_at)).toBe(90 * 24 * 60 * 60 * 1000);
+    const completionId = await deliver("checkout.session.completed", paid.session);
     await deliver("checkout.session.completed", paid.session, completionId);
+    const replayed = await service.from("pmle_passes").select("id,paid_at,expires_at,refunded_at").eq("user_id", userId).single();
+    expect(replayed.data).toEqual(pass.data);
     const duplicateCharge = await page.request.post("/api/billing/checkout", { data: {} });
     expect(await duplicateCharge.json()).toEqual({ href: "/account", alreadyActive: true });
     await page.reload(); await expect(page.getByText("Your PMLE Pass is active.", { exact: true })).toBeVisible();

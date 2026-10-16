@@ -343,6 +343,12 @@ try {
   const grantFirstId = await scalar(service(phase3FulfillSQL(grantFirstFixture)));
   await run(service(phase3ReceiptSQL(grantFirstFixture)));
   const granted = await phase3Snapshot(grantFirstFixture, grantFirstId, false);
+  const purchaseClaimSQL = `UPDATE public.pmle_passes SET purchase_completed_at=now()
+    WHERE id=${q(grantFirstId)} AND refunded_at IS NULL AND purchase_completed_at IS NULL RETURNING id`;
+  const purchaseClaims = await Promise.all(Array.from({ length: 8 }, () => run(service(purchaseClaimSQL))));
+  assert.equal(purchaseClaims.filter(result => result.output === grantFirstId).length, 1,
+    "eight parallel return/webhook analytics claims have exactly one winner");
+  await run(`UPDATE public.pmle_passes SET purchase_completed_at=NULL WHERE id=${q(grantFirstId)}`);
   await phase3ReceiptRace(grantFirstFixture);
   const revoked = await phase3Snapshot(grantFirstFixture, grantFirstId, true);
   assert.deepEqual(revoked, {

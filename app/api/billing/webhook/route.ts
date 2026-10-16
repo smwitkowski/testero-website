@@ -1,9 +1,9 @@
 import type Stripe from "stripe";
 import { StripeService } from "@/lib/stripe/stripe-service";
-import { grantPmlePass, isPaidPassSession, refundPmlePass, stripeId } from "@/lib/stripe/pmle-pass";
+import { fulfillCheckoutSession, isPaidPassSession, refundPmlePass, stripeId } from "@/lib/stripe/pmle-pass";
+import { HANDLED_STRIPE_EVENTS } from "@/lib/stripe/events";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { billingJson, billingErrorResponse } from "@/lib/billing/http";
-import { trackPurchaseCompleted } from "@/lib/analytics/server";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
   try {
@@ -26,24 +26,15 @@ export async function POST(request: Request) {
       // Parallel deliveries may create the same ledger row. Entitlement RPCs are idempotent.
       if (error && error.code !== "23505") throw error;
     }
-    let purchasedSession: string | null = null;
     try {
-      switch (event.type) {
+      if (HANDLED_STRIPE_EVENTS.some(type => type === event.type)) switch (event.type) {
         case "checkout.session.completed":
         case "checkout.session.async_payment_succeeded": {
           const delivered = event.data.object as Stripe.Checkout.Session;
           const session = await stripe.retrieveCheckoutSession(delivered.id);
           if (session.id !== delivered.id) throw new Error("Checkout identity mismatch");
           if (!isPaidPassSession(session)) break;
-          const { refunded } = await grantPmlePass(stripe, db, session);
-          // The RPC shares the fulfillment/refund payment-intent lock and derives
-          // ownership/refund state inside the transaction, never from this snapshot.
-          const { error } = await db.rpc("record_pmle_pass_payment", {
-            p_stripe_payment_intent_id: stripeId(session.payment_intent),
-            p_amount: session.amount_total ?? 0, p_currency: session.currency ?? "usd",
-          });
-          if (error) throw error;
-          if (!refunded) purchasedSession = session.id;
+          await fulfillCheckoutSession(stripe, db, session);
           break;
         }
         case "charge.refunded": {
@@ -52,22 +43,6 @@ export async function POST(request: Request) {
           if (!intentId) break;
           // Any refund (including partial) revokes access. RPC tombstones survive reordering.
           await refundPmlePass(db, intentId, new Date(event.created * 1000).toISOString());
-          break;
-        }
-        case "customer.subscription.updated":
-        case "customer.subscription.deleted": {
-          // Maintain existing legacy rows only. Never create new tiers or subscriptions.
-          const delivered = event.data.object as Stripe.Subscription;
-          const { data: owned, error: ownedError } = await db.from("user_subscriptions")
-            .select("id, stripe_customer_id").eq("stripe_subscription_id", delivered.id).maybeSingle();
-          if (ownedError) throw ownedError;
-          if (!owned) break;
-          const current = await stripe.retrieveSubscription(delivered.id);
-          if (current.id !== delivered.id || stripeId(current.customer) !== owned.stripe_customer_id) throw new Error("Subscription ownership mismatch");
-          const { error } = await db.from("user_subscriptions").update({
-            status: current.status, cancel_at_period_end: current.cancel_at_period_end, updated_at: new Date().toISOString(),
-          }).eq("id", owned.id).eq("stripe_customer_id", owned.stripe_customer_id);
-          if (error) throw error;
           break;
         }
       }
@@ -79,7 +54,6 @@ export async function POST(request: Request) {
       await db.from("webhook_events").update({ error: "Billing processing failed" }).eq("stripe_event_id", event.id);
       throw error;
     }
-    if (purchasedSession) await trackPurchaseCompleted(purchasedSession);
     return billingJson({ received: true });
   } catch (error) { return billingErrorResponse(error); }
 }
