@@ -8,7 +8,7 @@ Checked October 16, 2026 against the local certification registry and directly f
 - Study scenarios, artifacts, role choices and recommendations are original editorial exercises, not factual descriptions of actual exam items or outcome predictions. No sample question text or answer keys are reproduced.
 - Site facts (free PMLE diagnostic, non-PMLE notification CTAs, PMLE-only practice) come from the app and D-036, not Google. Publication dates are October 16, 2026 for this editorial release; they are not exam revision dates.
 - All numeric exam facts in the three non-PMLE guides use the standard exam, never a renewal exam. Tax qualifications and approximate weights are retained.
-- All 15 certification links are intentional in the comparison article; the other articles have 3–5 internal links. No tool routes are added or linked before they exist.
+- All 15 certification links are intentional in the comparison article; the other articles have 3–5 internal links. No tool routes are added. The certification path article links to `/tools/which-google-cloud-certification` with explicit approval; the picker route ships separately in PR #243.
 
 ## Article inventory
 
@@ -25,7 +25,7 @@ Counts use whitespace-separated Markdown body tokens, excluding frontmatter. The
 | Associate Cloud Engineer exam guide (2026) | `/blog/ace-exam-guide-2026` | 1071 |
 | Professional Cloud Architect exam guide (2026) | `/blog/pca-exam-guide-2026` | 1168 |
 | Professional Data Engineer exam guide (2026) | `/blog/pde-exam-guide-2026` | 1249 |
-| Which Google Cloud certification should I take? | `/blog/which-google-cloud-certification` | 1651 |
+| Google Cloud certification path: all 15 certs compared | `/blog/google-cloud-certification-path` | 1675 |
 
 ## Claim → official source
 
@@ -196,8 +196,8 @@ Fetched evidence is retained in the worker research folder, not served by the si
 ## Verification of the final publication sources
 
 - Independent source review: all ten articles passed after unsupported historical subsection/order comparisons were removed; all 18 mapping rows checked against the official table.
-- Clean environment (`env -i PATH="$PATH" HOME="$HOME" CI=true`): `npm test` passed 972 tests in 51 files; `npm run lint`, `npm run typecheck`, and `docker build -t testero-content-1016 .` exited 0.
-- Final image: `sha256:94287452d2e283fb14a71084862288216cfe6e22ad1016f50182ac2b4cc83e6e`. Local production container returned HTTP 200 for all ten articles. Verified each H1, description, canonical, BlogPosting headline/datePublished/dateModified, checked date, absence of historical notice, appropriate footer CTA and sitemap inclusion.
+- Clean environment (`env -i PATH="$PATH" HOME="$HOME" CI=true`): `npm test` passed 973 tests in 51 files; `npm run lint`, `npm run typecheck`, and `docker build -t testero-content-1016 .` exited 0.
+- Final image: `sha256:ea3b73b4f44cde80d865da55f32e7106d146ab6c735e7fd601855d9745418986`. Local production container returned HTTP 200 for all ten articles. Verified each H1, description, canonical, BlogPosting headline/datePublished/dateModified, checked date, absence of historical notice, appropriate footer CTA and sitemap inclusion.
 - New source bytes match their reviewed publication hashes. Existing historical source files and overlays are unchanged. No active redirect rules, tool routes or dependencies changed.
 - Docker emitted the existing `SecretsUsedInArgOrEnv` warning for the placeholder `SUPABASE_SERVICE_ROLE_KEY` environment declaration. No credential was supplied to this build. This content task does not alter Docker configuration.
 - These checks prove local production rendering, not deployment, Google indexing, live Stripe/cloud behavior or future exam availability.
@@ -205,3 +205,9 @@ Fetched evidence is retained in the worker research folder, not served by the si
 ## Redirect decision (not enabled)
 
 D-031 requires founder approval. Commented proposals only: `/blog/pmle-october-2024-exam-changes` → `/blog/pmle-exam-changes-june-2026`; `/blog/accelerated-google-ml-certification-30-day-success-story-2025` → `/blog/pmle-study-plan-by-domain`. Existing legacy pages remain live. No like-for-like replacement for `/blog/5-hardest-pmle-questions` is proposed here.
+
+## Certification path keyword separation revision
+
+The unpublished comparison article now uses `/blog/google-cloud-certification-path` and the title “Google Cloud certification path: all 15 certs compared” (54 characters), with a 148-character description. Its opening and headings frame paths by level and role, not a personal-selection quiz. The prominent near-top link reads “Want a personal shortlist? Try the certification picker” and targets `/tools/which-google-cloud-certification` (approved cross-PR link to #243). Catalog, reviewed source hash, article inventory and sitemap regression use the new slug. No redirect was added.
+
+After the revision, clean-env tests passed 973 tests/51 files; lint, typecheck and Docker build exited 0. All ten articles rendered successfully in the revised production image. The new path returned HTTP 200 with matching H1, description, canonical and BlogPosting; the old unpublished blog path returned 404 without a redirect and is absent from the sitemap. The new path is in the sitemap and the picker link renders with the requested label. The picker itself is provided by PR #243, not verified as a live route in this branch.

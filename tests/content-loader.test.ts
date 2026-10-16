@@ -45,6 +45,15 @@ describe("local content loader", () => {
       expect(entry.body).toContain("Testero is independent and not affiliated with Google.");
     }
   });
+  it("separates the certification path comparison from the personal picker", () => {
+    const entry = getBlogEntry("google-cloud-certification-path")!;
+    expect(entry.href).toBe("/blog/google-cloud-certification-path");
+    expect(entry.title).toBe("Google Cloud certification path: all 15 certs compared");
+    const picker = "[Want a personal shortlist? Try the certification picker](/tools/which-google-cloud-certification)";
+    expect(entry.body).toContain(picker);
+    expect(entry.body.indexOf(picker)).toBeLessThan(entry.body.indexOf("## How the certification paths fit together"));
+    expect(entry.body).toContain("related paths, not a required ladder");
+  });
   it("keeps the historical PMLE update focused on checking current guidance", () => {
     const entry = getBlogEntry("pmle-october-2024-exam-changes")!;
     expect(entry.body).toContain("current official exam guide");
