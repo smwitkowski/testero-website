@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import catalog from "@/content/catalog.json";
 import { certifications, certificationPath } from "@/lib/certifications/catalog";
+import { toolPaths } from "@/lib/tools/pages";
 
 /** Public production origin. Preview hosts and request headers never set canonicals. */
 export const SITE_ORIGIN = "https://testero.ai";
@@ -9,6 +10,7 @@ export const SOCIAL_IMAGE = `${SITE_ORIGIN}/og-v2.png`;
 
 export const publicPaths: readonly string[] = [
   "/", "/diagnostic", "/pricing", "/blog", "/faq", "/terms", "/privacy", "/certifications",
+  ...toolPaths,
   ...certifications.map(cert => certificationPath(cert.cert_id)),
   ...catalog.blog.map(entry => entry.href),
   ...catalog.faq.map(entry => entry.href),
