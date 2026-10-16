@@ -1,0 +1,256 @@
+{
+  "lighthouse": {
+    "before": {
+      "home": {
+        "url": "http://127.0.0.1:3116/",
+        "fetchTime": "2026-10-16T15:14:42.798Z",
+        "lighthouseVersion": "12.8.2",
+        "formFactor": "mobile",
+        "scores": {
+          "performance": 94,
+          "accessibility": 100,
+          "best-practices": 100,
+          "seo": 100
+        },
+        "metrics": {
+          "first-contentful-paint": {
+            "value": 761.3006,
+            "unit": "millisecond"
+          },
+          "largest-contentful-paint": {
+            "value": 3016.9509,
+            "unit": "millisecond"
+          },
+          "speed-index": {
+            "value": 761.3006,
+            "unit": "millisecond"
+          },
+          "total-blocking-time": {
+            "value": 19,
+            "unit": "millisecond"
+          },
+          "cumulative-layout-shift": {
+            "value": 0,
+            "unit": "unitless"
+          }
+        }
+      },
+      "blog": {
+        "url": "http://127.0.0.1:3116/blog",
+        "fetchTime": "2026-10-16T15:15:18.719Z",
+        "lighthouseVersion": "12.8.2",
+        "formFactor": "mobile",
+        "scores": {
+          "performance": 94,
+          "accessibility": 100,
+          "best-practices": 100,
+          "seo": 100
+        },
+        "metrics": {
+          "first-contentful-paint": {
+            "value": 760.8739,
+            "unit": "millisecond"
+          },
+          "largest-contentful-paint": {
+            "value": 3016.31085,
+            "unit": "millisecond"
+          },
+          "speed-index": {
+            "value": 760.8739,
+            "unit": "millisecond"
+          },
+          "total-blocking-time": {
+            "value": 25,
+            "unit": "millisecond"
+          },
+          "cumulative-layout-shift": {
+            "value": 0,
+            "unit": "unitless"
+          }
+        }
+      },
+      "post": {
+        "url": "http://127.0.0.1:3116/blog/5-hardest-pmle-questions",
+        "fetchTime": "2026-10-16T15:15:18.952Z",
+        "lighthouseVersion": "12.8.2",
+        "formFactor": "mobile",
+        "scores": {
+          "performance": 97,
+          "accessibility": 100,
+          "best-practices": 100,
+          "seo": 100
+        },
+        "metrics": {
+          "first-contentful-paint": {
+            "value": 759.1253999999999,
+            "unit": "millisecond"
+          },
+          "largest-contentful-paint": {
+            "value": 2563.6881,
+            "unit": "millisecond"
+          },
+          "speed-index": {
+            "value": 759.1253999999999,
+            "unit": "millisecond"
+          },
+          "total-blocking-time": {
+            "value": 12,
+            "unit": "millisecond"
+          },
+          "cumulative-layout-shift": {
+            "value": 0,
+            "unit": "unitless"
+          }
+        }
+      }
+    },
+    "after": {
+      "home": {
+        "url": "http://127.0.0.1:3116/",
+        "fetchTime": "2026-10-16T15:31:01.018Z",
+        "lighthouseVersion": "12.8.2",
+        "formFactor": "mobile",
+        "scores": {
+          "performance": 99,
+          "accessibility": 100,
+          "best-practices": 100,
+          "seo": 100
+        },
+        "metrics": {
+          "first-contentful-paint": {
+            "value": 1071.97185,
+            "unit": "millisecond"
+          },
+          "largest-contentful-paint": {
+            "value": 1814.6479,
+            "unit": "millisecond"
+          },
+          "speed-index": {
+            "value": 1071.97185,
+            "unit": "millisecond"
+          },
+          "total-blocking-time": {
+            "value": 15.5,
+            "unit": "millisecond"
+          },
+          "cumulative-layout-shift": {
+            "value": 0,
+            "unit": "unitless"
+          }
+        }
+      },
+      "blog": {
+        "url": "http://127.0.0.1:3116/blog",
+        "fetchTime": "2026-10-16T15:31:21.289Z",
+        "lighthouseVersion": "12.8.2",
+        "formFactor": "mobile",
+        "scores": {
+          "performance": 99,
+          "accessibility": 100,
+          "best-practices": 100,
+          "seo": 100
+        },
+        "metrics": {
+          "first-contentful-paint": {
+            "value": 1065.6642000000002,
+            "unit": "millisecond"
+          },
+          "largest-contentful-paint": {
+            "value": 2164.8856000000005,
+            "unit": "millisecond"
+          },
+          "speed-index": {
+            "value": 1065.6642000000002,
+            "unit": "millisecond"
+          },
+          "total-blocking-time": {
+            "value": 23.5,
+            "unit": "millisecond"
+          },
+          "cumulative-layout-shift": {
+            "value": 0,
+            "unit": "unitless"
+          }
+        }
+      },
+      "post": {
+        "url": "http://127.0.0.1:3116/blog/5-hardest-pmle-questions",
+        "fetchTime": "2026-10-16T15:31:57.407Z",
+        "lighthouseVersion": "12.8.2",
+        "formFactor": "mobile",
+        "scores": {
+          "performance": 99,
+          "accessibility": 100,
+          "best-practices": 100,
+          "seo": 100
+        },
+        "metrics": {
+          "first-contentful-paint": {
+            "value": 1059.5545499999998,
+            "unit": "millisecond"
+          },
+          "largest-contentful-paint": {
+            "value": 2262.7393999999995,
+            "unit": "millisecond"
+          },
+          "speed-index": {
+            "value": 1059.5545499999998,
+            "unit": "millisecond"
+          },
+          "total-blocking-time": {
+            "value": 18,
+            "unit": "millisecond"
+          },
+          "cumulative-layout-shift": {
+            "value": 0,
+            "unit": "unitless"
+          }
+        }
+      }
+    }
+  },
+  "cacheHeadersAfter": {
+    "/": {
+      "status": 200,
+      "cacheControl": "s-maxage=31536000",
+      "setCookie": false
+    },
+    "/blog": {
+      "status": 200,
+      "cacheControl": "s-maxage=31536000",
+      "setCookie": false
+    },
+    "/blog/5-hardest-pmle-questions": {
+      "status": 200,
+      "cacheControl": "s-maxage=31536000",
+      "setCookie": false
+    },
+    "/faq": {
+      "status": 200,
+      "cacheControl": "s-maxage=31536000",
+      "setCookie": false
+    },
+    "/faq/how-long-is-the-google-ml-engineer-exam": {
+      "status": 200,
+      "cacheControl": "s-maxage=31536000",
+      "setCookie": false
+    },
+    "/pricing": {
+      "status": 200,
+      "cacheControl": "s-maxage=31536000",
+      "setCookie": false
+    },
+    "/api/auth/navigation": {
+      "status": 200,
+      "cacheControl": "private, no-store",
+      "setCookie": false
+    },
+    "/api/billing/access": {
+      "status": 200,
+      "cacheControl": "private, no-store",
+      "setCookie": false
+    }
+  },
+  "cacheHeaderBefore": "private, no-cache, no-store, max-age=0, must-revalidate",
+  "baselineNote": "Blog and post baseline ran concurrently; final measurements ran sequentially. Single local runs, not production field data."
+}
