@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, logoutSchema, confirmationSchema } from "@/lib/auth/validation";
-import { safeNext, signupDestination } from "@/lib/auth/redirects";
+import { confirmationNext, safeNext, signupDestination } from "@/lib/auth/redirects";
 const valid = { email: "learner@example.com", password: "12345678" };
 describe("strict auth bodies", () => {
   it("normalizes email and defaults to the dashboard", () => {
@@ -35,4 +35,24 @@ describe("callback validation", () => {
   it.each([{}, { type: "signup" }, { token_hash: "a".repeat(64) }, { token_hash: "a".repeat(64), type: "email" }, { token_hash: "a".repeat(64), type: "signup", flow: "recovery" }, { token_hash: "a".repeat(64), type: "signup", code: "abcdefgh" }, { code: "abcdefgh", userId: "foreign" }, { code: "bad" }])("rejects invalid/ambiguous callback %#", params => expect(confirmationSchema.safeParse(params).success).toBe(false));
   it.each(["signup", "recovery"])("accepts hash callback %s", type => expect(confirmationSchema.safeParse({ token_hash: "a".repeat(64), type }).success).toBe(true));
   it("accepts PKCE", () => expect(confirmationSchema.safeParse({ code: "abcd1234-abcd-1234" }).success).toBe(true));
+});
+
+describe("signup email next path", () => {
+  const origin = "https://testero.ai";
+  it.each([
+    "https://evil.example/auth/confirm?next=/pricing", "//evil.example/auth/confirm?next=/pricing",
+    "https://user@testero.ai/auth/confirm?next=/pricing", "/other?next=/pricing",
+    "/auth/confirm?next=/pricing&next=/dashboard", "/auth/confirm?flow=signup",
+    "/auth/confirm?next=//evil.example", "/auth/confirm?next=https://testero.ai/pricing",
+    "/auth/confirm?next=/%255cevil.example", "/auth/confirm?next=/a/..//evil.example",
+  ])("rejects unsafe email redirect %#", redirectTo => expect(confirmationNext(redirectTo, origin, "/pricing")).toBe("/dashboard"));
+  it.each([undefined, ""]) ("uses a safe default for an empty RedirectTo %#", redirectTo => {
+    expect(confirmationNext(redirectTo, origin, "/dashboard")).toBe("/dashboard");
+  });
+  it.each(["/auth/confirm?next=%2Fdiagnostic%2Fowned%2Fresults", "https://testero.ai/auth/confirm?next=%2Fdiagnostic%2Fowned%2Fresults&flow=signup"])("keeps a local results path from %s", redirectTo => {
+    expect(confirmationNext(redirectTo, origin, "/dashboard")).toBe("/diagnostic/owned/results");
+  });
+  it("never permits a full URL in the actual next parameter", () => {
+    expect(confirmationSchema.parse({ token_hash: "a".repeat(64), type: "signup", next: "https://testero.ai/pricing" }).next).toBe("/dashboard");
+  });
 });

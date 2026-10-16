@@ -24,12 +24,12 @@ function ResendConfirmation({ email, next }: { email: string; next: string }) {
       const response = await fetch("/api/auth/resend", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: String(new FormData(event.currentTarget).get("email") ?? ""), next }) });
       const result = await response.json() as { error?: string; message?: string };
       if (!response.ok) setError(result.error ?? "Unable to complete this request. Please try again.");
-      else setMessage(result.message ?? "Check your email for a new link.");
+      else setMessage(result.message ?? "If an account exists, we sent a new confirmation link.");
     } catch { setError("Unable to complete this request. Please try again."); }
     finally { setPending(false); }
   }
   return <section aria-labelledby="resend-heading" className="space-y-3 rounded-md border border-border bg-muted p-4">
-    <h2 id="resend-heading" className="font-semibold">Need a new confirmation email?</h2>
+    <h2 id="resend-heading" className="font-semibold">Didn’t get the confirmation email?</h2>
     {message ? <p role="status">{message}</p> : <form onSubmit={submit} className="space-y-3">
       <fieldset disabled={pending} className="space-y-3">
         <div className="space-y-2"><label htmlFor="resend-email" className="block text-sm font-medium">Email address</label><input id="resend-email" name="email" type="email" autoComplete="email" required maxLength={254} defaultValue={email} className="min-h-12 w-full rounded-md border border-input bg-card px-3 focus-visible:outline-2 focus-visible:outline-ring" /></div>
@@ -44,7 +44,6 @@ export function AuthForm({ mode, next = "/dashboard", confirmationFailed = false
   const [pending, setPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(confirmationFailed ? (mode === "forgot-password" ? RECOVERY_FAILED : CONFIRMATION_FAILED) : "");
-  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const emailRequired = mode !== "reset-password";
   const passwordRequired = mode !== "forgot-password";
@@ -58,13 +57,12 @@ export function AuthForm({ mode, next = "/dashboard", confirmationFailed = false
     if (emailRequired) body.email = String(data.get("email") ?? "");
     if (passwordRequired) body.password = String(data.get("password") ?? "");
     if (mode !== "reset-password") body.next = destination;
-    setPending(true); setError(""); setMessage(""); setUnconfirmedEmail(null);
+    setPending(true); setError(""); setMessage("");
     try {
       const response = await fetch(`/api/auth/${mode}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const result = await response.json() as { error?: string; message?: string; href?: string; userId?: string; unconfirmed?: boolean };
+      const result = await response.json() as { error?: string; message?: string; href?: string; userId?: string };
       if (!response.ok) {
         setError(result.error ?? "Unable to complete this request. Please try again.");
-        if (mode === "login" && result.unconfirmed) setUnconfirmedEmail(body.email);
         return;
       }
       if (mode === "login" && result.userId) identifyAnalytics(result.userId);
@@ -86,7 +84,7 @@ export function AuthForm({ mode, next = "/dashboard", confirmationFailed = false
         </form>
       )}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      {(unconfirmedEmail !== null || (confirmationFailed && mode !== "forgot-password" && mode !== "reset-password")) && <ResendConfirmation key={unconfirmedEmail ?? ""} email={unconfirmedEmail ?? ""} next={destination} />}
+      {(mode === "login" || (confirmationFailed && mode === "signup")) && <ResendConfirmation email="" next={destination} />}
       <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-primary">
         {mode === "signup" && <Link href={`/login?next=${encodeURIComponent(destination)}`} className="hover:underline">Already have an account? Sign in</Link>}
         {mode === "login" && <><Link href={`/signup?next=${encodeURIComponent(destination)}`} className="hover:underline">Create an account</Link><Link href="/forgot-password" className="hover:underline">Forgot password?</Link></>}

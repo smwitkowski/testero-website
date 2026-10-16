@@ -11,6 +11,6 @@ export async function POST(request: Request) {
     if (!user) return authResponse({ error: AUTH_MESSAGES.unauthenticated }, 401);
     const { error } = await supabase.auth.updateUser({ password: data.password });
     if (error) return authResponse({ error: AUTH_MESSAGES.unavailable }, 400);
-    return authResponse({ message: "Your password has been updated.", href: "/dashboard" });
+    return authResponse({ message: "Your password has been updated.", href: "/dashboard?message=password-updated" });
   } catch (error) { return authErrorResponse(error); }
 }

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getVerifiedUser, claimVerifiedDiagnostics } from "@/lib/auth/session";
 import { confirmationSchema } from "@/lib/auth/validation";
-import { requestOrigin, signupDestination } from "@/lib/auth/redirects";
+import { confirmationNext, requestOrigin, signupDestination } from "@/lib/auth/redirects";
 export const runtime = "nodejs";
 function destination(request: Request, path: string) {
   const response = NextResponse.redirect(new URL(path, requestOrigin(request)), 303);
@@ -33,6 +33,6 @@ export async function GET(request: Request) {
     if (flow === "recovery") return destination(request, "/reset-password");
     await claimVerifiedDiagnostics(user);
     if (flow === "signup") scheduleFunnelEvent(request, "signup_completed", user.id, {}, `signup_completed:${user.id}`);
-    return destination(request, flow === "signup" ? signupDestination(data.next) : data.next);
+    return destination(request, flow === "signup" ? signupDestination(confirmationNext(data.redirect_to, requestOrigin(request), data.next)) : data.next);
   } catch { return invalid(); }
 }
