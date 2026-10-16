@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-const sdk = vi.hoisted(() => ({ init: vi.fn(), capture: vi.fn(), identify: vi.fn(), reset: vi.fn(), get_distinct_id: vi.fn(() => "anonymous-id") }));
+const sdk = vi.hoisted(() => ({ init: vi.fn(), capture: vi.fn(), identify: vi.fn(), reset: vi.fn(), set_config: vi.fn(), stopSessionRecording: vi.fn(), get_distinct_id: vi.fn(() => "anonymous-id") }));
 vi.mock("posthog-js", () => ({ default: sdk }));
 beforeEach(() => {
   vi.resetModules(); sdk.init.mockReset(); sdk.capture.mockReset(); sdk.identify.mockReset(); sdk.reset.mockReset();
@@ -21,9 +21,26 @@ describe("private analytics event wiring", () => {
   });
   it("initializes once with masked recording and persistent identity", async () => {
     const analytics = await import("@/lib/analytics/client");
-    analytics.initializeAnalytics(); analytics.initializeAnalytics();
+    analytics.initializeAnalytics("/diagnostic"); analytics.initializeAnalytics("/diagnostic");
     expect(sdk.init).toHaveBeenCalledOnce();
     expect(sdk.init).toHaveBeenCalledWith("unit-placeholder-not-a-real-key", expect.objectContaining({ api_host: "http://127.0.0.1:56545", autocapture: false, disable_session_recording: false, session_recording: { maskAllInputs: true, maskTextSelector: "*" }, persistence: "localStorage+cookie", person_profiles: "identified_only" }));
+  });
+  it("keeps recording and surveys off on content routes and switches on app navigation", async () => {
+    const analytics = await import("@/lib/analytics/client");
+    analytics.configureAnalyticsForPath("/blog?utm_source=reddit");
+    expect(sdk.init).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ disable_session_recording: true, disable_surveys: true }));
+    analytics.configureAnalyticsForPath("/diagnostic");
+    expect(sdk.set_config).toHaveBeenLastCalledWith({ disable_session_recording: false });
+    for (const path of ["/", "/faq/how-long", "/pricing", "/blog/post"]) {
+      analytics.configureAnalyticsForPath("/practice/session");
+      analytics.configureAnalyticsForPath(path);
+      expect(sdk.set_config).toHaveBeenLastCalledWith({ disable_session_recording: true });
+    }
+    expect(sdk.stopSessionRecording).toHaveBeenCalled();
+    vi.stubGlobal("window", { location: { origin: "https://testero.ai" } });
+    analytics.trackPageview("/blog?utm_source=reddit&utm_campaign=pmle");
+    expect(sdk.capture).toHaveBeenCalledWith("$pageview", { $current_url: "https://testero.ai/blog?utm_source=reddit&utm_campaign=pmle" });
+    vi.unstubAllGlobals();
   });
   it("sends signup completion without any user, email, or token properties", async () => {
     const analytics = await import("@/lib/analytics/client");

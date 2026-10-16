@@ -5,9 +5,9 @@ import { PMLE_BLUEPRINT, PMLE_BLUEPRINT_MAP } from "@/lib/constants/pmle-bluepri
 import { pageMetadata } from "@/lib/seo";
 import { getFaqEntries } from "@/lib/content/loader";
 import { isComingSoon } from "@/lib/content/exam";
+import { RelatedPmleGuides } from "@/components/related-pmle-guides";
 
-// The root layout's "%s | Testero" template does not apply to its own page.
-export const metadata = { ...pageMetadata("Know where to focus your PMLE study", "Take a free PMLE diagnostic, find your weakest exam domains, and practice with a free account or PMLE Pass.", "/"), title: { absolute: "Know where to focus your PMLE study | Testero" } };
+export const metadata = { ...pageMetadata("Free PMLE Practice Test & Readiness Diagnostic", "Take a free 20-question PMLE diagnostic across the six June 2026 exam-guide domains. See your readiness and study focus, with no account needed.", "/"), title: { absolute: "Free PMLE Practice Test & Readiness Diagnostic | Testero" } };
 
 const steps = [
   { title: "Take the diagnostic", cost: "Free", body: "20 scenario questions across the six exam domains. No account needed." },
@@ -49,7 +49,8 @@ export default function HomePage() {
       <h2 id="domains" className="text-2xl font-semibold">What the diagnostic covers</h2>
       <ol className="grid border-t border-border sm:grid-cols-2 sm:gap-x-8">{PMLE_BLUEPRINT.map((domain, index) => <li key={domain.domainCode} className="flex gap-3.5 border-b border-border py-3.5"><span className="text-muted-foreground">{index + 1}</span><span>{domain.displayName}</span></li>)}</ol>
     </section>
-    <section aria-labelledby="questions" className="space-y-5 rounded-lg border border-border bg-card p-6 sm:p-9"><h2 id="questions" className="text-2xl font-semibold">Before you get started</h2><div className="divide-y divide-border">{faqs.map((faq) => <article key={faq.slug} className="space-y-2 py-5"><h3 className="text-lg font-semibold"><Link className="text-foreground underline hover:text-primary" href={faq.href}>{faq.title}</Link></h3><p className="leading-relaxed text-muted-foreground">{faq.description}</p></article>)}</div><Link className="text-sm font-medium text-primary underline" href="/faq">Read all exam FAQs</Link></section>
+    <div className="grid gap-8 lg:grid-cols-2"><RelatedPmleGuides home />
+    <section aria-labelledby="questions" className="space-y-5 rounded-lg border border-border bg-card p-6 sm:p-9"><h2 id="questions" className="text-2xl font-semibold">Before you get started</h2><div className="divide-y divide-border">{faqs.map((faq) => <article key={faq.slug} className="space-y-2 py-5"><h3 className="text-lg font-semibold"><Link className="text-foreground underline hover:text-primary" href={faq.href}>{faq.title}</Link></h3><p className="leading-relaxed text-muted-foreground">{faq.description}</p></article>)}</div><Link className="text-sm font-medium text-primary underline" href="/faq">Read all exam FAQs</Link></section></div>
     <section aria-labelledby="pass" className="on-dark flex flex-wrap items-center justify-between gap-x-12 gap-y-6 rounded-lg bg-foreground p-6 text-card sm:p-9">
       <div className="min-w-0 flex-1 basis-96 space-y-2"><h2 id="pass" className="text-2xl font-semibold">PMLE Pass</h2><p className="leading-relaxed text-on-dark-secondary">Explanations for every option and unlimited 5-question practice sessions for 90 days. One-time payment, no auto-renewal, 7-day refund. A refund ends pass access.</p></div>
       <div className="flex flex-wrap items-center gap-6"><p className="text-4xl font-semibold">$39 <span className="text-base font-normal text-on-dark-secondary">USD</span></p><Button asChild variant="outline" className="border-card bg-transparent text-card hover:bg-card/10"><Link href="/pricing">Compare plans</Link></Button></div>

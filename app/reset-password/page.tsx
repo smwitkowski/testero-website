@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AuthForm } from "@/components/auth-form";
 import { safeNext } from "@/lib/auth/redirects";
 import { requireUser } from "@/lib/auth/require-user";
-export const metadata: Metadata = { title: "Choose a new password" };
+export const metadata: Metadata = { title: "Choose a new password", description: "Choose a new password for your Testero account and return to PMLE practice.", robots: { index: false, follow: false } };
 export default async function AuthPage({ searchParams }: { searchParams: Promise<{ next?: string; message?: string }> }) {
   await requireUser("/reset-password");
   const params = await searchParams;

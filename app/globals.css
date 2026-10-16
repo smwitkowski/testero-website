@@ -42,7 +42,7 @@
   --color-solid: var(--solid);
   --color-solid-background: var(--solid-background);
   --color-on-dark-secondary: var(--on-dark-secondary);
-  --font-sans: var(--font-ibm-plex-sans);
+  --font-sans: "Testero IBM Plex Sans", var(--font-ibm-plex-sans);
 }
 
 body { background: var(--background); color: var(--foreground); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
