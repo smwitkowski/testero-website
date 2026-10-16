@@ -16,6 +16,8 @@ export interface ContentEntry {
   exam: string;
   citations: string[];
   publishedAt?: string;
+  updatedAt?: string;
+  republished?: boolean;
   editorialNotice?: string;
 }
 
@@ -35,7 +37,8 @@ export function getBlogEntries(): ContentEntry[] {
     }
     return { ...item, exam: contentExam(item), title: overlay.title, description: overlay.description, body: overlay.body,
       citations: overlay.citations, editorialNotice: BLOG_EDITORIAL_NOTICE,
-      publishedAt: typeof document.attributes.publishedAt === "string" ? document.attributes.publishedAt : undefined };
+      publishedAt: typeof document.attributes.publishedAt === "string" ? document.attributes.publishedAt : undefined,
+      updatedAt: typeof document.attributes.updatedAt === "string" ? document.attributes.updatedAt : undefined };
   });
 }
 
@@ -80,8 +83,10 @@ export function getFaqEntries(): ContentEntry[] {
     // official certification directory rather than silently sending readers to 404.
     const body = publication.body.replace(/\]\(\/content\/[^)]+\)/g, "](https://cloud.google.com/learn/certification)");
     const plainDescription = body.split("\n\n")[0].replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/[*_`]/g, "");
-    const description = sentenceExcerpt(plainDescription);
+    const description = item.description ?? sentenceExcerpt(plainDescription, 150, 150);
     return { ...item, exam: contentExam(item), description, body, editorialNotice: publication.editorialNotice,
+      publishedAt: typeof document.attributes.publishedAt === "string" ? document.attributes.publishedAt : item.publishedAt,
+      updatedAt: typeof document.attributes.updatedAt === "string" ? document.attributes.updatedAt : undefined,
       citations: Array.isArray(sources) ? sources.filter((value) => typeof value === "string" && safeHref(value)) : [] };
   });
 }

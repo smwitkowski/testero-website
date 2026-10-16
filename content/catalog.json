@@ -33,53 +33,80 @@
       "slug": "what-is-google-cloud-certification",
       "title": "What are Google Cloud certifications?",
       "href": "/faq/what-is-google-cloud-certification",
-      "exam": "other Google Cloud certifications"
+      "exam": "other Google Cloud certifications",
+      "description": "Understand Google Cloud certification paths and how to compare their objectives with the skills you want to build.",
+      "publishedAt": "2026-10-04",
+      "republished": true
     },
     {
       "slug": "is-google-cloud-certification-worth-it",
       "title": "Are Google Cloud certifications worth it?",
       "href": "/faq/is-google-cloud-certification-worth-it",
-      "exam": "other Google Cloud certifications"
+      "exam": "other Google Cloud certifications",
+      "description": "Weigh certification goals, practical experience, preparation costs and role requirements before choosing a Google Cloud credential.",
+      "publishedAt": "2026-10-04",
+      "republished": true
     },
     {
       "slug": "what-are-the-five-sections-of-the-associate-cloud-engineer-certification-by-google",
-      "title": "What are the five sections of the Associate Cloud Engineer certification by Google?",
+      "title": "What does the Associate Cloud Engineer exam cover?",
       "href": "/faq/what-are-the-five-sections-of-the-associate-cloud-engineer-certification-by-google",
-      "exam": "Associate Cloud Engineer"
+      "exam": "Associate Cloud Engineer",
+      "description": "Review the Associate Cloud Engineer exam sections and check the official guide for current objectives.",
+      "publishedAt": "2026-10-04",
+      "republished": true
     },
     {
       "slug": "how-much-does-google-cloud-digital-leader-cost",
       "title": "How much does Google Cloud Digital Leader cost?",
       "href": "/faq/how-much-does-google-cloud-digital-leader-cost",
-      "exam": "Cloud Digital Leader"
+      "exam": "Cloud Digital Leader",
+      "description": "Find official Cloud Digital Leader exam pricing guidance and consider preparation costs before booking.",
+      "publishedAt": "2026-10-04",
+      "republished": true
     },
     {
       "slug": "how-do-you-register-for-google-cloud-certification",
       "title": "How do you register for Google Cloud certifications?",
       "href": "/faq/how-do-you-register-for-google-cloud-certification",
-      "exam": "other Google Cloud certifications"
+      "exam": "other Google Cloud certifications",
+      "description": "Find official Google Cloud certification registration guidance and check current booking and delivery requirements.",
+      "publishedAt": "2026-10-04",
+      "republished": true
     },
     {
       "slug": "how-long-to-complete-google-data-analytics-certification",
-      "title": "How long does it take to complete the Google Data Analytics certification?",
+      "title": "How long does the Google Data Analytics certificate take?",
       "href": "/faq/how-long-to-complete-google-data-analytics-certification",
-      "exam": "Google Data Analytics Professional Certificate"
+      "exam": "Google Data Analytics Professional Certificate",
+      "description": "Plan Google Data Analytics certificate study around your experience, weekly availability and the current course requirements.",
+      "publishedAt": "2026-10-04",
+      "republished": true
     },
     {
       "slug": "is-google-data-analytics-certification-worth-it",
       "title": "Is the Google Data Analytics certification worth it?",
       "href": "/faq/is-google-data-analytics-certification-worth-it",
-      "exam": "Google Data Analytics Professional Certificate"
+      "exam": "Google Data Analytics Professional Certificate",
+      "description": "Compare the Google Data Analytics certificate with your career goals, practical experience and preparation budget.",
+      "publishedAt": "2026-10-04",
+      "republished": true
     },
     {
       "slug": "is-the-google-professional-machine-learning-engineer-certification-worth-it",
-      "title": "Is the Google Professional Machine Learning Engineer certification worth it?",
-      "href": "/faq/is-the-google-professional-machine-learning-engineer-certification-worth-it"
+      "title": "Is the Google PMLE certification worth it?",
+      "href": "/faq/is-the-google-professional-machine-learning-engineer-certification-worth-it",
+      "description": "Consider the Google Professional Machine Learning Engineer certification against your experience, goals and preparation costs.",
+      "publishedAt": "2026-10-04",
+      "republished": true
     },
     {
       "slug": "how-long-is-the-google-ml-engineer-exam",
-      "title": "How long is the Google Professional Machine Learning Engineer exam?",
-      "href": "/faq/how-long-is-the-google-ml-engineer-exam"
+      "title": "How long is the Google PMLE exam?",
+      "href": "/faq/how-long-is-the-google-ml-engineer-exam",
+      "description": "Check PMLE exam duration and official guidance, then plan your preparation and exam-day schedule.",
+      "publishedAt": "2026-10-04",
+      "republished": true
     }
   ]
 }

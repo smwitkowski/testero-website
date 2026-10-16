@@ -25,7 +25,7 @@ export function canonicalUrl(path: string): string {
 }
 
 /** Per-page metadata: avoid inheriting the landing page's canonical or social text. */
-export function pageMetadata(title: string, description: string, path: string): Metadata {
+export function pageMetadata(title: string, description: string, path: string, article?: { publishedAt?: string; updatedAt?: string }): Metadata {
   const url = canonicalUrl(path);
   const socialTitle = `${title} | Testero`;
   return {
@@ -33,7 +33,8 @@ export function pageMetadata(title: string, description: string, path: string): 
     description,
     alternates: { canonical: url },
     openGraph: {
-      type: "website", siteName: "Testero", locale: "en_US", url,
+      ...(article ? { type: "article" as const, publishedTime: article.publishedAt, modifiedTime: article.updatedAt ?? article.publishedAt } : { type: "website" as const }),
+      siteName: "Testero", locale: "en_US", url,
       title: socialTitle, description,
       images: [{ url: SOCIAL_IMAGE, width: 1200, height: 630, alt: "Testero — PMLE readiness diagnostic" }],
     },
