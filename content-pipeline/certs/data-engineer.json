@@ -8,6 +8,11 @@
   "status": "catalog-listed",
   "registration_status": "not_stated",
   "canonical_exam_code": null,
+  "recommended_experience": "3+ years of industry experience including 1+ years designing and managing solutions using Google Cloud.",
+  "recommended_experience_source": {
+    "url": "https://cloud.google.com/learn/certification/data-engineer",
+    "retrieved_at": "2026-10-16T16:04:01.536431Z"
+  },
   "retirement": null,
   "announcements": [
     "This exam will soon be updated to reflect recent branding changes. Refer to the exam guide to review product names used on the exam."
@@ -997,6 +1002,19 @@
     }
   ],
   "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification/data-engineer",
+      "final_url": "https://cloud.google.com/learn/certification/data-engineer",
+      "retrieved_at": "2026-10-16T16:04:01.536431Z",
+      "role": "recommended_experience",
+      "content_type": "text/html; charset=utf-8",
+      "verified_fields": [
+        "recommended_experience",
+        "canonical_exam_code",
+        "exam_variants.validity_stated"
+      ],
+      "verification_scope": "Experience, exam code and validity only; other exam facts and guides not rechecked."
+    },
     {
       "url": "https://cloud.google.com/learn/certification",
       "final_url": "https://cloud.google.com/learn/certification",

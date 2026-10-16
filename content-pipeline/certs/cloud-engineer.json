@@ -8,6 +8,11 @@
   "status": "catalog-listed",
   "registration_status": "not_stated",
   "canonical_exam_code": null,
+  "recommended_experience": "6+ months hands on experience with Google Cloud",
+  "recommended_experience_source": {
+    "url": "https://cloud.google.com/learn/certification/cloud-engineer",
+    "retrieved_at": "2026-10-16T16:04:00.955188Z"
+  },
   "retirement": null,
   "announcements": [
     "This exam was updated to reflect recent branding changes. Refer to the exam guide to review product names used on the exam."
@@ -1241,6 +1246,19 @@
     }
   ],
   "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification/cloud-engineer",
+      "final_url": "https://cloud.google.com/learn/certification/cloud-engineer",
+      "retrieved_at": "2026-10-16T16:04:00.955188Z",
+      "role": "recommended_experience",
+      "content_type": "text/html; charset=utf-8",
+      "verified_fields": [
+        "recommended_experience",
+        "canonical_exam_code",
+        "exam_variants.validity_stated"
+      ],
+      "verification_scope": "Experience, exam code and validity only; other exam facts and guides not rechecked."
+    },
     {
       "url": "https://cloud.google.com/learn/certification",
       "final_url": "https://cloud.google.com/learn/certification",
