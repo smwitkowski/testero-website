@@ -17,17 +17,18 @@ function findLink(node: ReactElement): ReactElement<{ onClick: () => void }> | u
   }
 }
 beforeEach(() => { vi.clearAllMocks(); mocks.data = null; mocks.error = null; });
-it("shows all rationales and the signup-to-pricing CTA, then tracks its click", () => {
+it.each([5, 10, 20])("shows rationales, report control and count-safe CTA for %i questions", totalQuestions => {
+  const report = { ...result, totalQuestions };
   mocks.data = question;
-  const node = FreeDiagnosticExplanation({ result });
+  const node = FreeDiagnosticExplanation({ result: report });
   const html = renderToStaticMarkup(node);
   expect(html).toContain("Why wrong"); expect(html).toContain("Why right");
   expect(html).toContain("Report a problem with this question");
-  expect(html).toContain("Unlock explanations for all 20 + unlimited practice: $39 one-time, 90 days");
+  expect(html).toContain("Unlock explanations for all questions + unlimited practice: $39 one-time, 90 days");
   expect(html).toContain('href="/signup?next=%2Fpricing"');
-  expect(mocks.track).toHaveBeenCalledWith("free_explanation_viewed", result);
+  expect(mocks.track).toHaveBeenCalledWith("free_explanation_viewed", report);
   findLink(node)!.props.onClick();
-  expect(mocks.track).toHaveBeenCalledWith("unlock_cta_clicked", result);
+  expect(mocks.track).toHaveBeenCalledWith("unlock_cta_clicked", report);
 });
 it("does not track a viewed explanation while loading or failed, and offers retry", () => {
   expect(renderToStaticMarkup(createElement(FreeDiagnosticExplanation, { result }))).toContain("Loading your free explanation");

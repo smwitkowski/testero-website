@@ -30,6 +30,9 @@ for (const count of [5, 10]) {
     expect(domains.size).toBe(count === 5 ? 5 : 6);
     await page.goto(`/diagnostic/${sessionId}/results`);
     await expect(page.getByRole("heading", { name: "A lower-confidence snapshot" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "One full explanation, free", exact: true })).toBeVisible();
+    await expect(page.getByText("Report a problem with this question", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Unlock explanations for all questions + unlimited practice: $39 one-time, 90 days", exact: true })).toHaveAttribute("href", "/signup?next=%2Fpricing");
     const result = await (await page.request.get(`${api}/results`)).json();
     expect(result.totalQuestions).toBe(count);
     expect(result.review).toBeUndefined();
