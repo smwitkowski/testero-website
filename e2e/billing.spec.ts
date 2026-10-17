@@ -169,10 +169,14 @@ test("local return fulfillment grants paid explanations and unlimited practice; 
     await captureV3(page, "account");
     await page.goto(`/diagnostic/${diagnosticId}/results`);
     await expect(page.getByRole("heading", { name: "Question review", exact: true })).toBeVisible();
-    await expect(page.getByText("Explanation", { exact: true }).first()).toBeVisible();
     const paidReview = await (await page.request.get(`/api/diagnostic/${diagnosticId}/results`)).json() as DiagnosticResult;
     expect(paidReview.review!.every(item => item.explanation && item.options.every(option => option.explanation))).toBe(true);
     assertRestoredPaidReview(paidReview.review!, diagnosticBank);
+    await expect(page.getByRole("heading", { name: "Explanation", exact: true })).toHaveCount(0);
+    const firstReview = page.locator("#question-review-heading + ol > li").first();
+    for (const option of paidReview.review![0].options) {
+      await expect(firstReview.getByText(option.explanation!, { exact: true })).toHaveCount(1);
+    }
     await layout("diagnostic-paid");
     const paidPracticeIds: string[] = [];
     for (let i = 0; i < 3; i++) {
@@ -196,8 +200,20 @@ test("local return fulfillment grants paid explanations and unlimited practice; 
     const withContent = await page.request.post(`/api/practice/${paidPracticeId}/answer`, { data: { itemId: first.data!.id, selectedLabel: first.data!.selected_label } });
     const liveFeedback = (await withContent.json()).feedback as PracticeAnswerResponse["feedback"];
     expect(liveFeedback.optionExplanations).toHaveLength(4);
-    await expect(page.getByText(liveFeedback.explanation!, { exact: true })).toHaveCount(1);
-    await completePractice(paidPracticeIds[1], true);
+    await expect(page.getByRole("heading", { name: "Explanation", exact: true })).toHaveCount(0);
+    for (const option of liveFeedback.optionExplanations!) {
+      await expect(page.getByText(option.explanation, { exact: true })).toHaveCount(1);
+    }
+    const paidSummary = await completePractice(paidPracticeIds[1], true);
+    await page.goto(`/practice/${paidPracticeIds[1]}/summary`);
+    await expect(page.getByRole("heading", { name: "Your practice summary", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Explanation", exact: true })).toHaveCount(0);
+    for (const [index, question] of paidSummary.review.entries()) {
+      const reviewItem = page.locator("#question-review-heading + ol > li").nth(index);
+      for (const option of question.options) {
+        await expect(reviewItem.getByText(option.explanation!, { exact: true })).toHaveCount(1);
+      }
+    }
 
     const refunded = await fixture("refund", { paymentIntentId: paid.intent.id });
     await deliver("charge.refunded", refunded.charge);

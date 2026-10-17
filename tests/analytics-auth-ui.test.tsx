@@ -1,15 +1,16 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { createElement, type FormEvent, type ReactElement } from "react";
+import { createElement, useState, type FormEvent, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AuthForm } from "@/components/auth-form";
 import { LogoutButton } from "@/components/logout-button";
 import { AnalyticsIdentity } from "@/components/analytics-identity";
 import { Button } from "@/components/ui/button";
+import { AUTH_MESSAGES } from "@/lib/auth/errors";
 
 const mocks = vi.hoisted(() => ({ identify: vi.fn(), reset: vi.fn(), assign: vi.fn() }));
 vi.mock("react", async importOriginal => {
   const actual = await importOriginal<typeof import("react")>();
-  return { ...actual, useState: (value: unknown) => [value, vi.fn()],
+  return { ...actual, useState: vi.fn((value: unknown) => [value, vi.fn()]),
     useEffect: (effect: () => void) => { effect(); } };
 });
 vi.mock("@/lib/analytics/client", () => ({ identifyAnalytics: mocks.identify, resetAnalytics: mocks.reset }));
@@ -63,6 +64,31 @@ it("identifies the verified server user when the identity component mounts", () 
   const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   expect(AnalyticsIdentity({ userId })).toBeNull();
   expect(mocks.identify.mock.calls).toEqual([[userId]]);
+});
+
+it("offers sign-in and password reset links in the generic signup success message", () => {
+  vi.mocked(useState).mockImplementationOnce(() => [false, vi.fn()] as never)
+    .mockImplementationOnce(() => [false, vi.fn()] as never)
+    .mockImplementationOnce(() => ["", vi.fn()] as never)
+    .mockImplementationOnce(() => [AUTH_MESSAGES.signup, vi.fn()] as never);
+  const form = AuthForm({ mode: "signup" });
+  const success = find(form, "h2")!;
+  expect(renderToStaticMarkup(success)).toContain("Check your email");
+  const status = (form.props as { children: ReactElement[] }).children[0];
+  const html = renderToStaticMarkup(status);
+  expect(html).toContain(AUTH_MESSAGES.signup);
+  expect(html).toContain('Already have an account? <a');
+  expect(html).toMatch(/href="\/login"[^>]*>Sign in<\/a>/);
+  expect(html).toMatch(/href="\/forgot-password"[^>]*>reset your password<\/a>/);
+  expect(html).not.toMatch(/account already exists|email already registered/i);
+});
+it("does not show signup recovery help before submission or after a password reset request", () => {
+  expect(renderToStaticMarkup(createElement(AuthForm, { mode: "signup" }))).not.toContain("reset your password");
+  vi.mocked(useState).mockImplementationOnce(() => [false, vi.fn()] as never)
+    .mockImplementationOnce(() => [false, vi.fn()] as never)
+    .mockImplementationOnce(() => ["", vi.fn()] as never)
+    .mockImplementationOnce(() => [AUTH_MESSAGES.recovery, vi.fn()] as never);
+  expect(renderToStaticMarkup(createElement(AuthForm, { mode: "forgot-password" }))).not.toContain("Already have an account?");
 });
 
 it("offers a confirmation resend without revealing account state", () => {

@@ -74,7 +74,11 @@ export function AuthForm({ mode, next = "/dashboard", confirmationFailed = false
   }
   return (
     <div className="max-w-md space-y-6">
-      {message ? <div role="status" className="rounded-md border border-border bg-muted p-4 leading-relaxed"><h2 className="mb-2 text-xl font-semibold">Check your email</h2>{message}</div> : (
+      {message ? <div role="status" className="rounded-md border border-border bg-muted p-4 leading-relaxed">
+        <h2 className="mb-2 text-xl font-semibold">Check your email</h2>
+        <p>{message}</p>
+        {mode === "signup" && <p className="mt-3">Already have an account? <Link href="/login" className="font-medium text-primary hover:underline">Sign in</Link> or <Link href="/forgot-password" className="font-medium text-primary hover:underline">reset your password</Link>.</p>}
+      </div> : (
         <form onSubmit={submit} className="space-y-5">
           <fieldset disabled={pending} className="space-y-5">
             {emailRequired && <div className="space-y-2"><label htmlFor="email" className="block text-sm font-medium">Email</label><input id="email" name="email" type="email" autoComplete="email" required maxLength={254} className="min-h-12 w-full rounded-md border border-input bg-card px-3 focus-visible:outline-2 focus-visible:outline-ring" /></div>}

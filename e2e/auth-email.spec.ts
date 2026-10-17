@@ -58,6 +58,11 @@ test("confirm and reset links work in another browser; unconfirmed sign-in and e
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Create account", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
+    const success = page.getByRole("status").filter({ has: page.getByRole("heading", { name: "Check your email", exact: true }) });
+    await expect(success).toContainText("Already have an account? Sign in or reset your password.");
+    await expect(success.getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/login");
+    await expect(success.getByRole("link", { name: "reset your password", exact: true })).toHaveAttribute("href", "/forgot-password");
+    const signupMessage = await success.textContent();
     const [firstSignup] = await mailLinks(page.request, email, "signup", 1);
 
     // Unconfirmed and wrong-password attempts show the same message and resend form.
@@ -88,6 +93,15 @@ test("confirm and reset links work in another browser; unconfirmed sign-in and e
       await expect(other).toHaveURL(/\/dashboard\?signup=confirmed$/);
       await expect(other.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
     });
+    // Confirmed accounts get exactly the same generic signup help, not an account-exists response.
+    await page.goto("/signup");
+    await page.getByLabel("Email", { exact: true }).fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByRole("button", { name: "Create account", exact: true }).click();
+    await expect(success).toHaveText(signupMessage!);
+    await success.getByRole("link", { name: "reset your password", exact: true }).click();
+    await expect(page).toHaveURL(/\/forgot-password$/);
+
     // A superseded or used link explains itself and offers a new email.
     await inFreshBrowser(browser, async other => {
       await other.goto(firstSignup);
