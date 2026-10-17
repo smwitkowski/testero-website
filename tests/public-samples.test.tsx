@@ -44,6 +44,16 @@ describe("public-only PMLE sample publication", () => {
     expect(sitemap().map(entry => entry.url)).toContain("https://testero.ai/pmle/sample-questions");
     expect(renderToStaticMarkup(<RelatedPmleGuides exam="Professional Machine Learning Engineer" />)).toContain('href="/pmle/sample-questions"');
   });
+  it("renders all ten reviewed public samples with four choices each", () => {
+    const questions = getPublicSamples();
+    expect(questions).toHaveLength(10);
+    const html = renderToStaticMarkup(<Page />);
+    expect((html.match(/<fieldset/g) ?? [])).toHaveLength(10);
+    expect((html.match(/type="radio"/g) ?? [])).toHaveLength(40);
+    for (const question of questions) expect(html).toContain(`id="sample-${question.id}"`);
+    expect(html).not.toContain("Samples are being prepared");
+    expect(html).toContain("application/ld+json");
+  });
   it("hides feedback until reveal and renders every rationale and source once revealed", () => {
     let html = renderToStaticMarkup(<PublicSampleQuestion question={sample} index={0} />);
     expect(html).toContain('type="radio"');
