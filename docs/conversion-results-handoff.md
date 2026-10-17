@@ -4,7 +4,7 @@ PR: https://github.com/smwitkowski/testero-website/pull/260
 Commit: 3f84c9b (implementation).
 
 ## Verified
-Clean-env npm test: 59 files / 1073 tests pass. Clean-env lint and typecheck pass, including final reruns after e2e additions. Docker build is still running at handoff creation; do not infer success.
+Clean-env npm test: 59 files / 1073 tests pass. Clean-env lint and typecheck pass, including final reruns after e2e additions. Docker build exit0; image sha256:66735e59ff232626ccb1b4450279bf85b5efdfa6609787f17988c9099e496be6. Existing Dockerfile build-placeholder SUPABASE_SERVICE_ROLE_KEY triggers Docker SecretsUsedInArgOrEnv warning (no actual credential supplied).
 
 `npm run qa:local` failed before browser tests: local migration history contains 20261017190000 absent from this checkout. No repair/reset attempted. Browser assertions are written but unexecuted. Another top-level workstream is actively using shared local DB; coordinate exclusive lease before any DB/flow commands.
 
