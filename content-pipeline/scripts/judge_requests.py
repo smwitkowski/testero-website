@@ -129,7 +129,7 @@ def _read_request(path, ident, canonical, *, with_digest=False):
                 or not re.fullmatch(r"[0-9a-f]{64}", request["decision_provenance_sha256"])
                 or not isinstance(request["gates"], dict) or set(request["gates"]) != set(GATE_SIGNATURES)):
             raise RequestValidationError("Request must contain all current independent gates")
-        for name, signature in gate_signatures(request["gate_version"], distractor_evidence=request.get("distractor_evidence")).items():
+        for name, signature in gate_signatures(request["gate_version"], distractor_evidence=request.get("distractor_evidence"), cert_id=request["objective_id"].split(":", 1)[0]).items():
             gate = request["gates"][name]
             if (not isinstance(gate, dict) or set(gate) != {"judge_prompt", "verdict_schema"}
                     or not isinstance(gate["judge_prompt"], str) or not gate["judge_prompt"].strip()

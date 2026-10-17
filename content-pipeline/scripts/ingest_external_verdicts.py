@@ -402,8 +402,12 @@ def ingest(path, verdicts, *, dry_run=False):
                 or (bank["sha256"] is not None and (not isinstance(bank["sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", bank["sha256"])) )):
             raise click.ClickException("Missing or malformed local export snapshot for near-duplicate checks")
         for row in bank["questions"]:
-            if (not isinstance(row, dict) or set(row) != {"id", "stem", "key"}
-                    or not isinstance(row["id"], str) or not row["id"].strip()):
+            if (not isinstance(row, dict) or not {"id", "stem", "key"} <= set(row)
+                    or set(row) - {"id", "stem", "key", "cert_id", "objective_id"}
+                    or not isinstance(row["id"], str) or not row["id"].strip()
+                    or ("objective_id" in row and (not isinstance(row["objective_id"], str) or not row["objective_id"].strip()))
+                    or row.get("cert_id", payload["cert_id"]) != payload["cert_id"]
+                    or (payload["cert_id"] != "machine-learning-engineer" and row.get("cert_id") != payload["cert_id"])):
                 raise click.ClickException("Malformed local export snapshot")
             tokens(row["stem"]); tokens(row["key"])
         near_seen = list(bank["questions"])

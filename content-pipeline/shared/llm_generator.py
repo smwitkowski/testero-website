@@ -822,27 +822,29 @@ def generate_question(
     difficulty: str = "MEDIUM",
     exam_subsection: str = "",
     prompt_version: Optional[str] = None,
-    *, reasoning_effort: str = "high", include_evidence: bool = False,
+    *, reasoning_effort: str = "high", include_evidence: bool = False, cert_id: str | None = None,
 ) -> Dict[str, Any]:
     """Generate a question, optionally including receipts in the writer call."""
     if include_evidence:
         return generate_question_with_evidence(
             domain_context, documentation_context, model, difficulty, exam_subsection,
-            prompt_version, reasoning_effort=reasoning_effort)
+            prompt_version, reasoning_effort=reasoning_effort, cert_id=cert_id)
     from dspy.utils.exceptions import AdapterParseError
     if (not isinstance(domain_context, str) or not domain_context.strip()
             or not isinstance(documentation_context, str) or not documentation_context.strip()):
         raise ValueError("Registry objective scope and fetched documentation are required")
+    from shared.question_style import practitioner_signature
+    signature = practitioner_signature(PmleQuestionSignature, cert_id)
     if model == "codex" or model.startswith("codex/"):
         from shared.cli_models import run_signature
-        return run_signature(model, PmleQuestionSignature, {
+        return run_signature(model, signature, {
             "domain_context": domain_context, "documentation_context": documentation_context,
             "difficulty": difficulty, "exam_subsection": exam_subsection or "",
             "gap_analysis_guidance": "",
         }, reasoning_effort=reasoning_effort)
     lm = _generation_lm(model, max_tokens=GENERATION_MAX_TOKENS)
     adapter = CompletionCaptureAdapter()
-    predictor = dspy.ChainOfThought(PmleQuestionSignature)
+    predictor = dspy.ChainOfThought(signature)
     try:
         with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
             result = predictor(
@@ -938,7 +940,7 @@ def generate_question_with_evidence(
     domain_context: str, documentation_context: str,
     model: str = "openai/gpt-4o", difficulty: str = "MEDIUM",
     exam_subsection: str = "", prompt_version: Optional[str] = None,
-    *, reasoning_effort: str = "high", predictor=None,
+    *, reasoning_effort: str = "high", predictor=None, cert_id: str | None = None,
 ) -> Dict[str, Any]:
     """Write question and receipts once; the caller checks them against full docs.
 
@@ -953,7 +955,8 @@ def generate_question_with_evidence(
     inputs = dict(domain_context=domain_context, documentation_context=documentation_context,
                   difficulty=difficulty, exam_subsection=exam_subsection or "",
                   gap_analysis_guidance="")
-    signature = QuestionWithEvidenceSignature
+    from shared.question_style import practitioner_signature
+    signature = practitioner_signature(QuestionWithEvidenceSignature, cert_id)
     if predictor is not None:
         raw = predictor(**inputs)
     elif model == "codex" or model.startswith("codex/"):

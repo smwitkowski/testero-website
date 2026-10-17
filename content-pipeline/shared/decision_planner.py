@@ -170,7 +170,9 @@ def plan_decision(scope, *, model, difficulty="MEDIUM", replacement_feedback="",
               "replacement_feedback": replacement_feedback,
               "existing_scenarios": json.dumps(existing_scenarios, ensure_ascii=False)}
     from shared.cli_models import output_model
-    output = predictor(**inputs) if predictor else _predict(DecisionPlanSignature, inputs, model, reasoning_effort)
+    from shared.question_style import practitioner_signature
+    signature = practitioner_signature(DecisionPlanSignature, scope.get("cert_id"))
+    output = predictor(**inputs) if predictor else _predict(signature, inputs, model, reasoning_effort)
     plan = output_model(DecisionPlanSignature).model_validate(output).model_dump()["plan"]
     if plan["objective_id"] != scope["objective_id"]:
         raise ValueError("Decision plan changed the selected objective")
