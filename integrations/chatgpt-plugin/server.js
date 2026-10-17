@@ -63,7 +63,7 @@ const { questions } = JSON.parse(readFileSync(new URL("./data/demo-questions.jso
 const labels = ["A", "B", "C", "D"];
 const tokenLifetimeMs = 60 * 60 * 1000;
 const maxTokens = 1000;
-const diagnostic = "Get a full readiness diagnostic at https://testero.ai/diagnostic";
+const diagnostic = "Continue on testero.ai: take the free 20-question diagnostic — https://testero.ai/diagnostic?utm_source=chatgpt&utm_medium=plugin";
 
 const reply = (data) => ({
   content: [{ type: "text", text: JSON.stringify(data) }],

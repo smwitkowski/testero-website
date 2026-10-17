@@ -10,7 +10,7 @@ import { createHttpServer } from '../server.js';
 
 const { questions } = JSON.parse(await readFile(new URL('../data/demo-questions.json', import.meta.url), 'utf8'));
 const labels = ['A', 'B', 'C', 'D'];
-const diagnostic = 'Get a full readiness diagnostic at https://testero.ai/diagnostic';
+const diagnostic = 'Continue on testero.ai: take the free 20-question diagnostic — https://testero.ai/diagnostic?utm_source=chatgpt&utm_medium=plugin';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 async function start(t) {
@@ -87,6 +87,11 @@ function assertGrading(result, question, chosenText, demo) {
   const correct = demo.options.find(option => option.correct);
   assert.equal(answer.correct, chosen.correct);
   assert.equal(answer.diagnostic, diagnostic);
+  const handoff = new URL(answer.diagnostic.match(/https:\/\/\S+$/)[0]);
+  assert.equal(handoff.origin, 'https://testero.ai');
+  assert.equal(handoff.pathname, '/diagnostic');
+  assert.equal(handoff.searchParams.get('utm_source'), 'chatgpt');
+  assert.equal(handoff.searchParams.get('utm_medium'), 'plugin');
   for (const [key, approved] of [['chosen_option', chosen], ['correct_option', correct]]) {
     const displayed = question.options.find(option => option.text === approved.text);
     exactKeys(answer[key], ['label', 'text', 'explanation', 'doc_url', 'doc_quote']);

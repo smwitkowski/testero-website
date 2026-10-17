@@ -140,6 +140,25 @@ Installing the package does **not** start the server or tunnel. A custom MCP
 connection does **not** install the skill. Avoid enabling duplicate tool
 connections in the same test chat.
 
+## Site CTA and diagnostic handoff
+
+The site CTA is OFF by default. After plugin approval and a working listing,
+set `NEXT_PUBLIC_CHATGPT_CTA_ENABLED=true` and `NEXT_PUBLIC_CHATGPT_CTA_URL`
+to the approved HTTPS ChatGPT plugin URL, then rebuild. Docker builds accept
+matching build arguments. These public values are compiled into the browser
+bundle and static pages; changing only runtime environment does not enable them.
+No real listing URL is configured in this prototype.
+
+The secondary CTA appears below diagnostic start/resume controls, on the PMLE
+certification page and in PMLE blog footers only. It describes demo questions,
+not a full bank or synced progress. Its link adds `utm_source=chatgpt-cta`.
+
+`check_answer` returns “Continue on testero.ai: take the free 20-question
+diagnostic” with `utm_source=chatgpt&utm_medium=plugin`. Per OpenAI plugin
+guidelines, this handoff must point to the free diagnostic, never checkout,
+pricing or a paid upsell. The plugin is still an undeployed draft prototype;
+these changes do not establish approval or live ChatGPT validation.
+
 ## Official references
 
 [Package your plugin](https://developers.openai.com/plugins/build/plugins) ·

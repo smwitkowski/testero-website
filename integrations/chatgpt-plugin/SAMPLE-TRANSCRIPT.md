@@ -54,6 +54,6 @@ check_answer({"question_token":"<opaque token from preceding call>","choice":"A"
     "doc_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/optimize/evaluation/evaluate-online",
     "doc_quote": "Configure Metrics: Add the metrics you want to track continuously, such as Safety. Set Sampling: Sampling percentage: Define what percentage of your live traffic should be evaluated. Max samples per run: Set a cap to manage evaluation costs."
   },
-  "diagnostic": "Get a full readiness diagnostic at https://testero.ai/diagnostic"
+  "diagnostic": "Continue on testero.ai: take the free 20-question diagnostic — https://testero.ai/diagnostic?utm_source=chatgpt&utm_medium=plugin"
 }
 ```
