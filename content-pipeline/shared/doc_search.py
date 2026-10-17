@@ -18,7 +18,7 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from threading import Lock
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from shared.cert_registry import content_node
@@ -28,6 +28,13 @@ DISCOVERY_HOST = "docs.cloud.google.com"
 OFFICIAL_DOC_HOSTS = frozenset({DISCOVERY_HOST, "cloud.google.com"})
 MAX_HTML_BYTES = 4 * 1024 * 1024
 OPTION_DOCUMENT_LIMIT = 2
+DISCOVERY_RESERVE_FACTOR = 3
+# Naming aliases are discovery hints only, never fetched evidence.
+PRODUCT_NAMES = (
+    ("Gemini Enterprise Agent Platform", "Vertex AI"),
+    ("Agent Platform", "Vertex AI"),
+)
+
 
 
 class DocumentationError(ValueError):
@@ -138,6 +145,19 @@ def decision_discovery_text(objective_text: str, decision_plan: dict) -> str:
     ])
 
 
+def _product_aliases(query: str) -> str:
+    for current, legacy in PRODUCT_NAMES:
+        if current.casefold() in query.casefold():
+            if legacy.casefold() not in query.casefold():
+                query += f" (formerly {legacy})"
+            break
+        if legacy.casefold() in query.casefold():
+            query = re.sub(re.escape(legacy), current, query, flags=re.I)
+            query += f" (formerly {legacy})"
+            break
+    return query
+
+
 def _discovery_query(objective_text: str, services: list[str]) -> str:
     """Focus objective examples without changing existing question-first queries."""
     fallback = " ".join(["Google Cloud", objective_text, ", ".join(services)])
@@ -162,13 +182,13 @@ def _discover_urls(objective_text: str, services: list[str], num_results: int) -
     if not api_key:
         raise DocumentationError("EXA_API_KEY must be supplied in the environment")
     from exa_py import Exa  # Lazy: imports and pure operations never initialize Exa.
-    query = _discovery_query(objective_text, services)
+    query = _product_aliases(_discovery_query(objective_text, services))
     results = Exa(api_key=api_key).search(
-        query=query, type="neural", num_results=num_results,
+        query=query, type="neural", num_results=num_results * DISCOVERY_RESERVE_FACTOR,
         include_domains=[DISCOVERY_HOST],
     )
     urls = []
-    for result in results.results:
+    for result in results.results[:num_results * DISCOVERY_RESERVE_FACTOR]:
         url = getattr(result, "url", None)
         try:
             approved_documentation_url(url, discovery=True)
@@ -232,6 +252,39 @@ def _fetch_documentation(url: str) -> dict:
     }
 
 
+def _moved_documentation_urls(url: str) -> list[str]:
+    """Bounded path aliases, attempted only after a discovered URL returns 404."""
+    parsed = urlparse(approved_documentation_url(url, discovery=True))
+    paths = []
+    for old, new in (("/vertex-ai/", "/gemini-enterprise-agent-platform/"),
+                     ("/gemini-enterprise-agent-platform/", "/vertex-ai/"),
+                     ("/agent-assist/docs/", "/gemini-enterprise-cx/agent-assist/")):
+        if parsed.path.startswith(old):
+            paths.append(new + parsed.path[len(old):])
+    return [approved_documentation_url(urlunparse(parsed._replace(path=path)), discovery=True)
+            for path in paths]
+
+
+def _fetch_with_path_recovery(url, cache):
+    fetch = _fetch_documentation if cache is None else cache._fetch
+    try:
+        return fetch(url)
+    except HTTPError as exc:
+        if exc.code != 404:
+            raise
+        for replacement in _moved_documentation_urls(url):
+            try:
+                source = fetch(replacement)
+            except _ConflictingDocumentationError:
+                raise
+            except Exception as recovery_error:
+                logger.warning("Could not fetch moved documentation %s: %s", replacement, recovery_error)
+                continue
+            # Preserve the discovered URL while binding evidence to the actual final URL.
+            return {**source, "requested_url": url}
+        raise
+
+
 def _search_objective_docs(objective_text: str, services: list[str], num_results: int,
                            *, cache: DocumentationCache | None = None,
                            objective_id: str | None = None,
@@ -245,10 +298,12 @@ def _search_objective_docs(objective_text: str, services: list[str], num_results
     sources = []
     urls = (_discover_urls(objective_text, services, num_results) if cache is None else
             cache._discover(objective_text, services, num_results, objective_id))
-    for url in urls[:num_results]:
+    for url in dict.fromkeys(urls):
+        if len(sources) >= num_results:
+            break
         approved_documentation_url(url, discovery=True)
         try:
-            source = _fetch_documentation(url) if cache is None else cache._fetch(url)
+            source = _fetch_with_path_recovery(url, cache)
         except _ConflictingDocumentationError:
             raise
         except Exception as exc:
@@ -274,7 +329,8 @@ def search_objective_docs(objective_text: str, services: list[str], *,
     Each record binds requested_url and final url to the same fetched text,
     retrieval timestamp and SHA-256 of the exact UTF-8 text. Raises when empty.
     An optional run-local cache reuses discovery and evidence, including failures.
-    Decision plans add at most two document fetches per option (eight extra);
+    Decision plans retain at most two documents per option (eight extra);
+    bounded reserve results and 404 path aliases do not consume that source cap;
     missing support remains a veto, never permission to invent evidence.
     """
     if decision_plan is None:

@@ -71,7 +71,7 @@ def test_discovery_and_fetch_bind_exact_urls_and_html(monkeypatch):
         assert "+00:00" in source["retrieved_at"]
     assert search.call_args.kwargs == {
         "query": "Google Cloud Select an analytical query tool BigQuery, Cloud Storage",
-        "type": "neural", "num_results": 5, "include_domains": ["docs.cloud.google.com"],
+        "type": "neural", "num_results": 15, "include_domains": ["docs.cloud.google.com"],
     }
     context = docs.documentation_context(sources)
     assert "Fetched storage fact." in context

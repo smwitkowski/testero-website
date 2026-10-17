@@ -1438,3 +1438,10 @@ The selector is repeatable; absent IDs fail closed. A retry reruns all calls for
 the selected candidate; complete verdicts are skipped unchanged. A complete
 atomic verdict replaces no existing result and clears that candidate's failure
 record only after publication. No partial sub-call output is used as evidence.
+
+## Retrieval resilience and flagged evidence inference
+
+See [the retrieval A/B runbook](calibration/retrieval-2026-10-17/README.md) for the
+strict-default `--distractor-evidence` flag, frozen provenance, offline measurements
+and coordinator-only comparison commands. This does not change strict prompts
+or authorize production ingestion.

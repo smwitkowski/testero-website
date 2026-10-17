@@ -1,0 +1,38 @@
+{
+  "recorded_at": "2026-10-17T18:19:50.417807+00:00",
+  "note": "Public HTTP capture; safe headers only. 200 body reduced to an actual text excerpt wrapped in article HTML; no live tests.",
+  "responses": {
+    "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning/distillation": {
+      "status": 404,
+      "headers": {
+        "content-type": "text/html; charset=utf-8"
+      }
+    },
+    "https://docs.cloud.google.com/vertex-ai/models/tuning/distillation": {
+      "status": 404,
+      "headers": {
+        "content-type": "text/html; charset=utf-8"
+      }
+    },
+    "https://docs.cloud.google.com/vertex-ai/generative-ai/docs/models/tune-models": {
+      "status": 301,
+      "headers": {
+        "content-type": "text/html; charset=utf-8",
+        "location": "/gemini-enterprise-agent-platform/models/tuning"
+      }
+    },
+    "https://docs.cloud.google.com/gemini-enterprise-agent-platform/generative-ai/docs/models/tune-models": {
+      "status": 404,
+      "headers": {
+        "content-type": "text/html; charset=utf-8"
+      }
+    },
+    "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning": {
+      "status": 200,
+      "headers": {
+        "content-type": "text/html; charset=utf-8"
+      },
+      "body_file": "tuning-excerpt.html"
+    }
+  }
+}

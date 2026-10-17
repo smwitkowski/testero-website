@@ -29,7 +29,7 @@ def test_rollout_examples_and_comparison_focus_the_actual_discovery_query(exa_se
     assert exa_search.call_args.kwargs == {
         "query": "Google Cloud A/B testing and canary deployments "
                  "Implementing model rollout strategies to compare model versions",
-        "type": "neural", "num_results": 5,
+        "type": "neural", "num_results": 15,
         "include_domains": ["docs.cloud.google.com"],
     }
     query = exa_search.call_args.kwargs["query"]
@@ -48,7 +48,7 @@ def test_rollout_examples_and_comparison_focus_the_actual_discovery_query(exa_se
 def test_example_focus_is_general_and_keeps_objective_context(exa_search, objective, expected):
     docs._discover_urls(objective, BROAD_SERVICES, 3)
     assert exa_search.call_args.kwargs["query"] == expected
-    assert exa_search.call_args.kwargs["num_results"] == 3
+    assert exa_search.call_args.kwargs["num_results"] == 9
 
 
 @pytest.mark.parametrize("objective,services", [
@@ -65,9 +65,9 @@ def test_example_focus_is_general_and_keeps_objective_context(exa_search, object
 ])
 def test_no_examples_preserves_existing_question_and_objective_queries(exa_search, objective, services):
     docs._discover_urls(objective, services, 5)
-    assert exa_search.call_args.kwargs["query"] == " ".join([
+    assert exa_search.call_args.kwargs["query"] == docs._product_aliases(" ".join([
         "Google Cloud", objective, ", ".join(services),
-    ])
+    ]))
 
 
 def test_example_focus_does_not_bypass_official_url_checks(exa_search):
