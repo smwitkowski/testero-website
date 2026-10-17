@@ -18,6 +18,7 @@ supabase
 docs
 README.md
 CLAUDE.md
+CONVERSION-HANDOFF.md
 
 # Google auth artifacts must never enter source or Docker build layers.
 gha-creds-*.json
