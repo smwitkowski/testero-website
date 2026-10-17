@@ -33,15 +33,15 @@ describe("local content loader", () => {
     expect(entries).toHaveLength(10);
     for (const entry of entries) {
       const document = parseFrontmatter(readFileSync(`content/blog/${entry.slug}.md`, "utf8"));
-      expect(entry.body).toBe(document.body);
+      expect(entry.body).toBe(BLOG_PUBLICATION_OVERLAYS[entry.slug].body);
       expect(entry.title).toBe(document.attributes.title);
       expect(entry.description).toBe(document.attributes.description);
       expect(entry.editorialNotice).toBeUndefined();
       expect(entry.title.length).toBeLessThanOrEqual(60);
       expect(entry.description.length).toBeLessThanOrEqual(150);
       expect(entry.publishedAt).toBe("2026-10-16");
-      expect(entry.updatedAt).toBe("2026-10-16");
-      expect(entry.body).toContain("Last checked October 16, 2026");
+      expect(entry.updatedAt).toBe(BLOG_PUBLICATION_OVERLAYS[entry.slug].updatedAt ?? "2026-10-16");
+      expect(entry.body).toContain(entry.updatedAt === "2026-10-17" ? "Updated October 17, 2026" : "Last checked October 16, 2026");
       expect(entry.body).toContain("Testero is independent and not affiliated with Google.");
     }
   });
@@ -81,13 +81,11 @@ describe("local content loader", () => {
     expect(published.editorialNotice).toBe(overlay.notice);
     expect(getFaqEntry(slug)?.editorialNotice).toBe(overlay.notice);
     expect(() => faqDocumentForPublication(slug, `${source}\n`)).toThrow("FAQ source requires editorial review");
-    const untouchedSlug = "how-long-is-the-google-ml-engineer-exam";
-    const untouchedSource = readFileSync(`content/faq/${untouchedSlug}.md`, "utf8");
-    expect(faqDocumentForPublication(untouchedSlug, untouchedSource)).toEqual({ body: parseFrontmatter(untouchedSource).body });
+
   });
-  it("audits exactly six FAQ sources and leaves all text outside each narrow replacement unchanged", () => {
+  it("audits exactly seven FAQ sources and leaves all text outside each narrow replacement unchanged", () => {
     expect(Object.keys(FAQ_PUBLICATION_OVERLAYS).sort()).toEqual([
-      "how-do-you-register-for-google-cloud-certification", "how-much-does-google-cloud-digital-leader-cost",
+      "how-do-you-register-for-google-cloud-certification", "how-long-is-the-google-ml-engineer-exam", "how-much-does-google-cloud-digital-leader-cost",
       "is-google-cloud-certification-worth-it", "is-google-data-analytics-certification-worth-it",
       "is-the-google-professional-machine-learning-engineer-certification-worth-it", "what-is-google-cloud-certification",
     ]);

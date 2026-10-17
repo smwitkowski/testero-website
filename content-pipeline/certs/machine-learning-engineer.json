@@ -518,6 +518,21 @@
     {
       "url": "https://cloud.google.com/learn/certification/machine-learning-engineer",
       "final_url": "https://cloud.google.com/learn/certification/machine-learning-engineer",
+      "retrieved_at": "2026-10-17T00:00:00Z",
+      "role": "certification",
+      "content_type": "text/html; charset=utf-8",
+      "verified_fields": [
+        "exam_variants.standard",
+        "recommended_experience",
+        "announcements",
+        "prerequisites",
+        "renewal"
+      ],
+      "verification_scope": "Certification page fetched October 17, 2026; exam logistics, no prerequisites, experience, renewal wording and update notice verified. Guides and sample questions not re-fetched. Timestamp records verification date only."
+    },
+    {
+      "url": "https://cloud.google.com/learn/certification/machine-learning-engineer",
+      "final_url": "https://cloud.google.com/learn/certification/machine-learning-engineer",
       "retrieved_at": "2026-10-16T16:04:00.782393Z",
       "role": "recommended_experience",
       "content_type": "text/html; charset=utf-8",
