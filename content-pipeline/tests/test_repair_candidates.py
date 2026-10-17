@@ -326,6 +326,7 @@ def add_parent(repairs, index=2):
     payload = saved(repairs)
     original = payload["candidates"][0]
     scope = plan_questions(payload["cert_id"], index, objective_ids=[original["objective_id"]])[index - 1]
+    scope.pop("style_policy")
     entry = deepcopy(original)
     entry.update({key: scope[key] for key in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line", "key_length_rank")})
     entry.update(index=index, stem=original["stem"].replace("a retailer", f"retailer number {index}"))

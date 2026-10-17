@@ -14,6 +14,8 @@ from decimal import Decimal, InvalidOperation, ROUND_FLOOR
 from pathlib import Path
 from typing import Any, Iterator
 
+from shared.objective_style import style_policy
+
 DEFAULT_CERT = "machine-learning-engineer"
 CERTS_DIR = Path(__file__).resolve().parents[1] / "certs"
 # Operational moments come first, so every prefix (including N=1) keeps
@@ -373,6 +375,7 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
             " longest. Keep all options balanced and the mechanical two-word key lead limit."
         )
         plan.append({
+            "style_policy": style_policy(objective["objective_id"]),
             "cert_id": cert_id, "domain_code": code, "domain_name": domain["display_name"],
             "objective_id": objective["objective_id"], "guide_sha256": context["guide_sha256"],
             "objective_offset": offset, "scenario_moment": moment,

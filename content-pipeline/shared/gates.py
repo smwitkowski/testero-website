@@ -223,6 +223,24 @@ def aggregate_gate_verdict(question, raw, *, model="claude", version=GATE_VERSIO
     from shared.quality_gate import JudgeVerdict
     if not isinstance(raw, dict) or set(raw) != set(GATE_SIGNATURES):
         raise ValueError("All three strict gate outputs are required")
+    skipped = [name for name in GATE_SIGNATURES if isinstance(raw[name], dict) and raw[name].get("status") == "skipped"]
+    if skipped:
+        order = ("style", "evidence", "blind_solver")
+        failed_at = None
+        for name in order:
+            if name in skipped:
+                if failed_at is None or raw[name] != {"status": "skipped", "reason": "prior_gate_failed", "gate": failed_at}:
+                    raise ValueError("Invalid skipped gate provenance")
+            else:
+                if failed_at is not None:
+                    raise ValueError("Unexpected gate after short circuit")
+                passed, _ = evaluate_gate(name, raw[name], question, version=version, style_policy=style_policy)
+                if not passed:
+                    failed_at = name
+        if failed_at is None:
+            raise ValueError("Skipped gates cannot approve content")
+        return JudgeVerdict(False, 0.0, "Short circuit: " + failed_at, model,
+                            gate_results=json.loads(json.dumps(raw, allow_nan=False)))
     results = {name: evaluate_gate(name, raw[name], question, version=version, style_policy=style_policy) for name in GATE_SIGNATURES}
     scores = [raw[name]["confidence" if name == "blind_solver" else "score"]
               for name in GATE_SIGNATURES

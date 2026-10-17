@@ -122,7 +122,7 @@ def _build_outputs(artifact, out, payload, *, force):
                 raise ValueError()
             from shared.quality_gate import QuestionQualitySignature
             request = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"],
-                                    **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False)} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
+                                    **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False), "execution_policy": payload.get("execution_policy")} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
             raw = _encode(request)
             if len(raw.decode("utf-8")) > REQUEST_CHARACTER_LIMIT:
                 raise ValueError()

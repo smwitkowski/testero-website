@@ -124,7 +124,8 @@ def test_fail_closed_before_judge_and_database_writes_but_artifact_retains_attem
     else: assert record["stem"]
     if failure in {"quote_missing", "wrong_url"}:
         assert len(record["citation_attempts"]) == 2
-        assert generator.cite_mock.call_args_list[1].kwargs["check_errors"]
+        assert generator.cite_mock.call_count == 1
+        assert generator.cite_mock.call_args_list[0].kwargs["check_errors"]
     else:
         generator.cite_mock.assert_not_called()
 
@@ -248,8 +249,8 @@ def test_real_cite_step_retains_invalid_receipts_without_judge_or_database(gener
     elif failure == "null_evidence": records = None
     values = {"evidence": records}
     if failure == "omitted_evidence": del values["evidence"]
-    # Two mechanical failures exercise the one allowed citation retry.
-    lm = DummyLM([values, values])
+    # Missing writer evidence forces the one allowed citation repair.
+    lm = DummyLM([values])
     monkeypatch.setenv("OPENROUTER_API_KEY", "offline-test-only")
     monkeypatch.setattr(llm_generator.dspy, "LM", lambda **kwargs: lm)
     monkeypatch.setattr(generate, "cite_question", llm_generator.cite_question)
@@ -264,24 +265,25 @@ def test_real_cite_step_retains_invalid_receipts_without_judge_or_database(gener
     assert len(record["citation_attempts"]) == 2
     assert record["error_class"] == "CandidateRejected"
     assert record["error_message"] == record["reason"]
-    if failure == "overlong": assert len(record["citation_attempts"][0]["evidence"][0]["quote"]) == 301
+    if failure == "overlong": assert len(record["citation_attempts"][1]["evidence"][0]["quote"]) == 301
     if failure == "omitted_evidence":
-        assert record["citation_attempts"][0]["parse_failure"]
-        assert len(record["citation_attempts"][0].get("raw_response", "")) <= 2048
+        assert record["citation_attempts"][1]["parse_failure"]
+        assert len(record["citation_attempts"][1].get("raw_response", "")) <= 2048
 
 
 def test_cite_retry_passes_errors_and_does_not_regenerate_question(generation):
     raw = generation[2]
     bad = [{**e, "quote": "Not in frozen text"} for e in raw["evidence"]]
-    generation[4].cite_mock.side_effect = [{"evidence": bad}, {"evidence": raw["evidence"]}]
+    good = raw["evidence"]
+    generation[4].side_effect = lambda *a, **kw: {**QUESTION, "evidence": bad}
+    generation[4].cite_mock.side_effect = [{"evidence": good}]
     outcome = invoke(generation, "--dry-run")
     assert outcome.exit_code == 0, outcome.output
     generation[4].assert_called_once()
     generation[5].assert_called_once()
     cite = generation[4].cite_mock
-    assert cite.call_count == 2
-    assert cite.call_args_list[0].kwargs["check_errors"] is None
-    assert cite.call_args_list[1].kwargs["check_errors"]
+    assert cite.call_count == 1
+    assert cite.call_args_list[0].kwargs["check_errors"]
     record = json.loads((generation[-1] / "pilot.json").read_text())["candidates"][0]
     assert [a["mechanical_check"]["passed"] for a in record["citation_attempts"]] == [False, True]
     assert record["accepted"]
@@ -293,7 +295,7 @@ def test_seed_cli_is_reproducible_and_recorded(generation):
     artifact = json.loads((generation[-1] / "pilot.json").read_text())
     assert artifact["seed"] == 1234
     from shared.cert_context import plan_questions
-    deterministic = [{k: v for k, v in item.items() if k not in {"decision_plan", "decision_proof", "decision_objective", "style_policy"}}
+    deterministic = [{k: v for k, v in item.items() if k not in {"decision_plan", "decision_proof", "decision_objective"}}
                      for item in artifact["plan"]]
     assert deterministic == plan_questions(generate.DEFAULT_CERT, 6, seed=1234)
     assert all("objective_offset" in item for item in artifact["plan"])
@@ -427,8 +429,9 @@ def test_citation_parse_diagnostics_survive_in_attempts(generation):
     assert outcome.exit_code != 0
     row = json.loads((generation[-1] / "pilot.json").read_text())["candidates"][0]
     assert len(row["citation_attempts"]) == 2
-    assert all(attempt["diagnostics"] == diagnostics for attempt in row["citation_attempts"])
-    assert all(attempt["raw_response"] == diagnostics["raw_response"] for attempt in row["citation_attempts"])
+    assert row["citation_attempts"][1]["stage"] == "cite"
+    assert row["citation_attempts"][1]["diagnostics"] == diagnostics
+    assert row["citation_attempts"][1]["raw_response"] == diagnostics["raw_response"]
     generation[5].assert_not_called()
 
 

@@ -10,6 +10,7 @@ import logging
 import json
 from typing import Dict, Any, Optional, Callable, Tuple
 import dspy
+from shared.call_logging import log_lm_calls
 from shared.completion_diagnostics import CompletionCaptureAdapter, MAX_RAW_RESPONSE, _safe_completion
 from shared.evidence import OptionEvidence
 from shared.question_style import STYLE_INSTRUCTIONS
@@ -383,6 +384,23 @@ class FactualCorrectionSignature(dspy.Signature):
 PmleQuestionSignature.instructions += "\n\n" + STYLE_INSTRUCTIONS
 QuestionCorrectionSignature.instructions += "\n\n" + STYLE_INSTRUCTIONS
 FactualCorrectionSignature.instructions += "\n\n" + STYLE_INSTRUCTIONS
+
+
+class QuestionWithEvidenceSignature(PmleQuestionSignature):
+    """Write the final question and its provenance receipts in the same response.
+
+    Return exactly one evidence receipt for each option A-D. Each receipt must
+    quote at most 300 characters, verbatim and case-sensitively, from that URL's
+    supplied text. For distractors cite the capability used in its explanation,
+    not an endorsement. Keep URLs and receipts outside learner prose.
+    """
+    evidence: list[OptionEvidence] = dspy.OutputField(
+        desc="Exactly A-D option_label, url, quote receipts for the final explanations")
+
+
+QuestionWithEvidenceSignature.instructions = (
+    PmleQuestionSignature.instructions + "\n\n" + QuestionWithEvidenceSignature.instructions
+)
 
 
 class GapAnalysisSignature(dspy.Signature):
@@ -804,9 +822,13 @@ def generate_question(
     difficulty: str = "MEDIUM",
     exam_subsection: str = "",
     prompt_version: Optional[str] = None,
-    *, reasoning_effort: str = "high",
+    *, reasoning_effort: str = "high", include_evidence: bool = False,
 ) -> Dict[str, Any]:
-    """Generate only a question; cite its finished options in a separate call."""
+    """Generate a question, optionally including receipts in the writer call."""
+    if include_evidence:
+        return generate_question_with_evidence(
+            domain_context, documentation_context, model, difficulty, exam_subsection,
+            prompt_version, reasoning_effort=reasoning_effort)
     from dspy.utils.exceptions import AdapterParseError
     if (not isinstance(domain_context, str) or not domain_context.strip()
             or not isinstance(documentation_context, str) or not documentation_context.strip()):
@@ -822,7 +844,7 @@ def generate_question(
     adapter = CompletionCaptureAdapter()
     predictor = dspy.ChainOfThought(PmleQuestionSignature)
     try:
-        with reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
+        with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
             result = predictor(
                 domain_context=domain_context,
                 documentation_context=documentation_context,
@@ -850,6 +872,7 @@ def cite_question(
     *,
     max_tokens: int = 8000,
     reasoning_effort: str = "medium",
+    fetched_context: str | None = None,
 ) -> dict:
     """Make one citation call. Root checks and stores every attempt, then retries."""
     from dspy.utils.exceptions import AdapterParseError
@@ -868,20 +891,21 @@ def cite_question(
     }
     fetched = [{"url": source["url"], "requested_url": source.get("requested_url"),
                 "text": source["text"]} for source in sources]
+    fetched_text = fetched_context if fetched_context is not None else json.dumps(fetched, ensure_ascii=False)
     if model == "codex" or model.startswith("codex/"):
         from shared.cli_models import run_signature
         return run_signature(model, CitationSignature, {
             "finished_question": json.dumps(question, ensure_ascii=False),
-            "fetched_sources": json.dumps(fetched, ensure_ascii=False),
+            "fetched_sources": fetched_text,
             "check_errors": "\n".join(check_errors or []),
         }, reasoning_effort=reasoning_effort)
     adapter = CompletionCaptureAdapter(preserve_receipts=True)
     try:
         lm = _generation_lm(model, max_tokens=max_tokens)
-        with reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
+        with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
             result = dspy.Predict(CitationSignature)(
                 finished_question=json.dumps(question, ensure_ascii=False),
-                fetched_sources=json.dumps(fetched, ensure_ascii=False),
+                fetched_sources=fetched_text,
                 check_errors="\n".join(check_errors or []),
                 lm=lm,
                 config={"rollout_id": time.time_ns(), "temperature": 0.7},
@@ -909,3 +933,45 @@ def _citation_diagnostics(adapter):
         return {}
     return {"diagnostics": diagnostics,
             **({"raw_response": adapter.raw_response} if adapter.raw_response is not None else {})}
+
+def generate_question_with_evidence(
+    domain_context: str, documentation_context: str,
+    model: str = "openai/gpt-4o", difficulty: str = "MEDIUM",
+    exam_subsection: str = "", prompt_version: Optional[str] = None,
+    *, reasoning_effort: str = "high", predictor=None,
+) -> Dict[str, Any]:
+    """Write question and receipts once; the caller checks them against full docs.
+
+    Mechanical failure permits one separate cite_question call, never a rewrite.
+    All attempts and the immutable full sources remain the caller's artifacts.
+    """
+    from shared.cli_models import output_model, run_signature
+    from dspy.utils.exceptions import AdapterParseError
+    if (not isinstance(domain_context, str) or not domain_context.strip()
+            or not isinstance(documentation_context, str) or not documentation_context.strip()):
+        raise ValueError("Registry objective scope and fetched documentation are required")
+    inputs = dict(domain_context=domain_context, documentation_context=documentation_context,
+                  difficulty=difficulty, exam_subsection=exam_subsection or "",
+                  gap_analysis_guidance="")
+    signature = QuestionWithEvidenceSignature
+    if predictor is not None:
+        raw = predictor(**inputs)
+    elif model == "codex" or model.startswith("codex/"):
+        raw = run_signature(model, signature, inputs, reasoning_effort=reasoning_effort)
+    else:
+        adapter = CompletionCaptureAdapter(preserve_receipts=True)
+        lm = _generation_lm(model, max_tokens=GENERATION_MAX_TOKENS)
+        try:
+            with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
+                result = dspy.Predict(signature)(
+                    **inputs, lm=lm, config={"rollout_id": time.time_ns(), "temperature": 0.7})
+            raw = {key: getattr(result, key) for key in signature.output_fields}
+        except MaxTokensTruncation:
+            raise
+        except AdapterParseError:
+            raise GenerationOutputError(adapter.raw_response, adapter.capture.failure()) from None
+        except Exception:
+            raise RuntimeError("Question generation request failed") from None
+    data = output_model(signature).model_validate(raw).model_dump()
+    return {**{key: data[key].strip() for key in QUESTION_FIELDS},
+            "evidence": data["evidence"]}
