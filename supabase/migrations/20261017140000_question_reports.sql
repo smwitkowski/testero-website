@@ -12,7 +12,7 @@ create table public.question_reports (
 );
 alter table public.question_reports enable row level security;
 revoke all on public.question_reports from anon, authenticated;
-grant select, insert on public.question_reports to service_role;
+grant select, insert, delete on public.question_reports to service_role;
 create index question_reports_owner_time on public.question_reports(owner_key,created_at);
 create function public.submit_question_report(p_session_id uuid,p_item_id uuid,p_kind text,p_user_id uuid,p_anonymous_owner_hash text,p_reason text,p_note text,p_email text)
 returns void language plpgsql security definer set search_path = public as $$
