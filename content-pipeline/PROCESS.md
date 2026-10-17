@@ -35,6 +35,17 @@ failures and subscription errors; no prompts, responses or credentials are logge
 Codex JSONL usage is separate from its unchanged final `-o` structured output.
 Cached/reasoning counts are subsets, not extra tokens to add to input/output.
 
+### Offline verification
+
+From the repository root, run the Python gate in its project directory:
+
+```sh
+cd content-pipeline && env -i PATH="$PATH" HOME="$HOME" uv run pytest -q
+```
+
+The repository root is the Node application, not the uv Python project. Running
+`uv run pytest` there cannot find the pipeline's pytest executable.
+
 ### Coordinator-only A/B (no live runs performed in this PR)
 
 Baseline is **origin/main plus telemetry only**; treatment is
