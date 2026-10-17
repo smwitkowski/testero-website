@@ -85,3 +85,63 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   await writeFile(`.qa/timings-${info.project.name}.json`, JSON.stringify({ mode: "warm compilation, real local API", viewport: info.project.name, ...timings }, null, 2));
   await info.attach("local-timings", { body: JSON.stringify(timings), contentType: "application/json" });
 });
+
+test("instant start measurement", async ({ page }, info) => {
+  test.skip(process.env.TESTERO_QA !== "1");
+  await page.addInitScript(() => {
+    const events: Record<string, unknown>[] = []; (window as unknown as { instantEvents: unknown[] }).instantEvents = events;
+    const original = window.fetch; window.fetch = async (...args) => { const start = performance.now(); const response = await original(...args); if (String(args[0]) === "/api/diagnostic") { events.push({kind:"create",start,end:performance.now(),timing:response.headers.get("server-timing")}); const json=response.json.bind(response); response.json=async()=>{const body=await json();events.push({kind:"json",at:performance.now()});return body;}; } return response; };
+    document.addEventListener("click", event => { if ((event.target as Element).closest("button")?.textContent === "Begin diagnostic") events.push({kind:"click",at:performance.now()}); },true);
+    document.addEventListener("focusin",()=>{ if (events.some(x=>x.kind==="click") && !events.some(x=>x.kind==="dom") && document.activeElement?.tagName === "H1" && document.querySelectorAll('input[type="radio"]').length===4) events.push({kind:"dom",at:performance.now()}); });
+    new MutationObserver(() => { if (events.some(x=>x.kind==="click") && !events.some(x=>x.kind==="dom") && document.querySelectorAll('input[type="radio"]').length === 4 && document.activeElement?.tagName === "H1") events.push({kind:"dom",at:performance.now()}); }).observe(document,{subtree:true,childList:true,attributes:true});
+  });
+  const runs=[];
+  for(let i=0;i<6;i++) {
+    await page.context().clearCookies(); await page.goto("/diagnostic");
+    await page.getByRole("button",{name:"Begin diagnostic",exact:true}).click(); await expect(page.getByText("Question 1 of 20",{exact:true})).toBeVisible();
+    await expect(page.getByRole("heading",{level:1})).toBeFocused();
+    const events = await page.evaluate(()=>(window as unknown as {instantEvents:{kind:string;at?:number}[]}).instantEvents);
+    const click = events.find(x=>x.kind==="click")!.at!;
+    const focused = events.find(x=>x.kind==="dom")!.at!;
+    const consumed = events.find(x=>x.kind==="json")!.at!;
+    const create = events.find(x=>x.kind==="create") as unknown as {start:number;end:number};
+    expect(click).toBeLessThanOrEqual(create.start); expect(create.start).toBeLessThanOrEqual(create.end);
+    expect(create.end).toBeLessThanOrEqual(consumed); expect(consumed).toBeLessThanOrEqual(focused);
+    if(i>0) expect(focused - click).toBeLessThanOrEqual(300);
+    runs.push(events);
+  }
+  await writeFile(`.qa/instant-${process.env.INSTANT_PHASE}-${info.project.name}.json`,JSON.stringify(runs,null,2));
+});
+
+test("instant start restores URL, refresh and back/forward without creating another session", async ({ page }) => {
+  test.skip(process.env.TESTERO_QA !== "1");
+  const beginRequests: string[] = []; let recordingBegin = false;
+  let creates = 0; page.on("request", request => { if (recordingBegin) beginRequests.push(`${request.method()} ${new URL(request.url()).pathname}${new URL(request.url()).search}`); if (new URL(request.url()).pathname === "/api/diagnostic" && request.method() === "POST") creates++; });
+  await page.goto("/"); await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Diagnostic", exact: true }).click();
+  recordingBegin = true;
+  await page.getByRole("button", { name: "Begin diagnostic", exact: true }).click();
+  await expect(page.getByText("Question 1 of 20", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading",{level:1})).toBeFocused();
+  recordingBegin = false;
+  expect(beginRequests.filter(path => path.startsWith("GET ") && (path.includes("/api/diagnostic/") || path.includes("_rsc=")))).toEqual([]);
+  const sessionURL = page.url(); expect(sessionURL).toMatch(/\/diagnostic\/[0-9a-f-]+$/);
+  await expect(page.getByRole("heading", {name:"What the PMLE diagnostic covers"})).toHaveCount(0);
+  await expect(page.getByRole("navigation",{name:"Main navigation"})).toHaveCount(0);
+  await expect(page.getByRole("heading",{level:1})).toBeFocused();
+  await page.getByRole("radio").first().check(); await page.getByRole("button",{name:"Next question",exact:true}).click();
+  await expect(page.getByText("Question 2 of 20",{exact:true})).toBeVisible();
+  await page.goBack(); await expect(page).toHaveURL(/\/$/);
+  await page.goForward(); await expect(page).toHaveURL(sessionURL);
+  await expect(page.getByText("Question 2 of 20",{exact:true})).toBeVisible();
+  await page.getByRole("link", { name: "Testero home" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.goBack(); await expect(page.getByText("Question 2 of 20",{exact:true})).toBeVisible();
+  await page.reload(); await expect(page.getByText("Question 2 of 20",{exact:true})).toBeVisible();
+  expect(creates).toBe(1);
+  await page.getByRole("link", {name:"Testero home"}).click(); await expect(page).toHaveURL(/\/$/);
+  await page.getByRole("navigation",{name:"Main navigation"}).getByRole("link",{name:"Diagnostic",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"PMLE readiness diagnostic",exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Start over",exact:true}).click();
+  await expect(page.getByText("Question 1 of 20",{exact:true})).toBeVisible();
+  expect(page.url()).not.toBe(sessionURL); expect(creates).toBe(2);
+});

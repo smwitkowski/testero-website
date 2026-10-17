@@ -5,7 +5,7 @@ import { POST as start } from "@/app/api/diagnostic/route";
 import { GET as read } from "@/app/api/diagnostic/[sessionId]/route";
 import { POST as answer } from "@/app/api/diagnostic/[sessionId]/answer/route";
 import { GET as results } from "@/app/api/diagnostic/[sessionId]/results/route";
-import { createDiagnostic, readDiagnostic, answerDiagnostic, diagnosticResults } from "@/lib/diagnostic/service";
+import { createDiagnosticStart, readDiagnostic, answerDiagnostic, diagnosticResults } from "@/lib/diagnostic/service";
 import { DiagnosticError } from "@/lib/diagnostic/http";
 import { diagnosticCredentials } from "@/lib/diagnostic/request";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
@@ -21,7 +21,7 @@ vi.mock("next/headers", () => ({ cookies: vi.fn(async () => ({
 vi.mock("@/lib/supabase/service", () => ({ createServiceSupabaseClient: vi.fn(() => mocks.client) }));
 vi.mock("@/lib/supabase/server", () => ({ createServerSupabaseClient: vi.fn(async () => ({ auth: { getUser: mocks.getUser } })) }));
 vi.mock("@/lib/diagnostic/service", () => ({
-  createDiagnostic: vi.fn(), readDiagnostic: vi.fn(), answerDiagnostic: vi.fn(), diagnosticResults: vi.fn(),
+  createDiagnosticStart: vi.fn(), readDiagnostic: vi.fn(), answerDiagnostic: vi.fn(), diagnosticResults: vi.fn(),
 }));
 const sessionId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const itemId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -37,7 +37,7 @@ function getRequest() { return new Request(`http://localhost:3000/api/diagnostic
 beforeEach(() => {
   mocks.cookie = undefined;
   mocks.getUser.mockReset().mockResolvedValue({ data: { user: null }, error: null });
-  vi.mocked(createDiagnostic).mockReset().mockResolvedValue(sessionId);
+  vi.mocked(createDiagnosticStart).mockReset().mockResolvedValue({ sessionId, href: `/diagnostic/${sessionId}`, progress: { sessionId, status: "in_progress", answeredCount: 0, totalQuestions: 20, currentQuestion: { id: itemId, ordinal: 1, domainCode: "TEST", stem: "Safe stem", options: [{ label: "A", text: "Safe option" }] } } });
   vi.mocked(readDiagnostic).mockReset().mockResolvedValue({ sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 0, currentQuestion: null });
   vi.mocked(answerDiagnostic).mockReset().mockResolvedValue({ answeredCount: 1, totalQuestions: 20, completed: false, progress: { sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 1, currentQuestion: null } });
   vi.mocked(diagnosticResults).mockReset().mockResolvedValue({ sessionId, score: 0, totalQuestions: 20, correctAnswers: 0, readiness: { id: "low", label: "Low", description: "Guidance" }, domainBreakdown: [] });
@@ -50,15 +50,15 @@ describe("strict diagnostic creation route", () => {
     const response = await start(request());
     expect(response.status).toBe(201);
     expect(response.headers.get("Server-Timing")).toMatch(/^credentials;dur=\d+\.\d, total;dur=\d+\.\d$/);
-    expect(await response.json()).toEqual({ sessionId, href: `/diagnostic/${sessionId}` });
+    expect(await response.json()).toEqual(await vi.mocked(createDiagnosticStart).mock.results[0].value);
     const cookie = response.headers.get("set-cookie")!;
     expect(cookie).toMatch(/testero_anon=[a-f0-9]{64}/);
     expect(cookie).toMatch(/HttpOnly/i); expect(cookie).toMatch(/Secure/i);
     expect(cookie).toMatch(/SameSite=lax/i); expect(cookie).toMatch(/Path=\//i);
     expect(cookie).toMatch(/Max-Age=2592000/i);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
-    expect(createDiagnostic).toHaveBeenCalledOnce();
-    expect(vi.mocked(createDiagnostic).mock.calls[0][1]).toMatch(/^[a-f0-9]{64}$/);
+    expect(createDiagnosticStart).toHaveBeenCalledOnce();
+    expect(vi.mocked(createDiagnosticStart).mock.calls[0][1]).toMatch(/^[a-f0-9]{64}$/);
   });
   it("does not require Secure on local development cookies", async () => {
     vi.stubEnv("NODE_ENV", "development");
@@ -67,19 +67,19 @@ describe("strict diagnostic creation route", () => {
   it("reuses a valid anonymous cookie", async () => {
     mocks.cookie = token;
     const response = await start(request());
-    expect(createDiagnostic).toHaveBeenCalledWith(mocks.client, token, undefined, null, expect.anything());
+    expect(createDiagnosticStart).toHaveBeenCalledWith(mocks.client, token, undefined, null, expect.anything());
     expect(response.headers.get("set-cookie")).toContain(`testero_anon=${token}`);
   });
   it.each(["invalid", "A".repeat(64), "a".repeat(63)])("replaces an invalid cookie %# only after success", async (cookie) => {
     mocks.cookie = cookie;
     const response = await start(request());
-    const used = vi.mocked(createDiagnostic).mock.calls[0][1];
+    const used = vi.mocked(createDiagnosticStart).mock.calls[0][1];
     expect(used).not.toBe(cookie); expect(used).toMatch(/^[a-f0-9]{64}$/);
     expect(response.headers.get("set-cookie")).toContain(`testero_anon=${used}`);
   });
   it.each([undefined, token, "invalid"])("preserves existing cookie on creation failure %#", async (previous) => {
     mocks.cookie = previous;
-    vi.mocked(createDiagnostic).mockRejectedValue(new DiagnosticError(503, "Unavailable"));
+    vi.mocked(createDiagnosticStart).mockRejectedValue(new DiagnosticError(503, "Unavailable"));
     const response = await start(request());
     expect(response.status).toBe(503); expect(response.headers.get("Server-Timing")).toMatch(/^credentials;dur=\d+\.\d, total;dur=\d+\.\d$/); expect(response.headers.get("set-cookie")).toBeNull();
     expect(mocks.cookie).toBe(previous);
@@ -90,17 +90,17 @@ describe("strict diagnostic creation route", () => {
     { sessionId }, { exam: "other" }, [], null, "",
   ].map((body) => ({ body })))("rejects impersonation or extra body fields %# before clients", async ({ body }) => {
     const response = await start(request(body));
-    expect(response.status).toBe(400); expect(createDiagnostic).not.toHaveBeenCalled();
+    expect(response.status).toBe(400); expect(createDiagnosticStart).not.toHaveBeenCalled();
     expect(createServiceSupabaseClient).not.toHaveBeenCalled();
     expect(response.headers.get("set-cookie")).toBeNull();
   });
   it("rejects malformed JSON", async () => {
     const response = await start(new Request("http://localhost:3000/api/diagnostic", { method: "POST", body: "{broken" }));
-    expect(response.status).toBe(400); expect(createDiagnostic).not.toHaveBeenCalled();
+    expect(response.status).toBe(400); expect(createDiagnosticStart).not.toHaveBeenCalled();
   });
   it("rejects foreign origins before body/ownership processing", async () => {
     const response = await start(request({}, "https://evil.example"));
-    expect(response.status).toBe(403); expect(createDiagnostic).not.toHaveBeenCalled();
+    expect(response.status).toBe(403); expect(createDiagnosticStart).not.toHaveBeenCalled();
     expect(createServiceSupabaseClient).not.toHaveBeenCalled();
   });
   it.each([
@@ -115,7 +115,7 @@ describe("strict diagnostic creation route", () => {
       },
     }));
     expect(response.status).toBe(201);
-    expect(createDiagnostic).toHaveBeenCalledOnce();
+    expect(createDiagnosticStart).toHaveBeenCalledOnce();
   });
   it.each([
     { host: "127.0.0.1:3000", origin: "http://localhost:3000", protocol: undefined },
@@ -131,7 +131,7 @@ describe("strict diagnostic creation route", () => {
       },
     }));
     expect(response.status).toBe(403);
-    expect(createDiagnostic).not.toHaveBeenCalled();
+    expect(createDiagnosticStart).not.toHaveBeenCalled();
     expect(createServiceSupabaseClient).not.toHaveBeenCalled();
   });
   it("accepts origin-less local requests with valid bodies", async () => {
@@ -202,7 +202,7 @@ describe("diagnostic progress, answer, and aggregate result routes", () => {
   it.each(["start", "read", "answer", "results"])("sanitizes untyped API500 body for %s", async (route) => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const error = new Error("SUPABASE_SERVICE_ROLE_KEY=secret leaked body answer A");
-    vi.mocked(createDiagnostic).mockRejectedValue(error);
+    vi.mocked(createDiagnosticStart).mockRejectedValue(error);
     vi.mocked(readDiagnostic).mockRejectedValue(error);
     vi.mocked(answerDiagnostic).mockRejectedValue(error);
     vi.mocked(diagnosticResults).mockRejectedValue(error);
@@ -223,9 +223,9 @@ describe("verified account diagnostic creation", () => {
     const response = await start(request());
     expect(response.status).toBe(201);
     expect(mocks.getUser).toHaveBeenCalledOnce();
-    expect(createDiagnostic).toHaveBeenCalledWith(mocks.client, token, undefined, "verified-user", expect.anything());
+    expect(createDiagnosticStart).toHaveBeenCalledWith(mocks.client, token, undefined, "verified-user", expect.anything());
     expect(response.headers.get("set-cookie")).toContain(`testero_anon=${token}`);
-    expect(Object.keys(await response.json()).sort()).toEqual(["href", "sessionId"]);
+    expect(Object.keys(await response.json()).sort()).toEqual(["href", "progress", "sessionId"]);
   });
   it("does not accept an account identifier from JSON even for a verified user", async () => {
     mocks.getUser.mockResolvedValue({ data: { user: { id: "verified-user", email_confirmed_at: "2026-10-03T12:00:00Z" } }, error: null });
@@ -258,7 +258,7 @@ it("tracks successful creation and completed answers only", async () => {
   await answer(request({ itemId, selectedLabel: "A" }), context);
   expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_completed", sessionId, { session_id: sessionId });
   vi.mocked(scheduleFunnelEvent).mockClear();
-  vi.mocked(createDiagnostic).mockRejectedValue(new DiagnosticError(503, "Unavailable"));
+  vi.mocked(createDiagnosticStart).mockRejectedValue(new DiagnosticError(503, "Unavailable"));
   await start(request());
   vi.mocked(answerDiagnostic).mockRejectedValue(new DiagnosticError(409, "Conflict"));
   await answer(request({ itemId, selectedLabel: "A" }), context);
