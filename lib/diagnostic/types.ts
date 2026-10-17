@@ -39,6 +39,7 @@ export interface DiagnosticStartResponse {
 }
 
 export interface DiagnosticAnswerResponse {
+  progress: DiagnosticProgress;
   answeredCount: number;
   totalQuestions: number;
   completed: boolean;

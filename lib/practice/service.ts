@@ -1,3 +1,4 @@
+import type { ServerTiming } from "@/lib/server-timing";
 import "server-only";
 import { getPaidAccess } from "@/lib/billing/paid-access";
 import { loadPaidExplanations, addPaidReview } from "@/lib/billing/explanations";
@@ -81,17 +82,21 @@ async function items(client: SupabaseClient, id: string): Promise<Item[]> {
 export async function readPractice(client: SupabaseClient, id: string, userId: string, now = Date.now()): Promise<PracticeProgress> {
   const session = await ownedPractice(client, id, userId, now);
   const rows = await items(client, id);
+  return practiceProgress(session, rows);
+}
+function practiceProgress(session: Session, rows: Item[]): PracticeProgress {
   if (rows.length !== session.question_count) throw unavailable();
   const answeredCount = rows.filter(row => row.answered_at !== null).length;
   const completed = !!session.completed_at || answeredCount === session.question_count;
   const current = completed ? null : rows.find(row => row.answered_at === null);
   if (!completed && !current) throw unavailable();
-  return { sessionId: id, status: completed ? "completed" : "in_progress", totalQuestions: session.question_count, answeredCount,
+  return { sessionId: session.id, status: completed ? "completed" : "in_progress", totalQuestions: session.question_count, answeredCount,
     currentQuestion: current ? { id: current.id, ordinal: current.ordinal, domainCode: current.domain_code, stem: current.stem, options: current.options.map(option => ({ label: option.label, text: option.text })) } : null };
 }
-export async function answerPractice(client: SupabaseClient, id: string, userId: string, itemId: string, selectedLabel: string, now = Date.now()): Promise<PracticeAnswerResponse> {
-  const session = await ownedPractice(client, id, userId, now);
-  const { data, error } = await client.rpc("answer_study_item", { p_session_id: id, p_item_id: itemId, p_selected_label: selectedLabel, p_user_id: userId, p_anonymous_owner_hash: null });
+export async function answerPractice(client: SupabaseClient, id: string, userId: string, itemId: string, selectedLabel: string, now = Date.now(), timing?: ServerTiming): Promise<PracticeAnswerResponse> {
+  const measure = <T>(name: string, task: () => Promise<T>) => timing ? timing.measure(name, task) : task();
+  const session = await measure("ownership", () => ownedPractice(client, id, userId, now));
+  const { data, error } = await measure("answer_rpc", async () => client.rpc("answer_study_item", { p_session_id: id, p_item_id: itemId, p_selected_label: selectedLabel, p_user_id: userId, p_anonymous_owner_hash: null }));
   if (error) {
     if (error.code === "42501") throw new DiagnosticError(404, "Practice not found");
     if (error.code === "22023") throw new DiagnosticError(error.message === "Session expired" ? 410 : 409, "The answer could not be saved. Reload your saved progress.");
@@ -100,15 +105,17 @@ export async function answerPractice(client: SupabaseClient, id: string, userId:
   const progress = data as { answeredCount: number; totalQuestions: number; completed: boolean } | null;
   if (!progress || !Number.isInteger(progress.answeredCount) || progress.answeredCount < 1 || progress.answeredCount > session.question_count || progress.totalQuestions !== session.question_count || progress.completed !== (progress.answeredCount === session.question_count)) throw unavailable();
   // Both reads start only after the answer commit; paid access remains fresh on retries.
-  const [{ data: raw, error: feedbackError }, access] = await Promise.all([
-    client.from("session_items").select("id,question_id,options,selected_label,correct_label,is_correct,answered_at").eq("session_id", id).eq("id", itemId).maybeSingle(),
-    getPaidAccess(userId, client, now),
+  const [rows, access] = await Promise.all([
+    measure("progress_read", () => items(client, id)),
+    measure("paid_access", () => getPaidAccess(userId, client, now)),
   ]);
-  const row = raw as Pick<Item, "id" | "question_id" | "options" | "selected_label" | "correct_label" | "is_correct" | "answered_at"> | null;
-  if (feedbackError || !row || row.id !== itemId || !row.answered_at || row.selected_label !== selectedLabel || typeof row.is_correct !== "boolean" || !validAnsweredItem(row)) throw unavailable();
+  const row = rows.find(item => item.id === itemId);
+  if (!row || !row.answered_at || row.selected_label !== selectedLabel || typeof row.is_correct !== "boolean" || !validAnsweredItem(row)) throw unavailable();
+  const updated = practiceProgress(session, rows);
+  if (updated.answeredCount < progress.answeredCount) throw unavailable();
   // A refund must redact retries immediately.
   const explanations = access.hasPaidAccess ? await loadPaidExplanations(client, [row]) : null;
-  return { answeredCount: progress.answeredCount, totalQuestions: progress.totalQuestions, completed: progress.completed,
+  return { answeredCount: updated.answeredCount, totalQuestions: updated.totalQuestions, completed: updated.status === "completed", progress: updated,
     feedback: { itemId: row.id, selectedLabel, correctLabel: row.correct_label, isCorrect: row.is_correct, ...explanations?.get(row.id) } };
 }
 export async function practiceSummary(client: SupabaseClient, id: string, userId: string, now = Date.now()): Promise<PracticeSummary> {

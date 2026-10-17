@@ -17,8 +17,7 @@ export function PracticeSession({ sessionId, initialData = null }: { sessionId: 
   const summaryPath = `${nextPath}/summary`;
   const path = `/api${nextPath}`;
   const { data, error, reload, setData } = usePracticeResource<PracticeProgress>(path, initialData);
-  const prefetched = useRef<PracticeProgress | null>(null);
-  const prefetchGeneration = useRef(0);
+  const nextProgress = useRef<PracticeProgress | null>(null);
   const [selected, setSelected] = useState("");
   const [pending, setPending] = useState(false);
   const [answer, setAnswer] = useState<PracticeAnswerResponse | null>(null);
@@ -26,16 +25,27 @@ export function PracticeSession({ sessionId, initialData = null }: { sessionId: 
   const controller = useRef<AbortController | null>(null);
   const submitting = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => { controller.current = new AbortController(); return () => controller.current?.abort(); }, []);
+  useEffect(() => {
+    const requestController = new AbortController();
+    controller.current = requestController;
+    return () => requestController.abort();
+  }, []);
   useEffect(() => {
     if (data?.status === "completed") router.replace(summaryPath);
     else if (data?.currentQuestion) heading.current?.focus();
   }, [data, router, summaryPath]);
 
-  function nextQuestion() {
-    prefetchGeneration.current++;
+  function retry() {
+    nextProgress.current = null;
     setSelected(""); setAnswer(null); setAnswerError(null); submitting.current = false; setPending(false);
-    if (prefetched.current) { setData(prefetched.current); prefetched.current = null; } else reload();
+    reload();
+  }
+  function nextQuestion() {
+    const progress = nextProgress.current;
+    if (!progress) return;
+    nextProgress.current = null;
+    setSelected(""); setAnswer(null); setAnswerError(null); submitting.current = false; setPending(false);
+    setData(progress);
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -51,13 +61,7 @@ export function PracticeSession({ sessionId, initialData = null }: { sessionId: 
       });
       if (!signal.aborted) {
         setAnswer(result);
-        if (!result.completed) {
-          const generation = ++prefetchGeneration.current;
-          void practiceRequest<PracticeProgress>(path, { signal }).then(
-            progress => { if (!signal.aborted && generation === prefetchGeneration.current) prefetched.current = progress; },
-            () => { /* Next retries through the normal saved-progress read. */ },
-          );
-        }
+        nextProgress.current = result.progress;
       }
     } catch (reason) {
       if (!signal.aborted) {
@@ -69,10 +73,10 @@ export function PracticeSession({ sessionId, initialData = null }: { sessionId: 
     }
   }
 
-  if (error || answerError) return <PracticeError error={error || answerError!} nextPath={nextPath} onRetry={nextQuestion} />;
+  if (error || answerError) return <PracticeError error={error || answerError!} nextPath={nextPath} onRetry={retry} />;
   if (!data || data.status === "completed") return <PracticeLoading message={data ? "Opening your practice summary…" : "Loading your saved practice…"} />;
   const question = data.currentQuestion;
-  if (!question) return <PracticeError error={new PracticeRequestError(0, "Your next question could not be loaded. Retry to load your saved progress.")} nextPath={nextPath} onRetry={nextQuestion} />;
+  if (!question) return <PracticeError error={new PracticeRequestError(0, "Your next question could not be loaded. Retry to load your saved progress.")} nextPath={nextPath} onRetry={retry} />;
   const answeredCount = answer?.answeredCount ?? data.answeredCount;
   const correctOption = question.options.find(option => option.label === answer?.feedback.correctLabel);
 

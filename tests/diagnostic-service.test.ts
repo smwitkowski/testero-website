@@ -47,7 +47,7 @@ function database(options: { session?: unknown; items?: unknown; sessionError?: 
     const query = {
       select: vi.fn(() => query), eq: vi.fn(() => query),
       maybeSingle: vi.fn(async () => ({ data: options.session === undefined ? session() : options.session, error: options.sessionError ? { message: "secret db" } : null })),
-      order: vi.fn(async () => ({ data: options.items === undefined ? items() : options.items, error: options.itemsError ? { message: "secret db" } : null })),
+      order: vi.fn(async () => ({ data: options.items === undefined ? items().map((item, index) => options.rpcData && index < Number((options.rpcData as { answeredCount?: number }).answeredCount) ? { ...item, answered_at: "done", is_correct: true } : item) : options.items, error: options.itemsError ? { message: "secret db" } : null })),
     };
     expect(["study_sessions", "session_items"]).toContain(table);
     return query;
@@ -64,7 +64,8 @@ describe("atomic anonymous diagnostic creation", () => {
     vi.spyOn(Math, "random").mockReturnValue(0);
     const db = database();
     expect(await createDiagnostic(db.client, token, now)).toBe(sessionId);
-    expect(selectPmleQuestionsByBlueprint).toHaveBeenCalledWith(db.client, 20, { newSince: DIAGNOSTIC_NEW_SINCE, seenQuestionIds: new Set() });
+    expect(selectPmleQuestionsByBlueprint).toHaveBeenCalledWith(db.client, 20, expect.any(Promise), undefined);
+    await expect(vi.mocked(selectPmleQuestionsByBlueprint).mock.calls[0][2]).resolves.toEqual({ newSince: DIAGNOSTIC_NEW_SINCE, seenQuestionIds: new Set() });
     expect(db.rpc).toHaveBeenCalledOnce();
     const [name, args] = db.rpc.mock.calls[0] as unknown as [string, { p_items: { question_id: string; options: { label: string; text: string }[]; correct_label: string }[]; p_anonymous_owner_hash: string; p_expires_at: string; p_user_id: null }];
     expect(name).toBe("create_study_session");
@@ -188,7 +189,7 @@ describe("ownership-first answer RPC", () => {
     const db = database({ rpcData: { answeredCount: 1, totalQuestions: 20, completed: false, is_correct: true, correct_label: "A", explanation: "secret" } });
     for (let retry = 0; retry < 2; retry++) {
       expect(await answerDiagnostic(db.client, sessionId, credentials, itemId, "A", now))
-        .toEqual({ answeredCount: 1, totalQuestions: 20, completed: false });
+        .toMatchObject({ answeredCount: 1, totalQuestions: 20, completed: false, progress: { answeredCount: 1, currentQuestion: { ordinal: 2 } } });
     }
     expect(db.rpc).toHaveBeenCalledWith("answer_study_item", { p_session_id: sessionId, p_item_id: itemId, p_selected_label: "A", p_user_id: null, p_anonymous_owner_hash: hashAnonymousToken(token) });
   });
@@ -206,7 +207,7 @@ describe("ownership-first answer RPC", () => {
   });
   it("accepts a consistent completion response", async () => {
     expect(await answerDiagnostic(database({ rpcData: { answeredCount: 20, totalQuestions: 20, completed: true } }).client, sessionId, credentials, itemId, "A", now))
-      .toEqual({ answeredCount: 20, totalQuestions: 20, completed: true });
+      .toMatchObject({ answeredCount: 20, totalQuestions: 20, completed: true, progress: { answeredCount: 20, currentQuestion: null } });
   });
   it.each([
     ["42501", "Foreign owner", 404], ["22023", "Session expired", 410],
@@ -218,6 +219,21 @@ describe("ownership-first answer RPC", () => {
   });
 });
 
+
+describe("post-commit answer progress", () => {
+  it("uses one sanitized item snapshot even if another answer has already committed", async () => {
+    const rows = items().map((item, index) => index < 2 ? { ...item, answered_at: "done", is_correct: true } : item);
+    const db = database({ items: rows, rpcData: { answeredCount: 1, totalQuestions: 20, completed: false } });
+    const answer = await answerDiagnostic(db.client, sessionId, credentials, itemId, "A", now);
+    expect(answer).toMatchObject({ answeredCount: 2, completed: false, progress: { answeredCount: 2, currentQuestion: { ordinal: 3 } } });
+    expect(JSON.stringify(answer)).not.toMatch(/correct_label|is_correct|explanation|selected_label|anonymous_owner_hash/);
+    expect(db.from.mock.calls).toEqual([["study_sessions"], ["session_items"]]);
+  });
+  it("fails closed if the post-commit read lags the RPC count", async () => {
+    const db = database({ items: items(), rpcData: { answeredCount: 1, totalQuestions: 20, completed: false } });
+    await expect(answerDiagnostic(db.client, sessionId, credentials, itemId, "A", now)).rejects.toMatchObject({ status: 503 });
+  });
+});
 
 describe("account-owned diagnostic review", () => {
   function completedItems() {
@@ -300,7 +316,7 @@ describe("paid diagnostic review remains completion- and ownership-gated", () =>
     vi.mocked(getPaidAccess).mockResolvedValue(paid);
     const db = database({ session: { ...owned(), completed_at: null }, rpcData: { answeredCount: 1, totalQuestions: 20, completed: false } });
     expect(JSON.stringify(await readDiagnostic(db.client, sessionId, signedIn, now))).not.toMatch(/correctLabel|explanation|review/);
-    expect(await answerDiagnostic(db.client, sessionId, signedIn, itemId, "A", now)).toEqual({ answeredCount: 1, totalQuestions: 20, completed: false });
+    expect(await answerDiagnostic(db.client, sessionId, signedIn, itemId, "A", now)).toMatchObject({ answeredCount: 1, totalQuestions: 20, completed: false, progress: { answeredCount: 1, currentQuestion: { ordinal: 2 } } });
     expect(getPaidAccess).not.toHaveBeenCalled(); expect(loadPaidExplanations).not.toHaveBeenCalled();
   });
 });

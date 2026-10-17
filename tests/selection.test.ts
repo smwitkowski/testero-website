@@ -263,3 +263,17 @@ describe("diagnostic freshness preferences", () => {
     }
   });
 });
+
+it("loads inventory while history preferences are pending, then honors those preferences", async () => {
+  const rows = bank([10, 10, 10, 10, 10, 10]);
+  const database = client(rows);
+  let release!: (preferences: { seenQuestionIds: Set<string> }) => void;
+  const preferences = new Promise<{ seenQuestionIds: Set<string> }>(resolve => { release = resolve; });
+  const pending = selectPmleQuestionsByBlueprint(database.supabase, 20, preferences);
+  await Promise.resolve(); await Promise.resolve();
+  expect(vi.mocked(database.supabase.from)).toHaveBeenCalledWith("questions");
+  release({ seenQuestionIds: new Set(rows.filter(row => row.id.endsWith("-0")).map(row => row.id)) });
+  const selected = await pending;
+  expect(selected.questions).toHaveLength(20);
+  expect(selected.questions.every(row => !row.id.endsWith("-0"))).toBe(true);
+});

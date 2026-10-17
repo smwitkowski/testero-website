@@ -1,3 +1,4 @@
+import { armTransition, assertTransition } from "./transition-timing";
 import { test, expect } from "@playwright/test";
 import { captureV3 } from "./v3-capture";
 import { assertRestoredSession } from "./prod-bank";
@@ -153,13 +154,15 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
         continue;
       }
       await page.getByRole("radio").first().check();
+      if (index < 3) await armTransition(page, { path: api, ordinal: index + 2, total: 20 });
       const acceptedResponse = page.waitForResponse(response => response.url().endsWith(`${api}/answer`) && response.request().method() === "POST");
       await page.getByRole("button", { name: nextName }).click();
       const accepted = await acceptedResponse;
       expect(accepted.status()).toBe(200);
       const answer = await accepted.json() as DiagnosticAnswerResponse;
-      expect(answer).toEqual({ answeredCount: index + 1, totalQuestions: 20, completed: index === 19 });
+      expect(answer).toMatchObject({ answeredCount: index + 1, totalQuestions: 20, completed: index === 19, progress: { answeredCount: index + 1, currentQuestion: index === 19 ? null : { ordinal: index + 2 } } });
       noAnswerKeys(answer);
+      if (index < 3) await assertTransition(page, api, "diagnostic");
     }
     await expect(page).toHaveURL(new RegExp(`/diagnostic/${sessionId}/results$`));
     await expect(page.getByRole("heading", { name: "PMLE readiness report", exact: true })).toBeVisible();

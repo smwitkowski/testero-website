@@ -14,7 +14,7 @@ import { diagnosticRequest, requestError, useDiagnosticResource } from "@/compon
 export function DiagnosticSession({ sessionId, initialData = null }: { sessionId: string; initialData?: DiagnosticProgress | null }) {
   const router = useRouter();
   const path = `/api/diagnostic/${encodeURIComponent(sessionId)}`;
-  const { data, error, reload } = useDiagnosticResource<DiagnosticProgress>(path, initialData);
+  const { data, error, reload, setData } = useDiagnosticResource<DiagnosticProgress>(path, initialData);
   const [selected, setSelected] = useState("");
   const [pending, setPending] = useState(false);
   const [answerError, setAnswerError] = useState<string | null>(null);
@@ -24,8 +24,9 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
   const resultsPath = `/diagnostic/${encodeURIComponent(sessionId)}/results`;
 
   useEffect(() => {
-    controller.current = new AbortController();
-    return () => controller.current?.abort();
+    const requestController = new AbortController();
+    controller.current = requestController;
+    return () => requestController.abort();
   }, []);
   useEffect(() => {
     if (data?.status === "completed") router.replace(resultsPath);
@@ -59,7 +60,7 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
         router.replace(resultsPath);
       } else {
         setSelected("");
-        reload();
+        setData(result.progress);
       }
     } catch (reason) {
       if (!signal.aborted) setAnswerError(`${requestError(reason)} Retry loads your saved progress before you answer again.`);

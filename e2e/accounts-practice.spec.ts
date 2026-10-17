@@ -1,3 +1,4 @@
+import { armTransition, assertTransition } from "./transition-timing";
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { captureV3 } from "./v3-capture";
 import { assertRestoredSession } from "./prod-bank";
@@ -153,19 +154,9 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     ids.push(practiceId);
     await assertRestoredSession(service, practiceId, 5);
     await expect(page).toHaveURL(new RegExp(`/practice/${practiceId}$`));
-    // Hold the first safe-progress prefetch until Next has fallen back to a fresh read.
-    let releasePrefetch: (() => void) | undefined;
-    let heldPrefetch: Promise<void> | undefined;
-    let held = false;
-    await page.route(`**/api/practice/${practiceId}`, async route => {
-      if (!held && route.request().method() === "GET") {
-        held = true;
-        const response = await route.fetch();
-        heldPrefetch = new Promise<void>(resolve => { releasePrefetch = resolve; });
-        await heldPrefetch;
-        await route.fulfill({ response });
-      } else await route.continue();
-    });
+    // No background progress GET: the committed answer carries the next safe item.
+    const browserProgressReads: string[] = [];
+    page.on("request", request => { if (request.method() === "GET" && request.url().endsWith(`/api/practice/${practiceId}`)) browserProgressReads.push(request.url()); });
     for (let ordinal = 1; ordinal <= 5; ordinal++) {
       await expect(page.getByText(`Question ${ordinal} of 5`, { exact: true })).toBeVisible();
       if (ordinal === 1) { await checkLayout("practice"); await captureV3(page, "practice-question"); }
@@ -174,20 +165,41 @@ test("local account confirmation claims only owned diagnostics, practices five, 
       expect(Object.keys(progress.currentQuestion!).sort()).toEqual(["id", "ordinal", "domainCode", "stem", "options"].sort());
       noExplanations(progress);
       await page.getByRole("radio").first().check();
+      if (ordinal <= 3) await armTransition(page, { path: `/api/practice/${practiceId}`, ordinal, total: 5, feedback: true });
+      let releaseAnswer: (() => void) | undefined;
+      let committedAnswer: Promise<void> | undefined;
+      if (ordinal === 1) {
+        await page.route(`**/api/practice/${practiceId}/answer`, async route => {
+          const response = await route.fetch();
+          committedAnswer = new Promise<void>(resolve => { releaseAnswer = resolve; });
+          await committedAnswer;
+          await route.fulfill({ response });
+        }, { times: 1 });
+      }
       const answerResponse = page.waitForResponse(response => response.url().endsWith(`/api/practice/${practiceId}/answer`) && response.request().method() === "POST");
       await page.getByRole("button", { name: "Submit answer", exact: true }).click();
+      if (ordinal === 1) {
+        await expect.poll(() => !!releaseAnswer).toBe(true);
+        await expect(page.getByRole("button", { name: "Next question", exact: true })).toHaveCount(0);
+        await expect(page.getByRole("button", { name: "Saving answer…", exact: true })).toBeDisabled();
+        releaseAnswer!();
+      }
       const accepted = await answerResponse;
       expect(accepted.status()).toBe(200);
       const answer = await accepted.json() as PracticeAnswerResponse;
+      if (ordinal <= 3) await assertTransition(page, `/api/practice/${practiceId}`, "feedback");
       expect(answer.answeredCount).toBe(ordinal);
       expect(answer.feedback.itemId).toBe(progress.currentQuestion!.id);
       expect(answer.feedback.correctLabel).toMatch(/^[A-D]$/);
       noExplanations(answer);
       await expect(page.getByText(`Correct answer: ${answer.feedback.correctLabel}.`, { exact: true })).toBeVisible();
       if (ordinal < 5) {
-        await page.getByRole("button", { name: "Next question", exact: true }).click();
+        if (ordinal > 1) await armTransition(page, { path: `/api/practice/${practiceId}`, ordinal: ordinal + 1, total: 5 });
+        const next = page.getByRole("button", { name: "Next question", exact: true });
+        await next.evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
         await expect(page.getByText(`Question ${ordinal + 1} of 5`, { exact: true })).toBeVisible();
-        if (ordinal === 1) releasePrefetch?.();
+        if (ordinal > 1) await assertTransition(page, `/api/practice/${practiceId}`, "next");
+        expect(browserProgressReads).toEqual([]);
       }
       else await page.getByRole("link", { name: "View summary", exact: true }).click();
     }

@@ -24,7 +24,7 @@ beforeEach(() => {
   vi.mocked(getVerifiedUser).mockReset().mockResolvedValue({ id: userId, email_confirmed_at: "2026-10-03T12:00:00Z" } as never);
   vi.mocked(createPractice).mockReset().mockResolvedValue(id);
   vi.mocked(readPractice).mockReset().mockResolvedValue({ sessionId: id, status: "in_progress", totalQuestions: 5, answeredCount: 0, currentQuestion: null });
-  vi.mocked(answerPractice).mockReset().mockResolvedValue({ answeredCount: 1, totalQuestions: 5, completed: false, feedback: { itemId, selectedLabel: "A", correctLabel: "A", isCorrect: true } });
+  vi.mocked(answerPractice).mockReset().mockResolvedValue({ answeredCount: 1, totalQuestions: 5, completed: false, progress: { sessionId: id, status: "in_progress", totalQuestions: 5, answeredCount: 1, currentQuestion: null }, feedback: { itemId, selectedLabel: "A", correctLabel: "A", isCorrect: true } });
   vi.mocked(practiceSummary).mockReset().mockResolvedValue({ sessionId: id, score: 80, totalQuestions: 5, correctAnswers: 4, readiness: { id: "strong", label: "Strong", description: "Guidance" }, domainBreakdown: [], review: [] });
 });
 const routes = ["start", "read", "answer", "summary"] as const;
@@ -45,7 +45,7 @@ describe("practice route auth and privacy", () => {
   });
   it.each(["start", "answer"] as const)("rejects cross-origin writes before auth/body/DB: %s", async route => {
     const response = route === "start" ? await start(request({ domainCode }, "https://evil.example")) : await answer(request({ itemId, selectedLabel: "A" }, "https://evil.example"), context);
-    expect(response.status).toBe(403); expect(getVerifiedUser).not.toHaveBeenCalled(); expect(createServiceSupabaseClient).not.toHaveBeenCalled();
+    expect(response.status).toBe(403); if (route === "answer") expect(response.headers.get("Server-Timing")).toMatch(/^total;dur=\d+\.\d$/); expect(getVerifiedUser).not.toHaveBeenCalled(); expect(createServiceSupabaseClient).not.toHaveBeenCalled();
   });
   it.each([{ domainCode, userId: "victim" }, { domainCode, paid: true }, { domainCode, questionCount: 10 }, { domainCode, anonymousToken: "secret" }, { domainCode: "unknown" }, {}, null, []])("rejects strict start body without any service DB client %#", async body => {
     expect((await start(request(body))).status).toBe(400); expect(createServiceSupabaseClient).not.toHaveBeenCalled(); expect(createPractice).not.toHaveBeenCalled();
@@ -67,8 +67,9 @@ describe("practice route auth and privacy", () => {
   it("passes verified identity to progress, answer and owned summary", async () => {
     const progress = await read(getRequest(), context); const result = await answer(request({ itemId, selectedLabel: "A" }), context); const completed = await summary(getRequest(), context);
     expect(readPractice).toHaveBeenCalledWith(mocks.client, id, userId);
-    expect(answerPractice).toHaveBeenCalledWith(mocks.client, id, userId, itemId, "A"); expect(practiceSummary).toHaveBeenCalledWith(mocks.client, id, userId);
-    expect(await result.json()).toEqual({ answeredCount: 1, totalQuestions: 5, completed: false, feedback: { itemId, selectedLabel: "A", correctLabel: "A", isCorrect: true } });
+    expect(answerPractice).toHaveBeenCalledWith(mocks.client, id, userId, itemId, "A", undefined, expect.anything());
+    expect(result.headers.get("Server-Timing")).toMatch(/^credentials;dur=\d+\.\d, total;dur=\d+\.\d$/); expect(practiceSummary).toHaveBeenCalledWith(mocks.client, id, userId);
+    expect(await result.json()).toEqual({ answeredCount: 1, totalQuestions: 5, completed: false, progress: { sessionId: id, status: "in_progress", totalQuestions: 5, answeredCount: 1, currentQuestion: null }, feedback: { itemId, selectedLabel: "A", correctLabel: "A", isCorrect: true } });
     for (const response of [progress, result, completed]) expect(response.headers.get("Cache-Control")).toBe("private, no-store");
   });
   it.each([404, 409, 410])("preserves safe ownership/incomplete/expiry status %s", async status => { vi.mocked(practiceSummary).mockRejectedValue(new DiagnosticError(status, "Safe error")); const response = await summary(getRequest(), context); expect(response.status).toBe(status); expect(await response.json()).toEqual({ error: "Safe error" }); expect(response.headers.get("Cache-Control")).toBe("private, no-store"); });

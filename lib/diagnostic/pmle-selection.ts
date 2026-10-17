@@ -1,3 +1,4 @@
+import type { ServerTiming } from "@/lib/server-timing";
 /**
  * PMLE Question Selection Logic
  * 
@@ -186,11 +187,13 @@ export function calculateDomainTargets(
 export async function selectPmleQuestionsByBlueprint(
   supabase: SupabaseClient,
   totalQuestions: number,
-  preferences: SelectionPreferences = {}
+  preferences: SelectionPreferences | Promise<SelectionPreferences> = {},
+  timing?: ServerTiming
 ): Promise<SelectionResult> {
   // Load each eligible question once. Availability and sampling use the same inventory.
   type Row = { id: string; stem: string; domain_id: string; difficulty: string | null; created_at: string | null;
     exam_domains: { code: string; name: string }; answers: CanonicalAnswer[] };
+  const load = async () => {
   const data: Row[] = [];
   const pageSize = 1000;
   for (let offset = 0; ; offset += pageSize) {
@@ -203,6 +206,10 @@ export async function selectPmleQuestionsByBlueprint(
     data.push(...rows);
     if (rows.length < pageSize) break;
   }
+    return data;
+  };
+  const data = timing ? await timing.measure("inventory", load) : await load();
+  const resolvedPreferences = await preferences;
   const pools = new Map<string, Row[]>();
   for (const row of (data ?? []) as unknown as Row[]) {
     if (!hasValidAnswers(row.answers)) continue;
@@ -218,7 +225,7 @@ export async function selectPmleQuestionsByBlueprint(
     const pool = pools.get(domainCode) ?? [];
     if (pool.length > 0 && pool.length < MIN_POOL_THRESHOLD)
       console.warn(`[CONTENT] Domain ${domainCode} has low ACTIVE+GOOD question pool: ${pool.length} questions available`);
-    const selected = pickPreferred(pool, targetCount, preferences);
+    const selected = pickPreferred(pool, targetCount, resolvedPreferences);
     selectedQuestions.push(...selected.map(row => ({ id: row.id, stem: row.stem, domain_id: row.domain_id,
       domain_code: domainCode, domain_name: row.exam_domains.name, difficulty: row.difficulty, answers: row.answers })));
     domainDistribution.push({ domainCode, targetCount, availableCount: pool.length, selectedCount: selected.length });
