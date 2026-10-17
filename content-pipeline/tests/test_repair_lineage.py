@@ -394,6 +394,8 @@ def test_same_artifact_ingest_reuses_six_runs_preserves_twelve_complete_rows(com
     assert sum(ingest._is_complete(entry) for entry in after["candidates"]) == 13
     case[3].create_generation_run.assert_not_called()
     assert case[3].insert_question.call_count == 1
+    assert case[3].insert_question.call_args.args[0]["exam"] == "GCP_PM_ML_ENG"
+    case[3].get_domain_by_code.assert_any_call(child["domain_code"], exam="GCP_PM_ML_ENG")
     ingest.validate_completed_journals(after, case[0])
     invoke(case)
     assert case[3].insert_question.call_count == 1

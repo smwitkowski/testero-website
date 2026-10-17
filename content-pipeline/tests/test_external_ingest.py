@@ -478,3 +478,70 @@ def test_scope_replay_uses_actual_index_when_question_cycle_differs():
     for index in (1,3,6,7,12,30,45):
         scope=plans[index-1]
         assert ingest._scope(payload,{**scope,"index":index})==scope
+
+
+@pytest.mark.parametrize("cert_id", ["cloud-engineer", "cloud-architect", "data-engineer"])
+def test_non_pmle_ingest_resolves_exam_and_domain_and_stays_draft(case, cert_id):
+    if cert_id != "cloud-engineer":
+        scope = plan_questions(cert_id, 1, seed=3)[0]
+        scope.pop("style_policy")
+        payload, entry = case[2], case[2]["candidates"][0]
+        payload.update(cert_id=cert_id, exam=cert_id, plan=[scope])
+        entry.update({key: scope[key] for key in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line", "key_length_rank")})
+        entry["candidate_id"] = candidate_id(1, scope, QUESTION)
+        request = build_request(entry["candidate_id"], scope, QUESTION, entry["sources"], entry["evidence"])
+        path = case[6].with_name(entry["candidate_id"] + ".json")
+        path.write_text(json.dumps(request))
+        entry["external_judge_request"] = {"path": str(path.relative_to(case[0].parent)),
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        (case[1] / (entry["candidate_id"] + ".json")).write_text(json.dumps(case[5]))
+        save_input(case)
+    result = invoke(case)
+    assert result.exit_code == 0, result.output
+    case[3].get_domain_by_code.assert_called_once_with(case[2]["plan"][0]["domain_code"], exam=cert_id)
+    assert case[3].create_generation_run.call_args.args[0]["exam"] == cert_id
+    row = case[3].insert_question.call_args.args[0]
+    assert row["exam"] == cert_id and row["domain_id"] == "seeded-domain"
+    assert row["status"] == "DRAFT"
+    assert sum(a["is_correct"] for a in case[3].insert_answers_batch.call_args.args[0]) == 1
+
+
+def test_foreign_exam_rejected_before_client(case):
+    case[2]["exam"] = "GCP_PM_ML_ENG"
+    save_input(case)
+    result = invoke(case)
+    assert result.exit_code == 1 and "exam must match" in result.output
+    case[4].assert_not_called()
+
+
+@pytest.mark.parametrize("patch", [
+    {"question_type": "multiple_select"}, {"answer_mode": "multiple_select"},
+    {"keys": ["A", "B"]}, {"key": ["A", "B"]},
+    {"correct_labels": ["A", "B"]}, {"correct_answers": ["A", "B"]},
+])
+def test_multiple_select_rejected_explicitly_before_client(case, patch):
+    case[2]["candidates"][0].update(patch)
+    save_input(case)
+    result = invoke(case)
+    assert result.exit_code == 1 and "multiple-select ingestion waits for phase 3" in result.output
+    case[4].assert_not_called()
+
+
+def test_multiple_is_correct_options_are_not_silently_coerced(case):
+    for option in case[2]["candidates"][0]["options"][:2]:
+        option["is_correct"] = True
+    save_input(case)
+    result = invoke(case)
+    assert result.exit_code == 1 and "multiple-select ingestion waits for phase 3" in result.output
+    case[4].assert_not_called()
+
+
+@pytest.mark.parametrize("change", ["plan_null", "entry_null", "options_null"])
+def test_malformed_records_fail_cleanly_before_client(case, change):
+    if change == "plan_null": case[2]["plan"][0] = None
+    elif change == "entry_null": case[2]["candidates"][0] = None
+    else: case[2]["candidates"][0]["options"] = None
+    save_input(case)
+    result = invoke(case)
+    assert result.exit_code == 1 and "Invalid candidate record or options" in result.output
+    case[4].assert_not_called()

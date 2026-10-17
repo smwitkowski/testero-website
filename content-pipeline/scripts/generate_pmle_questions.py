@@ -211,7 +211,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         for item in plan:
             code = item["domain_code"]
             if code not in domains:
-                domain = client.get_domain_by_code(code)
+                domain = client.get_domain_by_code(code, exam=exam)
                 if not domain:
                     raise click.ClickException(f"Domain {code} is not seeded; DB seeding requires separate approval")
                 domains[code] = domain["id"]

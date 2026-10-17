@@ -333,6 +333,21 @@ def ingest(path, verdicts, *, dry_run=False):
         raise click.ClickException("Invalid generator/judge vendor independence") from None
     if payload.get("difficulty") not in ("EASY", "MEDIUM", "HARD") or not isinstance(payload.get("exam"), str) or not payload["exam"].strip():
         raise click.ClickException("Artifact lacks persistence difficulty or exam")
+    persistence_exam = "GCP_PM_ML_ENG" if payload.get("cert_id") == "machine-learning-engineer" else payload.get("cert_id")
+    allowed_exams = ({"GCP_PM_ML_ENG", "machine-learning-engineer"}
+                     if payload.get("cert_id") == "machine-learning-engineer" else {persistence_exam})
+    if payload["exam"] not in allowed_exams:
+        raise click.ClickException("Artifact exam must match its certification (PMLE uses GCP_PM_ML_ENG)")
+    for row in [payload, *payload["plan"], *payload["candidates"]]:
+        if not isinstance(row, dict) or not isinstance(row.get("options", []), list):
+            raise click.ClickException("Invalid candidate record or options")
+        if (row.get("question_type", "single_select") != "single_select"
+                or row.get("answer_mode", "single_select") != "single_select"
+                or any(key in row for key in ("keys", "correct_labels", "correct_answers"))
+                or ("key" in row and not isinstance(row["key"], str))
+                or any(isinstance(option, dict) and "is_correct" in option
+                       for option in row.get("options", []))):
+            raise click.ClickException("Only single_select candidates are supported; multiple-select ingestion waits for phase 3")
     try:
         validate_candidate_records(payload)
         # Validate every candidate, including failed/unwritten records, before ingest.
@@ -582,7 +597,7 @@ def ingest(path, verdicts, *, dry_run=False):
             for scope in payload["plan"]:
                 code = scope["domain_code"]
                 if code not in domains:
-                    domain = client.get_domain_by_code(code)
+                    domain = client.get_domain_by_code(code, exam=persistence_exam)
                     if not domain or not domain.get("id"):
                         raise ValueError("Unseeded domain")
                     domains[code] = domain["id"]
@@ -595,7 +610,7 @@ def ingest(path, verdicts, *, dry_run=False):
                     journal[code] = {"status": "creating", "run_id": run_id}
                     _flush(path, payload)
                     try:
-                        run = client.create_generation_run({"id": run_id, "exam": payload["exam"], "domain_code": code,
+                        run = client.create_generation_run({"id": run_id, "exam": persistence_exam, "domain_code": code,
                             "target_count": sum(item["domain_code"] == code for item in payload["plan"]),
                             "generated_count": 0, "model": payload["model"], "prompt_version": "registry-grounded-v1",
                             "notes": json.dumps({"cert_id": payload["cert_id"], "judge_model": EXTERNAL_JUDGE_PROVENANCE})})
@@ -627,7 +642,7 @@ def ingest(path, verdicts, *, dry_run=False):
                     raise ValueError("Inserted question returned an unexpected ID")
 
             try:
-                stored = persist_candidate(client, scope, question, judge, grounding, payload["exam"],
+                stored = persist_candidate(client, scope, question, judge, grounding, persistence_exam,
                     domains[scope["domain_code"]], runs[scope["domain_code"]], payload["difficulty"],
                     before_insert=before_insert, on_question_inserted=on_question_inserted,
                     question_id=storage_id)
