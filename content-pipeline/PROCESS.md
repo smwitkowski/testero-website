@@ -1,5 +1,109 @@
 # Docs-grounded question process
 
+## Pipeline efficiency (2026-10-17)
+
+New generation keeps full fetched docs for the decision verifier and independent
+judges. Writer/cite prompts use only verifier-receipted source windows (8,000
+characters either side, overlapping windows merged). Full source hashes and
+retrieval timestamps remain unchanged. The writer returns A–D receipts; exact
+`check_evidence` failure permits **one** cite-only repair, never a rewrite.
+Decision plans get the existing near-duplicate threshold before retrieval; the
+final question duplicate veto remains. Planner instructions omit prose-only
+style details; writer and style-gate instructions remain intact.
+
+New requests freeze `execution_policy: short_circuit_v1`. The runner evaluates
+style → evidence → Claude blind → Argon review, stopping on first failure except
+for every fifth candidate. `--full-gate-sample N` changes that interval (`1` runs
+all gates). Skips are explicit rejecting verdicts. Passing candidates always have
+Claude blind and Argon review results. New Argon requests are review-only version
+2; historical version-1 requests keep both Argon calls and their original order.
+No pass thresholds change. The sorted full request-directory cohort and interval
+are frozen in `<verdicts>/.sampling/policy.json`; retries may filter candidates but
+must not change directory membership or interval. Use a new verdict directory for
+a new cohort. Empty retired request directories remain safe no-ops.
+
+`--target-accepted K --expected-yield 0.29` is an alternative to `--n-questions`
+in either generator entry point. It budgets `ceil(K / yield)` candidates, not a
+promise of acceptance/publication, and does not stop early after K passes.
+All scopes freeze `style_policy` at plan construction, including unadmitted scopes
+after a subscription stop (this fix was absent on the starting main).
+
+Each transport attempt appends metadata only to `<artifact>.calls.jsonl`.
+Native DSPy logs each `LM.forward`, not opaque provider-internal retries. Missing
+usage stays null, including failures before a response. CLI records include parse
+failures and subscription errors; no prompts, responses or credentials are logged.
+Codex JSONL usage is separate from its unchanged final `-o` structured output.
+Cached/reasoning counts are subsets, not extra tokens to add to input/output.
+
+### Coordinator-only A/B (no live runs performed in this PR)
+
+Baseline is **origin/main plus telemetry only**; treatment is
+`prime/pipeline-efficiency`. Never call an uninstrumented baseline token-comparable.
+Use the same frozen origin/main commit this branch started from, two domains,
+identical objective IDs, model selectors, efforts, seed, parallelism and N=12–15
+candidates **per arm** (the example uses 12 over two domains). Do not use
+`--target-accepted` for this fixed-N comparison. Run each arm in a separate
+worktree with its normal documented environment. No production writes are needed.
+The overlay refuses drift, dirty baselines and the treatment worktree; it applies
+only token instrumentation and keeps main's prompts/retries/gates unchanged.
+
+From the treatment worktree, prepare a separate clean baseline (founder/coordinator):
+
+```sh
+git worktree add --detach ../frontend.pipeline-baseline c03d091
+cd content-pipeline
+uv run python scripts/baseline_telemetry.py \
+  --baseline ../../frontend.pipeline-baseline \
+  --calls /absolute/path/baseline.json.calls.jsonl
+# Inspect the dry-run file list, then repeat with --apply.
+```
+
+In each arm's `content-pipeline/` directory run the following, changing the artifact
+path to `/absolute/path/baseline.json` or `/absolute/path/treatment.json`:
+
+```sh
+uv run python scripts/generate_all_domains.py \
+  --cert machine-learning-engineer --n-questions 12 --seed 1710 \
+  --objective machine-learning-engineer:standard:1.1:5 \
+  --objective machine-learning-engineer:standard:6.1:1 \
+  --model codex --judge-model external --argon-gate \
+  --artifact /absolute/path/treatment.json
+uv run python scripts/judge_requests.py \
+  --requests /absolute/path/treatment.judge-requests \
+  --verdicts /absolute/path/treatment.verdicts \
+  --judge-model claude --parallel 3 --argon-gate
+uv run python scripts/ingest_external_verdicts.py \
+  --artifact /absolute/path/treatment.json \
+  --verdicts /absolute/path/treatment.verdicts --dry-run
+```
+
+Main has no sampling option: it runs all original gates. Treatment defaults to 5.
+For a separate complete overlap-quality audit use treatment `--full-gate-sample 1`
+and a new verdict directory; do not mix those costs into the default-5 comparison.
+Skipped gates are **not failures** for conditional pass-rate statistics. Compare
+strict evidence/Argon rates on the all-gate cohort, with its denominator visible;
+12–15 candidates is a smoke comparison, not evidence that ±5 points is significant.
+Replay parity covers recorded all-gate verdicts, not the quality of newly written questions.
+
+Run the treatment report script on both arms' telemetry:
+
+```sh
+uv run python scripts/token_report.py \
+  --calls /absolute/path/treatment.json.calls.jsonl \
+  --artifact /absolute/path/treatment.json --published 0
+```
+
+`groups` gives stage/candidate known-token subtotals and coverage.
+`tokens.*.calls_with_usage / total_calls` must be comparable before interpreting a
+saving. `known_tokens_per_published` divides by an **explicit verified publication
+count**; replace 0 only after independent coordinator review/publication. Zero or
+unknown publication has a null ratio. `artifact.accepted`, persisted DRAFTs and
+dry-run judge passes are not publication. Reuse this script from treatment for
+baseline logs; `--artifact` joins changing pre-write/final IDs by plan index.
+Look for ≥30% lower known input/output tokens per published question, with no
+credible evidence/Argon quality drop; stop and investigate any missing usage or
+semantic rejection change. No actual savings are claimed by this offline PR.
+
 ## Current rules-v5.1 objective allowance (2026-10-14)
 
 For **new candidates**, freeze `style_policy` version `5.1` on the plan,
