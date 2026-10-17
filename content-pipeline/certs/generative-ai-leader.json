@@ -545,6 +545,19 @@
   ],
   "sources": [
     {
+      "url": "https://cloud.google.com/learn/certification/generative-ai-leader",
+      "final_url": "https://cloud.google.com/learn/certification/generative-ai-leader",
+      "retrieved_at": "2026-10-16T16:04:01.025941Z",
+      "role": "recommended_experience",
+      "content_type": "text/html; charset=utf-8",
+      "verified_fields": [
+        "recommended_experience",
+        "canonical_exam_code",
+        "exam_variants.validity_stated"
+      ],
+      "verification_scope": "Experience, exam code and validity only; other exam facts and guides not rechecked."
+    },
+    {
       "url": "https://cloud.google.com/learn/certification",
       "final_url": "https://cloud.google.com/learn/certification",
       "retrieved_at": "2026-10-04T13:40:00Z",

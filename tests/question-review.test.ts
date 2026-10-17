@@ -33,7 +33,7 @@ describe("shared question review", () => {
   it("renders only the optional explanation fields received in paid review", () => {
     const review = { ...mapReview(source), explanation: "Stored question explanation", options: [{ label: "A", text: "First", explanation: "Stored option explanation" }, { label: "B", text: "Second" }] };
     const html = renderToStaticMarkup(createElement(QuestionReviewList, { review: [review] }));
-    expect(html).toContain("Stored question explanation");
+    expect(html).not.toContain("Stored question explanation");
     expect(html).toContain("Stored option explanation");
     expect(html).not.toContain("secret link");
   });
@@ -42,5 +42,26 @@ describe("shared question review", () => {
     expect(html).toContain("Your answer");
     expect(html).toContain("Correct answer");
     expect(html).not.toContain("Incorrect");
+  });
+});
+
+describe("paid review explanations", () => {
+  it("shows each rationale once in the practice summary when the explanation repeats all options", () => {
+    const options = ["A", "B", "C", "D"].map(label => ({ label, text: `Choice ${label}`, explanation: `Rationale for ${label}.` }));
+    const review = { ...mapReview(source), explanation: options.map(option => `${option.label}: ${option.explanation}`).join("\n\n"), options };
+    const html = renderToStaticMarkup(createElement(QuestionReviewList, { review: [review] }));
+    for (const option of options) expect(html.split(option.explanation)).toHaveLength(2);
+    expect(html).not.toContain(">Explanation</h4>");
+  });
+  it("keeps an overall explanation when no option rationales are available", () => {
+    const review = { ...mapReview(source), explanation: "Overall rationale." };
+    const html = renderToStaticMarkup(createElement(QuestionReviewList, { review: [review] }));
+    expect(html.split(review.explanation)).toHaveLength(2);
+  });
+  it("shows a correct-option explanation that repeats the question explanation only once", () => {
+    const review = { ...mapReview(source), explanation: "Because A.", options: [{ label: "A", text: "First", explanation: " Because A. " }, { label: "B", text: "Second", explanation: "B is wrong." }] };
+    const html = renderToStaticMarkup(createElement(QuestionReviewList, { review: [review] }));
+    expect(html.match(/Because A\./g)).toHaveLength(1);
+    expect(html).toContain("B is wrong.");
   });
 });

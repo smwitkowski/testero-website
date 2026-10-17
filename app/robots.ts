@@ -4,8 +4,10 @@ import { SITE_ORIGIN } from "@/lib/seo";
 export const privatePaths = [
   "/api/", "/auth/", "/account", "/dashboard", "/practice/", "/diagnostic/",
   "/checkout/", "/login", "/signup", "/forgot-password", "/reset-password",
-  "/verify-email", "/admin/", "/_next/",
+  "/verify-email", "/admin/", "/results/",
 ];
+
+export const revalidate = 300;
 
 export default function robots(): MetadataRoute.Robots {
   return {

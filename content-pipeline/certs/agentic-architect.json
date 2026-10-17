@@ -8,6 +8,11 @@
   "status": "catalog-listed",
   "registration_status": "closed_beta_upcoming_ga",
   "canonical_exam_code": null,
+  "recommended_experience": "3+ years of hands-on experience building, testing, deploying, and managing cloud solutions including 1+ years building agentic solutions using Google Cloud",
+  "recommended_experience_source": {
+    "url": "https://cloud.google.com/learn/certification/agentic-architect/",
+    "retrieved_at": "2026-10-16T16:04:01.285016Z"
+  },
   "retirement": null,
   "announcements": [
     "Professional Agentic Architect beta registration is closed. If you took the beta, please refer to the PAA beta FAQs. GA registration opens November 2.",
@@ -409,6 +414,19 @@
     }
   ],
   "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification/agentic-architect/",
+      "final_url": "https://cloud.google.com/learn/certification/agentic-architect/",
+      "retrieved_at": "2026-10-16T16:04:01.285016Z",
+      "role": "recommended_experience",
+      "content_type": "text/html; charset=utf-8",
+      "verified_fields": [
+        "recommended_experience",
+        "canonical_exam_code",
+        "exam_variants.validity_stated"
+      ],
+      "verification_scope": "Experience, exam code and validity only; other exam facts and guides not rechecked."
+    },
     {
       "url": "https://cloud.google.com/learn/certification",
       "final_url": "https://cloud.google.com/learn/certification",

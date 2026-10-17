@@ -9,7 +9,10 @@ playwright-report
 test-results
 tests
 e2e
-content-pipeline
+content-pipeline/*
+!content-pipeline/certs
+content-pipeline/certs/*
+!content-pipeline/certs/*.json
 integrations
 supabase
 docs

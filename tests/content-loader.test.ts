@@ -9,7 +9,7 @@ describe("local content loader", () => {
   it("returns all preserved catalog routes with bodies and safe publication metadata", () => {
     const blogs = getBlogEntries();
     const faqs = getFaqEntries();
-    expect(blogs).toHaveLength(5);
+    expect(blogs).toHaveLength(13);
     expect(faqs).toHaveLength(9);
     for (const entry of [...blogs, ...faqs]) {
       expect(entry.body.length).toBeGreaterThan(300);
@@ -18,7 +18,7 @@ describe("local content loader", () => {
       expect(entry.citations.length).toBeGreaterThan(0);
       expect(entry.href).toMatch(/^\/(blog|faq)\/[a-z0-9-]+$/);
     }
-    for (const entry of blogs) {
+    for (const entry of blogs.filter(entry => entry.republished)) {
       expect(entry.editorialNotice).toContain("Edited historical article");
       expect(entry.body).toBe(BLOG_PUBLICATION_OVERLAYS[entry.slug].body);
       expect(entry.body + entry.description).not.toMatch(/Sarah|85%|20\+ hours|40\+ hours|50,000|2,000|pass in 30 days|proven blueprint|expert review/i);
@@ -27,6 +27,32 @@ describe("local content loader", () => {
       expect(entry.title).toBe(BLOG_PUBLICATION_OVERLAYS[entry.slug].title);
       expect(entry.title).not.toMatch(/success story|expert solutions|hardest|complete guide|complete 2025 guide/i);
     }
+  });
+  it("publishes reviewed current articles without historical notices", () => {
+    const entries = getBlogEntries().filter(entry => !entry.republished);
+    expect(entries).toHaveLength(10);
+    for (const entry of entries) {
+      const document = parseFrontmatter(readFileSync(`content/blog/${entry.slug}.md`, "utf8"));
+      expect(entry.body).toBe(document.body);
+      expect(entry.title).toBe(document.attributes.title);
+      expect(entry.description).toBe(document.attributes.description);
+      expect(entry.editorialNotice).toBeUndefined();
+      expect(entry.title.length).toBeLessThanOrEqual(60);
+      expect(entry.description.length).toBeLessThanOrEqual(150);
+      expect(entry.publishedAt).toBe("2026-10-16");
+      expect(entry.updatedAt).toBe("2026-10-16");
+      expect(entry.body).toContain("Last checked October 16, 2026");
+      expect(entry.body).toContain("Testero is independent and not affiliated with Google.");
+    }
+  });
+  it("separates the certification path comparison from the personal picker", () => {
+    const entry = getBlogEntry("google-cloud-certification-path")!;
+    expect(entry.href).toBe("/blog/google-cloud-certification-path");
+    expect(entry.title).toBe("Google Cloud certification path: all 15 certs compared");
+    const picker = "[Want a personal shortlist? Try the certification picker](/tools/which-google-cloud-certification)";
+    expect(entry.body).toContain(picker);
+    expect(entry.body.indexOf(picker)).toBeLessThan(entry.body.indexOf("## How the certification paths fit together"));
+    expect(entry.body).toContain("related paths, not a required ladder");
   });
   it("passes each entry's safe title, description and path to canonical/social metadata", () => {
     for (const entry of [...getBlogEntries(), ...getFaqEntries()]) {
@@ -48,9 +74,9 @@ describe("local content loader", () => {
     const source = readFileSync(`content/faq/${slug}.md`, "utf8");
     const originalBody = parseFrontmatter(source).body;
     const overlay = FAQ_PUBLICATION_OVERLAYS[slug];
-    const replacement = overlay.replacements[0];
     const published = faqDocumentForPublication(slug, source);
-    expect(published.body).toBe(originalBody.replace(replacement.original, replacement.replacement));
+    expect(published.body).toBe(overlay.replacements.reduce((body, { original, replacement }) => body.replace(original, replacement), originalBody));
+    expect(published.body).not.toMatch(/widely considered worth the investment/);
     expect(published.body).not.toContain("among the highest earners");
     expect(published.editorialNotice).toBe(overlay.notice);
     expect(getFaqEntry(slug)?.editorialNotice).toBe(overlay.notice);
@@ -59,9 +85,11 @@ describe("local content loader", () => {
     const untouchedSource = readFileSync(`content/faq/${untouchedSlug}.md`, "utf8");
     expect(faqDocumentForPublication(untouchedSlug, untouchedSource)).toEqual({ body: parseFrontmatter(untouchedSource).body });
   });
-  it("audits exactly three FAQ sources and leaves all text outside each narrow replacement unchanged", () => {
+  it("audits exactly six FAQ sources and leaves all text outside each narrow replacement unchanged", () => {
     expect(Object.keys(FAQ_PUBLICATION_OVERLAYS).sort()).toEqual([
-      "is-google-cloud-certification-worth-it", "is-google-data-analytics-certification-worth-it", "what-is-google-cloud-certification",
+      "how-do-you-register-for-google-cloud-certification", "how-much-does-google-cloud-digital-leader-cost",
+      "is-google-cloud-certification-worth-it", "is-google-data-analytics-certification-worth-it",
+      "is-the-google-professional-machine-learning-engineer-certification-worth-it", "what-is-google-cloud-certification",
     ]);
     for (const [slug, overlay] of Object.entries(FAQ_PUBLICATION_OVERLAYS)) {
       const source = readFileSync(`content/faq/${slug}.md`, "utf8");
@@ -70,10 +98,25 @@ describe("local content loader", () => {
         expect(expected.split(replacement.original)).toHaveLength(2);
         expected = expected.replace(replacement.original, replacement.replacement);
       }
-      expect(faqDocumentForPublication(slug, source)).toEqual({ body: expected, editorialNotice: overlay.notice });
+      expect(faqDocumentForPublication(slug, source)).toEqual({ body: expected, editorialNotice: overlay.notice, ...(overlay.citations ? { citations: overlay.citations } : {}) });
       expect(() => faqDocumentForPublication(slug, source.replace("Google", "Changed"))).toThrow("FAQ source requires editorial review");
       expect(getFaqEntry(slug)?.editorialNotice).toBe(overlay.notice);
     }
+  });
+  it("removes unsourced value claims and known-broken citations", () => {
+    const faqs = getFaqEntries();
+    for (const entry of faqs) {
+      expect(entry.body).not.toMatch(/highly valuable|widely considered/);
+      expect(entry.citations.join(" ")).not.toMatch(/answer\/9907651|coursera\.org\/professional-certificates\/google-cloud-digital-leader|datacamp\.blog/);
+    }
+  });
+  it("ends FAQ excerpts at a sentence boundary when the first sentence fits", async () => {
+    const { sentenceExcerpt } = await import("@/lib/content/loader");
+    expect(sentenceExcerpt("Short.")).toBe("Short.");
+    expect(sentenceExcerpt(`${"a".repeat(100)}. ${"b".repeat(100)}.`)).toBe(`${"a".repeat(100)}.`);
+    expect(sentenceExcerpt(`${"word ".repeat(50)}end. Next.`)).toBe(`${"word ".repeat(50)}end.`);
+    expect(sentenceExcerpt(`${"word ".repeat(80)}end.`)).toMatch(/word…$/);
+    for (const entry of getFaqEntries()) expect(entry.description).toMatch(/[.!?]$/);
   });
   it("shows FAQ citations while replacing legacy hub destinations", () => {
     for (const entry of getFaqEntries()) {

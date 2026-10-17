@@ -12,7 +12,7 @@ export function PracticeSummary({ sessionId }: { sessionId: string }) {
   const { data, error, reload } = usePracticeResource<PracticeSummaryData>(`/api${nextPath}`);
   if (error) return <PracticeError error={error} nextPath={nextPath} onRetry={reload} />;
   if (!data) return <PracticeLoading message="Loading your practice summary…" />;
-  return <div className="space-y-8">
+  return <div className="mx-auto max-w-[760px] space-y-8">
     <section className="space-y-3">
       <h1 className="text-3xl font-semibold tracking-tight">Your practice summary</h1>
       <p className="leading-relaxed text-muted-foreground">Review your answers to decide what to study next. This short session is study guidance, not an exam readiness guarantee.</p>

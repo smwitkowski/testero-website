@@ -1,3 +1,4 @@
+import { scheduleFunnelEvent } from "@/lib/analytics/server";
 import { requestOrigin } from "@/lib/auth/redirects";
 import { createHash } from "node:crypto";
 import { getPaidAccess } from "@/lib/billing/paid-access";
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
       idempotencyKey: checkoutIdempotencyKey(user.id, price),
     });
     if (!session.url) throw new Error("Missing checkout URL");
+    scheduleFunnelEvent(request, "checkout_started", user.id, { plan_name: "PMLE Pass" }, `checkout_started:${createHash("sha256").update(session.id).digest("hex")}`);
     return billingJson({ href: session.url });
   } catch (error) { return billingErrorResponse(error); }
 }

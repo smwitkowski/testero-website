@@ -48,6 +48,11 @@ describe("practice HTTP boundary", () => {
 });
 
 describe("dashboard and practice states", () => {
+  it.each([["D3", "D3"], ["unknown", "D0"]])("selects only a supported requested domain %s", (requestedDomain, selected) => {
+    const html = renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: [], remaining: 5, requestedDomain }));
+    expect(html).toContain(`value="${selected}" selected=""`);
+    expect(html).not.toContain('value="unknown"');
+  });
   it("shows a genuine empty diagnostic with a diagnostic link and all six practice domains", () => {
     const html = renderToStaticMarkup(createElement(DashboardPanel, { data: empty }));
     expect(html).toContain("Take a diagnostic");
@@ -126,9 +131,45 @@ describe("practice explanation display boundary", () => {
       .mockImplementationOnce(() => [false, vi.fn()] as never)
       .mockImplementationOnce(() => [{ answeredCount: 1, totalQuestions: 5, completed: false, feedback }, vi.fn()] as never);
     const html = renderToStaticMarkup(createElement(PracticeSession, { sessionId: "owned" }));
-    expect(html).toContain("Saved-answer explanation"); expect(html).toContain("Saved option explanation");
+    expect(html).not.toContain("Saved-answer explanation"); expect(html).toContain("Saved option explanation");
     expect(html).toContain("First snapshot"); expect(html).toContain("Correct answer: A");
     expect(html).not.toContain("Submit answer");
+  });
+  it("shows duplicate correct-option and question explanations only once", () => {
+    state.progress = { sessionId: "owned", status: "in_progress", answeredCount: 0, totalQuestions: 5, currentQuestion: question };
+    vi.mocked(useState).mockImplementationOnce(() => ["B", vi.fn()] as never)
+      .mockImplementationOnce(() => [false, vi.fn()] as never)
+      .mockImplementationOnce(() => [{ answeredCount: 1, totalQuestions: 5, completed: false, feedback: { ...feedback,
+        optionExplanations: [{ label: "A", text: "First snapshot", explanation: `  ${feedback.explanation}  ` }, { label: "B", text: "Second", explanation: "Distinct distractor reason" }],
+      } }, vi.fn()] as never);
+    const html = renderToStaticMarkup(createElement(PracticeSession, { sessionId: "owned" }));
+    expect(html.split(feedback.explanation)).toHaveLength(2);
+    expect(html).toContain("Distinct distractor reason");
+  });
+  it("shows each option rationale once when the question explanation aggregates all options", () => {
+    const options = [{ label: "A", text: "First" }, { label: "B", text: "Second" }, { label: "C", text: "Third" }, { label: "D", text: "Fourth" }];
+    state.progress = { sessionId: "owned", status: "in_progress", answeredCount: 0, totalQuestions: 5, currentQuestion: { ...question, options } };
+    const optionExplanations = options.map(option => ({ ...option, explanation: `Reason for ${option.text}.` }));
+    vi.mocked(useState).mockImplementationOnce(() => ["B", vi.fn()] as never)
+      .mockImplementationOnce(() => [false, vi.fn()] as never)
+      .mockImplementationOnce(() => [{ answeredCount: 1, totalQuestions: 5, completed: false, feedback: { ...feedback,
+        explanation: optionExplanations.map(option => `${option.label}: ${option.explanation}`).join("\n\n"), optionExplanations,
+      } }, vi.fn()] as never);
+    const html = renderToStaticMarkup(createElement(PracticeSession, { sessionId: "owned" }));
+    for (const option of optionExplanations) expect(html.split(option.explanation)).toHaveLength(2);
+    expect(html).toContain("Option explanations");
+    expect(html).not.toContain(">Explanation</h2>");
+    expect(html).toContain("Next question");
+  });
+  it.each([undefined, []])("keeps the question explanation when option rationales are %j", optionExplanations => {
+    state.progress = { sessionId: "owned", status: "in_progress", answeredCount: 0, totalQuestions: 5, currentQuestion: question };
+    vi.mocked(useState).mockImplementationOnce(() => ["B", vi.fn()] as never)
+      .mockImplementationOnce(() => [false, vi.fn()] as never)
+      .mockImplementationOnce(() => [{ answeredCount: 1, totalQuestions: 5, completed: true, feedback: { ...feedback, optionExplanations } }, vi.fn()] as never);
+    const html = renderToStaticMarkup(createElement(PracticeSession, { sessionId: "owned" }));
+    expect(html.split(feedback.explanation)).toHaveLength(2);
+    expect(html).not.toContain("Option explanations");
+    expect(html).toContain("View summary");
   });
   it("does not invent explanations for free saved-answer feedback", () => {
     state.progress = { sessionId: "owned", status: "in_progress", answeredCount: 0, totalQuestions: 5, currentQuestion: question };
@@ -139,5 +180,17 @@ describe("practice explanation display boundary", () => {
       .mockImplementationOnce(() => [{ answeredCount: 1, totalQuestions: 5, completed: false, feedback: freeFeedback }, vi.fn()] as never);
     const html = renderToStaticMarkup(createElement(PracticeSession, { sessionId: "owned" }));
     expect(html).toContain("Correct answer: A"); expect(html).not.toMatch(/Explanation|Saved-answer|Saved option/);
+  });
+});
+
+describe("QA 2026-10-14 practice start", () => {
+  it("defaults the domain select to the weakest domain unless one was requested", () => {
+    const weakest = [{ domainCode: "D4", domainName: "Domain 4", total: 3, correct: 0, percentage: 0 }];
+    expect(renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: weakest, remaining: 5 }))).toContain('value="D4" selected=""');
+    expect(renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: weakest, remaining: 5, requestedDomain: "D2" }))).toContain('value="D2" selected=""');
+  });
+  it("shows the quota reset date", () => {
+    const html = renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: [], remaining: 0, quotaWeekStart: "2026-10-12" }));
+    expect(html).toContain("Your free allowance resets on Monday, October 19 at 00:00 UTC.");
   });
 });

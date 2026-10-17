@@ -28,10 +28,15 @@ site_url = "http://127.0.0.1:3000"
 additional_redirect_urls = ["http://127.0.0.1:3000/**", "http://127.0.0.1:3100/**"]
 jwt_expiry = 3600
 enable_signup = true
+[auth.rate_limit]
+# Local only: e2e sends several confirmation, resend and reset emails per run.
+email_sent = 100
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = true
+# Local e2e resends right after signup. Hosted projects keep their own (60s) limit.
+max_frequency = "1s"
 [auth.email.template.confirmation]
 subject = "Confirm your Testero account"
 content_path = "./supabase/templates/confirmation.html"

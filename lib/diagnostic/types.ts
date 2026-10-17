@@ -1,8 +1,10 @@
 import type { ExamReadinessTier } from "@/lib/readiness";
+import { domainDisplayName } from "@/lib/constants/pmle-blueprint";
 
 export interface DiagnosticQuestion {
   id: string;
   ordinal: number;
+  domainCode: string;
   stem: string;
   options: { label: string; text: string }[];
 }
@@ -84,6 +86,6 @@ export function mapReview(item: QuestionReviewSource): QuestionReview {
     correctLabel: item.correct_label,
     isCorrect: item.is_correct,
     domainCode: item.domain_code,
-    domainName: item.domain_name,
+    domainName: domainDisplayName(item.domain_code, item.domain_name),
   };
 }

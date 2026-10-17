@@ -1,0 +1,125 @@
+{
+  "date": "2026-10-06",
+  "diagnosis": {
+    "live_calls": 2,
+    "model": "codex/gpt-6.1-sol",
+    "flags_unchanged": true,
+    "effort": "high",
+    "before": {
+      "returncode": 1,
+      "duration_seconds": 4.269022458989639,
+      "actual_error_code": "invalid_json_schema",
+      "actual_error_message": "Invalid schema for response_format 'codex_output_schema': context=('properties', 'plan'), $ref cannot have keywords {'description'}.",
+      "misclassified_as": "CodexModelRejectedError",
+      "false_regex_match": "model or Building a model. Prefix hints must not invent a role, chronology or scope unsupported"
+    },
+    "after": {
+      "returncode": 0,
+      "duration_seconds": 60.2123075829586,
+      "plan_parsed": true,
+      "plan_ref_keywords": [
+        "$ref"
+      ]
+    },
+    "fix": "Normalize only Codex transport $ref description/title annotations; full local/Claude schemas and validation constraints stay unchanged. Detect requested-model rejection only from ERROR records after removing exact echoed input."
+  },
+  "smoke": {
+    "kind": "writer-and-citer-only-transport-smoke",
+    "model": "codex/gpt-6.1-sol",
+    "gen_effort": "high",
+    "cite_effort": "medium",
+    "source_artifact": "pmle-d025-r5-45.json",
+    "source_artifact_sha256": "f5e49a9bde813245b6b252ca0fe201b4a0a0c5d3996bb698ffd742eb7e0c6675",
+    "planned_items": 2,
+    "calls": [
+      {
+        "model": "codex/gpt-6.1-sol",
+        "signature": "PmleQuestionSignature",
+        "effort": "high",
+        "status": "success",
+        "duration": 90.57914416701533
+      },
+      {
+        "model": "codex/gpt-6.1-sol",
+        "signature": "CitationSignature",
+        "effort": "medium",
+        "status": "success",
+        "duration": 9.537234875024296
+      },
+      {
+        "model": "codex/gpt-6.1-sol",
+        "signature": "PmleQuestionSignature",
+        "effort": "high",
+        "status": "success",
+        "duration": 86.78462395898532
+      },
+      {
+        "model": "codex/gpt-6.1-sol",
+        "signature": "CitationSignature",
+        "effort": "medium",
+        "status": "success",
+        "duration": 19.932561374967918
+      }
+    ],
+    "transport_passed": true,
+    "all_checks_passed": true,
+    "retrieval_calls": 0,
+    "judge_calls": 0,
+    "db_writes": 0
+  },
+  "smoke_items": [
+    {
+      "source_index": 6,
+      "objective_id": "machine-learning-engineer:standard:2.2:3",
+      "source_hashes": [
+        "7cfd10226b59c07b446524826486da0c251a8f3f3b468b367af095aa12657b11",
+        "4b79962b5046dd7621857b844c064dc0a4e0827075dc2f6a70bfbdc8d7bc566f",
+        "4d706bad6013db6cdf5005694d577e986d4f43718fbf3c1521b44651ae435561",
+        "a23a602e2d17261dba1138064d5a3d1072c97f8a0626ebbe1800937ac9516b04",
+        "1dc205402814c56674704e19f06b5fa570f7da0082b9f590b829d9c93a511026"
+      ],
+      "source_integrity": "VERIFIED",
+      "schema_check": {
+        "passed": true,
+        "errors": []
+      },
+      "mechanical_check": {
+        "passed": true,
+        "errors": []
+      },
+      "question_sha256": "48820d1506d03d77ad96f10607f164a76184122d220cb620cbbd3efe5ab06a20"
+    },
+    {
+      "source_index": 7,
+      "objective_id": "machine-learning-engineer:standard:3.1:4",
+      "source_hashes": [
+        "21788ddcdee9c84755255676f0e5c2503e187fdc97b75144ae80b02e15e29555",
+        "9c637299f35f8e358126e7dc2568d19715feec2f7102c6370884a882a81fa1f2",
+        "a4bac323539d828eaebd444c05c76cb7244a5d9b6ea3f1d8813f1fcba581130d",
+        "bec7a45c27bb98c7cf7d5edaa9bd5ffc6f31f67096cbe3d759d517bfbdc16cb8",
+        "b4af5a3cf85a2d0d1fd47f83fc7aa9e0836ef29f3673b9d6fb75340c059a48bd"
+      ],
+      "source_integrity": "VERIFIED",
+      "schema_check": {
+        "passed": true,
+        "errors": []
+      },
+      "mechanical_check": {
+        "passed": true,
+        "errors": []
+      },
+      "question_sha256": "e23a0f55369719b72abab773917fc8571fdfcb58caf76dcceb31e2767a6896b3"
+    }
+  ],
+  "tests": {
+    "command": "cd content-pipeline && uv run pytest -q",
+    "passed": 1846,
+    "subtests_passed": 48,
+    "warnings": 25
+  },
+  "live_cli_invocations_total": 6,
+  "failed_pilot_artifact_unchanged": true,
+  "publication": false,
+  "raw_local_evidence": ".cache/codex-pilot-diagnosis/{call1.json,call2.json,smoke.json}",
+  "replay_fixture": "tests/fixtures/codex-plan-invalid-schema.stderr.json"
+}

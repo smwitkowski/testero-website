@@ -112,7 +112,7 @@ describe("practice ownership and no early correctness", () => {
   it("rejects expired unfinished sessions before item reads", async () => { const database = db({ session: { ...session, expires_at: "2026-10-01T00:00:00Z" } }); await expect(readPractice(database.client, sessionId, userId, now)).rejects.toMatchObject({ status: 410 }); expect(database.from.mock.calls).toEqual([["study_sessions"]]); });
   it("whitelists progress and nested options even for malicious extra JSON", async () => {
     const progress = await readPractice(db().client, sessionId, userId, now);
-    expect(progress.currentQuestion).toEqual({ id: itemId, ordinal: 1, stem: "Question 0", options: [{ label: "A", text: "Correct" }, { label: "B", text: "Wrong" }] });
+    expect(progress.currentQuestion).toEqual({ id: itemId, ordinal: 1, domainCode: domain, stem: "Question 0", options: [{ label: "A", text: "Correct" }, { label: "B", text: "Wrong" }] });
     expect(JSON.stringify(progress)).not.toMatch(/correctLabel|selectedLabel|isCorrect|correct_label|selected_label|explanation|source|question_id/);
   });
   it("infers completed progress when final answer arrives after session read", async () => { const result = await readPractice(db({ items: rows().map(row => ({ ...row, answered_at: "done", is_correct: true })) }).client, sessionId, userId, now); expect(result).toEqual({ sessionId, status: "completed", totalQuestions: 5, answeredCount: 5, currentQuestion: null }); });

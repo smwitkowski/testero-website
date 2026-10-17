@@ -60,6 +60,36 @@ export interface SelectionResult {
 const MIN_POOL_THRESHOLD = 5;
 
 /**
+ * Questions created from this date come from the current doc-grounded pipeline.
+ * The 2026-10-14 bank export splits exactly here (100 new, 111 legacy). generation_run_id
+ * exists in the schema but its population on legacy rows is unverified, so the date is the marker.
+ */
+export const DIAGNOSTIC_NEW_SINCE = '2026-10-04T00:00:00Z';
+
+export interface SelectionPreferences {
+  /** Prefer questions created at or after this ISO time. */
+  newSince?: string;
+  /** Prefer questions this owner has not seen in earlier diagnostics. */
+  seenQuestionIds?: ReadonlySet<string>;
+}
+
+/**
+ * Random pick that prefers, in order: new+unseen, new+seen, legacy+unseen, legacy+seen.
+ * A thin preferred pool therefore falls back to the full pool for that domain.
+ */
+export function pickPreferred<T extends { id: string; created_at?: string | null }>(pool: T[], count: number, preferences: SelectionPreferences = {}): T[] {
+  const started = performance.now();
+  const since = preferences.newSince ? Date.parse(preferences.newSince) : NaN;
+  const tier = (question: T) =>
+    (Number.isFinite(since) && !(question.created_at && Date.parse(question.created_at) >= since) ? 2 : 0)
+    + (preferences.seenQuestionIds?.has(question.id) ? 1 : 0);
+  // Array.prototype.sort is stable, so each tier keeps its shuffled order.
+  const selected = shuffleArray(pool).sort((a, b) => tier(a) - tier(b)).slice(0, count);
+  if (process.env.NODE_ENV === 'development') console.info(`[selection-timing] pickPreferred ${Math.round(performance.now() - started)}ms`);
+  return selected;
+}
+
+/**
  * Calculate domain targets from blueprint weights
  * Uses largest remainder method for fair rounding
  * 
@@ -155,157 +185,43 @@ export function calculateDomainTargets(
  */
 export async function selectPmleQuestionsByBlueprint(
   supabase: SupabaseClient,
-  totalQuestions: number
+  totalQuestions: number,
+  preferences: SelectionPreferences = {}
 ): Promise<SelectionResult> {
-  // Step 1: Get domain availability counts
-  const { data: domainCounts, error: countError } = await supabase
-    .from('questions')
-    .select(`
-      domain_id,
-      exam_domains!inner(code, name),
-      answers(choice_label, choice_text, is_correct)
-    `)
-    .eq('exam', 'GCP_PM_ML_ENG')
-    .eq('status', 'ACTIVE')
-    .eq('review_status', 'GOOD');
-
-  if (countError) {
-    throw new Error(`Failed to fetch domain counts: ${countError.message}`);
+  // Load each eligible question once. Availability and sampling use the same inventory.
+  type Row = { id: string; stem: string; domain_id: string; difficulty: string | null; created_at: string | null;
+    exam_domains: { code: string; name: string }; answers: CanonicalAnswer[] };
+  const data: Row[] = [];
+  const pageSize = 1000;
+  for (let offset = 0; ; offset += pageSize) {
+    const page = await supabase.from('questions')
+      .select('id,stem,domain_id,difficulty,created_at,exam_domains!inner(code,name),answers(choice_label,choice_text,is_correct)')
+      .eq('exam', 'GCP_PM_ML_ENG').eq('status', 'ACTIVE').eq('review_status', 'GOOD')
+      .order('id').range(offset, offset + pageSize - 1);
+    if (page.error) throw new Error(`Failed to fetch domain counts: ${page.error.message}`);
+    const rows = (page.data ?? []) as unknown as Row[];
+    data.push(...rows);
+    if (rows.length < pageSize) break;
   }
-
-  // Build availability map
-  const domainAvailability = new Map<string, number>();
-  const domainCodeToId = new Map<string, string>();
-  const domainCodeToName = new Map<string, string>();
-
-  interface DomainCountRow {
-    domain_id: string;
-    answers: CanonicalAnswer[] | null;
-    exam_domains: {
-      code: string;
-      name: string;
-    };
+  const pools = new Map<string, Row[]>();
+  for (const row of (data ?? []) as unknown as Row[]) {
+    if (!hasValidAnswers(row.answers)) continue;
+    const pool = pools.get(row.exam_domains.code) ?? [];
+    pool.push(row);
+    pools.set(row.exam_domains.code, pool);
   }
-
-  (domainCounts as unknown as DomainCountRow[] | null)?.forEach((q) => {
-    // Count the same valid inventory that can actually be selected below.
-    if (!hasValidAnswers(q.answers)) return;
-    const domain = q.exam_domains;
-    const code = domain.code;
-    domainAvailability.set(code, (domainAvailability.get(code) || 0) + 1);
-    domainCodeToId.set(code, q.domain_id);
-    domainCodeToName.set(code, domain.name);
-  });
-
-  // Step 2: Calculate domain targets
+  const domainAvailability = new Map([...pools].map(([code, pool]) => [code, pool.length]));
   const domainTargets = calculateDomainTargets(totalQuestions, domainAvailability);
-
-  // Step 3: Select questions from each domain
   const selectedQuestions: CanonicalQuestionWithAnswers[] = [];
   const domainDistribution: DomainSelectionTarget[] = [];
-
-  for (const [domainCode, targetCount] of domainTargets.entries()) {
-    const availableCount = domainAvailability.get(domainCode) || 0;
-    
-    // Log warning if pool is below threshold
-    if (availableCount > 0 && availableCount < MIN_POOL_THRESHOLD) {
-      console.warn(
-        `[CONTENT] Domain ${domainCode} has low ACTIVE+GOOD question pool: ${availableCount} questions available`
-      );
-    }
-    
-    if (targetCount === 0) {
-      domainDistribution.push({
-        domainCode,
-        targetCount: 0,
-        availableCount,
-        selectedCount: 0,
-      });
-      continue;
-    }
-
-    const domainId = domainCodeToId.get(domainCode);
-    if (!domainId) {
-      console.warn(`Domain ID not found for code: ${domainCode}`);
-      continue;
-    }
-
-    // Fetch questions for this domain with answers
-    const { data: domainQuestions, error: fetchError } = await supabase
-      .from('questions')
-      .select(`
-        id,
-        stem,
-        difficulty,
-        answers(choice_label, choice_text, is_correct)
-      `)
-      .eq('exam', 'GCP_PM_ML_ENG')
-      .eq('status', 'ACTIVE')
-      .eq('review_status', 'GOOD')
-      .eq('domain_id', domainId);
-    // NOTE:
-    // We intentionally do NOT apply a small `.limit()` here.
-    // PostgREST/Supabase results are typically stable in practice, so doing a small limit
-    // without a true randomized DB order causes the app to repeatedly sample from the same
-    // tiny subset of questions (which users experience as "only ~10 questions that recycle").
-    //
-    // Current PMLE pool size is small enough that fetching the full domain pool is acceptable,
-    // and we randomize in-memory below before slicing to `targetCount`.
-
-    if (fetchError) {
-      console.error(`Error fetching questions for domain ${domainCode}:`, fetchError);
-      continue;
-    }
-
-    if (!domainQuestions || domainQuestions.length === 0) {
-      console.warn(`No questions available for domain: ${domainCode}`);
-      domainDistribution.push({
-        domainCode,
-        targetCount,
-        availableCount,
-        selectedCount: 0,
-      });
-      continue;
-    }
-
-    // Randomize and select target count
-    const shuffled = shuffleArray(domainQuestions.filter((q) => hasValidAnswers(q.answers)));
-    const selected = shuffled.slice(0, Math.min(targetCount, shuffled.length));
-
-    interface DomainQuestionRow {
-      id: string;
-      stem: string;
-      difficulty: string | null;
-      answers: Array<{
-        choice_label: string;
-        choice_text: string;
-        is_correct: boolean;
-      }> | null;
-    }
-
-    // Transform to CanonicalQuestionWithAnswers format
-    const transformed = (selected as DomainQuestionRow[]).map((q) => ({
-      id: q.id,
-      stem: q.stem,
-      domain_id: domainId,
-      domain_code: domainCode,
-      domain_name: domainCodeToName.get(domainCode) || domainCode,
-      difficulty: q.difficulty,
-      answers: (q.answers || []).map((a) => ({
-        choice_label: a.choice_label,
-        choice_text: a.choice_text,
-        is_correct: a.is_correct,
-      })),
-    }));
-
-    selectedQuestions.push(...transformed);
-
-    domainDistribution.push({
-      domainCode,
-      targetCount,
-      availableCount,
-      selectedCount: transformed.length,
-    });
+  for (const [domainCode, targetCount] of domainTargets) {
+    const pool = pools.get(domainCode) ?? [];
+    if (pool.length > 0 && pool.length < MIN_POOL_THRESHOLD)
+      console.warn(`[CONTENT] Domain ${domainCode} has low ACTIVE+GOOD question pool: ${pool.length} questions available`);
+    const selected = pickPreferred(pool, targetCount, preferences);
+    selectedQuestions.push(...selected.map(row => ({ id: row.id, stem: row.stem, domain_id: row.domain_id,
+      domain_code: domainCode, domain_name: row.exam_domains.name, difficulty: row.difficulty, answers: row.answers })));
+    domainDistribution.push({ domainCode, targetCount, availableCount: pool.length, selectedCount: selected.length });
   }
 
   // Step 4: Validate we have enough questions

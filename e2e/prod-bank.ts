@@ -1,3 +1,4 @@
+import { relabelExplanation } from "../lib/questions/answer-order";
 import { expect } from "@playwright/test";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PaidQuestionReview } from "../lib/diagnostic/types";
@@ -84,12 +85,14 @@ export function assertRestoredPaidReview(review: PaidQuestionReview[], items: Re
   for (const item of review) {
     const restored = items.get(item.itemId);
     expect(restored).toBeDefined();
-    expect(item.explanation).toBe(restored!.question.explanations[0].explanation_text);
+    // Explanations are shown with bank letters rewritten to the displayed (shuffled) letters.
+    const displayLabelFor = new Map(restored!.question.answers.map(answer => [answer.choice_label, item.options.find(option => option.text === answer.choice_text)!.label]));
+    expect(item.explanation).toBe(relabelExplanation(restored!.question.explanations[0].explanation_text, displayLabelFor));
     expect(item.options).toHaveLength(restored!.question.answers.length);
     for (const option of item.options) {
       const canonical = restored!.question.answers.find(answer => answer.choice_text === option.text);
       expect(canonical).toBeDefined(); expect(canonical!.explanation_text.trim()).not.toBe("");
-      expect(option.explanation).toBe(canonical!.explanation_text);
+      expect(option.explanation).toBe(relabelExplanation(canonical!.explanation_text, displayLabelFor));
     }
   }
 }

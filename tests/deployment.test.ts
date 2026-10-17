@@ -40,8 +40,14 @@ describe("non-destructive deployment configuration", () => {
     expect(docker).toContain("USER nextjs");
     expect(docker).toContain('CMD ["node", "server.js"]');
     const ignored = read(".dockerignore").split(/\r?\n/);
-    expect(ignored).toContain("content-pipeline");
+    expect(ignored).toContain("content-pipeline/*");
+    expect(ignored).toContain("!content-pipeline/certs/*.json");
+    expect(ignored).toContain("tests");
     expect(ignored).not.toContain("content");
+  });
+  it("does not restrict PostHog ingestion or recorder assets with an app CSP", () => {
+    for (const path of ["next.config.ts", "proxy.ts"])
+      expect(read(path)).not.toMatch(/Content-Security-Policy/i);
   });
   it("defines exactly the eight supported application configuration values", () => {
     const names = read(".env.example").split(/\r?\n/)

@@ -45,7 +45,7 @@ def test_question_signatures_have_only_string_question_fields():
     instructions = generator.PmleQuestionSignature.instructions
     assert "registry objective" in instructions
     assert "Professional Machine Learning Engineer builds" not in instructions
-    assert "foundational" in instructions
+    assert "business-first" in instructions
 
 
 def test_citation_lm_schema_is_required_strict_receipt_list():

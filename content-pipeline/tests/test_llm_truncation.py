@@ -17,6 +17,7 @@ import pytest
 
 from shared import llm_generator as generator
 from shared import quality_gate as gate
+from shared.model_policy import OPENROUTER_JUDGE_MODEL
 from shared.evidence import check_evidence
 from shared.llm_limits import MaxTokensTruncation, TRUNCATION_REASON, reject_token_limit
 
@@ -111,7 +112,7 @@ def test_judge_token_limit_fails_even_for_valid_high_score(monkeypatch, question
     monkeypatch.setattr(gate.dspy, "LM", factory)
     monkeypatch.setattr(gate.os.environ, "get", lambda key, default=None: "offline-placeholder" if key == "OPENROUTER_API_KEY" else default)
     with dspy.context(disable_history=True):
-        verdict = gate.judge_question(question, "ML", documentation_context="Docs", max_tokens=4000)
+        verdict = gate.judge_question(question, "ML", documentation_context="Docs", model=OPENROUTER_JUDGE_MODEL, max_tokens=4000)
     assert not verdict.passed and verdict.score == 0.0
     assert verdict.reason == TRUNCATION_REASON and verdict.error_class == "MaxTokensTruncation"
     assert verdict.diagnostics["finish_reason"] == "length"
@@ -129,7 +130,7 @@ def test_untruncated_native_judge_keeps_policy_and_shape(monkeypatch, question):
     factory = Mock(return_value=lm)
     monkeypatch.setattr(gate.dspy, "LM", factory)
     monkeypatch.setattr(gate.os.environ, "get", lambda key, default=None: "offline-placeholder" if key == "OPENROUTER_API_KEY" else default)
-    verdict = gate.judge_question(question, "ML", documentation_context="Docs")
+    verdict = gate.judge_question(question, "ML", documentation_context="Docs", model=OPENROUTER_JUDGE_MODEL)
     assert verdict.passed and verdict.error_class is None
     assert gate.is_judge_passed(verdict.to_review_notes())
     assert factory.call_args.kwargs["max_tokens"] == 2000

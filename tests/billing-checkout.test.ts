@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { scheduleFunnelEvent } from "@/lib/analytics/server";
+vi.mock("@/lib/analytics/server", () => ({ scheduleFunnelEvent: vi.fn() }));
 import { POST, checkoutIdempotencyKey } from "@/app/api/billing/checkout/route";
 import { getVerifiedUser } from "@/lib/auth/session";
 import { getPaidAccess } from "@/lib/billing/paid-access";
@@ -13,7 +15,7 @@ beforeEach(() => {
   vi.stubEnv("STRIPE_PRICE_PMLE_PASS", "price_pass");
   vi.mocked(getVerifiedUser).mockResolvedValue(user as never);
   vi.mocked(getPaidAccess).mockResolvedValue({ hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null });
-  mocks.customer.mockResolvedValue({ id: "cus_owned" }); mocks.checkout.mockResolvedValue({ url: "https://checkout.stripe.com/c/pay" });
+  mocks.customer.mockResolvedValue({ id: "cus_owned" }); mocks.checkout.mockResolvedValue({ id: "cs_opaque", url: "https://checkout.stripe.com/c/pay" });
 });
 afterEach(() => vi.unstubAllEnvs());
 describe("PMLE checkout", () => {
@@ -34,4 +36,15 @@ describe("PMLE checkout", () => {
   it.each([false, true])("does not charge existing paid users (legacy=%s)", async legacy => { vi.mocked(getPaidAccess).mockResolvedValue({ hasPaidAccess: true, isLegacySubscriber: legacy, accessUntil: "2027-01-01", pass: null }); const r = await POST(req()); expect(await r.json()).toEqual({ href: "/account", alreadyActive: true }); expect(mocks.ctor).not.toHaveBeenCalled(); });
   it("never charges after an entitlement DB failure", async () => { vi.mocked(getPaidAccess).mockResolvedValue({ hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null, unavailable: true }); const r = await POST(req()); expect(r.status).toBe(503); expect(mocks.ctor).not.toHaveBeenCalled(); });
   it("requires configured server price and sanitizes provider errors", async () => { vi.spyOn(console, "error").mockImplementation(() => {}); vi.stubEnv("STRIPE_PRICE_PMLE_PASS", ""); expect((await POST(req())).status).toBe(503); expect(mocks.ctor).not.toHaveBeenCalled(); vi.stubEnv("STRIPE_PRICE_PMLE_PASS", "price_pass"); mocks.checkout.mockRejectedValue(new Error("secret/customer/email")); const r = await POST(req()); expect(r.status).toBe(503); expect(JSON.stringify(await r.json())).not.toContain("secret"); });
+});
+
+it("tracks checkout only when Stripe returns a usable checkout", async () => {
+  await POST(req());
+  expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "checkout_started", user.id, { plan_name: "PMLE Pass" }, expect.stringMatching(/^checkout_started:[a-f0-9]{64}$/));
+  vi.mocked(scheduleFunnelEvent).mockClear();
+  vi.mocked(getPaidAccess).mockResolvedValue({ hasPaidAccess: true, isLegacySubscriber: false, accessUntil: null, pass: null });
+  await POST(req()); expect(scheduleFunnelEvent).not.toHaveBeenCalled();
+  vi.mocked(getPaidAccess).mockResolvedValue({ hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null });
+  mocks.checkout.mockRejectedValue(new Error("Stripe unavailable"));
+  await POST(req()); expect(scheduleFunnelEvent).not.toHaveBeenCalled();
 });

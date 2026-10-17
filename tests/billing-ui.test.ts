@@ -17,7 +17,7 @@ vi.mock("react", async importOriginal => {
 vi.mock("@/lib/auth/session", () => ({ getVerifiedUser: mocks.user }));
 vi.mock("@/lib/auth/require-user", () => ({ requireUser: mocks.requireUser }));
 vi.mock("@/lib/billing/paid-access", () => ({ getPaidAccess: mocks.access }));
-vi.mock("@/lib/analytics/client", () => ({ trackCheckoutStarted: mocks.checkoutEvent }));
+vi.mock("@/lib/analytics/client", () => ({ trackCheckoutStarted: mocks.checkoutEvent, analyticsHeaders: () => ({ "X-PostHog-Distinct-Id": "anonymous-id" }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 const free: PaidAccess = { hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null };
 const paid: PaidAccess = { hasPaidAccess: true, isLegacySubscriber: false, accessUntil: "2027-01-01T00:00:00Z", pass: { id: "pass", paid_at: "2026-10-03T00:00:00Z", expires_at: "2027-01-01T00:00:00Z", refunded_at: null } };
@@ -34,16 +34,18 @@ afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 describe("verified billing pages", () => {
   it("offers one $39 one-time 90-day pass, signup return, free diagnostic and no placeholder", async () => {
     const html = renderToStaticMarkup(await PricingPage());
-    expect(html).toContain("$39"); expect(html).toContain("one-time"); expect(html).toContain("90 days");
-    expect(html).toContain("No auto-renew"); expect(html).toContain("7-day refund");
+    expect(html).toContain("$39 one-time payment");
+    expect(html).toContain("90 days of access to PMLE practice questions and explanations");
+    expect(html).toContain("Updated for the June 2026 exam guide.");
+    expect(html).toContain("No subscription. No auto-renew."); expect(html).toContain("7-day refund");
     expect(html).toContain('href="/signup?next=/pricing"'); expect(html).toContain('href="/diagnostic"');
     expect(html).not.toMatch(/Phase 3|preview|coming soon/i);
   });
-  it("renders checkout only for the verified server user", async () => {
-    mocks.user.mockResolvedValue({ id: "verified" });
-    const html = renderToStaticMarkup(await PricingPage());
-    expect(html).toContain("Get PMLE Pass"); expect(html).not.toContain("/signup");
-    expect(mocks.user).toHaveBeenCalledOnce();
+  it("renders shared pricing without requesting private account data on the server", () => {
+    const html = renderToStaticMarkup(PricingPage());
+    expect(html).toContain("/signup?next=/pricing");
+    expect(mocks.user).not.toHaveBeenCalled();
+    expect(mocks.access).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
   });
   it("requires auth before checking account access freshly", async () => {
@@ -77,6 +79,8 @@ describe("verified billing pages", () => {
   it("protects success with its safe checkout reference and starts pending, not paid", async () => {
     const html = renderToStaticMarkup(await CheckoutSuccessPage({ searchParams: Promise.resolve({ session_id: "cs_test_owned" }) }));
     expect(mocks.requireUser).toHaveBeenCalledWith("/checkout/success?session_id=cs_test_owned");
+    expect(html).toContain("$39 one-time payment for 90 days of access");
+    expect(html).toContain("No subscription. No auto-renew.");
     expect(html).toContain("Access starts only after your payment is verified"); expect(html).not.toContain("Pass is active");
     expect(MAX_STATUS_CHECKS).toBeLessThanOrEqual(6);
   });
@@ -86,7 +90,7 @@ describe("billing browser boundary", () => {
   it("posts only {} and tracks checkout_started only for the actual Stripe redirect", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ href: "https://checkout.stripe.com/c/pay/test" })));
     expect(await beginCheckout()).toBe("https://checkout.stripe.com/c/pay/test"); expect(mocks.checkoutEvent).toHaveBeenCalledOnce();
-    expect(fetch).toHaveBeenCalledWith("/api/billing/checkout", expect.objectContaining({ method: "POST", body: "{}", cache: "no-store", credentials: "same-origin" }));
+    expect(fetch).toHaveBeenCalledWith("/api/billing/checkout", expect.objectContaining({ method: "POST", body: "{}", cache: "no-store", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-PostHog-Distinct-Id": "anonymous-id" } }));
     mocks.checkoutEvent.mockClear();
     vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ href: "/account", alreadyActive: true })));
     expect(await beginCheckout()).toBe("/account"); expect(mocks.checkoutEvent).not.toHaveBeenCalled();
@@ -122,7 +126,7 @@ describe("billing browser boundary", () => {
     await expect(readCheckoutStatus("cs_test_owned")).rejects.toThrow("could not be verified");
   });
   it("renders accessible initial checkout controls and never a fabricated success", () => {
-    expect(renderToStaticMarkup(createElement(CheckoutButton))).toContain("Get PMLE Pass");
+    expect(renderToStaticMarkup(createElement(CheckoutButton))).toContain("Get PMLE Pass — $39 one-time payment");
     expect(renderToStaticMarkup(createElement(CheckoutStatus, { sessionId: "cs_test_owned" }))).not.toContain("Pass is active");
   });
 });
@@ -195,5 +199,25 @@ describe("bounded checkout verification and authoritative focus reload", () => {
     listeners.get("focus")?.(); expect(reload).toHaveBeenCalledOnce();
     if (typeof cleanup === "function") cleanup();
     expect(listeners.has("focus")).toBe(false);
+  });
+});
+
+describe("QA 2026-10-14 pass display", () => {
+  it("does not put one user's pass expiry into shared pricing HTML", () => {
+    mocks.user.mockResolvedValue({ id: "verified" });
+    mocks.access.mockResolvedValue(paid);
+    const html = renderToStaticMarkup(PricingPage());
+    expect(html).not.toContain("January 1, 2027");
+    expect(mocks.access).not.toHaveBeenCalled();
+  });
+  it("shows days left and a refund note", () => {
+    vi.useFakeTimers({ now: Date.parse("2026-12-30T12:00:00Z") });
+    try {
+      expect(renderToStaticMarkup(createElement(PassStatus, { access: paid }))).toMatch(/January 1, 2027<\/time> <span[^>]*>\(2 days left\)/);
+      const refunded = renderToStaticMarkup(createElement(PassStatus, { access: { ...free, refundedAt: "2026-10-05T09:00:00Z" } }));
+      expect(refunded).toContain("Your PMLE Pass was refunded on <time");
+      expect(refunded).toContain("October 5, 2026");
+      expect(refunded).toContain("Free account.");
+    } finally { vi.useRealTimers(); }
   });
 });

@@ -1,0 +1,270 @@
+{
+ "model": "google/gemini-4-argon",
+ "ids": [
+  "060fbb68-b02a-5928-80ad-9146b569e0b5",
+  "00649ff6-c21b-5aa2-99f1-6312b906bfe9",
+  "420f7f83-b69a-5c8e-9621-b293c171fedc",
+  "758cc679-909f-5e3d-96b3-ed3ab3d51219",
+  "9c808102-5404-5660-ab0e-d22d1a7b87c5",
+  "ed3e2b33-59ea-5c6d-b237-dafa278e869d",
+  "e9d9f655-0e9e-5f84-9ccb-896961705543",
+  "65e66c34-f9af-5fef-a0c9-8ff92921eb48",
+  "c90d0792-551e-5530-9e04-9d451bc3f607",
+  "2e3684ad-0dce-5944-9551-0c4be92471fc"
+ ],
+ "blind": {
+  "answers": [
+   {
+    "n": 1,
+    "answer": "A",
+    "confidence": 0.99,
+    "runner_up": "C",
+    "why": "Agent Platform Model Registry supports model versioning under a single model entry and movable aliases (e.g., 'approved', 'previous') to track release states natively without external spreadsheets or separate registry entries."
+   },
+   {
+    "n": 2,
+    "answer": "A",
+    "confidence": 0.99,
+    "runner_up": "C",
+    "why": "Agent Platform Inference supports autoscaling based on GPU duty cycle/utilization. Enabling this on the existing endpoint directly solves the bottleneck (high GPU usage, low CPU usage) with minimal operational overhead."
+   },
+   {
+    "n": 3,
+    "answer": "A",
+    "confidence": 0.99,
+    "runner_up": "B",
+    "why": "Registering retrained artifacts as new versions under the existing Model Registry entry and using version aliases (like 'production' and 'candidate') provides native lifecycle management and eliminates manual spreadsheet tracking."
+   },
+   {
+    "n": 4,
+    "answer": "A",
+    "confidence": 0.99,
+    "runner_up": "D",
+    "why": "To prevent training-serving skew and inconsistency across replicas, inference must reuse the exact normalization and encoding artifacts fitted during training, validated end-to-end from raw inputs."
+   },
+   {
+    "n": 5,
+    "answer": "A",
+    "confidence": 0.99,
+    "runner_up": "D",
+    "why": "Changes to preprocessing and postprocessing can subtly alter inputs and decisions. End-to-end benchmarking on labeled raw images in staging verifies both latency gains and preserved detection quality before production rollout."
+   },
+   {
+    "n": 6,
+    "answer": "A",
+    "confidence": 0.99,
+    "runner_up": "D",
+    "why": "Point-in-time joins on timestamped BigQuery history prevent data leakage (time travel) during training while leaving the online Agent Platform Feature Store serving path untouched."
+   },
+   {
+    "n": 7,
+    "answer": "A",
+    "confidence": 0.99,
+    "runner_up": "D",
+    "why": "Agent Platform Private Endpoints use Private Service Connect (PSC) to keep prediction traffic entirely within the private VPC network while retaining fully managed serving infrastructure."
+   },
+   {
+    "n": 8,
+    "answer": "A",
+    "confidence": 0.98,
+    "runner_up": "C",
+    "why": "Hardware selection requires empirical benchmarking across CPU, GPU, and TPU under realistic request patterns (single requests and bursts) to find the most cost-effective option that satisfies the p95 latency SLA."
+   },
+   {
+    "n": 9,
+    "answer": "A",
+    "confidence": 0.99,
+    "runner_up": "B",
+    "why": "For imbalanced fraud data, recall measures missed fraud (false negatives), whereas accuracy is misleading. Benchmarking throughput on target hardware alongside held-out recall directly addresses both business constraints."
+   },
+   {
+    "n": 10,
+    "answer": "A",
+    "confidence": 0.99,
+    "runner_up": "D",
+    "why": "Balancing model complexity against both validation error and online tail latency (via replayed app traffic in staging) directly optimizes accuracy within the production response-time SLA."
+   }
+  ]
+ },
+ "review": {
+  "reviews": [
+   {
+    "n": 1,
+    "verdict": "PASS",
+    "key_correct": true,
+    "other_defensible_option": null,
+    "issues": [],
+    "exam_realism": 5,
+    "difficulty": "right",
+    "fix": null
+   },
+   {
+    "n": 2,
+    "verdict": "PASS",
+    "key_correct": true,
+    "other_defensible_option": null,
+    "issues": [],
+    "exam_realism": 5,
+    "difficulty": "right",
+    "fix": null
+   },
+   {
+    "n": 3,
+    "verdict": "REVISE",
+    "key_correct": true,
+    "other_defensible_option": null,
+    "issues": [
+     "Near-duplicate of Question 1: tests the exact same scenario (retailer demand forecasting, spreadsheet tracking) and exact same solution (Model Registry versions + aliases).",
+     "Distractor C is a strawman that simply repeats the broken state described in the stem."
+    ],
+    "exam_realism": 4,
+    "difficulty": "too_easy",
+    "fix": "Differentiate from Question 1 by focusing on how CI/CD or deployment pipelines reference mutable aliases (e.g., deploying by alias or integrating with Model Monitoring) rather than repeating the basic spreadsheet-replacement scenario."
+   },
+   {
+    "n": 4,
+    "verdict": "PASS",
+    "key_correct": true,
+    "other_defensible_option": null,
+    "issues": [
+     "Could be slightly stronger by explicitly naming Custom Prediction Routines (CPR) or embedding transformations into the model graph in the option text, though the current phrasing is completely accurate."
+    ],
+    "exam_realism": 4,
+    "difficulty": "right",
+    "fix": null
+   },
+   {
+    "n": 5,
+    "verdict": "PASS",
+    "key_correct": true,
+    "other_defensible_option": null,
+    "issues": [
+     "Tests general ML systems engineering and staging validation rather than Google Cloud-specific features, makes it slightly easy by elimination."
+    ],
+    "exam_realism": 4,
+    "difficulty": "too_easy",
+    "fix": null
+   },
+   {
+    "n": 6,
+    "verdict": "PASS",
+    "key_correct": true,
+    "other_defensible_option": null,
+    "issues": [
+     "Minor branding leak in Option B's quote ('Vertex AI Feature Store'), though the question and explanations properly use Agent Platform."
+    ],
+    "exam_realism": 5,
+    "difficulty": "right",
+    "fix": null
+   },
+   {
+    "n": 7,
+    "verdict": "PASS",
+    "key_correct": true,
+    "other_defensible_option": null,
+    "issues": [],
+    "exam_realism": 5,
+    "difficulty": "right",
+    "fix": null
+   },
+   {
+    "n": 8,
+    "verdict": "REVISE",
+    "key_correct": true,
+    "other_defensible_option": null,
+    "issues": [
+     "Tests generic benchmarking logic (measure all constraints, pick cheapest that meets SLA) rather than Google Cloud hardware architecture knowledge.",
+     "Benchmarking TPUs for single-request, low-concurrency online inference of a small prototype photo-embedding network is generally an anti-pattern compared to CPUs or L4/T4 GPUs."
+    ],
+    "exam_realism": 3,
+    "difficulty": "too_easy",
+    "fix": "Test concrete GCP accelerator selection (e.g., choosing NVIDIA L4 GPUs or CPU over multi-host TPUs for bursty, single-item online inference) rather than generic benchmarking procedure."
+   },
+   {
+    "n": 9,
+    "verdict": "REVISE",
+    "key_correct": true,
+    "other_defensible_option": null,
+    "issues": [
+     "Focusing purely on matching recall without constraining precision or FPR is risky in production fraud systems (a model could trivially increase recall by flagging everything).",
+     "Tests basic ML fundamentals (class imbalance metrics + load testing) rather than specific GCP tuning or serving capabilities."
+    ],
+    "exam_realism": 4,
+    "difficulty": "too_easy",
+    "fix": "Specify 'recall at a fixed precision/false-positive rate (or AuPRC)' in Option A, or incorporate a GCP-specific serving optimization like TensorRT/ONNX compilation on Agent Platform."
+   },
+   {
+    "n": 10,
+    "verdict": "PASS",
+    "key_correct": true,
+    "other_defensible_option": null,
+    "issues": [
+     "Like Q5, Q8, and Q9, leans heavily on the generic 'optimizing vs. satisficing metrics' pattern rather than GCP-specific tooling, though it is well-constructed."
+    ],
+    "exam_realism": 4,
+    "difficulty": "right",
+    "fix": null
+   }
+  ],
+  "summary": {
+   "pass": 7,
+   "revise": 3,
+   "reject": 0,
+   "top_patterns": [
+    "Questions 1 and 3 are near-duplicates testing the exact same domain, problem (spreadsheet tracking of demand forecast models), and solution (Model Registry versions and aliases).",
+    "Questions 5, 8, 9, and 10 rely heavily on the same generic 'optimizing vs. satisficing metrics' benchmarking template; while technically sound, they test general ML common sense over deep GCP practitioner knowledge.",
+    "In the benchmarking questions (5, 8, 9, 10), every distractor predictably ignores one of the two stated requirements in the stem, making them solvable by pure reading comprehension.",
+    "Core GCP architecture questions (2, 4, 6, 7) are exceptionally well-crafted, realistic, and accurately reflect current Agent Platform (formerly Vertex AI) and BigQuery capabilities.",
+    "One minor branding slip remains in Question 6 Option B's documentation quote ('Vertex AI Feature Store')."
+   ]
+  }
+ },
+ "usage": [
+  {
+   "prompt_tokens": 3102,
+   "completion_tokens": 689,
+   "total_tokens": 3791,
+   "cost": 0,
+   "is_byok": true,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "cache_write_tokens": 0,
+    "audio_tokens": 0,
+    "video_tokens": 0
+   },
+   "cost_details": {
+    "upstream_inference_cost": 0.026188,
+    "upstream_inference_prompt_cost": 0.012408,
+    "upstream_inference_completions_cost": 0.01378
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 0,
+    "image_tokens": 0,
+    "audio_tokens": 0
+   }
+  },
+  {
+   "prompt_tokens": 8878,
+   "completion_tokens": 1185,
+   "total_tokens": 10063,
+   "cost": 0,
+   "is_byok": true,
+   "prompt_tokens_details": {
+    "cached_tokens": 0,
+    "cache_write_tokens": 0,
+    "audio_tokens": 0,
+    "video_tokens": 0
+   },
+   "cost_details": {
+    "upstream_inference_cost": 0.059212,
+    "upstream_inference_prompt_cost": 0.035512,
+    "upstream_inference_completions_cost": 0.0237
+   },
+   "completion_tokens_details": {
+    "reasoning_tokens": 0,
+    "image_tokens": 0,
+    "audio_tokens": 0
+   }
+  }
+ ]
+}

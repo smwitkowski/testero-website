@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import catalog from "@/content/catalog.json";
+import { certifications, certificationPath } from "@/lib/certifications/catalog";
+import { toolPaths } from "@/lib/tools/pages";
 
 /** Public production origin. Preview hosts and request headers never set canonicals. */
 export const SITE_ORIGIN = "https://testero.ai";
@@ -7,7 +9,9 @@ export const DEFAULT_DESCRIPTION = "Take a free 20-question PMLE diagnostic and 
 export const SOCIAL_IMAGE = `${SITE_ORIGIN}/og-v2.png`;
 
 export const publicPaths: readonly string[] = [
-  "/", "/diagnostic", "/pricing", "/blog", "/faq", "/terms", "/privacy",
+  "/", "/diagnostic", "/pricing", "/blog", "/faq", "/terms", "/privacy", "/certifications",
+  ...toolPaths,
+  ...certifications.map(cert => certificationPath(cert.cert_id)),
   ...catalog.blog.map(entry => entry.href),
   ...catalog.faq.map(entry => entry.href),
 ];
@@ -25,7 +29,7 @@ export function canonicalUrl(path: string): string {
 }
 
 /** Per-page metadata: avoid inheriting the landing page's canonical or social text. */
-export function pageMetadata(title: string, description: string, path: string): Metadata {
+export function pageMetadata(title: string, description: string, path: string, article?: { publishedAt?: string; updatedAt?: string }): Metadata {
   const url = canonicalUrl(path);
   const socialTitle = `${title} | Testero`;
   return {
@@ -33,7 +37,8 @@ export function pageMetadata(title: string, description: string, path: string): 
     description,
     alternates: { canonical: url },
     openGraph: {
-      type: "website", siteName: "Testero", locale: "en_US", url,
+      ...(article ? { type: "article" as const, publishedTime: article.publishedAt, modifiedTime: article.updatedAt ?? article.publishedAt } : { type: "website" as const }),
+      siteName: "Testero", locale: "en_US", url,
       title: socialTitle, description,
       images: [{ url: SOCIAL_IMAGE, width: 1200, height: 630, alt: "Testero — PMLE readiness diagnostic" }],
     },

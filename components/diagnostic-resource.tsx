@@ -1,9 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { analyticsHeaders } from "@/lib/analytics/client";
 
 export async function diagnosticRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(path, { ...init, cache: "no-store", credentials: "same-origin" });
+  const headers = new Headers(init.headers);
+  if (init.method === "POST") {
+    for (const [name, value] of Object.entries(analyticsHeaders())) headers.set(name, value);
+  }
+  const response = await fetch(path, { ...init, headers, cache: "no-store", credentials: "same-origin" });
   if (!response.ok) {
     if (response.status === 401 || response.status === 403 || response.status === 404) {
       throw new Error("This diagnostic is not available in this browser. Return to the start to begin a new one.");
@@ -21,22 +26,23 @@ export function requestError(error: unknown) {
     : error instanceof Error ? error.message : "We could not load your diagnostic. Please retry.";
 }
 
-export function useDiagnosticResource<T>(path: string) {
-  const [data, setData] = useState<T | null>(null);
+export function useDiagnosticResource<T>(path: string, initialData: T | null = null) {
+  const [data, setData] = useState<T | null>(initialData);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    if (attempt === 0 && initialData !== null) return;
     const controller = new AbortController();
     diagnosticRequest<T>(path, { signal: controller.signal }).then(
       (value) => { if (!controller.signal.aborted) setData(value); },
       (reason: unknown) => { if (!controller.signal.aborted) setError(requestError(reason)); },
     );
     return () => controller.abort();
-  }, [path, attempt]);
+  }, [path, attempt, initialData]);
   function reload() {
     setData(null);
     setError(null);
     setAttempt((value) => value + 1);
   }
-  return { data, error, reload };
+  return { data, error, reload, setData };
 }

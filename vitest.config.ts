@@ -14,7 +14,7 @@ export default defineConfig({
     include: ["**/*.{test,spec}.{ts,tsx}"],
     exclude: [
       "node_modules/**", ".next/**", "content-pipeline/**", "integrations/**",
-      "supabase/migrations_legacy/**", "e2e/**", "tests/e2e/**",
+      "e2e/**", "tests/e2e/**",
       "playwright/**", "playwright-report/**", "test-results/**",
     ],
     clearMocks: true,

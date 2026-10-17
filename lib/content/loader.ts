@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import catalog from "@/content/catalog.json";
+import { contentExam } from "@/lib/content/exam";
 import { parseFrontmatter, safeHref } from "@/lib/content/markdown";
 import { BLOG_EDITORIAL_NOTICE, BLOG_PUBLICATION_OVERLAYS, FAQ_PUBLICATION_OVERLAYS } from "@/lib/content/editorial";
 
@@ -12,8 +13,11 @@ export interface ContentEntry {
   title: string;
   description: string;
   body: string;
+  exam: string;
   citations: string[];
   publishedAt?: string;
+  updatedAt?: string;
+  republished?: boolean;
   editorialNotice?: string;
 }
 
@@ -31,9 +35,11 @@ export function getBlogEntries(): ContentEntry[] {
     if (!overlay || createHash("sha256").update(document.source).digest("hex") !== overlay.sourceSha256) {
       throw new Error(`Blog source requires editorial review: ${item.slug}`);
     }
-    return { ...item, title: overlay.title, description: overlay.description, body: overlay.body,
-      citations: overlay.citations, editorialNotice: BLOG_EDITORIAL_NOTICE,
-      publishedAt: typeof document.attributes.publishedAt === "string" ? document.attributes.publishedAt : undefined };
+    return { ...item, exam: contentExam(item), title: overlay.title, description: overlay.description, body: overlay.body,
+      citations: overlay.citations, republished: overlay.historical !== false,
+      editorialNotice: overlay.historical === false ? undefined : BLOG_EDITORIAL_NOTICE,
+      publishedAt: typeof document.attributes.publishedAt === "string" ? document.attributes.publishedAt : undefined,
+      updatedAt: typeof document.attributes.updatedAt === "string" ? document.attributes.updatedAt : undefined };
   });
 }
 
@@ -42,7 +48,20 @@ export function getBlogEntry(slug: string): ContentEntry | undefined {
   return getBlogEntries().find((item) => item.slug === slug);
 }
 
-export function faqDocumentForPublication(slug: string, source: string): { body: string; editorialNotice?: string } {
+/** Whole sentences up to `max` characters. A longer first sentence is kept whole up to `hardMax`. */
+export function sentenceExcerpt(text: string, max = 180, hardMax = 320): string {
+  if (text.length <= max) return text;
+  const sentences = text.match(/[^.!?]+[.!?]+(?=\s|$)/g) ?? [];
+  let excerpt = "";
+  for (const sentence of sentences) {
+    if ((excerpt + sentence).trim().length > max) break;
+    excerpt += sentence;
+  }
+  if (!excerpt && sentences[0] && sentences[0].trim().length <= hardMax) excerpt = sentences[0];
+  return excerpt.trim() || text.slice(0, max - 3).replace(/\s+\S*$/, "") + "…";
+}
+
+export function faqDocumentForPublication(slug: string, source: string): { body: string; editorialNotice?: string; citations?: string[] } {
   let body = parseFrontmatter(source).body;
   const overlay = FAQ_PUBLICATION_OVERLAYS[slug];
   if (!overlay) return { body };
@@ -53,21 +72,22 @@ export function faqDocumentForPublication(slug: string, source: string): { body:
     if (!body.includes(replacement.original)) throw new Error(`FAQ replacement requires editorial review: ${slug}`);
     body = body.replace(replacement.original, replacement.replacement);
   }
-  return { body, editorialNotice: overlay.notice };
+  return { body, editorialNotice: overlay.notice, ...(overlay.citations ? { citations: overlay.citations } : {}) };
 }
 
 export function getFaqEntries(): ContentEntry[] {
   return catalog.faq.map((item) => {
     const document = readDocument("faq", item.slug);
-    const sources = document.attributes.citations;
     const publication = faqDocumentForPublication(item.slug, document.source);
+    const sources = publication.citations ?? document.attributes.citations;
     // Legacy hub routes are not in v2. Point retained Markdown links to the
     // official certification directory rather than silently sending readers to 404.
     const body = publication.body.replace(/\]\(\/content\/[^)]+\)/g, "](https://cloud.google.com/learn/certification)");
     const plainDescription = body.split("\n\n")[0].replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/[*_`]/g, "");
-    const description = plainDescription.length > 180
-      ? plainDescription.slice(0, 177).replace(/\s+\S*$/, "") + "…" : plainDescription;
-    return { ...item, description, body, editorialNotice: publication.editorialNotice,
+    const description = item.description ?? sentenceExcerpt(plainDescription, 150, 150);
+    return { ...item, exam: contentExam(item), description, body, editorialNotice: publication.editorialNotice,
+      publishedAt: typeof document.attributes.publishedAt === "string" ? document.attributes.publishedAt : item.publishedAt,
+      updatedAt: typeof document.attributes.updatedAt === "string" ? document.attributes.updatedAt : undefined,
       citations: Array.isArray(sources) ? sources.filter((value) => typeof value === "string" && safeHref(value)) : [] };
   });
 }

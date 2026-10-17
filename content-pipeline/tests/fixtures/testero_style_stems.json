@@ -1,0 +1,21 @@
+{
+  "provenance": {
+    "artifact": "/private/tmp/claude-501/-Users-switkowski-Projects-Testero/1c820979-1fd4-4fd4-9df3-2ed845ac4afa/scratchpad/review-batch12.json",
+    "artifact_sha256": "16373db313aabb1c9f3312763b41ea80f632ee6e5d2548ef17c2da2e8d762d04",
+    "note": "Original founder-review stems copied unchanged; no options or new semantic judge verdicts invented."
+  },
+  "rejected_stems": [
+    {
+      "id": "58450231-f145-49e8-bb14-fb81664e467a",
+      "stem": "Your organization is selecting an open foundation model from Model Garden on Gemini Enterprise Agent Platform for a core customer-facing application. Your architecture must satisfy the following technical and compliance requirements:\nData regulations prohibit the use of multi-tenant managed services; the model serving infrastructure must reside entirely within your Google Cloud project and Virtual Private Cloud (VPC) network.\nThe application will experience steady, predictable, and continuous high-volume inference traffic where you need to optimize total cost of ownership (TCO).\nYour team does not require custom preprocessing or postprocessing logic and wants to avoid the operational burden of building and maintaining custom container images.\n\nWhich model selection and serving strategy should you implement?"
+    },
+    {
+      "id": "5ebd2b7d-b99f-4499-8034-313439025eeb",
+      "stem": "You are building an automated quality control solution on Gemini Enterprise Agent Platform. You need to adapt a foundation model using supervised fine-tuning to perform visual inspection and identify subtle manufacturing defects from component photos stored in Cloud Storage. You must configure the dataset and tuning job so that the model captures high visual detail while adhering to supported platform specifications. How should you prepare the training dataset and configure the tuning job?"
+    },
+    {
+      "id": "57a86c1e-99b0-4dfc-b404-09f1af89002e",
+      "stem": "Your team is developing a customer churn classification model using customer interaction data stored in BigQuery. The team decides to train and evaluate the model directly within BigQuery ML. Stakeholders have established the following technical and interpretability requirements:\n\n The model must use a tree-based ensemble architecture to capture non-linear relationships.\n The system must provide exact local feature attributions for individual customer predictions so customer service agents understand why a specific customer was flagged.\nThe system must provide global feature attributions aggregated across the evaluation dataset to satisfy auditing requirements.\n\nWhich model type and explainability configuration should you select in BigQuery ML?"
+    }
+  ]
+}

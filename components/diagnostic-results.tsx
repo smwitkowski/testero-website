@@ -3,7 +3,8 @@
 import Link from "next/link";
 import type { DiagnosticResult } from "@/lib/diagnostic/types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { DomainScores, ScoreReport } from "@/components/readiness-report";
+import { weakestFirst } from "@/lib/readiness";
 import { DiagnosticError, DiagnosticLoading } from "@/components/diagnostic-state";
 import { useDiagnosticResource } from "@/components/diagnostic-resource";
 import { QuestionReviewList } from "@/components/question-review";
@@ -13,52 +14,30 @@ export function DiagnosticResults({ sessionId }: { sessionId: string }) {
   if (error) return <DiagnosticError message={error} onRetry={reload} />;
   if (!data) return <DiagnosticLoading message="Loading your readiness results…" />;
 
-  return (
-    <div className="space-y-8">
-      <section className="space-y-4">
-        <h1 className="text-3xl font-semibold tracking-tight">Your PMLE readiness</h1>
-        <p className="leading-relaxed text-muted-foreground">Use this snapshot to decide what to study next. It is study guidance, not an official exam pass threshold or a guarantee.</p>
-      </section>
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-baseline justify-between gap-4">
-            <h2 className="text-xl font-semibold">{data.readiness.label} readiness</h2>
-            <p className="text-3xl font-semibold tabular-nums">{data.score}%<span className="ml-2 text-sm font-normal text-muted-foreground">score</span></p>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p>{data.correctAnswers} of {data.totalQuestions} correct</p>
-          <p className="leading-relaxed text-muted-foreground">{data.readiness.description}</p>
-        </CardContent>
-      </Card>
-      <section aria-labelledby="domains-heading" className="space-y-4">
-        <h2 id="domains-heading" className="text-xl font-semibold">Your domain breakdown</h2>
-        <ul className="divide-y divide-border border-y border-border">
-          {data.domainBreakdown.map((domain) => (
-            <li key={domain.domainCode} className="flex items-start justify-between gap-4 py-4">
-              <div className="min-w-0 space-y-1">
-                <h3 className="font-medium leading-relaxed">{domain.domainName}</h3>
-                <p className="text-sm text-muted-foreground">{domain.correct} of {domain.total} correct</p>
-              </div>
-              <span className="shrink-0 pt-1 font-semibold tabular-nums">{domain.percentage}%</span>
-            </li>
-          ))}
-        </ul>
-        <p className="text-sm leading-relaxed text-muted-foreground">Each domain has only a few questions. Treat lower scores as areas to explore, not a complete measure of your knowledge.</p>
-      </section>
-      {data.review && <QuestionReviewList review={data.review} />}
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold">Keep building your knowledge</h2>
-        {data.review ? (
-          <Button asChild><Link href="/dashboard">Go to your dashboard</Link></Button>
-        ) : (
-          <>
-            <p className="leading-relaxed text-muted-foreground">Your full score, readiness tier, and domain breakdown are available without an account. Create an account to see your questions and start free practice.</p>
-            <Button asChild><Link href={`/signup?next=${encodeURIComponent(`/diagnostic/${sessionId}/results`)}`}>Create an account to see your questions</Link></Button>
-          </>
-        )}
-        <Button variant="outline" asChild><Link href="/diagnostic">Take a new diagnostic</Link></Button>
-      </section>
+  const orderedDomains = weakestFirst(data.domainBreakdown);
+  const weakest = orderedDomains[0];
+  const dashboardPath = weakest ? `/dashboard?domain=${encodeURIComponent(weakest.domainCode)}` : "/dashboard";
+  const practiceHref = data.review ? dashboardPath : `/signup?next=${encodeURIComponent(dashboardPath)}`;
+
+  return <div className="mx-auto max-w-[896px] space-y-8">
+    <header className="space-y-3"><h1 className="text-3xl font-semibold tracking-tight">PMLE readiness report</h1><p className="text-sm text-muted-foreground">{data.totalQuestions} questions</p></header>
+    <div className="grid gap-6 md:grid-cols-2">
+      <ScoreReport score={data.score} correctAnswers={data.correctAnswers} totalQuestions={data.totalQuestions} />
+      {weakest && <section aria-labelledby="next-step" className="on-dark flex flex-col items-start gap-4 rounded-lg bg-foreground p-5 text-card sm:p-7">
+        <h2 id="next-step" className="text-sm font-medium text-on-dark-secondary">Recommended next step</h2>
+        <p className="text-xl font-semibold leading-snug">{weakest.domainName}</p>
+        <p className="text-sm leading-relaxed text-on-dark-secondary">{data.review ? "Choose this domain on your dashboard for a focused 5-question session." : "A free account saves this report and includes 5 practice questions a week."}</p>
+        <Button variant="outline" className="mt-auto border-card bg-card text-foreground hover:bg-muted" asChild><Link href={practiceHref}>Start practice</Link></Button>
+        {!data.review && <p className="text-sm text-on-dark-secondary">Create a free account to continue.</p>}
+      </section>}
     </div>
-  );
+    <section aria-labelledby="domains-heading" className="space-y-5 rounded-lg border border-border bg-card p-5 sm:p-7">
+      <h2 id="domains-heading" className="text-xl font-semibold">Score by domain</h2>
+      <DomainScores domains={orderedDomains} />
+      <p className="text-sm leading-relaxed text-muted-foreground">Each domain has only 3–4 questions, so these results are an early signal of where to look, not a full measure of your knowledge. Domains with the same score are listed in exam-guide order.</p>
+    </section>
+    {data.review && <QuestionReviewList review={data.review} />}
+    {!data.review && <section className="space-y-3"><h2 className="text-xl font-semibold">Review your answers</h2><p className="leading-relaxed text-muted-foreground">Your full score, readiness tier, and domain breakdown are available without an account. Create an account to see your questions and start free practice.</p><Button variant="outline" asChild><Link href={`/signup?next=${encodeURIComponent(`/diagnostic/${sessionId}/results`)}`}>Create an account to see your questions</Link></Button></section>}
+    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border pt-5"><p className="text-sm text-muted-foreground">Study guidance, not a prediction of your exam result.</p><Link href="/diagnostic" className="text-sm font-medium text-primary underline">Retake the diagnostic</Link></div>
+  </div>;
 }

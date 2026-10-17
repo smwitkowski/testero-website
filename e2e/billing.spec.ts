@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { captureV3 } from "./v3-capture";
 import { assertRestoredSession, assertRestoredPaidReview } from "./prod-bank";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
@@ -14,8 +15,8 @@ function noPaidContent(value: unknown) {
     noPaidContent(child);
   }
 }
-test("local signed webhook grants paid explanations and unlimited practice; refund wins over replay", async ({ page, browser }) => {
-  test.setTimeout(120_000);
+test("local return fulfillment grants paid explanations and unlimited practice; refund wins over replay", async ({ page, browser }) => {
+  test.setTimeout(process.env.TESTERO_V3_SCREENSHOTS ? 240_000 : 120_000);
   const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!);
   expect(url.hostname).toBe("127.0.0.1"); expect(url.port).toBe("56541");
   expect(process.env.TESTERO_LOCAL_STRIPE).toBe("1");
@@ -32,12 +33,12 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
   const eventIds: string[] = [], paymentIds: string[] = [];
   const foreign = await browser.newContext();
   const failures: string[] = [];
-  const directory = "/tmp/testero-v2-phase3-visual";
+  const directory = process.env.TESTERO_V3_SCREENSHOTS ?? "test-results/billing-visual";
   await mkdir(directory, { recursive: true });
   page.on("pageerror", error => failures.push(error.message));
   page.on("request", request => { if (!["127.0.0.1", "localhost"].includes(new URL(request.url()).hostname)) failures.push("External browser request"); });
   async function layout(name: string) {
-    for (const width of [320, 1280]) {
+    for (const width of [320, 375, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.screenshot({ path: `${directory}/${name}-${width}.png`, fullPage: true });
@@ -91,13 +92,17 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     expect((await page.request.post("/api/billing/checkout", { data: {} })).status()).toBe(401);
     const badSignature = await foreign.request.post("http://127.0.0.1:3000/api/billing/webhook", { headers: { "stripe-signature": "t=1,v1=invalid" }, data: "{}" });
     expect(badSignature.status()).toBe(400);
+    await page.goto("/"); await layout("landing");
     await page.goto("/pricing");
     await expect(page.getByRole("link", { name: "Create an account to get PMLE Pass", exact: true })).toHaveAttribute("href", "/signup?next=/pricing");
     await page.goto("/login?next=%2Fdashboard");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
+    const loginResponse = page.waitForResponse(response => response.url().endsWith("/api/auth/login") && response.request().method() === "POST");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Your study dashboard", exact: true })).toBeVisible();
+    expect((await loginResponse).status()).toBe(200);
+    await expect(page).toHaveURL(/\/dashboard(?:\?.*)?$/, { timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
 
     const diagnostic = await page.request.post("/api/diagnostic", { data: {} });
     expect(diagnostic.status()).toBe(201);
@@ -119,7 +124,8 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
 
     await page.goto("/pricing"); await layout("pricing");
     const checkoutResponse = page.waitForResponse(response => response.url().endsWith("/api/billing/checkout") && response.request().method() === "POST");
-    await page.getByRole("button", { name: "Get PMLE Pass — $39", exact: true }).click();
+    await expect(page.getByText("$39 one-time payment", { exact: false }).first()).toBeVisible();
+    await page.getByRole("button", { name: "Get PMLE Pass — $39 one-time payment", exact: true }).click();
     const checkout = await checkoutResponse;
     expect(checkout.status()).toBe(200);
     // The client navigates immediately; Chromium may discard the fetch body.
@@ -128,6 +134,7 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     expect(destination.origin).toBe("http://127.0.0.1:3000");
     const sessionId = destination.searchParams.get("session_id")!;
     await expect(page.getByText(/Your payment is processing/)).toBeVisible();
+    await captureV3(page, "checkout-success");
     expect(await (await page.request.get(`/api/billing/status?session_id=${sessionId}`)).json()).toEqual({ status: "processing", accessUntil: null });
     const before = await service.from("pmle_passes").select("id").eq("user_id", userId);
     expect(before.data).toHaveLength(0);
@@ -136,25 +143,42 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     expect((await retryCheckout.json()).href).toBe(destination.href);
     const paid = await fixture("pay", { sessionId });
     paymentIds.push(paid.intent.id);
-    const completionId = await deliver("checkout.session.completed", paid.session);
+    // Stripe is paid, but no webhook was delivered. The authenticated return repairs access.
+    const recovered = await page.request.get(`/api/billing/status?session_id=${sessionId}`);
+    expect(recovered.status()).toBe(200);
+    expect((await recovered.json()).status).toBe("active");
     const pass = await service.from("pmle_passes").select("id,paid_at,expires_at,refunded_at").eq("user_id", userId).single();
     expect(pass.error).toBeNull(); expect(pass.data!.refunded_at).toBeNull();
     expect(Date.parse(pass.data!.expires_at) - Date.parse(pass.data!.paid_at)).toBe(90 * 24 * 60 * 60 * 1000);
+    const completionId = await deliver("checkout.session.completed", paid.session);
     await deliver("checkout.session.completed", paid.session, completionId);
+    const replayed = await service.from("pmle_passes").select("id,paid_at,expires_at,refunded_at").eq("user_id", userId).single();
+    expect(replayed.data).toEqual(pass.data);
     const duplicateCharge = await page.request.post("/api/billing/checkout", { data: {} });
     expect(await duplicateCharge.json()).toEqual({ href: "/account", alreadyActive: true });
     await page.reload(); await expect(page.getByText("Your PMLE Pass is active.", { exact: true })).toBeVisible();
     await page.getByRole("link", { name: "View account", exact: true }).click();
     await expect(page.getByText(/Access until/)).toBeVisible();
+    await expect(page.getByText(/\((89|90) days left\)/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Manage legacy subscription", exact: true })).toHaveCount(0);
+    await page.goto("/pricing");
+    await expect(page.getByText(/You have PMLE Pass until/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Get PMLE Pass — $39 one-time payment", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Go to practice", exact: true })).toHaveAttribute("href", "/dashboard");
+    await page.goto("/account");
     expect((await page.request.post("/api/billing/portal", { data: {} })).status()).toBe(403);
     await layout("account-paid");
+    await captureV3(page, "account");
     await page.goto(`/diagnostic/${diagnosticId}/results`);
     await expect(page.getByRole("heading", { name: "Question review", exact: true })).toBeVisible();
-    await expect(page.getByText("Explanation", { exact: true }).first()).toBeVisible();
     const paidReview = await (await page.request.get(`/api/diagnostic/${diagnosticId}/results`)).json() as DiagnosticResult;
     expect(paidReview.review!.every(item => item.explanation && item.options.every(option => option.explanation))).toBe(true);
     assertRestoredPaidReview(paidReview.review!, diagnosticBank);
+    await expect(page.getByRole("heading", { name: "Explanation", exact: true })).toHaveCount(0);
+    const firstReview = page.locator("#question-review-heading + ol > li").first();
+    for (const option of paidReview.review![0].options) {
+      await expect(firstReview.getByText(option.explanation!, { exact: true })).toHaveCount(1);
+    }
     await layout("diagnostic-paid");
     const paidPracticeIds: string[] = [];
     for (let i = 0; i < 3; i++) {
@@ -173,10 +197,25 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     await page.getByRole("button", { name: "Submit answer", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Option explanations", exact: true })).toBeVisible();
     await layout("practice-paid");
+    await captureV3(page, "practice-feedback");
     const first = await service.from("session_items").select("id,selected_label").eq("session_id", paidPracticeId).eq("ordinal", 1).single();
     const withContent = await page.request.post(`/api/practice/${paidPracticeId}/answer`, { data: { itemId: first.data!.id, selectedLabel: first.data!.selected_label } });
-    expect((await withContent.json()).feedback.optionExplanations).toHaveLength(4);
-    await completePractice(paidPracticeIds[1], true);
+    const liveFeedback = (await withContent.json()).feedback as PracticeAnswerResponse["feedback"];
+    expect(liveFeedback.optionExplanations).toHaveLength(4);
+    await expect(page.getByRole("heading", { name: "Explanation", exact: true })).toHaveCount(0);
+    for (const option of liveFeedback.optionExplanations!) {
+      await expect(page.getByText(option.explanation, { exact: true })).toHaveCount(1);
+    }
+    const paidSummary = await completePractice(paidPracticeIds[1], true);
+    await page.goto(`/practice/${paidPracticeIds[1]}/summary`);
+    await expect(page.getByRole("heading", { name: "Your practice summary", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Explanation", exact: true })).toHaveCount(0);
+    for (const [index, question] of paidSummary.review.entries()) {
+      const reviewItem = page.locator("#question-review-heading + ol > li").nth(index);
+      for (const option of question.options) {
+        await expect(reviewItem.getByText(option.explanation!, { exact: true })).toHaveCount(1);
+      }
+    }
 
     const refunded = await fixture("refund", { paymentIntentId: paid.intent.id });
     await deliver("charge.refunded", refunded.charge);
@@ -201,6 +240,7 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     await page.goto("/dashboard");
     await expect(page.getByRole("link", { name: "Upgrade to PMLE Pass", exact: true })).toBeVisible();
     await expect(page.getByLabel("Practice domain", { exact: true })).toHaveCount(0);
+    await expect(page.getByText(/Your PMLE Pass was refunded on/)).toBeVisible();
     await layout("dashboard-refunded");
     await page.goto(destination.href);
     await expect(page.getByText(/This payment was refunded/)).toBeVisible();
@@ -208,6 +248,7 @@ test("local signed webhook grants paid explanations and unlimited practice; refu
     const legacy = await service.from("user_subscriptions").insert({ user_id: userId, stripe_customer_id: `cus_local_legacy_${randomUUID().replaceAll("-", "")}`, stripe_subscription_id: `sub_local_${randomUUID().replaceAll("-", "")}`, status: "active", current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() });
     expect(legacy.error).toBeNull();
     await page.goto("/account");
+    await expect(page.getByText(/Your PMLE Pass was refunded on/)).toHaveCount(0);
     await expect(page.getByText("Active legacy subscription", { exact: true })).toBeVisible();
     const portalResponse = page.waitForResponse(response => response.url().endsWith("/api/billing/portal") && response.request().method() === "POST");
     await page.getByRole("button", { name: "Manage legacy subscription", exact: true }).click();

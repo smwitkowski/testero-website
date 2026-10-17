@@ -5,6 +5,7 @@ import { PMLE_BLUEPRINT, validateBlueprintWeights } from "@/lib/constants/pmle-b
 import {
   calculateDomainTargets,
   hasValidAnswers,
+  pickPreferred,
   selectPmleQuestionsByBlueprint,
   type CanonicalAnswer,
 } from "@/lib/diagnostic/pmle-selection";
@@ -38,8 +39,11 @@ function client(rows: BankRow[], errors: { counts?: string; domain?: string } = 
     from: vi.fn((table: string) => {
       expect(table).toBe("questions");
       let domainId: string | undefined;
+      let first = 0, last = rows.length;
       const query = {
         select: vi.fn(() => query),
+        order: vi.fn(() => query),
+        range: vi.fn((from: number, to: number) => { first = from; last = to + 1; return query; }),
         eq: vi.fn((column: string, value: string) => {
           filters.push([column, value]);
           if (column === "domain_id") domainId = value;
@@ -48,7 +52,7 @@ function client(rows: BankRow[], errors: { counts?: string; domain?: string } = 
         then(resolve: (result: { data: BankRow[] | null; error: { message: string } | null }) => unknown) {
           const message = domainId ? errors.domain : errors.counts;
           return Promise.resolve(resolve({
-            data: message ? null : rows.filter((row) => !domainId || row.domain_id === domainId),
+            data: message ? null : rows.filter((row) => !domainId || row.domain_id === domainId).slice(first, last),
             error: message ? { message } : null,
           }));
         },
@@ -168,6 +172,13 @@ describe("ported Supabase selector", () => {
     expect(rows).toEqual(bank([5, 5, 5, 5, 5, 5]));
   });
 
+  it("includes domains beyond the first inventory page", async () => {
+    const { supabase } = client(bank([1000, 5, 5, 5, 5, 5]));
+    const result = await selectPmleQuestionsByBlueprint(supabase, 20);
+    expect(result.domainDistribution.map(domain => domain.selectedCount)).toEqual([3, 3, 4, 4, 3, 3]);
+    expect(supabase.from).toHaveBeenCalledTimes(2);
+  });
+
   it("samples beyond a fixed prefix using deterministic Fisher-Yates seeds", async () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const rows = bank([30, 0, 0, 0, 0, 0]);
@@ -212,9 +223,43 @@ describe("ported Supabase selector", () => {
       .rejects.toThrow("Failed to fetch domain counts: offline");
   });
 
-  it("fails closed if a domain fetch fails", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    await expect(selectPmleQuestionsByBlueprint(client(bank([25, 0, 0, 0, 0, 0]), { domain: "offline" }).supabase, 20))
-      .rejects.toThrow("Insufficient questions: requested 20, selected 0");
+  it("loads the full inventory once rather than serial per-domain reads", async () => {
+    const { supabase } = client(bank([5, 5, 5, 5, 5, 5]));
+    const result = await selectPmleQuestionsByBlueprint(supabase, 20);
+    expect(result.questions).toHaveLength(20);
+    expect(supabase.from).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("diagnostic freshness preferences", () => {
+  const since = "2026-10-04T00:00:00Z";
+  const pool = [
+    { id: "new-unseen-1", created_at: "2026-10-05T00:00:00Z" }, { id: "new-unseen-2", created_at: "2026-10-04T00:00:00Z" },
+    { id: "new-seen", created_at: "2026-10-06T00:00:00Z" },
+    { id: "legacy-unseen", created_at: "2026-09-01T00:00:00Z" }, { id: "legacy-seen", created_at: null },
+  ];
+  const seenQuestionIds = new Set(["new-seen", "legacy-seen"]);
+  it("draws only new, unseen questions when they cover the target", () => {
+    for (let run = 0; run < 20; run++) expect(pickPreferred(pool, 2, { newSince: since, seenQuestionIds }).map(q => q.id).sort()).toEqual(["new-unseen-1", "new-unseen-2"]);
+  });
+  it("falls back to seen new, then unseen legacy, then everything", () => {
+    expect(pickPreferred(pool, 3, { newSince: since, seenQuestionIds }).map(q => q.id)).toContain("new-seen");
+    expect(pickPreferred(pool, 4, { newSince: since, seenQuestionIds }).map(q => q.id)).toContain("legacy-unseen");
+    expect(pickPreferred(pool, 9, { newSince: since, seenQuestionIds })).toHaveLength(5);
+  });
+  it("is a plain random pick without preferences", () => {
+    expect(pickPreferred(pool, 5).map(q => q.id).sort()).toEqual(pool.map(q => q.id).sort());
+  });
+  it("selection serves new unseen questions per domain and keeps blueprint targets", async () => {
+    const rows = bank([10, 10, 10, 10, 10, 10]).map((row, index) => ({ ...row, created_at: index % 5 ? "2026-10-05T00:00:00Z" : "2026-09-01T00:00:00Z" }));
+    const seen = new Set(rows.filter((row, index) => index % 10 === 1).map(row => row.id));
+    const { supabase } = client(rows as BankRow[]);
+    const result = await selectPmleQuestionsByBlueprint(supabase, 20, { newSince: since, seenQuestionIds: seen });
+    expect(result.domainDistribution.map(d => d.selectedCount)).toEqual([3, 3, 4, 4, 3, 3]);
+    for (const question of result.questions) {
+      const row = rows.find(candidate => candidate.id === question.id)!;
+      expect(row.created_at >= since).toBe(true);
+      expect(seen.has(row.id)).toBe(false);
+    }
   });
 });

@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
+import LoginPage from "@/app/login/page";
 import DashboardPage from "@/app/dashboard/page";
 import PracticePage from "@/app/practice/[id]/page";
 import PracticeSummaryPage from "@/app/practice/[id]/summary/page";
@@ -46,6 +48,22 @@ describe("protected study pages", () => {
     mocks.load.mockRejectedValue(new Error("private DB failure"));
     const page = await DashboardPage({ searchParams: Promise.resolve({}) });
     expect(page.type).toBe(DashboardLoadError);
+  });
+  it("preserves the password-updated flag through the dashboard auth boundary", async () => {
+    const page = await DashboardPage({ searchParams: Promise.resolve({ message: "password-updated" }) });
+    expect(mocks.requireUser).toHaveBeenCalledWith("/dashboard?message=password-updated");
+    expect(renderToStaticMarkup(page)).toContain("Password updated.");
+  });
+  it("shows the password-updated notice even when dashboard loading fails", async () => {
+    mocks.load.mockRejectedValue(new Error("private DB failure"));
+    const page = await DashboardPage({ searchParams: Promise.resolve({ message: "password-updated" }) });
+    expect(renderToStaticMarkup(page)).toContain("Password updated.");
+  });
+  it.each([
+    { message: "password-updated" }, { next: "/dashboard?message=password-updated" },
+  ])("explains a post-reset sign-in prompt %#", async params => {
+    const page = await LoginPage({ searchParams: Promise.resolve(params) });
+    expect(renderToStaticMarkup(page)).toContain("Password updated. Please sign in again with your new password.");
   });
   it("protects practice and summary with the encoded actual session return path", async () => {
     await PracticePage({ params: Promise.resolve({ id: "actual/id" }) });

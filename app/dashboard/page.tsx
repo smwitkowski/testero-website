@@ -11,9 +11,11 @@ import { createServiceSupabaseClient } from "@/lib/supabase/service";
 export const metadata: Metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ signup?: string }> }) {
-  const user = await requireUser("/dashboard");
-  const confirmedSignup = (await searchParams).signup === "confirmed";
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ signup?: string; domain?: string; message?: string }> }) {
+  const query = await searchParams;
+  const passwordUpdated = query.message === "password-updated";
+  const user = await requireUser(passwordUpdated ? "/dashboard?message=password-updated" : "/dashboard");
+  const confirmedSignup = query.signup === "confirmed";
   let data;
   try {
     const client = createServiceSupabaseClient();
@@ -23,6 +25,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   } catch {
     // A failed load is not an empty dashboard. Retry repeats the idempotent claim.
   }
-  if (!data) return <DashboardLoadError />;
-  return <>{confirmedSignup && <SignupAnalytics userId={user.id} />}<DashboardPanel data={data} /></>;
+  if (!data && !passwordUpdated) return <DashboardLoadError />;
+  return <>{passwordUpdated && <p role="status" className="mb-6 rounded-md border border-border bg-muted p-4">Password updated.</p>}{confirmedSignup && <SignupAnalytics userId={user.id} />}{data ? <DashboardPanel data={data} requestedDomain={query.domain} /> : <DashboardLoadError />}</>;
 }

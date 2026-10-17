@@ -2,9 +2,9 @@ import { loadPaidExplanations } from "@/lib/billing/explanations";
 import { getPaidAccess } from "@/lib/billing/paid-access";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createDiagnostic, readDiagnostic, answerDiagnostic, diagnosticResults } from "@/lib/diagnostic/service";
+import { createDiagnostic, readDiagnostic, answerDiagnostic, diagnosticResults, seenDiagnosticQuestions } from "@/lib/diagnostic/service";
 import { hashAnonymousToken } from "@/lib/diagnostic/ownership";
-import { selectPmleQuestionsByBlueprint, type SelectionResult } from "@/lib/diagnostic/pmle-selection";
+import { DIAGNOSTIC_NEW_SINCE, selectPmleQuestionsByBlueprint, type SelectionResult } from "@/lib/diagnostic/pmle-selection";
 
 vi.mock("@/lib/billing/explanations", async original => ({ ...await original<typeof import("@/lib/billing/explanations")>(), loadPaidExplanations: vi.fn() }));
 vi.mock("@/lib/billing/paid-access", () => ({ getPaidAccess: vi.fn() }));
@@ -64,7 +64,7 @@ describe("atomic anonymous diagnostic creation", () => {
     vi.spyOn(Math, "random").mockReturnValue(0);
     const db = database();
     expect(await createDiagnostic(db.client, token, now)).toBe(sessionId);
-    expect(selectPmleQuestionsByBlueprint).toHaveBeenCalledWith(db.client, 20);
+    expect(selectPmleQuestionsByBlueprint).toHaveBeenCalledWith(db.client, 20, { newSince: DIAGNOSTIC_NEW_SINCE, seenQuestionIds: new Set() });
     expect(db.rpc).toHaveBeenCalledOnce();
     const [name, args] = db.rpc.mock.calls[0] as unknown as [string, { p_items: { question_id: string; options: { label: string; text: string }[]; correct_label: string }[]; p_anonymous_owner_hash: string; p_expires_at: string; p_user_id: null }];
     expect(name).toBe("create_study_session");
@@ -137,7 +137,7 @@ describe("ownership-first reads and results", () => {
     const db = database();
     const result = await readDiagnostic(db.client, sessionId, credentials, now);
     expect(result).toEqual({ sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 0,
-      currentQuestion: { id: itemId, ordinal: 1, stem: "Secret stem 0", options: [{ label: "A", text: "Display only" }, { label: "B", text: "Other" }] } });
+      currentQuestion: { id: itemId, ordinal: 1, domainCode: "A", stem: "Secret stem 0", options: [{ label: "A", text: "Display only" }, { label: "B", text: "Other" }] } });
     expect(JSON.stringify(result)).not.toMatch(/is_correct|correct_label|explanation|domain_code/);
   });
   it("reads the next unanswered item without exposing previous questions", async () => {
@@ -302,5 +302,34 @@ describe("paid diagnostic review remains completion- and ownership-gated", () =>
     expect(JSON.stringify(await readDiagnostic(db.client, sessionId, signedIn, now))).not.toMatch(/correctLabel|explanation|review/);
     expect(await answerDiagnostic(db.client, sessionId, signedIn, itemId, "A", now)).toEqual({ answeredCount: 1, totalQuestions: 20, completed: false });
     expect(getPaidAccess).not.toHaveBeenCalled(); expect(loadPaidExplanations).not.toHaveBeenCalled();
+  });
+});
+
+describe("seen-question history", () => {
+  function history(sessions: unknown, items: unknown, fail?: "sessions" | "items") {
+    const calls: [string, string, unknown][] = [];
+    const from = vi.fn((table: string) => {
+      const query: Record<string, unknown> = {};
+      for (const method of ["select", "eq", "is", "in", "order"]) query[method] = vi.fn((column: string, value: unknown) => { calls.push([table, `${method}:${column}`, value]); return query; });
+      query.limit = vi.fn(async () => ({ data: sessions, error: fail === "sessions" ? { message: "x" } : null }));
+      if (table === "session_items") query.in = vi.fn(async (column: string, value: unknown) => { calls.push([table, `in:${column}`, value]); return { data: items, error: fail === "items" ? { message: "x" } : null }; });
+      return query;
+    });
+    return { client: { from } as unknown as SupabaseClient, calls };
+  }
+  it("collects question ids from the anonymous owner's earlier diagnostics", async () => {
+    const db = history([{ id: "s1" }, { id: "s2" }], [{ question_id: "q1" }, { question_id: "q2" }, { question_id: null }]);
+    expect(await seenDiagnosticQuestions(db.client, null, "h".repeat(64))).toEqual(new Set(["q1", "q2"]));
+    expect(db.calls).toContainEqual(["study_sessions", "is:user_id", null]);
+    expect(db.calls).toContainEqual(["study_sessions", "eq:anonymous_owner_hash", "h".repeat(64)]);
+    expect(db.calls).toContainEqual(["session_items", "in:session_id", ["s1", "s2"]]);
+  });
+  it("scopes a signed-in owner by user id", async () => {
+    const db = history([{ id: "s1" }], [{ question_id: "q1" }]);
+    await seenDiagnosticQuestions(db.client, userId, null);
+    expect(db.calls).toContainEqual(["study_sessions", "eq:user_id", userId]);
+  });
+  it.each(["sessions", "items"] as const)("treats a %s read failure as nothing seen", async fail => {
+    expect(await seenDiagnosticQuestions(history([{ id: "s1" }], [{ question_id: "q1" }], fail).client, userId, null)).toEqual(new Set());
   });
 });

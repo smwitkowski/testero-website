@@ -32,7 +32,12 @@ describe("fresh fail-closed paid access", () => {
     expect(await getPaidAccess(userId, database({ status: "active", current_period_end: "2025-01-01T00:00:00Z" }).client, now)).toEqual({ ...free, hasPaidAccess: true, isLegacySubscriber: true, accessUntil: "2025-01-01T00:00:00Z" });
   });
   it.each([{ expires_at: "2026-10-03T12:00:00Z" }, { expires_at: "2026-10-03T11:59:59Z" }, { refunded_at: "2026-10-02T12:00:00Z" }, { paid_at: "2026-10-04T00:00:00Z" }])("rejects expired/refunded/future pass %#", async override => {
-    expect(await getPaidAccess(userId, database(null, [{ ...pass, ...override }]).client, now)).toEqual(free);
+    expect(await getPaidAccess(userId, database(null, [{ ...pass, ...override }]).client, now)).toEqual("refunded_at" in override ? { ...free, refundedAt: override.refunded_at } : free);
+  });
+  it("reports the latest refund only when no paid access remains", async () => {
+    const older = { ...pass, id: "22222222-2222-4222-8222-222222222222", refunded_at: "2026-09-01T00:00:00Z" };
+    expect((await getPaidAccess(userId, database(null, [older, { ...pass, refunded_at: "2026-10-02T12:00:00Z" }]).client, now)).refundedAt).toBe("2026-10-02T12:00:00Z");
+    expect((await getPaidAccess(userId, database(null, [older, pass]).client, now)).refundedAt).toBeUndefined();
   });
   it("newer refunds cannot hide another valid pass", async () => {
     expect((await getPaidAccess(userId, database(null, [{ ...pass, expires_at: "2027-01-01T00:00:00Z", refunded_at: "2026-10-03T00:00:00Z" }, pass]).client, now)).pass).toEqual(pass);

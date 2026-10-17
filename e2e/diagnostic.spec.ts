@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { captureV3 } from "./v3-capture";
 import { assertRestoredSession } from "./prod-bank";
 import { createClient } from "@supabase/supabase-js";
 import type { DiagnosticProgress, DiagnosticAnswerResponse, DiagnosticResult } from "../lib/diagnostic/types";
@@ -18,6 +19,7 @@ function noAnswerKeys(value: unknown) {
 }
 
 test("anonymous 20-question diagnostic persists snapshots and exposes aggregate results only", async ({ page, context, browser }) => {
+  if (process.env.TESTERO_V3_SCREENSHOTS) test.setTimeout(180_000);
   assertLocalDatabase();
   const failures: string[] = [];
   page.on("pageerror", error => failures.push(error.message));
@@ -25,9 +27,40 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
     const url = new URL(request.url());
     if (!["127.0.0.1", "localhost"].includes(url.hostname)) failures.push(`Unexpected external request: ${url.hostname}`);
   });
+  if (process.env.TESTERO_V3_SCREENSHOTS) {
+    for (const route of ["/", "/pricing", "/signup", "/login", "/forgot-password", "/blog", "/faq", "/terms", "/privacy"]) {
+      await page.goto(route);
+      await expect(page.locator("main h1")).toBeVisible();
+      expect(await page.locator("body").evaluate(body => getComputedStyle(body).fontFamily)).toContain("IBM Plex Sans");
+      await captureV3(page, route === "/" ? "home" : route.slice(1));
+      if (route === "/signup") {
+        const signupTab = page.getByRole("tab", { name: "Create account", exact: true });
+        const loginTab = page.getByRole("tab", { name: "Sign in", exact: true });
+        await signupTab.focus();
+        await page.keyboard.press("ArrowRight");
+        await expect(loginTab).toBeFocused();
+        await expect(loginTab).toHaveAttribute("aria-selected", "true");
+        await page.keyboard.press("ArrowLeft");
+        await expect(signupTab).toBeFocused();
+        await page.keyboard.press("End");
+        await expect(loginTab).toBeFocused();
+        await page.keyboard.press("Home");
+        await expect(signupTab).toBeFocused();
+      }
+      if (route === "/blog" || route === "/faq") {
+        const articles = await page.locator("main li h2 a").evaluateAll(links => links.map(link => link.getAttribute("href")!));
+        for (const article of articles) {
+          await page.goto(article);
+          await expect(page.locator("main h1")).toBeVisible();
+          await captureV3(page, article.slice(1).replaceAll("/", "-"));
+        }
+      }
+    }
+  }
   await page.goto("/diagnostic");
+  await captureV3(page, "diagnostic");
   const createdResponse = page.waitForResponse(response => response.url().endsWith("/api/diagnostic") && response.request().method() === "POST");
-  await page.getByRole("button", { name: "Start 20-question diagnostic" }).click();
+  await page.getByRole("button", { name: "Begin diagnostic" }).click();
   const created = await createdResponse;
   expect(created.status()).toBe(201);
   const { sessionId } = await created.json() as { sessionId: string };
@@ -35,16 +68,22 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
   try {
     await assertRestoredSession(service, sessionId);
     const api = `/api/diagnostic/${sessionId}`;
+    const initialGets: string[] = [];
+    page.on("request", request => { if (request.method() === "GET" && new URL(request.url()).pathname === api) initialGets.push(request.url()); });
+    const html = await (await page.request.get(`/diagnostic/${sessionId}`)).text();
+    expect(html).toContain("Choose one answer");
     await expect(page).toHaveURL(new RegExp(`/diagnostic/${sessionId}$`));
     const cookie = (await context.cookies()).find(value => value.name === "testero_anon");
     expect(cookie).toMatchObject({ httpOnly: true, sameSite: "Lax", path: "/" });
     expect(cookie?.value).toMatch(/^[a-f0-9]{64}$/);
+    await expect(page.getByText("Question 1 of 20", { exact: true })).toBeVisible();
+    expect(initialGets).toHaveLength(0);
     const firstResponse = await page.request.get(api);
     const first = await firstResponse.json() as DiagnosticProgress;
     expect(first.totalQuestions).toBe(20);
     noAnswerKeys(first);
     const earlyResults = await page.request.get(`${api}/results`);
-    expect(earlyResults.status()).toBe(409);
+    expect(earlyResults.status(), (await earlyResults.text()).slice(0, 180)).toBe(409);
 
     const foreign = await browser.newContext();
     try {
@@ -68,16 +107,54 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
       expect(progress.currentQuestion?.ordinal).toBe(index + 1);
       expect(seen.has(progress.currentQuestion!.id)).toBe(false);
       seen.add(progress.currentQuestion!.id);
+      await expect(page.getByRole("navigation", { name: "Main navigation" })).toHaveCount(0);
+      await expect(page.getByRole("contentinfo")).toHaveCount(0);
+      await expect(page.getByText(/of 20 answered/)).toHaveCount(0);
+      await expect(page.getByRole("progressbar", { name: "Diagnostic progress" })).toHaveAttribute("aria-valuenow", String(index));
+      await expect(page.getByText("Halfway there. Your domain picture is taking shape.", { exact: true })).toHaveCount(index === 10 ? 1 : 0);
+      await expect(page.getByText("Answers can’t be changed after you submit.")).toHaveCount(0);
+      if (index === 0) {
+        await captureV3(page, "diagnostic-question");
+        // B2: the primary button focus ring contrasts with both the blue fill and the page.
+        await page.getByRole("radio").first().focus();
+        await page.keyboard.press("ArrowDown");
+        await page.keyboard.press("Tab");
+        const submit = page.getByRole("button", { name: "Next question" });
+        await expect(submit).toBeFocused();
+        const ring = await submit.evaluate(element => { const style = getComputedStyle(element); return { outline: style.outlineColor, width: style.outlineWidth, shadow: style.boxShadow }; });
+        expect(ring).toEqual({ outline: "rgb(16, 24, 40)", width: "3px", shadow: "rgb(255, 255, 255) 0px 0px 0px 3px" });
+      }
       if (index === 3) {
+        // B5: starting again from /diagnostic offers to resume this browser's session.
+        await page.goto("/diagnostic");
+        await expect(page.getByRole("button", { name: "Begin diagnostic" })).toHaveCount(0);
+        await expect(page.getByRole("button", { name: "Start over" })).toBeVisible();
+        await page.getByRole("link", { name: "Resume diagnostic", exact: true }).click();
+        await expect(page).toHaveURL(new RegExp(`/diagnostic/${sessionId}$`));
         await page.reload();
         await expect(page.getByText("Question 4 of 20", { exact: true })).toBeVisible();
         const reloaded = await (await page.request.get(api)).json() as DiagnosticProgress;
         expect(reloaded.currentQuestion).toEqual(progress.currentQuestion);
         expect(reloaded.answeredCount).toBe(3);
       }
+      const nextName = index === 19 ? "See my results" : "Next question";
+      if (index === 1) {
+        // Selecting does not commit: change the pick, then Next sends the final one.
+        const radios = page.getByRole("radio");
+        await radios.nth(0).check();
+        await radios.nth(1).check();
+        await expect(radios.nth(1)).toBeChecked();
+        await expect(radios.nth(0)).not.toBeChecked();
+        expect(await (await page.request.get(api)).json()).toMatchObject({ answeredCount: 1 });
+        const sent = page.waitForRequest(request => request.url().endsWith(`${api}/answer`));
+        await page.getByRole("button", { name: nextName }).click();
+        expect(JSON.parse((await sent).postData()!).selectedLabel).toBe(progress.currentQuestion!.options[1].label);
+        await expect(page.getByText("Question 3 of 20", { exact: true })).toBeVisible();
+        continue;
+      }
       await page.getByRole("radio").first().check();
       const acceptedResponse = page.waitForResponse(response => response.url().endsWith(`${api}/answer`) && response.request().method() === "POST");
-      await page.getByRole("button", { name: "Submit answer" }).click();
+      await page.getByRole("button", { name: nextName }).click();
       const accepted = await acceptedResponse;
       expect(accepted.status()).toBe(200);
       const answer = await accepted.json() as DiagnosticAnswerResponse;
@@ -85,8 +162,12 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
       noAnswerKeys(answer);
     }
     await expect(page).toHaveURL(new RegExp(`/diagnostic/${sessionId}/results$`));
-    await expect(page.getByRole("heading", { name: "Your PMLE readiness", exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Your domain breakdown", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "PMLE readiness report", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Score by domain", exact: true })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
+    await expect(page.getByRole("contentinfo")).toBeVisible();
+    await expect(page.locator("main").getByText(/Study guidance, not a prediction/i)).toHaveCount(1);
+    await captureV3(page, "diagnostic-results");
     const resultResponse = await page.request.get(`${api}/results`);
     expect(resultResponse.status()).toBe(200);
     const result = await resultResponse.json() as DiagnosticResult;
@@ -97,7 +178,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
     expect(result.domainBreakdown.reduce((sum, domain) => sum + domain.correct, 0)).toBe(result.correctAnswers);
     expect(Object.keys(result).sort()).toEqual(["sessionId", "score", "totalQuestions", "correctAnswers", "readiness", "domainBreakdown"].sort());
     await expect(page.getByRole("radio")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Submit answer" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Next question|See my results/ })).toHaveCount(0);
     await expect(page.getByText(`${result.correctAnswers} of 20 correct`, { exact: true })).toBeVisible();
 
     const { data: rows, error } = await service.from("session_items").select("id,ordinal,is_correct,answered_at").eq("session_id", sessionId).order("ordinal");
@@ -111,7 +192,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
     expect(completed.currentQuestion).toBeNull();
     expect(completed.status).toBe("completed");
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Your PMLE readiness", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "PMLE readiness report", exact: true })).toBeVisible();
     expect(await (await page.request.get(`${api}/results`)).json()).toEqual(result);
     const anonymous = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
     for (const table of ["questions", "answers", "explanations", "session_items"]) {

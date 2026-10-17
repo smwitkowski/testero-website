@@ -8,6 +8,11 @@
   "status": "catalog-listed",
   "registration_status": "not_stated",
   "canonical_exam_code": null,
+  "recommended_experience": "3+ years of security industry experience including 1+ years using Google Cloud security tooling",
+  "recommended_experience_source": {
+    "url": "https://cloud.google.com/learn/certification/security-operations-engineer",
+    "retrieved_at": "2026-10-16T16:04:00.871536Z"
+  },
   "retirement": null,
   "announcements": [],
   "upcoming_versions": [],
@@ -584,6 +589,19 @@
     }
   ],
   "sources": [
+    {
+      "url": "https://cloud.google.com/learn/certification/security-operations-engineer",
+      "final_url": "https://cloud.google.com/learn/certification/security-operations-engineer",
+      "retrieved_at": "2026-10-16T16:04:00.871536Z",
+      "role": "recommended_experience",
+      "content_type": "text/html; charset=utf-8",
+      "verified_fields": [
+        "recommended_experience",
+        "canonical_exam_code",
+        "exam_variants.validity_stated"
+      ],
+      "verification_scope": "Experience, exam code and validity only; other exam facts and guides not rechecked."
+    },
     {
       "url": "https://cloud.google.com/learn/certification",
       "final_url": "https://cloud.google.com/learn/certification",

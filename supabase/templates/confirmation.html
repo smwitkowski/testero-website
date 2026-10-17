@@ -1,9 +1,14 @@
 <!doctype html>
 <html lang="en">
   <head><meta charset="utf-8"><title>Confirm your Testero account</title></head>
-  <body>
-    <h1>Confirm your Testero account</h1>
-    <p><a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=signup">Confirm your email</a></p>
-    <p>If you did not request this, you can ignore this email.</p>
+  <body style="margin:0;padding:24px;background:#F6F7F9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#101828;line-height:1.5">
+    <div style="max-width:520px;margin:0 auto;padding:32px;background:#FFFFFF;border:1px solid #E4E7EC;border-radius:8px">
+      <h1 style="margin:0 0 16px;font-size:22px">Confirm your email address</h1>
+      <p style="margin:0 0 24px;color:#344054">You created a Testero account with this address. Confirm it to save your diagnostic report and start free practice.</p>
+      <p style="margin:0 0 24px"><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=signup&amp;redirect_to={{ .RedirectTo | urlquery }}" style="display:inline-block;padding:12px 20px;background:#1F4CB5;color:#FFFFFF;border-radius:6px;font-weight:600;text-decoration:none">Confirm email address</a></p>
+      <p style="margin:0 0 16px;font-size:14px;color:#475467">The link works once, on any device. If it has expired, sign in at Testero and request a new confirmation email.</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#475467">If you did not create a Testero account, you can ignore this email.</p>
+      <p style="margin:0;font-size:12px;color:#475467">Testero is independent PMLE exam preparation and is not affiliated with Google.</p>
+    </div>
   </body>
 </html>

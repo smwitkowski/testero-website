@@ -19,7 +19,7 @@ export function QuestionReviewList({ review }: { review: PaidQuestionReview[] })
                 <p className="text-sm font-medium">{question.isCorrect ? "Correct" : "Incorrect"}</p>
               </CardHeader>
               <CardContent className="space-y-5">
-                {question.explanation && <section className="space-y-2"><h4 className="font-semibold">Explanation</h4><p className="whitespace-pre-line leading-relaxed">{question.explanation}</p></section>}
+                {!question.options.some(option => option.explanation) && question.explanation && <section className="space-y-2"><h4 className="font-semibold">Explanation</h4><p className="whitespace-pre-line leading-relaxed">{question.explanation}</p></section>}
                 <ul className="space-y-3">
                   {question.options.map(option => (
                     <li key={option.label} className={`rounded-lg border p-4 ${option.label === question.correctLabel ? "border-primary" : "border-border"}`}>

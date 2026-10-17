@@ -29,13 +29,14 @@ describe("SEO function contracts", () => {
   it.each(["https://evil.example", "//evil.example", "/%2Fevil.example", "/pricing?preview=true", "/pricing#top", "/%2e%2e/other", "/%5cevil"])
     ("rejects non-path or unsafe canonical input %s", path => { expect(() => canonicalUrl(path)).toThrow(); });
 
-  it("sitemap includes only public pages and all five blog and nine FAQ entries", () => {
-    expect(catalog.blog).toHaveLength(5);
+  it("sitemap includes only public pages and all blog and FAQ entries", () => {
+    expect(catalog.blog).toHaveLength(13);
     expect(catalog.faq).toHaveLength(9);
     const entries = sitemap();
     const indexable = publicPaths.filter(path => path !== "/terms" && path !== "/privacy");
     expect(entries.map(entry => entry.url)).toEqual(indexable.map(canonicalUrl));
-    expect(entries).toHaveLength(19);
+    expect(entries).toHaveLength(indexable.length);
+    expect(entries.map(entry => entry.url)).toContain(canonicalUrl("/blog/google-cloud-certification-path"));
     expect(new Set(entries.map(entry => entry.url)).size).toBe(entries.length);
     for (const entry of entries) {
       const url = new URL(entry.url);
