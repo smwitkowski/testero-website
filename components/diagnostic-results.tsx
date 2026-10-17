@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { trackResults } from "@/lib/analytics/client";
 import { FreeDiagnosticExplanation } from "@/components/free-diagnostic-explanation";
+import { ResultsEmailForm } from "@/components/results-email-form";
 import type { DiagnosticResult } from "@/lib/diagnostic/types";
 import { Button } from "@/components/ui/button";
 import { DomainScores, ScoreReport } from "@/components/readiness-report";
@@ -47,6 +48,7 @@ export function DiagnosticResults({ sessionId }: { sessionId: string }) {
       <DomainScores domains={orderedDomains} />
       <p className="text-sm leading-relaxed text-muted-foreground">Each domain has only a few questions, so these results are an early signal of where to look, not a full measure of your knowledge. Domains with the same score are listed in exam-guide order.</p>
     </section>
+    <ResultsEmailForm sessionId={sessionId} />
     {!data.review && <FreeDiagnosticExplanation key={data.sessionId} result={data} />}
     {data.review && <QuestionReviewList review={data.review} sessionId={sessionId} kind="diagnostic" />}
     {!data.review && <section className="space-y-3"><h2 className="text-xl font-semibold">Review your answers</h2><p className="leading-relaxed text-muted-foreground">Your full score, readiness tier, and domain breakdown are available without an account. Create an account to see your questions and start free practice.</p><Button variant="outline" asChild><Link href={`/signup?next=${encodeURIComponent(`/diagnostic/${sessionId}/results`)}`}>Create an account to see your questions</Link></Button></section>}
