@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PricingAction } from "@/components/pricing-action";
 import { Button } from "@/components/ui/button";
 
-export const metadata = pageMetadata("PMLE Pass pricing", "PMLE Pass: $39 one-time for 90 days of explanations and unlimited five-question practice sessions. No auto-renew; 7-day refund window.", "/pricing");
+export const metadata = pageMetadata("PMLE Pass pricing", "PMLE Pass: $39 one-time payment. 90 days of access to PMLE practice questions and explanations. No subscription. No auto-renew. 7-day refund window.", "/pricing");
 export default function PricingPage() {
   return <div className="mx-auto max-w-[916px] space-y-10">
     <header className="space-y-3"><h1 className="text-3xl font-semibold tracking-tight">Pricing</h1><p className="text-lg leading-relaxed text-muted-foreground">Start free. Buy PMLE Pass when you want full explanations and unlimited practice.</p></header>
@@ -14,9 +14,9 @@ export default function PricingPage() {
         <Button variant="outline" asChild className="mt-auto"><Link href="/diagnostic">Start the free diagnostic</Link></Button>
       </section>
       <section aria-labelledby="paid-plan" className="on-dark flex flex-col items-start gap-6 rounded-lg bg-foreground p-6 text-card sm:p-8">
-        <div className="space-y-3"><h2 id="paid-plan" className="text-xl font-semibold">PMLE Pass</h2><p className="text-sm text-on-dark-secondary">90 days of access</p><p className="text-4xl font-semibold">$39 <span className="text-base font-normal text-on-dark-secondary">USD, one-time</span></p></div>
+        <div className="space-y-3"><h2 id="paid-plan" className="text-xl font-semibold">PMLE Pass</h2><p className="text-sm text-on-dark-secondary">90 days of access to PMLE practice questions and explanations</p><p className="text-4xl font-semibold">$39 one-time payment <span className="text-base font-normal text-on-dark-secondary">USD</span></p></div>
         <ul className="list-disc space-y-3 pl-5 text-on-dark-secondary"><li>Everything in Free</li><li>Explanations for the question and every option after answering</li><li>Unlimited 5-question practice sessions from the current question bank</li><li>Practice by domain, including your weakest</li></ul>
-        <dl className="space-y-4 text-sm"><div><dt className="font-semibold">No auto-renewal</dt><dd className="text-on-dark-secondary">Access ends after 90 days. You are not charged again.</dd></div><div><dt className="font-semibold">7-day refund window</dt><dd className="text-on-dark-secondary">A refund ends pass access. Contact <a href="mailto:support@testero.ai" className="underline">support@testero.ai</a>.</dd></div><div><dt className="font-semibold">PMLE only</dt><dd className="text-on-dark-secondary">One exam, all six domains.</dd></div></dl>
+        <dl className="space-y-4 text-sm"><div><dt className="font-semibold">No subscription. No auto-renew.</dt><dd className="text-on-dark-secondary">Access ends after 90 days. You are not charged again.</dd></div><div><dt className="font-semibold">7-day refund window</dt><dd className="text-on-dark-secondary">A refund ends pass access. Contact <a href="mailto:support@testero.ai" className="underline">support@testero.ai</a>.</dd></div><div><dt className="font-semibold">PMLE only</dt><dd className="text-on-dark-secondary">One exam, all six domains. Updated for the June 2026 exam guide.</dd></div></dl>
         <div className="mt-auto"><PricingAction /></div>
       </section>
     </div>
