@@ -39,7 +39,7 @@ beforeEach(() => {
   mocks.getUser.mockReset().mockResolvedValue({ data: { user: null }, error: null });
   vi.mocked(createDiagnostic).mockReset().mockResolvedValue(sessionId);
   vi.mocked(readDiagnostic).mockReset().mockResolvedValue({ sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 0, currentQuestion: null });
-  vi.mocked(answerDiagnostic).mockReset().mockResolvedValue({ answeredCount: 1, totalQuestions: 20, completed: false });
+  vi.mocked(answerDiagnostic).mockReset().mockResolvedValue({ answeredCount: 1, totalQuestions: 20, completed: false, progress: { sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 1, currentQuestion: null } });
   vi.mocked(diagnosticResults).mockReset().mockResolvedValue({ sessionId, score: 0, totalQuestions: 20, correctAnswers: 0, readiness: { id: "low", label: "Low", description: "Guidance" }, domainBreakdown: [] });
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -49,6 +49,7 @@ describe("strict diagnostic creation route", () => {
     vi.stubEnv("NODE_ENV", "production");
     const response = await start(request());
     expect(response.status).toBe(201);
+    expect(response.headers.get("Server-Timing")).toMatch(/^credentials;dur=\d+\.\d, total;dur=\d+\.\d$/);
     expect(await response.json()).toEqual({ sessionId, href: `/diagnostic/${sessionId}` });
     const cookie = response.headers.get("set-cookie")!;
     expect(cookie).toMatch(/testero_anon=[a-f0-9]{64}/);
@@ -66,7 +67,7 @@ describe("strict diagnostic creation route", () => {
   it("reuses a valid anonymous cookie", async () => {
     mocks.cookie = token;
     const response = await start(request());
-    expect(createDiagnostic).toHaveBeenCalledWith(mocks.client, token, undefined, null);
+    expect(createDiagnostic).toHaveBeenCalledWith(mocks.client, token, undefined, null, expect.anything());
     expect(response.headers.get("set-cookie")).toContain(`testero_anon=${token}`);
   });
   it.each(["invalid", "A".repeat(64), "a".repeat(63)])("replaces an invalid cookie %# only after success", async (cookie) => {
@@ -80,7 +81,7 @@ describe("strict diagnostic creation route", () => {
     mocks.cookie = previous;
     vi.mocked(createDiagnostic).mockRejectedValue(new DiagnosticError(503, "Unavailable"));
     const response = await start(request());
-    expect(response.status).toBe(503); expect(response.headers.get("set-cookie")).toBeNull();
+    expect(response.status).toBe(503); expect(response.headers.get("Server-Timing")).toMatch(/^credentials;dur=\d+\.\d, total;dur=\d+\.\d$/); expect(response.headers.get("set-cookie")).toBeNull();
     expect(mocks.cookie).toBe(previous);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
   });
@@ -164,8 +165,9 @@ describe("diagnostic progress, answer, and aggregate result routes", () => {
     mocks.cookie = token;
     const response = await answer(request({ itemId, selectedLabel: "B" }), context);
     expect(response.status).toBe(200);
-    expect(answerDiagnostic).toHaveBeenCalledWith(mocks.client, sessionId, { userId: null, anonymousToken: token }, itemId, "B");
-    expect(await response.json()).toEqual({ answeredCount: 1, totalQuestions: 20, completed: false });
+    expect(answerDiagnostic).toHaveBeenCalledWith(mocks.client, sessionId, { userId: null, anonymousToken: token }, itemId, "B", undefined, expect.anything());
+    expect(response.headers.get("Server-Timing")).toMatch(/^credentials;dur=\d+\.\d, total;dur=\d+\.\d$/);
+    expect(await response.json()).toEqual({ answeredCount: 1, totalQuestions: 20, completed: false, progress: { sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 1, currentQuestion: null } });
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     expect(response.headers.get("set-cookie")).toBeNull();
   });
@@ -221,7 +223,7 @@ describe("verified account diagnostic creation", () => {
     const response = await start(request());
     expect(response.status).toBe(201);
     expect(mocks.getUser).toHaveBeenCalledOnce();
-    expect(createDiagnostic).toHaveBeenCalledWith(mocks.client, token, undefined, "verified-user");
+    expect(createDiagnostic).toHaveBeenCalledWith(mocks.client, token, undefined, "verified-user", expect.anything());
     expect(response.headers.get("set-cookie")).toContain(`testero_anon=${token}`);
     expect(Object.keys(await response.json()).sort()).toEqual(["href", "sessionId"]);
   });
@@ -252,7 +254,7 @@ it("tracks successful creation and completed answers only", async () => {
   vi.mocked(scheduleFunnelEvent).mockClear();
   await answer(request({ itemId, selectedLabel: "A" }), context);
   expect(scheduleFunnelEvent).not.toHaveBeenCalled();
-  vi.mocked(answerDiagnostic).mockResolvedValue({ answeredCount: 20, totalQuestions: 20, completed: true });
+  vi.mocked(answerDiagnostic).mockResolvedValue({ answeredCount: 20, totalQuestions: 20, completed: true, progress: { sessionId, status: "completed", totalQuestions: 20, answeredCount: 20, currentQuestion: null } });
   await answer(request({ itemId, selectedLabel: "A" }), context);
   expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_completed", sessionId, { session_id: sessionId });
   vi.mocked(scheduleFunnelEvent).mockClear();

@@ -31,7 +31,11 @@ function db(options: Options = {}) {
         data = options.session === undefined ? session : options.session;
         if (data && call.filters.some(([key, value]) => key === "kind" && (data as typeof session).kind !== value)) data = null;
       }
-      if (table === "session_items") data = call.filters.some(([key]) => key === "id") ? options.feedback ?? { ...rows()[0], selected_label: "A", is_correct: true, answered_at: "done" } : options.items === undefined ? rows() : options.items;
+      if (table === "session_items") {
+        const committed = options.rpcData && !options.rpcError;
+        const all = options.items === undefined ? rows().map((row, index) => committed && index === 0 ? options.feedback ?? { ...row, selected_label: "A", is_correct: true, answered_at: "done" } : row) : options.items;
+        data = call.filters.some(([key]) => key === "id") ? options.feedback ?? { ...rows()[0], selected_label: "A", is_correct: true, answered_at: "done" } : all;
+      }
       return { data, error: options.errorTable === table ? { message: "secret SDK error" } : null };
     };
     const query = {
@@ -130,7 +134,7 @@ describe("committed answer feedback", () => {
   const progress = { answeredCount: 1, totalQuestions: 5, completed: false, explanation: "secret", correct_label: "secret" };
   it("reads feedback only after RPC commit, passes server owner, and strips extras on retries", async () => {
     const database = db({ rpcData: progress });
-    for (let attempt = 0; attempt < 2; attempt++) expect(await answerPractice(database.client, sessionId, userId, itemId, "A", now)).toEqual({ answeredCount: 1, totalQuestions: 5, completed: false, feedback: { itemId, selectedLabel: "A", correctLabel: "A", isCorrect: true } });
+    for (let attempt = 0; attempt < 2; attempt++) expect(await answerPractice(database.client, sessionId, userId, itemId, "A", now)).toMatchObject({ answeredCount: 1, totalQuestions: 5, completed: false, progress: { answeredCount: 1, currentQuestion: { ordinal: 2 } }, feedback: { itemId, selectedLabel: "A", correctLabel: "A", isCorrect: true } });
     expect(database.rpc).toHaveBeenCalledWith("answer_study_item", { p_session_id: sessionId, p_item_id: itemId, p_selected_label: "A", p_user_id: userId, p_anonymous_owner_hash: null });
     expect(database.rpc.mock.invocationCallOrder[0]).toBeLessThan(database.from.mock.invocationCallOrder[1]);
   });
@@ -151,6 +155,21 @@ describe("malformed committed feedback and review fail closed", () => {
   });
 });
 
+
+it("returns safe progress from the same newer snapshot as its outer counts", async () => {
+  const committed = rows().map((row, index) => index < 2 ? { ...row, selected_label: "A", is_correct: true, answered_at: "done" } : row);
+  const database = db({ items: committed, rpcData: { answeredCount: 1, totalQuestions: 5, completed: false } });
+  const answer = await answerPractice(database.client, sessionId, userId, itemId, "A", now);
+  expect(answer).toMatchObject({ answeredCount: 2, completed: false, feedback: { itemId }, progress: { answeredCount: 2, currentQuestion: { ordinal: 3 } } });
+  expect(Object.keys(answer.progress.currentQuestion!).sort()).toEqual(["id", "ordinal", "domainCode", "stem", "options"].sort());
+  expect(answer.progress.currentQuestion!.options).toEqual([{ label: "A", text: "Correct" }, { label: "B", text: "Wrong" }]);
+  expect(JSON.stringify(answer.progress)).not.toMatch(/correct_label|is_correct|explanation|question_id|selected_label/);
+});
+it("rejects practice progress behind the committed RPC count", async () => {
+  const committed = rows(); committed[0] = { ...committed[0], selected_label: "A", is_correct: true, answered_at: "done" };
+  const database = db({ items: committed, rpcData: { answeredCount: 2, totalQuestions: 5, completed: false } });
+  await expect(answerPractice(database.client, sessionId, userId, itemId, "A", now)).rejects.toMatchObject({ status: 503 });
+});
 
 describe("paid practice uses fresh access, never charges the free counter", () => {
   const paid = { ...freeAccess, hasPaidAccess: true };

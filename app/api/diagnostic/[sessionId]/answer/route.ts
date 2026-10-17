@@ -1,3 +1,4 @@
+import { ServerTiming } from "@/lib/server-timing";
 import { scheduleFunnelEvent } from "@/lib/analytics/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -8,13 +9,15 @@ import { DiagnosticError, diagnosticErrorResponse, requireSameOrigin } from "@/l
 export const runtime = "nodejs";
 const answerBody = z.object({ itemId: z.uuid(), selectedLabel: z.string().regex(/^[A-Z]$/) }).strict();
 export async function POST(request: Request, context: { params: Promise<{ sessionId: string }> }) {
+  const timing = new ServerTiming();
   try {
     requireSameOrigin(request);
     const parsed = answerBody.safeParse(await request.json().catch(() => null));
     if (!parsed.success) throw new DiagnosticError(400, "Invalid answer request");
     const { sessionId } = await context.params;
-    const data = await answerDiagnostic(createServiceSupabaseClient(), sessionId, await diagnosticCredentials(), parsed.data.itemId, parsed.data.selectedLabel);
+    const credentials = await timing.measure("credentials", () => diagnosticCredentials());
+    const data = await answerDiagnostic(createServiceSupabaseClient(), sessionId, credentials, parsed.data.itemId, parsed.data.selectedLabel, undefined, timing);
     if (data.completed) scheduleFunnelEvent(request, "diagnostic_completed", sessionId, { session_id: sessionId });
-    return NextResponse.json(data, { headers: { "Cache-Control": "private, no-store" } });
-  } catch (error) { return diagnosticErrorResponse(error); }
+    return NextResponse.json(data, { headers: { "Cache-Control": "private, no-store", "Server-Timing": timing.header() } });
+  } catch (error) { const response = diagnosticErrorResponse(error); response.headers.set("Server-Timing", timing.header()); return response; }
 }

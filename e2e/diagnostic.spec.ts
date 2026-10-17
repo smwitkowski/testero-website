@@ -160,7 +160,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
       const accepted = await acceptedResponse;
       expect(accepted.status()).toBe(200);
       const answer = await accepted.json() as DiagnosticAnswerResponse;
-      expect(answer).toEqual({ answeredCount: index + 1, totalQuestions: 20, completed: index === 19 });
+      expect(answer).toMatchObject({ answeredCount: index + 1, totalQuestions: 20, completed: index === 19, progress: { answeredCount: index + 1, currentQuestion: index === 19 ? null : { ordinal: index + 2 } } });
       noAnswerKeys(answer);
       if (index < 3) await assertTransition(page, api, "diagnostic");
     }

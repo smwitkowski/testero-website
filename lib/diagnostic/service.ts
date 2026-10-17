@@ -1,3 +1,4 @@
+import type { ServerTiming } from "@/lib/server-timing";
 import "server-only";
 import { getPaidAccess } from "@/lib/billing/paid-access";
 import { loadPaidExplanations, addPaidReview } from "@/lib/billing/explanations";
@@ -34,24 +35,25 @@ export async function seenDiagnosticQuestions(client: SupabaseClient, userId: st
   } catch { return new Set(); }
 }
 
-export async function createDiagnostic(client: SupabaseClient, token: string, now = Date.now(), userId: string | null = null): Promise<string> {
-  const ownerHash = userId === null ? hashAnonymousToken(token) : null;
+export async function createDiagnostic(client: SupabaseClient, token: string, now = Date.now(), userId: string | null = null, timing?: ServerTiming): Promise<string> {
+  const ownerHash = timing ? await timing.measure("owner_hash", () => userId === null ? hashAnonymousToken(token) : null) : userId === null ? hashAnonymousToken(token) : null;
   if (userId === null ? !ownerHash : !UUID.test(userId)) throw new DiagnosticError(400, "Invalid diagnostic owner");
   const started = performance.now();
-  const seenQuestionIds = await seenDiagnosticQuestions(client, userId, ownerHash);
+  const measure = <T>(name: string, task: () => Promise<T>) => timing ? timing.measure(name, task) : task();
+  const preferences = measure("history", async () => ({ newSince: DIAGNOSTIC_NEW_SINCE, seenQuestionIds: await seenDiagnosticQuestions(client, userId, ownerHash) }));
   let selected;
-  try { selected = await selectPmleQuestionsByBlueprint(client, DIAGNOSTIC_LENGTH, { newSince: DIAGNOSTIC_NEW_SINCE, seenQuestionIds }); }
+  try { selected = await measure("selection", () => selectPmleQuestionsByBlueprint(client, DIAGNOSTIC_LENGTH, preferences, timing)); }
   catch { throw unavailable(); }
   if (selected.questions.length !== DIAGNOSTIC_LENGTH || new Set(selected.questions.map(q => q.id)).size !== DIAGNOSTIC_LENGTH) throw unavailable();
-  const items = selected.questions.map(question => {
+  const items = await measure("snapshot", async () => selected.questions.map(question => {
     if (!hasValidAnswers(question.answers) || !question.stem.trim()) throw unavailable();
     const snapshot = createAnswerSnapshot(question.answers.map(answer => ({ text: answer.choice_text, is_correct: answer.is_correct })));
     return { question_id: question.id, domain_code: question.domain_code, domain_name: question.domain_name, stem: question.stem, ...snapshot };
-  });
-  const { data, error } = await client.rpc("create_study_session", {
+  }));
+  const { data, error } = await measure("create_rpc", async () => client.rpc("create_study_session", {
     p_kind: "diagnostic", p_user_id: userId, p_anonymous_owner_hash: ownerHash,
     p_items: items, p_expires_at: new Date(now + 24 * 60 * 60 * 1000).toISOString(),
-  });
+  }));
   if (error || typeof data !== "string" || !UUID.test(data)) throw unavailable();
   if (process.env.NODE_ENV === "development") console.info(`[diagnostic-timing] create ${Math.round(performance.now() - started)}ms`);
   return data;
@@ -89,9 +91,12 @@ async function sessionItems(client: SupabaseClient, id: string, includeReview = 
 export async function readDiagnostic(client: SupabaseClient, id: string, credentials: OwnerCredentials, now = Date.now()): Promise<DiagnosticProgress> {
   const session = await ownedSession(client, id, credentials, now);
   const items = await sessionItems(client, id);
+  return diagnosticProgress(session, items);
+}
+
+function diagnosticProgress(session: StudySession, items: SessionItem[]): DiagnosticProgress {
   if (items.length !== session.question_count) throw unavailable();
   const answeredCount = items.filter(item => item.answered_at !== null).length;
-  // A final-answer commit may occur between the session and item reads.
   const completed = !!session.completed_at || answeredCount === session.question_count;
   const current = completed ? null : items.find(item => item.answered_at === null);
   if (!completed && !current) throw unavailable();
@@ -102,12 +107,13 @@ export async function readDiagnostic(client: SupabaseClient, id: string, credent
   };
 }
 
-export async function answerDiagnostic(client: SupabaseClient, id: string, credentials: OwnerCredentials, itemId: string, selectedLabel: string, now = Date.now()): Promise<DiagnosticAnswerResponse> {
-  const session = await ownedSession(client, id, credentials, now);
-  const { data, error } = await client.rpc("answer_study_item", {
+export async function answerDiagnostic(client: SupabaseClient, id: string, credentials: OwnerCredentials, itemId: string, selectedLabel: string, now = Date.now(), timing?: ServerTiming): Promise<DiagnosticAnswerResponse> {
+  const measure = <T>(name: string, task: () => Promise<T>) => timing ? timing.measure(name, task) : task();
+  const session = await measure("ownership", () => ownedSession(client, id, credentials, now));
+  const { data, error } = await measure("answer_rpc", async () => client.rpc("answer_study_item", {
     p_session_id: session.id, p_item_id: itemId, p_selected_label: selectedLabel,
     p_user_id: session.user_id, p_anonymous_owner_hash: session.anonymous_owner_hash,
-  });
+  }));
   if (error) {
     if (error.code === "42501") throw new DiagnosticError(404, "Diagnostic not found");
     if (error.code === "22023") {
@@ -119,7 +125,9 @@ export async function answerDiagnostic(client: SupabaseClient, id: string, crede
   const result = data as DiagnosticAnswerResponse | null;
   if (!result || !Number.isInteger(result.answeredCount) || result.answeredCount < 0 || result.answeredCount > session.question_count || result.totalQuestions !== session.question_count || typeof result.completed !== "boolean" || result.completed !== (result.answeredCount === session.question_count)) throw unavailable();
   // Whitelist fields even if the RPC changes: correctness must never cross this boundary.
-  return { answeredCount: result.answeredCount, totalQuestions: result.totalQuestions, completed: result.completed };
+  const progress = diagnosticProgress(session, await measure("progress_read", () => sessionItems(client, id)));
+  if (progress.answeredCount < result.answeredCount) throw unavailable();
+  return { answeredCount: progress.answeredCount, totalQuestions: progress.totalQuestions, completed: progress.status === "completed", progress };
 }
 
 export async function diagnosticResults(client: SupabaseClient, id: string, credentials: OwnerCredentials, now = Date.now()): Promise<DiagnosticResult> {

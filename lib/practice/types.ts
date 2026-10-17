@@ -1,6 +1,7 @@
 import type { DiagnosticProgress, DiagnosticResult, PaidQuestionReview } from "@/lib/diagnostic/types";
 export type PracticeProgress = DiagnosticProgress;
 export interface PracticeAnswerResponse {
+  progress: PracticeProgress;
   answeredCount: number;
   totalQuestions: number;
   completed: boolean;
