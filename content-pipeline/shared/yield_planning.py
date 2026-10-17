@@ -49,7 +49,7 @@ class ObjectiveRotation:
         pool = self.pools[scope["domain_code"]]
         fair_share = math.ceil(self.section_slots[scope["domain_code"]] / len(pool))
         failed = {row["objective_id"] for row in candidates
-                  if row.get("failure_stage") in ("decision_veto", "near_duplicate")}
+                  if row.get("failure_stage") in ("decision_veto", "near_duplicate", "near_duplicate_plan")}
         successes = Counter(row["objective_id"] for row in candidates
                             if row.get("accepted") is True or row.get("awaiting_external_judge") is True)
         original = scope["objective_id"]

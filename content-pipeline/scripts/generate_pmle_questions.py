@@ -17,7 +17,7 @@ from shared.batch_report import ml_practice_report
 from shared.yield_planning import existing_scenarios, ObjectiveRotation
 from shared.dedupe import normalize_stem, strip_markdown
 from shared.option_order import store_options
-from shared.near_duplicates import load_export, check_near_duplicate, comparison_row
+from shared.near_duplicates import load_export, check_near_duplicate, check_plan_near_duplicate, comparison_row
 from shared.batch_report import key_position_report, format_key_position_report, template_diversity_report
 from shared.doc_search import search_objective_docs, documentation_context, DocumentationCache
 from shared.parallel import run_bounded
@@ -127,9 +127,19 @@ def persist_candidate(client, scope, question, judge, grounding, exam, domain_id
     return bool(client.update_question_review(saved["id"], run_id, final_review, review_notes))
 
 
+def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29):
+    if n_questions is not None and target_accepted is not None:
+        raise ValueError("--target-accepted and --n-questions are alternatives")
+    if not math.isfinite(expected_yield) or not 0 < expected_yield <= 1:
+        raise ValueError("Expected yield must be greater than 0 and at most 1")
+    return math.ceil(target_accepted / expected_yield) if target_accepted is not None else (n_questions or 10)
+
+
 @click.command()
 @click.option("--cert", default=DEFAULT_CERT, show_default=True)
-@click.option("--n-questions", type=click.IntRange(min=1), default=10, show_default=True, help="Total candidate count across the plan, not per domain.")
+@click.option("--n-questions", type=click.IntRange(min=1), default=None, help="Total candidate count across the plan, not per domain (default: 10).")
+@click.option("--target-accepted", type=click.IntRange(min=1), default=None, help="Plan ceil(K / expected-yield) candidates; alternative to --n-questions, not a quality guarantee.")
+@click.option("--expected-yield", type=click.FloatRange(min=0, max=1, min_open=True), default=0.29, show_default=True, help="Planning yield assumption for --target-accepted; does not change gates.")
 @click.option("--domain-code", default=None, help="Optional domain filter; otherwise use all weighted sections.")
 @click.option("--subsection", default=None, help="Optional guide subsection filter.")
 @click.option("--objective", "objective_ids", multiple=True, help="Repeatable registry objective ID; overrides weights with round-robin targets in flag order.")
@@ -147,8 +157,10 @@ def persist_candidate(client, scope, question, judge, grounding, exam, domain_id
 @click.option("--gen-effort", type=click.Choice(["low", "medium", "high"]), default="high", show_default=True)
 @click.option("--cite-effort", type=click.Choice(["low", "medium", "high"]), default="medium", show_default=True)
 def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge_model, difficulty, dry_run, artifact, exam, seed,
-         parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None, existing_questions=None, argon_gate=False):
+         parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None, existing_questions=None, argon_gate=False,
+         target_accepted=None, expected_yield=0.29):
     try:
+        n_questions = candidate_budget(n_questions, target_accepted, expected_yield)
         if argon_gate:
             if judge_model != "external":
                 raise ValueError("Argon gate requires external judging")
@@ -176,7 +188,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     payload = {"version": 1, "cert_id": cert, "model": model, "judge_model": judge_model,
                "generator_family": generator_family, "judge_family": judge_family,
                "dry_run": dry_run, "seed": seed, "requested_objective_ids": list(dict.fromkeys(objective_ids)),
-               "planned_count": n_questions, "plan": plan, "candidates": [],
+               "planned_count": n_questions, "target_accepted": target_accepted, "expected_yield": expected_yield,
+               "plan": plan, "candidates": [],
                "parallel": effective_parallel, "gen_effort": gen_effort, "cite_effort": cite_effort,
                "rules_version": 5, "style_policy_version": "5.1", "section_allocation": allocation, "decision_first": True,
                "existing_questions": bank, "argon_gate": argon_gate}
@@ -240,7 +253,6 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     def process_candidate(item):
         nonlocal accepted, awaiting, batch_stop, next_commit
         index, scope = item
-        scope["style_policy"] = style_policy(scope["objective_id"])
         request = None
         entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line", "key_length_rank")},
                  "style_policy": scope["style_policy"],
@@ -274,6 +286,13 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     stage = "decision_veto"
                     attempt["proof"] = {"passed": False, "reason": "Replacement must change the unsupported engineering decision"}
                     raise DecisionVetoError(attempt["proof"]["reason"])
+                stage = "near_duplicate_plan"
+                plan_check = check_plan_near_duplicate(decision, bank["questions"])
+                attempt["near_duplicate_plan_check"] = plan_check
+                if not plan_check["passed"]:
+                    entry["near_duplicate_plan_check"] = plan_check
+                    reject_candidate(entry, stage, "near_duplicate_plan")
+                    return
                 stage = "documentation"
                 sources = search_objective_docs(scope["objective_text"], scope["services"],
                     cache=docs_cache, objective_id=scope["objective_id"], decision_plan=decision)
