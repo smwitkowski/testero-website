@@ -43,7 +43,7 @@ export function CheckoutButton() {
     catch (reason) { setError(reason instanceof Error ? reason.message : "Checkout is unavailable. Please retry."); inFlight.current = false; setPending(false); }
   }
   return <div className="space-y-3" aria-busy={pending}>
-    <Button disabled={pending} onClick={() => void checkout()}>{pending ? "Opening checkout…" : "Get PMLE Pass — $39"}</Button>
+    <Button disabled={pending} onClick={() => void checkout()}>{pending ? "Opening checkout…" : "Get PMLE Pass — $39 one-time payment"}</Button>
     {error && <p role="alert" className="text-destructive">{error}</p>}
   </div>;
 }

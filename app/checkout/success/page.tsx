@@ -9,5 +9,5 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
   const raw = query.session_id;
   const sessionId = typeof raw === "string" && /^cs_[A-Za-z0-9_]{1,240}$/.test(raw) ? raw : null;
   await requireUser(`/checkout/success${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ""}`);
-  return <div className="mx-auto max-w-2xl space-y-6"><h1 className="text-3xl font-semibold tracking-tight">Checkout confirmation</h1><CheckoutStatus sessionId={sessionId} /></div>;
+  return <div className="mx-auto max-w-2xl space-y-6"><h1 className="text-3xl font-semibold tracking-tight">Checkout confirmation</h1><p className="text-muted-foreground">PMLE Pass: $39 one-time payment for 90 days of access to PMLE practice questions and explanations. No subscription. No auto-renew.</p><CheckoutStatus sessionId={sessionId} /></div>;
 }
