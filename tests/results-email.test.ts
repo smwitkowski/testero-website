@@ -34,7 +34,7 @@ it("fails closed without configuration or after persistence failure", async () =
 });
 it("builds four weighted weeks without review or authorization tokens", () => {
  const text = resultsEmailText(result as never, Date.parse("2026-10-17T12:00:00Z"));
- expect(text).toContain("Week 4:"); expect(text).toContain("4 hours/week"); expect(text).toContain("16h total");
+ expect(text).toContain("Plan ends: 2026-11-14"); expect(text).not.toContain("Exam:"); expect(text).toContain("Week 4:"); expect(text).toContain("4 hours/week"); expect(text).toContain("16h total");
  expect(text).toContain("https://testero.ai/pricing"); expect(text).toContain("same browser");
  expect(text).not.toContain("PAID SECRET"); expect(text).not.toContain("token=");
 });

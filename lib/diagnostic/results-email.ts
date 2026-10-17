@@ -25,7 +25,7 @@ export function resultsEmailText(result: DiagnosticResult, now = Date.now()) {
     "\nScores by domain:", ...result.domainBreakdown.map(d => `${d.domainName}: ${d.correct}/${d.total} (${d.percentage}%)`),
     "\nWeakest sampled domains:", ...domains.slice(0, 2).map(d => d.domainName),
     "\nYour 4-week plan assumes 4 hours/week (16 hours total). Time uses official section weight × (1 + sampled error rate), so weaker sampled domains receive more time. Unsampled domains retain their official weight.",
-    studyPlanText(plan).replace(`Time allocated in proportion to official section weights (total ${plan.totalWeight}%).`, "Time allocated by official section weight adjusted for your diagnostic error rate."),
+    studyPlanText(plan).replace(`Exam: ${plan.examDate}`, `Plan ends: ${plan.examDate}`).replace(`Time allocated in proportion to official section weights (total ${plan.totalWeight}%).`, "Time allocated by official section weight adjusted for your diagnostic error rate."),
     `\nView results: https://testero.ai/diagnostic/${result.sessionId}/results`,
     "Open results in the same browser used for your diagnostic, or sign in to the account that owns it. This link does not grant access on its own.",
     "PMLE Pass pricing: https://testero.ai/pricing",
