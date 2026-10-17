@@ -87,3 +87,46 @@ def test_target_accepted_cli_sizes_the_plan(monkeypatch, tmp_path):
     assert artifact["target_accepted"] == 4 and artifact["expected_yield"] == .5
     conflict = CliRunner().invoke(generate.main, ["--target-accepted", "4", "--n-questions", "12"])
     assert conflict.exit_code == 1 and "alternatives" in conflict.output
+
+
+def test_merged_generation_skips_cite_on_valid_writer_receipts(monkeypatch, tmp_path):
+    from test_external_generation import QUESTION, OBJECTIVE, source, receipts
+    monkeypatch.setattr(generate, "ARTIFACT_ROOT", tmp_path)
+    monkeypatch.setattr(generate, "search_objective_docs", lambda *a, **kw: [source()])
+    monkeypatch.setattr(generate, "plan_decision", lambda scope, **kw: decision(scope))
+    proof = {"passed": True, "reasons": receipts()}
+    monkeypatch.setattr(generate, "verify_decision", lambda *a, **kw: proof)
+    writer = Mock(return_value={**QUESTION, "evidence": receipts()})
+    cite = Mock(side_effect=AssertionError("Valid writer receipts need no cite call"))
+    monkeypatch.setattr(generate, "generate_question", writer)
+    monkeypatch.setattr(generate, "cite_question", cite)
+    monkeypatch.setattr(generate, "database_client", lambda: pytest.fail("No DB"))
+    result = CliRunner().invoke(generate.main, ["--model", "codex", "--judge-model", "external",
+        "--n-questions", "1", "--objective", OBJECTIVE, "--artifact", str(tmp_path / "merged.json")])
+    assert result.exit_code == 0, result.output
+    entry = json.loads((tmp_path / "merged.json").read_text())["candidates"][0]
+    assert entry["mechanical_check"]["passed"] is True
+    assert [attempt["stage"] for attempt in entry["citation_attempts"]] == ["write"]
+    cite.assert_not_called()
+    assert writer.call_args.kwargs["include_evidence"] is True
+
+
+@pytest.mark.parametrize("fixed", [True, False])
+def test_merged_generation_allows_only_one_cite_repair(monkeypatch, tmp_path, fixed):
+    from test_external_generation import QUESTION, OBJECTIVE, source, receipts
+    monkeypatch.setattr(generate, "ARTIFACT_ROOT", tmp_path)
+    monkeypatch.setattr(generate, "search_objective_docs", lambda *a, **kw: [source()])
+    monkeypatch.setattr(generate, "plan_decision", lambda scope, **kw: decision(scope))
+    monkeypatch.setattr(generate, "verify_decision", lambda *a, **kw: {"passed": True, "reasons": receipts()})
+    monkeypatch.setattr(generate, "generate_question", Mock(return_value={**QUESTION, "evidence": []}))
+    cite = Mock(return_value={"evidence": receipts() if fixed else []})
+    monkeypatch.setattr(generate, "cite_question", cite)
+    result = CliRunner().invoke(generate.main, ["--model", "codex", "--judge-model", "external",
+        "--n-questions", "1", "--objective", OBJECTIVE, "--artifact", str(tmp_path / "repair.json")])
+    assert result.exit_code == (0 if fixed else 1), result.output
+    entry = json.loads((tmp_path / "repair.json").read_text())["candidates"][0]
+    assert entry["mechanical_check"]["passed"] is fixed
+    assert [attempt["stage"] for attempt in entry["citation_attempts"]] == ["write", "cite"]
+    assert cite.call_count == 1
+    assert cite.call_args.kwargs["check_errors"]
+    assert "Source excerpt" in cite.call_args.kwargs["fetched_context"]
