@@ -39,8 +39,11 @@ function client(rows: BankRow[], errors: { counts?: string; domain?: string } = 
     from: vi.fn((table: string) => {
       expect(table).toBe("questions");
       let domainId: string | undefined;
+      let first = 0, last = rows.length;
       const query = {
         select: vi.fn(() => query),
+        order: vi.fn(() => query),
+        range: vi.fn((from: number, to: number) => { first = from; last = to + 1; return query; }),
         eq: vi.fn((column: string, value: string) => {
           filters.push([column, value]);
           if (column === "domain_id") domainId = value;
@@ -49,7 +52,7 @@ function client(rows: BankRow[], errors: { counts?: string; domain?: string } = 
         then(resolve: (result: { data: BankRow[] | null; error: { message: string } | null }) => unknown) {
           const message = domainId ? errors.domain : errors.counts;
           return Promise.resolve(resolve({
-            data: message ? null : rows.filter((row) => !domainId || row.domain_id === domainId),
+            data: message ? null : rows.filter((row) => !domainId || row.domain_id === domainId).slice(first, last),
             error: message ? { message } : null,
           }));
         },
@@ -167,6 +170,13 @@ describe("ported Supabase selector", () => {
       expect(filters).toContainEqual(["review_status", "GOOD"]);
     }
     expect(rows).toEqual(bank([5, 5, 5, 5, 5, 5]));
+  });
+
+  it("includes domains beyond the first inventory page", async () => {
+    const { supabase } = client(bank([1000, 5, 5, 5, 5, 5]));
+    const result = await selectPmleQuestionsByBlueprint(supabase, 20);
+    expect(result.domainDistribution.map(domain => domain.selectedCount)).toEqual([3, 3, 4, 4, 3, 3]);
+    expect(supabase.from).toHaveBeenCalledTimes(2);
   });
 
   it("samples beyond a fixed prefix using deterministic Fisher-Yates seeds", async () => {

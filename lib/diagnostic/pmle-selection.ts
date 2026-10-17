@@ -189,12 +189,20 @@ export async function selectPmleQuestionsByBlueprint(
   preferences: SelectionPreferences = {}
 ): Promise<SelectionResult> {
   // Load each eligible question once. Availability and sampling use the same inventory.
-  const { data, error } = await supabase.from('questions')
-    .select('id,stem,domain_id,difficulty,created_at,exam_domains!inner(code,name),answers(choice_label,choice_text,is_correct)')
-    .eq('exam', 'GCP_PM_ML_ENG').eq('status', 'ACTIVE').eq('review_status', 'GOOD');
-  if (error) throw new Error(`Failed to fetch domain counts: ${error.message}`);
   type Row = { id: string; stem: string; domain_id: string; difficulty: string | null; created_at: string | null;
     exam_domains: { code: string; name: string }; answers: CanonicalAnswer[] };
+  const data: Row[] = [];
+  const pageSize = 1000;
+  for (let offset = 0; ; offset += pageSize) {
+    const page = await supabase.from('questions')
+      .select('id,stem,domain_id,difficulty,created_at,exam_domains!inner(code,name),answers(choice_label,choice_text,is_correct)')
+      .eq('exam', 'GCP_PM_ML_ENG').eq('status', 'ACTIVE').eq('review_status', 'GOOD')
+      .order('id').range(offset, offset + pageSize - 1);
+    if (page.error) throw new Error(`Failed to fetch domain counts: ${page.error.message}`);
+    const rows = (page.data ?? []) as unknown as Row[];
+    data.push(...rows);
+    if (rows.length < pageSize) break;
+  }
   const pools = new Map<string, Row[]>();
   for (const row of (data ?? []) as unknown as Row[]) {
     if (!hasValidAnswers(row.answers)) continue;

@@ -7,10 +7,14 @@
 - Independent billing sources and explanation sources fetched concurrently. Fresh fail-closed access remains after committed practice answer; DB quota and idempotency unchanged.
 - Development-only Supabase request durations, selector/create durations and one trivial query RTT. No query/body/credential logs. No infra changes.
 
+Inventory reads use stable ID pagination at 1,000 rows to avoid silently sampling only the PostgREST first page; current bank remains one query.
+
 ## Evidence limitations
 Local 30-question educational seed, Next development, loopback Supabase. First sample excluded as compilation. Baseline diagnostic POST warm p50 147.6ms(n5); after39.3ms(n7). ProgressGET32.7->20.3ms. After diagnostic answer p5024ms. API durations are not click-to-visible.
 
-Separate browser profile (5 each, local confirmed paid fixture, dev, baseline restored after implementation run): diagnostic click-to-question visible p50 860.7→363.0ms; paid practice create 94.9→94.8ms (no material change); paid answer 117.5→104.5ms. All five samples included; dev HMR/order/noise limit causal interpretation. Before/after raw values are included below.
+Separate browser profile (5 each, local confirmed paid fixture, dev, baseline restored after implementation run): baseline was exact `94424cb` content for all 12 implementation files, including both billing files. Implementation was subsequently committed as `6f46a67`. Same dev process, hot reload, no restart between these profiles. Source hashes are in the coordinator's `speed-timings.json`. No full bank digest was captured.
+
+Browser measurements: diagnostic click-to-question visible p50 860.7→363.0ms; paid practice create 94.9→94.8ms (no material change); paid answer 117.5→104.5ms. All five samples included; dev HMR/order/noise limit causal interpretation. Before/after raw values are included below.
 
 ```json
 {
@@ -140,7 +144,7 @@ Separate browser profile (5 each, local confirmed paid fixture, dev, baseline re
   ]
 }
 ```
-Founder production baseline supplied3.2s first question /2.9s create. No production benchmark collected. <=1s target not claimed. Six eliminated serial requests at hypothetical100–300ms RTT save600–1800ms; this is an estimate, not a measurement. Supabase/cloud region unknown; recommend compare configured regions and co-locate only with approval if RTT is high.
+Founder production baseline supplied3.2s first question /2.9s create. No production benchmark collected. <=1s target not claimed. Six eliminated serial requests at hypothetical100–300ms RTT save600–1800ms; this is an estimate, not a measurement. Supabase/cloud region unknown; the development trivial-query probe was implemented after these profiles, but its numeric RTT was not captured before runtime release. It is instrumentation, not measured Cloud Run→Supabase evidence; recommend compare configured regions and co-locate only with approval if RTT is high.
 
 ## Gates
-1033 unit tests, lint, typecheck passed. Docker passed. Local DB verifier passed. Diagnostic/accounts-practice e2e passed2 (SSR/no initial browserGET, delayed stale-prefetch regression). Initial harness failure route already handled corrected by not removing an outstanding route.
+1034 unit tests, lint, typecheck passed (including inventory pagination). Docker passed. Local DB verifier passed. Diagnostic/accounts-practice e2e passed2 (SSR/no initial browserGET, delayed stale-prefetch regression). Initial harness failure route already handled corrected by not removing an outstanding route. DB verifier and these flow tests overlapped; both passed, but this is not clean sequential evidence. Final pagination change is unit-tested; subsequent mirror flow verification belongs to QA.
