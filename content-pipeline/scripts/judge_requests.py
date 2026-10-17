@@ -100,12 +100,21 @@ def _read_request(path, ident, canonical, *, with_digest=False):
     gate_fields = {"candidate_id", "objective_id", "gate_version", "decision_provenance_sha256", "gates", "trimming"}
     base_fields = (gate_fields, gate_fields | {"argon"}, gate_fields | {"style_policy"},
                    gate_fields | {"argon", "style_policy"})
+    base_fields = (*base_fields, *(fields | {"distractor_evidence"} for fields in base_fields))
     modern_fields = (*base_fields, *(fields | {"execution_policy"} for fields in base_fields))
     if not isinstance(request, dict) or set(request) not in (legacy_fields, *modern_fields):
         raise RequestValidationError("Request must contain exactly the exported request fields")
     is_gates = set(request) in modern_fields
     if "execution_policy" in request and request["execution_policy"] != "short_circuit_v1":
         raise RequestValidationError("Unsupported execution policy")
+    if "distractor_evidence" in request:
+        from shared.distractor_evidence import validate_policy
+        try:
+            validate_policy(request["distractor_evidence"])
+            if request["gate_version"] != 5:
+                raise ValueError()
+        except ValueError:
+            raise RequestValidationError("Invalid frozen distractor-evidence policy") from None
     if "style_policy" in request:
         from shared.objective_style import validate_style_policy
         try:
@@ -120,12 +129,16 @@ def _read_request(path, ident, canonical, *, with_digest=False):
                 or not re.fullmatch(r"[0-9a-f]{64}", request["decision_provenance_sha256"])
                 or not isinstance(request["gates"], dict) or set(request["gates"]) != set(GATE_SIGNATURES)):
             raise RequestValidationError("Request must contain all current independent gates")
-        for name, signature in gate_signatures(request["gate_version"]).items():
+        for name, signature in gate_signatures(request["gate_version"], distractor_evidence=request.get("distractor_evidence")).items():
             gate = request["gates"][name]
             if (not isinstance(gate, dict) or set(gate) != {"judge_prompt", "verdict_schema"}
                     or not isinstance(gate["judge_prompt"], str) or not gate["judge_prompt"].strip()
                     or gate["verdict_schema"] != output_model(signature).model_json_schema()):
                 raise RequestValidationError("Gate request differs from the strict current schema")
+            if name == "evidence" and "distractor_evidence" in request:
+                system = gate["judge_prompt"].split("\n\nUSER:\n", 1)[0]
+                if " ".join(signature.instructions.split()) not in " ".join(system.split()):
+                    raise RequestValidationError("Evidence prompt differs from frozen mode")
     if request["candidate_id"] != ident:
         raise RequestValidationError("Request candidate ID must match its filename")
     if not isinstance(request["objective_id"], str) or not request["objective_id"].strip():
@@ -331,6 +344,8 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
                                       attempt=1, calls_path=calls_path):
                         raw["argon"] = argon.run_argon(request["argon"])
             sub_call = "verdict_publication"
+            from shared.distractor_evidence import verdict_with_policy
+            raw = verdict_with_policy(raw, request.get("distractor_evidence"))
             if not _publish(destination, raw, exclusive=True):
                 return ident, "skipped", None
             try:

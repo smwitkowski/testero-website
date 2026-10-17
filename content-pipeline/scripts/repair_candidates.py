@@ -134,7 +134,8 @@ def _inventory(path, verdicts, payload):
                 raw = ingestion._read_json(verdict_path)
                 if payload["external_judge_version"] == 2:
                     from shared.gates import eligible_gate_repair
-                    eligible_gate_repair(raw)
+                    from shared.distractor_evidence import verdict_gates
+                    eligible_gate_repair(verdict_gates(raw, entry.get("distractor_evidence")))
                 else:
                     eligible_repair_verdict(raw, gate_version=1)
                 scope, question, checked = ingestion._validate_candidate(path, payload, entry)
@@ -220,7 +221,7 @@ def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed
         child = {key: deepcopy(entry[key]) for key in (
             "cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment",
             "opening_style", "question_line", "index", "sources")}
-        for name in ("decision_plan", "decision_proof", "decision_objective", "key_length_rank", "style_policy"):
+        for name in ("decision_plan", "decision_proof", "decision_objective", "key_length_rank", "style_policy", "distractor_evidence"):
             if name in entry:
                 child[name] = deepcopy(entry[name])
         child.update(candidate_id=ident + "-r1", key="A", stem=revised["stem"],

@@ -144,6 +144,7 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--domain-code", default=None, help="Optional domain filter; otherwise use all weighted sections.")
 @click.option("--subsection", default=None, help="Optional guide subsection filter.")
 @click.option("--objective", "objective_ids", multiple=True, help="Repeatable registry objective ID; overrides weights with round-robin targets in flag order.")
+@click.option("--distractor-evidence", type=click.Choice(["strict", "consistent"]), default="strict", show_default=True, help="Freeze decision/evidence review policy for this batch.")
 @click.option("--argon-gate", is_flag=True, help="Freeze mandatory independent Gemini 4 Argon blind/full review requests.")
 @click.option("--existing-questions", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Local ACTIVE/DRAFT question export for near-duplicate veto; no DB access.")
 @click.option("--section-allocation", default=None, help="Comma-separated counts in included guide section order, summing to N; pilot: 4,5,6,6,5,4. Cannot combine with scope filters.")
@@ -159,8 +160,10 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--cite-effort", type=click.Choice(["low", "medium", "high"]), default="medium", show_default=True)
 def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge_model, difficulty, dry_run, artifact, exam, seed,
          parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None, existing_questions=None, argon_gate=False,
-         target_accepted=None, expected_yield=0.29):
+         target_accepted=None, expected_yield=0.29, distractor_evidence="strict"):
     try:
+        from shared.distractor_evidence import evidence_policy
+        frozen_evidence = evidence_policy(distractor_evidence)
         n_questions = candidate_budget(n_questions, target_accepted, expected_yield)
         if argon_gate:
             if judge_model != "external":
@@ -177,6 +180,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                               objective_ids=objective_ids, section_allocation=allocation)
     except ValueError as exc:
         raise click.ClickException(str(exc)) from None
+    for scope in plan:
+        scope["distractor_evidence"] = dict(frozen_evidence)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     artifact = artifact or ARTIFACT_ROOT / f"{cert}-{stamp}.json"
     if not artifact.resolve().is_relative_to(ARTIFACT_ROOT.resolve()) or artifact.suffix != ".json":
@@ -193,6 +198,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                "plan": plan, "candidates": [],
                "parallel": effective_parallel, "gen_effort": gen_effort, "cite_effort": cite_effort,
                "rules_version": 5, "style_policy_version": "5.1", "section_allocation": allocation, "decision_first": True,
+               "distractor_evidence": frozen_evidence,
                "existing_questions": bank, "argon_gate": argon_gate, "execution_policy": "short_circuit_v1"}
     client = None if dry_run or external else database_client()
     exam = exam or ("GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert)
@@ -246,6 +252,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 scope = original
                 if selected != original["objective_id"]:
                     scope = plan_questions(cert, index, objective_ids=[selected])[-1]
+                    scope["distractor_evidence"] = dict(frozen_evidence)
                     objective_rotations[index] = {"from": original["objective_id"], "to": selected,
                                                   "fair_share": fair_share}
                     plan[index - 1] = scope
@@ -256,7 +263,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         index, scope = item
         request = None
         entry = {**{k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line", "key_length_rank")},
-                 "style_policy": scope["style_policy"],
+                 "style_policy": scope["style_policy"], "distractor_evidence": dict(frozen_evidence),
                  "index": index, "stem": None, "options": [], "key": "A", "rationales": {},
                  "evidence": [], "citation_attempts": [], "mechanical_check": {"passed": False, "errors": ["No fetched evidence"]},
                  "judge_verdict": {"passed": False, "score": 0.0, "reason": "Not judged", "model": judge_model},
@@ -390,7 +397,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                               calls_path=str(artifact) + ".calls.jsonl"):
                 judge = judge_three_gates(question, scope["domain_prompt"], documentation_context=context,
                                        model=judge_model, generator_model=model, option_evidence=checked["options"],
-                                       style_policy=scope["style_policy"])
+                                       style_policy=scope["style_policy"], distractor_evidence=frozen_evidence)
             entry["judge_verdict"] = {"passed": judge.passed, "score": judge.score, "reason": judge.reason, "model": judge.model}
             if getattr(judge, "gate_results", None) is not None:
                 entry["gate_verdicts"] = judge.gate_results
@@ -403,6 +410,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                               "evidence": entry["evidence"], "option_order": entry["option_order"],
                               "mechanical_check": entry["mechanical_check"],
                               "rules_version": 5, "gate_version": 5, "style_policy": scope["style_policy"],
+                              "distractor_evidence": dict(frozen_evidence),
                               "decision_objective": decision_objective,
                               "decision_plan": decision, "decision_proof": proof,
                               "decision_attempt_count": len(entry["decision_attempts"]),

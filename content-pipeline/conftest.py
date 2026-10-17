@@ -60,7 +60,8 @@ def legacy_generation_stage_fixtures(request, monkeypatch):
                 "reason": "Explicit offline fixture for historical writer-stage tests",
                 "reasons": [{**row, "scenario_reason": "Explicit synthetic decision-proof reason"}
                             for row in receipts],
-                "mechanical_check": {"passed": checked["passed"], "errors": checked["errors"]}}
+                "mechanical_check": {"passed": checked["passed"], "errors": checked["errors"]},
+                **({"distractor_evidence": scope["distractor_evidence"]} if "distractor_evidence" in scope else {})}
 
     # These historical suites isolate transport/publication, not new semantic or batch gates.
     # Dedicated v5 replay tests exercise both checks without these mocks.

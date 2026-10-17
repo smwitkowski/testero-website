@@ -325,14 +325,15 @@ def judge_three_gates(
     generator_model: str | None = None, option_evidence: list[dict] | None = None,
     predictors: Mapping[str, Callable[..., Any]] | None = None,
     style_reference: str | None = None, max_tokens: int = 2000,
-    style_policy: dict | None = None,
+    style_policy: dict | None = None, distractor_evidence: dict | None = None,
 ) -> JudgeVerdict:
     """Run three separate calls with isolated inputs; require every strict gate.
 
     Injected per-gate predictors support offline tests. CLI subscription and
     explicit OpenRouter paths use the same independent DSPy signatures.
     """
-    from shared.gates import GATE_SIGNATURES, build_gate_inputs, aggregate_gate_verdict
+    from shared.gates import GATE_SIGNATURES, build_gate_inputs, aggregate_gate_verdict, gate_signatures
+    from shared.distractor_evidence import verdict_with_policy
     from shared.cli_models import run_signature
     from shared.evidence import check_evidence
     if not isinstance(model, str) or not model.strip():
@@ -357,7 +358,7 @@ def judge_three_gates(
         inputs = build_gate_inputs(question_data, domain_context, documentation_context,
                                    option_evidence, style_reference=style_reference, style_policy=style_policy)
         raw = {}
-        for name, signature in GATE_SIGNATURES.items():
+        for name, signature in gate_signatures(distractor_evidence=distractor_evidence).items():
             from shared.call_logging import call_context
             with call_context(stage="judge_blind" if name == "blind_solver" else "judge_" + name):
                 if predictors is not None:
@@ -374,7 +375,7 @@ def judge_three_gates(
                     from shared.call_logging import log_lm_calls
                     with log_lm_calls(lm, model), reject_token_limit(lm), dspy.context(adapter=dspy.JSONAdapter()):
                         raw[name] = dict(dspy.Predict(signature)(**inputs[name], lm=lm))
-        return aggregate_gate_verdict(question_data, raw, model=model, style_policy=style_policy)
+        return aggregate_gate_verdict(question_data, verdict_with_policy(raw, distractor_evidence), model=model, style_policy=style_policy, distractor_evidence=distractor_evidence)
     except CLIUsageLimitError:
         raise
     except CLIModelError as error:

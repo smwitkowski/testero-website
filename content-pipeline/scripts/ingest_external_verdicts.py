@@ -99,7 +99,15 @@ def _scope(payload, entry):
     current = plan_questions(payload["cert_id"], index, objective_ids=[scope["objective_id"]])
     expected = current[index - 1]
     # Deterministic registry scope stays exact; LLM decision/proof data is frozen separately.
-    provenance_fields = {"objective_offset", "decision_plan", "decision_proof", "decision_objective", "style_policy"}
+    provenance_fields = {"objective_offset", "decision_plan", "decision_proof", "decision_objective", "style_policy", "distractor_evidence"}
+    from shared.distractor_evidence import validate_policy
+    if "distractor_evidence" in payload:
+        validate_policy(payload["distractor_evidence"])
+        if (payload.get("rules_version") != 5 or scope.get("distractor_evidence") != payload["distractor_evidence"]
+                or entry.get("distractor_evidence") != payload["distractor_evidence"]):
+            raise ValueError("Mixed frozen distractor-evidence modes")
+    elif "distractor_evidence" in scope or "distractor_evidence" in entry:
+        raise ValueError("Distractor-evidence mode requires frozen batch provenance")
     policy = scope.get("style_policy")
     if payload.get("style_policy_version") == "5.1":
         validate_style_policy(policy, scope["objective_id"])
@@ -206,6 +214,9 @@ def _external_decision(question, scope, sources, evidence, raw, generator_model,
     require_independent_models(generator_model, EXTERNAL_POLICY_MODEL)
     if gate_version == 2:
         from shared.gates import aggregate_gate_verdict
+        from shared.distractor_evidence import verdict_gates, verdict_with_policy
+        policy = scope.get("distractor_evidence")
+        raw = verdict_gates(raw, policy)
         base = raw
         if argon_request is not None:
             from shared.argon_gate import evaluate_argon, MODEL
@@ -214,14 +225,14 @@ def _external_decision(question, scope, sources, evidence, raw, generator_model,
                 raise ValueError("All four gates required")
             base = {name: raw[name] for name in ("blind_solver", "style", "evidence")}
             if raw["argon"] == {"status": "skipped", "reason": "prior_gate_failed"}:
-                decision = aggregate_gate_verdict(question, base, model=EXTERNAL_JUDGE_PROVENANCE,
-                    version=rules_version, style_policy=scope.get("style_policy"))
+                decision = aggregate_gate_verdict(question, verdict_with_policy(base, policy), model=EXTERNAL_JUDGE_PROVENANCE,
+                    version=rules_version, style_policy=scope.get("style_policy"), distractor_evidence=policy)
                 if argon_request["version"] != 2 or decision.passed:
                     raise ValueError("Argon skip cannot approve content")
                 return decision
             passed, reason = evaluate_argon(question, raw["argon"], argon_request)
-        decision = aggregate_gate_verdict(question, base, model=EXTERNAL_JUDGE_PROVENANCE, version=rules_version,
-                                          style_policy=scope.get("style_policy"))
+        decision = aggregate_gate_verdict(question, verdict_with_policy(base, policy), model=EXTERNAL_JUDGE_PROVENANCE, version=rules_version,
+                                          style_policy=scope.get("style_policy"), distractor_evidence=policy)
         if argon_request is not None and not passed:
             from shared.quality_gate import JudgeVerdict
             return JudgeVerdict(False, 0.0, ("Argon: " + reason)[:300], EXTERNAL_JUDGE_PROVENANCE)
@@ -324,7 +335,10 @@ def ingest(path, verdicts, *, dry_run=False):
         raise click.ClickException("Artifact lacks persistence difficulty or exam")
     try:
         validate_candidate_records(payload)
-    except ValueError:
+        # Validate every candidate, including failed/unwritten records, before ingest.
+        for entry in payload["candidates"]:
+            _scope(payload, entry)
+    except (ValueError, KeyError, TypeError, StopIteration):
         raise click.ClickException("Invalid candidate records or repair lineage") from None
     try:
         for index, scope in enumerate(payload["plan"], 1):
@@ -348,7 +362,7 @@ def ingest(path, verdicts, *, dry_run=False):
             if verdict_path.is_symlink():
                 raise ValueError("Unsafe parent verdict path")
             raw = _read_json(verdict_path)
-            eligible_repair_verdict(raw, gate_version=payload["external_judge_version"])
+            eligible_repair_verdict(raw, gate_version=payload["external_judge_version"], distractor_evidence=parent.get("distractor_evidence"))
             if canonical_sha256(raw) != child["repair"]["original_verdict_sha256"]:
                 raise ValueError("Parent verdict changed after repair")
     except (ValueError, KeyError, TypeError, OSError, UnicodeError, StopIteration):
@@ -511,6 +525,8 @@ def ingest(path, verdicts, *, dry_run=False):
                                 ("decision_objective", "decision_plan", "decision_proof", "key_length_rank")})
         if scope.get("style_policy") is not None:
             grounding["style_policy"] = scope["style_policy"]
+        if "distractor_evidence" in scope:
+            grounding["distractor_evidence"] = scope["distractor_evidence"]
         if payload.get("argon_gate") is True:
             grounding["argon"] = raw["argon"]
         if "option_order" in entry:

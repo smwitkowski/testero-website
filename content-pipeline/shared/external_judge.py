@@ -56,7 +56,7 @@ def candidate_question(entry):
 REPAIR_FIELDS = {"parent_candidate_id", "attempt", "parent_question_sha256", "question_sha256",
                  "storage_question_id", "original_verdict", "original_verdict_sha256"}
 SCOPE_FIELDS = ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment",
-                "opening_style", "question_line", "style_policy")
+                "opening_style", "question_line", "style_policy", "distractor_evidence")
 
 
 def canonical_sha256(value):
@@ -70,13 +70,15 @@ def question_sha256(question):
     return canonical_sha256({name: question[name] for name in QUESTION_FIELDS})
 
 
-def eligible_repair_verdict(raw, *, gate_version=None):
+def eligible_repair_verdict(raw, *, gate_version=None, distractor_evidence=None):
     """Require a strict FAIL with intact factual checks and a repairable defect.
 
     Raises:
         ValueError: The verdict is malformed or is not eligible for repair.
     """
     from shared.cli_models import parse_output
+    from shared.distractor_evidence import verdict_gates
+    raw = verdict_gates(raw, distractor_evidence)
     from shared.quality_gate import ACCURACY_CHECKS
     from shared.gates import eligible_gate_repair, GATE_SIGNATURES
     if gate_version not in (None, 1, 2):
@@ -123,7 +125,7 @@ def candidate_storage_id(entry, scope, question):
             raise ValueError("Invalid parent UUID")
     except (ValueError, AttributeError):
         raise ValueError("Invalid repair parent UUID") from None
-    eligible_repair_verdict(repair["original_verdict"])
+    eligible_repair_verdict(repair["original_verdict"], distractor_evidence=scope.get("distractor_evidence"))
     return expected
 
 
@@ -143,6 +145,19 @@ def _validate_candidate_records(payload):
     entries, plan = payload["candidates"], payload["plan"]
     if not isinstance(entries, list) or not entries or not isinstance(plan, list) or not plan:
         raise ValueError("Invalid candidates or plan")
+    from shared.distractor_evidence import validate_policy
+    frozen = payload.get("distractor_evidence")
+    if "distractor_evidence" in payload:
+        validate_policy(frozen)
+    for row in [*plan, *entries]:
+        if not isinstance(row, dict):
+            raise ValueError("Invalid frozen plan or candidate")
+        if "distractor_evidence" in payload:
+            validate_policy(row.get("distractor_evidence"))
+            if row["distractor_evidence"] != frozen:
+                raise ValueError("Mixed frozen distractor-evidence modes")
+        elif "distractor_evidence" in row:
+            raise ValueError("Distractor-evidence mode requires batch provenance")
     by_id, by_index = {}, {}
     for entry in entries:
         if not isinstance(entry, dict):
@@ -180,7 +195,8 @@ def _validate_candidate_records(payload):
         if "repair" not in entry:
             continue
         question, repair = candidate_question(entry), entry["repair"]
-        eligible_repair_verdict(repair.get("original_verdict"), gate_version=payload.get("external_judge_version"))
+        eligible_repair_verdict(repair.get("original_verdict"), gate_version=payload.get("external_judge_version"),
+                                distractor_evidence=entry.get("distractor_evidence"))
         scope = plan[entry["index"] - 1]
         candidate_storage_id(entry, scope, question)
         parent_id = repair["parent_candidate_id"]
@@ -208,7 +224,7 @@ def _validate_candidate_records(payload):
         if (parent.get("external_verdict") is not None
                 and canonical_sha256(parent["external_verdict"]) != repair["original_verdict_sha256"]):
             raise ValueError("Stored parent verdict does not match repair snapshot")
-        eligible_repair_verdict(repair["original_verdict"])
+        eligible_repair_verdict(repair["original_verdict"], distractor_evidence=scope.get("distractor_evidence"))
     for group in by_index.values():
         originals = [entry for entry in group if "repair" not in entry]
         repairs = [entry for entry in group if "repair" in entry]
@@ -293,7 +309,13 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
         validate_style_policy(policy, scope["objective_id"])
         if signature is not None or gate_version != 5:
             raise ValueError("Rules v5.1 policy requires v5 independent gates")
-    signatures = gate_signatures(gate_version)
+    from shared.distractor_evidence import validate_policy
+    frozen_evidence = scope.get("distractor_evidence")
+    if "distractor_evidence" in scope:
+        validate_policy(frozen_evidence)
+        if signature is not None or gate_version != 5:
+            raise ValueError("Distractor-evidence policy requires rules-v5 gates")
+    signatures = gate_signatures(gate_version, distractor_evidence=frozen_evidence)
     schema = output_model(signature).model_json_schema() if signature is not None else None
     trimmed_urls = set()
     largest_first = sorted(cited, key=lambda source: len(source["text"]), reverse=True)
@@ -328,6 +350,8 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
             if signature is not None:
                 raise ValueError("Short circuit requires independent gates")
             request["execution_policy"] = execution_policy
+        if frozen_evidence is not None:
+            request["distractor_evidence"] = dict(frozen_evidence)
         if policy is not None:
             request["style_policy"] = policy
         if argon_gate:
@@ -346,7 +370,8 @@ def validate_decision_provenance(scope, entry):
     Raises:
         ValueError: Typed plan, selected objective or verified proof is invalid.
     """
-    from shared.decision_planner import DecisionPlan, DecisionProofSignature
+    from shared.decision_planner import DecisionPlan, decision_proof_signature
+    from shared.distractor_evidence import validate_policy
     from shared.cli_models import parse_output
     try:
         if (type(scope.get("key_length_rank")) is not int or not 1 <= scope["key_length_rank"] <= 4
@@ -363,10 +388,20 @@ def validate_decision_provenance(scope, entry):
         if len(set(action.casefold() for action in actions)) != 4:
             raise ValueError()
         proof = scope["decision_proof"]
-        output_fields = set(DecisionProofSignature.output_fields)
-        if not isinstance(proof, dict) or set(proof) != output_fields | {"passed", "mechanical_check"}:
+        policy = scope.get("distractor_evidence")
+        if "distractor_evidence" in scope:
+            validate_policy(policy)
+            validate_policy(proof.get("distractor_evidence"))
+            validate_policy(entry["decision_proof"].get("distractor_evidence"))
+            if entry.get("distractor_evidence") != policy or proof.get("distractor_evidence") != policy:
+                raise ValueError()
+        elif "distractor_evidence" in proof or "distractor_evidence" in entry:
             raise ValueError()
-        parsed = parse_output(json.dumps({name: proof[name] for name in output_fields}, allow_nan=False), DecisionProofSignature)
+        signature = decision_proof_signature(policy)
+        output_fields = set(signature.output_fields)
+        if not isinstance(proof, dict) or set(proof) != output_fields | {"passed", "mechanical_check"} | ({"distractor_evidence"} if policy is not None else set()):
+            raise ValueError()
+        parsed = parse_output(json.dumps({name: proof[name] for name in output_fields}, allow_nan=False), signature)
         if (proof["passed"] is not True or not parsed["reason"].strip()
                 or any(parsed[name] is not True for name in
                        ("supported", "uniquely_best", "scenario_reasons_supported", "no_feature_gotchas"))):

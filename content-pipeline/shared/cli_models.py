@@ -268,8 +268,8 @@ def run_claude_request(model: str, prompt: str, schema: dict, *, timeout=CLI_TIM
         raise ValueError("Exported requests require a Claude CLI model")
     if not isinstance(prompt, str) or not prompt.strip():
         raise CLISchemaError("Exported judge prompt is missing")
-    from shared.gates import GATE_SIGNATURES
-    signatures = [QuestionQualitySignature, *GATE_SIGNATURES.values()]
+    from shared.gates import GATE_SIGNATURES, ConsistentEvidenceReviewerSignature
+    signatures = [QuestionQualitySignature, *GATE_SIGNATURES.values(), ConsistentEvidenceReviewerSignature]
     matches = [signature for signature in signatures
                if schema == output_model(signature).model_json_schema()]
     if len(matches) != 1:

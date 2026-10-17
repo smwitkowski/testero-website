@@ -37,7 +37,7 @@ def test_real_codex_content_mixed_batch_ingests_once_with_synthetic_verdict(monk
     assert len(list(request_directory(artifact).glob("*.json"))) == 1
     verdicts = tmp_path / "verdicts"; verdicts.mkdir()
     from test_three_gates_v4 import bundle
-    verdict = bundle(question)  # Synthetic three-gate outputs, not live factual proof.
+    verdict = {**bundle(question), "distractor_evidence": first["distractor_evidence"]}  # Synthetic, not live factual proof.
     (verdicts / (first["candidate_id"] + ".json")).write_text(json.dumps(verdict))
     client = Mock()
     client.get_domain_by_code.return_value = {"id":"fake-domain"}
