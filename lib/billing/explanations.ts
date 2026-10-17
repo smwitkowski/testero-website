@@ -25,10 +25,10 @@ export async function loadPaidExplanations(client: SupabaseClient, items: Explan
   const ids = [...new Set(eligible.map(item => item.question_id!))];
   if (!ids.length) return result;
   try {
-    const { data: answers, error: answerError } = await client.from("answers")
-      .select("question_id,choice_label,choice_text,explanation_text").in("question_id", ids);
-    const { data: explanations, error: explanationError } = await client.from("explanations")
-      .select("question_id,explanation_text").in("question_id", ids);
+    const [{ data: answers, error: answerError }, { data: explanations, error: explanationError }] = await Promise.all([
+      client.from("answers").select("question_id,choice_label,choice_text,explanation_text").in("question_id", ids),
+      client.from("explanations").select("question_id,explanation_text").in("question_id", ids),
+    ]);
     if (answerError || explanationError || !Array.isArray(answers) || !Array.isArray(explanations)) return result;
     for (const item of eligible) {
       const canonical = answers.filter(answer => answer.question_id === item.question_id);

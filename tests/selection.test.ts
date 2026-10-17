@@ -213,10 +213,11 @@ describe("ported Supabase selector", () => {
       .rejects.toThrow("Failed to fetch domain counts: offline");
   });
 
-  it("fails closed if a domain fetch fails", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    await expect(selectPmleQuestionsByBlueprint(client(bank([25, 0, 0, 0, 0, 0]), { domain: "offline" }).supabase, 20))
-      .rejects.toThrow("Insufficient questions: requested 20, selected 0");
+  it("loads the full inventory once rather than serial per-domain reads", async () => {
+    const { supabase } = client(bank([5, 5, 5, 5, 5, 5]));
+    const result = await selectPmleQuestionsByBlueprint(supabase, 20);
+    expect(result.questions).toHaveLength(20);
+    expect(supabase.from).toHaveBeenCalledTimes(1);
   });
 });
 

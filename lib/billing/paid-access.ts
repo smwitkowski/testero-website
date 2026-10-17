@@ -48,10 +48,10 @@ export async function readPaidAccess(userId: string, client?: SupabaseClient, no
   if (!UUID.test(userId) || !Number.isFinite(now)) throw new Error("Paid access unavailable");
   const supabase = client ?? createServiceSupabaseClient();
   // Both sources must be readable, including when the first source grants access.
-  const { data: legacy, error: legacyError } = await supabase.from("user_subscriptions")
-    .select("status,current_period_end").eq("user_id", userId).eq("status", "active").limit(1).maybeSingle();
-  const { data: passes, error: passError } = await supabase.from("pmle_passes")
-    .select("id,paid_at,expires_at,refunded_at").eq("user_id", userId).order("expires_at", { ascending: false });
+  const [{ data: legacy, error: legacyError }, { data: passes, error: passError }] = await Promise.all([
+    supabase.from("user_subscriptions").select("status,current_period_end").eq("user_id", userId).eq("status", "active").limit(1).maybeSingle(),
+    supabase.from("pmle_passes").select("id,paid_at,expires_at,refunded_at").eq("user_id", userId).order("expires_at", { ascending: false }),
+  ]);
   if (legacyError || passError || (legacy !== null && (!legacy || typeof legacy !== "object" || legacy.status !== "active" || (legacy.current_period_end !== null && !timestamp(legacy.current_period_end))))
     || !Array.isArray(passes) || !passes.every(isValidPass)) throw new Error("Paid access unavailable");
   const pass = [...passes].sort((a, b) => Date.parse(b.expires_at) - Date.parse(a.expires_at))
