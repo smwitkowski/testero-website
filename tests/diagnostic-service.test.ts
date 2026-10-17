@@ -60,6 +60,27 @@ beforeEach(() => {
 });
 
 describe("atomic anonymous diagnostic creation", () => {
+  it.each([5, 10])("creates and restores safe progress for %i questions", async count => {
+    const pool = selected(); pool.questions = pool.questions.slice(0, count);
+    vi.mocked(selectPmleQuestionsByBlueprint).mockResolvedValue(pool);
+    const rows = items().slice(0, count);
+    const db = database({ items: rows, session: session({ question_count: count }) });
+    const started = await createDiagnosticStart(db.client, token, now, null, undefined, count);
+    expect(started.progress).toMatchObject({ totalQuestions: count, answeredCount: 0, currentQuestion: { ordinal: 1 } });
+    expect(db.rpc).toHaveBeenCalledWith("create_study_session", expect.objectContaining({ p_items: expect.arrayContaining([expect.objectContaining({ question_id: "question-0" })]) }));
+    expect((db.rpc.mock.calls[0] as unknown as [string, { p_items: unknown[] }])[1].p_items).toHaveLength(count);
+    expect(await readDiagnostic(db.client, sessionId, credentials, now)).toMatchObject({ totalQuestions: count });
+    await expect(readDiagnostic(db.client, sessionId, foreign, now)).rejects.toMatchObject({ status: 404 });
+    const completed = database({ session: session({ question_count: count, completed_at: "done" }), items: rows.map(row => ({ ...row, answered_at: "done", is_correct: true })) });
+    const result = await diagnosticResults(completed.client, sessionId, credentials, now);
+    expect(result).toMatchObject({ totalQuestions: count, score: 100 });
+    expect(JSON.stringify(result)).not.toMatch(/stem|options|correct_label|explanation/);
+  });
+  it("rejects unsupported lengths before reading the bank", async () => {
+    const db = database();
+    await expect(createDiagnostic(db.client, token, now, null, undefined, 7)).rejects.toMatchObject({ status: 400 });
+    expect(db.from).not.toHaveBeenCalled(); expect(db.rpc).not.toHaveBeenCalled();
+  });
   it("persists 20 unique snapshots, shuffled labels and their correct key together", async () => {
     vi.spyOn(Math, "random").mockReturnValue(0);
     const db = database();

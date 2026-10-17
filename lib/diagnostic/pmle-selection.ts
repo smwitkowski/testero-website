@@ -103,6 +103,10 @@ export function calculateDomainTargets(
   if (!Number.isInteger(totalQuestions) || totalQuestions < 0) {
     throw new Error('Question count must be a non-negative integer');
   }
+  if (totalQuestions === 5 && PMLE_BLUEPRINT.every(domain => (domainAvailability.get(domain.domainCode) ?? 0) > 0)) {
+    const highest = [...PMLE_BLUEPRINT].sort((a, b) => b.weight - a.weight).slice(0, 5);
+    return new Map(PMLE_BLUEPRINT.map(domain => [domain.domainCode, highest.includes(domain) ? 1 : 0]));
+  }
   const targets = new Map<string, number>();
   const remainders: Array<{ domainCode: string; remainder: number }> = [];
 

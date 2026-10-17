@@ -21,7 +21,7 @@ export async function trackPurchaseCompleted(checkoutId: string) {
 type FunnelEvent = "diagnostic_started" | "diagnostic_completed" | "signup_completed" | "checkout_started" | "cert_waitlist_joined";
 
 /** Analytics scheduling and transport failures never change a successful response. */
-export function scheduleFunnelEvent(request: Request, event: FunnelEvent, fallbackId: string, properties: { session_id?: string; plan_name?: string; cert_id?: string } = {}, insertId?: string) {
+export function scheduleFunnelEvent(request: Request, event: FunnelEvent, fallbackId: string, properties: { session_id?: string; plan_name?: string; cert_id?: string; length?: number } = {}, insertId?: string) {
   if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return;
   try {
     const suppliedId = request.headers.get("X-PostHog-Distinct-Id");
@@ -30,7 +30,7 @@ export function scheduleFunnelEvent(request: Request, event: FunnelEvent, fallba
   } catch { /* A missing after context must not affect the response. */ }
 }
 
-export async function captureFunnelEvent(event: FunnelEvent, distinctId: string, properties: { session_id?: string; plan_name?: string; cert_id?: string } = {}, insertId?: string) {
+export async function captureFunnelEvent(event: FunnelEvent, distinctId: string, properties: { session_id?: string; plan_name?: string; cert_id?: string; length?: number } = {}, insertId?: string) {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   if (!key) return;
   try {
@@ -42,6 +42,7 @@ export async function captureFunnelEvent(event: FunnelEvent, distinctId: string,
         ...(properties.session_id ? { session_id: properties.session_id } : {}),
         ...(properties.plan_name ? { plan_name: properties.plan_name } : {}),
         ...(properties.cert_id ? { cert_id: properties.cert_id } : {}),
+        ...([5, 10, 20].includes(properties.length ?? 0) ? { length: properties.length } : {}),
         ...(insertId || properties.session_id || event === "signup_completed"
           ? { $insert_id: `server:${insertId || `${event}:${properties.session_id || distinctId}`}` } : {}),
       } }),

@@ -14,14 +14,16 @@ export async function POST(request: Request) {
   try {
     requireSameOrigin(request);
     const body = await request.json().catch(() => { throw new DiagnosticError(400, "Invalid request body"); });
-    if (!z.object({}).strict().safeParse(body).success) throw new DiagnosticError(400, "Invalid request body");
+    const parsed = z.object({ questionCount: z.union([z.literal(5), z.literal(10), z.literal(20)]).optional() }).strict().safeParse(body);
+    if (!parsed.success) throw new DiagnosticError(400, "Invalid request body");
+    const questionCount = parsed.data.questionCount ?? 20;
     const cookieStore = await cookies();
     const previous = cookieStore.get(ANONYMOUS_COOKIE)?.value;
     const token = hashAnonymousToken(previous) ? previous! : createAnonymousToken();
     const credentials = await timing.measure("credentials", () => diagnosticCredentials());
-    const result = await createDiagnosticStart(createServiceSupabaseClient(), token, undefined, credentials.userId, timing);
+    const result = await createDiagnosticStart(createServiceSupabaseClient(), token, undefined, credentials.userId, timing, questionCount);
     const { sessionId } = result;
-    scheduleFunnelEvent(request, "diagnostic_started", sessionId, { session_id: sessionId });
+    scheduleFunnelEvent(request, "diagnostic_started", sessionId, { session_id: sessionId, length: questionCount });
     const response = NextResponse.json(result, { status: 201 });
     response.cookies.set(ANONYMOUS_COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: ANONYMOUS_COOKIE_MAX_AGE });
     response.headers.set("Cache-Control", "private, no-store");

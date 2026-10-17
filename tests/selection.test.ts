@@ -10,6 +10,17 @@ import {
   type CanonicalAnswer,
 } from "@/lib/diagnostic/pmle-selection";
 
+it("allocates five questions to the five highest-weight domains and ten across all six", () => {
+  const inventory = new Map(PMLE_BLUEPRINT.map(domain => [domain.domainCode, 30]));
+  const five = calculateDomainTargets(5, inventory);
+  const expected = [...PMLE_BLUEPRINT].sort((a, b) => b.weight - a.weight).slice(0, 5).map(domain => domain.domainCode);
+  expect([...five].filter(([, count]) => count > 0).map(([code]) => code).sort()).toEqual(expected.sort());
+  expect([...five.values()].reduce((sum, count) => sum + count, 0)).toBe(5);
+  const ten = calculateDomainTargets(10, inventory);
+  expect([...ten.values()].every(count => count >= 1)).toBe(true);
+  expect([...ten.values()].reduce((sum, count) => sum + count, 0)).toBe(10);
+});
+
 const codes = PMLE_BLUEPRINT.map((domain) => domain.domainCode);
 const goodAnswers: CanonicalAnswer[] = [
   { choice_label: "A", choice_text: "Correct", is_correct: true },
