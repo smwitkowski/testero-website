@@ -11,13 +11,14 @@ if (supabaseURL) {
 
 export default defineConfig({
   testDir: "./e2e",
+  ...(process.env.TESTERO_QA === "1" ? { testMatch: "qa-core.spec.ts" } : { testIgnore: "qa-core.spec.ts" }),
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: 0,
   workers: 1,
   reporter: "list",
   use: { baseURL, trace: "retain-on-failure" },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: process.env.TESTERO_QA === "1" ? [1280, 375].map(width => ({ name: `qa-${width}`, use: { ...devices["Desktop Chrome"], viewport: { width, height: 900 } } })) : [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: process.env.PLAYWRIGHT_MANAGED_SERVER === "1" ? undefined : {
     command: "npm run dev",
     url: baseURL,

@@ -52,7 +52,8 @@ test("local account confirmation claims only owned diagnostics, practices five, 
   const visualDirectory = process.env.TESTERO_V3_SCREENSHOTS ?? "test-results/accounts-visual";
   await mkdir(visualDirectory, { recursive: true });
   async function checkLayout(name: string) {
-    for (const width of [320, 1280]) {
+    const original = page.viewportSize();
+    for (const width of process.env.TESTERO_QA === "1" ? [original!.width] : [320, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.screenshot({ path: `${visualDirectory}/${name}-${width}.png`, fullPage: true });

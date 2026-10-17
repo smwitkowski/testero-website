@@ -38,7 +38,8 @@ test("local return fulfillment grants paid explanations and unlimited practice; 
   page.on("pageerror", error => failures.push(error.message));
   page.on("request", request => { if (!["127.0.0.1", "localhost"].includes(new URL(request.url()).hostname)) failures.push("External browser request"); });
   async function layout(name: string) {
-    for (const width of [320, 375, 1280]) {
+    const original = page.viewportSize();
+    for (const width of process.env.TESTERO_QA === "1" ? [original!.width] : [320, 375, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.screenshot({ path: `${directory}/${name}-${width}.png`, fullPage: true });
