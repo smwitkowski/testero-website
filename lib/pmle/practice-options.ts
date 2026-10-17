@@ -34,12 +34,13 @@ export const practiceOptions = [
   },
   {
     "name": "GCP Study Hub",
-    "format": "Homepage lists a PMLE course, hands-on labs and practice exams.",
+    "format": "PMLE video lessons, hands-on labs and practice exams (provider-described format).",
     "access": "All-access membership for current and future courses. Membership price, not a verified PMLE-only purchase.",
     "price": "$39/month; $89/3 months; $249/year (displayed $). Check site for current terms.",
     "url": "https://gcpstudyhub.com/",
     "sources": [
-      "https://gcpstudyhub.com/"
+      "https://gcpstudyhub.com/",
+      "https://gcpstudyhub.com/courses/professional-ml-engineer"
     ]
   },
   {
