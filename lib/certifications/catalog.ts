@@ -7,7 +7,7 @@ export function certificationForExam(exam: string) {
   return certifications.find(cert => cert.name === exam);
 }
 export const certificationSummaries: Record<string, string> = {
-  "agentic-architect": "Compare the agent architecture assessment, required labs and beta-to-GA announcements before planning your preparation.",
+  "agentic-architect": "Explore agent architecture, the upcoming two-hour GA exam and required hands-on labs. Compare GA registration timing and PMLE overlap.",
   "associate-google-workspace-administrator": "Explore the administration credential for managing an organization's Google Workspace environment.",
   "cloud-architect": "Review the architecture credential for designing cloud systems and balancing business and technical needs.",
   "cloud-database-engineer": "Explore the database engineering credential for planning and operating cloud database solutions.",

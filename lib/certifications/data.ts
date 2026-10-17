@@ -27,7 +27,7 @@ export interface Certification {
   sources: { url: string; retrieved_at: string; role: string }[];
   sample_sources: { url: string; availability: string }[];
   missing_fields: string[]; not_stated_notes: string[];
-  assessment_components?: string[]; lab_deadline?: { date: string; source_url: string };
+  assessment_components?: string[]; lab_deadline?: { date: string; source_url: string; variant?: string };
   recommended_experience?: string;
   recommended_experience_source?: { url: string; retrieved_at: string };
 }

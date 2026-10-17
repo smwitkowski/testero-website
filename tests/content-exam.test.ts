@@ -30,7 +30,7 @@ describe("exam preparation availability", () => {
   });
   it("shows notices near the top of all non-PMLE pages, including mixed-platform and general topics", async () => {
     const entries = [...getBlogEntries(), ...getFaqEntries()];
-    expect(entries.filter(e => isComingSoon(e.exam))).toHaveLength(13);
+    expect(entries.filter(e => isComingSoon(e.exam))).toHaveLength(14);
     for (const entry of entries) {
       const Page = entry.href.startsWith("/blog/") ? BlogArticlePage : FaqArticlePage;
       const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ slug: entry.slug }) }));

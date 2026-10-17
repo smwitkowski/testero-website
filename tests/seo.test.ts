@@ -30,7 +30,7 @@ describe("SEO function contracts", () => {
     ("rejects non-path or unsafe canonical input %s", path => { expect(() => canonicalUrl(path)).toThrow(); });
 
   it("sitemap includes only public pages and all blog and FAQ entries", () => {
-    expect(catalog.blog).toHaveLength(13);
+    expect(catalog.blog).toHaveLength(14);
     expect(catalog.faq).toHaveLength(9);
     const entries = sitemap();
     const indexable = publicPaths.filter(path => path !== "/terms" && path !== "/privacy");

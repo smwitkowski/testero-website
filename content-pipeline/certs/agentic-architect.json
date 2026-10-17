@@ -15,9 +15,9 @@
   },
   "retirement": null,
   "announcements": [
-    "Professional Agentic Architect beta registration is closed. If you took the beta, please refer to the PAA beta FAQs. GA registration opens November 2.",
-    "Results of the beta exam will be released in CM Connect at the end of October. Candidates who pass will receive a notification to complete the required PAA labs by December 31, 2026.",
-    "Beta certification exams are newly developed assessments. We gather performance statistics on the questions and use these statistics to create the certification standards for the final certification. Beta participants will be notified of their results 4-6 weeks after both the exam window and lab window are closed. You can pass the beta or GA certification to become a Google Cloud Certified - Professional Agentic Architect."
+    "GA registration opens November 2; exam availability is planned for mid-November. The announcement does not explicitly state a year. Checked October 17, 2026.",
+    "Beta registration is closed. Beta multiple-choice results are expected in CM Connect in late October; successful beta candidates must complete required PAA labs by December 31, 2026.",
+    "The PAA-specific FAQ says GA is a 2-hour session with results in 7–10 business days and 2 months after passing to complete required labs. Both components must be passed."
   ],
   "upcoming_versions": [
     {
@@ -26,11 +26,34 @@
       "guide_url": null,
       "effective_date": null,
       "registration_opens_stated": "November 2",
-      "date_note": "Year not stated; do not infer a full date.",
-      "source_url": "https://cloud.google.com/learn/certification/agentic-architect/"
+      "date_note": "The November 2 registration and mid-November availability announcements do not explicitly state a year; no full date is inferred.",
+      "source_url": "https://cloud.google.com/learn/certification/agentic-architect",
+      "availability_stated": "mid-November"
     }
   ],
   "exam_variants": [
+    {
+      "variant": "ga",
+      "duration_minutes": 120,
+      "duration_stated": "2 hours",
+      "question_count": null,
+      "question_types": [
+        "multiple_choice"
+      ],
+      "format_stated": "Proctored multiple-choice exam plus separate required hands-on labs",
+      "languages": null,
+      "languages_stated": null,
+      "price_usd": 200,
+      "price_stated": "$200 USD",
+      "validity_stated": "1 year",
+      "delivery_stated": null,
+      "case_studies_per_exam": null,
+      "case_studies_stated": null,
+      "guide_urls": [
+        "https://services.google.com/fh/files/misc/professional_agentic_architect_exam_guide_english.pdf"
+      ],
+      "case_study_names": null
+    },
     {
       "variant": "beta",
       "duration_minutes": 180,
@@ -454,12 +477,42 @@
       "retrieved_at": "2026-10-04T13:40:00Z",
       "role": "official_sample",
       "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://cloud.google.com/learn/certification/agentic-architect",
+      "final_url": "https://cloud.google.com/learn/certification/agentic-architect",
+      "retrieved_at": "2026-10-17T21:26:28.608127Z",
+      "role": "certification",
+      "content_type": "text/html; charset=utf-8",
+      "verified_fields": [
+        "announcements",
+        "upcoming_versions",
+        "exam_variants.beta",
+        "assessment_components",
+        "lab_deadline"
+      ]
+    },
+    {
+      "url": "https://support.google.com/cloud-certification/answer/18080541?hl=en",
+      "final_url": "https://support.google.com/cloud-certification/answer/18080541?hl=en",
+      "retrieved_at": "2026-10-17T21:27:22.066926Z",
+      "role": "certification_faq",
+      "content_type": "text/html; charset=utf-8",
+      "verified_fields": [
+        "exam_variants.ga",
+        "assessment_components",
+        "upcoming_versions",
+        "beta_results"
+      ]
     }
   ],
   "missing_fields": [],
   "not_stated_notes": [
     "canonical_exam_code is not stated in the fetched official sources; no app or DB code is assigned.",
-    "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions."
+    "Guide version/effective/as-of dates are null unless explicitly stated in the guide. File names, hashes and HTML Last Updated dates are not versions.",
+    "GA question count, languages and delivery mode are not stated in the checked GA guidance. Do not inherit beta values.",
+    "The current linked guide does not state beta in its title or an effective date. Existing beta-prefixed outline IDs preserve extraction provenance, not a claim of a GA cutover date.",
+    "General beta-results boilerplate differs from the PAA-specific FAQ; use the specific late-October timeline for the beta multiple-choice results."
   ],
   "assessment_components": [
     "Proctored multiple-choice exam",
@@ -467,6 +520,11 @@
   ],
   "lab_deadline": {
     "date": "2026-12-31",
-    "source_url": "https://cloud.google.com/learn/certification/agentic-architect/"
+    "source_url": "https://cloud.google.com/learn/certification/agentic-architect/",
+    "variant": "beta"
+  },
+  "lab_completion_stated": {
+    "ga": "2 months after passing the multiple-choice exam; instructions through CM Connect",
+    "source_url": "https://support.google.com/cloud-certification/answer/18080541?hl=en"
   }
 }

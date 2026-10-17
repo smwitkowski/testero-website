@@ -1,6 +1,12 @@
 {
   "blog": [
     {
+      "slug": "professional-agentic-architect-exam-ga-2026",
+      "title": "Agentic Architect exam: GA registration, format and labs",
+      "href": "/blog/professional-agentic-architect-exam-ga-2026",
+      "exam": "Professional Agentic Architect"
+    },
+    {
       "slug": "pmle-exam-changes-june-2026",
       "title": "PMLE exam changes: June 2026 guide explained",
       "href": "/blog/pmle-exam-changes-june-2026"
