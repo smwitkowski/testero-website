@@ -39,6 +39,10 @@ describe("server purchase analytics", () => {
 });
 
 describe("server funnel analytics", () => {
+  it.each([5, 10, 20])("captures diagnostic length %i", async length => {
+    await captureFunnelEvent("diagnostic_started", "session", { session_id: "session", length });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).properties.length).toBe(length);
+  });
   it("uses the custom ingestion host, safe fields and stable completion ID", async () => {
     const timeout = vi.spyOn(AbortSignal, "timeout");
     await captureFunnelEvent("diagnostic_completed", "browser-id", { session_id: "session-id" });

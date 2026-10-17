@@ -8,6 +8,14 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 describe("private analytics event wiring", () => {
+  it.each([5, 10, 20, 7])("includes only supported diagnostic length %i", async length => {
+    const analytics = await import("@/lib/analytics/client");
+    analytics.initializeAnalytics();
+    analytics.trackDiagnostic("diagnostic_started", "session", length);
+    const properties = sdk.capture.mock.calls[0][1];
+    if ([5, 10, 20].includes(length)) expect(properties.length).toBe(length);
+    else expect(properties).not.toHaveProperty("length");
+  });
   it("makes no SDK calls when the optional key is empty", async () => {
     vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "");
     const analytics = await import("@/lib/analytics/client");

@@ -44,8 +44,8 @@ export function trackPageview(path: string) {
   if (initialized) posthog.capture("$pageview", { $current_url: `${window.location.origin}${safePath}` });
 }
 
-export function trackDiagnostic(event: "diagnostic_started" | "diagnostic_completed", sessionId: string) {
-  if (initialized) posthog.capture(event, { session_id: sessionId, $insert_id: `${event}:${sessionId}` });
+export function trackDiagnostic(event: "diagnostic_started" | "diagnostic_completed", sessionId: string, length?: number) {
+  if (initialized) posthog.capture(event, { session_id: sessionId, ...([5, 10, 20].includes(length ?? 0) ? { length } : {}), $insert_id: `${event}:${sessionId}` });
 }
 
 export function trackSignupCompleted() {

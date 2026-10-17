@@ -17,6 +17,7 @@ content-pipeline/certs/*
 supabase
 docs
 README.md
+CONVERSION-HANDOFF.md
 CLAUDE.md
 CONVERSION-HANDOFF.md
 

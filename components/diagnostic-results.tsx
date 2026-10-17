@@ -31,6 +31,7 @@ export function DiagnosticResults({ sessionId }: { sessionId: string }) {
 
   return <div className="mx-auto max-w-[896px] space-y-8">
     <header className="space-y-3"><h1 className="text-3xl font-semibold tracking-tight">PMLE readiness report</h1><p className="text-sm text-muted-foreground">{data.totalQuestions} questions</p></header>
+    {data.totalQuestions < 20 && <section className="space-y-3 rounded-lg border border-border bg-card p-5"><h2 className="text-xl font-semibold">A lower-confidence snapshot</h2><p className="text-muted-foreground">This shorter check gives lower-confidence results than the full 20-question diagnostic. Take the full version for a broader signal across all six domains.</p><Button asChild><Link href="/diagnostic">Take full readiness (20)</Link></Button></section>}
     <div className="grid gap-6 md:grid-cols-2">
       <ScoreReport score={data.score} correctAnswers={data.correctAnswers} totalQuestions={data.totalQuestions} />
       {weakest && <section aria-labelledby="next-step" className="on-dark flex flex-col items-start gap-4 rounded-lg bg-foreground p-5 text-card sm:p-7">
@@ -44,7 +45,7 @@ export function DiagnosticResults({ sessionId }: { sessionId: string }) {
     <section aria-labelledby="domains-heading" className="space-y-5 rounded-lg border border-border bg-card p-5 sm:p-7">
       <h2 id="domains-heading" className="text-xl font-semibold">Score by domain</h2>
       <DomainScores domains={orderedDomains} />
-      <p className="text-sm leading-relaxed text-muted-foreground">Each domain has only 3–4 questions, so these results are an early signal of where to look, not a full measure of your knowledge. Domains with the same score are listed in exam-guide order.</p>
+      <p className="text-sm leading-relaxed text-muted-foreground">Each domain has only a few questions, so these results are an early signal of where to look, not a full measure of your knowledge. Domains with the same score are listed in exam-guide order.</p>
     </section>
     {!data.review && <FreeDiagnosticExplanation key={data.sessionId} result={data} />}
     {data.review && <QuestionReviewList review={data.review} sessionId={sessionId} kind="diagnostic" />}

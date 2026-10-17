@@ -45,6 +45,12 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("strict diagnostic creation route", () => {
+  it.each([5, 10, 20])("passes the selected %i length without accepting owner identity", async count => {
+    const response = await start(request({ questionCount: count }));
+    expect(response.status).toBe(201);
+    expect(createDiagnosticStart).toHaveBeenCalledWith(mocks.client, expect.any(String), undefined, null, expect.anything(), count);
+    expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_started", sessionId, { session_id: sessionId, length: count });
+  });
   it("sets an opaque protected cookie only after successful creation", async () => {
     vi.stubEnv("NODE_ENV", "production");
     const response = await start(request());
@@ -67,7 +73,7 @@ describe("strict diagnostic creation route", () => {
   it("reuses a valid anonymous cookie", async () => {
     mocks.cookie = token;
     const response = await start(request());
-    expect(createDiagnosticStart).toHaveBeenCalledWith(mocks.client, token, undefined, null, expect.anything());
+    expect(createDiagnosticStart).toHaveBeenCalledWith(mocks.client, token, undefined, null, expect.anything(), 20);
     expect(response.headers.get("set-cookie")).toContain(`testero_anon=${token}`);
   });
   it.each(["invalid", "A".repeat(64), "a".repeat(63)])("replaces an invalid cookie %# only after success", async (cookie) => {
@@ -223,7 +229,7 @@ describe("verified account diagnostic creation", () => {
     const response = await start(request());
     expect(response.status).toBe(201);
     expect(mocks.getUser).toHaveBeenCalledOnce();
-    expect(createDiagnosticStart).toHaveBeenCalledWith(mocks.client, token, undefined, "verified-user", expect.anything());
+    expect(createDiagnosticStart).toHaveBeenCalledWith(mocks.client, token, undefined, "verified-user", expect.anything(), 20);
     expect(response.headers.get("set-cookie")).toContain(`testero_anon=${token}`);
     expect(Object.keys(await response.json()).sort()).toEqual(["href", "progress", "sessionId"]);
   });
@@ -250,7 +256,7 @@ describe("diagnostic confirmed credentials", () => {
 
 it("tracks successful creation and completed answers only", async () => {
   await start(request());
-  expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_started", sessionId, { session_id: sessionId });
+  expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_started", sessionId, { session_id: sessionId, length: 20 });
   vi.mocked(scheduleFunnelEvent).mockClear();
   await answer(request({ itemId, selectedLabel: "A" }), context);
   expect(scheduleFunnelEvent).not.toHaveBeenCalled();

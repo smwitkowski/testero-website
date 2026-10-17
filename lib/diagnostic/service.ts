@@ -33,16 +33,17 @@ export async function seenDiagnosticQuestions(client: SupabaseClient, userId: st
   } catch { return new Set(); }
 }
 
-export async function createDiagnostic(client: SupabaseClient, token: string, now = Date.now(), userId: string | null = null, timing?: ServerTiming): Promise<string> {
+export async function createDiagnostic(client: SupabaseClient, token: string, now = Date.now(), userId: string | null = null, timing?: ServerTiming, questionCount = DIAGNOSTIC_LENGTH): Promise<string> {
+  if (![5, 10, 20].includes(questionCount)) throw new DiagnosticError(400, "Invalid diagnostic length");
   const ownerHash = timing ? await timing.measure("owner_hash", () => userId === null ? hashAnonymousToken(token) : null) : userId === null ? hashAnonymousToken(token) : null;
   if (userId === null ? !ownerHash : !UUID.test(userId)) throw new DiagnosticError(400, "Invalid diagnostic owner");
   const started = performance.now();
   const measure = <T>(name: string, task: () => Promise<T>) => timing ? timing.measure(name, task) : task();
   const preferences = measure("history", async () => ({ newSince: DIAGNOSTIC_NEW_SINCE, seenQuestionIds: await seenDiagnosticQuestions(client, userId, ownerHash) }));
   let selected;
-  try { selected = await measure("selection", () => selectPmleQuestionsByBlueprint(client, DIAGNOSTIC_LENGTH, preferences, timing)); }
+  try { selected = await measure("selection", () => selectPmleQuestionsByBlueprint(client, questionCount, preferences, timing)); }
   catch { throw unavailable(); }
-  if (selected.questions.length !== DIAGNOSTIC_LENGTH || new Set(selected.questions.map(q => q.id)).size !== DIAGNOSTIC_LENGTH) throw unavailable();
+  if (selected.questions.length !== questionCount || new Set(selected.questions.map(q => q.id)).size !== questionCount) throw unavailable();
   const items = await measure("snapshot", async () => selected.questions.map(question => {
     if (!hasValidAnswers(question.answers) || !question.stem.trim()) throw unavailable();
     const snapshot = createAnswerSnapshot(question.answers.map(answer => ({ text: answer.choice_text, is_correct: answer.is_correct })));
@@ -58,11 +59,11 @@ export async function createDiagnostic(client: SupabaseClient, token: string, no
 }
 
 /** Return only committed, display-safe progress for the session just created by this request. */
-export async function createDiagnosticStart(client: SupabaseClient, token: string, now = Date.now(), userId: string | null = null, timing?: ServerTiming) {
-  const sessionId = await createDiagnostic(client, token, now, userId, timing);
+export async function createDiagnosticStart(client: SupabaseClient, token: string, now = Date.now(), userId: string | null = null, timing?: ServerTiming, questionCount = DIAGNOSTIC_LENGTH) {
+  const sessionId = await createDiagnostic(client, token, now, userId, timing, questionCount);
   const read = () => sessionItems(client, sessionId);
   const items = await (timing ? timing.measure("progress_read", read) : read());
-  const progress = diagnosticProgress({ id: sessionId, question_count: DIAGNOSTIC_LENGTH, completed_at: null }, items);
+  const progress = diagnosticProgress({ id: sessionId, question_count: questionCount, completed_at: null }, items);
   if (progress.answeredCount !== 0 || progress.currentQuestion?.ordinal !== 1) throw unavailable();
   return { sessionId, href: `/diagnostic/${sessionId}`, progress };
 }
