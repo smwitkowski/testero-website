@@ -26,22 +26,23 @@ export function requestError(error: unknown) {
     : error instanceof Error ? error.message : "We could not load your diagnostic. Please retry.";
 }
 
-export function useDiagnosticResource<T>(path: string) {
-  const [data, setData] = useState<T | null>(null);
+export function useDiagnosticResource<T>(path: string, initialData: T | null = null) {
+  const [data, setData] = useState<T | null>(initialData);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    if (attempt === 0 && initialData !== null) return;
     const controller = new AbortController();
     diagnosticRequest<T>(path, { signal: controller.signal }).then(
       (value) => { if (!controller.signal.aborted) setData(value); },
       (reason: unknown) => { if (!controller.signal.aborted) setError(requestError(reason)); },
     );
     return () => controller.abort();
-  }, [path, attempt]);
+  }, [path, attempt, initialData]);
   function reload() {
     setData(null);
     setError(null);
     setAttempt((value) => value + 1);
   }
-  return { data, error, reload };
+  return { data, error, reload, setData };
 }

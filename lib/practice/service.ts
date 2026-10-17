@@ -99,11 +99,14 @@ export async function answerPractice(client: SupabaseClient, id: string, userId:
   }
   const progress = data as { answeredCount: number; totalQuestions: number; completed: boolean } | null;
   if (!progress || !Number.isInteger(progress.answeredCount) || progress.answeredCount < 1 || progress.answeredCount > session.question_count || progress.totalQuestions !== session.question_count || progress.completed !== (progress.answeredCount === session.question_count)) throw unavailable();
-  const { data: raw, error: feedbackError } = await client.from("session_items").select("id,question_id,options,selected_label,correct_label,is_correct,answered_at").eq("session_id", id).eq("id", itemId).maybeSingle();
+  // Both reads start only after the answer commit; paid access remains fresh on retries.
+  const [{ data: raw, error: feedbackError }, access] = await Promise.all([
+    client.from("session_items").select("id,question_id,options,selected_label,correct_label,is_correct,answered_at").eq("session_id", id).eq("id", itemId).maybeSingle(),
+    getPaidAccess(userId, client, now),
+  ]);
   const row = raw as Pick<Item, "id" | "question_id" | "options" | "selected_label" | "correct_label" | "is_correct" | "answered_at"> | null;
   if (feedbackError || !row || row.id !== itemId || !row.answered_at || row.selected_label !== selectedLabel || typeof row.is_correct !== "boolean" || !validAnsweredItem(row)) throw unavailable();
-  // Recheck after the committed answer. A refund must redact retries immediately.
-  const access = await getPaidAccess(userId, client, now);
+  // A refund must redact retries immediately.
   const explanations = access.hasPaidAccess ? await loadPaidExplanations(client, [row]) : null;
   return { answeredCount: progress.answeredCount, totalQuestions: progress.totalQuestions, completed: progress.completed,
     feedback: { itemId: row.id, selectedLabel, correctLabel: row.correct_label, isCorrect: row.is_correct, ...explanations?.get(row.id) } };

@@ -68,10 +68,16 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
   try {
     await assertRestoredSession(service, sessionId);
     const api = `/api/diagnostic/${sessionId}`;
+    const initialGets: string[] = [];
+    page.on("request", request => { if (request.method() === "GET" && new URL(request.url()).pathname === api) initialGets.push(request.url()); });
+    const html = await (await page.request.get(`/diagnostic/${sessionId}`)).text();
+    expect(html).toContain("Choose one answer");
     await expect(page).toHaveURL(new RegExp(`/diagnostic/${sessionId}$`));
     const cookie = (await context.cookies()).find(value => value.name === "testero_anon");
     expect(cookie).toMatchObject({ httpOnly: true, sameSite: "Lax", path: "/" });
     expect(cookie?.value).toMatch(/^[a-f0-9]{64}$/);
+    await expect(page.getByText("Question 1 of 20", { exact: true })).toBeVisible();
+    expect(initialGets).toHaveLength(0);
     const firstResponse = await page.request.get(api);
     const first = await firstResponse.json() as DiagnosticProgress;
     expect(first.totalQuestions).toBe(20);
