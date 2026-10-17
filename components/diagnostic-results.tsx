@@ -47,7 +47,7 @@ export function DiagnosticResults({ sessionId }: { sessionId: string }) {
       <p className="text-sm leading-relaxed text-muted-foreground">Each domain has only 3–4 questions, so these results are an early signal of where to look, not a full measure of your knowledge. Domains with the same score are listed in exam-guide order.</p>
     </section>
     {!data.review && <FreeDiagnosticExplanation key={data.sessionId} result={data} />}
-    {data.review && <QuestionReviewList review={data.review} />}
+    {data.review && <QuestionReviewList review={data.review} sessionId={sessionId} kind="diagnostic" />}
     {!data.review && <section className="space-y-3"><h2 className="text-xl font-semibold">Review your answers</h2><p className="leading-relaxed text-muted-foreground">Your full score, readiness tier, and domain breakdown are available without an account. Create an account to see your questions and start free practice.</p><Button variant="outline" asChild><Link href={`/signup?next=${encodeURIComponent(`/diagnostic/${sessionId}/results`)}`}>Create an account to see your questions</Link></Button></section>}
     <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border pt-5"><p className="text-sm text-muted-foreground">Study guidance, not a prediction of your exam result.</p><Link href="/diagnostic" className="text-sm font-medium text-primary underline">Retake the diagnostic</Link></div>
   </div>;

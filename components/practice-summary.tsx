@@ -21,7 +21,7 @@ export function PracticeSummary({ sessionId }: { sessionId: string }) {
       <CardHeader><div className="flex flex-wrap items-baseline justify-between gap-4"><h2 className="text-xl font-semibold">Practice score</h2><p className="text-3xl font-semibold tabular-nums">{data.score}%</p></div></CardHeader>
       <CardContent><p>{data.correctAnswers} of {data.totalQuestions} correct</p></CardContent>
     </Card>
-    <QuestionReviewList review={data.review} />
+    <QuestionReviewList review={data.review} sessionId={sessionId} kind="practice" />
     <Button asChild><Link href="/dashboard">Back to dashboard</Link></Button>
   </div>;
 }

@@ -22,6 +22,7 @@ it("shows all rationales and the signup-to-pricing CTA, then tracks its click", 
   const node = FreeDiagnosticExplanation({ result });
   const html = renderToStaticMarkup(node);
   expect(html).toContain("Why wrong"); expect(html).toContain("Why right");
+  expect(html).toContain("Report a problem with this question");
   expect(html).toContain("Unlock explanations for all 20 + unlimited practice: $39 one-time, 90 days");
   expect(html).toContain('href="/signup?next=%2Fpricing"');
   expect(mocks.track).toHaveBeenCalledWith("free_explanation_viewed", result);
