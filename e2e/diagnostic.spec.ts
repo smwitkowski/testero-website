@@ -85,10 +85,11 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
     noAnswerKeys(first);
     const earlyResults = await page.request.get(`${api}/results`);
     expect(earlyResults.status(), (await earlyResults.text()).slice(0, 180)).toBe(409);
+    expect((await page.request.get(`${api}/free-explanation`)).status()).toBe(409);
 
     const foreign = await browser.newContext();
     try {
-      for (const path of [api, `${api}/results`]) {
+      for (const path of [api, `${api}/results`, `${api}/free-explanation`]) {
         const response = await foreign.request.get(`http://127.0.0.1:3000${path}`);
         expect(response.status()).toBe(404);
         expect(await response.json()).toEqual({ error: "Diagnostic not found" });
@@ -175,6 +176,21 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
     expect(resultResponse.status()).toBe(200);
     const result = await resultResponse.json() as DiagnosticResult;
     noAnswerKeys(result);
+    const previewResponse = await page.request.get(`${api}/free-explanation`);
+    expect(previewResponse.status()).toBe(200);
+    expect(previewResponse.headers()["cache-control"]).toBe("private, no-store");
+    const preview = await previewResponse.json();
+    expect(Array.isArray(preview)).toBe(false);
+    expect(preview.options).toHaveLength(4);
+    expect(preview.options.every((option: { explanation?: string }) => option.explanation?.trim())).toBe(true);
+    const { data: snapshot } = await service.from("session_items").select("id,ordinal,domain_code,is_correct").eq("session_id", sessionId).order("ordinal");
+    const lowestDomain = [...result.domainBreakdown].sort((a, b) => a.correct * b.total - b.correct * a.total)[0];
+    const domainItems = snapshot!.filter(item => item.domain_code === lowestDomain.domainCode);
+    expect(preview.itemId).toBe((domainItems.find(item => item.is_correct === false) ?? domainItems[0]).id);
+    expect(await (await page.request.get(`${api}/free-explanation`)).json()).toEqual(preview);
+    expect((await page.request.get(`${api}/free-explanation?itemId=${snapshot![0].id}`)).status()).toBe(400);
+    await expect(page.getByRole("heading", { name: "One full explanation, free", exact: true })).toBeVisible();
+    await expect(page.getByText(preview.stem, { exact: true })).toBeVisible();
     expect(result.totalQuestions).toBe(20);
     expect(result.domainBreakdown).toHaveLength(6);
     expect(result.domainBreakdown.reduce((sum, domain) => sum + domain.total, 0)).toBe(20);

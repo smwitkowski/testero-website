@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
+import { trackResults } from "@/lib/analytics/client";
+import { FreeDiagnosticExplanation } from "@/components/free-diagnostic-explanation";
 import type { DiagnosticResult } from "@/lib/diagnostic/types";
 import { Button } from "@/components/ui/button";
 import { DomainScores, ScoreReport } from "@/components/readiness-report";
@@ -11,6 +14,13 @@ import { QuestionReviewList } from "@/components/question-review";
 
 export function DiagnosticResults({ sessionId }: { sessionId: string }) {
   const { data, error, reload } = useDiagnosticResource<DiagnosticResult>(`/api/diagnostic/${encodeURIComponent(sessionId)}/results`);
+  const viewed = useRef<string | null>(null);
+  useEffect(() => {
+    if (data && viewed.current !== data.sessionId) {
+      viewed.current = data.sessionId;
+      trackResults("results_viewed", data);
+    }
+  }, [data]);
   if (error) return <DiagnosticError message={error} onRetry={reload} />;
   if (!data) return <DiagnosticLoading message="Loading your readiness results…" />;
 
@@ -36,6 +46,7 @@ export function DiagnosticResults({ sessionId }: { sessionId: string }) {
       <DomainScores domains={orderedDomains} />
       <p className="text-sm leading-relaxed text-muted-foreground">Each domain has only 3–4 questions, so these results are an early signal of where to look, not a full measure of your knowledge. Domains with the same score are listed in exam-guide order.</p>
     </section>
+    {!data.review && <FreeDiagnosticExplanation key={data.sessionId} result={data} />}
     {data.review && <QuestionReviewList review={data.review} />}
     {!data.review && <section className="space-y-3"><h2 className="text-xl font-semibold">Review your answers</h2><p className="leading-relaxed text-muted-foreground">Your full score, readiness tier, and domain breakdown are available without an account. Create an account to see your questions and start free practice.</p><Button variant="outline" asChild><Link href={`/signup?next=${encodeURIComponent(`/diagnostic/${sessionId}/results`)}`}>Create an account to see your questions</Link></Button></section>}
     <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border pt-5"><p className="text-sm text-muted-foreground">Study guidance, not a prediction of your exam result.</p><Link href="/diagnostic" className="text-sm font-medium text-primary underline">Retake the diagnostic</Link></div>

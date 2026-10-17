@@ -93,4 +93,18 @@ describe("private analytics event wiring", () => {
     }]]);
   });
 
+  it.each(["results_viewed", "free_explanation_viewed", "unlock_cta_clicked"] as const)("captures %s with aggregate scores only", async event => {
+    const analytics = await import("@/lib/analytics/client");
+    const result = { sessionId: "session", totalQuestions: 20, score: 50, correctAnswers: 10, readiness: { id: "building", label: "Building", description: "Guidance" },
+      domainBreakdown: [{ domainCode: "A", domainName: "Domain A", total: 4, correct: 2, percentage: 50 }],
+      email: "private@example.com", review: [{ stem: "Private question", explanation: "Private explanation" }] };
+    analytics.trackResults(event, result as never);
+    expect(sdk.capture.mock.calls).toEqual([[event, {
+      session_id: "session", question_count: 20,
+      domain_scores: [{ domain_code: "A", correct: 2, total: 4, percentage: 50 }],
+      ...(event === "unlock_cta_clicked" ? {} : { $insert_id: `${event}:session` }),
+    }]]);
+    expect(JSON.stringify(sdk.capture.mock.calls)).not.toMatch(/private|email|stem|explanation"|domainName/);
+  });
+
 });

@@ -87,3 +87,14 @@ export function trackTool(event: "tool_used" | "tool_result_viewed", tool: Certi
     $current_url: typeof window === "undefined" ? undefined : `${window.location.origin}${window.location.pathname}`,
   });
 }
+
+/** Results metadata only: never stems, answers, email addresses or other PII. */
+export function trackResults(event: "results_viewed" | "free_explanation_viewed" | "unlock_cta_clicked", result: import("@/lib/diagnostic/types").DiagnosticResult) {
+  initializeAnalytics();
+  if (initialized) posthog.capture(event, {
+    session_id: result.sessionId,
+    question_count: result.totalQuestions,
+    domain_scores: result.domainBreakdown.map(domain => ({ domain_code: domain.domainCode, correct: domain.correct, total: domain.total, percentage: domain.percentage })),
+    ...(event !== "unlock_cta_clicked" ? { $insert_id: `${event}:${result.sessionId}` } : {}),
+  });
+}
