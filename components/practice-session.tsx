@@ -10,13 +10,15 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useFreshAccessOnFocus } from "@/components/billing-account";
 import { PracticeError, PracticeLoading, PracticeRequestError, practiceError, practiceRequest, usePracticeResource } from "@/components/practice-resource";
 
-export function PracticeSession({ sessionId }: { sessionId: string }) {
+export function PracticeSession({ sessionId, initialData = null }: { sessionId: string; initialData?: PracticeProgress | null }) {
   useFreshAccessOnFocus();
   const router = useRouter();
   const nextPath = `/practice/${encodeURIComponent(sessionId)}`;
   const summaryPath = `${nextPath}/summary`;
   const path = `/api${nextPath}`;
-  const { data, error, reload } = usePracticeResource<PracticeProgress>(path);
+  const { data, error, reload, setData } = usePracticeResource<PracticeProgress>(path, initialData);
+  const prefetched = useRef<PracticeProgress | null>(null);
+  const prefetchGeneration = useRef(0);
   const [selected, setSelected] = useState("");
   const [pending, setPending] = useState(false);
   const [answer, setAnswer] = useState<PracticeAnswerResponse | null>(null);
@@ -31,7 +33,9 @@ export function PracticeSession({ sessionId }: { sessionId: string }) {
   }, [data, router, summaryPath]);
 
   function nextQuestion() {
-    setSelected(""); setAnswer(null); setAnswerError(null); submitting.current = false; setPending(false); reload();
+    prefetchGeneration.current++;
+    setSelected(""); setAnswer(null); setAnswerError(null); submitting.current = false; setPending(false);
+    if (prefetched.current) { setData(prefetched.current); prefetched.current = null; } else reload();
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,7 +49,16 @@ export function PracticeSession({ sessionId }: { sessionId: string }) {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemId: question.id, selectedLabel: selected }), signal,
       });
-      if (!signal.aborted) setAnswer(result);
+      if (!signal.aborted) {
+        setAnswer(result);
+        if (!result.completed) {
+          const generation = ++prefetchGeneration.current;
+          void practiceRequest<PracticeProgress>(path, { signal }).then(
+            progress => { if (!signal.aborted && generation === prefetchGeneration.current) prefetched.current = progress; },
+            () => { /* Next retries through the normal saved-progress read. */ },
+          );
+        }
+      }
     } catch (reason) {
       if (!signal.aborted) {
         const failure = practiceError(reason);

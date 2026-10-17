@@ -37,6 +37,7 @@ export async function seenDiagnosticQuestions(client: SupabaseClient, userId: st
 export async function createDiagnostic(client: SupabaseClient, token: string, now = Date.now(), userId: string | null = null): Promise<string> {
   const ownerHash = userId === null ? hashAnonymousToken(token) : null;
   if (userId === null ? !ownerHash : !UUID.test(userId)) throw new DiagnosticError(400, "Invalid diagnostic owner");
+  const started = performance.now();
   const seenQuestionIds = await seenDiagnosticQuestions(client, userId, ownerHash);
   let selected;
   try { selected = await selectPmleQuestionsByBlueprint(client, DIAGNOSTIC_LENGTH, { newSince: DIAGNOSTIC_NEW_SINCE, seenQuestionIds }); }
@@ -52,6 +53,7 @@ export async function createDiagnostic(client: SupabaseClient, token: string, no
     p_items: items, p_expires_at: new Date(now + 24 * 60 * 60 * 1000).toISOString(),
   });
   if (error || typeof data !== "string" || !UUID.test(data)) throw unavailable();
+  if (process.env.NODE_ENV === "development") console.info(`[diagnostic-timing] create ${Math.round(performance.now() - started)}ms`);
   return data;
 }
 

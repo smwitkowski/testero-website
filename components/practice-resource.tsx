@@ -26,20 +26,21 @@ export function practiceError(reason: unknown): PracticeRequestError {
   return reason instanceof PracticeRequestError ? reason : new PracticeRequestError(0, "Practice could not be loaded. Check your connection and retry.");
 }
 
-export function usePracticeResource<T>(path: string) {
-  const [data, setData] = useState<T | null>(null);
+export function usePracticeResource<T>(path: string, initialData: T | null = null) {
+  const [data, setData] = useState<T | null>(initialData);
   const [error, setError] = useState<PracticeRequestError | null>(null);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    if (attempt === 0 && initialData !== null) return;
     const controller = new AbortController();
     practiceRequest<T>(path, { signal: controller.signal }).then(
       value => { if (!controller.signal.aborted) setData(value); },
       reason => { if (!controller.signal.aborted) setError(practiceError(reason)); },
     );
     return () => controller.abort();
-  }, [path, attempt]);
+  }, [path, attempt, initialData]);
   function reload() { setData(null); setError(null); setAttempt(value => value + 1); }
-  return { data, error, reload };
+  return { data, error, reload, setData };
 }
 
 export function PracticeLoading({ message }: { message: string }) {

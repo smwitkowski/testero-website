@@ -34,8 +34,10 @@ afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 describe("verified billing pages", () => {
   it("offers one $39 one-time 90-day pass, signup return, free diagnostic and no placeholder", async () => {
     const html = renderToStaticMarkup(await PricingPage());
-    expect(html).toContain("$39"); expect(html).toContain("one-time"); expect(html).toContain("90 days");
-    expect(html).toContain("No auto-renew"); expect(html).toContain("7-day refund");
+    expect(html).toContain("$39 one-time payment");
+    expect(html).toContain("90 days of access to PMLE practice questions and explanations");
+    expect(html).toContain("Updated for the June 2026 exam guide.");
+    expect(html).toContain("No subscription. No auto-renew."); expect(html).toContain("7-day refund");
     expect(html).toContain('href="/signup?next=/pricing"'); expect(html).toContain('href="/diagnostic"');
     expect(html).not.toMatch(/Phase 3|preview|coming soon/i);
   });
@@ -77,6 +79,8 @@ describe("verified billing pages", () => {
   it("protects success with its safe checkout reference and starts pending, not paid", async () => {
     const html = renderToStaticMarkup(await CheckoutSuccessPage({ searchParams: Promise.resolve({ session_id: "cs_test_owned" }) }));
     expect(mocks.requireUser).toHaveBeenCalledWith("/checkout/success?session_id=cs_test_owned");
+    expect(html).toContain("$39 one-time payment for 90 days of access");
+    expect(html).toContain("No subscription. No auto-renew.");
     expect(html).toContain("Access starts only after your payment is verified"); expect(html).not.toContain("Pass is active");
     expect(MAX_STATUS_CHECKS).toBeLessThanOrEqual(6);
   });
@@ -122,7 +126,7 @@ describe("billing browser boundary", () => {
     await expect(readCheckoutStatus("cs_test_owned")).rejects.toThrow("could not be verified");
   });
   it("renders accessible initial checkout controls and never a fabricated success", () => {
-    expect(renderToStaticMarkup(createElement(CheckoutButton))).toContain("Get PMLE Pass");
+    expect(renderToStaticMarkup(createElement(CheckoutButton))).toContain("Get PMLE Pass — $39 one-time payment");
     expect(renderToStaticMarkup(createElement(CheckoutStatus, { sessionId: "cs_test_owned" }))).not.toContain("Pass is active");
   });
 });

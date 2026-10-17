@@ -11,10 +11,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DiagnosticError, DiagnosticLoading } from "@/components/diagnostic-state";
 import { diagnosticRequest, requestError, useDiagnosticResource } from "@/components/diagnostic-resource";
 
-export function DiagnosticSession({ sessionId }: { sessionId: string }) {
+export function DiagnosticSession({ sessionId, initialData = null }: { sessionId: string; initialData?: DiagnosticProgress | null }) {
   const router = useRouter();
   const path = `/api/diagnostic/${encodeURIComponent(sessionId)}`;
-  const { data, error, reload } = useDiagnosticResource<DiagnosticProgress>(path);
+  const { data, error, reload } = useDiagnosticResource<DiagnosticProgress>(path, initialData);
   const [selected, setSelected] = useState("");
   const [pending, setPending] = useState(false);
   const [answerError, setAnswerError] = useState<string | null>(null);

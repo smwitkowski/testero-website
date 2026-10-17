@@ -154,6 +154,19 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     ids.push(practiceId);
     await assertRestoredSession(service, practiceId, 5);
     await expect(page).toHaveURL(new RegExp(`/practice/${practiceId}$`));
+    // Hold the first safe-progress prefetch until Next has fallen back to a fresh read.
+    let releasePrefetch: (() => void) | undefined;
+    let heldPrefetch: Promise<void> | undefined;
+    let held = false;
+    await page.route(`**/api/practice/${practiceId}`, async route => {
+      if (!held && route.request().method() === "GET") {
+        held = true;
+        const response = await route.fetch();
+        heldPrefetch = new Promise<void>(resolve => { releasePrefetch = resolve; });
+        await heldPrefetch;
+        await route.fulfill({ response });
+      } else await route.continue();
+    });
     for (let ordinal = 1; ordinal <= 5; ordinal++) {
       await expect(page.getByText(`Question ${ordinal} of 5`, { exact: true })).toBeVisible();
       if (ordinal === 1) { await checkLayout("practice"); await captureV3(page, "practice-question"); }
@@ -172,7 +185,11 @@ test("local account confirmation claims only owned diagnostics, practices five, 
       expect(answer.feedback.correctLabel).toMatch(/^[A-D]$/);
       noExplanations(answer);
       await expect(page.getByText(`Correct answer: ${answer.feedback.correctLabel}.`, { exact: true })).toBeVisible();
-      if (ordinal < 5) await page.getByRole("button", { name: "Next question", exact: true }).click();
+      if (ordinal < 5) {
+        await page.getByRole("button", { name: "Next question", exact: true }).click();
+        await expect(page.getByText(`Question ${ordinal + 1} of 5`, { exact: true })).toBeVisible();
+        if (ordinal === 1) releasePrefetch?.();
+      }
       else await page.getByRole("link", { name: "View summary", exact: true }).click();
     }
     await expect(page.getByRole("heading", { name: "Your practice summary", exact: true })).toBeVisible();
