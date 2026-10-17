@@ -23,3 +23,5 @@ CONVERSION-HANDOFF.md
 
 # Google auth artifacts must never enter source or Docker build layers.
 gha-creds-*.json
+
+CONVERSION-HANDOFF.md
