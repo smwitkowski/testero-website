@@ -48,3 +48,9 @@ it("retries the exact provider key after a successful send whose database acknow
  expect(calls[0][1]?.body).toEqual(calls[1][1]?.body);
  expect(calls[0][1]?.headers).toEqual(calls[1][1]?.headers);
 });
+
+it("gives a weaker sampled domain numerically more study time", () => {
+ const make = (correct: number) => resultsEmailText({ ...result, domainBreakdown: [{ domainCode: "MONITORING_ML_SOLUTIONS", domainName: "Monitoring AI solutions", correct, total: 4, percentage: correct * 25 }] } as never, Date.parse("2026-10-17T12:00:00Z"));
+ const monitoringMinutes = (text: string) => [...text.matchAll(/- Monitoring AI solutions: (?:(\d+)h)?(?: )?(?:(\d+)(?:m|min))?/g)].reduce((sum, match) => sum + Number(match[1] ?? 0) * 60 + Number(match[2] ?? 0), 0);
+ expect(monitoringMinutes(make(0))).toBeGreaterThan(monitoringMinutes(make(4)));
+});
