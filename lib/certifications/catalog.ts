@@ -20,6 +20,6 @@ export const certificationSummaries: Record<string, string> = {
   "data-engineer": "Explore the data engineering credential for building and operating cloud data systems.",
   "data-practitioner": "Review the associate credential for working with data services and analysis on Google Cloud.",
   "generative-ai-leader": "Compare the foundational credential focused on generative AI concepts and business decisions.",
-  "machine-learning-engineer": "Review the machine learning credential, compare exam versions and try Testero's free PMLE diagnostic.",
+  "machine-learning-engineer": "The PMLE exam is two hours long, costs $200 plus tax where applicable, and has 50–60 multiple-choice and multiple-select questions, offered in English and Japanese.",
   "security-operations-engineer": "Explore the security operations credential for detecting, investigating and responding to threats.",
 };

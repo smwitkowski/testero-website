@@ -39,7 +39,7 @@ export function getBlogEntries(): ContentEntry[] {
       citations: overlay.citations, republished: overlay.historical !== false,
       editorialNotice: overlay.historical === false ? undefined : BLOG_EDITORIAL_NOTICE,
       publishedAt: typeof document.attributes.publishedAt === "string" ? document.attributes.publishedAt : undefined,
-      updatedAt: typeof document.attributes.updatedAt === "string" ? document.attributes.updatedAt : undefined };
+      updatedAt: overlay.updatedAt ?? (typeof document.attributes.updatedAt === "string" ? document.attributes.updatedAt : undefined) };
   });
 }
 
@@ -87,7 +87,7 @@ export function getFaqEntries(): ContentEntry[] {
     const description = item.description ?? sentenceExcerpt(plainDescription, 150, 150);
     return { ...item, exam: contentExam(item), description, body, editorialNotice: publication.editorialNotice,
       publishedAt: typeof document.attributes.publishedAt === "string" ? document.attributes.publishedAt : item.publishedAt,
-      updatedAt: typeof document.attributes.updatedAt === "string" ? document.attributes.updatedAt : undefined,
+      updatedAt: FAQ_PUBLICATION_OVERLAYS[item.slug]?.updatedAt ?? (typeof document.attributes.updatedAt === "string" ? document.attributes.updatedAt : undefined),
       citations: Array.isArray(sources) ? sources.filter((value) => typeof value === "string" && safeHref(value)) : [] };
   });
 }
