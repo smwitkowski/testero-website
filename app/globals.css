@@ -68,4 +68,12 @@ input { accent-color: var(--primary); }
   body:has(.certification-tool) { background: white; color: black; }
   body:has(.certification-tool) > header, body:has(.certification-tool) footer { display: none !important; }
   #main-content:has(.certification-tool) { max-width: none; padding: 0; }
+  body:has(.pmle-cheat-sheet) > div, body:has(.pmle-cheat-sheet) > a { display: none !important; }
+  #main-content:has(.pmle-cheat-sheet) { min-height: 0; }
+  .pmle-cheat-sheet table { table-layout: fixed; }
+  .pmle-cheat-sheet { page: pmle-sheet; }
+  .pmle-cheat-sheet p { font-size: 8pt; line-height: 1.3; }
+  .pmle-cheat-sheet th, .pmle-cheat-sheet td { line-height: 1.3; }
+  .pmle-cheat-sheet > section { padding-top: 4px; }
+  @page pmle-sheet { size: A4 portrait; margin: 10mm; }
 }

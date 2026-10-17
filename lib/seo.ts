@@ -12,6 +12,7 @@ export const publicPaths: readonly string[] = [
   "/", "/diagnostic", "/pricing", "/blog", "/faq", "/terms", "/privacy", "/certifications",
   ...toolPaths,
   "/pmle/sample-questions",
+  "/pmle/vertex-ai-agent-platform-cheat-sheet",
   ...certifications.map(cert => certificationPath(cert.cert_id)),
   ...catalog.blog.map(entry => entry.href),
   ...catalog.faq.map(entry => entry.href),
