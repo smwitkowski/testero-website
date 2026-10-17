@@ -154,8 +154,8 @@ def test_rejected_candidate_never_receives_external_request(external_generation,
     assert "external_judge_request" not in candidate
     assert not list(env["path"].glob("batch.judge-requests/*.json"))
     if failure == "mechanical":
-        assert env["cite"].call_count == 2
-        assert env["cite"].call_args_list[1].kwargs["check_errors"]
+        assert env["cite"].call_count == 1
+        assert env["cite"].call_args.kwargs["check_errors"]
     else:
         env["cite"].assert_not_called()
 
@@ -218,8 +218,9 @@ def test_request_uses_exact_shared_signature_prompt_and_raw_schema():
     ident = external_judge.candidate_id(1, scope, QUESTION)
     request = external_judge.build_request(ident, scope, QUESTION, fetched, evidence)
     from shared.gates import GATE_SIGNATURES, build_gate_inputs
-    assert set(request) == {"candidate_id", "objective_id", "gate_version", "gates", "trimming", "decision_provenance_sha256"}
-    inputs = build_gate_inputs(QUESTION, scope["domain_prompt"], documentation_context(fetched), evidence)
+    assert set(request) == {"candidate_id", "objective_id", "gate_version", "gates", "trimming", "decision_provenance_sha256", "style_policy"}
+    inputs = build_gate_inputs(QUESTION, scope["domain_prompt"], documentation_context(fetched), evidence,
+                               style_policy=scope["style_policy"])
     for name, signature in GATE_SIGNATURES.items():
         assert request["gates"][name]["judge_prompt"] == signature_prompt(signature, inputs[name])
         assert request["gates"][name]["verdict_schema"] == output_model(signature).model_json_schema()

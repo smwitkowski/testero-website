@@ -6,11 +6,11 @@ import time
 from typing import Annotated
 
 import dspy
+from shared.call_logging import log_lm_calls
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from shared.doc_search import documentation_context
 from shared.evidence import OptionEvidence, check_evidence
-from shared.question_style import STYLE_INSTRUCTIONS
 
 Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
@@ -101,7 +101,12 @@ class DecisionProofSignature(dspy.Signature):
     reasons: list[VerifiedReason] = dspy.OutputField()
 
 
-DecisionPlanSignature.instructions += "\n\n" + STYLE_INSTRUCTIONS
+DecisionPlanSignature.instructions += (
+    "\nPlan only the decision, not finished learner prose. Keep constraints as wants, "
+    "not prohibitions that eliminate options literally. Use distinct plausible "
+    "approaches whose losing reasons require ML/product knowledge. The supplied "
+    "objective style policy overrides product-specific hinge preferences where allowed."
+)
 
 
 class DecisionVetoError(ValueError):
@@ -120,7 +125,7 @@ def _predict(signature, inputs, model, reasoning_effort):
     lm = _generation_lm(model)
     adapter = CompletionCaptureAdapter(preserve_receipts=True)
     try:
-        with reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
+        with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
             result = dspy.Predict(signature)(**inputs, lm=lm, config={"rollout_id": time.time_ns()})
         return output_model(signature).model_validate({
             key: getattr(result, key) for key in signature.output_fields
@@ -172,3 +177,46 @@ def writer_decision_context(scope, plan, proof):
             + json.dumps(proof["reasons"], ensure_ascii=False)
             + "\nKeep one clear task and comparable option granularity. Do not add wants, exceptions, "
               "feature gotchas or unsupported capability claims. Evidence stays outside learner prose.")
+
+def writer_documentation_context(sources, proof):
+    """Render receipt-centered windows without changing immutable fetched records."""
+    import re
+    # Validate the complete fetch records before selecting text for a prompt.
+    documentation_context(sources)
+    if proof.get("passed") is not True:
+        raise DecisionVetoError("Unsupported decision must not reach the writer")
+    receipts = [{k: row[k] for k in ("option_label", "url", "quote")}
+                for row in proof["reasons"]]
+    checked = check_evidence(receipts, sources)
+    if not checked["passed"]:
+        raise DecisionVetoError("Verifier receipts failed mechanical checks")
+    sections = ["Official fetched Google Cloud documentation excerpts (quote only this text):"]
+    for source in sources:
+        relevant = [row for row in receipts
+                    if row["url"] in (source["url"], source["requested_url"])]
+        if not relevant:
+            continue
+        windows = []
+        for row in relevant:
+            # The mechanical gate permits whitespace normalization. Locate the
+            # original span, and render original text, never normalized text.
+            pattern = r"\s+".join(re.escape(part) for part in row["quote"].split())
+            match = re.search(pattern, source["text"])
+            if match is None:
+                raise DecisionVetoError("Verifier quote span not found")
+            windows.append((max(0, match.start() - 8000),
+                            min(len(source["text"]), match.end() + 8000)))
+        merged = []
+        for start, end in sorted(windows):
+            if merged and start <= merged[-1][1]:
+                merged[-1] = (merged[-1][0], max(end, merged[-1][1]))
+            else:
+                merged.append((start, end))
+        sections.append(
+            f"URL: {source['url']}\nRequested URL: {source['requested_url']}\n"
+            f"Retrieved at: {source['retrieved_at']}\n"
+            f"Full source text SHA-256: {source['text_sha256']}\n"
+            + "\n\n".join(f"Source excerpt [{start}:{end}]:\n{source['text'][start:end]}"
+                              for start, end in merged)
+        )
+    return "\n\n".join(sections)

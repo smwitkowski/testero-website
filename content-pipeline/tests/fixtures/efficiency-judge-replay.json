@@ -1,0 +1,1644 @@
+[
+  {
+    "source": "pmle-d033-v5-pipelines-30-b18.json",
+    "source_sha256": "7f98428139296514182723045c256de83d5af3d8f02b6dc61d6da2de2b0bf23e",
+    "rows": [
+      {
+        "candidate_id": "d7eaa93e-28b9-563a-aaa6-5c9dada3d878",
+        "question": {
+          "stem": "You are maintaining an emergency department's patient-arrival forecasting workflow in BigQuery ML. A recent deployment underestimated arrivals, leaving shifts understaffed despite improved training-fit diagnostics. The release workflow ranks candidates using those diagnostics, and actual arrival counts from completed four-week planning periods are reserved for evaluation rather than model fitting. Staffing decisions use forecasts for the next four weeks. You want to catch inaccurate forecasts over that staffing horizon while minimizing changes to the existing SQL workflow. What should you do?",
+          "correct_answer": "Evaluate each candidate with ML.EVALUATE against held-out actual arrivals over four weeks, and gate promotion on acceptable forecast error in the existing SQL workflow.",
+          "distractor_1": "Compare each candidate's training-fit diagnostics with ML.ARIMA_EVALUATE, rank candidates by lowest Akaike information criterion, and gate promotion on improved historical fit in the SQL workflow.",
+          "distractor_2": "Retrieve each candidate's four-week forecasts with ML.FORECAST, compare prediction interval widths at the same confidence level, and promote the candidate with the narrowest prediction intervals.",
+          "distractor_3": "Profile incoming arrival data with BigQuery SQL, compare its distribution with previous training batches, and gate candidate promotion on stable demand distributions across completed staffing periods.",
+          "correct_explanation": "You need to validate four-week forecast accuracy while retaining the SQL workflow. First, supply held-out actual arrivals to BigQuery ML's ML.EVALUATE. Next, select an evaluation horizon covering the four-week staffing period. ML.EVALUATE compares forecasted values with actual values and returns forecast-error metrics, including mean absolute error. Use those errors to gate candidate promotion. This adds forecast validation within SQL. ML.ARIMA_EVALUATE measures fitted-model diagnostics, prediction interval widths describe estimated uncertainty, and data distribution comparisons detect data changes; none of those criteria measures forecast errors against the reserved actual arrivals.",
+          "distractor_1_explanation": "This fails the requirement to catch inaccurate forecasts over the staffing horizon. BigQuery ML's ML.ARIMA_EVALUATE returns fitted-model diagnostics, including Akaike information criterion, log likelihood, and variance. Ranking by those diagnostics repeats the existing fitting criterion rather than measuring four-week forecast errors against held-out actual arrivals.",
+          "distractor_2_explanation": "This fails the forecast-accuracy requirement. BigQuery ML's ML.FORECAST returns forecast values and prediction intervals whose widths depend on standard error and confidence level. Comparing interval widths evaluates estimated uncertainty, rather than observed differences between forecasts and held-out actual arrivals. Narrow intervals therefore do not establish acceptable four-week forecast error.",
+          "distractor_3_explanation": "This fails the forecast-accuracy requirement. BigQuery ML's data monitoring compares training and serving data statistics to identify distribution differences. Such comparisons assess data stability, but do not measure differences between candidate forecasts and actual arrivals. Gate promotion on ML.EVALUATE forecast-error metrics instead; stable demand distributions alone cannot establish acceptable four-week forecast accuracy."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "A",
+            "confidence": 0.9,
+            "ambiguous_answers": false,
+            "reason": "Training-fit diagnostics (AIC) misled ranking. Evaluating candidates with ML.EVALUATE on held-out actual four-week arrivals measures forecast error over the staffing horizon and fits into the existing SQL workflow. Other options use fit, interval width, or data drift."
+          },
+          "style": {
+            "verdict": "PASS",
+            "score": 0.78,
+            "reason": "Realistic BigQuery ML forecasting decision: evaluate on held-out actuals over the staffing horizon instead of training-fit AIC. Distractors are plausible, and ML.ARIMA_EVALUATE, ML.FORECAST intervals and data profiling each need product or ML knowledge to reject. B is nearly given away by the stem.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": true,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.9,
+            "reason": "Docs show ML.EVALUATE with input data evaluates forecasting accuracy per timestamp and returns MAE and other error metrics. ML.ARIMA_EVALUATE AIC reflects fitting. Prediction intervals depend on standard error and confidence level. Skew detection compares data stats, not forecast error.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "bb99adf46c07070f09d255cf25c280adf6532d77601d1af2ec85813fde44dca7",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "A",
+              "confidence": 0.99,
+              "ambiguous_answers": false,
+              "reason": "In BigQuery ML, passing held-out actuals to ML.EVALUATE computes out-of-sample forecast accuracy metrics over the four-week horizon, directly addressing the failure of relying solely on training-fit diagnostics (ML.ARIMA_EVALUATE) while keeping the workflow in SQL."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "f424bfafe5b79f726bb04a78a95b370f828e5bc02b417929f5626213420de605",
+        "verdict_sha256": "532c9ca8cb84cebaab4b5e731117c1f78f682b07924822f80c22b508cf33d116"
+      },
+      {
+        "candidate_id": "58435331-18ad-5510-a144-34c341f65906",
+        "question": {
+          "stem": "You work for a rail operator whose equipment fault classifier scores incoming sensor alerts. The running scikit-learn model uses numerical scaling and categorical encoding learned during training. A separate prediction service reproduces these transformations in its own code. Your team is migrating this service to Agent Platform as part of a hosting consolidation. You want to keep training and serving preprocessing consistent while minimizing changes to the working classifier. Which approach should you use?",
+          "correct_answer": "Train and save the numerical scaling, categorical encoding, and classifier together in a scikit-learn pipeline. Load the fitted pipeline through an Agent Platform custom prediction routine to serve sensor alerts.",
+          "distractor_1": "Rebuild the classifier in TensorFlow and use TensorFlow Transform to prepare its inputs. Embed the learned transformations in the exported model, then deploy it to an Agent Platform endpoint for online predictions.",
+          "distractor_2": "Materialize transformed sensor features in BigQuery and expose them through Agent Platform Feature Store. Change training and prediction to retrieve the prepared features by equipment identifier before classification.",
+          "distractor_3": "Deploy the scikit-learn classifier in an Agent Platform custom container. Implement numerical scaling and categorical encoding in its prediction handler by copying transformations from the training code.",
+          "correct_explanation": "You want consistent preprocessing with minimal changes to the existing classifier. A saved scikit-learn pipeline keeps the fitted transformations together with the classifier. Agent Platform custom prediction routines can load training artifacts and perform preprocessing for online predictions, allowing serving to reuse the learned transformations while retaining scikit-learn. Rebuilding in TensorFlow changes the classifier framework, Feature Store introduces a different feature retrieval workflow, and copying transformation code does not ensure reuse of the fitted preprocessing state.",
+          "distractor_1_explanation": "This fails the goal of minimizing changes to the working classifier. TensorFlow Transform produces transformation artifacts that can be embedded in an exported TensorFlow model, providing consistent preprocessing. However, this approach replaces the existing scikit-learn classifier with a TensorFlow implementation, whereas Agent Platform can serve exported scikit-learn pipelines.",
+          "distractor_2_explanation": "This fails the goal of minimizing changes to the working classifier's workflow. Agent Platform Feature Store requires prepared feature data in BigQuery, online store and feature view resources, and retrieval of feature values associated with entity identifiers. Introducing that path changes how training and prediction obtain classifier inputs. Saving the fitted scikit-learn pipeline preserves the existing transformations with the classifier instead.",
+          "distractor_3_explanation": "This fails to ensure consistent fitted preprocessing between training and serving. A custom container can perform preprocessing, but copying transformation code does not ensure that it uses the trained classifier's scaling statistics and category mappings. Agent Platform custom prediction routines support loading serialized preprocessing artifacts, allowing the fitted transformations to be reused rather than separately reproduced."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "B",
+            "confidence": 0.9,
+            "ambiguous_answers": false,
+            "reason": "Bundling the fitted scaler, encoder and classifier in one scikit-learn pipeline, served via a custom prediction routine, keeps preprocessing identical and barely changes the model. A duplicates the transforms, C rebuilds the model, D is an unnecessary redesign."
+          },
+          "style": {
+            "verdict": "PASS",
+            "score": 0.84,
+            "reason": "Rail fault-classifier migration with a clear purpose. It tests one decision: package preprocessing with the model and serve it through a custom prediction routine. Distractors are plausible: copied code, a TensorFlow rebuild, and Feature Store. Minor risk: pipeline packaging is somewhat generic.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": true,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.8,
+            "reason": "Docs support exporting scikit-learn pipelines and CPR loading a serialized preprocessor with the sklearn Predictor. TFT requires a TensorFlow model, Feature Store needs BigQuery-based feature retrieval, and copied code duplicates logic. Minor gap: a prebuilt container could also serve the pipeline.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "4af3004ad8520aa5ce25f6d016e64db1d1b08bd9f0f24b8d88568fc7ecb01911",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "B",
+              "confidence": 0.98,
+              "ambiguous_answers": false,
+              "reason": "Bundling the preprocessing steps and classifier into a single fitted scikit-learn pipeline eliminates training-serving skew while keeping the existing scikit-learn implementation intact. Serving it via a custom prediction routine avoids rebuilding in TensorFlow or duplicating code."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "5b6a7ec4e25b800f084b100eafd0a6dfbb7c89311229d8d1b23c2d4a64a1feea",
+        "verdict_sha256": "4a26a7f8e7c448f5b63fe91df5b2be57a0afa85fb06ad131ea9a9ac500432842"
+      },
+      {
+        "candidate_id": "66a22ed6-158a-5983-8028-4356cd997ad3",
+        "question": {
+          "stem": "You manage a repair-duration predictor that helps a fleet operator plan maintenance capacity. Its Agent Platform Pipelines workflow retrains nightly, and training costs have grown. Telemetry files arrive in Cloud Storage daily, but verified repair outcomes become available irregularly after work-order review. A preparation job joins the outcomes with telemetry, checks the result, and publishes a finalized labeled dataset. Many nightly runs reuse the same training examples. You want to keep estimates current with verified repair outcomes while minimizing repeated training on unchanged labeled data. What should you do?",
+          "correct_answer": "Replace nightly retraining with a Pub/Sub readiness event emitted after the preparation job joins and checks each new labeled dataset. Use a Cloud Run function to launch the existing Agent Platform Pipelines workflow for that dataset.",
+          "distractor_1": "Use Cloud Storage upload notifications to launch the existing Agent Platform Pipelines workflow whenever a telemetry file arrives. For each run, join the uploaded telemetry with the verified repair outcomes available at that time.",
+          "distractor_2": "Change the retraining policy to a weekly Cloud Scheduler trigger for the existing Agent Platform Pipelines workflow. At each scheduled execution, select the latest finalized labeled dataset and retain the current training and evaluation steps.",
+          "distractor_3": "Configure Cloud Build repository triggers to run tests whenever model-code changes are pushed. After those tests pass, launch the existing Agent Platform Pipelines training workflow using the latest finalized labeled dataset available at that build's completion.",
+          "correct_explanation": "The retraining policy needs to incorporate newly verified outcomes and reduce training on unchanged examples. Pub/Sub can trigger a Cloud Run function that launches an Agent Platform Pipelines workflow. Publishing readiness after dataset preparation aligns retraining with new labeled examples instead of nightly executions. Cloud Storage uploads indicate object availability, Cloud Scheduler follows a calendar, and Cloud Build repository triggers follow source changes; those policies do not track finalized dataset readiness.",
+          "distractor_1_explanation": "This fails to minimize retraining on unchanged labeled data. Cloud Storage upload notifications indicate that an object was successfully created, not that newly verified outcomes are ready. Daily telemetry arrivals can therefore launch repeated training while the available labeled examples remain unchanged.",
+          "distractor_2_explanation": "Cloud Scheduler triggers execution according to a schedule, independently of irregular dataset releases. Weekly runs can reuse the same finalized dataset when no new outcomes are ready and delay incorporating newly finalized outcomes until the next scheduled run. Reducing frequency does not align retraining with changes in labeled data.",
+          "distractor_3_explanation": "This fails to keep estimates current with newly verified outcomes. Cloud Build repository triggers execute build steps when source changes are pushed. New repair outcomes can produce a finalized labeled dataset while model code remains unchanged, leaving the model unchanged until another code update triggers training. A dataset-readiness event tracks the relevant change."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "D",
+            "confidence": 0.93,
+            "ambiguous_answers": false,
+            "reason": "Retraining should fire when a new finalized labeled dataset exists, not on a schedule, telemetry arrival, or code push. A readiness event after the join and checks, with a function launching the pipeline, retrains only on new verified labels."
+          },
+          "style": {
+            "verdict": "PASS",
+            "score": 0.74,
+            "reason": "Tests a real MLOps decision: retrain on a finalized-dataset readiness event, not on a schedule, a code push, or telemetry arrival. The Cloud Build and Storage-notification distractors are plausible. The hinge is mostly trigger design, so product depth is moderate.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": true,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.88,
+            "reason": "Docs support the key: a Cloud Run function subscribed to Pub/Sub launches the pipeline, and any service can publish, e.g. after data ingestion. They also support the rejections: Storage events fire on object creation, Scheduler on a schedule, Cloud Build on source pushes.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "72e0183deccbb187ea7669e36a137af4663dffc2577ebc64f4b493c2630290c0",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "D",
+              "confidence": 0.99,
+              "ambiguous_answers": false,
+              "reason": "Option D uses an event-driven architecture triggered only when the preparation job publishes a newly validated labeled dataset. This ensures the model is updated promptly with new verified outcomes while eliminating redundant training runs on unchanged labeled data."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "43b8092e6578526aec4e92c60f6c4321eba1759ac153693cb3e00e2526b0524e",
+        "verdict_sha256": "6025a37e69b8e0192580355736d21a4cc819e4c1e6a7541bf58431e5bd23d153"
+      },
+      {
+        "candidate_id": "03a2f2c1-173e-55a0-936f-09e73fbdb544",
+        "question": {
+          "stem": "You need to build a pipe-leak classifier that helps a water utility prioritize inspections. Your team has prepared training and evaluation components for Agent Platform Pipelines and is designing production releases with Cloud Build. You want a utility engineer to review each candidate's evaluation results and approve its production use while minimizing manual release work. What should you do?",
+          "correct_answer": "After evaluation completes, automatically submit a separate Cloud Build deployment build through an approval-gated trigger. Present the candidate's results to the utility engineer, then let the approved build deploy that same evaluated model.",
+          "distractor_1": "Combine training, evaluation, and deployment in one Cloud Build build controlled by an approval-gated trigger. Give the utility engineer access to the build's evaluation reports, and deploy the candidate when the approved build reaches deployment.",
+          "distractor_2": "Configure Cloud Build notifications to send the candidate's evaluation results to the utility engineer for review. Continue deployment after evaluation succeeds, and record the engineer's response alongside the model's release information.",
+          "distractor_3": "Automate training and evaluation with Agent Platform Pipelines, then send the candidate's results to the utility engineer. Have an operator select and deploy the approved model from Agent Platform Workbench.",
+          "correct_explanation": "The workflow needs candidate-specific review before production use and minimal manual release work. Run training and evaluation in Agent Platform Pipelines, then submit a separate approval-gated Cloud Build deployment build. Cloud Build keeps that build pending until approval, so the engineer can review existing results before deployment starts. Approval then starts automated deployment of the evaluated model. A combined build gates execution before evaluation, notifications alone do not establish an approval gate, and operator-driven deployment adds manual release work.",
+          "distractor_1_explanation": "This fails the review-before-production requirement. Cloud Build approval gates the start of the entire build. The engineer would approve before its training and evaluation steps produce the candidate's results. Access to those reports does not add an approval gate between evaluation and deployment.",
+          "distractor_2_explanation": "This fails the approval-before-production requirement. Cloud Build notifications communicate build updates; they do not make this deployment wait for approval. Continuing after successful evaluation can deploy the candidate before the engineer approves it. Recording the response does not enforce that sequence.",
+          "distractor_3_explanation": "This preserves review but fails to minimize manual release work. An operator must select and deploy every approved candidate. Agent Platform Workbench provides an interactive development environment, while a separate approval-gated Cloud Build deployment build can execute the release steps automatically after the engineer approves."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "D",
+            "confidence": 0.8,
+            "ambiguous_answers": false,
+            "reason": "Pipelines run training and evaluation. A separate Cloud Build deployment is then triggered automatically behind an approval gate. The engineer reviews the results, and the same evaluated model is deployed. C moves training into Cloud Build. A has no approval gate. B deploys by hand."
+          },
+          "style": {
+            "verdict": "PASS",
+            "score": 0.8,
+            "reason": "Tests a real MLOps release decision: a human approval gate in Cloud Build between Agent Platform Pipelines evaluation and deployment. Distractors are plausible Google Cloud approaches, and option lengths are balanced. A is somewhat obvious because it deploys without waiting for approval.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": true,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "UNCERTAIN",
+            "score": 0.55,
+            "reason": "Docs support approval-gated triggers holding a build PENDING until approved, then starting it. They don't show a pipeline auto-submitting a separate gated build, or the approved build deploying the same evaluated model. Workbench rejection is loosely supported.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": false,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": false
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "6037f67ea4a44bb90b8bebe71f8977fa6114c49d4bf3f9893a67267f90ed419a",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "D",
+              "confidence": 0.95,
+              "ambiguous_answers": false,
+              "reason": "Cloud Build approvals gate an entire build before it starts, not individual steps mid-build (ruling out C). Submitting a separate approval-gated deployment build after evaluation finishes (D) enforces human sign-off on evaluation results before deployment while minimizing manual work (unlike A, B)."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "f6ee4f9c86c00158ff2f7445ea6c547bdee4d5c03e10ea4344315916ade8230b",
+        "verdict_sha256": "760defbe067c0f63381b75a9a9b5386dc441a345abc6b0d6f9a39665c8d2c960"
+      },
+      {
+        "candidate_id": "dfabdf29-eb76-5f5a-9ae2-b74a5e59513c",
+        "question": {
+          "stem": "You are maintaining a solar generation forecasting model that helps an electricity supplier plan next-day purchases. Agent Platform Model Monitoring reports seasonal shifts in weather inputs, and each alert launches the existing Agent Platform Pipelines retraining workflow. Training costs have risen, although forecast errors remain within the supplier's operating target. Actual generation measurements arrive daily and are retained with the forecasts in BigQuery. You want to keep forecast errors within the operating target while minimizing unnecessary retraining. How should you address this issue?",
+          "correct_answer": "Evaluate forecast error daily against observed generation in BigQuery, and trigger the existing Agent Platform Pipelines workflow only when error shows sustained deterioration relative to the operating target.",
+          "distractor_1": "Schedule the existing Agent Platform Pipelines workflow to retrain every night using recent generation observations from BigQuery, so the model is refreshed regularly as seasonal weather conditions change.",
+          "distractor_2": "Raise Agent Platform Model Monitoring drift thresholds to tolerate routine seasonal weather changes, and trigger the existing Agent Platform Pipelines retraining workflow whenever an input distribution exceeds its revised drift threshold.",
+          "distractor_3": "Configure Cloud Build to launch the existing Agent Platform Pipelines retraining workflow whenever forecasting code changes, and retain the deployed model between code releases to reduce training triggered by seasonal weather changes.",
+          "correct_explanation": "The goals are to maintain forecast accuracy and reduce unnecessary retraining. Comparing forecasts with observed generation in BigQuery measures actual forecast error. Agent Platform Pipelines supports triggering retraining on model performance degradation, so sustained error deterioration ties training to the supplier's accuracy needs. Nightly retraining runs even when accuracy remains acceptable, input drift measures distribution changes rather than forecast error, and code-change triggers do not respond to deterioration between releases.",
+          "distractor_1_explanation": "This fails the goal of minimizing unnecessary retraining. Agent Platform Pipelines supports scheduled training, but a nightly schedule runs regardless of forecast accuracy. It continues incurring training costs even when forecast errors remain within the operating target.",
+          "distractor_2_explanation": "This retains a retraining trigger that measures input distribution changes rather than forecast accuracy. Agent Platform Model Monitoring compares feature distributions with a baseline and alerts when statistical distance exceeds a threshold. Raising that threshold does not establish whether retraining is needed: distribution changes can still trigger training while forecast errors remain acceptable.",
+          "distractor_3_explanation": "This fails to address maintaining forecast accuracy between code releases. Cloud Build source triggers execute build steps when source changes are pushed. Production data dynamics can change independently of forecasting code, so a code-change-only policy provides no retraining trigger when forecast performance deteriorates between releases."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "D",
+            "confidence": 0.92,
+            "ambiguous_answers": false,
+            "reason": "Ground truth arrives daily, so performance-based triggering (sustained error deterioration vs. target) retrains only when needed. Drift alerts on seasonal inputs don't imply degraded accuracy; nightly retraining adds cost; code-change triggers ignore data decay."
+          },
+          "style": {
+            "verdict": "FAIL",
+            "score": 0.55,
+            "reason": "The stem is clear and the choices are parallel, but the key is a generic performance-based retraining trigger. Rejecting the distractors needs general MLOps reasoning, not Google Cloud knowledge. Option A (Cloud Build on code changes) is weak filler, and C obviously raises cost.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": false,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": false,
+            "cloud_specific_alternative": false,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.86,
+            "reason": "Docs support triggering on model performance degradation, scheduled runs, drift-threshold alerts on input distributions, and Cloud Build triggers on source changes. The key fits the retraining-policy decision. The \"sustained\" and \"daily\" details are design choices, not documented.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "c9be0b2fb3e170632ee10a809c633f149d9db118b2c4d9f43578f18741eddd77",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "D",
+              "confidence": 0.95,
+              "ambiguous_answers": false,
+              "reason": "Since actual ground truth arrives daily in BigQuery and seasonal feature drift does not degrade model accuracy, triggering retraining based on actual performance degradation (forecast error vs. operating target) avoids unnecessary retraining while maintaining accuracy."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "2f4c1bdd9f16e241947c1d2dece67b64efcd3b1c03c5498df7e68fa97071fc70",
+        "verdict_sha256": "d6daa725946414f6683a01b9cb89501f7d22996b2d9259f0a1917f0401bbec82"
+      },
+      {
+        "candidate_id": "dedaaaee-71e7-5c75-951f-fbcc0fd01c87",
+        "question": {
+          "stem": "Your company retrains a road-damage detector each night to help municipalities prioritize repairs. Its workflow uses self-managed Apache Airflow on Compute Engine to wait for survey-image ingestion, launch training jobs, and rerun failed days. Airflow maintenance is consuming more engineering time, and the team is planning an orchestration migration. You want to minimize orchestration maintenance while minimizing changes to the existing workflow code. What should you do?",
+          "correct_answer": "Migrate the existing DAGs to Managed Service for Apache Airflow, adapt their environment dependencies, and continue using Airflow operators and sensors to orchestrate the nightly training workflow.",
+          "distractor_1": "Rebuild the workflow in Agent Platform Pipelines with custom components for ingestion checks and training jobs, then replace the Airflow DAGs with scheduled pipeline runs for nightly retraining.",
+          "distractor_2": "Convert the workflow into Ray tasks on Agent Platform, implement ingestion polling and historical reruns in application code, and replace the Airflow deployment with a managed Ray cluster.",
+          "distractor_3": "Move Airflow to Google Kubernetes Engine Autopilot, retain its DAGs and operators, and operate the Airflow scheduler, workers, metadata database, and application upgrades as containerized workloads.",
+          "correct_explanation": "The goals are to minimize orchestration maintenance and workflow code changes. Managed Service for Apache Airflow provides fully managed orchestration built on Apache Airflow. Its Python DAGs, operators, sensors, scheduling, and historical reruns align with the existing workflow, allowing reuse with necessary dependency adjustments. Agent Platform Pipelines requires a different pipeline definition and components. The proposed Ray migration replaces existing orchestration with application code. Google Kubernetes Engine Autopilot manages underlying Kubernetes infrastructure but leaves the proposed Airflow application under the team's management.",
+          "distractor_1_explanation": "This fails the goal of minimizing workflow code changes. Agent Platform Pipelines provides serverless ML orchestration, but workflows must be defined using Kubeflow Pipelines or TFX components and pipeline definitions. The proposed rebuild translates the existing Airflow orchestration instead of reusing its DAGs and operators.",
+          "distractor_2_explanation": "This fails the goal of minimizing workflow code changes. Ray on Agent Platform provides distributed computing and parallel processing, with minimal-change reuse for existing Ray applications. This workflow uses Airflow, so the proposed conversion requires a new Ray application and custom polling and rerun logic that Managed Service for Apache Airflow already supports through sensors and DAG reruns.",
+          "distractor_3_explanation": "This fails the goal of minimizing orchestration maintenance. Google Kubernetes Engine Autopilot manages underlying infrastructure, including node configuration, autoscaling, and node upgrades. The proposed deployment still leaves the team operating the Airflow application and its components. Managed Service for Apache Airflow manages the Airflow infrastructure while retaining the existing orchestration framework."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "B",
+            "confidence": 0.95,
+            "ambiguous_answers": false,
+            "reason": "Managed Airflow (Cloud Composer) removes infrastructure maintenance while keeping existing DAGs, sensors and operators, so code changes are minimal. GKE Autopilot still leaves Airflow ops to the team; Ray and Pipelines require rewrites."
+          },
+          "style": {
+            "verdict": "PASS",
+            "score": 0.8,
+            "reason": "Migration decision with a real tradeoff. The key is managed Airflow, and the distractors are GKE self-hosting, Agent Platform Pipelines, and Ray. Minor issues: \"orchestration\" appears twice and the key is a simple lift-and-shift. Product knowledge is still needed to reject the options.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": true,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "UNCERTAIN",
+            "score": 0.55,
+            "reason": "Docs support Managed Airflow as fully managed, Apache Airflow-based, with operators, sensors, and DAG re-runs. They don't say existing DAGs migrate with minimal change. Docs also don't say GKE Autopilot leaves Airflow's scheduler, workers, or database to the team. Those hinge claims are unsupported.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": false,
+            "evidence_supported": false,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": false
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "bbe3ad088ab0d72c27a2dc43ee4f2766d4212dda8cf3fc4b5ebee24fb597881e",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "B",
+              "confidence": 0.99,
+              "ambiguous_answers": false,
+              "reason": "Migrating to a managed Apache Airflow service (such as Cloud Composer) eliminates infrastructure maintenance while allowing the team to reuse existing Airflow DAGs, operators, and sensors with minimal code changes."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "afd7fdfacdb706cd220c6e8ecf9f927a4606843272695592d187be5036963a31",
+        "verdict_sha256": "504bd25a91094ba21135c11f8e2f2d8ffa20f41e6de8277c1d19c3cbfa4e335e"
+      },
+      {
+        "candidate_id": "13b6fa9c-1b91-567d-8a9d-d9fa52197f53",
+        "question": {
+          "stem": "Your company is building a classifier that routes insurance claims to specialist teams. Historical claims and their routing labels are stored in BigQuery. Approved routing definitions change at irregular times as coverage rules evolve, although the mix of submitted claims often stays similar. Your team records each approved revision, and historical labels reflect previous definitions. You want routing to reflect each approved revision promptly while minimizing unnecessary retraining. What should you do?",
+          "correct_answer": "Trigger retraining for each approved routing revision. Relabel relevant historical training examples and held-out evaluation examples using the revised definitions, then train and evaluate the candidate with Agent Platform Pipelines.",
+          "distractor_1": "Use Agent Platform Model Monitoring feature-drift alerts to trigger retraining. Relabel historical training examples and held-out evaluation examples using the latest routing definitions, then train and evaluate the candidate before release.",
+          "distractor_2": "Schedule monthly retraining with Agent Platform Pipelines. Relabel newly collected training examples and held-out evaluation examples using the current routing definitions, then train and evaluate each candidate before release.",
+          "distractor_3": "Retrain for each approved routing revision using newly relabeled historical training examples. Evaluate each candidate against the original held-out examples and labels to maintain consistent comparisons with the current classifier.",
+          "correct_explanation": "The goals are to adapt promptly to approved routing revisions and minimize unnecessary retraining. Using the revision record as the trigger ties training runs to changes in the prediction target. Relabeling training examples aligns learning with the revised definitions, and relabeling held-out examples supplies matching ground truth for evaluation. Agent Platform Pipelines can execute custom training and evaluation tasks. Feature-drift alerts can miss revisions when input distributions remain stable. Monthly scheduling can delay adaptation and run unnecessarily. Original evaluation labels measure agreement with outdated definitions.",
+          "distractor_1_explanation": "This fails prompt adaptation to routing revisions. Agent Platform Model Monitoring feature-drift detection compares input feature distributions against a baseline and alerts when statistical differences exceed thresholds. A routing revision can change the correct labels while input distributions remain similar, so the revision might not trigger retraining.",
+          "distractor_2_explanation": "This fails both prompt adaptation and minimizing unnecessary retraining. Agent Platform Pipelines supports scheduled training runs, including monthly schedules. An irregular routing revision can occur between runs and remain unapplied until the next run. The schedule also launches training during months when routing definitions have not changed.",
+          "distractor_3_explanation": "This fails reliable adaptation to revised routing definitions. Evaluation in Agent Platform Pipelines uses predictions and supplied ground truth. Original held-out labels encode previous definitions, so evaluation measures agreement with outdated routing and can penalize a candidate that follows the revised definitions. Relabeling held-out examples aligns evaluation with the current task."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "C",
+            "confidence": 0.9,
+            "ambiguous_answers": false,
+            "reason": "Concept drift from label definition changes: retrain on each approved revision (event-triggered, prompt), relabel history and held-out set with the new definitions, and use a pipeline. Monthly is not prompt, feature drift won't fire, and old labels make evaluation invalid."
+          },
+          "style": {
+            "verdict": "PASS",
+            "score": 0.78,
+            "reason": "Tests a real ML decision: retrain on label-definition (concept) change, with relabeled evaluation data, rather than on a schedule or on feature drift. Option D is a plausible Google Cloud distractor. Weaknesses: options share a similar relabel-train-evaluate shape, and the product hinge is moderate.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": true,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.8,
+            "reason": "Docs support the pipeline's train and evaluate steps, monitoring that compares input feature distributions to a baseline, monthly cron scheduling, and evaluation against supplied ground truth. Triggering on revisions and the label-staleness logic are sound reasoning, not stated in the docs.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "0531520b16f5888ad2c7162ab4ef7c40f15e1346cbcae67dacd94469b2af1a2e",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "C",
+              "confidence": 0.98,
+              "ambiguous_answers": false,
+              "reason": "Since routing definitions change irregularly (concept drift without feature drift) and each revision is recorded, retraining should be event-driven per approved revision, and both training and evaluation sets must be relabeled to match the new definitions."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "707543c7ab52fb1aafccd7611df352bba67edde3bdab75e2cadf36cd356aff50",
+        "verdict_sha256": "2f2fa2f61b2d4a9f8760d71c5a316eaefb3d736b16e76d2796b79e5925c6cdcf"
+      },
+      {
+        "candidate_id": "76b41962-17de-5bef-8e21-fbfd492757ed",
+        "question": {
+          "stem": "You need to restore reliable arrival-time estimates for a parcel carrier after a recent deployment. Your team trains a BigQuery ML regression model on parcel attributes preprocessed by a separate SQL query. The scheduled prediction query repeats those transformations but calculates normalization statistics from each day's parcels. Arrival estimates now change unexpectedly as the daily parcel mix changes. You want predictions to reuse preprocessing learned from training data while minimizing changes to the team's SQL workflow. What should you do?",
+          "correct_answer": "Retrain the BigQuery ML regression model with learned normalization in its transformation clause. Update the scheduled prediction query to pass raw parcel attributes, letting the model apply the preprocessing statistics calculated during training.",
+          "distractor_1": "Export the current BigQuery ML model and deploy it to an Agent Platform endpoint. Update the scheduled prediction workflow to send raw parcel attributes directly to the endpoint for managed prediction serving.",
+          "distractor_2": "Move the training and prediction preprocessing queries into Agent Platform Pipelines. Calculate normalization statistics independently for each training run and daily prediction batch, then pass the transformed parcel attributes to the BigQuery ML model.",
+          "distractor_3": "Add BigQuery ML data validation to the scheduled prediction workflow. Compare training and daily prediction feature statistics, and retain the existing preprocessing queries for batches that show no anomalous differences.",
+          "correct_explanation": "You need predictions to reuse training-derived preprocessing while preserving the SQL workflow. BigQuery ML's TRANSFORM clause captures preprocessing in the model, including statistics calculated during training. ML.PREDICT automatically applies these transformations to raw parcel attributes, allowing scheduled predictions to reuse training preprocessing. Exporting the current model omits its external feature engineering. Orchestrating independently calculated statistics retains the inconsistency, and validating feature statistics detects anomalies but does not change the preprocessing.",
+          "distractor_1_explanation": "This fails to reuse the training preprocessing. Exported BigQuery ML models retain automatic preprocessing and transformations captured in a TRANSFORM clause, but they do not contain feature engineering performed outside that clause. The current model's separate SQL preprocessing would therefore be missing when raw parcel attributes reach the Agent Platform endpoint.",
+          "distractor_2_explanation": "This fails to make prediction preprocessing reuse training statistics. Agent Platform Pipelines orchestrates components that execute preprocessing logic. Moving the queries into pipeline components preserves their independent calculations, so each daily batch can still use different normalization statistics from training. Capturing preprocessing in the BigQuery ML model binds those transformations to the training statistics.",
+          "distractor_3_explanation": "This fails to bind prediction preprocessing to training statistics. BigQuery ML's ML.TFDV_DESCRIBE computes descriptive statistics, and ML.TFDV_VALIDATE compares statistics to identify anomalous differences. These checks do not replace the normalization calculations in the existing queries. Passing validation therefore does not ensure that prediction batches reuse the preprocessing statistics calculated during training."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "D",
+            "confidence": 0.93,
+            "ambiguous_answers": false,
+            "reason": "BigQuery ML's TRANSFORM clause with ML.STANDARD_SCALER etc. stores training-time statistics in the model and applies them automatically at prediction. This keeps SQL workflow changes minimal. The other options keep per-batch stats or add heavy infrastructure."
+          },
+          "style": {
+            "verdict": "PASS",
+            "score": 0.85,
+            "reason": "Real BQML decision: TRANSFORM clause embeds preprocessing in the model. Distractors are plausible: Agent Platform endpoint export, drift validation, pipelines with per-batch stats. Minor: A is longer and C's flaw is fairly evident.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": true,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "UNCERTAIN",
+            "score": 0.6,
+            "reason": "Docs support that TRANSFORM captures preprocessing with training statistics, that exports omit feature engineering outside TRANSFORM, and that TFDV only detects anomalies. No supplied text says ML.PREDICT automatically applies TRANSFORM to raw inputs.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": false,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": false
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "88cd26db452af171cfb44cf1986eae5248a28f4e37de958bb6ccaeae1567075b",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "D",
+              "confidence": 0.99,
+              "ambiguous_answers": false,
+              "reason": "Using the BigQuery ML TRANSFORM clause with ML.STANDARD_SCALER or ML.MIN_MAX_SCALER persists normalization statistics from the training data and automatically applies them to raw inputs during ML.PREDICT, eliminating training-serving skew while keeping the SQL workflow intact."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "eabbb08566adf49d31ed0b55271236e35f57525f4f66242d3410a473aa585a23",
+        "verdict_sha256": "d5b4b7a6384e2c7935f21b0680b322c9d2fc6e637aac0e29fbb6d204a9c5fb49"
+      },
+      {
+        "candidate_id": "422acede-e7c7-55de-ab08-55c061210ba9",
+        "question": {
+          "stem": "You manage an image classifier that flags fabric defects before rolls ship to clothing manufacturers. You are migrating its running training workflow to AutoML image training in Agent Platform. The labeled archive contains overlapping camera views of each roll and includes roll identifiers. A migration rehearsal reports high test accuracy after splitting individual images. You want to estimate performance on newly produced rolls while minimizing manual evaluation work. What should you do?",
+          "correct_answer": "Assign each roll entirely to training, validation, or testing, and import those assignments for AutoML image training in Agent Platform. Select manual splitting and review test metrics.",
+          "distractor_1": "Use AutoML's automatic split in Agent Platform to distribute individual images across training, validation, and test sets. Train the image classifier and review the generated test metrics to assess the migration.",
+          "distractor_2": "Create label-stratified cross-validation folds from individual archive images. Train AutoML image models in Agent Platform using those folds, then average their held-out scores to estimate performance on new rolls.",
+          "distractor_3": "Run batch inference with the migrated AutoML image classifier in Agent Platform on every labeled archive image. Compare its overall accuracy with the incumbent's archived score to assess the migration.",
+          "correct_explanation": "You need an estimate for unseen rolls with minimal manual evaluation work. Keeping every view of a roll in one partition prevents related views from crossing into training and testing. Agent Platform supports importing manual split assignments, and AutoML automatically generates final evaluation metrics using the test set. Automatic image splitting and image-level cross-validation can mix views of the same roll across partitions. Evaluating the entire archive includes training examples and therefore does not establish performance on unseen rolls.",
+          "distractor_1_explanation": "This fails to establish performance on newly produced rolls. Agent Platform's automatic image split randomly assigns images by percentage, so overlapping views of the same roll can appear in different partitions. The resulting test metrics can overestimate performance on unseen rolls.",
+          "distractor_2_explanation": "This fails to establish performance on unseen rolls because partitioning individual images by label does not enforce separation by roll. Related views can remain in both training and held-out data across folds. Averaging those scores does not correct the overlap; the partitions need to separate the entities the model will encounter as new in production.",
+          "distractor_3_explanation": "This fails to establish performance on newly produced rolls because the full archive includes examples used during training. Final model evaluation needs a separate test partition unused for training or hyperparameter tuning. Comparing a score that includes familiar examples with an archived incumbent score does not resolve that evaluation problem."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "B",
+            "confidence": 0.93,
+            "ambiguous_answers": false,
+            "reason": "Overlapping views of the same roll leak across image-level splits, inflating accuracy. Splitting by roll and importing manual assignments gives a leak-free test of new rolls with little manual work. Options A and C keep the leakage, and D evaluates on training data."
+          },
+          "style": {
+            "verdict": "PASS",
+            "score": 0.7,
+            "reason": "The key is a roll-level manual split in AutoML. The decision is real and the options are balanced. The hinge is mostly generic group-leakage reasoning, though, and the stem's mention of roll identifiers and overlapping views gives it away. Option D is the weakest distractor.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": false,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.86,
+            "reason": "Docs support manual ml_use split at import for image AutoML, with test metrics generated from the test set. They also support segregating by entity (stores) to generalize to unseen ones. The random split, image-level folds and full-archive evaluation each fail for a leakage or contamination reason.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "62b7bbc7d07328df9674d4642121139b6e0ca738a07d4c4a1caf09dad8b1ef3f",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "B",
+              "confidence": 0.99,
+              "ambiguous_answers": false,
+              "reason": "Overlapping camera views of the same roll cause data leakage if split at the individual image level. Grouping splits by roll identifier and importing those manual split assignments prevents leakage and accurately estimates performance on new rolls."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "f1c617b9f6d0c03fc911e9635e91f5127a88a5f91f3bcd0f8e2c36e96f8059e0",
+        "verdict_sha256": "0d2ddd4542d0b39ece7a4df950c6c0d6ada2c16e22aefc1066cce5ddcae7e699"
+      },
+      {
+        "candidate_id": "e7d8a90c-04c4-5a28-a0dc-605b6715981f",
+        "question": {
+          "stem": "Your company runs an image-based defect detector that helps factories reject damaged products. Cloud Build retrains, evaluates, and deploys the model whenever the prediction container changes, even when training code and data are unchanged. These GPU jobs delay releases and increase costs. A recent preprocessing update passed training evaluation but changed production predictions. Your team retains the deployed model artifact and has prediction regression tests. You want to release validated serving updates while minimizing repeated GPU training. What should you do?",
+          "correct_answer": "Separate serving releases from continuous training. Use Cloud Build to test the updated container with the retained model artifact in staging, and deploy that combination only after the prediction regression tests pass.",
+          "distractor_1": "Enable Docker layer caching in Cloud Build to accelerate container builds. Keep the combined workflow, rerunning GPU training, model evaluation, and serving deployment whenever the prediction container changes.",
+          "distractor_2": "Move the combined release workflow to Google Kubernetes Engine and add parallel training workers. Continue running GPU training and model evaluation before deploying each updated prediction container on the new cluster.",
+          "distractor_3": "Build the updated serving container in Cloud Build and reuse the retained model artifact. Deploy after container build checks pass, then run prediction regression tests in production after the rollout completes.",
+          "correct_explanation": "The goals are to validate serving updates and minimize repeated GPU training. A separate serving CI/CD workflow reuses the retained model artifact, removing retraining from serving-only releases. Cloud Build can execute regression tests before deployment, and staging tests of the model-serving interface verify raw inputs against expected outputs. Docker layer caching and moving execution to Google Kubernetes Engine retain unnecessary training. Testing predictions only after production deployment leaves serving behavior unvalidated at release time.",
+          "distractor_1_explanation": "This fails to minimize repeated GPU training. Docker layer caching accelerates Docker image construction; it does not skip the separately executed training steps retained in this workflow. Serving-only releases still trigger GPU training.",
+          "distractor_2_explanation": "This fails to minimize repeated GPU training. Google Kubernetes Engine can run training Jobs across multiple Pods, but moving the workflow and adding workers retain the dependency on retraining for every serving change. Separating serving CI/CD removes that unnecessary work.",
+          "distractor_3_explanation": "This fails to release validated serving updates. Successful container construction does not establish that the model-serving interface produces expected predictions. Testing raw inputs against expected outputs in staging before deployment checks the updated serving behavior before factories receive its predictions."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "A",
+            "confidence": 0.96,
+            "ambiguous_answers": false,
+            "reason": "A decouples serving from training and validates the new container with the retained model in staging using regression tests before deploy. This avoids GPU retraining and catches preprocessing regressions. D tests only after production rollout; B and C keep retraining."
+          },
+          "style": {
+            "verdict": "FAIL",
+            "score": 0.45,
+            "reason": "Decoupling serving CI from training is sensible, but B and C lose by ignoring the GPU-reduction want and D by testing after deploy. No Google Cloud-specific alternative needs product knowledge to reject; reads as reading comprehension. A is also longest.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": false,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": false,
+            "cloud_specific_alternative": false,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.84,
+            "reason": "Docs support a separate model-serving CI/CD process and staging tests of serving interfaces against raw inputs and expected outputs, before deployment. Docker caching and GKE keep training; post-rollout-only testing fails validation.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "da5d9f24e7aad9003de6949ad125df5eb05499192f69d98916707ffee60931c5",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "A",
+              "confidence": 0.99,
+              "ambiguous_answers": false,
+              "reason": "Option A decouples serving releases from model retraining, reusing the existing model artifact to avoid unnecessary GPU training costs while running prediction regression tests in staging before production deployment."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "d755d08b99014b0670a7e4488f927d6b8eb33449fbf11f3856f1b070548532d3",
+        "verdict_sha256": "59902e1c5eae8d101f4ba1ce3ba78b1d1348b3106ed73c7535ffc8953274f1ba"
+      },
+      {
+        "candidate_id": "e19b262c-e8d4-5c35-a527-444e05efbb2c",
+        "question": {
+          "stem": "You recently expanded a packaging-defect classifier to more production lines. Its existing Agent Platform Pipelines workflow retrains monthly, and verified labels now arrive through many small Cloud Storage uploads each day. Experiments show that incorporating a week of new examples improves rare-defect recall even when input distributions remain stable. Cloud Build handles releases when training code changes. You want to incorporate verified examples within a week while minimizing repeated training on nearly identical data. How should you address this issue?",
+          "correct_answer": "Replace the monthly schedule with a weekly recurring schedule in Agent Platform Pipelines. Train on one snapshot of accumulated verified examples per run and evaluate each candidate before deployment.",
+          "distractor_1": "Use Agent Platform Model Monitoring input-drift alerts to launch the existing pipeline. Train on accumulated verified examples when a threshold is crossed and evaluate each candidate before deployment.",
+          "distractor_2": "Extend the Cloud Build trigger for training-code changes to run the existing pipeline. Train on accumulated verified examples during each release and evaluate each candidate before deployment.",
+          "distractor_3": "Send Cloud Storage upload notifications through Pub/Sub to a Cloud Run function that launches the existing pipeline. Retrain on accumulated verified examples for every upload and evaluate each candidate before deployment.",
+          "correct_explanation": "The policy needs to incorporate new verified examples within a week and reduce repeated training on nearly identical datasets. Agent Platform Pipelines supports recurring schedules for continuous training. Weekly runs batch the accumulated examples at the cadence shown to improve rare-defect recall, retaining candidate evaluation before deployment. Input-drift alerts might not fire when distributions remain stable, and the Cloud Build source-change trigger depends on code updates. Retraining for every upload repeatedly processes datasets that differ by only a small addition.",
+          "distractor_1_explanation": "This policy does not reliably incorporate verified examples within a week. Agent Platform Model Monitoring input drift measures changes in feature-value distributions relative to a baseline. The experiments show that additional verified examples improve recall even when those distributions remain stable, so useful examples can accumulate without crossing the drift threshold.",
+          "distractor_2_explanation": "This policy does not reliably incorporate verified examples within a week. Cloud Build repository triggers execute builds in response to source events, such as pushes or pull requests. Extending the training-code trigger can launch training during code releases, but new labels in Cloud Storage do not constitute training-code changes. Examples can therefore accumulate while no release triggers retraining.",
+          "distractor_3_explanation": "This policy fails to minimize repeated training on nearly identical data. Cloud Storage can publish notifications when objects are successfully created, and Pub/Sub can trigger a Cloud Run function that submits a pipeline run. Launching training for every small upload repeatedly processes accumulated datasets with only small additions. Weekly recurring runs in Agent Platform Pipelines combine those additions at the experimentally useful cadence."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "A",
+            "confidence": 0.93,
+            "ambiguous_answers": false,
+            "reason": "A weekly schedule matches the one-week freshness need and batches many small daily uploads into one snapshot, avoiding repeated training on near-identical data. B relies on drift, but the distributions are stable. C ties retraining to code releases. D retrains on every upload."
+          },
+          "style": {
+            "verdict": "FAIL",
+            "score": 0.45,
+            "reason": "Options share the same train-on-accumulated-data and evaluate tail and differ mainly in trigger. The weekly schedule is the obvious key from stem facts. Little Google Cloud product knowledge is needed, so it reads like reading comprehension.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": false,
+            "options_distinct_approaches": false,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": false,
+            "cloud_specific_alternative": false,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.86,
+            "reason": "Docs support recurring pipeline schedules for continuous training. Drift alerts fire on feature-distribution distance from a baseline, Cloud Build triggers on repository events, and OBJECT_FINALIZE on every upload. The stem's weekly cadence and 'minimize repeated training' make weekly the only fit.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "278c4d5c24c8dca01707e8aaabe4c6b74b89434e486f13811251a2e415ac6dc3",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "A",
+              "confidence": 0.99,
+              "ambiguous_answers": false,
+              "reason": "A weekly schedule incorporates new verified examples within a week while avoiding redundant retraining on each small daily upload (unlike D). Input distributions are stable so drift alerts (B) won't trigger reliably, and code changes (C) don't ensure weekly data updates."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "ab11d66a06477e4f70a7a1021f62449882ba48485371e0fcc924174d3d01a22b",
+        "verdict_sha256": "e26ab725396518a2b2f3a38c63a22fed6c5544afd47c13a3ccf587120a03da90"
+      },
+      {
+        "candidate_id": "0992cf85-6f92-5674-b233-ff00fb97c122",
+        "question": {
+          "stem": "You are building a solar-generation forecasting system to help a utility schedule backup power. Engineers have prototyped containerized steps for preparing sensor data, training a forecast model, and generating forecasts. Each plant uses the same workflow, but its dataset and training parameters differ. New plants will be added regularly, and engineers expect to improve the shared workflow over time. You want to reuse one workflow across plants while minimizing orchestration infrastructure. What should you do?",
+          "correct_answer": "Publish one parameterized pipeline template to Artifact Registry. Run it on Agent Platform Pipelines, supplying each plant's dataset and training parameters when submitting a run.",
+          "distractor_1": "Create a Managed Service for Apache Airflow environment. Implement a shared DAG that submits the data preparation, training, and forecasting jobs using each plant's dataset and training parameters.",
+          "distractor_2": "Generate a separate Agent Platform Pipelines definition for each plant with its dataset and training parameters substituted. Regenerate and distribute all plant-specific definitions whenever the shared workflow changes.",
+          "distractor_3": "Deploy Kubeflow Pipelines on Google Kubernetes Engine. Maintain a shared parameterized workflow that launches the data preparation, training, and forecasting containers using each plant's dataset and training parameters.",
+          "correct_explanation": "The decision hinges on reusing the workflow and minimizing orchestration infrastructure. Artifact Registry stores reusable, versioned pipeline templates, and Agent Platform Pipelines accepts parameter values when a run is submitted. This separates the shared workflow from each plant's dataset and training choices. Agent Platform Pipelines provides serverless orchestration for the containerized steps. Managed Service for Apache Airflow adds an orchestration environment, separate plant definitions multiply workflow artifacts to update, and deploying Kubeflow Pipelines on Google Kubernetes Engine adds infrastructure to maintain.",
+          "distractor_1_explanation": "This fails the goal of minimizing orchestration infrastructure. Managed Service for Apache Airflow can orchestrate the jobs, but it requires an environment containing schedulers, workers, a database, and other components. Although Google manages the underlying infrastructure, creating and configuring this environment adds an orchestration layer that serverless Agent Platform Pipelines already provides for the ML workflow.",
+          "distractor_2_explanation": "This fails the goal of reusing one workflow across plants. It creates multiple compiled workflow definitions to regenerate and distribute when the common workflow changes. Agent Platform Pipelines supports passing external resource paths and other inputs as parameters, and Artifact Registry supports reusable templates. Plant-specific inputs therefore do not require separate workflow definitions.",
+          "distractor_3_explanation": "This fails the goal of minimizing orchestration infrastructure. Deploying Kubeflow Pipelines on Google Kubernetes Engine introduces a cluster and a pipeline deployment to maintain. Agent Platform Pipelines can execute workflows defined with the Kubeflow Pipelines SDK using serverless orchestration, preserving the shared parameterized workflow with less infrastructure to operate."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "B",
+            "confidence": 0.9,
+            "ambiguous_answers": false,
+            "reason": "A parameterized pipeline template in Artifact Registry run on managed Pipelines reuses one workflow, supports versioned shared updates, and needs no cluster or Airflow environment. A duplicates definitions; C and D add infrastructure."
+          },
+          "style": {
+            "verdict": "PASS",
+            "score": 0.86,
+            "reason": "Clear utility forecasting scenario with one decision: reuse a parameterized pipeline template on managed Agent Platform Pipelines. Self-hosted Kubeflow on GKE and Managed Airflow are real Google Cloud alternatives that fail the minimal-infrastructure want. Option A is the weakest distractor.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": true,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.82,
+            "reason": "Docs support the key: Artifact Registry holds reusable pipeline templates, Agent Platform Pipelines is serverless and runs KFP pipelines, and parameters are shown. Airflow environments need schedulers, workers and a database. KFP-on-GKE overhead is implied by contrast.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "655513528bd937a2ea2e5a113488448dc167a4b16275b9907ea78c2597ba3e13",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "B",
+              "confidence": 0.98,
+              "ambiguous_answers": false,
+              "reason": "Publishing a single parameterized pipeline template to Artifact Registry and executing it on serverless Pipelines (passing plant-specific parameters at runtime) maximizes workflow reuse across plants while minimizing orchestration infrastructure compared to GKE or Airflow."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "2ec9632775067ad320b5e6204feb493a713b08cc996fac089ee357f60dd6c29b",
+        "verdict_sha256": "fee5f96ceafed5dadf551a807366cbf5149454c4f2bc8f6d3d4b8e2e69e7b09c"
+      },
+      {
+        "candidate_id": "8df094e1-1166-5d4b-80f1-6cfca6b28016",
+        "question": {
+          "stem": "Your company uses a player churn classifier to select retention offers during gameplay. A nightly SQL job prepares activity and spending features in BigQuery for training, while the prediction service calculates those features independently from player events. After a recent deployment, checks found different feature values for the same player snapshot. You want consistent preprocessing between training and serving while minimizing feature lookup latency for interactive predictions. What should you do?",
+          "correct_answer": "Publish the prepared BigQuery features through Agent Platform Feature Store and synchronize a feature view after nightly updates. Train from the BigQuery table and fetch player features through online serving.",
+          "distractor_1": "Query the prepared BigQuery feature table for each player prediction and pass the returned values to the classifier. Continue training from that table using the nightly SQL preprocessing job.",
+          "distractor_2": "Coordinate preprocessing releases through Agent Platform Pipelines, deploying the SQL job and prediction service together. Assign matching release identifiers to their separate feature calculations whenever the training or serving definitions change.",
+          "distractor_3": "Build a streaming Dataflow job to calculate serving features from player events and populate an online store. Continue training from features prepared separately by the nightly BigQuery SQL job.",
+          "correct_explanation": "The goals are consistent preprocessing and low-latency feature retrieval during gameplay. Agent Platform Feature Store synchronizes prepared BigQuery values into a feature view and provides low-latency online serving. Training from the same BigQuery source lets both paths reuse the SQL-produced features instead of independently calculating them. Querying BigQuery for every prediction places warehouse queries on the request path, while coordinated releases and separate streaming calculations do not establish shared preprocessing.",
+          "distractor_1_explanation": "This shares the prepared features, but fails the goal of minimizing interactive lookup latency. It executes a BigQuery query on every prediction request. Agent Platform Feature Store provides dedicated low-latency online feature retrieval from synchronized BigQuery values, which addresses the gameplay lookup requirement.",
+          "distractor_2_explanation": "This fails the preprocessing consistency goal. Agent Platform Pipelines executes component code according to workflow dependencies; coordinating releases does not make separate calculations produce equivalent values. Matching release identifiers leaves the observed calculation differences unresolved. Serving the prepared BigQuery values through Agent Platform Feature Store establishes a shared source instead.",
+          "distractor_3_explanation": "This fails the preprocessing consistency goal. Dataflow streaming aggregations use windows, watermarks, and triggers, which determine event grouping and when results are emitted. A separate streaming implementation can therefore differ from the nightly SQL calculations. Agent Platform Feature Store synchronizes the already-prepared BigQuery values rather than introducing another calculation path."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "A",
+            "confidence": 0.9,
+            "ambiguous_answers": false,
+            "reason": "A uses one BigQuery feature source for both training and serving, with Feature Store online serving for low-latency lookups. B and C keep separate calculations, so they can still diverge. D reads from BigQuery per request, which is slow for interactive use."
+          },
+          "style": {
+            "verdict": "PASS",
+            "score": 0.85,
+            "reason": "Real training-serving skew decision with a Feature Store key and plausible distractors (streaming Dataflow, release coordination, BigQuery per-request). Minor: option C is wordy and the stem is a little long, but there is no ban or gotcha.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": true,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "UNCERTAIN",
+            "score": 0.6,
+            "reason": "The docs support the key: Feature Store syncs BigQuery values to a feature view and serves online with low latency. They do not say that per-request BigQuery queries are slow, which is the only reason distractor 1 loses. Distractor 3's rejection rests on an inference from Dataflow windowing docs.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": false,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": false
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "6c3ba84ece526b864368c4c788c41eb81a79d7528c19908827dcd16b499c526e",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "A",
+              "confidence": 0.99,
+              "ambiguous_answers": false,
+              "reason": "Option A eliminates training-serving skew by using a single feature calculation in BigQuery and syncing it to the Feature Store's online serving layer for low-latency interactive lookups. B and C maintain dual calculation pipelines, while D has high latency due to querying BigQuery directly."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "56dea8f876463d90ed977aa45c647acaeb63a95b01f3282c40b7c6c7943d2120",
+        "verdict_sha256": "14974bd7f35c515ad94fd2f7f8180d3800564ad1160adb1d70a3e458bc0d6047"
+      },
+      {
+        "candidate_id": "d72f4532-5075-5209-a834-4f520c327bc9",
+        "question": {
+          "stem": "You work for an online marketplace whose AutoML tabular classifier flags suspected counterfeit listings for analyst review. Its retraining pipeline approves candidates using overall accuracy. Monitoring shows the review queue growing even though reported accuracy remains high. Counterfeit listings are rare, and the pipeline's held-out labeled listings reflect their prevalence in production. You want to improve counterfeit detection while minimizing unnecessary analyst reviews. Which approach should you use?",
+          "correct_answer": "Evaluate candidates with Agent Platform classification evaluations on the representative held-out listings. Examine counterfeit precision and recall across confidence thresholds, then gate pipeline approval on meeting detection and review targets at the selected threshold.",
+          "distractor_1": "Configure Agent Platform Model Monitoring to compare training feature distributions with production listings. Gate pipeline approval on small distribution differences and each candidate's overall evaluation accuracy exceeding the current model's accuracy on representative held-out listings.",
+          "distractor_2": "Rank candidates by the area under the ROC curve from Agent Platform classification evaluations on representative held-out listings. Approve the highest-scoring candidate and retain the current production model's confidence threshold.",
+          "distractor_3": "Create an evaluation sample containing equal numbers of counterfeit and legitimate listings, and run batch predictions for each candidate. Gate pipeline approval on counterfeit precision and recall meeting targets on this balanced sample.",
+          "correct_explanation": "You need to detect more counterfeits and limit false alerts sent to analysts. Recall measures the proportion of actual counterfeits detected, while precision measures the proportion of counterfeit alerts that are correct. Agent Platform classification evaluations provide these metrics across confidence thresholds, exposing the tradeoff between detection and unnecessary reviews. Evaluating representative held-out listings preserves production prevalence, and gating approval at the selected threshold validates the intended behavior. Feature distribution monitoring does not establish prediction correctness, ROC area does not validate the selected threshold, and balanced evaluation data can overstate production precision.",
+          "distractor_1_explanation": "This does not validate improved counterfeit detection or reduced unnecessary reviews. Agent Platform Model Monitoring compares feature distributions with a baseline; those comparisons do not measure predictions against ground-truth labels. Overall accuracy counts correctly predicted legitimate listings alongside correctly detected counterfeits. Because legitimate listings dominate, high accuracy can coexist with poor counterfeit recall. Neither small distribution differences nor higher overall accuracy establishes acceptable counterfeit precision and recall.",
+          "distractor_2_explanation": "This does not establish the detection and review performance at the retained confidence threshold. Agent Platform reports AuROC as the area under the ROC curve, summarizing performance across thresholds. It separately provides precision and recall at different thresholds because changing the threshold changes those metrics. The highest AuROC therefore does not guarantee acceptable counterfeit recall or precision at the current threshold. With many legitimate listings, false alerts can still consume substantial analyst capacity.",
+          "distractor_3_explanation": "This fails to validate unnecessary reviews under production prevalence. Agent Platform defines precision as the fraction of classification predictions that are correct. Increasing rare counterfeit listings to half the evaluation sample changes the relative numbers of true counterfeit alerts and false alerts from legitimate listings. When false positives occur, this can inflate measured counterfeit precision compared with production. Meeting precision and recall targets on that sample therefore does not establish acceptable review precision on production listings."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "D",
+            "confidence": 0.9,
+            "ambiguous_answers": false,
+            "reason": "With rare positives, accuracy is misleading. Precision and recall at a chosen threshold on prevalence-representative held-out data address both detection (recall) and analyst load (precision). Balanced sampling distorts precision; ROC AUC ignores the threshold."
+          },
+          "style": {
+            "verdict": "PASS",
+            "score": 0.78,
+            "reason": "Tests a real decision: metric and threshold choice for a rare-class classifier on representative held-out data. Distractors are plausible: AUC with unchanged threshold, Model Monitoring skew gate plus accuracy, and a balanced sample that distorts precision. Hinge is mostly ML knowledge.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": true,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.86,
+            "reason": "Docs support the key: evaluations give precision and recall across confidence thresholds. Model Monitoring covers drift and attribution, not label-based correctness. AuROC is threshold-independent. Balanced-sample precision inflation is standard reasoning, not a doc quote.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "c3ac4c60f22353f8f8ddb457e90e617f5c1dbc5e6567c20fd5dbf7d5b79c1f6c",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "D",
+              "confidence": 0.98,
+              "ambiguous_answers": false,
+              "reason": "For rare classes (counterfeits), overall accuracy is misleading. Evaluating precision (to control false positives/review queue size) and recall (detection rate) across confidence thresholds on representative held-out data directly optimizes the operational tradeoff."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "a1a457694688a0f274644cfcdcb9f913539c8ff892785859afe9b1a2938ce4cf",
+        "verdict_sha256": "763601e0c5483d14477533f4403f103828e547c3e9c581583969426f950ff7e0"
+      },
+      {
+        "candidate_id": "93929b02-404f-5abe-a533-70c6492bae65",
+        "question": {
+          "stem": "You manage a parcel-volume forecaster that sets staffing levels at distribution depots. Its release job currently retrains the model whenever the shared repository changes, including frequent dashboard and request-logging updates. You are migrating release automation to Cloud Build. Training uses a fixed, approved historical dataset, and feature-preparation and training logic change occasionally. You want each training-related revision reflected in the model while minimizing redundant training runs. What should you do?",
+          "correct_answer": "Configure Cloud Build triggers for feature-preparation and training code changes to deploy the revised pipeline and launch retraining in Agent Platform Pipelines. Keep dashboard and request-logging releases on their existing application delivery path.",
+          "distractor_1": "Retain a Cloud Build trigger for every repository change to launch retraining in Agent Platform Pipelines. Evaluate each trained candidate against the current model and promote it only when quality criteria are met.",
+          "distractor_2": "Use Agent Platform Model Monitoring input-drift alerts to launch retraining in Agent Platform Pipelines. Release revised feature-preparation and training code through Cloud Build as changes are merged into the repository.",
+          "distractor_3": "Schedule weekly retraining in Agent Platform Pipelines using Cloud Scheduler and run the latest training code against the approved dataset. Use Cloud Build independently to deliver repository changes as they are merged.",
+          "correct_explanation": "The policy needs to incorporate training-related revisions and avoid redundant training on a fixed dataset. Cloud Build triggers can execute builds only when repository changes match specified criteria. Scope those criteria to feature-preparation and training code, then deploy and execute the revised pipeline using Agent Platform Pipelines. Unrelated application releases can follow their separate delivery path. Repository-wide triggers still incur unnecessary training, input-drift alerts do not identify training-code revisions, and calendar schedules repeat training even when nothing relevant has changed.",
+          "distractor_1_explanation": "This fails to minimize redundant training runs. Model evaluation occurs after training and determines whether the candidate qualifies for promotion. It cannot prevent the training compute already consumed by dashboard and request-logging changes. Cloud Build can instead filter triggering changes before launching retraining.",
+          "distractor_2_explanation": "This fails to ensure that each training-related revision is reflected in a trained model. Agent Platform Model Monitoring input-drift alerts respond to changes in production feature distributions. Training logic can change while those distributions remain stable, so releasing revised code through Cloud Build does not ensure that drift-triggered retraining will execute it.",
+          "distractor_3_explanation": "This fails to minimize redundant training runs. Cloud Scheduler triggers the pipeline according to the calendar, including weeks when the approved dataset and training logic are unchanged. Revisions also wait until the next scheduled run, and multiple revisions between runs might not each receive a training run. Cloud Build triggers scoped to relevant changes align retraining with the actual changes."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "C",
+            "confidence": 0.92,
+            "ambiguous_answers": false,
+            "reason": "Path-filtered Cloud Build triggers on feature-prep and training code retrain only when relevant code changes, so every training-related revision is reflected and dashboard/logging updates cause no runs. Fixed dataset makes drift or weekly schedules irrelevant; D retrains on every change."
+          },
+          "style": {
+            "verdict": "FAIL",
+            "score": 0.45,
+            "reason": "Key is evident from the stem (trigger only on training-related code changes); mostly reading comprehension. A, B and D each ignore a stated need. Little Google Cloud product hinge beyond implied Cloud Build triggers.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": false,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": false,
+            "cloud_specific_alternative": false,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.88,
+            "reason": "Docs support: new implementation deploys a new pipeline via CI/CD; Cloud Build triggers can fire only when changes match criteria; evaluation follows training; drift alerts monitor input distributions; Scheduler is calendar-based. Key fits and distractors fail for supported reasons.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "c706f3cf4e902634515a4186ae6a56e665899856e1fc8f4c238de03565b7feae",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "C",
+              "confidence": 0.98,
+              "ambiguous_answers": false,
+              "reason": "Since the training dataset is fixed and only feature/training code changes occasionally in a shared repo, path-filtered Cloud Build triggers on training-related files ensure retraining occurs on every relevant revision while avoiding redundant runs from dashboard/logging commits."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "7dd5070fc9bd900cd932c13f33931cb8af4266e3522c0e3688ffb910fa98f902",
+        "verdict_sha256": "210e8e71500a56b3068e07a168cbcbecf44cb02fa5e1f4ad242edc9516c77ea8"
+      },
+      {
+        "candidate_id": "5a0c6bf1-6ced-53b7-843b-ac89d823d5bb",
+        "question": {
+          "stem": "Your company uses a spoilage classifier to prioritize pallet inspections at food distribution centers. Expansion into more product categories has increased automated releases through Cloud Build, which deploys candidates when overall validation accuracy improves. Recent candidates pass this gate, but inspectors report more missed spoilage in temperature-sensitive categories that represent a small share of the evaluation data. Your training pipeline retains labeled evaluation examples for every category. You want to automate releases while minimizing missed spoilage across product categories. What should you do first?",
+          "correct_answer": "Add category-level spoilage recall checks to the pipeline's evaluation stage. Make Cloud Build deploy a candidate only after every product category meets its predefined recall threshold.",
+          "distractor_1": "Raise the overall validation accuracy threshold used by Cloud Build. Deploy a candidate when its combined accuracy across all product categories exceeds the stricter threshold.",
+          "distractor_2": "Enable Agent Platform Model Monitoring for deployed candidates to detect input feature drift. Make Cloud Build roll back releases when feature distributions exceed their configured drift alert thresholds.",
+          "distractor_3": "Add prediction integration tests to the Cloud Build deployment workflow. Deploy a candidate after its serving container loads successfully, returns valid scores, and passes typical prediction request checks.",
+          "correct_explanation": "The release workflow needs to remain automated while controlling missed spoilage in every category. Recall measures true positives relative to all labeled positives, so category-level spoilage recall directly measures how many spoiled pallets the classifier detects within each category. Evaluate these slices against predefined thresholds and make deployment through Cloud Build conditional on passing every check. Aggregate accuracy can mask slice-specific errors, feature-drift alerts measure distribution changes, and serving integration tests establish functionality rather than category-level predictive quality.",
+          "distractor_1_explanation": "This fails to control missed spoilage across product categories. A global summary metric can mask poor performance on smaller data slices even when its threshold is raised. Overall accuracy measures correctness across all examples; it does not establish adequate detection of spoiled pallets within each category.",
+          "distractor_2_explanation": "This fails to control the observed category-specific missed spoilage. Input feature-drift alerts from Agent Platform Model Monitoring compare feature distributions against a baseline; they do not compare predictions with labeled spoilage outcomes. Recall can regress even when input distributions remain stable, so drift-triggered rollback does not provide the needed model-quality release gate.",
+          "distractor_3_explanation": "This fails to control missed spoilage across categories. Loading the model and successfully handling prediction requests verify serving functionality, but valid scores can still produce incorrect classifications. The Cloud Build release gate needs evaluation on labeled category slices against quality thresholds to catch the observed regression."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "C",
+            "confidence": 0.93,
+            "ambiguous_answers": false,
+            "reason": "The problem is that overall accuracy hides weak recall in small categories. Per-category spoilage recall gates in the evaluation stage, enforced by Cloud Build, fix this directly. The other options check serving health, drift, or overall accuracy, so they don't."
+          },
+          "style": {
+            "verdict": "FAIL",
+            "score": 0.55,
+            "reason": "Clear scenario and a sound ML decision (per-category recall gate instead of overall accuracy). But the hinge is generic evaluation practice, not a Google Cloud capability. Options A and D mostly ignore the stated problem, so the item leans toward reading comprehension.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": false,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": true
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.88,
+            "reason": "Docs support slice-level evaluation against predefined thresholds to avoid masking by global metrics, and automating model-quality gates in CI/CD. Drift monitoring compares feature distributions only; integration tests verify loading/invocation, not slice quality.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "cca6e9da0340b475d054ba29d456df774d59cfeb7f8bf1799e19b55489baa245",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "C",
+              "confidence": 0.99,
+              "ambiguous_answers": false,
+              "reason": "Overall accuracy masks performance degradation in small slices (temperature-sensitive categories), and missed spoilage is a false negative (recall) problem. Adding slice-level recall gates in the evaluation stage directly prevents deploying models with poor recall in any category."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "c4a00e107ee3b91b6c7caf870700fdfbbe11271ea2352d762d37905f43472ef2",
+        "verdict_sha256": "7da977eedff0b63ba91437fb3edf4e788f99690d335475b85cc38ba9676e27d3"
+      },
+      {
+        "candidate_id": "d35c2990-9b09-5533-8c64-c1b58f7f5920",
+        "question": {
+          "stem": "You recently began designing a click prediction model for an advertising platform. Historical replays show that training on the latest four weeks of labeled impressions gives better predictions than training on the complete history. Campaign changes alter the relationship between inputs and clicks even when input distributions remain similar. The replays also show that prediction quality declines after about a week. You want to maintain accurate click predictions while minimizing retraining cost. What should you do?",
+          "correct_answer": "Schedule weekly retraining in Agent Platform Pipelines using the latest four weeks of labeled impressions. Evaluate each candidate on a later held-out period and deploy it only if it meets prediction quality criteria.",
+          "distractor_1": "Run weekly retraining in Agent Platform Pipelines using the complete labeled impression history. Evaluate each candidate on a later held-out period and deploy it only when it improves prediction quality over its predecessor.",
+          "distractor_2": "Trigger retraining in Agent Platform Pipelines from Agent Platform Model Monitoring input drift alerts, using the latest four weeks of labeled impressions. Evaluate candidates on a later held-out period before deployment.",
+          "distractor_3": "Train the launch model using the latest four weeks of labeled impressions. Refresh its online features through Agent Platform Feature Store as campaign activity changes, and retain the original trained model.",
+          "correct_explanation": "The replay results establish a useful training window and an approximate retraining interval. Agent Platform Pipelines supports scheduled training and evaluation, so weekly retraining ties training frequency to the observed deterioration. The four-week window follows the demonstrated accuracy advantage. Evaluating on a later held-out period reflects subsequent production conditions, and quality criteria govern deployment. Complete-history training retains outdated patterns, input drift alerts can miss changing input-to-click relationships, and feature refreshes leave the trained model unchanged.",
+          "distractor_1_explanation": "This policy fails the accuracy goal because its expanding training history retains older campaign patterns that the replays show reduce prediction quality. Continuous training captures emerging patterns through new data. Evaluation can reject an inferior candidate, but it does not correct the training-data policy or produce the needed replacement.",
+          "distractor_2_explanation": "This policy fails the accuracy goal because Agent Platform Model Monitoring input drift alerts measure changes in feature distributions relative to a baseline. Campaigns can change input-to-click relationships while those distributions remain similar. Consequently, an alert-only trigger can leave a deteriorating model unretrained despite the week-long deterioration observed in replays.",
+          "distractor_3_explanation": "This policy fails the accuracy goal because Agent Platform Feature Store synchronizes and serves current feature values; refreshing those inputs does not update the retained model's learned relationships. Continuous training in Agent Platform Pipelines trains replacement models on new data to capture emerging patterns, addressing the deterioration shown by the replays."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "A",
+            "confidence": 0.9,
+            "ambiguous_answers": false,
+            "reason": "Concept drift with stable input distributions means input drift alerts (B) won't trigger. Quality decays after about a week, so weekly retraining on the latest four weeks fits. C uses full history, which is worse. D keeps a stale model."
+          },
+          "style": {
+            "verdict": "FAIL",
+            "score": 0.5,
+            "reason": "A, B and C are all Pipelines retraining with a held-out evaluation, differing only in trigger or data window, so that is more than one near-pair. The stem facts (similar inputs, four weeks better) eliminate B and C directly, which makes it reading comprehension. The hinge is mostly generic ML.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": false,
+            "options_distinct_approaches": false,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": false,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.84,
+            "reason": "Docs support scheduled Pipelines retraining, input drift as a distribution comparison against a baseline, and Feature Store as syncing feature values. The four-week window and weekly cadence come from the stem's replay results. Each distractor fails for a scenario-specific reason.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "8662124f869673a1f4e9e8d19db596dc80a90c624a39016103f2ace2b6755151",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "A",
+              "confidence": 0.98,
+              "ambiguous_answers": false,
+              "reason": "Concept drift occurs without input distribution drift (ruling out B), quality degrades after a week (requiring weekly retraining, ruling out D), and the latest 4 weeks outperform full history while minimizing training cost (ruling out C). Thus, A is uniquely best."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "cc2bcd9ef5f0a57125c8c1092566a9f182f6e2dff67f35a612ea1a196c6d89b6",
+        "verdict_sha256": "f00cbae075a36faa5da0a75670f09b6b50580ab552fb646f3e928e7f4414c4b3"
+      },
+      {
+        "candidate_id": "2b41de0b-da93-5dc3-baff-0fbe2535e441",
+        "question": {
+          "stem": "You are maintaining a complaint classifier that a consumer-goods company recently deployed to prioritize injury reports for investigation. Routine return requests dominate its traffic, and overall accuracy remains high. Labeled audits now show that more injury reports are being routed to the routine queue. An existing Agent Platform Pipelines workflow can retrain the classifier, but the team has not settled on its automatic trigger. You want retraining to respond to missed injury reports while minimizing training runs caused by changes in routine complaint traffic. How should you address this issue?",
+          "correct_answer": "Use injury-report recall from labeled audits as the trigger. Launch the existing Agent Platform Pipelines workflow when recall falls below the operating threshold.",
+          "distractor_1": "Retain overall accuracy from labeled audits as the trigger. Launch the existing Agent Platform Pipelines workflow when accuracy falls below the production model's operating threshold.",
+          "distractor_2": "Configure input feature drift alerts in Agent Platform Model Monitoring as the trigger. Launch the existing Agent Platform Pipelines workflow when feature distributions exceed alert thresholds.",
+          "distractor_3": "Schedule the existing Agent Platform Pipelines workflow to retrain daily on accumulated labeled complaints. Promote the latest candidate when its overall accuracy exceeds the production model's accuracy.",
+          "correct_explanation": "The trigger needs to respond to missed injury reports while avoiding unnecessary training caused by routine complaint changes. Recall measures the fraction of actual injury reports correctly classified, so declining recall directly captures the relevant failure. Agent Platform Pipelines can execute the existing retraining workflow when model performance degrades. Overall accuracy can mask errors in the rare class, input drift measures distributions rather than classification correctness, and daily scheduling runs training regardless of injury detection quality.",
+          "distractor_1_explanation": "This fails to reliably trigger retraining for missed injury reports. Successful classification of the dominant routine-return class can keep overall accuracy high despite worsening injury-report detection. Agent Platform model evaluation provides class recall, and TensorFlow Model Analysis distinguishes overall quality from performance on particular data subsets.",
+          "distractor_2_explanation": "This fails to tie retraining to missed injury reports while minimizing reactions to routine traffic changes. Agent Platform Model Monitoring compares input feature distributions with a baseline; it does not measure injury-report recall against labels through input drift. Routine complaint changes can exceed drift thresholds even when injury detection remains acceptable, and declining recall need not produce an input drift alert.",
+          "distractor_3_explanation": "This fails to minimize unnecessary training because an Agent Platform Pipelines schedule executes regardless of injury-report detection quality. The overall-accuracy promotion gate also allows performance on dominant routine complaints to mask continued injury-report misses. A recall-based performance trigger connects retraining to the business-critical failure."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "D",
+            "confidence": 0.93,
+            "ambiguous_answers": false,
+            "reason": "Class imbalance masks missed injuries in overall accuracy. Triggering on injury-class recall from labeled audits targets missed injury reports and avoids runs from routine traffic shifts (feature drift). D fits best."
+          },
+          "style": {
+            "verdict": "UNCERTAIN",
+            "score": 0.6,
+            "reason": "The scenario is clear and the trigger-metric decision is meaningful. The four options are parallel and plausible, and B is a Google Cloud-specific distractor. But the hinge is mostly generic ML (recall vs accuracy on imbalanced data), with little Google Cloud capability knowledge.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": false,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.85,
+            "reason": "Docs define recall as per-class true positive rate and describe continuous evaluation with retraining on degradation. Pipelines are triggerable via SDK. Drift measures distributions only; schedules run regardless of quality. Accuracy masking is general knowledge, partly supported by TFMA.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "69c84ceb6d67d03095cb3408b92039658b76e944e70fa2be3e6b9301fe8f2e2e",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "D",
+              "confidence": 0.98,
+              "ambiguous_answers": false,
+              "reason": "The dataset is heavily imbalanced toward routine complaints, masking false negatives in overall accuracy. Triggering retraining based on injury-report recall directly addresses missed injury reports without triggering unnecessary runs from shifts in routine complaint traffic."
+            },
+            "review": {
+              "verdict": "REVISE",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [
+                "Violates O3: Distractor 1 ('Retain overall accuracy from labeled audits as the trigger') is directly ruled out by the literal stem fact 'overall accuracy remains high' despite more injury reports being missed."
+              ],
+              "fix": "Replace Distractor 1 with a plausible metric from labeled audits (such as injury-report precision) or remove 'and overall accuracy remains high' from the stem so Distractor 1 requires ML class-imbalance knowledge rather than literal stem contradiction."
+            }
+          }
+        },
+        "request_sha256": "a690f568a1e73db13d859c2fe85d13bfcc8d99aa60e79587465027e7c3460da3",
+        "verdict_sha256": "6460723b2757e0b7e4db77e8eb8c37056c44a6f47961c1e239b7b8694a0d6e68"
+      },
+      {
+        "candidate_id": "3337a1ec-140f-5412-b3c1-10e879c5a676",
+        "question": {
+          "stem": "Your company runs a pipe-leak classifier for a water utility using pressure sensors that report different units. Monitoring shows inconsistent feature values when production readings are replayed for training. The Dataflow batch job converts units before clipping values, while a separately maintained Dataflow streaming job clips values before conversion. Both jobs use Apache Beam, and the classifier consumes their prepared features. You want consistent preprocessing between training and serving while minimizing the code your team maintains. What should you do?",
+          "correct_answer": "Create a reusable Apache Beam transform that converts pressure units before clipping values, and use it in both existing Dataflow jobs. Regenerate the training features with this transform and retrain the pipe-leak classifier.",
+          "distractor_1": "Rewrite both preprocessing jobs in Apache Spark on Managed Service for Apache Spark. Share unit conversion followed by clipping across historical and incoming readings, regenerate the training features, and retrain the existing pipe-leak classifier.",
+          "distractor_2": "Move training preprocessing to BigQuery SQL and retain Dataflow for incoming readings. Implement conversion followed by clipping separately in both systems, add parity tests for preprocessing changes, regenerate the training features, and retrain the classifier.",
+          "distractor_3": "Add Agent Platform Model Monitoring to compare serving feature distributions with the training baseline. Keep the preprocessing jobs and trigger classifier retraining on sensor readings whenever monitoring alerts indicate feature skew.",
+          "correct_explanation": "The goals are consistent preprocessing and minimal maintained code. Apache Beam supports sharing common transforms across batch and streaming pipelines, so both Dataflow jobs can use one implementation of conversion followed by clipping. Dataflow respects data dependencies, preserving this processing sequence. Regenerating training features and retraining aligns training with the shared preprocessing used for serving. Rewriting the jobs in Spark adds unnecessary replacement work, separate BigQuery and Beam implementations require synchronization, and monitoring-triggered retraining leaves the conflicting preprocessing unchanged.",
+          "distractor_1_explanation": "This fails the goal of minimizing maintained code by requiring replacement implementations for both existing pipelines. Managed Service for Apache Spark runs Spark workloads, but the existing Apache Beam jobs already support a shared library of reusable transforms. Sharing their preprocessing achieves consistency through reuse rather than rewriting both jobs in another framework.",
+          "distractor_2_explanation": "This fails the goal of minimizing maintained code. BigQuery SQL can perform transformations, but this approach maintains separate SQL and Apache Beam implementations of the same preprocessing. Duplicated pipeline logic creates code management overhead because both copies must remain synchronized. A shared Apache Beam transform lets both Dataflow jobs reuse one implementation.",
+          "distractor_3_explanation": "This fails the requirement for consistent preprocessing. Agent Platform Model Monitoring compares feature distributions and alerts on training-serving skew. Retraining in response to those alerts leaves the two Dataflow jobs applying conversion and clipping in different orders. Sharing an Apache Beam transform corrects the preprocessing mismatch; distribution monitoring only identifies its symptoms."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "D",
+            "confidence": 0.9,
+            "ambiguous_answers": false,
+            "reason": "Both jobs already use Beam, so one shared Beam transform (convert then clip) used in batch and streaming removes the skew with the least code to maintain. The other options rewrite everything, duplicate logic, or only detect skew."
+          },
+          "style": {
+            "verdict": "FAIL",
+            "score": 0.4,
+            "reason": "Key is obvious: share one Beam transform across two Beam jobs. No real Google Cloud product hinge. Distractors are weak: Spark rewrite is needless migration, monitoring doesn't fix the cause, and the dual-implementation option repeats the problem. Reads as comprehension.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": false,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": false,
+            "cloud_specific_alternative": false,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "UNCERTAIN",
+            "score": 0.6,
+            "reason": "Docs support the key: Beam transforms can be shared across bounded and unbounded pipelines via a shared library. But the key explanation says 'Dataflow respects data dependencies, preserving this processing sequence', which the excerpts don't support. Spark rejection quote only says Spark exists.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": false,
+            "evidence_supported": false,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "3e2e2d07a9ca39149394d959899b1b05099c4742375bf09b1c8158065d2f7f9f",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "D",
+              "confidence": 1.0,
+              "ambiguous_answers": false,
+              "reason": "Both jobs already use Apache Beam on Dataflow. Creating a shared Beam transform (converting units before clipping) and applying it to both batch and streaming pipelines eliminates training-serving skew while minimizing code maintenance without unnecessary rewrites."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "a7ab722cabc146b6470a49b89f7b1e144f62dc7ab76fc9a4f3b33ace879f8a05",
+        "verdict_sha256": "64e32d6f19df3f54e24130d351f07573baeef8cc84935e726c73e5907fe307ac"
+      }
+    ]
+  },
+  {
+    "source": "pmle-d033-v5-scaling-30-b19.json",
+    "source_sha256": "35fd724c6dbac28cea0caf56e3227732995359172c6ce2a5e4f129c8d60ea778",
+    "rows": [
+      {
+        "candidate_id": "d48ef594-a3a7-57f4-acf3-0a80903bee1d",
+        "question": {
+          "stem": "You manage a marketing team's offer-response classifier in BigQuery ML. Its binary logistic regression uses numeric customer features with different units, including spending and days since the last purchase. A recurring report varies each feature and reruns predictions to help campaign managers compare learned effects, but the report has become slow. You want managers to compare the model's learned effects for a one-standard-deviation change in each feature while minimizing report computation. What should you do?",
+          "correct_answer": "Retrieve standardized coefficients from the existing BigQuery ML model. Rank features by absolute coefficient magnitude and display each coefficient's sign in the campaign managers' recurring report to compare learned feature effects.",
+          "distractor_1": "Retrieve original coefficients from the existing BigQuery ML model. Rank features by absolute coefficient magnitude and display each coefficient's sign in the campaign managers' report to compare learned feature effects.",
+          "distractor_2": "Retrain the BigQuery ML logistic regression to calculate coefficient significance statistics. Retrieve coefficient p-values and rank features from smallest to largest p-value in the campaign managers' recurring feature comparison report.",
+          "distractor_3": "Generate local feature attributions with BigQuery ML for several representative customers. Rank features by their absolute contributions and display contribution signs in the campaign managers' recurring report to compare learned effects.",
+          "correct_explanation": "The report needs comparable learned effects for one-standard-deviation feature changes while reducing repeated prediction work. BigQuery ML's ML.WEIGHTS can return standardized coefficients, assuming features have mean zero and standard deviation one so their absolute magnitudes can be compared. Ranking these coefficients and displaying their signs uses the existing model's weights instead of rerunning predictions for feature variations. Original coefficients retain differing measurement scales, p-values test significance, and local attributions depend on individual customers' feature values.",
+          "distractor_1_explanation": "This fails the requirement to compare effects for one-standard-deviation feature changes. BigQuery ML returns denormalized weights by default, so original coefficients express effects per original measurement unit. Comparing spending and elapsed-time coefficients directly does not account for their different scales; standardized coefficients provide the required comparable magnitudes.",
+          "distractor_2_explanation": "This fails the requirement to compare standardized effect magnitudes. BigQuery ML calculates p-values during model training and exposes them through ML.ADVANCED_WEIGHTS for significance testing against model weights. P-values answer a statistical significance question rather than measuring effects for one-standard-deviation feature changes. Retraining also adds training work without producing the requested comparison.",
+          "distractor_3_explanation": "This fails the requirement to compare learned effects for equal one-standard-deviation feature changes. BigQuery ML's ML.EXPLAIN_PREDICT returns local attributions explaining individual predictions relative to a baseline. For linear and logistic regression, these Shapley attributions combine model weights with standardized feature values. Their magnitudes therefore depend on the selected customers' values, whereas standardized coefficients directly compare the model's learned feature effects."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "B",
+            "confidence": 0.9,
+            "ambiguous_answers": false,
+            "reason": "Standardized coefficients from the existing model show one-SD effects and are comparable across units, with no prediction reruns. Raw coefficients depend on units, p-values measure significance not effect size, and local attributions add computation."
+          },
+          "style": {
+            "verdict": "PASS",
+            "score": 0.82,
+            "reason": "Real BigQuery ML decision: standardized coefficients from the existing model compare per-SD effects cheaply. Distractors (raw coefficients, p-values, Explainable AI attributions) are plausible and product-specific. Minor issues: A/B are a near-pair, and the stem has two wants.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": true,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.88,
+            "reason": "ML.WEIGHTS with STANDARDIZE=TRUE returns weights assuming mean 0 and SD 1, so magnitudes are comparable; default is denormalized. P-values are significance tests via ML.ADVANCED_WEIGHTS; Shapley attributions equal weight times standardized feature value, so they are per-row.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "d064161e6d1fc4393c5b16d377042b47244f0c74f4a301eb1b348fea268ea87c",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "B",
+              "confidence": 0.99,
+              "ambiguous_answers": false,
+              "reason": "BigQuery ML provides ML.WEIGHTS with standardize=TRUE to retrieve standardized coefficients directly from an existing linear/logistic regression model. Standardized coefficients represent the effect of a one-standard-deviation change in numeric features, eliminating slow prediction reruns."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "f898e8e28410356bb03d1b2c57dc9294d65824520c5afae13c79e6b727246cc4",
+        "verdict_sha256": "4b1873aa4b297ff69c79c021831d7b7324ad26d7dd78ea663431501f2e4c5e18"
+      },
+      {
+        "candidate_id": "1a549996-b54d-5577-a641-b911b199b3eb",
+        "question": {
+          "stem": "You are maintaining an equipment-failure classifier for a machinery rental company. Its training data is stored in BigQuery and contains repeated sensor readings and repair labels for each machine. As the fleet grows, the team adds data from more machines. The existing preparation job randomly splits individual readings into training and evaluation datasets. You want to estimate performance on newly added machines while minimizing changes to the existing BigQuery workflow. What should you do?",
+          "correct_answer": "Assign machine identifiers to stable training, validation, and test groups in BigQuery, then join each machine's assignment onto all its sensor readings.",
+          "distractor_1": "Cluster the BigQuery sensor table by machine identifier, then independently sample individual readings to create training, validation, and test datasets in the preparation job.",
+          "distractor_2": "Split the BigQuery sensor data chronologically, assigning the oldest readings to training, intermediate readings to validation, and newest readings to testing across the fleet.",
+          "distractor_3": "Remove exact duplicate rows in BigQuery, then randomly assign the remaining individual sensor readings to training, validation, and test datasets in the preparation job.",
+          "correct_explanation": "The evaluation needs to represent machines absent from training, and preparation should remain in BigQuery. Assigning each machine to one split keeps its readings together, so validation and test data represent unfamiliar machines. Joining these assignments onto the readings changes the existing BigQuery preparation workflow rather than moving it elsewhere. Clustering organizes storage, chronological splitting separates observation times, and deduplication removes repeated rows; none of these establishes separation by machine.",
+          "distractor_1_explanation": "This fails to establish evaluation on unfamiliar machines. BigQuery clustering sorts storage blocks to improve query performance. Independently sampling individual readings can still place readings from the same machine in multiple splits, even when the table is clustered by machine identifier.",
+          "distractor_2_explanation": "This fails to isolate performance on unfamiliar machines. Chronological splitting separates earlier and later observations, which is useful when evaluation should reflect changes over time. Machines with repeated readings can appear on both sides of the time boundaries, so the test set can contain machines represented in training.",
+          "distractor_3_explanation": "This fails to establish evaluation on unfamiliar machines. Removing exact duplicates leaves distinct readings belonging to the same machine. Randomly assigning those readings can distribute a machine's data across multiple splits. Separating datasets by machine keeps every machine's readings in one split and matches the intended evaluation population."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "C",
+            "confidence": 0.93,
+            "ambiguous_answers": false,
+            "reason": "Estimating performance on new machines requires a group split by machine so no machine's readings appear in both train and eval. Option C does this by assigning machine IDs to stable splits in BigQuery. A and D leak machine information, and clustering in B doesn't change the split."
+          },
+          "style": {
+            "verdict": "FAIL",
+            "score": 0.45,
+            "reason": "Sound group-split decision, but it is generic ML data splitting with no Google Cloud hinge. All options are BigQuery-based, with no distinct Google Cloud-specific alternative. Fails v5 product-knowledge and O8.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": false,
+            "cloud_specific_alternative": false,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.88,
+            "reason": "Docs say to segregate splits by entity (stores, users) so the model generalizes to unseen ones. That supports assigning each machine to one split. Clustering only sorts storage blocks, chronological splits use time, and deduping with a random row split still mixes machines.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "677d791c917091d86ac27437a213f9d75cb759e9dd0a8c039c972b1081956da1",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "C",
+              "confidence": 0.98,
+              "ambiguous_answers": false,
+              "reason": "To estimate generalization to newly added machines and prevent data leakage from repeated readings of the same machine across splits, you must perform a group split by machine identifier (e.g., via hashing or stable group assignment in BigQuery) so all readings for a machine stay together."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "498199f248c7fcf0d50e2052807d13e94597fabc319328263536a4d5a3e5130a",
+        "verdict_sha256": "c658e09e850d58651552162b94cb643825f636835bc633c183d9b053bdfd77b8"
+      },
+      {
+        "candidate_id": "990c61fb-da2e-5557-ad5c-d538d63199ec",
+        "question": {
+          "stem": "Your company retrains a parcel-arrival predictor using shipment scans and route records collected in BigQuery. Its running pipeline combines these sources into a training table with SQL, then downloads the rows through paginated query results. As shipment volume grows, downloading the table takes most of the preparation time and delays model refreshes, although the SQL still finishes quickly. You want to increase training-data ingestion throughput while minimizing additional data staging. Which approach should you use?",
+          "correct_answer": "Retain the SQL preparation and replace paginated retrieval with parallel BigQuery Storage Read API streams. Feed incoming record batches directly into the training loader.",
+          "distractor_1": "Export each prepared training table to Cloud Storage before each run. Retain the SQL preparation and configure the training loader to read exported files in parallel.",
+          "distractor_2": "Reserve additional BigQuery query slots for the pipeline. Keep the SQL preparation and continue downloading the completed training table through paginated query results.",
+          "distractor_3": "Increase the training worker's memory to hold the completed training table. Retain SQL preparation and paginated retrieval, then finish downloading all rows before starting training.",
+          "correct_explanation": "The bottleneck is retrieving the prepared training table, and you want higher ingestion throughput with minimal additional staging. BigQuery Storage Read API provides high-throughput streaming reads and divides table rows into disjoint streams for parallel consumption. Feeding those batches directly into the training loader addresses retrieval throughput using the existing table. Cloud Storage exports add a staging copy, additional BigQuery query slots target query execution, and increasing worker memory retains the inefficient paginated retrieval path.",
+          "distractor_1_explanation": "This fails the goal of minimizing additional staging. BigQuery exports create an at-rest copy in Cloud Storage and must finish before exported rows can be read. BigQuery Storage Read API provides high-throughput access directly from the prepared table, avoiding that additional export stage and copy.",
+          "distractor_2_explanation": "This fails the ingestion-throughput goal. BigQuery query slots provide execution capacity that can improve query concurrency and complex-query performance. Here, SQL execution already finishes quickly; adding query capacity leaves the slow paginated result-retrieval mechanism unchanged.",
+          "distractor_3_explanation": "This fails the ingestion-throughput goal because it retains BigQuery's paginated row retrieval, which is appropriate for small result sets and is the least efficient method for high-volume reads. Increasing memory does not replace that retrieval mechanism. BigQuery Storage Read API instead supports parallel streaming consumption of table rows."
+        },
+        "verdict": {
+          "blind_solver": {
+            "verdict": "PASS",
+            "choice": "D",
+            "confidence": 0.93,
+            "ambiguous_answers": false,
+            "reason": "The bottleneck is paginated download, not SQL. The BigQuery Storage Read API streams rows in parallel and feeds the loader directly, with no intermediate staging. Export to Cloud Storage (B) adds staging; extra slots (A) and memory (C) don't fix the download."
+          },
+          "style": {
+            "verdict": "PASS",
+            "score": 0.85,
+            "reason": "Real ingestion-throughput decision hinging on BigQuery Storage Read API vs. export to Cloud Storage, slots, and memory. Plausible distractors, one want. Minor: the Cloud Storage option is the only direct staging foil, and the key is mildly longer.",
+            "decision_level": true,
+            "no_hidden_gotcha": true,
+            "current_names": true,
+            "distractors_plausible": true,
+            "distractors_need_knowledge": true,
+            "options_distinct_approaches": true,
+            "scenario_clear": true,
+            "business_context": true,
+            "constraints_as_wants": true,
+            "decisions_not_syntax": true,
+            "product_knowledge_hinge": true,
+            "cloud_specific_alternative": true,
+            "generic_validation_key": false
+          },
+          "evidence": {
+            "verdict": "PASS",
+            "score": 0.9,
+            "reason": "Docs support the key: the BigQuery API (paginated tabledata.list) is serial and least efficient for high-volume reads, and the Storage API gives parallel disjoint streams for reads. Exports must finish first and create a Cloud Storage copy. Slots help query execution, not retrieval.",
+            "correct_answer_accurate": true,
+            "distractors_incorrect": true,
+            "explanations_accurate": true,
+            "evidence_supported": true,
+            "no_credible_second_answer": true,
+            "scenario_relevant": true,
+            "supported_decision_hinge": true
+          },
+          "argon": {
+            "model": "openrouter/google/gemini-4-argon",
+            "version": 1,
+            "request_sha256": "95d8e510d103206e2efae183beaecb09dce7a49a1da0fbe86dea555deea40282",
+            "blind": {
+              "verdict": "PASS",
+              "choice": "D",
+              "confidence": 0.99,
+              "ambiguous_answers": false,
+              "reason": "The bottleneck is downloading BigQuery rows via paginated REST calls (`tabledata.list`). Replacing this with parallel BigQuery Storage Read API streams dramatically increases read throughput via gRPC (Arrow/Avro) while avoiding extra Cloud Storage staging required by B."
+            },
+            "review": {
+              "verdict": "PASS",
+              "key_correct": true,
+              "other_defensible_option": false,
+              "issues": [],
+              "fix": "No changes needed"
+            }
+          }
+        },
+        "request_sha256": "39916cdc0cad37997fc6a23e0d7e6a7e6910e9147a9645b9f806d5556b6afaf8",
+        "verdict_sha256": "da441088e14a2c052a65a429847665ae972648f65f18bf9c6345af6d4002079d"
+      }
+    ]
+  }
+]

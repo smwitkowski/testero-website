@@ -71,6 +71,8 @@ def test_direct_generator_passes_scope_and_per_call_lm_without_legacy(monkeypatc
     make_predictor = Mock(return_value=predictor)
     monkeypatch.setattr(generator.dspy, "LM", make_lm)
     monkeypatch.setattr(generator.dspy, "ChainOfThought", make_predictor)
+    from contextlib import nullcontext
+    monkeypatch.setattr(generator, "log_lm_calls", lambda *args, **kwargs: nullcontext())
     result = generator.generate_question("Registry objective + STYLE", "Fetched text", model="openrouter/test/model",
                                         difficulty="EASY", exam_subsection="1.2", prompt_version="test")
     assert result["stem"] == "Original stem"

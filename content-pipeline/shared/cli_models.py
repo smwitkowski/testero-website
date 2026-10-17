@@ -278,6 +278,19 @@ def run_claude_request(model: str, prompt: str, schema: dict, *, timeout=CLI_TIM
 
 
 def _run_cli(model, prompt, schema, signature, *, timeout, reasoning_effort="high"):
+    if not isinstance(model, str) or not (model in ("codex", "claude") or model.startswith(("codex/", "claude/"))):
+        raise ValueError("Not a subscription CLI model")
+    if reasoning_effort not in ("low", "medium", "high"):
+        raise ValueError("Reasoning effort must be low, medium or high")
+    from shared.call_logging import model_call
+    resolved = (DEFAULT_CODEX_MODEL if model == "codex" else
+                DEFAULT_CLAUDE_MODEL if model == "claude" else model.split("/", 1)[-1])
+    with model_call(resolved) as usage:
+        return _run_cli_transport(model, prompt, schema, signature, timeout=timeout,
+                                  reasoning_effort=reasoning_effort, usage=usage)
+
+
+def _run_cli_transport(model, prompt, schema, signature, *, timeout, reasoning_effort="high", usage):
     """Use one transport for both DSPy signatures and frozen external requests."""
     codex = model == "codex" or model.startswith("codex/")
     claude = model == "claude" or model.startswith("claude/")
@@ -294,7 +307,7 @@ def _run_cli(model, prompt, schema, signature, *, timeout, reasoning_effort="hig
         if codex:
             schema_path = base / "schema.json"
             schema_path.write_text(json.dumps(_codex_response_schema(schema)))
-            command = ["codex", "exec", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only",
+            command = ["codex", "exec", "--json", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only",
                        "--output-schema", str(schema_path), "-o", str(output)]
             command += ["--ignore-user-config", "--ignore-rules", "-m",
                         DEFAULT_CODEX_MODEL if model == "codex" else model.removeprefix("codex/"),
@@ -315,7 +328,22 @@ def _run_cli(model, prompt, schema, signature, *, timeout, reasoning_effort="hig
             raise CLITimeoutError("CLI model request timed out") from None
         except OSError:
             raise CLIExitError("CLI model command could not start") from None
+        from shared.call_logging import cli_usage
+        usage.update(cli_usage(result.stdout, provider="codex" if codex else "claude"))
         codex_errors = result.stderr.replace(prompt, "") if codex else ""
+        if codex:
+            # Only typed event errors participate; never classify echoed agent text.
+            for line in result.stdout.splitlines():
+                try:
+                    event = json.loads(line)
+                except (ValueError, TypeError):
+                    continue
+                if not isinstance(event, dict) or event.get("type") not in ("error", "turn.failed"):
+                    continue
+                error = event.get("error", event)
+                if isinstance(error, dict):
+                    codex_errors += "\nERROR: " + json.dumps(error)
+
         if result.returncode != 0:
             if codex:
                 if _codex_schema_error(codex_errors):

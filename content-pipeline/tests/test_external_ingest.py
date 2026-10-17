@@ -19,6 +19,8 @@ from test_generation_gate import QUESTION, URL, TEXT, QUOTES
 @pytest.fixture
 def case(tmp_path, monkeypatch):
     scope = plan_questions("cloud-engineer", 1, seed=3)[0]
+    # Historical version-1 artifacts predate frozen objective style policies.
+    scope.pop("style_policy")
     sources = [{"requested_url": URL, "url": URL, "text": TEXT,
                 "retrieved_at": "2026-10-04T00:00:00+00:00",
                 "text_sha256": hashlib.sha256(TEXT.encode()).hexdigest()}]
@@ -236,6 +238,7 @@ def test_all_domains_resolved_before_creating_runs(case):
                  if scope["domain_code"] != case[2]["plan"][0]["domain_code"])
     # Replay its authoring hints at the actual second plan position.
     extra = plan_questions("cloud-engineer", 2, objective_ids=[extra["objective_id"]])[1]
+    extra.pop("style_policy")
     # Extra planned candidate need not yet have a verdict to block unseeded-domain writes.
     case[2]["plan"].append(extra)
     save_input(case)
@@ -301,6 +304,7 @@ def test_completed_stems_block_pending_duplicates_even_when_reordered(case):
     for field in ("persistence_status", "inserted_question_id", "external_verdict", "judge_verdict"):
         extra.pop(field, None)
     second = plan_questions(payload["cert_id"], 2, objective_ids=[payload["plan"][0]["objective_id"]])[1]
+    second.pop("style_policy")
     payload["plan"].append(second)
     extra.update({key: second[key] for key in ("scenario_moment", "opening_style", "question_line", "key_length_rank")})
     request_path = request_directory(case[0]) / (extra["candidate_id"] + ".json")
@@ -470,7 +474,7 @@ def test_scope_replay_uses_actual_index_when_question_cycle_differs():
     plans=plan_questions("machine-learning-engineer",45,objective_ids=["machine-learning-engineer:standard:1.1:5"])
     assert plans[0]["scenario_moment"]==plans[7]["scenario_moment"]
     assert plans[5]["question_line"]!=plans[11]["question_line"]
-    payload={"cert_id":"machine-learning-engineer","plan":plans}
+    payload={"cert_id":"machine-learning-engineer","plan":plans,"style_policy_version":"5.1"}
     for index in (1,3,6,7,12,30,45):
         scope=plans[index-1]
         assert ingest._scope(payload,{**scope,"index":index})==scope

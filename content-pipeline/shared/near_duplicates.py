@@ -66,6 +66,13 @@ def load_export(path):
     return {"sha256": hashlib.sha256(raw).hexdigest(), "questions": selected}
 
 
+def check_plan_near_duplicate(plan, existing):
+    """Compare the proposed scenario and best action using the unchanged veto."""
+    scenario = " ".join([plan["existing_system"], plan["business_consequence"], *plan["decisive_constraints"]])
+    return check_near_duplicate({"id": "decision-plan", "stem": scenario, "key": "A",
+                                 "options": [{"label": "A", "text": plan["best_action"]}]}, existing)
+
+
 def check_near_duplicate(entry, existing, *, exclude=()):
     candidate = comparison_row(entry)
     matches = []

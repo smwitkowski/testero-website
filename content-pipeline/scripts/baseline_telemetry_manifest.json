@@ -1,0 +1,162 @@
+{
+  "files": [
+    {
+      "path": "shared/cli_models.py",
+      "sha256": "ebfbc8cc08f9f909542eed11e3c1da72b7ea1aaa491edd91f7ed65c26b0f0f76",
+      "hunks": [
+        {
+          "start": 280,
+          "end": 280,
+          "new": "    from shared.call_logging import model_call\n    resolved = (DEFAULT_CODEX_MODEL if model == \"codex\" else\n                DEFAULT_CLAUDE_MODEL if model == \"claude\" else model.split(\"/\", 1)[-1])\n    with model_call(resolved) as usage:\n        return _run_cli_transport(model, prompt, schema, signature, timeout=timeout,\n                                  reasoning_effort=reasoning_effort, usage=usage)\n\n\ndef _run_cli_transport(model, prompt, schema, signature, *, timeout, reasoning_effort=\"high\", usage):\n"
+        },
+        {
+          "start": 296,
+          "end": 297,
+          "new": "            command = [\"codex\", \"exec\", \"--json\", \"--ephemeral\", \"--skip-git-repo-check\", \"--sandbox\", \"read-only\",\n"
+        },
+        {
+          "start": 317,
+          "end": 317,
+          "new": "        from shared.call_logging import cli_usage\n        usage.update(cli_usage(result.stdout, provider=\"codex\" if codex else \"claude\"))\n"
+        }
+      ]
+    },
+    {
+      "path": "shared/decision_planner.py",
+      "sha256": "5f0c36694bb1a1953906406e826ec33418af1230740993bf7e42ef38ab94ecd4",
+      "hunks": [
+        {
+          "start": 122,
+          "end": 123,
+          "new": "        with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):\n"
+        },
+        {
+          "start": 174,
+          "end": 174,
+          "new": "\nfrom shared.call_logging import log_lm_calls, baseline_stage\nplan_decision = baseline_stage(plan_decision, 'plan')\nverify_decision = baseline_stage(verify_decision, 'verify')\n"
+        }
+      ]
+    },
+    {
+      "path": "shared/llm_generator.py",
+      "sha256": "16292e77315bff564ea96eb043758b6a7d7a48471de748e27d1b62691cbb72b5",
+      "hunks": [
+        {
+          "start": 824,
+          "end": 825,
+          "new": "        with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):\n"
+        },
+        {
+          "start": 880,
+          "end": 881,
+          "new": "        with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):\n"
+        },
+        {
+          "start": 911,
+          "end": 911,
+          "new": "\nfrom shared.call_logging import log_lm_calls, baseline_stage\ngenerate_question = baseline_stage(generate_question, 'write')\ncite_question = baseline_stage(cite_question, 'cite')\n"
+        }
+      ]
+    },
+    {
+      "path": "shared/quality_gate.py",
+      "sha256": "e2c9918d3708f0bdecafe55be836606729660d5394314b8cc8115ed56cf90e1e",
+      "hunks": [
+        {
+          "start": 281,
+          "end": 282,
+          "new": "            with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):\n"
+        },
+        {
+          "start": 359,
+          "end": 372,
+          "new": "            with call_context(stage='judge_blind' if name == 'blind_solver' else 'judge_' + name):\n                if predictors is not None:\n                    result = predictors[name](**inputs[name])\n                    raw[name] = result if isinstance(result, dict) else dict(result)\n                elif model == \"claude\" or model.startswith(\"claude/\"):\n                    raw[name] = run_signature(model, signature, inputs[name])\n                else:\n                    key = os.environ.get(\"OPENROUTER_API_KEY\")\n                    if not key:\n                        return fail(\"Judge credentials unavailable\")\n                    lm = dspy.LM(model=model, api_key=key, api_base=\"https://openrouter.ai/api/v1\",\n                                 temperature=0.0, max_tokens=max_tokens, cache=False)\n                    with log_lm_calls(lm, model), reject_token_limit(lm), dspy.context(adapter=dspy.JSONAdapter()):\n                        raw[name] = dict(dspy.Predict(signature)(**inputs[name], lm=lm))\n"
+        },
+        {
+          "start": 381,
+          "end": 381,
+          "new": "\nfrom shared.call_logging import log_lm_calls, baseline_stage, call_context\njudge_question = baseline_stage(judge_question, 'judge_quality')\njudge_three_gates = baseline_stage(judge_three_gates, 'judge')\n"
+        }
+      ]
+    },
+    {
+      "path": "shared/argon_gate.py",
+      "sha256": "1bcabd8029b8196b0ba4e654bd6f1891aca35d004260017e90699c83d80a7e86",
+      "hunks": [
+        {
+          "start": 64,
+          "end": 65,
+          "new": "    with call_context(stage=\"argon_\" + name), log_lm_calls(lm, MODEL), reject_token_limit(lm), dspy.context(adapter=dspy.JSONAdapter()):\n"
+        },
+        {
+          "start": 111,
+          "end": 111,
+          "new": "\nfrom shared.call_logging import log_lm_calls, baseline_stage, call_context\nrun_call = baseline_stage(run_call, 'argon')\n"
+        }
+      ]
+    },
+    {
+      "path": "scripts/generate_pmle_questions.py",
+      "sha256": "dc658c357107861183446035a823ce7ef947a55ad56fac275f6daf3106f06248",
+      "hunks": [
+        {
+          "start": 239,
+          "end": 239,
+          "new": "    from shared.call_logging import baseline_worker, call_context as _baseline_context\n    @baseline_worker(\"generate\")\n"
+        },
+        {
+          "start": 265,
+          "end": 267,
+          "new": "                with _baseline_context(stage='plan', index=index, candidate_id=entry.get(\"candidate_id\", candidate_id(index, scope, {})), attempt=decision_attempt + 1):\n                    decision = plan_decision(scope, model=model, difficulty=difficulty,\n                        replacement_feedback=feedback, existing_scenarios=summaries, reasoning_effort=gen_effort)\n"
+        },
+        {
+          "start": 285,
+          "end": 286,
+          "new": "                with _baseline_context(stage='verify', index=index, candidate_id=entry.get(\"candidate_id\", candidate_id(index, scope, {})), attempt=decision_attempt + 1):\n                    proof = verify_decision(scope, decision, sources, model=model, reasoning_effort=cite_effort)\n"
+        },
+        {
+          "start": 302,
+          "end": 305,
+          "new": "            with _baseline_context(stage='write', index=index, candidate_id=entry.get(\"candidate_id\", candidate_id(index, scope, {})), attempt=1):\n                raw = generate_question(writer_decision_context(scope, decision, proof), context, model=model,\n                                        difficulty=difficulty, exam_subsection=scope[\"subsection\"],\n                                        **({\"reasoning_effort\": gen_effort} if codex else {}))\n"
+        },
+        {
+          "start": 319,
+          "end": 322,
+          "new": "                with _baseline_context(stage='cite', index=index, candidate_id=entry.get(\"candidate_id\", candidate_id(index, scope, {})), attempt=cite_attempt + 1):\n                    citation = cite_question(question, sources, model=model,\n                        check_errors=checked[\"errors\"] if checked else None,\n                        **({\"reasoning_effort\": cite_effort} if codex else {}))\n"
+        },
+        {
+          "start": 356,
+          "end": 359,
+          "new": "            with _baseline_context(stage='judge', index=index, candidate_id=entry.get(\"candidate_id\", candidate_id(index, scope, {})), attempt=1):\n                judge = judge_three_gates(question, scope[\"domain_prompt\"], documentation_context=context,\n                                       model=judge_model, generator_model=model, option_evidence=checked[\"options\"],\n                                       style_policy=scope[\"style_policy\"])\n"
+        }
+      ]
+    },
+    {
+      "path": "scripts/judge_requests.py",
+      "sha256": "9c69d516a1f51eeea119dc2625d0a32fd44f52ac02f0f73ca231df071bb82750",
+      "hunks": [
+        {
+          "start": 255,
+          "end": 255,
+          "new": "    from shared.call_logging import baseline_worker, call_context as _baseline_context\n    @baseline_worker(\"judge_requests\", {str(path): index for index, path in enumerate(paths, 1)})\n"
+        },
+        {
+          "start": 280,
+          "end": 281,
+          "new": "                    with _baseline_context(stage=\"judge_blind\" if sub_call == \"claude.blind_solver\" else sub_call.replace(\"claude.\", \"judge_\"), candidate_id=ident, attempt=1):\n                        raw[name] = cli_models.run_claude_request(judge_model, gate[\"judge_prompt\"], gate[\"verdict_schema\"])\n"
+        },
+        {
+          "start": 284,
+          "end": 285,
+          "new": "                with _baseline_context(stage=\"judge_blind\" if sub_call == \"claude.blind_solver\" else sub_call.replace(\"claude.\", \"judge_\"), candidate_id=ident, attempt=1):\n                    raw = cli_models.run_claude_request(judge_model, request[\"judge_prompt\"], request[\"verdict_schema\"])\n"
+        },
+        {
+          "start": 296,
+          "end": 297,
+          "new": "                with _baseline_context(stage=\"judge_blind\" if sub_call == \"claude.blind_solver\" else sub_call.replace(\"claude.\", \"judge_\"), candidate_id=ident, attempt=1):\n                    raw[\"argon\"] = argon.run_argon(request[\"argon\"])\n"
+        }
+      ]
+    }
+  ],
+  "helper": "\"\"\"Metadata-only model call accounting; never retain prompts or provider bodies.\"\"\"\nfrom contextlib import contextmanager\nfrom contextvars import ContextVar\nfrom datetime import datetime, timezone\nimport json\nfrom pathlib import Path\nfrom threading import Lock\nimport time\n\n_CONTEXT = ContextVar(\"model_call_context\", default={})\n_LOCK = Lock()\nTOKEN_FIELDS = (\"input_tokens\", \"output_tokens\", \"cached_input_tokens\",\n                \"cache_creation_input_tokens\", \"reasoning_tokens\")\n\n\n@contextmanager\ndef call_context(*, stage=None, candidate_id=None, index=None, attempt=None, calls_path=None):\n    \"\"\"Inherit unspecified metadata; threads must enter their own context.\"\"\"\n    values = dict(_CONTEXT.get())\n    values.update({k: v for k, v in locals().copy().items()\n                   if k in (\"stage\", \"candidate_id\", \"index\", \"attempt\", \"calls_path\") and v is not None})\n    token = _CONTEXT.set(values)\n    try:\n        yield\n    finally:\n        _CONTEXT.reset(token)\n\n\ndef _count(value):\n    return value if type(value) is int and value >= 0 else None\n\n\ndef usage_fields(usage, *, provider):\n    \"\"\"Normalize only explicit provider counts; absent counts remain unknown.\"\"\"\n    usage = usage if isinstance(usage, dict) else {}\n    result = dict.fromkeys(TOKEN_FIELDS)\n    if provider in (\"claude\", \"codex\"):\n        result.update({name: _count(usage.get(name)) for name in TOKEN_FIELDS})\n        if provider == \"claude\":\n            result[\"cached_input_tokens\"] = _count(usage.get(\"cache_read_input_tokens\"))\n        elif provider == \"codex\":\n            result[\"reasoning_tokens\"] = _count(usage.get(\"reasoning_output_tokens\"))\n    else:\n        result[\"input_tokens\"] = _count(usage.get(\"prompt_tokens\"))\n        result[\"output_tokens\"] = _count(usage.get(\"completion_tokens\"))\n        details = usage.get(\"prompt_tokens_details\") or {}\n        output_details = usage.get(\"completion_tokens_details\") or {}\n        if isinstance(details, dict):\n            result[\"cached_input_tokens\"] = _count(details.get(\"cached_tokens\"))\n        if isinstance(output_details, dict):\n            result[\"reasoning_tokens\"] = _count(output_details.get(\"reasoning_tokens\"))\n    return result\n\n\ndef cli_usage(text, *, provider):\n    \"\"\"Codex turn.completed usage is independent of its final -o payload.\"\"\"\n    try:\n        if provider == \"claude\":\n            envelope = json.loads(text)\n            return usage_fields(envelope.get(\"usage\"), provider=provider)\n        turns = [json.loads(line) for line in text.splitlines() if line.strip()]\n        usages = [row[\"usage\"] for row in turns if isinstance(row, dict)\n                  and row.get(\"type\") == \"turn.completed\" and isinstance(row.get(\"usage\"), dict)]\n        if usages:\n            normalized = [usage_fields(value, provider=provider) for value in usages]\n            return {key: sum(row[key] for row in normalized)\n                    if all(row[key] is not None for row in normalized) else None for key in TOKEN_FIELDS}\n    except (ValueError, TypeError, AttributeError):\n        pass\n    return dict.fromkeys(TOKEN_FIELDS)\n\n\n@contextmanager\ndef model_call(model):\n    \"\"\"Record one transport attempt, including exceptions, when a sink is set.\"\"\"\n    context = dict(_CONTEXT.get())\n    path = context.pop(\"calls_path\", None)\n    usage = dict.fromkeys(TOKEN_FIELDS)\n    started = time.monotonic()\n    error_class = None\n    try:\n        yield usage\n    except BaseException as error:\n        error_class = type(error).__name__\n        raise\n    finally:\n        if path is not None:\n            record = {\"ts\": datetime.now(timezone.utc).isoformat(),\n                      **{key: context.get(key) for key in (\"stage\", \"candidate_id\", \"index\", \"attempt\")},\n                      \"model\": model, **{key: _count(usage.get(key)) for key in TOKEN_FIELDS},\n                      \"seconds\": time.monotonic() - started,\n                      \"ok\": error_class is None, \"error_class\": error_class}\n            with _LOCK:\n                destination = Path(path)\n                destination.parent.mkdir(parents=True, exist_ok=True)\n                with destination.open(\"a\", encoding=\"utf-8\") as handle:\n                    handle.write(json.dumps(record, allow_nan=False) + \"\\n\")\n\n\n@contextmanager\ndef log_lm_calls(lm, model):\n    \"\"\"Wrap DSPy forward calls and observe usage before parsing/truncation.\"\"\"\n    original_forward = lm.forward\n    original_check = getattr(lm, \"_check_truncation\", None)\n    had_forward = \"forward\" in lm.__dict__\n    had_check = \"_check_truncation\" in lm.__dict__\n    active = None\n\n    def check(response):\n        if active is not None:\n            usage = response.get(\"usage\") if isinstance(response, dict) else getattr(response, \"usage\", None)\n            if hasattr(usage, \"model_dump\"):\n                usage = usage.model_dump()\n            active.update(usage_fields(usage, provider=\"openrouter\"))\n        return original_check(response)\n\n    def forward(*args, **kwargs):\n        nonlocal active\n        with model_call(model) as usage:\n            active = usage\n            try:\n                return original_forward(*args, **kwargs)\n            finally:\n                active = None\n\n    lm.forward = forward\n    if callable(original_check):\n        lm._check_truncation = check\n    try:\n        yield\n    finally:\n        if had_forward:\n            lm.forward = original_forward\n        else:\n            del lm.forward\n        if callable(original_check):\n            if had_check:\n                lm._check_truncation = original_check\n            else:\n                del lm._check_truncation\n\n\n# These helpers are used only by the optional frozen-main telemetry overlay.\ndef baseline_stage(function, stage):\n    from functools import wraps\n    @wraps(function)\n    def wrapped(*args, **kwargs):\n        import os\n        sink = BASELINE_CALLS_PATH\n        with call_context(stage=stage, calls_path=sink):\n            return function(*args, **kwargs)\n    return wrapped\n\n\ndef baseline_worker(stage, indices=None):\n    from functools import wraps\n    def decorate(function):\n        @wraps(function)\n        def wrapped(item, *args, **kwargs):\n            import os\n            index = item[0] if isinstance(item, tuple) else None\n            ident = item.stem if isinstance(item, Path) else None\n            if isinstance(item, tuple):\n                ident = function.__globals__[\"candidate_id\"](item[0], item[1], {})\n            elif isinstance(item, Path):\n                index = indices.get(str(item)) if indices else None\n            with call_context(stage=stage, index=index, candidate_id=ident,\n                              calls_path=BASELINE_CALLS_PATH):\n                return function(item, *args, **kwargs)\n        return wrapped\n    return decorate\n"
+}

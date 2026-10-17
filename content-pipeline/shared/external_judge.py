@@ -275,8 +275,10 @@ def _source_context(cited, evidence, trimmed_urls, *, margin=QUOTE_WINDOW_MARGIN
     return context, metadata
 
 
-def build_request(candidate_id, scope, question, sources, evidence, *, signature=None, gate_version=5, argon_gate=False):
+def build_request(candidate_id, scope, question, sources, evidence, *, signature=None, gate_version=5, argon_gate=False, execution_policy=None):
     """Keep the rubric/schema intact; trim only fetched text around verified quotes."""
+    if execution_policy not in (None, "short_circuit_v1"):
+        raise ValueError("Unsupported execution policy")
     question = {name: question[name] for name in QUESTION_FIELDS}
     checked = check_evidence(evidence, sources)
     if not checked["passed"]:
@@ -322,13 +324,17 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
                                         "verdict_schema": output_model(gate_signature).model_json_schema()}
                                  for name, gate_signature in signatures.items()},
                        "trimming": trimming}
+        if execution_policy is not None:
+            if signature is not None:
+                raise ValueError("Short circuit requires independent gates")
+            request["execution_policy"] = execution_policy
         if policy is not None:
             request["style_policy"] = policy
         if argon_gate:
             if signature is not None or gate_version != 5:
                 raise ValueError("Argon requires rules-v5 independent gate requests")
             from shared.argon_gate import build_argon_request
-            request["argon"] = build_argon_request(question, scope, context, evidence)
+            request["argon"] = build_argon_request(question, scope, context, evidence, review_only=execution_policy is not None)
         if len(json.dumps(request, indent=2, ensure_ascii=False, allow_nan=False)) + 1 <= REQUEST_CHARACTER_LIMIT:
             return request
     raise ValueError("External request exceeds the character bound even with wide quote-centered excerpts")
