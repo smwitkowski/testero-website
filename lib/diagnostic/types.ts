@@ -34,6 +34,7 @@ export interface DiagnosticResult {
 }
 
 export interface DiagnosticStartResponse {
+  progress: DiagnosticProgress;
   sessionId: string;
   href: string;
 }

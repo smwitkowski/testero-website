@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { DiagnosticSession } from "@/components/diagnostic-session";
 import type { DiagnosticStartResponse } from "@/lib/diagnostic/types";
 import { trackDiagnostic } from "@/lib/analytics/client";
 import { Button } from "@/components/ui/button";
 import { diagnosticRequest, requestError } from "@/components/diagnostic-resource";
 
-export function DiagnosticStart({ resumeId = null }: { resumeId?: string | null }) {
-  const router = useRouter();
+export function DiagnosticStart({ resumeId = null, children }: { resumeId?: string | null; children?: ReactNode }) {
+  const pathname = usePathname();
+  const restoredId = /^\/diagnostic\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i.exec(pathname)?.[1] ?? null;
+  const [created, setCreated] = useState<DiagnosticStartResponse | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);
@@ -31,7 +34,8 @@ export function DiagnosticStart({ resumeId = null }: { resumeId?: string | null 
       });
       if (signal.aborted) return;
       trackDiagnostic("diagnostic_started", result.sessionId);
-      router.push(`/diagnostic/${encodeURIComponent(result.sessionId)}`);
+      window.history.replaceState(null, "", result.href);
+      setCreated(result);
     } catch (reason) {
       if (!signal.aborted) {
         setError(requestError(reason));
@@ -41,7 +45,10 @@ export function DiagnosticStart({ resumeId = null }: { resumeId?: string | null 
     }
   }
 
-  return <div className="mx-auto max-w-[696px] space-y-8">
+  const sessionId = restoredId;
+  if (sessionId) return <DiagnosticSession key={sessionId} sessionId={sessionId} initialData={created?.sessionId === sessionId ? created.progress : null} />;
+
+  return <><div className="mx-auto max-w-[696px] space-y-8">
     <header className="space-y-3">
       <p className="text-sm font-medium text-muted-foreground">Free PMLE diagnostic</p>
       <h1 className="text-3xl font-semibold leading-tight">PMLE readiness diagnostic</h1>
@@ -72,5 +79,5 @@ export function DiagnosticStart({ resumeId = null }: { resumeId?: string | null 
     </section>
     <p className="text-sm text-muted-foreground">Study guidance, not a prediction of your exam result. Testero is independent and not affiliated with Google.</p>
     <Link href="/" className="inline-block text-sm text-primary hover:underline">Back to home</Link>
-  </div>;
+  </div>{children}</>;
 }

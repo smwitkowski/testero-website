@@ -25,13 +25,11 @@ const unavailable = () => new DiagnosticError(503, "The diagnostic is unavailabl
 /** Questions from this owner's earlier diagnostics. Freshness is best effort: errors mean "none seen". */
 export async function seenDiagnosticQuestions(client: SupabaseClient, userId: string | null, ownerHash: string | null): Promise<Set<string>> {
   try {
-    const sessions = client.from("study_sessions").select("id").eq("kind", "diagnostic");
+    const sessions = client.from("study_sessions").select("id,session_items(question_id)").eq("kind", "diagnostic");
     const { data, error } = await (userId ? sessions.eq("user_id", userId) : sessions.is("user_id", null).eq("anonymous_owner_hash", ownerHash!))
       .order("created_at", { ascending: false }).limit(50);
-    if (error || !Array.isArray(data) || !data.length) return new Set();
-    const { data: items, error: itemError } = await client.from("session_items").select("question_id").in("session_id", data.map(row => row.id));
-    if (itemError || !Array.isArray(items)) return new Set();
-    return new Set(items.flatMap(item => typeof item.question_id === "string" ? [item.question_id] : []));
+    if (error || !Array.isArray(data)) return new Set();
+    return new Set(data.flatMap(session => Array.isArray(session.session_items) ? session.session_items.flatMap((item: { question_id?: unknown }) => typeof item.question_id === "string" ? [item.question_id] : []) : []));
   } catch { return new Set(); }
 }
 
@@ -57,6 +55,16 @@ export async function createDiagnostic(client: SupabaseClient, token: string, no
   if (error || typeof data !== "string" || !UUID.test(data)) throw unavailable();
   if (process.env.NODE_ENV === "development") console.info(`[diagnostic-timing] create ${Math.round(performance.now() - started)}ms`);
   return data;
+}
+
+/** Return only committed, display-safe progress for the session just created by this request. */
+export async function createDiagnosticStart(client: SupabaseClient, token: string, now = Date.now(), userId: string | null = null, timing?: ServerTiming) {
+  const sessionId = await createDiagnostic(client, token, now, userId, timing);
+  const read = () => sessionItems(client, sessionId);
+  const items = await (timing ? timing.measure("progress_read", read) : read());
+  const progress = diagnosticProgress({ id: sessionId, question_count: DIAGNOSTIC_LENGTH, completed_at: null }, items);
+  if (progress.answeredCount !== 0 || progress.currentQuestion?.ordinal !== 1) throw unavailable();
+  return { sessionId, href: `/diagnostic/${sessionId}`, progress };
 }
 
 /** The owner's newest unexpired, unfinished diagnostic, so "Begin" can offer to resume it. */
@@ -94,7 +102,7 @@ export async function readDiagnostic(client: SupabaseClient, id: string, credent
   return diagnosticProgress(session, items);
 }
 
-function diagnosticProgress(session: StudySession, items: SessionItem[]): DiagnosticProgress {
+function diagnosticProgress(session: Pick<StudySession, "id" | "question_count" | "completed_at">, items: SessionItem[]): DiagnosticProgress {
   if (items.length !== session.question_count) throw unavailable();
   const answeredCount = items.filter(item => item.answered_at !== null).length;
   const completed = !!session.completed_at || answeredCount === session.question_count;

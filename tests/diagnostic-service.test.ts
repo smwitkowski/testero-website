@@ -2,7 +2,7 @@ import { loadPaidExplanations } from "@/lib/billing/explanations";
 import { getPaidAccess } from "@/lib/billing/paid-access";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createDiagnostic, readDiagnostic, answerDiagnostic, diagnosticResults, seenDiagnosticQuestions } from "@/lib/diagnostic/service";
+import { createDiagnosticStart, createDiagnostic, readDiagnostic, answerDiagnostic, diagnosticResults, seenDiagnosticQuestions } from "@/lib/diagnostic/service";
 import { hashAnonymousToken } from "@/lib/diagnostic/ownership";
 import { DIAGNOSTIC_NEW_SINCE, selectPmleQuestionsByBlueprint, type SelectionResult } from "@/lib/diagnostic/pmle-selection";
 
@@ -322,30 +322,46 @@ describe("paid diagnostic review remains completion- and ownership-gated", () =>
 });
 
 describe("seen-question history", () => {
-  function history(sessions: unknown, items: unknown, fail?: "sessions" | "items") {
-    const calls: [string, string, unknown][] = [];
-    const from = vi.fn((table: string) => {
-      const query: Record<string, unknown> = {};
-      for (const method of ["select", "eq", "is", "in", "order"]) query[method] = vi.fn((column: string, value: unknown) => { calls.push([table, `${method}:${column}`, value]); return query; });
-      query.limit = vi.fn(async () => ({ data: sessions, error: fail === "sessions" ? { message: "x" } : null }));
-      if (table === "session_items") query.in = vi.fn(async (column: string, value: unknown) => { calls.push([table, `in:${column}`, value]); return { data: items, error: fail === "items" ? { message: "x" } : null }; });
-      return query;
-    });
-    return { client: { from } as unknown as SupabaseClient, calls };
+  function history(data: unknown, error = false) {
+    const calls: [string, unknown][] = [];
+    const query = {
+      select: vi.fn((fields: string) => { calls.push(["select", fields]); return query; }),
+      eq: vi.fn((field: string, value: unknown) => { calls.push([field, value]); return query; }),
+      is: vi.fn((field: string, value: unknown) => { calls.push([field, value]); return query; }),
+      order: vi.fn(() => query), limit: vi.fn(async () => ({ data, error: error ? { message: "secret" } : null })),
+    };
+    const from = vi.fn(() => query);
+    return { client: { from } as unknown as SupabaseClient, calls, from, query };
   }
-  it("collects question ids from the anonymous owner's earlier diagnostics", async () => {
-    const db = history([{ id: "s1" }, { id: "s2" }], [{ question_id: "q1" }, { question_id: "q2" }, { question_id: null }]);
+  it("loads latest 50 parent sessions with left-embedded items in one owned query", async () => {
+    const db = history([{ id: "empty", session_items: [] }, { id: "s1", session_items: [{ question_id: "q1" }, { question_id: "q1" }, { question_id: "q2" }, { question_id: null }] }]);
     expect(await seenDiagnosticQuestions(db.client, null, "h".repeat(64))).toEqual(new Set(["q1", "q2"]));
-    expect(db.calls).toContainEqual(["study_sessions", "is:user_id", null]);
-    expect(db.calls).toContainEqual(["study_sessions", "eq:anonymous_owner_hash", "h".repeat(64)]);
-    expect(db.calls).toContainEqual(["session_items", "in:session_id", ["s1", "s2"]]);
+    expect(db.from).toHaveBeenCalledExactlyOnceWith("study_sessions");
+    expect(db.calls).toEqual([["select", "id,session_items(question_id)"], ["kind", "diagnostic"], ["user_id", null], ["anonymous_owner_hash", "h".repeat(64)]]);
+    expect(db.query.order).toHaveBeenCalledWith("created_at", { ascending: false });
+    expect(db.query.limit).toHaveBeenCalledWith(50);
   });
-  it("scopes a signed-in owner by user id", async () => {
-    const db = history([{ id: "s1" }], [{ question_id: "q1" }]);
-    await seenDiagnosticQuestions(db.client, userId, null);
-    expect(db.calls).toContainEqual(["study_sessions", "eq:user_id", userId]);
+  it("uses only verified user identity for signed-in history", async () => {
+    const db = history([]); await seenDiagnosticQuestions(db.client, userId, null);
+    expect(db.calls).toContainEqual(["user_id", userId]); expect(db.calls.some(([field]) => field === "anonymous_owner_hash")).toBe(false);
   });
-  it.each(["sessions", "items"] as const)("treats a %s read failure as nothing seen", async fail => {
-    expect(await seenDiagnosticQuestions(history([{ id: "s1" }], [{ question_id: "q1" }], fail).client, userId, null)).toEqual(new Set());
+  it.each([null, [], [{ session_items: null }]])("treats empty or malformed optional history as nothing seen %#", async data => {
+    expect(await seenDiagnosticQuestions(history(data).client, userId, null)).toEqual(new Set());
   });
+  it("keeps history best effort when the read fails", async () => {
+    expect(await seenDiagnosticQuestions(history([], true).client, userId, null)).toEqual(new Set());
+  });
+});
+
+it("returns committed first-item identity with an exact safe display whitelist after create", async () => {
+  const db = database();
+  const result = await createDiagnosticStart(db.client, token, now);
+  expect(result).toEqual({ sessionId, href: `/diagnostic/${sessionId}`, progress: { sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 0, currentQuestion: { id: itemId, ordinal: 1, domainCode: items()[0].domain_code, stem: items()[0].stem, options: items()[0].options.map(({ label, text }) => ({ label, text })) } } });
+  expect(JSON.stringify(result)).not.toMatch(/correct_label|is_correct|explanation|selected_label|anonymous_owner_hash/);
+});
+
+it("fails closed if committed create progress cannot be read, without retrying creation", async () => {
+  const db = database({ itemsError: true });
+  await expect(createDiagnosticStart(db.client, token, now)).rejects.toMatchObject({ status: 503 });
+  expect(db.rpc).toHaveBeenCalledOnce();
 });
