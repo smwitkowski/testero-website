@@ -1,0 +1,326 @@
+[
+  {
+    "id": "306b7271-8442-49d2-85d1-985202ae2aba",
+    "domain": "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
+    "stem": "Your company recently deployed an Agent Platform AutoML classifier to predict retail order cancellations for inventory planning. Its random holdout results looked strong, but prediction quality fell after a pricing change. Historical data now contains labeled orders with dates from before and after the change. You want to estimate how a retrained model handles future orders while minimizing changes to the existing training workflow. What should you do?",
+    "options": {
+      "A": "Replace AutoML with an Agent Platform custom classifier, use shuffled cross-validation to average cancellation performance across several folds of historical orders, and select the strongest candidate based on those results.",
+      "B": "Move training to a BigQuery ML boosted tree classifier, separate orders chronologically for training and evaluation, and assess cancellation predictions on the newest labeled orders before deploying the replacement.",
+      "C": "Retrain the Agent Platform AutoML classifier using manually assigned partitions: earliest orders for training, subsequent orders for validation, and newest orders for the final evaluation test set.",
+      "D": "Repeat Agent Platform AutoML training with the default random split, increasing the training budget and using the resulting test metrics to assess future cancellation predictions."
+    },
+    "key": "C",
+    "rationale": {
+      "A": "This fails the future-order evaluation goal because shuffled folds mix earlier and later orders instead of reflecting predictions on later data. Agent Platform recommends that training, validation, and test distributions reflect the temporal differences encountered in production. It also fails the workflow-change goal: custom training requires developing a training application, whereas AutoML is codeless and already supports manual chronological partitions.",
+      "B": "This fails the goal of minimizing training workflow changes. Moving to BigQuery ML introduces a SQL-based training implementation. Agent Platform AutoML already supports manually assigned chronological partitions, so evaluating on the newest orders does not require changing training services.",
+      "C": "You need a forward-in-time evaluation while preserving the existing training workflow. Agent Platform AutoML supports manually assigning rows to training, validation, and test partitions. Chronological assignments reflect learning from earlier orders and predicting later orders. Agent Platform trains its evaluation model on the training and validation sets, then calculates final evaluation metrics on the test set. Random splits and shuffled folds mix time periods rather than testing forward in time. Moving to BigQuery ML changes the training implementation unnecessarily because AutoML already supports the required partitions.",
+      "D": "This fails the future-order evaluation goal. Agent Platform AutoML randomly assigns rows by default, mixing orders from earlier and later periods. For time-sensitive classification data, chronological partitions or manual partitions with the newest data reserved for testing provide the appropriate evaluation design. Increasing the training budget does not change the random partitioning."
+    },
+    "officialDocs": [
+      {
+        "title": "Best practices for creating tabular training data",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/tabular-data/bp-tabular"
+      },
+      {
+        "title": "Choose a training method",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/start/training-methods"
+      },
+      {
+        "title": "Data splits for tabular data",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/tabular-data/data-splits"
+      }
+    ]
+  },
+  {
+    "id": "5f2e2027-68ca-4487-85ce-8b84024d909d",
+    "domain": "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
+    "stem": "You work for an insurer whose Gemini assistant drafts explanations of claim decisions through BigQuery ML. Monitoring shows errors on newly encountered claims. Analysts have collected corrected input-output pairs in BigQuery, with several revisions associated with each claim, and your team is preparing a tuning run. You want to estimate how the tuned model handles unseen claims while minimizing changes to the SQL workflow. Which approach should you use?",
+    "options": {
+      "A": "Group revisions by claim in SQL and assign each claim a Boolean evaluation flag. Fine-tune Gemini through BigQuery ML using that custom split, then evaluate the tuned model on the reserved claims.",
+      "B": "Fine-tune Gemini through BigQuery ML using all corrected draft pairs as training data. Evaluate the tuned model on those same pairs to estimate how accurately it handles unseen claim explanations.",
+      "C": "Configure BigQuery ML to randomly split the corrected draft rows into training and evaluation data. Fine-tune Gemini with those groups, then use the tuned model's evaluation results to estimate performance on unseen claims.",
+      "D": "Evaluate the current Gemini model on separate unseen claims through BigQuery ML. Then fine-tune it on the corrected drafts and use the earlier evaluation to estimate the tuned model's performance."
+    },
+    "key": "A",
+    "rationale": {
+      "A": "You need an estimate of the tuned model's performance on unseen claims while retaining the SQL workflow. BigQuery ML supports Gemini supervised tuning through SQL and a custom split controlled by a Boolean column. Assigning the same flag to every revision of a claim keeps complete claims in either training or evaluation. Use the EVALUATE function after tuning to assess the tuned model on the reserved claims. Random row splitting can mix revisions across groups, evaluating training examples does not establish unseen-claim performance, and evaluating the current model does not assess the tuned model.",
+      "B": "This fails to establish performance on unseen claims. Gemini supervised tuning teaches the model to mimic the desired outputs in its labeled training examples. Evaluating those same pairs measures behavior on examples supplied during tuning; it does not establish how the tuned model handles claims absent from training.",
+      "C": "This fails to establish performance on unseen claims. BigQuery ML random splitting uses fingerprints of the row data rather than enforcing claim-level grouping. Different revisions of the same claim can enter both training and evaluation, so the evaluation can include claims encountered during tuning and inflate the estimate for unseen claims.",
+      "D": "This fails to establish the tuned model's performance. Gemini supervised tuning learns additional parameters and produces a new model combining those parameters with the original model. The earlier evaluation measures the current model and can serve as a baseline, but it does not assess the resulting tuned model. BigQuery ML provides the EVALUATE function for evaluation after tuning."
+    },
+    "officialDocs": [
+      {
+        "title": "The CREATE MODEL statement for fine-tuning Gemini Enterprise Agent Platform Gemini models",
+        "url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create-remote-model-tuned"
+      },
+      {
+        "title": "Introduction to tuning",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/tuning"
+      }
+    ]
+  },
+  {
+    "id": "8ae5ba2e-a3ac-4c3f-87cb-8e4c574b65d0",
+    "domain": "AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES",
+    "stem": "You manage a greenhouse heating-demand predictor that helps plan energy purchases. Its running BigQuery ML linear regression model automatically standardizes numeric sensor readings during training and prediction. As prediction requests become more frequent, you are migrating serving to Agent Platform. You want to preserve training-time preprocessing while minimizing prediction latency. What should you do?",
+    "options": {
+      "A": "Standardize incoming sensor readings in a Dataflow streaming pipeline using statistics from recent readings. Send the transformed features to the exported BigQuery ML model deployed on an Agent Platform endpoint.",
+      "B": "Build a custom prediction service on Agent Platform that submits each request's raw sensor readings to the existing BigQuery ML model. Return the query's heating-demand prediction to the calling application.",
+      "C": "Train a replacement AutoML tabular regression model in Agent Platform using historical raw sensor readings. Deploy the replacement to an endpoint and let AutoML preprocess incoming readings for heating-demand predictions.",
+      "D": "Export the existing BigQuery ML model to Cloud Storage and deploy it to an Agent Platform endpoint. Send raw sensor readings so the model applies its retained preprocessing."
+    },
+    "key": "D",
+    "rationale": {
+      "A": "This fails preprocessing consistency. The exported BigQuery ML model already contains its automatic standardization and expects inputs matching those supplied for BigQuery ML prediction. Standardizing readings separately using recent statistics changes that input representation before the retained transformations run. Send raw readings directly to the exported model instead.",
+      "B": "This fails the latency goal because every request requires BigQuery query execution in addition to the custom service. BigQuery ML provides batch predictions for its models; deploying the existing model to an Agent Platform endpoint provides online prediction directly while retaining the exported preprocessing.",
+      "C": "This fails to preserve the existing training-time preprocessing. AutoML provides tabular regression training and its own built-in preprocessing, but training a replacement does not transfer the current BigQuery ML model's saved transformations. Exporting the existing model retains those transformations together with the trained predictor.",
+      "D": "The migration needs consistent preprocessing and low prediction latency. BigQuery ML exports include automatic preprocessing in the model graph, so deploying the exported linear regression model to Agent Platform preserves those transformations. Sending raw readings maintains the input representation expected by the model, and direct endpoint requests avoid executing a BigQuery query for each prediction. A query-backed service retains that extra execution step, replacement AutoML training does not carry forward the existing preprocessing, and separate standardization changes the exported model's inputs."
+    },
+    "officialDocs": [
+      {
+        "title": "Export models",
+        "url": "https://docs.cloud.google.com/bigquery/docs/exporting-models"
+      },
+      {
+        "title": "Gemini Enterprise Agent Platform for BigQuery users",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/beginner/bqml"
+      },
+      {
+        "title": "Best practices for implementing machine learning on Google Cloud",
+        "url": "https://docs.cloud.google.com/architecture/ml-on-gcp-best-practices"
+      }
+    ]
+  },
+  {
+    "id": "8e6aea3b-f822-42fa-ac1c-ee7663865996",
+    "domain": "AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES",
+    "stem": "Your company predicts wind-turbine failures using a nightly workflow that trains, evaluates, and deploys models. During a migration from virtual-machine scripts, your team has converted these steps into an Agent Platform Pipelines pipeline. Workflow releases and recurring production runs still need automation. You want to test and release workflow changes when code changes while minimizing repeated build work during nightly retraining. What should you do?",
+    "options": {
+      "A": "Schedule a Cloud Run job with Cloud Scheduler to retrieve current repository code, compile the pipeline, and submit each nightly run. Treat successful production execution as acceptance of workflow changes for subsequent training, evaluation, and deployment.",
+      "B": "Configure Cloud Build triggers to test, compile, and publish pipeline versions to Artifact Registry after code changes. Update the Agent Platform Pipelines schedule to use each released version for nightly training, evaluation, and deployment.",
+      "C": "Reimplement the workflow in Managed Service for Apache Airflow. Configure its nightly execution to invoke Cloud Build for component tests and builds, then run the training, evaluation, and deployment tasks with those newly built components.",
+      "D": "Trigger Cloud Build nightly to retrieve repository code, run tests, compile the pipeline, and submit a production run. Use this recurring build to deliver workflow changes and execute training, evaluation, and deployment."
+    },
+    "key": "B",
+    "rationale": {
+      "A": "This repeats compilation nightly and uses changed workflow code in production before accepting its release. Cloud Scheduler can execute Cloud Run jobs on a schedule, but scheduling does not provide the separate testing and release process needed here. Cloud Build can test changed implementations before release, and Agent Platform Pipelines can execute the released template repeatedly.",
+      "B": "The workflow needs releases triggered by code changes and nightly retraining that minimizes repeated build work. Cloud Build repository triggers can run tests, compile the pipeline, and publish it to Artifact Registry. Agent Platform Pipelines can then schedule recurring runs using the released pipeline definition. This separates CI/CD for changed implementations from continuous training using new data. The alternatives repeat testing, compilation, or component builds nightly; accepting changes through production execution also postpones workflow validation until after production use.",
+      "C": "This fails the goal of minimizing repeated build work because every nightly execution tests and rebuilds components regardless of implementation changes. Managed Service for Apache Airflow can orchestrate general-purpose workflows, but changing orchestrators does not eliminate these repeated builds. Agent Platform Pipelines already supports recurring execution of the converted workflow using a released definition.",
+      "D": "This fails the goal of minimizing repeated build work. Testing and compiling the repository every night repeats release work even when workflow code has not changed. Cloud Build can release changed implementations separately, and Agent Platform Pipelines can reuse the previously released definition for recurring retraining."
+    },
+    "officialDocs": [
+      {
+        "title": "Execute jobs on a schedule",
+        "url": "https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule"
+      },
+      {
+        "title": "Architecture for MLOps using TensorFlow Extended, Agent Platform Pipelines, and Cloud Build",
+        "url": "https://docs.cloud.google.com/architecture/architecture-for-mlops-using-tfx-kubeflow-pipelines-and-cloud-build"
+      }
+    ]
+  },
+  {
+    "id": "98b70a0a-b30d-4a1c-9766-bd92f556aff3",
+    "domain": "COLLABORATING_TO_MANAGE_DATA_AND_MODELS",
+    "stem": "Your team develops a PyTorch model that groups furniture photographs for a resale marketplace in Colab Enterprise. As the catalog grows, training epochs now take hours on the existing CPU runtime. Profiling shows most time is spent in tensor operations, and the dataset still fits in memory. You want to shorten interactive experiments while minimizing changes to the notebook workflow. What should you do first?",
+    "options": {
+      "A": "Create a GPU-backed Colab Enterprise runtime, connect the existing notebook, and move the PyTorch model and training tensors onto the GPU.",
+      "B": "Package the PyTorch training code for GPU-backed Agent Platform custom training jobs, and submit a separate job for each notebook experiment.",
+      "C": "Increase the Colab Enterprise runtime's memory allocation, retain CPU execution, and rerun the existing PyTorch training cells interactively.",
+      "D": "Migrate the notebook to a GPU-enabled Agent Platform Workbench instance, recreate its environment, and move the PyTorch model and tensors onto the GPU."
+    },
+    "key": "A",
+    "rationale": {
+      "A": "The bottleneck is tensor computation, and the team wants faster experiments with minimal workflow changes. Colab Enterprise supports GPU-backed runtimes and connecting an existing notebook to a different runtime. Moving the PyTorch computation onto the GPU targets that bottleneck while retaining interactive notebook development. Additional memory does not address the identified bottleneck. Agent Platform Workbench migration and separate custom training jobs introduce avoidable environment or workflow changes.",
+      "B": "This fails the requirement to minimize workflow changes. Agent Platform custom training supports accelerators and executes training applications or custom containers. Packaging the notebook's training code and submitting separate jobs changes the interactive development process. Connecting the existing Colab Enterprise notebook to a GPU-backed runtime addresses the bottleneck with fewer changes.",
+      "C": "This fails to address the experiment-speed requirement. Colab Enterprise runtime templates let you configure the machine type, but additional memory targets memory capacity. The dataset already fits in memory, and profiling identifies tensor computation as the bottleneck. Retaining CPU execution does not provide GPU acceleration for that computation.",
+      "D": "This fails the requirement to minimize notebook workflow changes. Agent Platform Workbench supports PyTorch and GPU-enabled instances, so it could run the workload. However, migrating the notebook and recreating its environment adds work that is unnecessary because Colab Enterprise already supports GPU-backed runtimes for the existing notebook."
+    },
+    "officialDocs": [
+      {
+        "title": "Runtimes and runtime templates",
+        "url": "https://docs.cloud.google.com/colab/docs/runtimes"
+      },
+      {
+        "title": "Create training pipelines",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/training/create-training-pipeline"
+      },
+      {
+        "title": "Choose a notebook solution",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/notebooks/workbench/notebook-solution"
+      }
+    ]
+  },
+  {
+    "id": "1ec533e1-7eda-41a4-acb5-347f3e2b229e",
+    "domain": "COLLABORATING_TO_MANAGE_DATA_AND_MODELS",
+    "stem": "You recently deployed a repair-cost predictor that helps an insurer estimate claim expenses. Your team tests candidate scikit-learn regressors through independent Agent Platform custom training jobs. Each script trains and evaluates one candidate, and engineers copy settings and results into a shared spreadsheet. You want a shared environment for candidate-model experimentation while minimizing changes to this working execution flow. What should you do?",
+    "options": {
+      "A": "Move candidate training and evaluation into Agent Platform Workbench notebooks. Execute the scikit-learn code interactively and capture each candidate's parameters and evaluation metrics in notebook cells that engineers share for review.",
+      "B": "Adopt Agent Platform AutoML for tabular regression experiments. Submit the repair-cost dataset for automated model training and hyperparameter search, then review the trained model's evaluation metrics through the service's evaluation interface.",
+      "C": "Use Agent Platform Experiments with the existing custom training jobs. Record each candidate's parameters and evaluation metrics as an experiment run through the Agent Platform SDK for Python, retaining the scikit-learn training scripts.",
+      "D": "Build an Agent Platform Pipelines workflow around the training and evaluation scripts using Kubeflow Pipelines components. Submit each candidate configuration as a pipeline run and associate the runs with an experiment for comparison."
+    },
+    "key": "C",
+    "rationale": {
+      "A": "This fails the want to minimize execution changes. Agent Platform Workbench provides Jupyter notebook development environments, so the proposed approach relocates functioning training scripts into interactive notebook execution. Agent Platform Experiments already supports custom training jobs and provides centralized run comparison, making that relocation unnecessary for the team's experimentation task.",
+      "B": "This fails the want to minimize changes to the existing training flow. Agent Platform AutoML chooses model types, parameters, and hardware, searches hyperparameters, and creates a final ensemble from its trained models. Adopting that process replaces the team's custom scikit-learn candidate training. Agent Platform Experiments adds tracking and comparison to the existing custom training jobs instead.",
+      "C": "The team wants shared candidate experimentation with minimal changes to its independent training jobs. Agent Platform Experiments supports custom training and provides a centralized view for comparing experiment runs. The Agent Platform SDK for Python can log parameters and performance metrics from custom training jobs, including manually logged evaluation metrics. This adds structured experimentation around the existing scripts. Agent Platform Pipelines introduces pipeline definition and compilation, the proposed Agent Platform Workbench approach moves execution into notebooks, and Agent Platform AutoML replaces custom candidate training with automated model building.",
+      "D": "This fails the want to minimize changes to the working execution flow. Agent Platform Pipelines requires defining component tasks and compiling a pipeline before execution. Pipeline runs can be associated with experiments for comparison, but introducing that workflow adds adaptation for scripts that already execute independently. Agent Platform Experiments can track the existing custom training jobs directly."
+    },
+    "officialDocs": [
+      {
+        "title": "Introduction to Agent Platform Workbench",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/notebooks/workbench/introduction"
+      },
+      {
+        "title": "Tabular data overview",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/tabular-data/overview"
+      },
+      {
+        "title": "Run training job with experiment tracking",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/experiments/run-training-job-experiments"
+      },
+      {
+        "title": "Introduction to Gemini Enterprise Agent Platform Pipelines",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/pipelines/introduction"
+      }
+    ]
+  },
+  {
+    "id": "45ccfe82-7bd4-436f-9482-421f327fce29",
+    "domain": "MONITORING_ML_SOLUTIONS",
+    "stem": "You are monitoring a courier's delivery-delay predictor on Agent Platform Inference. Dispatchers use its scores to prioritize shipments for intervention. The deployed tabular model already returns feature attributions, but your team reviews only accuracy and input distributions as the route mix changes. You want to detect shifts in which features contribute to production predictions while minimizing manual review. What should you do first?",
+    "options": {
+      "A": "Monitor the predictor's delivery-delay score distributions with Agent Platform Model Monitoring. Schedule comparisons against an earlier production baseline, and alert dispatch analysts when predicted scores shift, using those alerts to assess changes in feature influence.",
+      "B": "Configure feature attribution drift monitoring in Agent Platform Model Monitoring for the deployed predictor. Schedule comparisons of production attribution distributions against an earlier production baseline, and alert dispatch analysts when feature contributions shift beyond the configured thresholds.",
+      "C": "Enable input feature drift monitoring in Agent Platform Model Monitoring for the deployed predictor. Compare shipment input distributions against an earlier production baseline, and alert dispatch analysts when shipment characteristics change beyond the configured thresholds.",
+      "D": "Generate a global feature-importance report by aggregating Agent Platform explanations over the predictor's training dataset. Share the resulting feature rankings with dispatch analysts, and use this historical summary to assess feature contributions as production delivery routes change."
+    },
+    "key": "B",
+    "rationale": {
+      "A": "This fails to identify shifts in individual feature contributions. Output inference drift monitoring in Agent Platform Model Monitoring compares predicted outcome distributions. Prediction scores aggregate feature contributions, so different combinations of contributions can produce the same score. Score distributions therefore cannot reliably reveal changes in individual feature influence.",
+      "B": "You want to track changing feature contributions in production while minimizing manual review. Feature attribution drift monitoring in Agent Platform Model Monitoring measures changes in features' contributions to predictions over time. Scheduled comparisons and threshold alerts automate detection against a production baseline. Input drift monitoring measures feature values rather than contributions. Score monitoring measures aggregate outputs, which can conceal changes in individual contributions. A report aggregated over the training dataset summarizes historical behavior rather than tracking evolving production attributions.",
+      "C": "This fails to detect shifts in feature contributions. Input feature drift monitoring in Agent Platform Model Monitoring compares distributions of feature values. Feature interactions can change attribution distributions even when an individual feature's input distribution remains unchanged, so input drift alerts can miss the explanatory changes you want to detect.",
+      "D": "This fails to track changing feature contributions in production. Aggregating Agent Platform explanations over a dataset summarizes approximate model behavior on that dataset. Rankings calculated from the training dataset describe historical examples and do not measure subsequent production attribution changes. Feature attribution drift monitoring compares production contributions over time instead."
+    },
+    "officialDocs": [
+      {
+        "title": "Introduction to Model Monitoring",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/model-monitoring/overview"
+      },
+      {
+        "title": "Monitor feature attribution skew and drift",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/model-monitoring/monitor-explainable-ai"
+      },
+      {
+        "title": "Feature attributions for forecasting",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/tabular-data/forecasting-explanations"
+      }
+    ]
+  },
+  {
+    "id": "ef035d8a-f31f-4020-b396-f2d2d0eb4e78",
+    "domain": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+    "stem": "Your company is building an irrigation planner that predicts each greenhouse's next-day water demand. Historical sensor summaries, crop types, and recorded water use are available as labeled tabular data in BigQuery. Your team has prepared the training examples but has no existing training code or preferred model family. You want to automate the search across model architectures and their tuning while minimizing the modeling code your team maintains. What should you do?",
+    "options": {
+      "A": "Develop a neural network with Agent Platform custom training on the greenhouse examples, using managed hyperparameter tuning to explore its architecture and training parameters for water-demand prediction.",
+      "B": "Create a boosted-tree regression model in BigQuery ML from the prepared greenhouse examples, using hyperparameter tuning to optimize the selected algorithm for water-demand prediction.",
+      "C": "Build an Agent Platform Pipelines workflow to train and compare regression algorithms on the greenhouse examples, implementing candidate models and search logic in custom components for water-demand prediction.",
+      "D": "Train an Agent Platform AutoML tabular regression model on the prepared greenhouse examples, using its managed model search and hyperparameter tuning to build the water-demand predictor."
+    },
+    "key": "D",
+    "rationale": {
+      "A": "This fails the goal of minimizing modeling code. Agent Platform custom training requires a training application or custom container that defines the training code. Managed hyperparameter tuning runs trials of that application using hyperparameters and limits the team specifies, leaving the neural-network implementation and search-space definition with the team.",
+      "B": "This fails the broader automated model-search goal. BigQuery ML boosted-tree tuning trains the selected model with different hyperparameter values and returns the best-performing result. It searches within the selected boosted-tree family rather than choosing between neural networks and boosted trees as Agent Platform AutoML does.",
+      "C": "This fails the goal of minimizing modeling-code maintenance. Agent Platform Pipelines orchestrates workflow steps, and custom components contain executable code authored by the team. In this approach, the team owns candidate-model implementations and search logic. Agent Platform AutoML already provides managed model search and tuning for tabular regression.",
+      "D": "The team wants automated architecture search and tuning with minimal modeling-code ownership. Agent Platform AutoML provides fully managed tabular regression training that considers neural networks and boosted trees, searches hyperparameters, and chooses model types and parameters. This addresses both wants for the prepared water-demand examples. The proposed BigQuery ML approach tunes a selected boosted-tree family. Agent Platform custom training requires a team-written training application, and the proposed Agent Platform Pipelines workflow requires custom model implementations and search logic."
+    },
+    "officialDocs": [
+      {
+        "title": "Create training pipelines",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/training/create-training-pipeline"
+      },
+      {
+        "title": "The CREATE MODEL statement for boosted trees models using XGBoost",
+        "url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create-boosted-tree"
+      },
+      {
+        "title": "Introduction to Gemini Enterprise Agent Platform Pipelines",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/pipelines/introduction"
+      },
+      {
+        "title": "Tabular Workflow for End-to-End AutoML",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/tabular-data/tabular-workflows/e2e-automl"
+      }
+    ]
+  },
+  {
+    "id": "1640fcc2-dea5-4616-bf35-6690179408d1",
+    "domain": "SERVING_AND_SCALING_MODELS",
+    "stem": "You are running a retail demand forecasting service that helps stores plan inventory. Its Python inference code loads an XGBoost model and uses a company Python package to adjust forecasts for local promotions. As more stores adopt the service, your team is moving model hosting to Agent Platform. You want to preserve current forecast behavior while minimizing prediction-server code your team maintains. What should you do?",
+    "options": {
+      "A": "Use Agent Platform's prebuilt XGBoost prediction container to serve the existing model. Upload the Python inference code and company package alongside the model artifacts in Cloud Storage so the serving runtime can load them.",
+      "B": "Use Agent Platform custom prediction routines to wrap the existing XGBoost inference code in a Predictor and install the company package. Build the custom serving container with the supplied prediction server, then deploy it to an Agent Platform endpoint.",
+      "C": "Write a dedicated HTTP prediction server that wraps the existing XGBoost inference code and calls the company package. Install the dependencies in a custom serving container, then upload and deploy the container and model to an Agent Platform endpoint.",
+      "D": "Retrain the forecasting model in TensorFlow and incorporate the company's promotion adjustments into the exported model. Upload the TensorFlow model artifacts to Cloud Storage, then deploy with Agent Platform's prebuilt TensorFlow prediction container."
+    },
+    "key": "B",
+    "rationale": {
+      "A": "This fails to preserve the promotion-adjusted forecasts. Agent Platform's prebuilt XGBoost container serves exported XGBoost model artifacts; placing application code and a company package alongside those artifacts does not install the dependency or integrate its logic into prediction processing. Custom prediction routines provide explicit integration of that code and its dependencies.",
+      "B": "You want to retain the existing forecasts and minimize prediction-server maintenance. Agent Platform custom prediction routines let you implement the existing inference logic in a Predictor, install Python dependencies when building the container, and run business logic during postprocessing. They supply the HTTP prediction server, so your team maintains the forecasting logic rather than its own server. Uploading code beside model artifacts does not integrate it into inference processing, writing a server adds maintenance, and retraining in TensorFlow replaces the predictor rather than packaging the existing application.",
+      "C": "This can preserve forecast behavior, but it fails the goal of minimizing prediction-server code your team maintains. A manually implemented custom server must handle the HTTP serving requirements for Agent Platform. Custom prediction routines supply that server while allowing your team to implement the existing inference and business logic.",
+      "D": "This does not establish preservation of current forecast behavior. Agent Platform's prebuilt TensorFlow container requires a TensorFlow model export, so this approach replaces the existing trained XGBoost predictor rather than packaging it. Custom prediction routines can retain the existing predictor and execute the company's promotion adjustments as postprocessing business logic."
+    },
+    "officialDocs": [
+      {
+        "title": "Export model artifacts for inference and explanation",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/training/exporting-model-artifacts"
+      },
+      {
+        "title": "Custom inference routines",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/custom-prediction-routines"
+      },
+      {
+        "title": "Custom container requirements for inference",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/custom-container-requirements"
+      }
+    ]
+  },
+  {
+    "id": "0c49d35f-c5cc-42b6-9f92-28edd8432c91",
+    "domain": "SERVING_AND_SCALING_MODELS",
+    "stem": "You are building an assistant that summarizes customer support conversations. Your team has selected a Llama model from Model Garden that is available through a managed API and for self-deployment. Support agents will request summaries as they review cases, and early usage will be intermittent. You want serving costs to track actual usage during the initial rollout while minimizing serving infrastructure maintenance. What should you do?",
+    "options": {
+      "A": "Build a model-serving container for Cloud Run, and configure GPU resources, model loading, and request concurrency to handle summaries requested by the support assistant.",
+      "B": "Host the Llama model on GKE with GPU workers, and configure the inference service, workload scaling, and cluster autoscaling to handle assistant summary requests.",
+      "C": "Use the Llama model's managed API in Model Garden with pay-as-you-go billing, and send summary requests directly from the support assistant.",
+      "D": "Deploy the Llama model from Model Garden to an Agent Platform endpoint, and configure the machine type and GPU resources to handle summary requests."
+    },
+    "key": "C",
+    "rationale": {
+      "A": "This fails the goal of minimizing serving infrastructure maintenance. Cloud Run supports GPU inference and autoscaling, but the team still configures the serving container, model loading, startup readiness, and concurrency. Concurrency must match the inference implementation's capacity. The managed API handles the underlying inference infrastructure instead.",
+      "B": "This fails the goal of minimizing serving infrastructure maintenance. GKE supports accelerator-backed inference and autoscaling, but the team packages the model and inference server, selects hardware configurations, and configures Kubernetes workloads. Kubernetes adds operational complexity compared with the managed API, where Google handles provisioning, scaling, and maintenance.",
+      "C": "The serving approach should minimize infrastructure maintenance and tie costs to intermittent usage. Model Garden's managed API provides serverless inference, with Google handling accelerator provisioning, scaling, and maintenance. Its pay-as-you-go model fits variable traffic. Self-deployment on an Agent Platform endpoint introduces compute configuration, Cloud Run requires model-serving container configuration, and GKE introduces Kubernetes workload operations. These alternatives add infrastructure work that the available managed API handles for the team.",
+      "D": "This fails the goal of minimizing serving infrastructure maintenance. Self-deployed Model Garden models are not serverless and require deployment with compute resources. The team takes on hardware configuration and a greater upfront engineering investment, whereas the managed API handles accelerator provisioning, scaling, and maintenance."
+    },
+    "officialDocs": [
+      {
+        "title": "Best practices: AI inference on Cloud Run services with GPUs",
+        "url": "https://docs.cloud.google.com/run/docs/configuring/services/gpu-best-practices"
+      },
+      {
+        "title": "Select a managed container runtime environment",
+        "url": "https://docs.cloud.google.com/architecture/select-managed-container-runtime-environment"
+      },
+      {
+        "title": "Open models overview",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/open-models/choose-serving-option"
+      },
+      {
+        "title": "Deploy open models from Model Garden",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/open-models/deploy-model-garden"
+      }
+    ]
+  }
+]

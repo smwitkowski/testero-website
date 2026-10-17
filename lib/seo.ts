@@ -11,6 +11,7 @@ export const SOCIAL_IMAGE = `${SITE_ORIGIN}/og-v2.png`;
 export const publicPaths: readonly string[] = [
   "/", "/diagnostic", "/pricing", "/blog", "/faq", "/terms", "/privacy", "/certifications",
   ...toolPaths,
+  "/pmle/sample-questions",
   ...certifications.map(cert => certificationPath(cert.cert_id)),
   ...catalog.blog.map(entry => entry.href),
   ...catalog.faq.map(entry => entry.href),
