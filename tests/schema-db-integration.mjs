@@ -112,6 +112,29 @@ if (await scalar("SELECT to_regprocedure('public.upsert_question_answers(uuid,js
   }
 }
 console.log(`PASS replay, ${prodSchema ? "restored 145-ACTIVE bank inventory and blueprint supply" : "seed inventory"}, table RLS and browser privilege denial`);
+// Multi-cert foundation: transaction-only fixtures never enter the live PMLE pool.
+for (const [exam, count] of [["cloud-engineer", 4], ["cloud-architect", 6], ["data-engineer", 5]]) {
+  assert.equal(await scalar(`SELECT count(*) FROM public.exam_domains WHERE exam=${q(exam)};`), String(count));
+}
+assert.equal(await scalar("SELECT count(*) FROM public.questions WHERE exam='GCP_PM_ML_ENG' AND question_type <> 'single_select';"), "0");
+const certDomain = randomUUID(), certQuestion = randomUUID();
+const pmleDomain = await scalar("SELECT id FROM public.exam_domains WHERE exam='GCP_PM_ML_ENG' ORDER BY id LIMIT 1;");
+const pmleCode = await scalar(`SELECT code FROM public.exam_domains WHERE id=${q(pmleDomain)};`);
+await run(`BEGIN;
+ INSERT INTO public.exam_domains(id,exam,code,name) VALUES (${q(certDomain)},'cloud-engineer',${q(pmleCode)},'Isolated ACE domain');
+ INSERT INTO public.questions(id,exam,domain_id,stem,status,question_type)
+ VALUES (${q(certQuestion)},'cloud-engineer',${q(certDomain)},'Isolated multiple-select storage fixture','DRAFT','multiple_select');
+ INSERT INTO public.answers(question_id,choice_label,choice_text,is_correct)
+ VALUES (${q(certQuestion)},'A','One',true),(${q(certQuestion)},'B','Two',true);
+ ROLLBACK;`);
+await denied(`BEGIN; INSERT INTO public.questions(exam,domain_id,stem,status)
+ VALUES ('cloud-engineer',${q(pmleDomain)},'Cross-exam must fail','DRAFT'); ROLLBACK;`, "cross-exam domain rejected");
+await denied(`BEGIN; INSERT INTO public.questions(exam,domain_id,stem,status,question_type)
+ VALUES ('GCP_PM_ML_ENG',${q(pmleDomain)},'Unsupported live mode','ACTIVE','multiple_select'); ROLLBACK;`, "multiple-select cannot become live");
+await denied(`BEGIN; INSERT INTO public.questions(exam,domain_id,stem,status,question_type)
+ VALUES ('GCP_PM_ML_ENG',${q(pmleDomain)},'Unknown mode','DRAFT','unknown'); ROLLBACK;`, "unknown question type rejected");
+console.log("PASS per-exam domain uniqueness, cross-exam FK, default single-select and non-live multiple-select storage");
+
 
 const owner = randomUUID(), other = randomUUID(), paidOwner = randomUUID(), legacyOwner = randomUUID();
 const strictOwner = randomUUID(), claimOwner = randomUUID(), claimOther = randomUUID();

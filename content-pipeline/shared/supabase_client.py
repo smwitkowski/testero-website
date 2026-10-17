@@ -27,10 +27,11 @@ class SupabaseClient:
         
         self.client: Client = create_client(url, key)
 
-    def get_domain_by_code(self, domain_code: str) -> Optional[Dict[str, Any]]:
-        """Fetch an exam domain by its code."""
+    def get_domain_by_code(self, domain_code: str, exam: str = "GCP_PM_ML_ENG") -> Optional[Dict[str, Any]]:
+        """Fetch a domain within one exam; legacy callers remain PMLE-scoped."""
         try:
-            response = self.client.table('exam_domains').select('*').eq('code', domain_code).maybe_single().execute()
+            response = (self.client.table('exam_domains').select('*')
+                        .eq('exam', exam).eq('code', domain_code).maybe_single().execute())
             return response.data if response.data else None
         except Exception as e:
             print(f"Error fetching domain by code '{domain_code}': {e}")
