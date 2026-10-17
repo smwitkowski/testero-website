@@ -13,6 +13,7 @@ content-pipeline/*
 !content-pipeline/certs
 content-pipeline/certs/*
 !content-pipeline/certs/*.json
+integrations
 supabase
 docs
 README.md

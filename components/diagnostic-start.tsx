@@ -1,5 +1,6 @@
 "use client";
 
+import { ChatgptCta } from "@/components/chatgpt-cta";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -63,6 +64,7 @@ export function DiagnosticStart({ resumeId = null }: { resumeId?: string | null 
       <Button onClick={start} disabled={pending}>{pending ? "Starting diagnostic…" : error ? "Retry start" : "Begin diagnostic"}</Button>
       <span className="text-sm text-muted-foreground">No account required.</span>
     </div>}
+    <ChatgptCta />
     {error && <p role="alert" className="text-sm leading-relaxed text-destructive">{error}</p>}
     {pending && <p role="status" className="text-sm text-muted-foreground">Preparing your questions…</p>}
     <p className="leading-relaxed text-muted-foreground">Questions appear one at a time. Answers are recorded as you go and can&apos;t be changed once submitted. Results are shown at the end. Keep cookies enabled.</p>
