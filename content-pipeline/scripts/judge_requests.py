@@ -19,9 +19,10 @@ import click
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from shared import cli_models
+from shared.call_logging import call_context
 from shared.cli_models import output_model, parse_output
 from shared.quality_gate import QuestionQualitySignature
-from shared.gates import GATE_SIGNATURES, GATE_VERSION, parse_gate_output, gate_signatures
+from shared.gates import GATE_SIGNATURES, GATE_VERSION, parse_gate_output, gate_signatures, evaluate_gate
 from shared import argon_gate as argon
 from shared.completion_diagnostics import _safe_completion
 from shared.llm_limits import MaxTokensTruncation
@@ -97,11 +98,14 @@ def _read_request(path, ident, canonical, *, with_digest=False):
         raise RequestValidationError("Request must be readable, non-symlink strict JSON") from None
     legacy_fields = {"candidate_id", "objective_id", "judge_prompt", "verdict_schema", "trimming"}
     gate_fields = {"candidate_id", "objective_id", "gate_version", "decision_provenance_sha256", "gates", "trimming"}
-    modern_fields = (gate_fields, gate_fields | {"argon"}, gate_fields | {"style_policy"},
-                     gate_fields | {"argon", "style_policy"})
+    base_fields = (gate_fields, gate_fields | {"argon"}, gate_fields | {"style_policy"},
+                   gate_fields | {"argon", "style_policy"})
+    modern_fields = (*base_fields, *(fields | {"execution_policy"} for fields in base_fields))
     if not isinstance(request, dict) or set(request) not in (legacy_fields, *modern_fields):
         raise RequestValidationError("Request must contain exactly the exported request fields")
     is_gates = set(request) in modern_fields
+    if "execution_policy" in request and request["execution_policy"] != "short_circuit_v1":
+        raise RequestValidationError("Unsupported execution policy")
     if "style_policy" in request:
         from shared.objective_style import validate_style_policy
         try:
@@ -134,6 +138,8 @@ def _read_request(path, ident, canonical, *, with_digest=False):
         raise RequestValidationError("Request verdict schema differs from the current question quality schema")
     if "argon" in request:
         argon.validate_request(request["argon"])
+        if request["argon"]["version"] != (2 if "execution_policy" in request else 1):
+            raise RequestValidationError("Argon version differs from frozen execution policy")
     return (request, hashlib.sha256(raw).hexdigest()) if with_digest else request
 
 
@@ -221,12 +227,14 @@ def _record_verdict_directory(requests, verdicts):
             raise click.ClickException("Cannot record verdict-directory registry safely") from None
 
 
-def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_gate=False, candidate_ids=()):
+def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_gate=False, candidate_ids=(), full_gate_sample=5):
     """Run a resumable locked batch, submitting at most parallel requests at once."""
     if not isinstance(judge_model, str) or judge_model not in ALLOWED_MODELS:
         raise click.ClickException("Only claude or claude/claude-sonnet-5-5 is allowed by current ingestion provenance")
     if type(parallel) is not int or not 1 <= parallel <= 4:
         raise click.ClickException("Parallel must be an integer from 1 to 4")
+    if type(full_gate_sample) is not int or full_gate_sample < 1:
+        raise click.ClickException("Full gate sample must be a positive integer")
     requests, verdicts = Path(requests).absolute(), Path(verdicts).absolute()
     _no_symlinks(requests)
     _no_symlinks(verdicts)
@@ -242,6 +250,8 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
         raise click.ClickException("Cannot prepare request and verdict directories") from None
     if any(not SAFE_ID.fullmatch(path.stem) for path in paths):
         raise click.ClickException("Request filenames must contain safe candidate IDs")
+    ordinals = {path.stem: index for index, path in enumerate(paths, 1)}
+    calls_path = requests.with_name(requests.name.removesuffix(".judge-requests") + ".json.calls.jsonl")
     if candidate_ids:
         if any(not isinstance(ident, str) or not SAFE_ID.fullmatch(ident) for ident in candidate_ids):
             raise click.ClickException("Candidate selection requires safe request IDs")
@@ -272,14 +282,34 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
                     return ident, "not_attempted", None
             if "gates" in request:
                 raw = {}
-                for name in GATE_SIGNATURES:
+                short = request.get("execution_policy") == "short_circuit_v1"
+                sampled = ordinals[ident] % full_gate_sample == 0
+                failed_at = None
+                # Evidence prompt is generated from canonical question JSON. Decode
+                # only its explicit field, never a model's interpretation of the key.
+                question = None
+                if short:
+                    prompt = request["gates"]["evidence"]["judge_prompt"]
+                    marker = "[[ ## question_data ## ]]"
+                    user_prompt = prompt.split("\n\nUSER:\n", 1)[-1]
+                    question = json.JSONDecoder().raw_decode(user_prompt.split(marker, 1)[1].lstrip())[0]
+                for name in (("style", "evidence", "blind_solver") if short else GATE_SIGNATURES):
+                    if failed_at and not sampled:
+                        raw[name] = {"status": "skipped", "reason": "prior_gate_failed", "gate": failed_at}
+                        continue
                     with submission_lock:
                         if stopped.is_set():
                             return ident, "not_attempted", None
                     sub_call = "claude." + name
                     gate = request["gates"][name]
-                    raw[name] = cli_models.run_claude_request(judge_model, gate["judge_prompt"], gate["verdict_schema"])
+                    with call_context(stage="judge_blind" if name == "blind_solver" else "judge_" + name,
+                                      candidate_id=ident,
+                                      attempt=1, calls_path=calls_path):
+                        raw[name] = cli_models.run_claude_request(judge_model, gate["judge_prompt"], gate["verdict_schema"])
                     parse_gate_output(name, raw[name], version=request["gate_version"])
+                    if short and not evaluate_gate(name, raw[name], question, version=request["gate_version"],
+                                                   style_policy=request.get("style_policy"))[0]:
+                        failed_at = failed_at or name
             else:
                 sub_call = "claude.quality"
                 raw = cli_models.run_claude_request(judge_model, request["judge_prompt"], request["verdict_schema"])
@@ -294,7 +324,12 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
                     raise cli_models.CLISchemaError("Invalid structured output")
             if argon_gate:
                 sub_call = "argon.validation"
-                raw["argon"] = argon.run_argon(request["argon"])
+                if request.get("execution_policy") == "short_circuit_v1" and failed_at and not sampled:
+                    raw["argon"] = {"status": "skipped", "reason": "prior_gate_failed"}
+                else:
+                    with call_context(candidate_id=ident,
+                                      attempt=1, calls_path=calls_path):
+                        raw["argon"] = argon.run_argon(request["argon"])
             sub_call = "verdict_publication"
             if not _publish(destination, raw, exclusive=True):
                 return ident, "skipped", None
@@ -324,6 +359,19 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
     # Exporters take the same request-directory lock before rewriting prompts.
     with batch_lock(requests), batch_lock(verdicts):
         _record_verdict_directory(requests, verdicts)
+        if ordinals:
+            sampling = verdicts / ".sampling"
+            _no_symlinks(sampling)
+            sampling.mkdir(exist_ok=True)
+            policy_path = sampling / "policy.json"
+            _no_symlinks(policy_path)
+            policy = {"full_gate_sample": full_gate_sample, "candidate_ids": list(ordinals),
+                      "sampled_ids": [ident for ident, ordinal in ordinals.items() if ordinal % full_gate_sample == 0]}
+            if policy_path.exists():
+                if cli_models._load_json(policy_path.read_text()) != policy:
+                    raise click.ClickException("Sampling cohort or interval changed; use a new verdict directory")
+            else:
+                _publish(policy_path, policy, exclusive=True)
         failures = verdicts / ".failures"
         _no_symlinks(failures)
         try:
@@ -372,9 +420,10 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
 @click.option("--parallel", default=3, type=click.IntRange(1, 4), show_default=True)
 @click.option("--argon-gate", is_flag=True, help="Require and run frozen independent Gemini 4 Argon blind/full requests via OpenRouter.")
 @click.option("--candidate-id", "candidate_ids", multiple=True, help="Retry only these frozen candidate IDs in the original directories.")
-def main(requests, verdicts, judge_model, parallel, argon_gate, candidate_ids):
+@click.option("--full-gate-sample", default=5, type=click.IntRange(1), show_default=True)
+def main(requests, verdicts, judge_model, parallel, argon_gate, candidate_ids, full_gate_sample):
     """Save raw Claude verdicts for frozen requests; never generate or ingest rows."""
-    summary = run_requests(requests, verdicts, judge_model=judge_model, parallel=parallel, argon_gate=argon_gate, candidate_ids=candidate_ids)
+    summary = run_requests(requests, verdicts, judge_model=judge_model, parallel=parallel, argon_gate=argon_gate, candidate_ids=candidate_ids, full_gate_sample=full_gate_sample)
     if summary.failed or summary.usage_stopped or summary.remaining:
         raise click.exceptions.Exit(1)
 

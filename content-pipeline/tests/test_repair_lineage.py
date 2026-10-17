@@ -283,6 +283,7 @@ def test_repair_cannot_duplicate_another_original_even_if_reordered(repaired, ch
     payload = repaired[2]
     parent, child = payload["candidates"]
     scope = plan_questions(payload["cert_id"], 2, objective_ids=[payload["plan"][0]["objective_id"]])[1]
+    scope.pop("style_policy")
     payload["plan"].append(scope)
     other = deepcopy(parent)
     other.update({key: scope[key] for key in ("scenario_moment", "opening_style", "question_line", "key_length_rank")})
@@ -305,6 +306,8 @@ def completed_batch(case):
     from shared.cert_context import plan_questions
     template = deepcopy(case[2]["candidates"][0])
     plan = plan_questions("machine-learning-engineer", 45, seed=3)
+    for scope in plan:
+        scope.pop("style_policy")
     payload = case[2]
     payload.update(cert_id="machine-learning-engineer", exam="machine-learning-engineer", plan=plan,
                    candidates=[], generation_runs={}, external_run_journal={})

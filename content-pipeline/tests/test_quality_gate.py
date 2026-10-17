@@ -262,6 +262,9 @@ def test_production_path_uses_typed_signature_and_per_call_lm(question, monkeypa
     monkeypatch.setattr(gate.os.environ, "get", lambda key: "offline-fake-credential")
     monkeypatch.setattr(gate.dspy, "LM", make_lm)
     monkeypatch.setattr(gate.dspy, "Predict", make_predictor)
+    from contextlib import nullcontext
+    from shared import call_logging
+    monkeypatch.setattr(call_logging, "log_lm_calls", lambda *args, **kwargs: nullcontext())
     verdict = gate.judge_question(question, "ML", documentation_context="Docs", model="openrouter/test/model")
     assert verdict.passed
     make_predictor.assert_called_once_with(gate.QuestionQualitySignature)

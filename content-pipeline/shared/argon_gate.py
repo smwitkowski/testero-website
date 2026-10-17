@@ -41,14 +41,14 @@ class ArgonCallError(RuntimeError):
         super().__init__(f"Argon {call} call failed ({type(error).__name__})")
 
 
-def build_argon_request(question, scope, context, evidence):
+def build_argon_request(question, scope, context, evidence, *, review_only=False):
     inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence)
     full = {**inputs["evidence"], "style_reference": inputs["style"]["style_reference"]}
-    return {"model": MODEL, "version": 1,
+    return {"model": MODEL, "version": 2 if review_only else 1,
             "calls": {name: {"judge_prompt": signature_prompt(signature, data),
                              "verdict_schema": output_model(signature).model_json_schema()}
                       for name, signature, data in (("blind", BlindSolverSignature, inputs["blind_solver"]),
-                                                    ("review", ArgonReviewSignature, full))}}
+                                                    ("review", ArgonReviewSignature, full)) if not review_only or name == "review"}}
 
 
 def run_call(name, gate):
@@ -62,17 +62,19 @@ def run_call(name, gate):
     for field, info in SIGNATURES[name].output_fields.items():
         signature = signature.append(field, info, type_=info.rebuild_annotation())
     lm = _generation_lm(MODEL, max_tokens=4000)
-    with reject_token_limit(lm), dspy.context(adapter=dspy.JSONAdapter()):
+    from shared.call_logging import log_lm_calls
+    with log_lm_calls(lm, MODEL), reject_token_limit(lm), dspy.context(adapter=dspy.JSONAdapter()):
         result = dict(dspy.Predict(signature)(prompt=gate["judge_prompt"], lm=lm))
     return parse_output(json.dumps(result, allow_nan=False), SIGNATURES[name])
 
 
 def validate_request(request):
     if (not isinstance(request, dict) or set(request) != {"model", "version", "calls"}
-            or request["model"] != MODEL or type(request["version"]) is not int or request["version"] != 1
-            or not isinstance(request["calls"], dict) or set(request["calls"]) != set(SIGNATURES)):
+            or request["model"] != MODEL or type(request["version"]) is not int or request["version"] not in (1, 2)
+            or not isinstance(request["calls"], dict) or set(request["calls"]) != ({"review"} if request["version"] == 2 else set(SIGNATURES))):
         raise CLISchemaError("Invalid Argon request")
-    for name, signature in SIGNATURES.items():
+    for name in request["calls"]:
+        signature = SIGNATURES[name]
         gate = request["calls"][name]
         if (not isinstance(gate, dict) or set(gate) != {"judge_prompt", "verdict_schema"}
                 or not isinstance(gate["judge_prompt"], str) or not gate["judge_prompt"].strip()
@@ -83,9 +85,12 @@ def validate_request(request):
 def run_argon(request):
     validate_request(request)
     outputs = {}
-    for name, signature in SIGNATURES.items():
+    for name in request["calls"]:
+        signature = SIGNATURES[name]
         try:
-            raw = run_call(name, request["calls"][name])
+            from shared.call_logging import call_context
+            with call_context(stage="argon_" + name):
+                raw = run_call(name, request["calls"][name])
             outputs[name] = parse_output(json.dumps(raw, allow_nan=False), signature)
             if name == "blind":
                 from shared.gates import parse_gate_output
@@ -94,16 +99,17 @@ def run_argon(request):
                 raise CLISchemaError("Empty Argon issue or fix")
         except Exception as error:
             raise ArgonCallError(name, error) from None
-    return {"model": MODEL, "version": 1, "request_sha256": canonical_sha256(request), **outputs}
+    return {"model": MODEL, "version": request["version"], "request_sha256": canonical_sha256(request), **outputs}
 
 
 def evaluate_argon(question, raw, request):
     validate_request(request)
-    if (not isinstance(raw, dict) or set(raw) != {"model", "version", "request_sha256", "blind", "review"}
-            or raw["model"] != MODEL or type(raw["version"]) is not int or raw["version"] != 1
+    if (not isinstance(raw, dict) or set(raw) != {"model", "version", "request_sha256", *request["calls"]}
+            or raw["model"] != MODEL or type(raw["version"]) is not int or raw["version"] != request["version"]
             or raw["request_sha256"] != canonical_sha256(request)):
         raise CLISchemaError("Missing or mismatched Argon provenance")
-    blind, reason = evaluate_gate("blind_solver", raw["blind"], question)
+    blind, reason = (evaluate_gate("blind_solver", raw["blind"], question)
+                     if request["version"] == 1 else (True, "Claude blind required separately"))
     review = parse_output(json.dumps(raw["review"], allow_nan=False), ArgonReviewSignature)
     if not review["fix"].strip() or any(not issue.strip() for issue in review["issues"]):
         raise CLISchemaError("Empty Argon issue or fix")

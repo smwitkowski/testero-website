@@ -175,7 +175,7 @@ def _validate_candidate(path, payload, entry):
         frozen = _read_json(request_path)
         v4 = payload.get("external_judge_version") == 2
         rebuilt = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"],
-                                **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False)} if v4 else {"signature": QuestionQualitySignature}))
+                                **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False), "execution_policy": payload.get("execution_policy")} if v4 else {"signature": QuestionQualitySignature}))
         if canonical_sha256(frozen) != canonical_sha256(rebuilt):
             # Only unchanged originals may retain the exact known preceding 14-field rubric.
             # No arbitrary old schema or historical 13-field request is accepted.
@@ -213,6 +213,12 @@ def _external_decision(question, scope, sources, evidence, raw, generator_model,
             if not isinstance(raw, dict) or set(raw) != {"blind_solver", "style", "evidence", "argon"}:
                 raise ValueError("All four gates required")
             base = {name: raw[name] for name in ("blind_solver", "style", "evidence")}
+            if raw["argon"] == {"status": "skipped", "reason": "prior_gate_failed"}:
+                decision = aggregate_gate_verdict(question, base, model=EXTERNAL_JUDGE_PROVENANCE,
+                    version=rules_version, style_policy=scope.get("style_policy"))
+                if argon_request["version"] != 2 or decision.passed:
+                    raise ValueError("Argon skip cannot approve content")
+                return decision
             passed, reason = evaluate_argon(question, raw["argon"], argon_request)
         decision = aggregate_gate_verdict(question, base, model=EXTERNAL_JUDGE_PROVENANCE, version=rules_version,
                                           style_policy=scope.get("style_policy"))

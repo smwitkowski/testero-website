@@ -201,6 +201,7 @@ def test_early_rejects_are_skipped_without_question_regeneration(case):
     payload = case[2]
     from shared.cert_context import plan_questions
     second = plan_questions(payload["cert_id"], 2, objective_ids=[payload["plan"][0]["objective_id"]])[1]
+    second.pop("style_policy")
     payload["plan"].append(second)
     scope = payload["plan"][1]
     reject = {**{key: scope[key] for key in ("cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment", "opening_style", "question_line", "key_length_rank")},
@@ -219,6 +220,7 @@ def test_all_builds_finish_before_any_request_is_replaced(case):
     payload = case[2]
     from shared.cert_context import plan_questions
     second = plan_questions(payload["cert_id"], 2, objective_ids=[payload["plan"][0]["objective_id"]])[1]
+    second.pop("style_policy")
     payload["plan"].append(second)
     other = deepcopy(payload["candidates"][0])
     other.update({key: second[key] for key in ("scenario_moment", "opening_style", "question_line", "key_length_rank")})

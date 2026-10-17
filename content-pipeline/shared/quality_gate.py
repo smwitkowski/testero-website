@@ -279,7 +279,8 @@ def judge_question(
             )
             # DSPy selects per-call lm from the direct keyword, not config.
             adapter = CompletionCaptureAdapter(normalize_markers=False)
-            with reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
+            from shared.call_logging import log_lm_calls
+            with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
                 result = dspy.Predict(QuestionQualitySignature)(**inputs, lm=lm)
         else:
             with reject_token_limit(None):
@@ -357,19 +358,22 @@ def judge_three_gates(
                                    option_evidence, style_reference=style_reference, style_policy=style_policy)
         raw = {}
         for name, signature in GATE_SIGNATURES.items():
-            if predictors is not None:
-                result = predictors[name](**inputs[name])
-                raw[name] = result if isinstance(result, dict) else dict(result)
-            elif model == "claude" or model.startswith("claude/"):
-                raw[name] = run_signature(model, signature, inputs[name])
-            else:
-                key = os.environ.get("OPENROUTER_API_KEY")
-                if not key:
-                    return fail("Judge credentials unavailable")
-                lm = dspy.LM(model=model, api_key=key, api_base="https://openrouter.ai/api/v1",
-                             temperature=0.0, max_tokens=max_tokens, cache=False)
-                with reject_token_limit(lm), dspy.context(adapter=dspy.JSONAdapter()):
-                    raw[name] = dict(dspy.Predict(signature)(**inputs[name], lm=lm))
+            from shared.call_logging import call_context
+            with call_context(stage="judge_blind" if name == "blind_solver" else "judge_" + name):
+                if predictors is not None:
+                    result = predictors[name](**inputs[name])
+                    raw[name] = result if isinstance(result, dict) else dict(result)
+                elif model == "claude" or model.startswith("claude/"):
+                    raw[name] = run_signature(model, signature, inputs[name])
+                else:
+                    key = os.environ.get("OPENROUTER_API_KEY")
+                    if not key:
+                        return fail("Judge credentials unavailable")
+                    lm = dspy.LM(model=model, api_key=key, api_base="https://openrouter.ai/api/v1",
+                                 temperature=0.0, max_tokens=max_tokens, cache=False)
+                    from shared.call_logging import log_lm_calls
+                    with log_lm_calls(lm, model), reject_token_limit(lm), dspy.context(adapter=dspy.JSONAdapter()):
+                        raw[name] = dict(dspy.Predict(signature)(**inputs[name], lm=lm))
         return aggregate_gate_verdict(question_data, raw, model=model, style_policy=style_policy)
     except CLIUsageLimitError:
         raise
