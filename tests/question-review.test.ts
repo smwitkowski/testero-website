@@ -12,6 +12,11 @@ const source = {
 };
 
 describe("shared question review", () => {
+  it("offers reporting for session-bound review without exposing bank identity", () => {
+    const html = renderToStaticMarkup(createElement(QuestionReviewList, { review: [mapReview(source)], sessionId: "session", kind: "practice" }));
+    expect(html).toContain("Report a problem with this question");
+    expect(html).not.toContain("bank-id");
+  });
   it("copies only review fields and strips explanation/source/answer metadata from JSON", () => {
     const review = mapReview(source);
     expect(Object.keys(review).sort()).toEqual(["correctLabel", "domainCode", "domainName", "isCorrect", "itemId", "options", "ordinal", "selectedLabel", "stem"]);

@@ -1,10 +1,12 @@
 "use client";
 
+import { ReportQuestion } from "@/components/report-question";
+
 import { useFreshAccessOnFocus } from "@/components/billing-account";
 import type { PaidQuestionReview } from "@/lib/diagnostic/types";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-export function QuestionReviewList({ review }: { review: PaidQuestionReview[] }) {
+export function QuestionReviewList({ review, sessionId, kind = "diagnostic" }: { review: PaidQuestionReview[]; sessionId?: string; kind?: "diagnostic" | "practice" }) {
   useFreshAccessOnFocus();
   return (
     <section aria-labelledby="question-review-heading" className="space-y-4">
@@ -35,6 +37,7 @@ export function QuestionReviewList({ review }: { review: PaidQuestionReview[] })
                     </li>
                   ))}
                 </ul>
+                {sessionId && <ReportQuestion sessionId={sessionId} itemId={question.itemId} kind={kind} />}
               </CardContent>
             </Card>
           </li>

@@ -1,5 +1,7 @@
 "use client";
 
+import { ReportQuestion } from "@/components/report-question";
+
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -118,6 +120,7 @@ export function PracticeSession({ sessionId, initialData = null }: { sessionId: 
         </div>}
       </CardContent>
     </Card>
+    <ReportQuestion key={question.id} sessionId={sessionId} itemId={question.id} kind="practice" />
     <Button variant="ghost" asChild><Link href="/dashboard">Back to dashboard</Link></Button>
   </div>;
 }

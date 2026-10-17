@@ -1,5 +1,7 @@
 "use client";
 
+import { ReportQuestion } from "@/components/report-question";
+
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { DiagnosticAnswerResponse, DiagnosticProgress } from "@/lib/diagnostic/types";
@@ -121,6 +123,7 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
           </form>
         </CardContent>
       </Card>
+      <ReportQuestion key={question.id} sessionId={sessionId} itemId={question.id} kind="diagnostic" />
     </div>
   );
 }
