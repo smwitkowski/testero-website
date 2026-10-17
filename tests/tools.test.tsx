@@ -101,7 +101,7 @@ describe("indexable tools", () => {
       expect(html).toContain(`id="${cert.cert_id}"`);
       for (const guide of getCertification(cert.cert_id)!.guides) expect(html).toContain(guide.url.replaceAll("&", "&amp;"));
     }
-    expect(html).toContain("Year not stated; do not infer a full date.");
+    expect(html).toContain("no full date is inferred");
     expect(html).toContain("2026-10-04"); expect(html).not.toContain("2026-10-16");
     const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
     expect(new Set(ids).size).toBe(ids.length);

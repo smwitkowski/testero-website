@@ -28,14 +28,14 @@ export const certificationEditorial: Record<string, { audience: string; steps: s
     ]
   },
   "agentic-architect": {
-    "audience": "This assessment concerns people designing agentic workflows across low-code tools, coding assistance, and custom development. The role is not simply about producing a convincing demonstration: evaluation, deployment, security, and governance are part of the guide too. It is relevant when you need to decide how an agent should act, what limits it should have, and how a team can judge its behavior. The sourced guide is for the beta, so assessment status deserves attention alongside technical preparation.",
+    "audience": "This assessment concerns developers and architects designing agentic workflows across low-code tools, coding assistance and custom development. The role is not simply about producing a convincing demonstration: evaluation, deployment, security and governance are part of the guide too. It is relevant when you need to decide how an agent should act, what limits it should have and how a team can judge its behavior. Preparation should connect architectural decisions to hands-on execution, because both the proctored exam and separate assessment labs must be passed.",
     "steps": [
-      "Read the beta guide and separate low-code agent construction, coding agents, and custom agents into distinct study areas. Write down where each approach could fit a real workflow and where additional control or evaluation would be needed.",
-      "Select Google Cloud Skills Boost labs related to agent development and deployment. Keep a record of the inputs, tools, and permissions used in each exercise, then examine how a failed or unexpected action would be detected.",
-      "Use the official sample questions to practice interpreting workflow requirements. Explain the evaluation or governance consequence of each choice instead of assuming that a more autonomous design is always preferable.",
-      "Review the current official assessment announcements before committing to a schedule. The beta assessment includes required labs as well as the exam; confirm the applicable windows and completion instructions rather than treating optional study labs as those required assessment components."
+        "Read the linked exam guide and separate low-code agent construction, coding agents and custom agents into distinct study areas. Write down where each approach could fit a real workflow and where more control or evaluation would be needed.",
+        "Select optional Google Skills learning activities related to agent development and deployment. Record inputs, tools and permissions, then examine how a failed or unexpected action would be detected.",
+        "Use official sample questions to practice interpreting workflow requirements. Explain each choice’s evaluation or governance consequence instead of assuming more autonomy is always preferable.",
+        "Recheck the official page and FAQ before booking. Keep GA and beta logistics separate. Training labs do not replace the distinct certification assessment labs required after passing the exam."
     ]
-  },
+},
   "machine-learning-engineer": {
     "audience": "This exam is relevant to engineers taking ML and AI solutions from an initial approach into repeatable production operation. The guide spans low-code options, shared data and model work, model scaling, serving, pipelines, and monitoring. It therefore asks for broader preparation than training an accurate model in a notebook. People working between data teams, application teams, and platform operations can use the scope to identify which parts of that lifecycle they have not yet practiced.",
     "steps": [

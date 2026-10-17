@@ -9,7 +9,7 @@ describe("local content loader", () => {
   it("returns all preserved catalog routes with bodies and safe publication metadata", () => {
     const blogs = getBlogEntries();
     const faqs = getFaqEntries();
-    expect(blogs).toHaveLength(13);
+    expect(blogs).toHaveLength(14);
     expect(faqs).toHaveLength(9);
     for (const entry of [...blogs, ...faqs]) {
       expect(entry.body.length).toBeGreaterThan(300);
@@ -30,7 +30,7 @@ describe("local content loader", () => {
   });
   it("publishes reviewed current articles without historical notices", () => {
     const entries = getBlogEntries().filter(entry => !entry.republished);
-    expect(entries).toHaveLength(10);
+    expect(entries).toHaveLength(11);
     for (const entry of entries) {
       const document = parseFrontmatter(readFileSync(`content/blog/${entry.slug}.md`, "utf8"));
       expect(entry.body).toBe(BLOG_PUBLICATION_OVERLAYS[entry.slug].body);
@@ -39,7 +39,7 @@ describe("local content loader", () => {
       expect(entry.editorialNotice).toBeUndefined();
       expect(entry.title.length).toBeLessThanOrEqual(60);
       expect(entry.description.length).toBeLessThanOrEqual(150);
-      expect(entry.publishedAt).toBe("2026-10-16");
+      expect(entry.publishedAt).toBe(entry.slug === "professional-agentic-architect-exam-ga-2026" ? "2026-10-17" : "2026-10-16");
       expect(entry.updatedAt).toBe(BLOG_PUBLICATION_OVERLAYS[entry.slug].updatedAt ?? "2026-10-16");
       expect(entry.body).toContain(entry.updatedAt === "2026-10-17" ? "Updated October 17, 2026" : "Last checked October 16, 2026");
       expect(entry.body).toContain("Testero is independent and not affiliated with Google.");

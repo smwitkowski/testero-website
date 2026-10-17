@@ -1,6 +1,6 @@
 // Our summaries of the sourced announcements, not excerpts from Google's guides.
 export const certificationNotices: Record<string, string[]> = {
-  "agentic-architect": ["Beta registration is closed. Google lists GA registration as November 2, without a year; no full date is inferred.", "Beta results are expected in CM Connect at the end of October. Successful candidates must complete the required labs by December 31, 2026.", "Google describes beta results as arriving 4–6 weeks after both the exam and lab windows close. Check the linked source for the latest status."],
+  "agentic-architect": ["GA registration opens November 2; exam availability is planned for mid-November. The announcement does not explicitly state a year. Checked October 17, 2026.", "Beta registration is closed. Beta multiple-choice results are expected in CM Connect in late October; successful beta candidates must complete required PAA labs by December 31, 2026.", "The PAA-specific FAQ says GA is a 2-hour session with results in 7–10 business days and 2 months after passing to complete required labs. Both components must be passed."],
   "cloud-architect": ["Google reports a branding update. Use the linked exam guide for current product names."],
   "cloud-database-engineer": ["Google announces a future branding update. No effective date or future guide link was listed when checked."],
   "cloud-developer": ["Google reports a branding update. Use the linked exam guide for current product names."],
