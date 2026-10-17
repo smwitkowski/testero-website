@@ -15,7 +15,8 @@ export interface PaidExplanation {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const nonblank = (text: unknown): text is string => typeof text === "string" && text.trim().length > 0;
 
-/** Only call after fresh paid access and completed/answered ownership checks.
+/** Call after fresh paid access and completed/answered ownership checks, or for
+ * the single server-selected free diagnostic preview after completed ownership.
  * Shuffled labels are not canonical labels. Match exact immutable text instead.
  * A changed, missing or ambiguous bank entry redacts that entire item's content.
  */

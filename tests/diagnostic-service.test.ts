@@ -2,7 +2,7 @@ import { loadPaidExplanations } from "@/lib/billing/explanations";
 import { getPaidAccess } from "@/lib/billing/paid-access";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createDiagnosticStart, createDiagnostic, readDiagnostic, answerDiagnostic, diagnosticResults, seenDiagnosticQuestions } from "@/lib/diagnostic/service";
+import { createDiagnosticStart, createDiagnostic, readDiagnostic, answerDiagnostic, diagnosticResults, diagnosticFreeExplanation, seenDiagnosticQuestions } from "@/lib/diagnostic/service";
 import { hashAnonymousToken } from "@/lib/diagnostic/ownership";
 import { DIAGNOSTIC_NEW_SINCE, selectPmleQuestionsByBlueprint, type SelectionResult } from "@/lib/diagnostic/pmle-selection";
 
@@ -364,4 +364,52 @@ it("fails closed if committed create progress cannot be read, without retrying c
   const db = database({ itemsError: true });
   await expect(createDiagnosticStart(db.client, token, now)).rejects.toMatchObject({ status: 503 });
   expect(db.rpc).toHaveBeenCalledOnce();
+});
+
+describe("one server-selected free explanation", () => {
+  function completedRows() {
+    return items().map((item, index) => ({ ...item, question_id: `question-${index}`, domain_code: index < 10 ? "A" : "B", domain_name: index < 10 ? "Domain A" : "Domain B", answered_at: "done", is_correct: index < 10 ? index < 8 : index < 15, selected_label: "A", correct_label: index < 10 ? "A" : "B" }));
+  }
+  function explain(item: ReturnType<typeof completedRows>[number]) {
+    return { explanation: "Full explanation", optionExplanations: item.options.map(option => ({ label: option.label, text: option.text, explanation: `Rationale ${option.label}` })) };
+  }
+  it("selects first miss in lowest-accuracy domain and loads exactly that item on every retry", async () => {
+    const rows = completedRows();
+    const chosen = rows[15];
+    vi.mocked(loadPaidExplanations).mockResolvedValue(new Map([[chosen.id, explain(chosen)]]));
+    const db = database({ session: session({ completed_at: "done" }), items: rows });
+    const first = await diagnosticFreeExplanation(db.client, sessionId, credentials, now);
+    const retry = await diagnosticFreeExplanation(db.client, sessionId, credentials, now);
+    expect(first).toEqual(retry);
+    expect(first).toMatchObject({ itemId: chosen.id, domainCode: "B", explanation: "Full explanation", options: [{ label: "A", text: "Display only", explanation: "Rationale A" }, { label: "B", text: "Other", explanation: "Rationale B" }] });
+    expect(loadPaidExplanations).toHaveBeenNthCalledWith(1, db.client, [chosen]);
+    expect(loadPaidExplanations).toHaveBeenNthCalledWith(2, db.client, [chosen]);
+    expect(getPaidAccess).not.toHaveBeenCalled();
+    expect(JSON.stringify(first)).not.toMatch(/question_id|secret|is_correct|answered_at/);
+  });
+  it("uses first item in exam-guide domain order for a perfect run", async () => {
+    const rows = completedRows().map(item => ({ ...item, is_correct: true }));
+    vi.mocked(loadPaidExplanations).mockResolvedValue(new Map([[rows[0].id, explain(rows[0])]]));
+    const db = database({ session: session({ completed_at: "done", expires_at: "2020-01-01" }), items: rows });
+    expect((await diagnosticFreeExplanation(db.client, sessionId, credentials, now)).itemId).toBe(rows[0].id);
+    expect(loadPaidExplanations).toHaveBeenCalledWith(db.client, [rows[0]]);
+  });
+  it.each(["foreign", "incomplete", "invalid"])('blocks bank and item reads for %s requests', async mode => {
+    const db = database({ session: session({ completed_at: mode === "incomplete" ? null : "done" }) });
+    await expect(diagnosticFreeExplanation(db.client, mode === "invalid" ? "bad" : sessionId, mode === "foreign" ? foreign : credentials, now)).rejects.toMatchObject({ status: mode === "incomplete" ? 409 : 404 });
+    expect(loadPaidExplanations).not.toHaveBeenCalled();
+    expect(db.from.mock.calls).not.toContainEqual(["session_items"]);
+  });
+  it.each(["missing rows", "unanswered", "missing label", "missing rationale"])('fails closed without substituting another question: %s', async mode => {
+    const rows = completedRows();
+    if (mode === "missing rows") rows.pop();
+    if (mode === "unanswered") rows[0].answered_at = "";
+    if (mode === "missing label") rows[15].selected_label = "Z";
+    const partial = { optionExplanations: [{ label: "A", text: "Display only", explanation: "One rationale only" }] };
+    vi.mocked(loadPaidExplanations).mockResolvedValue(new Map([[rows[15].id, partial]]));
+    const db = database({ session: session({ completed_at: "done" }), items: rows });
+    await expect(diagnosticFreeExplanation(db.client, sessionId, credentials, now)).rejects.toMatchObject({ status: 503 });
+    if (mode === "missing rationale") expect(loadPaidExplanations).toHaveBeenCalledWith(db.client, [rows[15]]);
+    else expect(loadPaidExplanations).not.toHaveBeenCalled();
+  });
 });

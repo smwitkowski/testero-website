@@ -29,7 +29,8 @@ decisions before product changes. Agents may read `hq/` including
 Next App Router/TypeScript, Tailwind 4, used shadcn components, system fonts.
 Supabase SSR verifies `getUser` plus confirmed email; httpOnly cookie hashes
 bind anonymous diagnostics and atomic account claims. Anonymous results are
-aggregate-only. Free review has no explanations. All explanations require fresh,
+aggregate-only. One completed, owned diagnostic item has a free explanation via
+the dedicated server-selected preview path. All other explanations require fresh,
 fail-closed paid access on the server. The database rechecks paid/free quota at
 session creation. Stripe signed webhooks and authenticated server-verified checkout returns grant passes; refund tombstones
 and payment-intent locks beat replay and out-of-order receipt writes.

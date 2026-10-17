@@ -42,7 +42,9 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   await expect(page.getByRole("heading", { name: "PMLE readiness report", exact: true })).toBeVisible();
   await expect(page.getByText("20 questions", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Score by domain", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Question review", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "One full explanation, free", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Question review", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("link", { name: "Unlock explanations for all 20 + unlimited practice: $39 one-time, 90 days", exact: true })).toHaveAttribute("href", "/signup?next=%2Fpricing");
   const accounts = JSON.parse(await readFile(".qa/accounts.json", "utf8"));
   const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
   for (const kind of ["free", "refunded", "unconfirmed"]) {

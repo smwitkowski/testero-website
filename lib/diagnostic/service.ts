@@ -157,3 +157,23 @@ export async function diagnosticResults(client: SupabaseClient, id: string, cred
   }
   return result;
 }
+
+/** The server, never a caller-supplied item, selects the one free explanation. */
+export async function diagnosticFreeExplanation(client: SupabaseClient, id: string, credentials: OwnerCredentials, now = Date.now()) {
+  const session = await ownedSession(client, id, credentials, now);
+  if (!session.completed_at) throw new DiagnosticError(409, "Finish the diagnostic to see your explanation");
+  const items = await sessionItems(client, id, true);
+  if (items.length !== session.question_count || items.some(item => !item.answered_at || typeof item.is_correct !== "boolean")) throw unavailable();
+  const domains = computeResult(session.id, items).domainBreakdown;
+  // Keep exam-guide order for equal accuracy. A perfect run uses its first domain.
+  const weakest = [...domains].sort((a, b) => a.correct * b.total - b.correct * a.total)[0];
+  const domainItems = items.filter(item => item.domain_code === weakest?.domainCode);
+  const item = domainItems.find(item => item.is_correct === false) ?? domainItems[0];
+  if (!item || typeof item.selected_label !== "string" || typeof item.correct_label !== "string" ||
+      !item.options.some(option => option.label === item.selected_label) ||
+      !item.options.some(option => option.label === item.correct_label)) throw unavailable();
+  const content = (await loadPaidExplanations(client, [item])).get(item.id);
+  // Never substitute a different question on retry if the selected bank item changed.
+  if (!content || item.options.some(option => !content.optionExplanations?.some(row => row.label === option.label && row.text === option.text && row.explanation.trim()))) throw unavailable();
+  return addPaidReview(mapReview({ ...item, selected_label: item.selected_label, correct_label: item.correct_label, is_correct: item.is_correct! }), content);
+}

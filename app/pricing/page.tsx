@@ -10,7 +10,7 @@ export default function PricingPage() {
     <div className="grid gap-6 md:grid-cols-2">
       <section aria-labelledby="free-plan" className="flex flex-col items-start gap-6 rounded-lg border border-border bg-card p-6 sm:p-8">
         <div className="space-y-3"><h2 id="free-plan" className="text-xl font-semibold">Free</h2><p className="text-4xl font-semibold">$0</p></div>
-        <ul className="w-full divide-y divide-border text-body"><li className="py-3">20-question diagnostic, no account needed</li><li className="py-3">Overall score, readiness tier and domain scores</li><li className="py-3">Answer review with an account: your answer and the correct one</li><li className="py-3">5 practice questions per week with an account</li><li className="py-3">Explanations: <span className="font-medium">not included</span></li></ul>
+        <ul className="w-full divide-y divide-border text-body"><li className="py-3">20-question diagnostic, no account needed</li><li className="py-3">Overall score, readiness tier and domain scores</li><li className="py-3">Answer review with an account: your answer and the correct one</li><li className="py-3">5 practice questions per week with an account</li><li className="py-3">One full diagnostic explanation free; all explanations with PMLE Pass</li></ul>
         <Button variant="outline" asChild className="mt-auto"><Link href="/diagnostic">Start the free diagnostic</Link></Button>
       </section>
       <section aria-labelledby="paid-plan" className="on-dark flex flex-col items-start gap-6 rounded-lg bg-foreground p-6 text-card sm:p-8">
