@@ -315,7 +315,7 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
         validate_policy(frozen_evidence)
         if signature is not None or gate_version != 5:
             raise ValueError("Distractor-evidence policy requires rules-v5 gates")
-    signatures = gate_signatures(gate_version, distractor_evidence=frozen_evidence)
+    signatures = gate_signatures(gate_version, distractor_evidence=frozen_evidence, cert_id=scope.get("cert_id"))
     schema = output_model(signature).model_json_schema() if signature is not None else None
     trimmed_urls = set()
     largest_first = sorted(cited, key=lambda source: len(source["text"]), reverse=True)

@@ -151,6 +151,7 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--model", default=DEFAULT_GENERATOR_MODEL, show_default=True)
 @click.option("--judge-model", default=DEFAULT_JUDGE_MODEL, show_default=True, help="Use external to export judge requests and never write the DB.")
 @click.option("--difficulty", type=click.Choice(["EASY", "MEDIUM", "HARD"]), default="MEDIUM", show_default=True)
+@click.option("--plan-only", is_flag=True, help="Write the frozen cert plan offline; no model, docs or DB calls.")
 @click.option("--dry-run", is_flag=True, help="Generate and judge locally; never access/write the DB.")
 @click.option("--artifact", type=click.Path(path_type=Path), help="JSON review artifact. Defaults to .cache/generation/<cert>-<UTC>.json.")
 @click.option("--exam", default=None, help="Existing DB exam identifier; no domain seeding is performed.")
@@ -160,7 +161,7 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--cite-effort", type=click.Choice(["low", "medium", "high"]), default="medium", show_default=True)
 def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge_model, difficulty, dry_run, artifact, exam, seed,
          parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None, existing_questions=None, argon_gate=False,
-         target_accepted=None, expected_yield=0.29, distractor_evidence="strict"):
+         target_accepted=None, expected_yield=0.29, distractor_evidence="strict", plan_only=False):
     try:
         from shared.distractor_evidence import evidence_policy
         frozen_evidence = evidence_policy(distractor_evidence)
@@ -169,7 +170,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             if judge_model != "external":
                 raise ValueError("Argon gate requires external judging")
             require_independent_models(model, "openrouter/google/gemini-4-argon")
-        bank = load_export(existing_questions) if existing_questions else {"sha256": None, "questions": []}
+        bank = load_export(existing_questions, cert_id=cert) if existing_questions else {"sha256": None, "questions": []}
         allocation = None
         if section_allocation is not None:
             if not re.fullmatch(r"[0-9]+(?:,[0-9]+)*", section_allocation):
@@ -200,9 +201,15 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                "rules_version": 5, "style_policy_version": "5.1", "section_allocation": allocation, "decision_first": True,
                "distractor_evidence": frozen_evidence,
                "existing_questions": bank, "argon_gate": argon_gate, "execution_policy": "short_circuit_v1"}
-    client = None if dry_run or external else database_client()
     exam = exam or ("GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert)
     payload.update({"difficulty": difficulty, "exam": exam})
+    if plan_only:
+        payload.update(plan_only=True, dry_run=True, generation_runs={})
+        artifact.parent.mkdir(parents=True, exist_ok=True)
+        artifact.write_text(json.dumps(payload, indent=2) + "\n")
+        click.echo(f"Offline plan: {len(plan)} {cert} candidates; no model, documentation or database calls")
+        return
+    client = None if dry_run or external else database_client()
     if external:
         payload["external_judge_version"] = 2
     domains, runs, run_counts = {}, {}, {}
@@ -297,7 +304,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     attempt["proof"] = {"passed": False, "reason": "Replacement must change the unsupported engineering decision"}
                     raise DecisionVetoError(attempt["proof"]["reason"])
                 stage = "near_duplicate_plan"
-                plan_check = check_plan_near_duplicate(decision, bank["questions"])
+                plan_check = check_plan_near_duplicate(decision, bank["questions"], cert_id=cert)
                 attempt["near_duplicate_plan_check"] = plan_check
                 if not plan_check["passed"]:
                     entry["near_duplicate_plan_check"] = plan_check
@@ -335,7 +342,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             with call_context(stage="write", candidate_id=entry.get("candidate_id"), index=index,
                               attempt=1, calls_path=str(artifact) + ".calls.jsonl"):
                 raw = generate_question(writer_decision_context(scope, decision, proof), writer_context, model=model,
-                                        difficulty=difficulty, exam_subsection=scope["subsection"], include_evidence=True,
+                                        difficulty=difficulty, exam_subsection=scope["subsection"], include_evidence=True, cert_id=cert,
                                         **({"reasoning_effort": gen_effort} if codex else {}))
             stage = "schema"
             question = clean_question(raw)

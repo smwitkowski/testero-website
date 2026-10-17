@@ -329,3 +329,20 @@ def test_historical_v4_reference_preserves_original_default():
     assert RULES_V4_STYLE_RULES in RULES_V4_STYLE_INSTRUCTIONS
     assert "Rules v5" not in RULES_V4_STYLE_INSTRUCTIONS
     assert "Rules v5" in STYLE_INSTRUCTIONS
+
+
+@pytest.mark.parametrize("provenance", [None, "cloud-architect", "cloud-engineer"])
+def test_non_pmle_snapshot_requires_matching_cert_before_client(v4, provenance):
+    case, _, _ = v4
+    prepare_v5(case)
+    row = {**comparison_row(case[2]["candidates"][0]), "id": "bank-question", "stem": "Unrelated billing account inventory", "key": "List billing accounts"}
+    if provenance is None:
+        row.pop("cert_id", None)
+    else:
+        row["cert_id"] = provenance
+    row["objective_id"] = case[2]["plan"][0]["objective_id"]
+    case[2]["existing_questions"] = {"sha256": "a" * 64, "questions": [row]}
+    save_input(case)
+    result = invoke(case, "--dry-run")
+    assert result.exit_code == (0 if provenance == case[2]["cert_id"] else 1), result.output
+    case[4].assert_not_called()

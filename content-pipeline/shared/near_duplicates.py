@@ -36,7 +36,8 @@ def comparison_row(entry):
     if not isinstance(ident, str) or not ident.strip():
         raise ValueError("Export row needs a question ID")
     tokens(entry.get("stem")); tokens(keys[0])
-    return {"id": ident, "stem": entry["stem"], "key": keys[0]}
+    return {"id": ident, "stem": entry["stem"], "key": keys[0],
+            **({"cert_id": entry["cert_id"]} if "cert_id" in entry else {})}
 
 
 def _pairs(pairs):
@@ -48,7 +49,7 @@ def _pairs(pairs):
     return result
 
 
-def load_export(path):
+def load_export(path, *, cert_id=None):
     """Accept a local list or {questions: [...]} export; malformed active rows block."""
     raw = Path(path).read_bytes()
     data = json.loads(raw, object_pairs_hook=_pairs,
@@ -58,18 +59,34 @@ def load_export(path):
         raise ValueError("Export must contain a question list")
     if any(row.get("status") not in ("ACTIVE", "DRAFT", "RETIRED") for row in rows):
         raise ValueError("Export question status must be ACTIVE, DRAFT or RETIRED")
-    selected = [{**comparison_row(row),
-                 **({"objective_id": row["objective_id"]} if isinstance(row.get("objective_id"), str) and row["objective_id"].strip() else {})}
-                for row in rows if row["status"] in ("ACTIVE", "DRAFT")]
+    selected = []
+    for row in rows:
+        if row["status"] not in ("ACTIVE", "DRAFT"):
+            continue
+        provenance = row.get("cert_id")
+        if row.get("exam") is not None:
+            exam_cert = "machine-learning-engineer" if row["exam"] == "GCP_PM_ML_ENG" else row["exam"]
+            if provenance is not None and provenance != exam_cert:
+                raise ValueError("Export certification and exam disagree")
+            provenance = exam_cert
+        if cert_id is not None:
+            if provenance is None and cert_id == "machine-learning-engineer":
+                provenance = cert_id  # Historical PMLE-only exports predate exam metadata.
+            if provenance != cert_id:
+                raise ValueError("Export must contain only the selected certification with exam provenance")
+        selected.append({**comparison_row(row),
+                         **({"cert_id": provenance} if provenance is not None else {}),
+                         **({"objective_id": row["objective_id"]} if isinstance(row.get("objective_id"), str) and row["objective_id"].strip() else {})})
     if len({row["id"] for row in selected}) != len(selected):
         raise ValueError("Duplicate export question IDs")
     return {"sha256": hashlib.sha256(raw).hexdigest(), "questions": selected}
 
 
-def check_plan_near_duplicate(plan, existing):
+def check_plan_near_duplicate(plan, existing, *, cert_id=None):
     """Compare the proposed scenario and best action using the unchanged veto."""
     scenario = " ".join([plan["existing_system"], plan["business_consequence"], *plan["decisive_constraints"]])
     return check_near_duplicate({"id": "decision-plan", "stem": scenario, "key": "A",
+                                 **({"cert_id": cert_id} if cert_id is not None else {}),
                                  "options": [{"label": "A", "text": plan["best_action"]}]}, existing)
 
 
@@ -78,6 +95,8 @@ def check_near_duplicate(entry, existing, *, exclude=()):
     matches = []
     for row in existing:
         if row["id"] in exclude:
+            continue
+        if candidate.get("cert_id") and row.get("cert_id") and candidate["cert_id"] != row["cert_id"]:
             continue
         scores = similarity(candidate["stem"], candidate["key"], row["stem"], row["key"])
         if scores["score"] >= THRESHOLD:

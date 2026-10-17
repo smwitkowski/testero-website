@@ -258,3 +258,22 @@ stated requirement makes a reading-comprehension item, not a PMLE decision. Keep
 """
 STYLE_RULES += RULES_V5_ADDITIONS
 STYLE_INSTRUCTIONS = (STYLE_INSTRUCTIONS + RULES_V5_ADDITIONS).strip()
+
+
+def practitioner_text(text, cert_id=None):
+    """Keep frozen PMLE wording exact; remove ML-only role wording for other certs."""
+    if cert_id in (None, "machine-learning-engineer", "GCP_PM_ML_ENG"):
+        return text
+    return (text.replace("an ML engineer", "the practitioner")
+            .replace("An ML engineer", "The practitioner")
+            .replace("ML engineering decision", "engineering decision")
+            .replace("a PMLE decision", "an engineering decision"))
+
+
+def practitioner_signature(signature, cert_id=None):
+    text = practitioner_text(signature.instructions, cert_id)
+    if text == signature.instructions:
+        return signature
+    selected = signature.with_instructions(text)
+    selected.__name__ = signature.__name__
+    return selected

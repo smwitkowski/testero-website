@@ -150,11 +150,13 @@ ProductStyleCriticSignature.instructions = StyleCriticSignature.instructions + "
 GATE_SIGNATURES = {**V4_GATE_SIGNATURES, "style": ProductStyleCriticSignature}
 
 
-def gate_signatures(version=GATE_VERSION, *, distractor_evidence=None):
+def gate_signatures(version=GATE_VERSION, *, distractor_evidence=None, cert_id=None):
     if version not in (4, 5):
         raise ValueError("Unsupported rules gate version")
     from shared.distractor_evidence import mode_for
-    signatures = V4_GATE_SIGNATURES if version == 4 else GATE_SIGNATURES
+    from shared.question_style import practitioner_signature
+    signatures = {name: practitioner_signature(signature, cert_id) for name, signature in
+                  (V4_GATE_SIGNATURES if version == 4 else GATE_SIGNATURES).items()}
     if mode_for(distractor_evidence) == "consistent":
         if version != 5:
             raise ValueError("Consistent distractor evidence requires rules v5")
@@ -191,14 +193,16 @@ def blind_choice_map(question):
 def build_gate_inputs(question, domain_context, documentation_context, option_evidence, *, style_reference=None, style_policy=None):
     """Explicit allowlists prevent answer/evidence leakage to learner-only gates."""
     from shared.quality_gate import QUESTION_FIELDS
+    from shared.question_style import practitioner_text
+    cert_id = (style_policy or {}).get("objective_id", "machine-learning-engineer:").split(":", 1)[0]
+    reference = practitioner_text(default_style_reference() if style_reference is None else style_reference, cert_id)
     mapping = blind_choice_map(question)
     original = dict(zip("ABCD", (question[name] for name in OPTION_FIELDS)))
     options = {label: original[origin] for label, origin in mapping.items()}
     learner = {"stem": question["stem"], "options": options}
     return {"blind_solver": {**learner, "options": dict(options)},
             "style": {**learner, "options": dict(options),
-                      "style_reference": (default_style_reference() if style_reference is None else style_reference)
-                                         + policy_instructions(style_policy)},
+                      "style_reference": reference + policy_instructions(style_policy)},
             "evidence": {"question_data": {name: question[name] for name in QUESTION_FIELDS},
                          "domain_context": domain_context, "documentation_context": documentation_context,
                          "option_evidence": option_evidence}}
