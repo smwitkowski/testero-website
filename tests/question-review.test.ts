@@ -44,7 +44,8 @@ describe("shared question review", () => {
   });
   it("shows question, choices, selection and correct answer as text without explanations/paywalls", () => {
     const html = renderToStaticMarkup(createElement(QuestionReviewList, { review: [mapReview(source)] }));
-    expect(html).toContain("Question review");
+    expect(html).not.toContain("Question review navigation");
+    expect(html).not.toContain(">Question review</h2>");
     expect(html).toContain("Which choice?");
     expect(html).toContain("Incorrect");
     expect(html).toContain("First");

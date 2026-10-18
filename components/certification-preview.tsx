@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DomainScores, ScoreBar } from "@/components/readiness-report";
@@ -21,34 +21,18 @@ const sampleDomains = [
 
 export function CertificationPreview() {
   const [index, setIndex] = useState(0);
-  const [playing, setPlaying] = useState(true);
-  const [reducedMotion, setReducedMotion] = useState(true);
-  const [hovered, setHovered] = useState(false);
   const preview = previews[index];
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReducedMotion(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
-  useEffect(() => {
-    if (!playing || reducedMotion || hovered) return;
-    const timer = window.setInterval(() => setIndex(value => (value + 1) % previews.length), 7000);
-    return () => window.clearInterval(timer);
-  }, [playing, reducedMotion, hovered]);
   function move(direction: number) {
-    setPlaying(false);
     setIndex(value => (value + direction + previews.length) % previews.length);
   }
-  return <section aria-label="Certification readiness previews" aria-roledescription="carousel" className="min-w-0 space-y-4" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={event => { if (!(event.target as HTMLElement).closest("[data-autoplay-control]")) setPlaying(false); }}>
-    <Card variant="featured" className="min-h-[29rem] space-y-5 p-5 sm:p-7" aria-live={playing && !reducedMotion ? "off" : "polite"} aria-atomic="true">
+  return <section aria-label="Certification readiness previews" aria-roledescription="carousel" className="min-w-0 space-y-4">
+    <Card variant="featured" className="min-h-[41rem] space-y-5 p-5 sm:min-h-[45rem] sm:p-7 lg:min-h-[43rem]" aria-live="polite" aria-atomic="true">
       <p className="flex flex-wrap justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><span>Readiness report preview</span><span>{index === 0 ? "PMLE · Live" : "Coming soon"}</span></p>
       <h2 className="text-xl font-semibold">{preview.name}</h2>
       {index === 0 ? <>
         <div className="flex flex-wrap items-baseline gap-3"><span className="text-5xl font-semibold leading-none">55</span><span className="text-muted-foreground">/ 100</span><span className="ml-auto rounded border border-input px-2 py-1 text-xs font-medium">Tier: Building</span></div>
         <ScoreBar score={55} />
-        <div><div className="hidden sm:block"><DomainScores domains={sampleDomains} /></div><dl className="divide-y divide-border sm:hidden">{sampleDomains.map(domain => <div key={domain.domainCode} className="space-y-1 py-3"><dt className="text-sm leading-relaxed">{domain.domainName}</dt><dd className="text-sm font-semibold">{domain.correct} of {domain.total} correct · {domain.correct === 1 ? "Focus area" : "Developing"}</dd></div>)}</dl><p className="pt-2 text-xs text-muted-foreground">Illustrative PMLE data, not a user result. 3 of 6 domains shown.</p></div>
+        <div><DomainScores domains={sampleDomains} /><p className="pt-2 text-xs text-muted-foreground">Illustrative PMLE data, not a user result. 3 of 6 domains shown.</p></div>
       </> : <>
         <p className="border-y border-border py-5 text-lg font-medium">Your next certification. A clearer study focus.</p>
         <p className="leading-relaxed text-body">This diagnostic is not available yet. Explore the official exam facts and preparation guide while we build it.</p>
@@ -59,7 +43,6 @@ export function CertificationPreview() {
     </Card>
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex items-center gap-1"><Button variant="ghost" onClick={() => move(-1)} aria-label="Previous certification">←</Button><span className="text-sm text-muted-foreground">{index + 1} / {previews.length}</span><Button variant="ghost" onClick={() => move(1)} aria-label="Next certification">→</Button></div>
-      {!reducedMotion && <Button data-autoplay-control variant="ghost" onClick={() => setPlaying(value => !value)}>{playing ? "Pause previews" : "Play previews"}</Button>}
     </div>
   </section>;
 }

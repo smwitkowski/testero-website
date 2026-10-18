@@ -18,6 +18,10 @@ describe("sourced certification directory", () => {
     const html = renderToStaticMarkup(createElement(CertificationsPage));
     for (const cert of certifications) expect(html).toContain(`href="${certificationPath(cert.cert_id)}"`);
     expect(html).toContain('id="foundational"'); expect(html).toContain('id="associate"'); expect(html).toContain('id="professional"');
+    expect(html).toContain('id="professional" open=""');
+    expect(html.indexOf("Available now: Professional Machine Learning Engineer")).toBeLessThan(html.indexOf('id="foundational"'));
+    const professional = html.slice(html.indexOf('id="professional"'));
+    expect(professional.indexOf("Professional Machine Learning Engineer")).toBeLessThan(professional.indexOf("Professional Agentic Architect"));
     expect(html).toContain("Practice available"); expect((html.match(/Diagnostic coming<\/p>/g) ?? []).length).toBe(14);
   });
   it.each(certifications)("renders sourced $cert_id with valid credential/breadcrumb data", async entry => {

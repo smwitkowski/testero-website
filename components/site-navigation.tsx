@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useRef } from "react";
 import { usePathname } from "next/navigation";
-import { AccountNavigation } from "@/components/account-navigation";
+import { AccountNavigation, useNavigationUser } from "@/components/account-navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 
 const links = [["/diagnostic", "Diagnostic"], ["/pricing", "Pricing"], ["/faq", "FAQ"], ["/blog", "Blog"], ["/certifications", "Certifications"]];
 
 export function SiteNavigation() {
   const pathname = usePathname();
+  const userId = useNavigationUser();
   const disclosure = useRef<HTMLDetailsElement>(null);
   function close() { if (disclosure.current) disclosure.current.open = false; }
   const navigationLinks = links.map(([href, label]) => <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined} className="inline-flex min-h-12 items-center rounded-md px-3 hover:bg-muted hover:text-primary aria-[current=page]:text-primary">{label}</Link>);
@@ -18,7 +19,7 @@ export function SiteNavigation() {
       {navigationLinks}<AccountNavigation />
     </nav>
     <div className="flex items-center gap-2 lg:hidden">
-      <Button asChild size="sm"><Link href="/diagnostic">Start free</Link></Button>
+      <Button asChild size="sm"><Link href={userId ? "/dashboard" : "/diagnostic"}>{userId ? "Dashboard" : "Start free"}</Link></Button>
       <details ref={disclosure} className="group" onKeyDown={event => {
         if (event.key === "Escape") { close(); disclosure.current?.querySelector("summary")?.focus(); }
       }}>

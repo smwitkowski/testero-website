@@ -41,7 +41,12 @@ export function DomainStatus({ correct, total }: { correct: number; total: numbe
 
 export function DomainScores({ domains }: { domains: DiagnosticResult["domainBreakdown"] }) {
   const ordered = weakestFirst(domains);
-  return <table className="w-full table-fixed border-collapse text-sm sm:text-base">
+  return <>
+    <dl aria-label="Domain results, weakest first" className="divide-y divide-border sm:hidden">{ordered.map(domain => <div key={domain.domainCode} className="space-y-1 py-3">
+      <dt className="text-sm leading-relaxed">{domain.domainName}</dt>
+      <dd className="flex flex-wrap items-center gap-1 text-sm"><span className="font-semibold">{domain.correct} of {domain.total} correct</span><span aria-hidden="true">·</span><DomainStatus correct={domain.correct} total={domain.total} /></dd>
+    </div>)}</dl>
+    <table className="hidden w-full table-fixed border-collapse text-base sm:table">
     <caption className="sr-only">Domain results, weakest first. Each domain has only a few questions, so these are early signals.</caption>
     <thead className="text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
       <tr><th scope="col" className="pb-3 font-medium">Domain</th><th scope="col" className="w-24 pb-3 text-right font-medium sm:w-32">Correct <span className="block normal-case tracking-normal">early signal</span></th><th scope="col" className="w-24 pb-3 pl-2 align-top font-medium sm:w-28 sm:pl-4">Status</th></tr>
@@ -50,5 +55,6 @@ export function DomainScores({ domains }: { domains: DiagnosticResult["domainBre
       <th scope="row" className="py-3 pr-2 text-left align-top font-normal leading-relaxed">{domain.domainName}</th>
       <td className="py-3 text-right align-top font-semibold">{domain.correct} of {domain.total}</td><td className="py-3 pl-2 align-top sm:pl-4"><DomainStatus correct={domain.correct} total={domain.total} /></td>
     </tr>)}</tbody>
-  </table>;
+  </table>
+  </>;
 }

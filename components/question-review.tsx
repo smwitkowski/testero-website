@@ -17,9 +17,9 @@ export function QuestionReviewList({ review, sessionId, kind = "diagnostic", pag
     setSelectedItemId(review[index].itemId);
   }
   return (
-    <section aria-labelledby="question-review-heading" className="space-y-4">
-      <h2 id="question-review-heading" className="text-xl font-semibold">Question review</h2>
-      {paginated && review.length > 0 && <nav aria-label="Question review navigation" className="space-y-3">
+    <section aria-label={review.length === 1 ? "Answer review" : undefined} aria-labelledby={review.length === 1 ? undefined : "question-review-heading"} className="space-y-4">
+      {review.length !== 1 && <h2 id="question-review-heading" className="text-xl font-semibold">Question review</h2>}
+      {paginated && review.length > 1 && <nav aria-label="Question review navigation" className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <Button variant="outline" size="sm" disabled={selectedIndex === 0} onClick={() => selectQuestion(selectedIndex - 1)}>Previous</Button>
           <p role="status" className="text-sm text-muted-foreground">Question {review[selectedIndex].ordinal} · {selectedIndex + 1} of {review.length}</p>

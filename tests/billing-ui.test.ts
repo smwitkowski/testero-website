@@ -128,7 +128,7 @@ describe("billing browser boundary", () => {
     await expect(readCheckoutStatus("cs_test_owned")).rejects.toThrow("could not be verified");
   });
   it("renders accessible initial checkout controls and never a fabricated success", () => {
-    expect(renderToStaticMarkup(createElement(CheckoutButton))).toContain("Get PMLE Pass — $39 one-time payment");
+    expect(renderToStaticMarkup(createElement(CheckoutButton))).toContain("Unlock PMLE Pass: $39");
     expect(renderToStaticMarkup(createElement(CheckoutStatus, { sessionId: "cs_test_owned" }))).not.toContain("Pass is active");
   });
 });

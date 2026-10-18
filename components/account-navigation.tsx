@@ -7,6 +7,8 @@ import { AnalyticsIdentity } from "@/components/analytics-identity";
 
 const NavigationUser = createContext<string | null>(null);
 
+export function useNavigationUser() { return useContext(NavigationUser); }
+
 export function NavigationIdentity({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const pathname = usePathname();
