@@ -1,0 +1,254 @@
+{
+  "checked_date": "2026-10-18",
+  "method": "HTTP GET official currently linked pages; follow redirects; readable HTML text inspected. No checkout tested.",
+  "editorial_rules": [
+    "Testero first is publisher placement, not a quality ranking.",
+    "No ranking, pass-rate, outcome-guarantee or disparagement claims.",
+    "Prices are displayed page prices, not checkout totals; taxes, offers, currencies and access may change.",
+    "Blocked/unreadable retrieval does not imply absence of a product or feature."
+  ],
+  "providers": [
+    {
+      "order": 1,
+      "name": "Testero",
+      "format": "PMLE diagnostic with domain report; five-question practice sessions with explanations on PMLE Pass.",
+      "access": "Free diagnostic, no account required. PMLE Pass lasts 90 days; no subscription or auto-renewal.",
+      "price": "USD $39 one-time for 90 days; free diagnostic.",
+      "evidence": [
+        {
+          "url": "https://testero.ai/pricing",
+          "checked_date": "2026-10-18",
+          "http_status": 200,
+          "snippet": "PMLE Pass 90 days of access to PMLE practice questions and explanations $39 one-time payment USD"
+        },
+        {
+          "url": "https://testero.ai/pricing",
+          "checked_date": "2026-10-18",
+          "http_status": 200,
+          "snippet": "The diagnostic and its full report are free, with or without an account."
+        },
+        {
+          "url": "https://testero.ai/pricing",
+          "checked_date": "2026-10-18",
+          "http_status": 200,
+          "snippet": "No subscription. No auto-renew. Access ends after 90 days. You are not charged again."
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "name": "Google Skills (formerly Google Cloud Skills Boost)",
+      "format": "Google-managed PMLE certification learning path with courses, labs and skill badges.",
+      "access": "Starter offers limited hands-on lab access. Pro offers unlimited hands-on learning labs.",
+      "price": "Pro $29/month (displayed $); Starter no cost.",
+      "evidence": [
+        {
+          "url": "https://www.skills.google/paths/17",
+          "checked_date": "2026-10-18",
+          "http_status": 200,
+          "snippet": "Through a curated collection of on-demand courses, labs, and skill badges, you will gain real-world, applied experience with Google Cloud technologies."
+        },
+        {
+          "url": "https://www.skills.google/subscriptions",
+          "checked_date": "2026-10-18",
+          "http_status": 200,
+          "snippet": "Starter No cost Claim no-cost credits, access limited hands-on labs and earn skill badges across all levels."
+        },
+        {
+          "url": "https://www.skills.google/subscriptions",
+          "checked_date": "2026-10-18",
+          "http_status": 200,
+          "snippet": "Pro $29 / month Unlock unlimited, hands-on learning labs at all levels \u2014 beginner to advanced."
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "name": "Google\u2019s official sample questions",
+      "format": "Official examples of question format and possible exam content.",
+      "access": "Public Google Forms introduction; Google sign-in offered to save progress.",
+      "price": "Check site; no sample price stated in retrieved introduction.",
+      "evidence": [
+        {
+          "url": "https://docs.google.com/forms/d/e/1FAIpQLSeYmkCANE81qSBqLW0g2X7RoskBX9yGYQu-m1TtsjMvHabGqg/viewform",
+          "checked_date": "2026-10-18",
+          "http_status": 200,
+          "snippet": "The Machine Learning Engineer sample questions will familiarize you with the format of exam questions and example content that may be covered on the exam."
+        },
+        {
+          "url": "https://docs.google.com/forms/d/e/1FAIpQLSeYmkCANE81qSBqLW0g2X7RoskBX9yGYQu-m1TtsjMvHabGqg/viewform",
+          "checked_date": "2026-10-18",
+          "http_status": 200,
+          "snippet": "The sample questions do not represent the range of topics or level of difficulty of questions presented on the exam."
+        },
+        {
+          "url": "https://docs.google.com/forms/d/e/1FAIpQLSeYmkCANE81qSBqLW0g2X7RoskBX9yGYQu-m1TtsjMvHabGqg/viewform",
+          "checked_date": "2026-10-18",
+          "http_status": 200,
+          "snippet": "Performance on the sample questions should not be used to predict your Machine Learning Engineer exam result."
+        }
+      ]
+    },
+    {
+      "order": 4,
+      "name": "Coursera",
+      "format": "Google Cloud Training professional certificate course series, with Qwiklabs hands-on labs.",
+      "access": "Listed as included with Coursera Plus. Free enrollment wording does not verify full access.",
+      "price": "Check site; no purchase price verified.",
+      "evidence": [
+        {
+          "url": "https://www.coursera.org/professional-certificates/preparing-for-google-cloud-machine-learning-engineer-professional-certificate",
+          "checked_date": "2026-10-18",
+          "http_status": 200,
+          "snippet": "Instructor: Google Cloud Training"
+        },
+        {
+          "url": "https://www.coursera.org/professional-certificates/preparing-for-google-cloud-machine-learning-engineer-professional-certificate",
+          "checked_date": "2026-10-18",
+          "http_status": 200,
+          "snippet": "Included with Coursera Plus"
+        },
+        {
+          "url": "https://www.coursera.org/professional-certificates/preparing-for-google-cloud-machine-learning-engineer-professional-certificate",
+          "checked_date": "2026-10-18",
+          "http_status": 200,
+          "snippet": "This professional certificate incorporates hands-on labs using Qwiklabs platform."
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "name": "GCP Study Hub",
+      "format": "Provider-described PMLE video lessons, practice exams and hands-on labs.",
+      "access": "All-access membership covering current and future courses.",
+      "price": "$39/month; $89/3 months; $249/year (displayed $). Membership prices, not a PMLE-only purchase.",
+      "evidence": [
+        {
+          "url": "https://gcpstudyhub.com/courses/professional-ml-engineer",
+          "checked_date": "2026-10-18",
+          "http_status": 200,
+          "snippet": "realistic practice questions, video lessons"
+        },
+        {
+          "url": "https://gcpstudyhub.com/courses/professional-ml-engineer",
+          "checked_date": "2026-10-18",
+          "http_status": 200,
+          "snippet": "Hands-On Labs Practice directly in real Google Cloud environments - no setup required."
+        },
+        {
+          "url": "https://gcpstudyhub.com/",
+          "checked_date": "2026-10-18",
+          "http_status": 200,
+          "snippet": "All-Access Membership Get access to all current and future courses. $39/ Month Monthly Plan Flexible access, billed monthly Get Started $89/ 3 Months Quarterly Plan Save 24% Great balance of savings and flexibility Get Started $249/ Year Yearly Plan"
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "name": "Whizlabs",
+      "format": "Check provider site for current PMLE format.",
+      "access": "Check provider site for access terms.",
+      "price": "Check site; not verified.",
+      "evidence": [],
+      "verification_limit": {
+        "url": "https://www.whizlabs.com/google-cloud-certified-professional-machine-learning-engineer/",
+        "checked_date": "2026-10-18",
+        "http_status": 200,
+        "result": "No substantive readable product text in fetched HTML.",
+        "not_a_product_assessment": true
+      }
+    },
+    {
+      "order": 7,
+      "name": "Tutorials Dojo",
+      "format": "Check provider site for current PMLE format.",
+      "access": "Check provider site for access terms.",
+      "price": "Check site; not verified.",
+      "evidence": [],
+      "verification_limit": {
+        "url": "https://tutorialsdojo.com/",
+        "checked_date": "2026-10-18",
+        "http_status": 403,
+        "result": "HTTP 403; product details not verified.",
+        "not_a_product_assessment": true
+      }
+    },
+    {
+      "order": 8,
+      "name": "Udemy",
+      "format": "Check provider site for current PMLE format.",
+      "access": "Check provider site for access terms.",
+      "price": "Check site; not verified.",
+      "evidence": [],
+      "verification_limit": {
+        "url": "https://www.udemy.com/topic/google-cloud-professional-machine-learning-engineer/",
+        "checked_date": "2026-10-18",
+        "http_status": 403,
+        "result": "HTTP 403; product details not verified.",
+        "not_a_product_assessment": true
+      }
+    }
+  ],
+  "source_checks": [
+    {
+      "url": "https://www.skills.google/paths/17",
+      "final_url": "https://www.skills.google/paths/17",
+      "status": 200
+    },
+    {
+      "url": "https://www.skills.google/subscriptions",
+      "final_url": "https://www.skills.google/subscriptions",
+      "status": 200
+    },
+    {
+      "url": "https://cloud.google.com/learn/certification/machine-learning-engineer",
+      "final_url": "https://cloud.google.com/learn/certification/machine-learning-engineer",
+      "status": 200
+    },
+    {
+      "url": "https://docs.google.com/forms/d/e/1FAIpQLSeYmkCANE81qSBqLW0g2X7RoskBX9yGYQu-m1TtsjMvHabGqg/viewform",
+      "final_url": "https://docs.google.com/forms/d/e/1FAIpQLSeYmkCANE81qSBqLW0g2X7RoskBX9yGYQu-m1TtsjMvHabGqg/viewform",
+      "status": 200
+    },
+    {
+      "url": "https://www.coursera.org/professional-certificates/preparing-for-google-cloud-machine-learning-engineer-professional-certificate",
+      "final_url": "https://www.coursera.org/professional-certificates/preparing-for-google-cloud-machine-learning-engineer-professional-certificate",
+      "status": 200
+    },
+    {
+      "url": "https://gcpstudyhub.com/",
+      "final_url": "https://gcpstudyhub.com/",
+      "status": 200
+    },
+    {
+      "url": "https://gcpstudyhub.com/courses/professional-ml-engineer",
+      "final_url": "https://gcpstudyhub.com/courses/professional-ml-engineer",
+      "status": 200
+    },
+    {
+      "url": "https://www.whizlabs.com/google-cloud-certified-professional-machine-learning-engineer/",
+      "final_url": "https://www.whizlabs.com/google-cloud-certified-professional-machine-learning-engineer/",
+      "status": 200
+    },
+    {
+      "url": "https://tutorialsdojo.com/",
+      "final_url": "https://tutorialsdojo.com/",
+      "status": 403
+    },
+    {
+      "url": "https://www.udemy.com/topic/google-cloud-professional-machine-learning-engineer/",
+      "final_url": "https://www.udemy.com/topic/google-cloud-professional-machine-learning-engineer/",
+      "status": 403
+    },
+    {
+      "url": "https://testero.ai/pricing",
+      "final_url": "https://testero.ai/pricing",
+      "status": 200
+    }
+  ],
+  "notes": [
+    "Current fetched Testero pricing still says 20-question diagnostic; avoid claiming 5/10/20 from this source alone.",
+    "Google Skills name verified; former Skills Boost naming is inherited from existing source data, not re-verified in this fetch. Prefer Google Skills in new copy.",
+    "Avoid Coursera completion-duration or course-count claims because page sections contain inconsistent details."
+  ]
+}
