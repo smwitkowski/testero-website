@@ -52,7 +52,7 @@ export function resultsEmailText(result: DiagnosticResult, now = Date.now()) {
   return ["Your PMLE diagnostic results", `${result.correctAnswers}/${result.totalQuestions} correct (${result.score}%). Study guidance: ${result.readiness.label}.`,
     "Small diagnostic samples are study signals, not an exam-readiness prediction.",
     "\nScores by domain:", ...result.domainBreakdown.map(d => `${d.domainName}: ${d.correct}/${d.total} (${d.percentage}%)`),
-    "\nWeakest sampled domains:", ...domains.slice(0, 2).map(d => d.domainName),
+    "\nWeakest sampled domains:", ...domains.slice(0, 2).map(d => `- ${d.domainName}`),
     "\nYour 4-week plan assumes 4 hours/week (16 hours total). Time uses official section weight × (1 + sampled error rate), so weaker sampled domains receive more time. Unsampled domains retain their official weight.",
     studyPlanText(plan).replace(`Exam: ${plan.examDate}`, `Plan ends: ${plan.examDate}`).replace(`Time allocated in proportion to official section weights (total ${plan.totalWeight}%).`, "Time allocated by official section weight adjusted for your diagnostic error rate."),
     `\nView results: https://testero.ai/diagnostic/${encodeURIComponent(result.sessionId)}/results`,
@@ -77,7 +77,7 @@ export function resultsEmailHtml(result: DiagnosticResult, now = Date.now()) {
 <p style="color:#344054">${e(result.correctAnswers)}/${e(result.totalQuestions)} correct (${e(result.score)}%). Study guidance: ${e(result.readiness.label)}.</p>
 <p style="font-size:14px;color:#475467">Small diagnostic samples are study signals, not an exam-readiness prediction.</p>
 <h2 style="font-size:18px">Scores by domain</h2><table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-size:14px"><thead><tr><th scope="col" style="${cell}">Domain</th><th scope="col" style="${cell}">Correct</th><th scope="col" style="${cell}">Score</th></tr></thead><tbody>${scores}</tbody></table>
-<h2 style="font-size:18px">Weakest sampled domains</h2><p>${weakestFirst(result.domainBreakdown).slice(0, 2).map(domain => e(domain.domainName)).join("<br>")}</p>
+<h2 style="font-size:18px">Weakest sampled domains</h2><ul style="margin:0;padding-left:20px;font-size:14px">${weakestFirst(result.domainBreakdown).slice(0, 2).map(domain => `<li style="margin:4px 0">${e(domain.domainName)}</li>`).join("")}</ul>
 <h2 style="font-size:18px">Your 4-week study plan</h2><p style="font-size:14px;color:#475467">4 hours/week (16 hours total), in 15-minute blocks. Plan ends: ${e(plan.examDate)}. Time uses official section weight × (1 + sampled error rate), so weaker sampled domains receive more time. Unsampled domains retain their official weight.</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tbody>${weeks}</tbody></table>
 <p style="font-size:14px">Official ${e(plan.guideVariant)} exam guide: <a href="${e(plan.guideUrl)}" style="color:#1F4CB5">${e(plan.certName)}</a></p>
