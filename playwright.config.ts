@@ -11,7 +11,7 @@ if (supabaseURL) {
 
 export default defineConfig({
   testDir: "./e2e",
-  ...(process.env.TESTERO_QA === "1" ? { testMatch: "qa-core.spec.ts" } : { testIgnore: "qa-core.spec.ts" }),
+  ...(process.env.TESTERO_QA === "1" ? { testMatch: process.env.CODEX_CAPTURE === "1" ? "ui-audit-codex.spec.ts" : "qa-core.spec.ts" } : { testIgnore: "qa-core.spec.ts" }),
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: 0,

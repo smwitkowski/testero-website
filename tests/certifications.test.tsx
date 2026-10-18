@@ -29,8 +29,13 @@ describe("sourced certification directory", () => {
     const html = renderToStaticMarkup(await CertPage({ params: Promise.resolve({ slug: entry.cert_id }) }));
     expect(html).toContain(cert.name); expect(html).toContain(cert.cert_url); expect(html).toContain(checkedDate(cert).slice(0, 10));
     expect(html).toContain("Who this exam is for"); expect(html).toContain("How to prepare");
-    expect(html.indexOf('aria-label="Exam summary"')).toBeLessThan(html.indexOf('aria-label="Diagnostic availability"'));
-    expect(html.indexOf('aria-label="Diagnostic availability"')).toBeLessThan(html.indexOf('id="exam-audience"'));
+    if (entry.cert_id === "machine-learning-engineer") {
+      expect(html.indexOf("Start PMLE diagnostic")).toBeLessThan(html.indexOf('aria-label="Exam summary"'));
+      expect(html).not.toContain('aria-label="Diagnostic availability"');
+    } else {
+      expect(html.indexOf('aria-label="Exam summary"')).toBeLessThan(html.indexOf('aria-label="Diagnostic availability"'));
+      expect(html.indexOf('aria-label="Diagnostic availability"')).toBeLessThan(html.indexOf('id="exam-audience"'));
+    }
     if (cert.recommended_experience) {
       expect(html).toContain("Google recommends:");
       expect(cert.recommended_experience_source?.url).toBe(cert.cert_url);
