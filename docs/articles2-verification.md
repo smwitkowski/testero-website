@@ -10,7 +10,7 @@ Three original decision guides, each with a direct answer, comparison table, two
 - `/blog/colab-enterprise-vs-agent-platform-workbench`
 - `/blog/bigquery-ml-vs-automl-vs-custom-training`
 
-The requested long topic titles are shortened for the existing 60-character SEO title contract. The canary article answers “which one does the PMLE exam expect?” by separating published guide scope from unsupported claims about unseen assessments.
+The requested long topic titles are shortened for the existing 60-character SEO title contract. The canary article maps the rollout decision to the published June 2026 objectives.
 
 ## Publication
 
@@ -45,9 +45,9 @@ No runtime dependencies, application behavior, pricing, database schema or produ
 
 ## Final article lengths
 
-- `canary-vs-shadow-deployment-agent-platform-pmle`: 1134 words including source labels.
-- `colab-enterprise-vs-agent-platform-workbench`: 1313 words including source labels.
-- `bigquery-ml-vs-automl-vs-custom-training`: 1267 words including source labels.
+- `canary-vs-shadow-deployment-agent-platform-pmle`: 996 words including source labels.
+- `colab-enterprise-vs-agent-platform-workbench`: 1079 words including source labels.
+- `bigquery-ml-vs-automl-vs-custom-training`: 1144 words including source labels.
 
 ## Source lists (last checked October 18, 2026)
 
@@ -91,3 +91,9 @@ Under `/Users/switkowski/Projects/Testero/frontend.prime-testero-articles2/` (lo
 - `handoffs/articles2/screenshots/bigquery-ml-vs-automl-vs-custom-training-390.png`
 
 Capture script: `handoffs/articles2/capture.mjs`. Machine-readable checks: `handoffs/articles2/screenshots/render-evidence.json`.
+
+## Founder copy revision
+
+Removed defensive commentary and repeated originality notes. Kept one independence line and one last-checked date per article. Recommendations now use direct instructions. Technical limits, source URLs, two scenarios, decision tables, objective mappings and CTAs remain.
+
+After the final edit, reran clean-environment full tests (74 files / 1,175 tests), lint, typecheck and Docker build. Recaptured production-image renders at 1280px and 390px; inspected a fresh screenshot per article. The first capture attempted before server readiness failed with connection refused; it was rerun after an HTTP readiness check.
