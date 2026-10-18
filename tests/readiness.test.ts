@@ -33,7 +33,9 @@ describe("diagnostic domain honesty", () => {
   it.each([
     [0, 3, "critical"], [1, 3, "critical"], [2, 3, "moderate"], [3, 3, "strong"],
     [0, 4, "critical"], [1, 4, "critical"], [2, 4, "moderate"], [3, 4, "moderate"], [4, 4, "strong"],
-  ])("%s of %s is %s, with the same rule for 3 and 4 questions", (correct, total, id) => {
+    // Quick checks: 1-2 questions per domain. All correct is never a focus area.
+    [1, 1, "strong"], [0, 1, "critical"], [2, 2, "strong"], [1, 2, "critical"], [0, 2, "critical"],
+  ])("%s of %s is %s, with the same rule for every small sample", (correct, total, id) => {
     expect(getDomainStatus(Number(correct), Number(total))).toBe(id);
   });
   it("orders weakest first by status, accuracy, then the given exam-guide order", () => {
