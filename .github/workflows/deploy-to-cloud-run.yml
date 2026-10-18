@@ -84,6 +84,11 @@ jobs:
   deploy:
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Serialize deploys so an older run can never finish last and roll prod back
+    # (seen 2026-10-18: #270's deploy landed after #271's). Pending runs collapse to the newest.
+    concurrency:
+      group: cloud-run-deploy
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     permissions:
       contents: read
