@@ -36,7 +36,7 @@ describe("sourced certification directory", () => {
       const overview = overviews[entry.cert_id as keyof typeof overviews];
       expect(overview).toBeDefined();
       expect(html).toContain(overview.checked);
-      for (const area of overview.areas) expect(html).toContain(area.replaceAll("&", "&amp;"));
+      for (const area of overview.areas) expect(html).toContain(renderToStaticMarkup(createElement("span", null, area)).slice(6, -7));
       expect(html).toContain('id="cert-overview"');
       expect(html).toContain('href="/certifications/machine-learning-engineer"');
       expect(html).toContain("Notify me");
