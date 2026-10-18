@@ -50,6 +50,10 @@ body { background: var(--background); color: var(--foreground); overflow-wrap: a
 a { text-underline-offset: 0.2em; }
 #main-content > article { max-width: 48rem; margin-inline: auto; }
 #main-content > section > a.bg-primary { min-height: 48px; border-radius: 6px; }
+#main-content:has(.auth-recovery) { min-height: 0; padding-block: 1.5rem 2rem; }
+@media (min-width: 640px) {
+  #main-content:has(.auth-recovery) { padding-block: 3rem; }
+}
 input { accent-color: var(--primary); }
 :focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
 /* Primary fills: a white band against the blue fill (7.6:1) and a dark ring against light pages (16:1).
