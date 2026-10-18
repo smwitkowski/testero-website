@@ -12,7 +12,7 @@ export default function NotFound() {
     <p className="text-sm font-medium text-muted-foreground">404</p>
     <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Page not found</h1>
     <p className="leading-relaxed text-muted-foreground">This page may have moved, or the link may be incorrect.</p>
-    <div className="flex flex-wrap gap-3">
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
       <Button asChild><Link href="/">Go home</Link></Button>
       <Button variant="outline" asChild><Link href="/diagnostic">Start the free diagnostic</Link></Button>
     </div>

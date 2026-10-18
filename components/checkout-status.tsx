@@ -47,14 +47,14 @@ export function CheckoutStatus({ sessionId }: { sessionId: string | null }) {
   return <section className="space-y-5" aria-busy={waiting}>
     {!sessionId ? <p role="alert">No valid checkout reference was provided. Open your account to verify your access.</p>
       : error ? <p role="alert" className="text-destructive">{error}</p>
-      : result?.status === "active" ? <div role="status" className="space-y-2"><p>Your PMLE Pass is active.</p><p>Access until <time dateTime={result.accessUntil!}>{accessDate(result.accessUntil)}</time></p></div>
+      : result?.status === "active" ? <div role="status" className="space-y-3 rounded-lg border border-solid bg-solid-background p-6 text-solid"><span aria-hidden="true" className="text-3xl">✓</span><h2 className="text-2xl font-semibold">Your PMLE Pass is active.</h2><p>Access until <time dateTime={result.accessUntil!}>{accessDate(result.accessUntil)}</time></p></div>
       : result?.status === "refunded" ? <p role="status">This payment was refunded. It no longer provides PMLE Pass access.</p>
       : result?.status === "expired" ? <p role="status">This PMLE Pass has expired.</p>
-      : <p role="status">Your payment is processing. Access starts only after your payment is verified. {waiting ? "Checking your payment…" : "Verification is taking longer than expected. Retry or check your account later."}</p>}
+      : <p role="status">{waiting && <span aria-hidden="true" className="mr-2 inline-block size-4 animate-spin rounded-full border-2 border-current border-r-transparent align-middle motion-reduce:animate-none" />}Your payment is processing. Access starts only after your payment is verified. {waiting ? "This usually takes a few seconds. Checking your payment…" : "Verification is taking longer than expected. Retry or check your account later."}</p>}
     <div className="flex flex-wrap gap-3">
       {sessionId && !waiting && (error || !result || result.status === "processing") && <Button onClick={retry}>Retry verification</Button>}
+      {result?.status === "active" && <Button asChild><Link href="/dashboard">Start practicing</Link></Button>}
       <Button variant="outline" asChild><Link href="/account">View account</Link></Button>
-      {result?.status === "active" && <Button asChild><Link href="/dashboard">Start studying</Link></Button>}
     </div>
   </section>;
 }

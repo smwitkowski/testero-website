@@ -27,7 +27,7 @@ export function QuestionReviewList({ review, sessionId, kind = "diagnostic", pag
         </div>
         <ol className="flex flex-wrap gap-2">
           {review.map((question, index) => <li key={question.itemId}>
-            <Button variant={index === selectedIndex ? "default" : "outline"} size="sm" className="min-w-11" aria-current={index === selectedIndex ? "step" : undefined} aria-label={`Review question ${question.ordinal}${question.isCorrect ? ", correct" : ", incorrect"}`} onClick={() => selectQuestion(index)}>{question.ordinal}</Button>
+            <Button variant={index === selectedIndex ? "default" : "outline"} size="sm" className="min-w-11" aria-current={index === selectedIndex ? "step" : undefined} aria-label={`Review question ${question.ordinal}${question.isCorrect ? ", correct" : ", incorrect"}`} onClick={() => selectQuestion(index)}>{question.ordinal}<span aria-hidden="true">{question.isCorrect ? "✓" : "✗"}</span></Button>
           </li>)}
         </ol>
       </nav>}
@@ -38,22 +38,19 @@ export function QuestionReviewList({ review, sessionId, kind = "diagnostic", pag
               <CardHeader className="space-y-3">
                 <p className="text-sm text-muted-foreground">Question {question.ordinal} · {question.domainName}</p>
                 <h3 className="font-medium leading-relaxed">{question.stem}</h3>
-                <p className="text-sm font-medium">{question.isCorrect ? "Correct" : "Incorrect"}</p>
+                <p className={`text-sm font-semibold ${question.isCorrect ? "text-solid" : "text-destructive"}`}>{question.isCorrect ? "Correct." : "Incorrect."} You chose {question.selectedLabel}. The correct answer is {question.correctLabel}.</p>
               </CardHeader>
               <CardContent className="space-y-5">
                 {!question.options.some(option => option.explanation) && question.explanation && <section className="space-y-2"><h4 className="font-semibold">Explanation</h4><p className="whitespace-pre-line leading-relaxed">{question.explanation}</p></section>}
                 <ul className="space-y-3">
                   {question.options.map(option => (
                     <li key={option.label} className={`rounded-lg border p-4 ${option.label === question.correctLabel ? "border-primary" : "border-border"}`}>
+                      {(option.label === question.selectedLabel || option.label === question.correctLabel) && <div className="mb-3 flex flex-wrap justify-end gap-2 text-sm font-semibold">
+                        {option.label === question.selectedLabel && <span className={`rounded px-2 py-1 ${question.isCorrect ? "bg-solid-background text-solid" : "bg-focus-area-background text-destructive"}`}>Your answer {question.isCorrect ? "✓" : "✗"}</span>}
+                        {option.label === question.correctLabel && <span className="rounded bg-solid-background px-2 py-1 text-solid">Correct ✓</span>}
+                      </div>}
                       <p className="leading-relaxed"><span className="font-medium">{option.label}.</span> {option.text}</p>
                       {option.explanation && <p className="mt-2 whitespace-pre-line leading-relaxed text-muted-foreground">{option.explanation}</p>}
-                      {(option.label === question.selectedLabel || option.label === question.correctLabel) && (
-                        <p className="mt-2 text-sm font-medium">
-                          {option.label === question.selectedLabel && <span>Your answer</span>}
-                          {option.label === question.selectedLabel && option.label === question.correctLabel && <span> · </span>}
-                          {option.label === question.correctLabel && <span>Correct answer</span>}
-                        </p>
-                      )}
                     </li>
                   ))}
                 </ul>

@@ -132,7 +132,7 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     expect(authCookies.length).toBeGreaterThan(0);
     expect(authCookies.every(cookie => cookie.httpOnly)).toBe(true);
     await expect(page.getByRole("heading", { name: "Latest diagnostic by domain", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: /^Practice / })).toHaveCount(2);
+    await expect(page.getByRole("button", { name: /^Practice / })).toHaveCount(1);
     await checkLayout("dashboard");
     await captureV3(page, "dashboard");
     if (process.env.TESTERO_V3_SCREENSHOTS) {
@@ -205,7 +205,7 @@ test("local account confirmation claims only owned diagnostics, practices five, 
       expect(answer.feedback.itemId).toBe(progress.currentQuestion!.id);
       expect(answer.feedback.correctLabel).toMatch(/^[A-D]$/);
       noExplanations(answer);
-      await expect(page.getByText(`Correct answer: ${answer.feedback.correctLabel}.`, { exact: true })).toBeVisible();
+      await expect(page.getByRole("status")).toContainText(`the correct answer is ${answer.feedback.correctLabel}.`);
       if (ordinal < 5) {
         if (ordinal > 1) await armTransition(page, { path: `/api/practice/${practiceId}`, ordinal: ordinal + 1, total: 5 });
         const next = page.getByRole("button", { name: "Next question", exact: true });

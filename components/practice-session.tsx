@@ -80,7 +80,6 @@ export function PracticeSession({ sessionId, initialData = null }: { sessionId: 
   const question = data.currentQuestion;
   if (!question) return <PracticeError error={new PracticeRequestError(0, "Your next question could not be loaded. Retry to load your saved progress.")} nextPath={nextPath} onRetry={retry} />;
   const answeredCount = answer?.answeredCount ?? data.answeredCount;
-  const correctOption = question.options.find(option => option.label === answer?.feedback.correctLabel);
 
   return <div className="mx-auto max-w-[760px] space-y-6">
     <div className="space-y-3">
@@ -94,12 +93,11 @@ export function PracticeSession({ sessionId, initialData = null }: { sessionId: 
       <CardContent className="space-y-6">
         {answer && <div role="status" className={`space-y-2 rounded-md p-4 ${answer.feedback.isCorrect ? "bg-solid-background text-solid" : "bg-focus-area-background text-focus-area"}`}>
           <p className="text-lg font-semibold">{answer.feedback.isCorrect ? "Correct" : "Incorrect"}. You chose {answer.feedback.selectedLabel}; the correct answer is {answer.feedback.correctLabel}.</p>
-          <p className="text-sm"><span className="font-medium">Correct answer: {answer.feedback.correctLabel}.</span> {correctOption?.text}</p>
         </div>}
         {!!answer?.feedback.optionExplanations?.length && <h2 className="font-semibold">Option explanations</h2>}
         <form onSubmit={submit} className="space-y-6" aria-busy={pending}>
           <fieldset disabled={pending || !!answer} className="space-y-3">
-            <legend className="mb-3 text-sm font-medium">Choose one answer</legend>
+            <legend className={answer ? "sr-only" : "mb-3 text-sm font-medium"}>{answer ? "Answer review" : "Choose one answer"}</legend>
             {question.options.map(option => {
               const explanation = answer?.feedback.optionExplanations?.find(explanation => explanation.label === option.label);
               return <label key={option.label} className={`answer-option flex min-h-14 items-start gap-3 rounded-md border p-4 leading-relaxed ${answer ? "cursor-default" : "cursor-pointer"} ${selected === option.label ? "border-primary bg-muted" : "border-input hover:bg-muted/50"}`}>
@@ -116,7 +114,7 @@ export function PracticeSession({ sessionId, initialData = null }: { sessionId: 
         </form>
         {answer && <div className="space-y-4 border-t border-border pt-5">
           {!answer.feedback.optionExplanations?.length && answer.feedback.explanation && <section className="space-y-2"><h2 className="font-semibold">Explanation</h2><p className="whitespace-pre-line leading-relaxed">{answer.feedback.explanation}</p></section>}
-          {answer.completed ? <Button asChild><Link href={summaryPath}>View summary</Link></Button> : <Button onClick={nextQuestion}>Next question</Button>}
+          <div className="flex justify-end">{answer.completed ? <Button asChild><Link href={summaryPath}>View summary</Link></Button> : <Button onClick={nextQuestion}>Next question</Button>}</div>
         </div>}
       </CardContent>
     </Card>

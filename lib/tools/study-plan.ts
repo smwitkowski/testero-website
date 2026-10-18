@@ -43,10 +43,19 @@ export function buildStudyPlan(cert: ToolCertification, examDate: string, hoursP
     }
     return { number: i + 1, start: dateText(start + i * 7 * DAY), end: dateText(start + (i * 7 + weekDays[i] - 1) * DAY), minutes, tasks };
   });
+  if (weeks.length > 1 && weekDays.at(-1) === 1) {
+    const last = weeks.pop()!;
+    const previous = weeks[weeks.length - 1];
+    previous.end = last.end; previous.minutes += last.minutes;
+    for (const task of last.tasks) {
+      const existing = previous.tasks.find(item => item.sectionId === task.sectionId);
+      if (existing) existing.minutes += task.minutes; else previous.tasks.push(task);
+    }
+  }
   return { certName: cert.name, guideUrl: cert.guide.url, guideVariant: cert.guide.variant, beta: cert.guide.variant === "beta", examDate, hoursPerWeek, totalMinutes, weighted, totalWeight, weeks, sections: sections.map((section, i) => ({ ...section, minutes: sectionMinutes[i] })) };
 }
 export type StudyPlan = ReturnType<typeof buildStudyPlan>;
 export const studyTime = (minutes: number) => minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)}h${minutes % 60 ? ` ${minutes % 60}m` : ""}`;
 export function studyPlanText(plan: StudyPlan) {
-  return [plan.certName, `Official ${plan.guideVariant} exam guide: ${plan.guideUrl}`, ...(plan.beta ? ["Beta guide only. Beta registration is closed; check Google for GA availability and its guide. Separate required labs are not scheduled."] : []), `Exam: ${plan.examDate} | ${plan.hoursPerWeek} hours/week | ${studyTime(plan.totalMinutes)} total`, plan.weighted ? `Time allocated in proportion to official section weights (total ${plan.totalWeight}%).` : "No complete section weights available; time split evenly across included sections.", ...plan.weeks.flatMap(week => [`\nWeek ${week.number}: ${week.start} – ${week.end} (${studyTime(week.minutes)})`, ...week.tasks.map(task => `- ${task.title}: ${studyTime(task.minutes)}`)]), "\nUse official docs and hands-on practice for each section; revisit weak areas. This schedule is not an exam-readiness prediction.", "Testero is independent and not affiliated with or endorsed by Google."].join("\n");
+  return [plan.certName, `Official ${plan.guideVariant} exam guide: ${plan.guideUrl}`, ...(plan.beta ? ["Beta guide only. Beta registration is closed; check Google for GA availability and its guide. Separate required labs are not scheduled."] : []), `Exam: ${plan.examDate} | ${plan.hoursPerWeek} hours/week | ${studyTime(plan.totalMinutes)} total`, plan.weighted ? `Time allocated in proportion to official section weights (total ${plan.totalWeight}%).` : "No complete section weights available; time split evenly across included sections.", ...plan.weeks.flatMap(week => [`\n${Date.parse(week.end) - Date.parse(week.start) > 6 * DAY ? "Study period" : "Week"} ${week.number}: ${week.start} – ${week.end} (${studyTime(week.minutes)})`, ...week.tasks.map(task => `- ${task.title}: ${studyTime(task.minutes)}`)]), "\nUse official docs and hands-on practice for each section; revisit weak areas. This schedule is not an exam-readiness prediction.", "Testero is independent and not affiliated with or endorsed by Google."].join("\n");
 }

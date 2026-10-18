@@ -64,7 +64,7 @@ describe("exam preparation availability", () => {
       expect((html.match(/>(?:Diagnostic coming|Not on Testero yet)</g) ?? []).length).toBe(entries.slice((page - 1) * 8, page * 8).filter(e => isComingSoon(e.exam)).length);
     }
     const faq = renderToStaticMarkup(createElement(FaqPage));
-    expect((faq.match(/>(?:Diagnostic coming|Not on Testero yet)</g) ?? []).length).toBe(getFaqEntries().filter(e => isComingSoon(e.exam)).length);
+    expect(faq).not.toMatch(/>(?:Diagnostic coming|Not on Testero yet)</);
     const home = renderToStaticMarkup(createElement(HomePage));
     expect(home).toContain('href="/diagnostic"');
     expect(home).toContain('href="/certifications"');

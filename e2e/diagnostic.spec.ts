@@ -159,8 +159,8 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
         await page.getByRole("button", { name: "Previous", exact: true }).click();
         await expect(page.getByText("Question 1 of 20", { exact: true })).toBeVisible();
         await expect(page.getByRole("button", { name: "Previous", exact: true })).toBeDisabled();
-        await page.getByRole("button", { name: "Next", exact: true }).click();
-        await page.getByRole("button", { name: "Next", exact: true }).click();
+        await page.getByRole("button", { name: "Next question", exact: true }).click();
+        await page.getByRole("button", { name: "Next question", exact: true }).click();
         await expect(page.getByText("Question 3 of 20", { exact: true })).toBeVisible();
         await expect(page.getByRole("radio").nth(1)).toBeChecked();
         await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "2");
@@ -174,7 +174,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
         await expect(page.getByText("Question 3 of 20", { exact: true })).toBeVisible();
         await page.getByRole("button", { name: "Previous", exact: true }).click();
         await expect(page.locator(`input[type=radio][value="${savedLabel}"]`)).toBeChecked();
-        await page.getByRole("button", { name: "Next", exact: true }).click();
+        await page.getByRole("button", { name: "Next question", exact: true }).click();
         expect(answerPosts).toHaveLength(postCount);
       }
       const nextName = index === 19 ? "See my results" : "Next question";

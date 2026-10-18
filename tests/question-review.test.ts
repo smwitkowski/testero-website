@@ -19,6 +19,7 @@ describe("shared question review", () => {
     expect(html).toContain("Question review navigation");
     expect(html).toContain('aria-current="step"');
     expect(html).toContain("Review question 2, incorrect");
+    expect(html).toContain("✗");
     expect(html).not.toContain(second.stem);
     expect(html).toContain(first.stem);
   });
@@ -51,7 +52,9 @@ describe("shared question review", () => {
     expect(html).toContain("First");
     expect(html).toContain("Second");
     expect(html).toContain("Your answer");
-    expect(html).toContain("Correct answer");
+    expect(html).toContain("Correct ✓");
+    expect(html).toContain("You chose B. The correct answer is A.");
+    expect(html.indexOf("Correct ✓")).toBeLessThan(html.indexOf(">A.</span> First"));
     expect(html).not.toMatch(/explanation|secret|unlock|blur|paywall/i);
   });
   it("renders only the optional explanation fields received in paid review", () => {
@@ -64,7 +67,8 @@ describe("shared question review", () => {
   it("marks a correct selected choice with both accessible text labels", () => {
     const html = renderToStaticMarkup(createElement(QuestionReviewList, { review: [mapReview({ ...source, selected_label: "A", is_correct: true })] }));
     expect(html).toContain("Your answer");
-    expect(html).toContain("Correct answer");
+    expect(html).toContain("Correct ✓");
+    expect(html).toContain("Your answer ✓");
     expect(html).not.toContain("Incorrect");
   });
 });

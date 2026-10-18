@@ -7,6 +7,7 @@ export function CertWaitlistForm({ certId, certName }: { certId: string; certNam
   const websiteId = `cert-website-${certId}`;
   const [status, setStatus] = useState("");
   const [pending, setPending] = useState(false);
+  const [emailError, setEmailError] = useState("");
   const [joined, setJoined] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,7 +31,8 @@ export function CertWaitlistForm({ certId, certName }: { certId: string; certNam
   }
   return <form onSubmit={submit} className="space-y-4">
     {joined ? <p className="text-sm font-semibold">Launch notification for {certName}</p> : <label className="block text-sm font-semibold" htmlFor={emailId}>Get notified when the {certName} diagnostic is ready</label>}
-    {!joined && <><input id={emailId} name="email" type="email" autoComplete="email" required maxLength={254} placeholder="you@example.com" className="min-h-12 w-full rounded-md border border-input bg-card px-3 text-base" />
+    {!joined && <><input id={emailId} name="email" type="email" autoComplete="email" required maxLength={254} aria-invalid={!!emailError} aria-describedby={`${emailId}-error`} onInvalid={event => setEmailError(event.currentTarget.validationMessage)} onChange={() => setEmailError("")} placeholder="you@example.com" className="min-h-12 w-full rounded-md border border-input bg-card px-3 text-base" />
+    <p id={`${emailId}-error`} className="text-sm text-destructive" aria-live="polite">{emailError}</p>
     <div hidden aria-hidden="true"><label htmlFor={websiteId}>Website</label><input id={websiteId} name="website" tabIndex={-1} autoComplete="off" /></div>
     <button disabled={pending} className="min-h-12 w-full rounded-lg bg-primary px-4 py-3 font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60">{pending ? "Saving…" : "Notify me"}</button></>}
     <p role="status" aria-live="polite" className={`text-sm ${joined ? "text-solid" : "text-destructive"}`}>{status}</p>

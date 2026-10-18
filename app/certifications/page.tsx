@@ -23,6 +23,7 @@ export default function CertificationsPage() {
       <p className="text-body">Get your readiness score and a domain breakdown. No account needed.</p>
       <Button asChild><Link href="/diagnostic">Start the free PMLE diagnostic →</Link></Button>
     </section>
+    <div className="space-y-0">
     {["foundational", "associate", "professional"].map(level => <details key={level} id={level} open={level === "professional"} className="group border-t border-border">
       <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 py-5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"><h2 className="text-2xl font-semibold capitalize">{level}</h2><span className="flex items-center gap-4 text-sm text-muted-foreground">{certifications.filter(cert => cert.level === level).length} credentials <span aria-hidden="true" className="text-xl group-open:rotate-180">⌄</span></span></summary>
       <ul className="divide-y divide-border border-y border-border">{certifications.filter(cert => cert.level === level).sort((a, b) => Number(b.cert_id === PMLE_CERT_ID) - Number(a.cert_id === PMLE_CERT_ID)).map(cert => <li key={cert.cert_id} className="grid gap-4 py-6 sm:grid-cols-[1fr_12rem] sm:gap-8">
@@ -30,6 +31,7 @@ export default function CertificationsPage() {
         <div className="space-y-2 sm:text-right"><p className={`text-sm font-semibold ${cert.cert_id === PMLE_CERT_ID ? "text-solid" : "text-muted-foreground"}`}>{cert.cert_id === PMLE_CERT_ID ? "Practice available" : "Diagnostic coming"}</p>{cert.cert_id === PMLE_CERT_ID && <Link href="/diagnostic" className="inline-flex min-h-12 items-center text-sm text-primary underline">Start PMLE diagnostic</Link>}</div>
       </li>)}</ul>
     </details>)}
+    </div>
     <p className="text-sm leading-relaxed text-muted-foreground">Check Google&apos;s linked certification pages before booking. Announcements and beta availability can change. No certification guarantees an exam result, job or salary.</p>
   </section>;
 }

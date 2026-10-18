@@ -48,6 +48,7 @@ export function AuthForm({ mode, next = "/dashboard", confirmationFailed = false
   const [confirmationEmail, setConfirmationEmail] = useState<string | null>(confirmationFailed ? "" : null);
   const emailRequired = mode !== "reset-password";
   const passwordRequired = mode !== "forgot-password";
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const destination = safeNext(next);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,6 +58,19 @@ export function AuthForm({ mode, next = "/dashboard", confirmationFailed = false
     const body: Record<string, string> = {};
     if (emailRequired) body.email = String(data.get("email") ?? "");
     if (passwordRequired) body.password = String(data.get("password") ?? "");
+    const errors: Record<string, string> = {};
+    if (emailRequired) {
+      const input = form.elements.namedItem("email") as HTMLInputElement;
+      if (!body.email.trim()) errors.email = "Enter your email address.";
+      else if (input.validity.typeMismatch) errors.email = "Enter a valid email address.";
+    }
+    if (passwordRequired && !body.password) errors.password = "Enter your password.";
+    else if (passwordRequired && mode !== "login" && (body.password.length < 8 || body.password.length > 72)) errors.password = "Use 8–72 characters.";
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      (form.elements.namedItem(Object.keys(errors)[0]) as HTMLInputElement)?.focus();
+      return;
+    }
     if (mode !== "reset-password") body.next = destination;
     setPending(true); setError(""); setMessage("");
     try {
@@ -82,10 +96,10 @@ export function AuthForm({ mode, next = "/dashboard", confirmationFailed = false
         <p>{message}</p>
         {mode === "signup" && <p className="mt-3">Already have an account? <Link href="/login" className="font-medium text-primary hover:underline">Sign in</Link> or <Link href="/forgot-password" className="font-medium text-primary hover:underline">reset your password</Link>.</p>}
       </div> : (
-        <form onSubmit={submit} className="space-y-5">
+        <form noValidate onSubmit={submit} className="space-y-5">
           <fieldset disabled={pending} className="space-y-5">
-            {emailRequired && <div className="space-y-2"><label htmlFor="email" className="block text-sm font-medium">Email</label><input id="email" name="email" type="email" autoComplete="email" required maxLength={254} className="min-h-12 w-full rounded-md border border-input bg-card px-3 focus-visible:outline-2 focus-visible:outline-ring" /></div>}
-            {passwordRequired && <div className="space-y-2"><label htmlFor="password" className="block text-sm font-medium">{mode === "reset-password" ? "New password" : "Password"}</label><input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={8} maxLength={72} aria-describedby="password-help" className="min-h-12 w-full rounded-md border border-input bg-card px-3 focus-visible:outline-2 focus-visible:outline-ring" /><div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1"><p id="password-help" className="text-sm text-muted-foreground">Use 8–72 characters.</p><button type="button" aria-controls="password" aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)} className="inline-flex min-h-12 items-center text-sm font-medium text-primary">{showPassword ? "Hide password" : "Show password"}</button></div></div>}
+            {emailRequired && <div className="space-y-2"><label htmlFor="email" className="block text-sm font-medium">Email</label><input id="email" aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? "email-error" : undefined} name="email" type="email" autoComplete="email" required maxLength={254} className="min-h-12 w-full rounded-md border border-input bg-card px-3 focus-visible:outline-2 focus-visible:outline-ring" />{fieldErrors.email && <p id="email-error" className="text-sm text-destructive">{fieldErrors.email}</p>}</div>}
+            {passwordRequired && <div className="space-y-2"><label htmlFor="password" className="block text-sm font-medium">{mode === "reset-password" ? "New password" : "Password"}</label><input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={mode === "login" ? undefined : 8} maxLength={72} aria-invalid={!!fieldErrors.password} aria-describedby={[mode !== "login" ? "password-help" : "", fieldErrors.password ? "password-error" : ""].filter(Boolean).join(" ") || undefined} className="min-h-12 w-full rounded-md border border-input bg-card px-3 focus-visible:outline-2 focus-visible:outline-ring" /><div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">{mode !== "login" && <p id="password-help" className="text-sm text-muted-foreground">Use 8–72 characters.</p>}<button type="button" aria-controls="password" aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)} className="inline-flex min-h-12 items-center text-sm font-medium text-primary">{showPassword ? "Hide password" : "Show password"}</button></div>{fieldErrors.password && <p id="password-error" className="text-sm text-destructive">{fieldErrors.password}</p>}</div>}
             <Button type="submit" disabled={pending} className="w-full">{pending ? "Please wait…" : labels[mode]}</Button>
           </fieldset>
         </form>

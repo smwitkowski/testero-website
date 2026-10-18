@@ -5,9 +5,11 @@ import type { DiagnosticProgress } from "../lib/diagnostic/types";
 import type { PracticeAnswerResponse } from "../lib/practice/types";
 // Reuse the established full confirmation/claim/quota and signed fake-Stripe flows.
 if (process.env.TESTERO_QA === "1") {
+  await import("./ui-audit-p2-summary.spec");
   await import("./accounts-practice.spec");
   await import("./billing.spec");
   await import("./ui-audit-p1.spec");
+  await import("./ui-audit-p2.spec");
 }
 
 test("QA diagnostic click-to-question budget and paid explanation/next/summary", async ({ page }, info) => {
@@ -74,7 +76,7 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   await expect(page.getByRole("radio").first()).toBeChecked();
   for (const radio of await page.getByRole("radio").all()) await expect(radio).toBeDisabled();
   await expect(page.getByRole("button", { name: "Previous", exact: true })).toBeDisabled();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Next question", exact: true }).click();
   await expect(page.getByText("Question 2 of 20", { exact: true })).toBeVisible();
   await expect(page.getByRole("radio").nth(1)).toBeChecked();
   const sessionId = new URL(page.url()).pathname.split("/").at(-1);

@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { DiagnosticSession } from "@/components/diagnostic-session";
 import { diagnosticRequest } from "@/components/diagnostic-resource";
 
-const mocks = vi.hoisted(() => ({ answer: vi.fn(), completed: vi.fn(), request: vi.fn(), reload: vi.fn(), replace: vi.fn(), viewOrdinal: null as number | null, nullStateCalls: 0 }));
+const mocks = vi.hoisted(() => ({ answer: vi.fn(), completed: vi.fn(), request: vi.fn(), reload: vi.fn(), replace: vi.fn(), viewOrdinal: null as number | null, totalQuestions: 20, answeredCount: 2, nullStateCalls: 0 }));
 vi.mock("react", async importOriginal => {
   const actual = await importOriginal<typeof import("react")>();
   return { ...actual, useState: (value: unknown) => [value === "" ? "A" : value === null && ++mocks.nullStateCalls === 1 ? mocks.viewOrdinal : value, vi.fn()],
@@ -13,8 +13,8 @@ vi.mock("react", async importOriginal => {
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: mocks.replace }) }));
 vi.mock("@/lib/analytics/client", () => ({ trackDiagnostic: mocks.completed, trackDiagnosticAnswer: mocks.answer }));
 vi.mock("@/components/diagnostic-resource", () => ({ diagnosticRequest: mocks.request, requestError: () => "Failed",
-  useDiagnosticResource: () => ({ data: { status: "in_progress", totalQuestions: 20, answeredCount: 2,
-    answeredQuestions: [{ id: "saved-item", ordinal: 1, domainCode: "D1", stem: "Saved private question", selectedLabel: "B", options: [{ label: "B", text: "Saved answer" }] }], currentQuestion: { id: "item", ordinal: 3, domainCode: "D2", stem: "Private question", options: [{ label: "A", text: "Private answer" }] } },
+  useDiagnosticResource: () => ({ data: { status: "in_progress", totalQuestions: mocks.totalQuestions, answeredCount: mocks.answeredCount,
+    answeredQuestions: [{ id: "saved-item", ordinal: 1, domainCode: "D1", stem: "Saved private question", selectedLabel: "B", options: [{ label: "B", text: "Saved answer" }] }], currentQuestion: { id: "item", ordinal: mocks.answeredCount + 1, domainCode: "D2", stem: "Private question", options: [{ label: "A", text: "Private answer" }] } },
     error: null, reload: mocks.reload }) }));
 
 function formIn(node: ReactElement): ReactElement<{ onSubmit: (event: { preventDefault: () => void }) => Promise<void> }> | undefined {
@@ -26,7 +26,7 @@ function formIn(node: ReactElement): ReactElement<{ onSubmit: (event: { preventD
     }
   }
 }
-beforeEach(() => { vi.clearAllMocks(); mocks.viewOrdinal = null; mocks.nullStateCalls = 0; });
+beforeEach(() => { vi.clearAllMocks(); mocks.viewOrdinal = null; mocks.totalQuestions = 20; mocks.answeredCount = 2; mocks.nullStateCalls = 0; });
 afterEach(() => vi.unstubAllGlobals());
 it("captures question metadata only after its answer was saved, before completion", async () => {
   mocks.request.mockResolvedValue({ completed: true });
@@ -43,6 +43,11 @@ it("does not capture question answered when saving fails", async () => {
   expect(mocks.answer).not.toHaveBeenCalled(); expect(mocks.completed).not.toHaveBeenCalled();
 });
 
+it.each([[10, 5, true], [20, 10, true], [5, 2, false], [10, 4, false]])("shows halfway encouragement only at the midpoint of %s questions", (total, answered, visible) => {
+  mocks.totalQuestions = total; mocks.answeredCount = answered;
+  const html = renderToStaticMarkup(createElement(DiagnosticSession, { sessionId: "session" }));
+  expect(html.includes("Halfway there.")).toBe(visible);
+});
 it("estimates one minute per remaining diagnostic question", () => {
   const html = renderToStaticMarkup(createElement(DiagnosticSession, { sessionId: "session" }));
   expect(html).toContain("~18 min left");

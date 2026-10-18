@@ -16,6 +16,6 @@ export function ToolPage({ slug, children, copy }: { slug: string; children: Rea
     {children}
     <section className="max-w-3xl space-y-4 text-body print:hidden">{copy}</section>
     {tool && <nav aria-label="More free tools" className="flex flex-wrap gap-x-6 gap-y-3 border-t border-border pt-5 print:hidden">{tools.filter(item => item.slug !== slug).map(item => <Link key={item.slug} href={`/tools/${item.slug}`} className="inline-block py-2 text-primary underline">{item.label} →</Link>)}</nav>}
-    <p className="text-sm leading-relaxed text-muted-foreground">Testero is independent and not affiliated with or endorsed by Google. These tools do not predict an exam outcome.</p>
+    <p className="text-sm leading-relaxed text-muted-foreground"><span className="hidden print:inline">Testero is independent and not affiliated with or endorsed by Google. </span>These tools do not predict an exam outcome.</p>
   </section>;
 }

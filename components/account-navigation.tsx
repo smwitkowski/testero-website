@@ -30,6 +30,6 @@ export function AccountNavigation() {
   const userId = useContext(NavigationUser);
   return <>
     <Link href={userId ? "/dashboard" : "/login"} className="inline-flex min-h-12 items-center rounded-md border border-input px-3.5 py-2 text-foreground hover:bg-muted">{userId ? "Dashboard" : "Sign in"}</Link>
-    {userId && <Link href="/account" className="inline-flex min-h-12 items-center py-2 hover:text-primary">Account</Link>}
+    {userId && <Link href="/account" className="inline-flex min-h-12 items-center rounded-md px-3 py-2 hover:bg-muted hover:text-primary">Account</Link>}
   </>;
 }

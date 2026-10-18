@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
   --background: #F6F7F9;
   --foreground: #101828;
   --body: #344054;
@@ -48,6 +49,7 @@
 body { background: var(--background); color: var(--foreground); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 ::selection { background: var(--primary); color: var(--primary-foreground); }
 a { text-underline-offset: 0.2em; }
+nav[aria-label="Breadcrumb"] a { display: inline-flex; min-height: 2.75rem; align-items: center; }
 #main-content > article { max-width: 48rem; margin-inline: auto; }
 #main-content > section > a.bg-primary { min-height: 48px; border-radius: 6px; }
 #main-content:has(.auth-recovery) { min-height: 0; padding-block: 1.5rem 2rem; }
@@ -61,7 +63,8 @@ input { accent-color: var(--primary); }
 .bg-primary:focus-visible { outline-color: var(--foreground); box-shadow: 0 0 0 3px var(--card); transition: none; }
 .on-dark :focus-visible { outline-color: var(--card); }
 .answer-option:has(:focus-visible) { outline: 3px solid var(--ring); outline-offset: 3px; }
-.answer-option:has(:checked) { border-color: var(--primary); background: var(--muted); }
+.answer-option { border-width: 2px; }
+.answer-option:has(:checked) { border-width: 3px; padding: calc(var(--answer-padding, 1rem) - 1px); border-color: var(--primary); background: color-mix(in srgb, var(--primary) 5%, var(--card)); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }

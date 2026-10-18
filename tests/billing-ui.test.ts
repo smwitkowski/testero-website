@@ -32,6 +32,13 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe("verified billing pages", () => {
+  it("shows refund support without inventing receipt dates", () => {
+    const html = renderToStaticMarkup(createElement(BillingAccount, { access: paid }));
+    expect(html).toContain("7-day refund window");
+    expect(html).toContain("mailto:support@testero.ai");
+    expect(html).not.toContain("refund window until");
+    expect(renderToStaticMarkup(createElement(BillingAccount, { access: free }))).not.toContain("Purchased");
+  });
   it("offers one $39 one-time 90-day pass, signup return, free diagnostic and no placeholder", async () => {
     const html = renderToStaticMarkup(await PricingPage());
     expect(html).toContain("$39</span>");

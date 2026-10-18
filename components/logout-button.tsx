@@ -17,5 +17,5 @@ export function LogoutButton() {
     } catch { setError("Unable to sign out. Please try again."); }
     finally { setPending(false); }
   }
-  return <div className="space-y-2"><Button variant="outline" onClick={logout} disabled={pending}>{pending ? "Signing out…" : "Sign out"}</Button>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</div>;
+  return <div className="space-y-2"><Button variant="ghost" onClick={logout} disabled={pending}>{pending ? "Signing out…" : "Sign out"}</Button>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}</div>;
 }

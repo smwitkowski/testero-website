@@ -53,6 +53,6 @@ export function DiagnosticResults({ sessionId, aboveFoldCta, emailCard }: { sess
     {data.review && <QuestionReviewList review={data.review} sessionId={sessionId} kind="diagnostic" />}
     {data.review && <SignedInDiagnosticUnlock result={data} />}
     {!data.review && (emailCard === undefined ? <ResultsEmailForm sessionId={sessionId} /> : emailCard)}
-    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border pt-5"><p className="text-sm text-muted-foreground">Study guidance, not a prediction of your exam result.</p><Link href="/diagnostic" className="text-sm font-medium text-primary underline">Retake the diagnostic</Link></div>
+    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border pt-5"><p className="text-sm text-muted-foreground">Study guidance, not a prediction of your exam result.</p><Link href="/diagnostic" className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline">Retake the diagnostic</Link></div>
   </div>;
 }
