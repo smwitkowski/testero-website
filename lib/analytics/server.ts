@@ -20,9 +20,16 @@ export async function trackPurchaseCompleted(checkoutId: string) {
 
 type FunnelEvent = "diagnostic_started" | "diagnostic_completed" | "signup_completed" | "checkout_started" | "cert_waitlist_joined";
 
+/** Our own automation (headless browsers, crawlers) or anyone with the testero_internal=1 cookie.
+ * Server events bypass posthog-js bot filtering, so without this they inflate funnel counts. */
+export function isInternalRequest(request: Request): boolean {
+  if (/HeadlessChrome|Playwright|bot\b|crawler|spider/i.test(request.headers.get("user-agent") ?? "")) return true;
+  return /(?:^|;\s*)testero_internal=1(?:;|$)/.test(request.headers.get("cookie") ?? "");
+}
+
 /** Analytics scheduling and transport failures never change a successful response. */
 export function scheduleFunnelEvent(request: Request, event: FunnelEvent, fallbackId: string, properties: { session_id?: string; plan_name?: string; cert_id?: string; length?: number } = {}, insertId?: string) {
-  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return;
+  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY || isInternalRequest(request)) return;
   try {
     const suppliedId = request.headers.get("X-PostHog-Distinct-Id");
     const distinctId = suppliedId && /^[a-zA-Z0-9_-]{1,200}$/.test(suppliedId) ? suppliedId : fallbackId;

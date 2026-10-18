@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { captureFunnelEvent, scheduleFunnelEvent, trackPurchaseCompleted } from "@/lib/analytics/server";
+import { captureFunnelEvent, isInternalRequest, scheduleFunnelEvent, trackPurchaseCompleted } from "@/lib/analytics/server";
 const afterMock = vi.hoisted(() => vi.fn());
 vi.mock("next/server", () => ({ after: afterMock }));
 const fetchMock = vi.fn();
@@ -88,4 +88,20 @@ describe("server funnel analytics", () => {
  it("waitlist capture includes only the cert and opaque identity, not email", async () => {
   await captureFunnelEvent("cert_waitlist_joined", "opaque-interest", { cert_id: "cloud-engineer" });
   expect(JSON.parse(fetchMock.mock.calls[0][1].body).properties).toEqual({ distinct_id: "opaque-interest", source: "server", $process_person_profile: false, cert_id: "cloud-engineer" });
+});
+
+describe("internal traffic is never captured server-side", () => {
+  const req = (headers: Record<string, string>) => new Request("https://testero.ai/api/diagnostic", { method: "POST", headers });
+  it.each([
+    [{ "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/131.0.0.0 Safari/537.36" }, true],
+    [{ "user-agent": "Googlebot/2.1 (+http://www.google.com/bot.html)" }, true],
+    [{ "user-agent": "Mozilla/5.0 (Macintosh) Chrome/131.0", cookie: "a=1; testero_internal=1" }, true],
+    [{ "user-agent": "Mozilla/5.0 (Macintosh) Chrome/131.0", cookie: "testero_internal=0" }, false],
+    [{ "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0) Mobile/15E148 Safari/604.1" }, false],
+  ])("%j → internal=%s", (headers, internal) => {
+    expect(isInternalRequest(req(headers))).toBe(internal);
+    afterMock.mockReset();
+    scheduleFunnelEvent(req(headers), "diagnostic_started", "anon_1", { session_id: "s1", length: 5 });
+    expect(afterMock).toHaveBeenCalledTimes(internal ? 0 : 1);
+  });
 });
