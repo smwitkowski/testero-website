@@ -39,7 +39,7 @@ export function CertificationPreview() {
         <ul className="divide-y divide-border text-sm text-body">{preview.focus.map(topic => <li key={topic} className="py-3">{topic}</li>)}</ul>
         <p className="text-xs text-muted-foreground">Concept preview only. No readiness scores or launch date are promised.</p>
       </>}
-      <Link className="inline-block text-sm font-semibold text-primary underline" href={`/certifications/${preview.slug}`}>Explore this certification →</Link>
+      <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-primary underline" href={`/certifications/${preview.slug}`}>Explore this certification →</Link>
     </Card>
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex items-center gap-1"><Button variant="outline" className="size-11 p-0" onClick={() => move(-1)} aria-label="Previous certification">←</Button><span className="text-sm text-muted-foreground">{index + 1} / {previews.length}</span><Button variant="outline" className="size-11 p-0" onClick={() => move(1)} aria-label="Next certification">→</Button></div>

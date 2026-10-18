@@ -16,9 +16,13 @@ export function DiagnosticUnlockCard({ result, signedIn = false }: { result: Dia
   </section>;
 }
 
-export function SignedInDiagnosticUnlock({ result }: { result: DiagnosticResult }) {
+export function DiagnosticPassOption({ result }: { result: DiagnosticResult }) {
+  return <Button asChild variant="outline"><Link href={result.review ? "/pricing" : "/signup?next=%2Fpricing"} onClick={() => trackResults("unlock_cta_clicked", result)}>PMLE Pass · $39 / 90 days</Link></Button>;
+}
+
+export function SignedInDiagnosticUnlock({ result, compact = false }: { result: DiagnosticResult; compact?: boolean }) {
   const { data, error, reload } = useDiagnosticResource<{ signedIn: boolean; owned?: boolean }>("/api/billing/access");
   if (error) return <p role="status">Unable to check pass access. <button className="text-primary underline" onClick={reload}>Retry access check</button></p>;
   if (!data?.signedIn || data.owned) return null;
-  return <DiagnosticUnlockCard result={result} signedIn />;
+  return compact ? <DiagnosticPassOption result={result} /> : <DiagnosticUnlockCard result={result} signedIn />;
 }

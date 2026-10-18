@@ -10,6 +10,7 @@ import { domainDisplayName } from "@/lib/constants/pmle-blueprint";
 export function PublicSampleQuestion({ question, index }: { question: PublicSample; index: number }) {
   const [selected, setSelected] = useState<OptionLabel | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [showExplanations, setShowExplanations] = useState(false);
   return <section className="space-y-5 border-t border-border pt-6" aria-labelledby={`sample-${question.id}`}>
     <p className="text-sm text-muted-foreground">{domainDisplayName(question.domain, question.domain)}</p>
     <fieldset disabled={revealed} className="space-y-4">
@@ -19,9 +20,9 @@ export function PublicSampleQuestion({ question, index }: { question: PublicSamp
         <span><strong>{label}.</strong> {question.options[label]}{revealed && label === question.key && <strong className="mt-2 block text-sm text-solid">✓ Correct answer{selected === label ? " · Your choice" : ""}</strong>}{revealed && selected === label && label !== question.key && <strong className="mt-2 block text-sm text-destructive">✕ Your choice · Incorrect</strong>}</span>
       </label>)}
     </fieldset>
-    <Button type="button" disabled={!selected} onClick={() => setRevealed(value => !value)} aria-controls={`answer-${question.id}`} aria-expanded={revealed} className="w-full whitespace-normal sm:w-auto">{revealed ? "Hide explanations" : "Reveal answer and explanations"}</Button>
-    {revealed && <div id={`answer-${question.id}`} className="space-y-4 rounded-lg border border-border bg-muted p-5">
-      <p role="status" className="font-semibold">{selected === question.key ? "Correct." : `You chose ${selected}.`} Answer: {question.key}.</p>
+    {revealed && <p role="status" className="font-semibold">{selected === question.key ? "Correct." : `You chose ${selected}.`} Answer: {question.key}.</p>}
+    <Button type="button" disabled={!selected} onClick={() => { setRevealed(true); setShowExplanations(value => !value); }} aria-controls={`answer-${question.id}`} aria-expanded={showExplanations} className="w-full whitespace-normal sm:w-auto">{showExplanations ? "Hide explanations" : revealed ? "Show explanations" : "Reveal answer and explanations"}</Button>
+    {showExplanations && <div id={`answer-${question.id}`} className="space-y-4 rounded-lg border border-border bg-muted p-5">
       <h2 className="text-lg font-semibold">Why each option is right or wrong</h2>
       <dl className="space-y-4">{optionLabels.map(label => <div key={label}><dt className="font-semibold">{label}. {question.options[label]}{label === question.key ? " — Correct answer" : " — Incorrect"}</dt><dd className="mt-1 leading-7 text-body">{question.rationale[label]}</dd></div>)}</dl>
       <h2 className="text-lg font-semibold">Official documentation</h2>
