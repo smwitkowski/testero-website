@@ -108,12 +108,13 @@ export function getDomainTier(score: number): DomainTier {
 
 /**
  * Diagnostic domain status from the raw count. Domains get only 3-4 questions, so
- * "Focus area" means 0-1 correct and "Solid" means none wrong; 2/3 and 3/4 are both
+ * "Solid" means none wrong (checked first) and "Focus area" means 0-1 correct; 2/3 and 3/4 are both
  * "Developing". Larger samples fall back to the percentage tiers.
  */
 export function getDomainStatus(correct: number, total: number): DomainTierId {
   if (total > 4) return getDomainTier(total ? Math.round(correct / total * 100) : 0).id;
-  return correct <= 1 ? "critical" : correct === total ? "strong" : "moderate";
+  // All-correct wins first: quick checks give a domain 1-2 questions, and 1/1 must not read "Focus area".
+  return correct === total && total > 0 ? "strong" : correct <= 1 ? "critical" : "moderate";
 }
 
 const STATUS_RANK: Record<DomainTierId, number> = { critical: 0, moderate: 1, strong: 2 };
