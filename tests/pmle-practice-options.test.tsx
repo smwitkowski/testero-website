@@ -13,8 +13,9 @@ describe("dated PMLE preparation comparison", () => {
       for (const source of option.sources) expect(html).toContain(source);
     }
     expect(html).toContain(comparisonChecked);
-    expect(html).toContain("check site"); expect(html).toContain("HTTP 403");
-    expect(html).toContain("not a ranking"); expect(html).toContain("Testero publishes this page");
+    expect(html).toContain("Check site; not verified.");
+    expect(practiceOptions[0].name).toBe("Testero");
+    expect(html).toContain("not a quality ranking"); expect(html).toContain("Testero publishes this page");
     expect(practiceOptions.find(option => option.name === "Testero")!.price).toContain("USD $39 one-time for 90 days");
     expect(practiceOptions.find(option => option.name === "GCP Study Hub")!.price).toContain("$39/month");
     expect(html).toContain('href="/diagnostic"');
