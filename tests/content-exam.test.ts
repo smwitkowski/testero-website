@@ -57,11 +57,14 @@ describe("exam preparation availability", () => {
       expect(footer).toContain(`href="${isComingSoon(entry.exam) ? cert ? `/certifications/${cert.cert_id}` : "/certifications" : "/diagnostic"}"`);
     }
   });
-  it("tags only non-PMLE index items and keeps the multi-cert homepage honest", () => {
-    for (const [Page, entries] of [[BlogPage, getBlogEntries()], [FaqPage, getFaqEntries()]] as const) {
-      const html = renderToStaticMarkup(createElement(Page));
-      expect((html.match(/>(?:Diagnostic coming|Not on Testero yet)</g) ?? []).length).toBe(entries.filter(e => isComingSoon(e.exam)).length);
+  it("tags only non-PMLE index items and keeps the multi-cert homepage honest", async () => {
+    const entries = getBlogEntries();
+    for (let page = 1; page <= Math.ceil(entries.length / 8); page++) {
+      const html = renderToStaticMarkup(await BlogPage({ searchParams: Promise.resolve({ page: String(page) }) }));
+      expect((html.match(/>(?:Diagnostic coming|Not on Testero yet)</g) ?? []).length).toBe(entries.slice((page - 1) * 8, page * 8).filter(e => isComingSoon(e.exam)).length);
     }
+    const faq = renderToStaticMarkup(createElement(FaqPage));
+    expect((faq.match(/>(?:Diagnostic coming|Not on Testero yet)</g) ?? []).length).toBe(getFaqEntries().filter(e => isComingSoon(e.exam)).length);
     const home = renderToStaticMarkup(createElement(HomePage));
     expect(home).toContain('href="/diagnostic"');
     expect(home).toContain('href="/certifications"');
