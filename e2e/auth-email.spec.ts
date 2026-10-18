@@ -67,6 +67,7 @@ test("confirm and reset links work in another browser; unconfirmed sign-in and e
 
     // Unconfirmed and wrong-password attempts show the same message and resend form.
     await page.goto("/login");
+    await expect(page.getByRole("button", { name: "Resend confirmation email", exact: true })).toHaveCount(0);
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();

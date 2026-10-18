@@ -34,7 +34,9 @@ afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 describe("verified billing pages", () => {
   it("offers one $39 one-time 90-day pass, signup return, free diagnostic and no placeholder", async () => {
     const html = renderToStaticMarkup(await PricingPage());
-    expect(html).toContain("$39 one-time payment");
+    expect(html).toContain("$39</span>");
+    expect(html).toContain("One-time payment");
+    expect(html).toContain("USD");
     expect(html).toContain("90 days of access to PMLE practice questions and explanations");
     expect(html).toContain("Updated for the June 2026 exam guide.");
     expect(html).toContain("No subscription. No auto-renew."); expect(html).toContain("7-day refund");

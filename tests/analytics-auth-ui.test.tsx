@@ -91,9 +91,29 @@ it("does not show signup recovery help before submission or after a password res
   expect(renderToStaticMarkup(createElement(AuthForm, { mode: "forgot-password" }))).not.toContain("Already have an account?");
 });
 
-it("offers a confirmation resend without revealing account state", () => {
+it("hides confirmation resend before login fails", () => {
   const html = renderToStaticMarkup(createElement(AuthForm, { mode: "login" }));
-  expect(html).toContain("Didn’t get the confirmation email?");
+  expect(html).not.toContain("Resend confirmation email");
+});
+it("offers generic confirmation resend after a failed login without exposing account state", () => {
+  vi.mocked(useState).mockImplementationOnce(() => [false, vi.fn()] as never)
+    .mockImplementationOnce(() => [false, vi.fn()] as never)
+    .mockImplementationOnce(() => [AUTH_MESSAGES.credentials, vi.fn()] as never)
+    .mockImplementationOnce(() => ["", vi.fn()] as never)
+    .mockImplementationOnce(() => ["learner@example.com", vi.fn()] as never);
+  const html = renderToStaticMarkup(createElement(AuthForm, { mode: "login" }));
   expect(html).toContain("Resend confirmation email");
   expect(html).not.toContain("isn’t confirmed yet");
+});
+it("sets the same resend affordance after generic rejected credentials", async () => {
+  const confirmation = vi.fn();
+  vi.mocked(useState).mockImplementationOnce(() => [false, vi.fn()] as never)
+    .mockImplementationOnce(() => [false, vi.fn()] as never)
+    .mockImplementationOnce(() => ["", vi.fn()] as never)
+    .mockImplementationOnce(() => ["", vi.fn()] as never)
+    .mockImplementationOnce(() => [null, confirmation] as never);
+  vi.mocked(fetch).mockResolvedValue(Response.json({ error: AUTH_MESSAGES.credentials }, { status: 401 }));
+  const form = find(AuthForm({ mode: "login" }), "form")!;
+  await (form.props as { onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void> }).onSubmit({ preventDefault: vi.fn(), currentTarget: { reset: vi.fn() } } as unknown as FormEvent<HTMLFormElement>);
+  expect(confirmation).toHaveBeenCalledWith("learner@example.com");
 });

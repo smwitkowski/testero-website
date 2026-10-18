@@ -45,6 +45,7 @@ export function AuthForm({ mode, next = "/dashboard", confirmationFailed = false
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(confirmationFailed ? (mode === "forgot-password" ? RECOVERY_FAILED : CONFIRMATION_FAILED) : "");
   const [message, setMessage] = useState("");
+  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(confirmationFailed ? "" : null);
   const emailRequired = mode !== "reset-password";
   const passwordRequired = mode !== "forgot-password";
   const destination = safeNext(next);
@@ -63,6 +64,8 @@ export function AuthForm({ mode, next = "/dashboard", confirmationFailed = false
       const result = await response.json() as { error?: string; message?: string; href?: string; userId?: string };
       if (!response.ok) {
         setError(result.error ?? "Unable to complete this request. Please try again.");
+        // Login failures intentionally do not distinguish unconfirmed accounts from other credentials errors.
+        if (mode === "login") setConfirmationEmail(body.email);
         return;
       }
       if (mode === "login" && result.userId) identifyAnalytics(result.userId);
@@ -88,7 +91,7 @@ export function AuthForm({ mode, next = "/dashboard", confirmationFailed = false
         </form>
       )}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      {(mode === "login" || (confirmationFailed && mode === "signup")) && <ResendConfirmation email="" next={destination} />}
+      {(mode === "login" || mode === "signup") && confirmationEmail !== null && <ResendConfirmation email={confirmationEmail} next={destination} />}
       <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-primary">
         {mode === "signup" && <Link href={`/login?next=${encodeURIComponent(destination)}`} className="hover:underline">Already have an account? Sign in</Link>}
         {mode === "login" && <><Link href={`/signup?next=${encodeURIComponent(destination)}`} className="hover:underline">Create an account</Link><Link href="/forgot-password" className="hover:underline">Forgot password?</Link></>}

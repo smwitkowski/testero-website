@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { sendResultsEmail, resultsEmailText } from "@/lib/diagnostic/results-email";
+import { sendResultsEmail, resultsEmailText, resultsEmailHtml, resultsEmailPlan } from "@/lib/diagnostic/results-email";
 import { getExamReadinessTier } from "@/lib/readiness";
 import type { SupabaseClient } from "@supabase/supabase-js";
 const result = { sessionId: "00000000-0000-4000-8000-000000000001", score: 50, correctAnswers: 10, totalQuestions: 20, readiness: getExamReadinessTier(50), domainBreakdown: [{ domainCode: "MONITORING_ML_SOLUTIONS", domainName: "Monitoring AI solutions", total: 3, correct: 1, percentage: 33 }], review: [{ explanation: "PAID SECRET" }] };
@@ -9,7 +9,7 @@ beforeEach(() => {
  vi.stubEnv("RESEND_API_KEY", "mock-key");
  rpc.mockResolvedValue({ data: { status: "claimed", id: "request-id", payload: "frozen original payload" }, error: null });
  eq.mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }); update.mockReturnValue({ eq });
- vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ id: "receipt" })));
+ vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => Response.json({ id: "receipt" })));
 });
 it("sends frozen aggregate-only content with stable provider idempotency and records success", async () => {
  await sendResultsEmail(client, "a@example.com", result as never);
@@ -53,4 +53,42 @@ it("gives a weaker sampled domain numerically more study time", () => {
  const make = (correct: number) => resultsEmailText({ ...result, domainBreakdown: [{ domainCode: "MONITORING_ML_SOLUTIONS", domainName: "Monitoring AI solutions", correct, total: 4, percentage: correct * 25 }] } as never, Date.parse("2026-10-17T12:00:00Z"));
  const monitoringMinutes = (text: string) => [...text.matchAll(/- Monitoring AI solutions: (?:(\d+)h)?(?: )?(?:(\d+)(?:m|min))?/g)].reduce((sum, match) => sum + Number(match[1] ?? 0) * 60 + Number(match[2] ?? 0), 0);
  expect(monitoringMinutes(make(0))).toBeGreaterThan(monitoringMinutes(make(4)));
+});
+
+it("freezes HTML and text before sending and reuses both on retry", async () => {
+ rpc.mockImplementation(async (_name, args) => ({ data: { status: "claimed", id: "request-id", payload: args.p_payload }, error: null }));
+ await sendResultsEmail(client, "a@example.com", result as never);
+ const frozen = rpc.mock.calls[0][1].p_payload as string;
+ const body = JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string);
+ expect(body.text).toContain("Your PMLE diagnostic results");
+ expect(body.html).toContain("<!doctype html>");
+ expect(body.html).not.toContain("PAID SECRET");
+ rpc.mockResolvedValue({ data: { status: "claimed", id: "request-id", payload: frozen }, error: null });
+ await sendResultsEmail(client, "a@example.com", { ...result, score: 99 } as never);
+ expect(vi.mocked(fetch).mock.calls[1][1]?.body).toBe(vi.mocked(fetch).mock.calls[0][1]?.body);
+});
+it("escapes dynamic HTML without including review data or access tokens", () => {
+ const html = resultsEmailHtml({ ...result, domainBreakdown: [{ ...result.domainBreakdown[0], domainName: '<img src=x onerror="alert(1)">' }] } as never);
+ expect(html).toContain("&lt;img");
+ expect(html).not.toContain('<img src=x');
+ expect(html).not.toContain("PAID SECRET");
+ expect(html).not.toContain("token=");
+ expect(html).toContain("same browser");
+ expect(html).toContain(`https://testero.ai/diagnostic/${result.sessionId}/results`);
+});
+it.each([0, 1, 2, 3, 4])("allocates whole quarter-hours without changing the 16-hour budget (%s/4 correct)", correct => {
+ const plan = resultsEmailPlan({ ...result, domainBreakdown: [{ ...result.domainBreakdown[0], total: 4, correct }] } as never);
+ expect(plan.weeks).toHaveLength(4);
+ expect(plan.totalMinutes).toBe(960);
+ expect(plan.sections.reduce((sum, section) => sum + section.minutes, 0)).toBe(960);
+ for (const week of plan.weeks) {
+  expect(week.minutes).toBe(240);
+  expect(week.tasks.reduce((sum, task) => sum + task.minutes, 0)).toBe(240);
+  for (const task of week.tasks) { expect(task.minutes).toBeGreaterThan(0); expect(task.minutes % 15).toBe(0); }
+ }
+});
+it("fails closed on malformed multipart payload without contacting the provider", async () => {
+ rpc.mockResolvedValue({ data: { status: "claimed", id: "request-id", payload: 'testero-results-multipart-v1\n{}' }, error: null });
+ await expect(sendResultsEmail(client, "a@example.com", result as never)).rejects.toThrow("We couldn't send your email");
+ expect(fetch).not.toHaveBeenCalled();
 });
