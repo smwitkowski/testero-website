@@ -1,0 +1,690 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-10-18T00:08:20.904368+00:00",
+  "method": "HTTP GET of each official Google certification landing page; parsed visible HTML text. Registry used for certificate IDs and source URLs only, not as independent verification.",
+  "scope": "14 non-PMLE certificates. Standard exam only except explicitly beta Agentic Architect. Renewal specs excluded.",
+  "limitations": [
+    "Assessment areas verified from landing pages; exam-guide domain weights not independently verified.",
+    "Fees retain official dollar notation and tax qualifier; no regional currency or final checkout amount inferred.",
+    "Unstated facts omitted. No claim that registration checkout, delivery availability, or live booking was tested."
+  ],
+  "certifications": [
+    {
+      "cert_id": "agentic-architect",
+      "official_title": "Professional Agentic Architect",
+      "source_url": "https://cloud.google.com/learn/certification/agentic-architect/",
+      "http_status": 200,
+      "checked_date": "2026-10-18",
+      "exam_variant": "beta",
+      "facts": {
+        "duration": {
+          "value": "3 hours",
+          "evidence": "eta exam details Length: 3 hours",
+          "url": "https://cloud.google.com/learn/certification/agentic-architect/"
+        },
+        "fee": {
+          "value": "$120 (40% discount on retail price of $200 USD) (plus tax where applicable)",
+          "evidence": " hours Registration fee: $120 (40% discount on retail price of $200 USD) (plus tax where applicable)",
+          "url": "https://cloud.google.com/learn/certification/agentic-architect/"
+        },
+        "format": {
+          "value": "~80 multiple choice questions",
+          "evidence": "ge: English Exam format: ~80 multiple choice questions",
+          "url": "https://cloud.google.com/learn/certification/agentic-architect/"
+        },
+        "prerequisites": {
+          "value": "None",
+          "evidence": "d: 1 year Prerequisites: None",
+          "url": "https://cloud.google.com/learn/certification/agentic-architect/"
+        },
+        "recommended_experience": {
+          "value": "3+ years of hands-on experience building, testing, deploying, and managing cloud solutions including 1+ years building agentic solutions using Google Cloud",
+          "evidence": " Recommended experience: 3+ years of hands-on experience building, testing, deploying, and managing cloud solutions including 1+ years building agentic solutions using Google Cloud",
+          "url": "https://cloud.google.com/learn/certification/agentic-architect/"
+        }
+      },
+      "domains": {
+        "scope": "Official certification landing page assessment areas; guide weights not independently verified",
+        "items": [
+          "Build agents using low-code tools",
+          "Use coding agents for application development",
+          "Develop custom agents",
+          "Evaluate and deploy agentic workflows",
+          "Secure and govern agentic workflows"
+        ],
+        "evidence": "Build agents using low-code tools Use coding agents for application development Develop custom agents Evaluate and deploy agentic workflows Secure and govern agentic workflows",
+        "url": "https://cloud.google.com/learn/certification/agentic-architect/"
+      },
+      "title_evidence": "Professional Agentic Architect",
+      "limitations": [
+        "Displayed duration, fee, and question format are explicitly beta details, not verified GA specifications.",
+        "Official page says GA registration opens Nov 2 and GA exam launches mid-November; certification also requires distinct PAA hands-on labs after passing the exam."
+      ]
+    },
+    {
+      "cert_id": "associate-google-workspace-administrator",
+      "official_title": "Associate Google Workspace Administrator",
+      "source_url": "https://cloud.google.com/learn/certification/associate-google-workspace-administrator",
+      "http_status": 200,
+      "checked_date": "2026-10-18",
+      "exam_variant": "standard",
+      "facts": {
+        "duration": {
+          "value": "2 hours",
+          "evidence": "tification exam Length : 2 hours",
+          "url": "https://cloud.google.com/learn/certification/associate-google-workspace-administrator"
+        },
+        "fee": {
+          "value": "$125 (plus tax where applicable)",
+          "evidence": "hours Registration fee : $125 (plus tax where applicable)",
+          "url": "https://cloud.google.com/learn/certification/associate-google-workspace-administrator"
+        },
+        "format": {
+          "value": "50-60 multiple choice and multiple select questions",
+          "evidence": "h, Japanese Exam format: 50-60 multiple choice and multiple select questions",
+          "url": "https://cloud.google.com/learn/certification/associate-google-workspace-administrator"
+        },
+        "prerequisites": {
+          "value": "None",
+          "evidence": "e Cloud. Prerequisites : None",
+          "url": "https://cloud.google.com/learn/certification/associate-google-workspace-administrator"
+        },
+        "recommended_experience": {
+          "value": "6 months of Google Workspace Super Admin experience in a real or test environment. Hands-on experience with Business Plus edition and knowledge of Enterprise Edition features and functionality.",
+          "evidence": "Recommended experience : 6 months of Google Workspace Super Admin experience in a real or test environment. Hands-on experience with Business Plus edition and knowledge of Enterprise Edition features and functionality.",
+          "url": "https://cloud.google.com/learn/certification/associate-google-workspace-administrator"
+        }
+      },
+      "domains": {
+        "scope": "Official certification landing page assessment areas; guide weights not independently verified",
+        "items": [
+          "Manage user accounts and objects",
+          "Manage core Workspace services",
+          "Support data governance and compliance",
+          "Manage security policies and access controls",
+          "Manage endpoints",
+          "Troubleshoot common issues"
+        ],
+        "evidence": "Manage user accounts and objects Manage core Workspace services Support data governance and compliance Manage security policies and access controls Manage endpoints Troubleshoot common issues",
+        "url": "https://cloud.google.com/learn/certification/associate-google-workspace-administrator"
+      },
+      "title_evidence": "Associate Google Workspace Administrator"
+    },
+    {
+      "cert_id": "cloud-architect",
+      "official_title": "Professional Cloud Architect",
+      "source_url": "https://cloud.google.com/learn/certification/cloud-architect",
+      "http_status": 200,
+      "checked_date": "2026-10-18",
+      "exam_variant": "standard",
+      "facts": {
+        "duration": {
+          "value": "2 hours",
+          "evidence": "exam information Length: 2 hours",
+          "url": "https://cloud.google.com/learn/certification/cloud-architect"
+        },
+        "fee": {
+          "value": "$200 (plus tax where applicable)",
+          "evidence": " hours Registration fee: $200 (plus tax where applicable)",
+          "url": "https://cloud.google.com/learn/certification/cloud-architect"
+        },
+        "format": {
+          "value": "50-60 multiple choice and multiple select questions",
+          "evidence": "h, Japanese Exam format: 50-60 multiple choice and multiple select questions",
+          "url": "https://cloud.google.com/learn/certification/cloud-architect"
+        },
+        "prerequisites": {
+          "value": "None",
+          "evidence": ": 2 years Prerequisites: None",
+          "url": "https://cloud.google.com/learn/certification/cloud-architect"
+        },
+        "recommended_experience": {
+          "value": "3+ years of industry experience including 1+ years designing and managing solutions using Google Cloud",
+          "evidence": " Recommended experience: 3+ years of industry experience including 1+ years designing and managing solutions using Google Cloud",
+          "url": "https://cloud.google.com/learn/certification/cloud-architect"
+        }
+      },
+      "domains": {
+        "scope": "Official certification landing page assessment areas; guide weights not independently verified",
+        "items": [
+          "Design and plan a cloud solution architecture",
+          "Manage and provision the cloud solution infrastructure",
+          "Design for security and compliance",
+          "Analyze and optimize technical and business processes",
+          "Manage implementations of cloud architecture",
+          "Ensure solution and operations excellence"
+        ],
+        "evidence": "Design and plan a cloud solution architecture Manage and provision the cloud solution infrastructure Design for security and compliance Analyze and optimize technical and business processes Manage implementations of cloud architecture Ensure solution and operations excellence",
+        "url": "https://cloud.google.com/learn/certification/cloud-architect"
+      },
+      "title_evidence": "Professional Cloud Architect"
+    },
+    {
+      "cert_id": "cloud-database-engineer",
+      "official_title": "Professional Cloud Database Engineer",
+      "source_url": "https://cloud.google.com/learn/certification/cloud-database-engineer",
+      "http_status": 200,
+      "checked_date": "2026-10-18",
+      "exam_variant": "standard",
+      "facts": {
+        "duration": {
+          "value": "2 hours",
+          "evidence": "rtification exam Length: 2 hours",
+          "url": "https://cloud.google.com/learn/certification/cloud-database-engineer"
+        },
+        "format": {
+          "value": "50-60 multiple choice and multiple select questions",
+          "evidence": "h, Japanese Exam format: 50-60 multiple choice and multiple select questions",
+          "url": "https://cloud.google.com/learn/certification/cloud-database-engineer"
+        },
+        "prerequisites": {
+          "value": "None",
+          "evidence": "e Cloud. Prerequisites : None",
+          "url": "https://cloud.google.com/learn/certification/cloud-database-engineer"
+        },
+        "recommended_experience": {
+          "value": "5+ years of overall database and IT experience, including 2 years of hands-on experience working with Google Cloud database solutions",
+          "evidence": " Recommended experience: 5+ years of overall database and IT experience, including 2 years of hands-on experience working with Google Cloud database solutions",
+          "url": "https://cloud.google.com/learn/certification/cloud-database-engineer"
+        },
+        "fee": {
+          "value": "$200 (plus tax where applicable)",
+          "evidence": "ours Registration fe e : $200 (plus tax where applicable)",
+          "url": "https://cloud.google.com/learn/certification/cloud-database-engineer"
+        }
+      },
+      "domains": {
+        "scope": "Official certification landing page assessment areas; guide weights not independently verified",
+        "items": [
+          "Design scalable and highly available cloud database solutions",
+          "Manage a solution that can span multiple database solutions",
+          "Migrate data solutions",
+          "Deploy scalable and highly available databases in Google Cloud"
+        ],
+        "evidence": "Design scalable and highly available cloud database solutions Manage a solution that can span multiple database solutions Migrate data solutions Deploy scalable and highly available databases in Google Cloud",
+        "url": "https://cloud.google.com/learn/certification/cloud-database-engineer"
+      },
+      "title_evidence": "Professional Cloud Database Engineer"
+    },
+    {
+      "cert_id": "cloud-developer",
+      "official_title": "Professional Cloud Developer",
+      "source_url": "https://cloud.google.com/learn/certification/cloud-developer",
+      "http_status": 200,
+      "checked_date": "2026-10-18",
+      "exam_variant": "standard",
+      "facts": {
+        "duration": {
+          "value": "Two hours",
+          "evidence": "rtification exam Length: Two hours",
+          "url": "https://cloud.google.com/learn/certification/cloud-developer"
+        },
+        "fee": {
+          "value": "$200 (plus tax where applicable)",
+          "evidence": " hours Registration fee: $200 (plus tax where applicable)",
+          "url": "https://cloud.google.com/learn/certification/cloud-developer"
+        },
+        "format": {
+          "value": "50-60 multiple choice and multiple select questions",
+          "evidence": "nd Japanese Exam format: 50-60 multiple choice and multiple select questions",
+          "url": "https://cloud.google.com/learn/certification/cloud-developer"
+        },
+        "prerequisites": {
+          "value": "None",
+          "evidence": "le Cloud. Prerequisites: None",
+          "url": "https://cloud.google.com/learn/certification/cloud-developer"
+        },
+        "recommended_experience": {
+          "value": "3+ years of industry experience including 1+ years designing and managing solutions using Google Cloud.",
+          "evidence": " Recommended experience: 3+ years of industry experience including 1+ years designing and managing solutions using Google Cloud.",
+          "url": "https://cloud.google.com/learn/certification/cloud-developer"
+        }
+      },
+      "domains": {
+        "scope": "Official certification landing page assessment areas; guide weights not independently verified",
+        "items": [
+          "Design highly scalable, secure, and reliable cloud-native applications",
+          "Build and test applications",
+          "Configure cloud-native applications for deployment",
+          "Integrate applications with Google Cloud services"
+        ],
+        "evidence": "Design highly scalable, secure, and reliable cloud-native applications Build and test applications Configure cloud-native applications for deployment Integrate applications with Google Cloud services",
+        "url": "https://cloud.google.com/learn/certification/cloud-developer"
+      },
+      "title_evidence": "Professional Cloud Developer",
+      "limitations": [
+        "Page gives two different experience recommendations: certification details say 3+ years industry including 1+ years designing/managing Google Cloud solutions; exam overview says 3+ years hands-on with Google Cloud products and solutions. Facts use the certification-details block."
+      ]
+    },
+    {
+      "cert_id": "cloud-devops-engineer",
+      "official_title": "Professional Cloud DevOps Engineer",
+      "source_url": "https://cloud.google.com/learn/certification/cloud-devops-engineer",
+      "http_status": 200,
+      "checked_date": "2026-10-18",
+      "exam_variant": "standard",
+      "facts": {
+        "duration": {
+          "value": "Two hours",
+          "evidence": "rtification exam Length: Two hours",
+          "url": "https://cloud.google.com/learn/certification/cloud-devops-engineer"
+        },
+        "fee": {
+          "value": "$200 (plus tax where applicable)",
+          "evidence": " hours Registration fee: $200 (plus tax where applicable)",
+          "url": "https://cloud.google.com/learn/certification/cloud-devops-engineer"
+        },
+        "format": {
+          "value": "50-60 multiple choice and multiple select questions",
+          "evidence": "h, Japanese Exam format: 50-60 multiple choice and multiple select questions",
+          "url": "https://cloud.google.com/learn/certification/cloud-devops-engineer"
+        },
+        "prerequisites": {
+          "value": "None",
+          "evidence": "e Cloud. Prerequisites : None",
+          "url": "https://cloud.google.com/learn/certification/cloud-devops-engineer"
+        },
+        "recommended_experience": {
+          "value": "3+ years of industry experience including 1+ years designing and managing production systems using Google Cloud",
+          "evidence": "Recommended experience : 3+ years of industry experience including 1+ years designing and managing production systems using Google Cloud",
+          "url": "https://cloud.google.com/learn/certification/cloud-devops-engineer"
+        }
+      },
+      "domains": {
+        "scope": "Official certification landing page assessment areas; guide weights not independently verified",
+        "items": [
+          "Bootstrap and maintain a Google Cloud organization",
+          "Apply site reliability engineering practices",
+          "Build and implement CI/CD pipelines, including continuous testing, for application, infrastructure, and machine learning workloads",
+          "Implement observability practices and troubleshoot issues",
+          "Optimize performance and cost"
+        ],
+        "evidence": "Bootstrap and maintain a Google Cloud organization Apply site reliability engineering practices Build and implement CI/CD pipelines, including continuous testing, for application, infrastructure, and machine learning workloads Implement observability practices and troubleshoot issues Optimize performance and cost",
+        "url": "https://cloud.google.com/learn/certification/cloud-devops-engineer"
+      },
+      "title_evidence": "Professional Cloud DevOps Engineer"
+    },
+    {
+      "cert_id": "cloud-digital-leader",
+      "official_title": "Cloud Digital Leader",
+      "source_url": "https://cloud.google.com/learn/certification/cloud-digital-leader",
+      "http_status": 200,
+      "checked_date": "2026-10-18",
+      "exam_variant": "standard",
+      "facts": {
+        "duration": {
+          "value": "90 minutes",
+          "evidence": "exam information Length: 90 minutes",
+          "url": "https://cloud.google.com/learn/certification/cloud-digital-leader"
+        },
+        "fee": {
+          "value": "$99 (plus tax where applicable)",
+          "evidence": "inutes Registration fee: $99 (plus tax where applicable)",
+          "url": "https://cloud.google.com/learn/certification/cloud-digital-leader"
+        },
+        "format": {
+          "value": "50-60 multiple choice and multiple select questions",
+          "evidence": "ese, French Exam format: 50-60 multiple choice and multiple select questions",
+          "url": "https://cloud.google.com/learn/certification/cloud-digital-leader"
+        },
+        "prerequisites": {
+          "value": "None",
+          "evidence": ": 3 years Prerequisites: None",
+          "url": "https://cloud.google.com/learn/certification/cloud-digital-leader"
+        },
+        "recommended_experience": {
+          "value": "Experience collaborating with technical professionals",
+          "evidence": " Recommended experience: Experience collaborating with technical professionals",
+          "url": "https://cloud.google.com/learn/certification/cloud-digital-leader"
+        }
+      },
+      "domains": {
+        "scope": "Official certification landing page assessment areas; guide weights not independently verified",
+        "items": [
+          "Digital transformation with Google Cloud",
+          "Exploring data transformation with Google Cloud",
+          "Innovating with Google Cloud artificial intelligence",
+          "Modernizing infrastructure and applications with Google Cloud",
+          "Trust and security with Google Cloud",
+          "Scaling with Google Cloud operations"
+        ],
+        "evidence": "Digital transformation with Google Cloud Exploring data transformation with Google Cloud Innovating with Google Cloud artificial intelligence Modernizing infrastructure and applications with Google Cloud Trust and security with Google Cloud Scaling with Google Cloud operations",
+        "url": "https://cloud.google.com/learn/certification/cloud-digital-leader"
+      },
+      "title_evidence": "Cloud Digital Leader"
+    },
+    {
+      "cert_id": "cloud-engineer",
+      "official_title": "Associate Cloud Engineer",
+      "source_url": "https://cloud.google.com/learn/certification/cloud-engineer",
+      "http_status": 200,
+      "checked_date": "2026-10-18",
+      "exam_variant": "standard",
+      "facts": {
+        "duration": {
+          "value": "2 hours",
+          "evidence": "exam information Length: 2 hours",
+          "url": "https://cloud.google.com/learn/certification/cloud-engineer"
+        },
+        "fee": {
+          "value": "$125 (plus tax where applicable)",
+          "evidence": " hours Registration fee: $125 (plus tax where applicable)",
+          "url": "https://cloud.google.com/learn/certification/cloud-engineer"
+        },
+        "format": {
+          "value": "50-60 multiple choice and multiple select questions",
+          "evidence": " Portuguese Exam format: 50-60 multiple choice and multiple select questions",
+          "url": "https://cloud.google.com/learn/certification/cloud-engineer"
+        },
+        "prerequisites": {
+          "value": "None",
+          "evidence": ": 3 years Prerequisites: None",
+          "url": "https://cloud.google.com/learn/certification/cloud-engineer"
+        },
+        "recommended_experience": {
+          "value": "6+ months hands on experience with Google Cloud",
+          "evidence": " Recommended experience: 6+ months hands on experience with Google Cloud",
+          "url": "https://cloud.google.com/learn/certification/cloud-engineer"
+        }
+      },
+      "domains": {
+        "scope": "Official certification landing page assessment areas; guide weights not independently verified",
+        "items": [
+          "Set up a cloud solution environment",
+          "Plan and implement a cloud solution",
+          "Ensure the successful operation of a cloud solution",
+          "Configure access and security"
+        ],
+        "evidence": "Set up a cloud solution environment Plan and implement a cloud solution Ensure the successful operation of a cloud solution Configure access and security",
+        "url": "https://cloud.google.com/learn/certification/cloud-engineer"
+      },
+      "title_evidence": "Associate Cloud Engineer"
+    },
+    {
+      "cert_id": "cloud-network-engineer",
+      "official_title": "Professional Cloud Network Engineer",
+      "source_url": "https://cloud.google.com/learn/certification/cloud-network-engineer",
+      "http_status": 200,
+      "checked_date": "2026-10-18",
+      "exam_variant": "standard",
+      "facts": {
+        "duration": {
+          "value": "2 hours",
+          "evidence": "rtification exam Length: 2 hours",
+          "url": "https://cloud.google.com/learn/certification/cloud-network-engineer"
+        },
+        "fee": {
+          "value": "$200 (plus tax where applicable)",
+          "evidence": " hours Registration fee: $200 (plus tax where applicable)",
+          "url": "https://cloud.google.com/learn/certification/cloud-network-engineer"
+        },
+        "format": {
+          "value": "50-60 multiple choice and multiple select questions",
+          "evidence": "h, Japanese Exam format: 50-60 multiple choice and multiple select questions",
+          "url": "https://cloud.google.com/learn/certification/cloud-network-engineer"
+        },
+        "prerequisites": {
+          "value": "None",
+          "evidence": "le Cloud. Prerequisites: None",
+          "url": "https://cloud.google.com/learn/certification/cloud-network-engineer"
+        },
+        "recommended_experience": {
+          "value": "3+ years of industry experience including 1+ years designing and managing solutions using Google Cloud",
+          "evidence": " Recommended experience: 3+ years of industry experience including 1+ years designing and managing solutions using Google Cloud",
+          "url": "https://cloud.google.com/learn/certification/cloud-network-engineer"
+        }
+      },
+      "domains": {
+        "scope": "Official certification landing page assessment areas; guide weights not independently verified",
+        "items": [
+          "Design and plan a Google Cloud Virtual Private Cloud (VPC) network.",
+          "Implement a VPC network.",
+          "Configure managed network services.",
+          "Configure and implement hybrid and multi-cloud network interconnectivity.",
+          "Manage, monitor, and troubleshoot network operations.",
+          "Configure, implement, and manage a cloud network security solution."
+        ],
+        "evidence": "Design and plan a Google Cloud Virtual Private Cloud (VPC) network. Implement a VPC network. Configure managed network services. Configure and implement hybrid and multi-cloud network interconnectivity. Manage, monitor, and troubleshoot network operations. Configure, implement, and manage a cloud network security solution.",
+        "url": "https://cloud.google.com/learn/certification/cloud-network-engineer"
+      },
+      "title_evidence": "Professional Cloud Network Engineer"
+    },
+    {
+      "cert_id": "cloud-security-engineer",
+      "official_title": "Professional Cloud Security Engineer",
+      "source_url": "https://cloud.google.com/learn/certification/cloud-security-engineer",
+      "http_status": 200,
+      "checked_date": "2026-10-18",
+      "exam_variant": "standard",
+      "facts": {
+        "duration": {
+          "value": "2 hours",
+          "evidence": "rtification exam Length: 2 hours",
+          "url": "https://cloud.google.com/learn/certification/cloud-security-engineer"
+        },
+        "fee": {
+          "value": "$200 (plus tax where applicable)",
+          "evidence": " hours Registration fee: $200 (plus tax where applicable)",
+          "url": "https://cloud.google.com/learn/certification/cloud-security-engineer"
+        },
+        "format": {
+          "value": "50-60 multiple choice and multiple select questions",
+          "evidence": "h, Japanese Exam format: 50-60 multiple choice and multiple select questions",
+          "url": "https://cloud.google.com/learn/certification/cloud-security-engineer"
+        },
+        "prerequisites": {
+          "value": "None",
+          "evidence": "le Cloud. Prerequisites: None",
+          "url": "https://cloud.google.com/learn/certification/cloud-security-engineer"
+        },
+        "recommended_experience": {
+          "value": "3+ years of industry experience including more than 1 year designing and managing solutions using Google Cloud",
+          "evidence": " Recommended experience: 3+ years of industry experience including more than 1 year designing and managing solutions using Google Cloud",
+          "url": "https://cloud.google.com/learn/certification/cloud-security-engineer"
+        }
+      },
+      "domains": {
+        "scope": "Official certification landing page assessment areas; guide weights not independently verified",
+        "items": [
+          "Configure access.",
+          "Secure communications and establish boundary protection.",
+          "Ensure data protection.",
+          "Manage operations.",
+          "Support compliance requirements."
+        ],
+        "evidence": "Configure access. Secure communications and establish boundary protection. Ensure data protection. Manage operations. Support compliance requirements.",
+        "url": "https://cloud.google.com/learn/certification/cloud-security-engineer"
+      },
+      "title_evidence": "Professional Cloud Security Engineer"
+    },
+    {
+      "cert_id": "data-engineer",
+      "official_title": "Professional Data Engineer",
+      "source_url": "https://cloud.google.com/learn/certification/data-engineer",
+      "http_status": 200,
+      "checked_date": "2026-10-18",
+      "exam_variant": "standard",
+      "facts": {
+        "duration": {
+          "value": "2 hours",
+          "evidence": "xam information Length : 2 hours",
+          "url": "https://cloud.google.com/learn/certification/data-engineer"
+        },
+        "fee": {
+          "value": "$200 (plus tax where applicable)",
+          "evidence": "hours Registration fee : $200 (plus tax where applicable)",
+          "url": "https://cloud.google.com/learn/certification/data-engineer"
+        },
+        "format": {
+          "value": "40-50 multiple choice and multiple select questions",
+          "evidence": "h, Japanese Exam format: 40-50 multiple choice and multiple select questions",
+          "url": "https://cloud.google.com/learn/certification/data-engineer"
+        },
+        "prerequisites": {
+          "value": "None",
+          "evidence": " 2 years Prerequisites : None",
+          "url": "https://cloud.google.com/learn/certification/data-engineer"
+        },
+        "recommended_experience": {
+          "value": "3+ years of industry experience including 1+ years designing and managing solutions using Google Cloud.",
+          "evidence": "Recommended experience : 3+ years of industry experience including 1+ years designing and managing solutions using Google Cloud.",
+          "url": "https://cloud.google.com/learn/certification/data-engineer"
+        }
+      },
+      "domains": {
+        "scope": "Official certification landing page assessment areas; guide weights not independently verified",
+        "items": [
+          "Design data processing systems",
+          "Ingest and process the data",
+          "Store the data",
+          "Prepare and use data for analysis",
+          "Maintain and automate data workloads"
+        ],
+        "evidence": "Design data processing systems Ingest and process the data Store the data Prepare and use data for analysis Maintain and automate data workloads",
+        "url": "https://cloud.google.com/learn/certification/data-engineer"
+      },
+      "title_evidence": "Professional Data Engineer"
+    },
+    {
+      "cert_id": "data-practitioner",
+      "official_title": "Associate Data Practitioner",
+      "source_url": "https://cloud.google.com/learn/certification/data-practitioner",
+      "http_status": 200,
+      "checked_date": "2026-10-18",
+      "exam_variant": "standard",
+      "facts": {
+        "duration": {
+          "value": "2 hours",
+          "evidence": "tification exam Length : 2 hours",
+          "url": "https://cloud.google.com/learn/certification/data-practitioner"
+        },
+        "fee": {
+          "value": "$125 (plus tax where applicable)",
+          "evidence": "hours Registration fee : $125 (plus tax where applicable)",
+          "url": "https://cloud.google.com/learn/certification/data-practitioner"
+        },
+        "format": {
+          "value": "50-60 multiple choice and multiple select questions",
+          "evidence": "h, Japanese Exam format: 50-60 multiple choice and multiple select questions",
+          "url": "https://cloud.google.com/learn/certification/data-practitioner"
+        },
+        "prerequisites": {
+          "value": "None",
+          "evidence": "e Cloud. Prerequisites : None",
+          "url": "https://cloud.google.com/learn/certification/data-practitioner"
+        },
+        "recommended_experience": {
+          "value": "6+ months of experience working with data on Google Cloud.",
+          "evidence": "Recommended experience : 6+ months of experience working with data on Google Cloud.",
+          "url": "https://cloud.google.com/learn/certification/data-practitioner"
+        }
+      },
+      "domains": {
+        "scope": "Official certification landing page assessment areas; guide weights not independently verified",
+        "items": [
+          "Prepare and ingest data",
+          "Analyze and present data",
+          "Orchestrate data pipelines",
+          "Manage data"
+        ],
+        "evidence": "Prepare and ingest data Analyze and present data Orchestrate data pipelines Manage data",
+        "url": "https://cloud.google.com/learn/certification/data-practitioner"
+      },
+      "title_evidence": "Associate Data Practitioner"
+    },
+    {
+      "cert_id": "generative-ai-leader",
+      "official_title": "Generative AI Leader",
+      "source_url": "https://cloud.google.com/learn/certification/generative-ai-leader",
+      "http_status": 200,
+      "checked_date": "2026-10-18",
+      "exam_variant": "standard",
+      "facts": {
+        "duration": {
+          "value": "90 minutes",
+          "evidence": "rtification exam Length: 90 minutes",
+          "url": "https://cloud.google.com/learn/certification/generative-ai-leader"
+        },
+        "fee": {
+          "value": "$99 (plus tax where applicable)",
+          "evidence": " guide Registration fee: $99 (plus tax where applicable)",
+          "url": "https://cloud.google.com/learn/certification/generative-ai-leader"
+        },
+        "format": {
+          "value": "50-60 multiple choice questions",
+          "evidence": " Portuguese Exam format: 50-60 multiple choice questions",
+          "url": "https://cloud.google.com/learn/certification/generative-ai-leader"
+        },
+        "prerequisites": {
+          "value": "None",
+          "evidence": ": 3 years Prerequisites: None",
+          "url": "https://cloud.google.com/learn/certification/generative-ai-leader"
+        }
+      },
+      "domains": {
+        "scope": "Official certification landing page assessment areas; guide weights not independently verified",
+        "items": [
+          "Fundamentals of gen AI",
+          "Google Cloud's gen AI offerings",
+          "Techniques to improve gen AI model output",
+          "Business strategies for a successful gen AI solution"
+        ],
+        "evidence": "Fundamentals of gen AI Google Cloud's gen AI offerings Techniques to improve gen AI model output Business strategies for a successful gen AI solution",
+        "url": "https://cloud.google.com/learn/certification/generative-ai-leader"
+      },
+      "title_evidence": "Generative AI Leader",
+      "limitations": [
+        "No separate recommended-experience field stated; page says anyone in any job role, with or without hands-on technical experience."
+      ]
+    },
+    {
+      "cert_id": "security-operations-engineer",
+      "official_title": "Professional Security Operations Engineer",
+      "source_url": "https://cloud.google.com/learn/certification/security-operations-engineer",
+      "http_status": 200,
+      "checked_date": "2026-10-18",
+      "exam_variant": "standard",
+      "facts": {
+        "duration": {
+          "value": "2 hours",
+          "evidence": "rtification exam Length: 2 hours",
+          "url": "https://cloud.google.com/learn/certification/security-operations-engineer"
+        },
+        "fee": {
+          "value": "$200 (plus tax where applicable)",
+          "evidence": " hours Registration fee: $200 (plus tax where applicable)",
+          "url": "https://cloud.google.com/learn/certification/security-operations-engineer"
+        },
+        "format": {
+          "value": "50-60 multiple choice and multiple select questions",
+          "evidence": "h, Japanese Exam format: 50-60 multiple choice and multiple select questions",
+          "url": "https://cloud.google.com/learn/certification/security-operations-engineer"
+        },
+        "prerequisites": {
+          "value": "None",
+          "evidence": "le Cloud. Prerequisites: None",
+          "url": "https://cloud.google.com/learn/certification/security-operations-engineer"
+        },
+        "recommended_experience": {
+          "value": "3+ years of security industry experience including 1+ years using Google Cloud security tooling",
+          "evidence": " Recommended experience: 3+ years of security industry experience including 1+ years using Google Cloud security tooling",
+          "url": "https://cloud.google.com/learn/certification/security-operations-engineer"
+        }
+      },
+      "domains": {
+        "scope": "Official certification landing page assessment areas; guide weights not independently verified",
+        "items": [
+          "Platform operations",
+          "Data management",
+          "Threat hunting",
+          "Detection engineering",
+          "Incident response",
+          "Observability"
+        ],
+        "evidence": "Platform operations Data management Threat hunting Detection engineering Incident response Observability",
+        "url": "https://cloud.google.com/learn/certification/security-operations-engineer"
+      },
+      "title_evidence": "Professional Security Operations Engineer"
+    }
+  ]
+}

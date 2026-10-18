@@ -1,0 +1,158 @@
+{
+  "associate-google-workspace-administrator": {
+    "checked": "2026-10-18",
+    "url": "https://cloud.google.com/learn/certification/associate-google-workspace-administrator",
+    "areas": [
+      "Manage user accounts and objects",
+      "Manage core Workspace services",
+      "Support data governance and compliance",
+      "Manage security policies and access controls",
+      "Manage endpoints",
+      "Troubleshoot common issues"
+    ],
+    "prerequisites": "None"
+  },
+  "cloud-architect": {
+    "checked": "2026-10-18",
+    "url": "https://cloud.google.com/learn/certification/cloud-architect",
+    "areas": [
+      "Design and plan a cloud solution architecture",
+      "Manage and provision the cloud solution infrastructure",
+      "Design for security and compliance",
+      "Analyze and optimize technical and business processes",
+      "Manage implementations of cloud architecture",
+      "Ensure solution and operations excellence"
+    ],
+    "prerequisites": "None"
+  },
+  "cloud-database-engineer": {
+    "checked": "2026-10-18",
+    "url": "https://cloud.google.com/learn/certification/cloud-database-engineer",
+    "areas": [
+      "Design scalable and highly available cloud database solutions",
+      "Manage a solution that can span multiple database solutions",
+      "Migrate data solutions",
+      "Deploy scalable and highly available databases in Google Cloud"
+    ],
+    "prerequisites": "None"
+  },
+  "cloud-developer": {
+    "checked": "2026-10-18",
+    "url": "https://cloud.google.com/learn/certification/cloud-developer",
+    "areas": [
+      "Design highly scalable, secure, and reliable cloud-native applications",
+      "Build and test applications",
+      "Configure cloud-native applications for deployment",
+      "Integrate applications with Google Cloud services"
+    ],
+    "prerequisites": "None"
+  },
+  "cloud-devops-engineer": {
+    "checked": "2026-10-18",
+    "url": "https://cloud.google.com/learn/certification/cloud-devops-engineer",
+    "areas": [
+      "Bootstrap and maintain a Google Cloud organization",
+      "Apply site reliability engineering practices",
+      "Build and implement CI/CD pipelines, including continuous testing, for application, infrastructure, and machine learning workloads",
+      "Implement observability practices and troubleshoot issues",
+      "Optimize performance and cost"
+    ],
+    "prerequisites": "None"
+  },
+  "cloud-digital-leader": {
+    "checked": "2026-10-18",
+    "url": "https://cloud.google.com/learn/certification/cloud-digital-leader",
+    "areas": [
+      "Digital transformation with Google Cloud",
+      "Exploring data transformation with Google Cloud",
+      "Innovating with Google Cloud artificial intelligence",
+      "Modernizing infrastructure and applications with Google Cloud",
+      "Trust and security with Google Cloud",
+      "Scaling with Google Cloud operations"
+    ],
+    "prerequisites": "None"
+  },
+  "cloud-engineer": {
+    "checked": "2026-10-18",
+    "url": "https://cloud.google.com/learn/certification/cloud-engineer",
+    "areas": [
+      "Set up a cloud solution environment",
+      "Plan and implement a cloud solution",
+      "Ensure the successful operation of a cloud solution",
+      "Configure access and security"
+    ],
+    "prerequisites": "None"
+  },
+  "cloud-network-engineer": {
+    "checked": "2026-10-18",
+    "url": "https://cloud.google.com/learn/certification/cloud-network-engineer",
+    "areas": [
+      "Design and plan a Google Cloud Virtual Private Cloud (VPC) network.",
+      "Implement a VPC network.",
+      "Configure managed network services.",
+      "Configure and implement hybrid and multi-cloud network interconnectivity.",
+      "Manage, monitor, and troubleshoot network operations.",
+      "Configure, implement, and manage a cloud network security solution."
+    ],
+    "prerequisites": "None"
+  },
+  "cloud-security-engineer": {
+    "checked": "2026-10-18",
+    "url": "https://cloud.google.com/learn/certification/cloud-security-engineer",
+    "areas": [
+      "Configure access.",
+      "Secure communications and establish boundary protection.",
+      "Ensure data protection.",
+      "Manage operations.",
+      "Support compliance requirements."
+    ],
+    "prerequisites": "None"
+  },
+  "data-engineer": {
+    "checked": "2026-10-18",
+    "url": "https://cloud.google.com/learn/certification/data-engineer",
+    "areas": [
+      "Design data processing systems",
+      "Ingest and process the data",
+      "Store the data",
+      "Prepare and use data for analysis",
+      "Maintain and automate data workloads"
+    ],
+    "prerequisites": "None"
+  },
+  "data-practitioner": {
+    "checked": "2026-10-18",
+    "url": "https://cloud.google.com/learn/certification/data-practitioner",
+    "areas": [
+      "Prepare and ingest data",
+      "Analyze and present data",
+      "Orchestrate data pipelines",
+      "Manage data"
+    ],
+    "prerequisites": "None"
+  },
+  "generative-ai-leader": {
+    "checked": "2026-10-18",
+    "url": "https://cloud.google.com/learn/certification/generative-ai-leader",
+    "areas": [
+      "Fundamentals of gen AI",
+      "Google Cloud's gen AI offerings",
+      "Techniques to improve gen AI model output",
+      "Business strategies for a successful gen AI solution"
+    ],
+    "prerequisites": "None"
+  },
+  "security-operations-engineer": {
+    "checked": "2026-10-18",
+    "url": "https://cloud.google.com/learn/certification/security-operations-engineer",
+    "areas": [
+      "Platform operations",
+      "Data management",
+      "Threat hunting",
+      "Detection engineering",
+      "Incident response",
+      "Observability"
+    ],
+    "prerequisites": "None"
+  }
+}
