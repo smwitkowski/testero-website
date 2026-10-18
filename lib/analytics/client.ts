@@ -22,7 +22,8 @@ export function configureAnalyticsForPath(path: string) {
 
 export function initializeAnalytics(path = typeof window === "undefined" ? "/" : window.location.pathname) {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-  if (!key || initialized) return;
+  // Internal browsers (testero_internal=1 cookie) never send analytics, matching the server-side guard.
+  if (!key || initialized || (typeof document !== "undefined" && /(?:^|;\s*)testero_internal=1(?:;|$)/.test(document.cookie))) return;
   recordingEnabled = appRecordingRoute(path);
   posthog.init(key, {
     api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
