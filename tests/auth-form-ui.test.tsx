@@ -14,3 +14,14 @@ it("labels the account tabpanel with the selected tab", () => {
   expect((html.match(/aria-selected="true"/g) ?? [])).toHaveLength(1);
   expect(html).toContain('aria-labelledby="account-tab-1"');
 });
+
+it("preserves paid signup intent without hiding free-account benefits", () => {
+  const html = renderToStaticMarkup(createElement(AuthScreen, { mode: "signup", next: "/pricing", confirmationFailed: false }));
+  expect(html).toContain("Create your free account, then get PMLE Pass");
+  expect(html).toContain("$39 one-time · 90 days");
+  expect(html).toContain("confirm your email → checkout");
+  expect(html).toContain("No payment is taken when you create an account.");
+  expect(html).toContain("5 free practice questions a week");
+  const free = renderToStaticMarkup(createElement(AuthScreen, { mode: "signup", next: "/dashboard", confirmationFailed: false }));
+  expect(free).not.toContain("$39");
+});

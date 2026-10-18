@@ -9,7 +9,7 @@ import PricingPage from "@/app/pricing/page";
 import AccountPage from "@/app/account/page";
 import CheckoutSuccessPage from "@/app/checkout/success/page";
 
-const mocks = vi.hoisted(() => ({ user: vi.fn(), requireUser: vi.fn(), access: vi.fn(), checkoutEvent: vi.fn(), effects: [] as (() => void | (() => void))[] }));
+const mocks = vi.hoisted(() => ({ user: vi.fn(), requireUser: vi.fn(), access: vi.fn(), checkoutEvent: vi.fn(), inventory: vi.fn(), effects: [] as (() => void | (() => void))[] }));
 vi.mock("react", async importOriginal => {
   const actual = await importOriginal<typeof import("react")>();
   return { ...actual, useEffect: (effect: () => void | (() => void)) => { mocks.effects.push(effect); } };
@@ -18,12 +18,15 @@ vi.mock("@/lib/auth/session", () => ({ getVerifiedUser: mocks.user }));
 vi.mock("@/lib/auth/require-user", () => ({ requireUser: mocks.requireUser }));
 vi.mock("@/lib/billing/paid-access", () => ({ getPaidAccess: mocks.access }));
 vi.mock("@/lib/analytics/client", () => ({ trackCheckoutStarted: mocks.checkoutEvent, analyticsHeaders: () => ({ "X-PostHog-Distinct-Id": "anonymous-id" }) }));
+vi.mock("next/server", () => ({ connection: vi.fn() }));
+vi.mock("@/lib/pmle/inventory", () => ({ getPmleInventory: mocks.inventory }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 const free: PaidAccess = { hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null };
 const paid: PaidAccess = { hasPaidAccess: true, isLegacySubscriber: false, accessUntil: "2027-01-01T00:00:00Z", pass: { id: "pass", paid_at: "2026-10-03T00:00:00Z", expires_at: "2027-01-01T00:00:00Z", refunded_at: null } };
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
   mocks.effects = [];
+  mocks.inventory.mockReset().mockResolvedValue({ count: 123, domainCount: 6, checkedAt: "2026-10-18T00:00:00Z" });
   mocks.user.mockReset().mockResolvedValue(null);
   mocks.requireUser.mockReset().mockResolvedValue({ id: "verified", email: "learner@example.com" });
   mocks.access.mockReset().mockResolvedValue(free);
@@ -32,6 +35,13 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe("verified billing pages", () => {
+  it("omits an unavailable inventory count without blocking checkout", async () => {
+    mocks.inventory.mockResolvedValue(null);
+    const html = renderToStaticMarkup(await PricingPage());
+    expect(html).toContain("Practice across all six PMLE domains; sessions can repeat questions.");
+    expect(html).not.toContain("Count checked");
+    expect(html).toContain("/signup?next=/pricing");
+  });
   it("shows refund support without inventing receipt dates", () => {
     const html = renderToStaticMarkup(createElement(BillingAccount, { access: paid }));
     expect(html).toContain("7-day refund window");
@@ -42,6 +52,8 @@ describe("verified billing pages", () => {
   it("offers one $39 one-time 90-day pass, signup return, free diagnostic and no placeholder", async () => {
     const html = renderToStaticMarkup(await PricingPage());
     expect(html).toContain("$39</span>");
+    expect(html).toContain("123 distinct PMLE questions across all six domains; sessions can repeat questions");
+    expect(html).toContain('dateTime="2026-10-18T00:00:00Z"');
     expect(html).toContain("One-time payment");
     expect(html).toContain("USD");
     expect(html).toContain("90 days of access to PMLE practice questions and explanations");
@@ -50,8 +62,8 @@ describe("verified billing pages", () => {
     expect(html).toContain('href="/signup?next=/pricing"'); expect(html).toContain('href="/diagnostic"');
     expect(html).not.toMatch(/Phase 3|preview|coming soon/i);
   });
-  it("renders shared pricing without requesting private account data on the server", () => {
-    const html = renderToStaticMarkup(PricingPage());
+  it("renders shared pricing without requesting private account data on the server", async () => {
+    const html = renderToStaticMarkup(await PricingPage());
     expect(html).toContain("/signup?next=/pricing");
     expect(mocks.user).not.toHaveBeenCalled();
     expect(mocks.access).not.toHaveBeenCalled();
@@ -212,10 +224,10 @@ describe("bounded checkout verification and authoritative focus reload", () => {
 });
 
 describe("QA 2026-10-14 pass display", () => {
-  it("does not put one user's pass expiry into shared pricing HTML", () => {
+  it("does not put one user's pass expiry into shared pricing HTML", async () => {
     mocks.user.mockResolvedValue({ id: "verified" });
     mocks.access.mockResolvedValue(paid);
-    const html = renderToStaticMarkup(PricingPage());
+    const html = renderToStaticMarkup(await PricingPage());
     expect(html).not.toContain("January 1, 2027");
     expect(mocks.access).not.toHaveBeenCalled();
   });

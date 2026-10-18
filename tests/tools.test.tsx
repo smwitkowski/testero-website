@@ -109,6 +109,10 @@ describe("indexable tools", () => {
       for (const guide of getCertification(cert.cert_id)!.guides) expect(html).toContain(guide.url.replaceAll("&", "&amp;"));
     }
     expect(html).toContain("no full date is inferred");
+    expect(html).toContain("Beta registration is closed. GA registration is announced for November 2");
+    expect(html).toContain("Read Google’s announcement");
+    expect(html).toContain("Metadata not stated by Google");
+    expect(html).not.toContain("Closed beta upcoming ga");
     expect(html).toContain("2026-10-04"); expect(html).not.toContain("2026-10-16");
     const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
     expect(new Set(ids).size).toBe(ids.length);

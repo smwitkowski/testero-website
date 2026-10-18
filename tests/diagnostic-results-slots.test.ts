@@ -5,7 +5,7 @@ import { DiagnosticResults } from "@/components/diagnostic-results";
 const mocks = vi.hoisted(() => ({ resource: vi.fn() }));
 vi.mock("@/components/diagnostic-resource", () => ({ useDiagnosticResource: mocks.resource }));
 vi.mock("@/components/free-diagnostic-explanation", () => ({ FreeDiagnosticExplanation: () => createElement("p", null, "Free explanation") }));
-vi.mock("@/components/diagnostic-unlock", () => ({ SignedInDiagnosticUnlock: () => createElement("p", null, "Signed-in unlock") }));
+vi.mock("@/components/diagnostic-unlock", () => ({ DiagnosticPassOption: () => createElement("p", null, "Secondary pass option"), SignedInDiagnosticUnlock: () => createElement("p", null, "Signed-in unlock") }));
 vi.mock("@/components/results-email-form", () => ({ ResultsEmailForm: () => createElement("p", null, "Default email form") }));
 beforeEach(() => mocks.resource.mockReturnValue({ data: { sessionId: "session", score: 60, correctAnswers: 12, totalQuestions: 20, domainBreakdown: [] }, error: null, reload: vi.fn() }));
 it("preserves the default email card and offers optional CTA and email slots", () => {

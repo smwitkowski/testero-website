@@ -104,6 +104,7 @@ export function AuthForm({ mode, next = "/dashboard", confirmationFailed = false
           </fieldset>
         </form>
       )}
+      {mode === "signup" && <p className="text-sm leading-relaxed text-muted-foreground">See our <Link href="/privacy" className="underline">privacy policy</Link> and <Link href="/terms" className="underline">service terms</Link>.</p>}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       {(mode === "login" || mode === "signup") && confirmationEmail !== null && <ResendConfirmation email={confirmationEmail} next={destination} />}
       <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-primary">

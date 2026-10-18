@@ -59,7 +59,7 @@ describe("public-only PMLE sample publication", () => {
     expect(html).toContain('type="radio"');
     expect(html).toContain('disabled=""');
     expect(html).not.toContain(sample.rationale.B);
-    vi.mocked(useState).mockReturnValueOnce(["A", vi.fn()]).mockReturnValueOnce([true, vi.fn()]);
+    vi.mocked(useState).mockReturnValueOnce(["A", vi.fn()]).mockReturnValueOnce([true, vi.fn()]).mockReturnValueOnce([true, vi.fn()]);
     html = renderToStaticMarkup(<PublicSampleQuestion question={sample} index={0} />);
     expect(html).toContain("Hide explanations");
     expect(html).toContain("You chose A.");
@@ -68,4 +68,14 @@ describe("public-only PMLE sample publication", () => {
     expect(html).toContain(sample.officialDocs[0].url);
     expect(html).toContain('href="/diagnostic"');
   });
+  it("keeps answer feedback when only explanation prose is hidden", () => {
+    vi.mocked(useState).mockReturnValueOnce(["A", vi.fn()]).mockReturnValueOnce([true, vi.fn()]).mockReturnValueOnce([false, vi.fn()]);
+    const html = renderToStaticMarkup(<PublicSampleQuestion question={sample} index={0} />);
+    expect(html).toContain("Show explanations");
+    expect(html).toContain("You chose A. Answer: B.");
+    expect(html).toContain("✓ Correct answer");
+    expect(html).toContain("✕ Your choice · Incorrect");
+    for (const text of Object.values(sample.rationale)) expect(html).not.toContain(text);
+  });
+
 });
