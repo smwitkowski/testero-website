@@ -18,7 +18,7 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
     <p className="text-sm text-muted-foreground">Page {page} of {pageCount} · {entries.length} articles</p>
     <ul className="grid gap-6 md:grid-cols-2">{visible.map((entry) => <li key={entry.slug} className="space-y-4 rounded-lg border border-border bg-card p-6 sm:p-8"><ComingSoonTag exam={entry.exam} /><h2 className="text-pretty text-xl font-semibold leading-snug"><Link href={entry.href} className="text-primary hover:underline">{entry.title}</Link></h2><p className="leading-relaxed text-muted-foreground">{entry.description}</p></li>)}</ul>
     {pageCount > 1 && <nav aria-label="Blog pagination" className="flex flex-wrap items-center gap-3">{page > 1 && <Button asChild variant="outline"><Link href={page === 2 ? "/blog" : `/blog?page=${page-1}`}>← Previous</Link></Button>}<span className="text-sm text-muted-foreground" aria-current="page">Page {page}</span>{page < pageCount && <Button asChild variant="outline"><Link href={`/blog?page=${page+1}`}>Next →</Link></Button>}</nav>}
-    <p className="text-sm text-muted-foreground">Testero is independent and not affiliated with Google. Our diagnostic and practice cover PMLE only.</p>
+    <p className="text-sm text-muted-foreground">Our diagnostic and practice cover PMLE only.</p>
     <Button asChild className="w-full whitespace-normal sm:w-auto"><Link href="/diagnostic">Start free PMLE diagnostic</Link></Button>
   </section>;
 }

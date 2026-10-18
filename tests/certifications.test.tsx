@@ -39,7 +39,7 @@ describe("sourced certification directory", () => {
     if (entry.cert_id !== "machine-learning-engineer" && entry.cert_id !== "agentic-architect") {
       const overview = overviews[entry.cert_id as keyof typeof overviews];
       expect(overview).toBeDefined();
-      expect(html).toContain(overview.checked);
+      expect(html).not.toContain(" · checked <time");
       for (const area of overview.areas) expect(html).toContain(renderToStaticMarkup(createElement("span", null, area)).slice(6, -7));
       expect(html).toContain('id="cert-overview"');
       expect(html).toContain('href="/certifications/machine-learning-engineer"');

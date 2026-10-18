@@ -42,7 +42,6 @@ describe("local content loader", () => {
       expect(entry.publishedAt).toBe(entry.slug === "professional-agentic-architect-exam-ga-2026" ? "2026-10-17" : "2026-10-16");
       expect(entry.updatedAt).toBe(BLOG_PUBLICATION_OVERLAYS[entry.slug].updatedAt ?? "2026-10-16");
       expect(entry.body).toContain(entry.updatedAt === "2026-10-17" ? "Updated October 17, 2026" : "Last checked October 16, 2026");
-      expect(entry.body).toContain("Testero is independent and not affiliated with Google.");
     }
   });
   it("separates the certification path comparison from the personal picker", () => {

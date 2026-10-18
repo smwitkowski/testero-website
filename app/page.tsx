@@ -20,7 +20,7 @@ export default function HomePage() {
         <h1 className="text-4xl font-semibold leading-[1.12] tracking-tight sm:text-5xl">Your next certification.<br />Know where you stand.</h1>
         <p className="text-lg leading-relaxed text-body">Find the Google Cloud exam that fits your work. Then turn practice into a clearer plan: what you know, where you need work, and what to study next.</p>
         <p className="leading-relaxed text-body"><strong>PMLE is live today.</strong> Take a free readiness diagnostic for the Professional Machine Learning Engineer exam. Cloud Engineer, Cloud Architect and Data Engineer diagnostics are coming soon.</p>
-        <div className="flex flex-wrap gap-3"><Button asChild><Link href="/diagnostic">Check my PMLE readiness</Link></Button><Button asChild variant="outline"><Link href="/certifications">Explore all certifications</Link></Button></div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap"><Button asChild><Link href="/diagnostic">Check my PMLE readiness</Link></Button><Button asChild variant="outline"><Link href="/certifications">Explore all certifications</Link></Button></div>
         <p className="text-sm text-muted-foreground">Free · 5, 10 or 20 questions · no account needed</p>
       </div>
       <CertificationPreview />
@@ -44,6 +44,6 @@ export default function HomePage() {
     </section>
     <section aria-labelledby="pass" className="flex flex-wrap items-center justify-between gap-6 rounded-lg border border-border bg-card p-6 sm:p-9"><div className="max-w-2xl space-y-3"><h2 id="pass" className="text-2xl font-semibold">Go deeper with the PMLE Pass</h2><p className="leading-7 text-body">$39 USD one-time for 90 days. Get explanations for every option and unlimited 5-question practice sessions. No auto-renewal; 7-day refund. A refund ends pass access. Start free and decide after you see your study focus.</p></div><Button asChild variant="outline"><Link href="/pricing">Compare free and paid</Link></Button></section>
     <RelatedPmleGuides home />
-    <p className="border-t border-border pt-5 text-sm text-muted-foreground">Testero is independent and not affiliated with or endorsed by Google. Readiness results are study guidance, not a prediction of your exam result.</p>
+    <p className="border-t border-border pt-5 text-sm text-muted-foreground">Readiness results are study guidance, not a prediction of your exam result.</p>
   </div>;
 }

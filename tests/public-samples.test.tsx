@@ -61,6 +61,7 @@ describe("public-only PMLE sample publication", () => {
     expect(html).not.toContain(sample.rationale.B);
     vi.mocked(useState).mockReturnValueOnce(["A", vi.fn()]).mockReturnValueOnce([true, vi.fn()]);
     html = renderToStaticMarkup(<PublicSampleQuestion question={sample} index={0} />);
+    expect(html).toContain("Hide explanations");
     expect(html).toContain("You chose A.");
     expect(html).toContain("Answer: B.");
     for (const text of Object.values(sample.rationale)) expect(html).toContain(text);

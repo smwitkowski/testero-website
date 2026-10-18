@@ -49,6 +49,13 @@ describe("weighted study budgets", () => {
     expect(studyPlanText(plan)).toContain("total 101%");
     expect(studyPlanText(plan)).toContain("Week 2: 2026-10-23 – 2026-10-26");
   });
+  it("merges a trailing single day without losing minutes", () => {
+    const plan = buildStudyPlan(pmle, "2026-11-29", 6, "2026-10-17");
+    expect(plan.weeks).toHaveLength(6);
+    expect(plan.weeks.at(-1)!.end).toBe("2026-11-28");
+    expect(plan.weeks.reduce((sum, week) => sum + week.minutes, 0)).toBe(plan.totalMinutes);
+    expect(plan.weeks.flatMap(week => week.tasks).reduce((sum, task) => sum + task.minutes, 0)).toBe(plan.totalMinutes);
+  });
   it("handles fractional weights and missing weights without inventing exam percentages", () => {
     const architect = certs.find(cert => cert.cert_id === "cloud-architect")!;
     const plan = buildStudyPlan(architect, "2026-11-13", 10, "2026-10-16");
@@ -90,7 +97,7 @@ describe("indexable tools", () => {
     for (const path of toolPaths) expect(sitemap().some(entry => entry.url === `https://testero.ai${path}`)).toBe(true);
     for (const Page of [PickerPage, StudyPage, TrackerPage, IndexPage]) {
       const html = renderToStaticMarkup(createElement(Page));
-      expect(html).toContain("BreadcrumbList"); expect(html).toContain("not affiliated with or endorsed by Google");
+      expect(html).toContain("BreadcrumbList"); expect(html).toContain("These tools do not predict an exam outcome.");
       const prose = html.match(/<section class="max-w-3xl space-y-4 text-body print:hidden">([\s\S]*?)<\/section>/)![1].replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean);
       expect(prose.length).toBeGreaterThanOrEqual(150); expect(prose.length).toBeLessThanOrEqual(300);
     }

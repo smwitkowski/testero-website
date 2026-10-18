@@ -28,7 +28,7 @@ export function CertificationPicker({ certs }: { certs: ToolCertification[] }) {
     window.history.replaceState(null, "", `${window.location.pathname}${pickerHash(next.map(result => result.cert.cert_id))}`);
     trackTool("tool_used", "cert-picker", next[0]?.cert.cert_id);
     trackTool("tool_result_viewed", "cert-picker", next[0]?.cert.cert_id);
-    requestAnimationFrame(() => heading.current?.focus());
+    requestAnimationFrame(() => { heading.current?.focus({ preventScroll: true }); heading.current?.scrollIntoView({ block: "start" }); });
   }
   async function share() {
     try { await navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}${pickerHash(results.map(result => result.cert.cert_id))}`); setMessage("Result link copied."); }

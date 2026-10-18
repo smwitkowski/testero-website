@@ -32,7 +32,7 @@ describe("answer-first PMLE publications", () => {
     expect(html).toContain("two hours long, costs $200 plus tax");
     expect(html).toContain("50–60 multiple-choice and multiple-select");
     expect(html).toContain("English and Japanese");
-    expect(html).toContain("October 17, 2026");
+    expect(html).toContain('<time dateTime="2026-10-17">2026-10-17</time>');
     expect(html).toContain('"dateModified":"2026-10-17"');
     expect(html).not.toMatch(/Valid for|Validity/);
   });
