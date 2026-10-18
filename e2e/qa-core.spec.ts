@@ -26,9 +26,33 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   await page.getByRole("button", { name: "Begin diagnostic" }).click();
   await expect(page.getByText("Question 1 of 20", { exact: true })).toBeVisible();
   timings.diagnosticStart = performance.now() - started;
+  const actions = page.locator("[data-diagnostic-actions]");
+  const pane = page.locator(".overscroll-contain");
+  const actionBounds = await actions.boundingBox();
+  const paneBounds = await pane.boundingBox();
+  expect(actionBounds).not.toBeNull();
+  expect(paneBounds).not.toBeNull();
+  expect(paneBounds!.y + paneBounds!.height).toBeLessThanOrEqual(actionBounds!.y);
+  for (const option of await page.locator(".answer-option").all()) {
+    await option.scrollIntoViewIfNeeded();
+    const bounds = await option.boundingBox();
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(actionBounds!.y + 1);
+  }
+  await expect(page.getByRole("button", { name: "Next question", exact: true })).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(timings.diagnosticStart).toBeLessThanOrEqual(2000);
+  expect(await pane.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await page.getByRole("radio").first().focus();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Report a problem with this question", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Next question", exact: true })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Question 2 of 20", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
   const sessionId = new URL(page.url()).pathname.split("/").at(-1);
-  for (let ordinal = 1; ordinal <= 20; ordinal++) {
+  for (let ordinal = 2; ordinal <= 20; ordinal++) {
     const progress = await (await page.request.get(`/api/diagnostic/${sessionId}`)).json() as DiagnosticProgress;
     expect(progress.totalQuestions).toBe(20);
     const before = performance.now();

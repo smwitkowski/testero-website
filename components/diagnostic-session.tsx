@@ -90,40 +90,46 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
   const halfway = data.answeredCount === 10 && question.ordinal === 11;
 
   return (
-    <div className="mx-auto max-w-[760px] space-y-6 pb-28 sm:pb-0">
-      {header}
-      <div className="space-y-3">
-        <div className="flex flex-wrap justify-between gap-2 text-sm text-muted-foreground">
-          <span>Question {question.ordinal} of {data.totalQuestions}</span>
-          {minutesLeft > 0 && <span>~{minutesLeft} min left</span>}
-        </div>
-        <div role="progressbar" aria-label="Diagnostic progress" aria-valuemin={0} aria-valuemax={data.totalQuestions} aria-valuenow={data.answeredCount} className="h-2 overflow-hidden rounded border border-input bg-border">
-          <div className="h-full bg-primary" style={{ width: `${data.answeredCount / data.totalQuestions * 100}%` }} />
+    <div className="fixed inset-0 z-0 flex flex-col bg-background">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-[max(1.25rem,env(safe-area-inset-left),env(safe-area-inset-right))] py-10 sm:px-8 sm:py-16">
+        <div className="mx-auto max-w-[760px] space-y-6">
+          {header}
+          <div className="space-y-3">
+            <div className="flex flex-wrap justify-between gap-2 text-sm text-muted-foreground">
+              <span>Question {question.ordinal} of {data.totalQuestions}</span>
+              {minutesLeft > 0 && <span>~{minutesLeft} min left</span>}
+            </div>
+            <div role="progressbar" aria-label="Diagnostic progress" aria-valuemin={0} aria-valuemax={data.totalQuestions} aria-valuenow={data.answeredCount} className="h-2 overflow-hidden rounded border border-input bg-border">
+              <div className="h-full bg-primary" style={{ width: `${data.answeredCount / data.totalQuestions * 100}%` }} />
+            </div>
+          </div>
+          {halfway && <p role="status" className="halfway-note rounded-md border border-border bg-muted px-4 py-3 text-sm font-medium">Halfway there. Your domain picture is taking shape.</p>}
+          <Card>
+            <CardHeader className="space-y-4"><p className="text-sm text-muted-foreground">{PMLE_BLUEPRINT_MAP[question.domainCode]?.displayName ?? question.domainCode}</p><h1 ref={heading} tabIndex={-1} className="whitespace-pre-line text-lg font-normal leading-relaxed sm:text-xl">{question.stem}</h1></CardHeader>
+            <CardContent>
+              <form id="diagnostic-answer" onSubmit={submit} className="space-y-6" aria-busy={pending}>
+                <fieldset disabled={pending} className="space-y-3">
+                  <legend className="mb-3 text-sm font-medium">Choose one answer</legend>
+                  {question.options.map((option) => (
+                    <label key={option.label} className={`answer-option flex min-h-14 cursor-pointer items-start gap-3 rounded-md border p-4 leading-relaxed ${selected === option.label ? "border-primary bg-muted" : "border-input hover:bg-muted/50"}`}>
+                      <input type="radio" name="answer" value={option.label} checked={selected === option.label} onChange={() => setSelected(option.label)} className="mt-1.5 size-4 shrink-0" />
+                      <span><span className="mr-2 font-semibold">{option.label}.</span>{option.text}</span>
+                    </label>
+                  ))}
+                </fieldset>
+                {pending && <p role="status" className="text-sm text-muted-foreground">Saving your answer…</p>}
+              </form>
+            </CardContent>
+          </Card>
+          <ReportQuestion key={question.id} sessionId={sessionId} itemId={question.id} kind="diagnostic" />
         </div>
       </div>
-      {halfway && <p role="status" className="halfway-note rounded-md border border-border bg-muted px-4 py-3 text-sm font-medium">Halfway there. Your domain picture is taking shape.</p>}
-      <Card>
-        <CardHeader className="space-y-4"><p className="text-sm text-muted-foreground">{PMLE_BLUEPRINT_MAP[question.domainCode]?.displayName ?? question.domainCode}</p><h1 ref={heading} tabIndex={-1} className="whitespace-pre-line text-lg font-normal leading-relaxed sm:text-xl">{question.stem}</h1></CardHeader>
-        <CardContent>
-          <form onSubmit={submit} className="space-y-6" aria-busy={pending}>
-            <fieldset disabled={pending} className="space-y-3">
-              <legend className="mb-3 text-sm font-medium">Choose one answer</legend>
-              {question.options.map((option) => (
-                <label key={option.label} className={`answer-option flex min-h-14 cursor-pointer items-start gap-3 rounded-md border p-4 leading-relaxed ${selected === option.label ? "border-primary bg-muted" : "border-input hover:bg-muted/50"}`}>
-                  <input type="radio" name="answer" value={option.label} checked={selected === option.label} onChange={() => setSelected(option.label)} className="mt-1.5 size-4 shrink-0" />
-                  <span><span className="mr-2 font-semibold">{option.label}.</span>{option.text}</span>
-                </label>
-              ))}
-            </fieldset>
-            {/* Pinned to the bottom of the viewport on phones; inline from sm up. */}
-            <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-card px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:flex sm:justify-end sm:border-0 sm:bg-transparent sm:p-0">
-              <Button type="submit" className="w-full sm:w-auto" disabled={!selected || pending}>{pending ? "Saving answer…" : last ? "See my results" : "Next question"}</Button>
-            </div>
-            {pending && <p role="status" className="text-sm text-muted-foreground">Saving your answer…</p>}
-          </form>
-        </CardContent>
-      </Card>
-      <ReportQuestion key={question.id} sessionId={sessionId} itemId={question.id} kind="diagnostic" />
+      {/* Keep actions outside the scrolling pane so they cannot cover an answer. */}
+      <div data-diagnostic-actions className="shrink-0 border-t border-border bg-card px-[max(1.25rem,env(safe-area-inset-left),env(safe-area-inset-right))] pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-8">
+        <div className="mx-auto flex max-w-[760px] justify-end">
+          <Button type="submit" form="diagnostic-answer" className="w-full sm:w-auto" disabled={!selected || pending}>{pending ? "Saving answer…" : last ? "See my results" : "Next question"}</Button>
+        </div>
+      </div>
     </div>
   );
 }
