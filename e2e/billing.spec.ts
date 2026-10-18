@@ -125,8 +125,8 @@ test("local return fulfillment grants paid explanations and unlimited practice; 
 
     await page.goto("/pricing"); await layout("pricing");
     const checkoutResponse = page.waitForResponse(response => response.url().endsWith("/api/billing/checkout") && response.request().method() === "POST");
-    await expect(page.getByText("$39 one-time payment", { exact: false }).first()).toBeVisible();
-    await page.getByRole("button", { name: "Get PMLE Pass — $39 one-time payment", exact: true }).click();
+    await expect(page.getByText("One-time payment", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Unlock PMLE Pass: $39", exact: true }).click();
     const checkout = await checkoutResponse;
     expect(checkout.status()).toBe(200);
     // The client navigates immediately; Chromium may discard the fetch body.
@@ -164,7 +164,7 @@ test("local return fulfillment grants paid explanations and unlimited practice; 
     await expect(page.getByRole("button", { name: "Manage legacy subscription", exact: true })).toHaveCount(0);
     await page.goto("/pricing");
     await expect(page.getByText(/You have PMLE Pass until/)).toBeVisible();
-    await expect(page.getByRole("button", { name: "Get PMLE Pass — $39 one-time payment", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Unlock PMLE Pass: $39", exact: true })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Go to practice", exact: true })).toHaveAttribute("href", "/dashboard");
     await page.goto("/account");
     expect((await page.request.post("/api/billing/portal", { data: {} })).status()).toBe(403);

@@ -103,7 +103,9 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     await page.goto(`/signup?next=${encodeURIComponent(`/diagnostic/${diagnosticId}/results`)}`);
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
+    const signupResponse = page.waitForResponse(response => response.url().endsWith("/api/auth/signup") && response.request().method() === "POST");
     await page.getByRole("button", { name: "Create account", exact: true }).click();
+    expect((await signupResponse).status()).toBe(200);
     await expect(page.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
     const before = await service.from("study_sessions").select("user_id").eq("id", diagnosticId).single();
     expect(before.data!.user_id).toBeNull();

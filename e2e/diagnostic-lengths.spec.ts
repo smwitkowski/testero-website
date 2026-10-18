@@ -29,14 +29,15 @@ for (const count of [5, 10]) {
     }
     expect(domains.size).toBe(count === 5 ? 5 : 6);
     await page.goto(`/diagnostic/${sessionId}/results`);
-    await expect(page.getByRole("heading", { name: "A lower-confidence snapshot" })).toBeVisible();
+    await expect(page.getByText(`Based on ${count} questions.`, { exact: false })).toBeVisible();
+    expect((await page.locator('[aria-label="Overall score"]').boundingBox())!.y).toBeLessThan((await page.getByText(`Based on ${count} questions.`, { exact: false }).boundingBox())!.y);
     await expect(page.getByRole("heading", { name: "One full explanation, free", exact: true })).toBeVisible();
     await expect(page.getByText("Report a problem with this question", { exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Unlock explanations for all questions + unlimited practice: $39 one-time, 90 days", exact: true })).toHaveAttribute("href", "/signup?next=%2Fpricing");
+    await expect(page.getByRole("link", { name: "Unlock PMLE Pass: $39", exact: true })).toHaveAttribute("href", "/signup?next=%2Fpricing");
     const result = await (await page.request.get(`${api}/results`)).json();
     expect(result.totalQuestions).toBe(count);
     expect(result.review).toBeUndefined();
-    await page.getByRole("link", { name: "Take full readiness (20)" }).click();
+    await page.getByRole("link", { name: "take the 20-question diagnostic →" }).click();
     await expect(page.getByRole("radio", { name: "Full readiness (20)" })).toBeChecked();
   });
 }

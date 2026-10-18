@@ -7,6 +7,7 @@ import type { PracticeAnswerResponse } from "../lib/practice/types";
 if (process.env.TESTERO_QA === "1") {
   await import("./accounts-practice.spec");
   await import("./billing.spec");
+  await import("./ui-audit-p1.spec");
 }
 
 test("QA diagnostic click-to-question budget and paid explanation/next/summary", async ({ page }, info) => {
@@ -95,13 +96,10 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   await expect(page.getByText("20 questions", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Score by domain", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "One full explanation, free", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Question review", exact: true })).toHaveCount(1);
-  const freeReviewNav = page.getByRole("navigation", { name: "Question review navigation" });
-  await expect(freeReviewNav.getByRole("button", { name: "Previous", exact: true })).toBeDisabled();
-  await expect(freeReviewNav.getByRole("button", { name: "Next", exact: true })).toBeDisabled();
-  await expect(freeReviewNav.getByRole("button", { name: /^Review question / })).toHaveCount(1);
+  await expect(page.getByRole("heading", { name: "Question review", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Question review navigation" })).toHaveCount(0);
   await expect(page.locator("[data-question-review-items] > li")).toHaveCount(1);
-  await expect(page.getByRole("link", { name: "Unlock explanations for all questions + unlimited practice: $39 one-time, 90 days", exact: true })).toHaveAttribute("href", "/signup?next=%2Fpricing");
+  await expect(page.getByRole("link", { name: "Unlock PMLE Pass: $39", exact: true })).toHaveAttribute("href", "/signup?next=%2Fpricing");
   const accounts = JSON.parse(await readFile(".qa/accounts.json", "utf8"));
   const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
   for (const kind of ["free", "refunded", "unconfirmed"]) {

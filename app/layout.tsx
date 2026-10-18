@@ -12,15 +12,15 @@ import "./globals.css";
 const ibmPlexSans = localFont({
   src: [
     { path: "./fonts/IBMPlexSans-Regular-Latin1.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/IBMPlexSans-Medium-Latin1.woff2", weight: "500", style: "normal" },
     { path: "./fonts/IBMPlexSans-SemiBold-Latin1.woff2", weight: "600", style: "normal" },
   ],
   declarations: [{ prop: "font-family", value: "Testero IBM Plex Sans" }],
   variable: "--font-ibm-plex-sans",
-  display: "optional",
+  display: "swap",
 });
 const ibmPlexSansOptional = localFont({
   src: [
-    { path: "./fonts/IBMPlexSans-Medium-Latin1.woff2", weight: "500", style: "normal" },
     { path: "./fonts/IBMPlexSans-Italic-Latin1.woff2", weight: "400", style: "italic" },
   ],
   declarations: [{ prop: "font-family", value: "Testero IBM Plex Sans" }],
