@@ -61,6 +61,9 @@ export function BillingAccount({ access, unavailable = false }: { access: PaidAc
   return <section aria-labelledby="account-access" className="space-y-4">
     <h2 id="account-access" className="text-xl font-semibold">Your access</h2>
     <PassStatus access={access} />
+    {access.hasPaidAccess && access.pass && <div className="space-y-2 text-sm text-muted-foreground">
+      <p>PMLE Pass has a 7-day refund window. To request a refund or purchase details, email <a href="mailto:support@testero.ai" className="underline">support@testero.ai</a>. A refund ends pass access.</p>
+    </div>}
     {!access.hasPaidAccess && <Button asChild><Link href="/pricing">Get PMLE Pass</Link></Button>}
     {access.isLegacySubscriber && <Button variant="outline" disabled={pending} onClick={() => void portal()}>{pending ? "Opening billing…" : "Manage legacy subscription"}</Button>}
     {error && <p role="alert" className="text-destructive">{error}</p>}

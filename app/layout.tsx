@@ -42,7 +42,7 @@ export const metadata: Metadata = {
 };
 
 // Lets env(safe-area-inset-bottom) work for the pinned diagnostic action bar on notched phones.
-export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", colorScheme: "light" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

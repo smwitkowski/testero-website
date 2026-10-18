@@ -39,7 +39,7 @@ it.each([200, 401])("identifies only successful login responses (%s)", async sta
   vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ userId, href: "/dashboard" }), { status }));
   const form = find(AuthForm({ mode: "login" }), "form")!;
   const submit = (form.props as { onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void> }).onSubmit;
-  await submit({ preventDefault: vi.fn(), currentTarget: { reset: vi.fn() } } as unknown as FormEvent<HTMLFormElement>);
+  await submit({ preventDefault: vi.fn(), currentTarget: { reset: vi.fn(), elements: { namedItem: () => ({ validity: { typeMismatch: false }, focus: vi.fn() }) } } } as unknown as FormEvent<HTMLFormElement>);
   if (status === 200) {
     expect(mocks.identify.mock.calls).toEqual([[userId]]);
     expect(mocks.assign).toHaveBeenCalledWith("/dashboard");
@@ -114,6 +114,6 @@ it("sets the same resend affordance after generic rejected credentials", async (
     .mockImplementationOnce(() => [null, confirmation] as never);
   vi.mocked(fetch).mockResolvedValue(Response.json({ error: AUTH_MESSAGES.credentials }, { status: 401 }));
   const form = find(AuthForm({ mode: "login" }), "form")!;
-  await (form.props as { onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void> }).onSubmit({ preventDefault: vi.fn(), currentTarget: { reset: vi.fn() } } as unknown as FormEvent<HTMLFormElement>);
+  await (form.props as { onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void> }).onSubmit({ preventDefault: vi.fn(), currentTarget: { reset: vi.fn(), elements: { namedItem: () => ({ validity: { typeMismatch: false }, focus: vi.fn() }) } } } as unknown as FormEvent<HTMLFormElement>);
   expect(confirmation).toHaveBeenCalledWith("learner@example.com");
 });

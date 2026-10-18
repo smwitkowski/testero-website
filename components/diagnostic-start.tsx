@@ -57,7 +57,7 @@ export function DiagnosticStart({ resumeId = null, children }: { resumeId?: stri
     </header>
     <fieldset disabled={pending} className="space-y-3">
       <legend className="font-medium">Choose your diagnostic length</legend>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">{[{ count: 5, label: "Quick check (5)" }, { count: 10, label: "Short (10)" }, { count: 20, label: "Full readiness (20)" }].map(({ count, label }) => <label key={count} className="answer-option flex min-h-14 cursor-pointer items-center gap-3 rounded-md border border-input bg-card p-4 text-sm font-medium"><input type="radio" name="diagnostic-length" value={count} checked={questionCount === count} onChange={() => setQuestionCount(count)} />{label}</label>)}</div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">{[{ count: 5, label: "Quick check (5)" }, { count: 10, label: "Short (10)" }, { count: 20, label: "Full readiness (20)" }].map(({ count, label }) => <label key={count} className="answer-option flex min-h-14 cursor-pointer items-center gap-3 rounded-md border border-input bg-card p-4 text-sm font-medium"><input type="radio" name="diagnostic-length" value={count} checked={questionCount === count} onChange={() => setQuestionCount(count)} /><span>{label}{count === 20 && <span className="mt-1 block text-xs text-primary">Recommended</span>}</span></label>)}</div>
       <p className="text-sm leading-relaxed text-muted-foreground">{questionCount === 5 ? "A quick signal across the five highest-weight domains." : "Questions across all six exam domains."} Shorter checks give lower-confidence results than the full 20.</p>
     </fieldset>
     <dl className="grid grid-cols-3 divide-x divide-border rounded-lg border border-border bg-card">
@@ -84,7 +84,7 @@ export function DiagnosticStart({ resumeId = null, children }: { resumeId?: stri
       <h2 id="report" className="text-xl font-semibold">Your report includes</h2>
       <ul className="list-disc space-y-2 pl-5 text-body"><li>An overall score out of 100 and a readiness tier (Low, Building, Ready or Strong)</li><li>Scores for the domains covered, weakest first</li><li>A recommended domain to practice next</li></ul>
     </section>
-    <p className="text-sm text-muted-foreground">Study guidance, not a prediction of your exam result. Testero is independent and not affiliated with Google.</p>
+    <p className="text-sm text-muted-foreground">Study guidance, not a prediction of your exam result.</p>
     <Link href="/" className="inline-block text-sm text-primary hover:underline">Back to home</Link>
   </div>{children}</>;
 }

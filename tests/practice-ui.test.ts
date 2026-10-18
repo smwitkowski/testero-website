@@ -72,7 +72,8 @@ describe("dashboard and practice states", () => {
     } }));
     expect(html).toContain("40%");
     expect(html).toContain("Practice Domain 0");
-    expect(html).toContain("Practice Domain 1");
+    expect(html).not.toContain("Practice Domain 1");
+    expect(html).toContain("Recommended: Domain 0");
     expect(html).toContain('/practice/owned%2Fsession');
     expect(html).not.toContain("Question review");
     expect(html).not.toMatch(/explanation/i);
@@ -132,7 +133,7 @@ describe("practice explanation display boundary", () => {
       .mockImplementationOnce(() => [{ answeredCount: 1, totalQuestions: 5, completed: false, feedback }, vi.fn()] as never);
     const html = renderToStaticMarkup(createElement(PracticeSession, { sessionId: "owned" }));
     expect(html).not.toContain("Saved-answer explanation"); expect(html).toContain("Saved option explanation");
-    expect(html).toContain("First snapshot"); expect(html).toContain("Correct answer: A");
+    expect(html).toContain("First snapshot"); expect(html).toContain("You chose B; the correct answer is A.");
     expect(html).not.toContain("Submit answer");
   });
   it("shows duplicate correct-option and question explanations only once", () => {
@@ -179,7 +180,7 @@ describe("practice explanation display boundary", () => {
       .mockImplementationOnce(() => [false, vi.fn()] as never)
       .mockImplementationOnce(() => [{ answeredCount: 1, totalQuestions: 5, completed: false, feedback: freeFeedback }, vi.fn()] as never);
     const html = renderToStaticMarkup(createElement(PracticeSession, { sessionId: "owned" }));
-    expect(html).toContain("Correct answer: A"); expect(html).not.toMatch(/Explanation|Saved-answer|Saved option/);
+    expect(html).toContain("You chose B; the correct answer is A."); expect(html).not.toMatch(/Explanation|Saved-answer|Saved option/);
   });
 });
 
@@ -191,6 +192,7 @@ describe("QA 2026-10-14 practice start", () => {
   });
   it("shows the quota reset date", () => {
     const html = renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: [], remaining: 0, quotaWeekStart: "2026-10-12" }));
-    expect(html).toContain("Your free allowance resets on Monday, October 19 at 00:00 UTC.");
+    expect(html).toContain('title="Monday, October 19 at 00:00 UTC"');
+    expect(html).not.toContain("0 free practice questions remaining");
   });
 });

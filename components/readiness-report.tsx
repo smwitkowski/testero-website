@@ -23,7 +23,7 @@ export function ScoreReport({ score, correctAnswers, totalQuestions }: Pick<Diag
       <p className="text-[52px] font-semibold leading-none">{score}<span className="ml-3 text-base font-normal text-muted-foreground">/ 100</span></p>
       <span className="ml-auto rounded border border-input px-2 py-0.5 text-sm font-medium">Tier: {tier.label}</span>
     </div>
-    <p className="text-sm text-muted-foreground"><span>{correctAnswers} of {totalQuestions} correct</span>{questionsToReady(score, totalQuestions) > 0 && <> · ≈{questionsToReady(score, totalQuestions)} {questionsToReady(score, totalQuestions) === 1 ? "question" : "questions"} to Ready</>}</p>
+    <p className="text-sm text-muted-foreground"><span>{correctAnswers} of {totalQuestions} correct</span>{questionsToReady(score, totalQuestions) > 0 && <> · {questionsToReady(score, totalQuestions)} more correct {questionsToReady(score, totalQuestions) === 1 ? "answer" : "answers"} would reach Ready (70)</>}</p>
     <ScoreBar score={score} />
     </CardContent>
   </Card>;
