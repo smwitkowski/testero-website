@@ -98,6 +98,10 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
       expect(foreignWrite.status()).toBe(404);
     } finally { await foreign.close(); }
 
+    const answerPosts: string[] = [];
+    page.on("request", request => {
+      if (request.method() === "POST" && new URL(request.url()).pathname === `${api}/answer`) answerPosts.push(request.url());
+    });
     const seen = new Set<string>();
     for (let index = 0; index < 20; index++) {
       await expect(page.getByText(`Question ${index + 1} of 20`, { exact: true })).toBeVisible();
@@ -121,6 +125,8 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
         await page.getByRole("radio").first().focus();
         await page.keyboard.press("ArrowDown");
         await page.keyboard.press("Tab");
+        await expect(page.getByRole("button", { name: "Report a problem with this question", exact: true })).toBeFocused();
+        await page.keyboard.press("Tab");
         const submit = page.getByRole("button", { name: "Next question" });
         await expect(submit).toBeFocused();
         const ring = await submit.evaluate(element => { const style = getComputedStyle(element); return { outline: style.outlineColor, width: style.outlineWidth, shadow: style.boxShadow }; });
@@ -139,6 +145,38 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
         expect(reloaded.currentQuestion).toEqual(progress.currentQuestion);
         expect(reloaded.answeredCount).toBe(3);
       }
+      if (index === 2) {
+        expect(progress.answeredQuestions).toHaveLength(2);
+        const postCount = answerPosts.length;
+        await page.getByRole("radio").nth(1).check();
+        await page.getByRole("button", { name: "Previous", exact: true }).click();
+        await expect(page.getByText("Question 2 of 20", { exact: true })).toBeVisible();
+        await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
+        const savedLabel = progress.answeredQuestions[1].selectedLabel;
+        await expect(page.locator(`input[type=radio][value="${savedLabel}"]`)).toBeChecked();
+        for (const radio of await page.getByRole("radio").all()) await expect(radio).toBeDisabled();
+        await expect(page.getByText("Saved answer. Previous answers are read-only and cannot be changed.")).toBeVisible();
+        await page.getByRole("button", { name: "Previous", exact: true }).click();
+        await expect(page.getByText("Question 1 of 20", { exact: true })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Previous", exact: true })).toBeDisabled();
+        await page.getByRole("button", { name: "Next", exact: true }).click();
+        await page.getByRole("button", { name: "Next", exact: true }).click();
+        await expect(page.getByText("Question 3 of 20", { exact: true })).toBeVisible();
+        await expect(page.getByRole("radio").nth(1)).toBeChecked();
+        await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "2");
+        expect(answerPosts).toHaveLength(postCount);
+        const changed = await page.request.post(`${api}/answer`, { data: {
+          itemId: progress.answeredQuestions[0].id,
+          selectedLabel: progress.answeredQuestions[0].options.find(option => option.label !== progress.answeredQuestions[0].selectedLabel)!.label,
+        } });
+        expect(changed.status()).toBe(409);
+        await page.reload();
+        await expect(page.getByText("Question 3 of 20", { exact: true })).toBeVisible();
+        await page.getByRole("button", { name: "Previous", exact: true }).click();
+        await expect(page.locator(`input[type=radio][value="${savedLabel}"]`)).toBeChecked();
+        await page.getByRole("button", { name: "Next", exact: true }).click();
+        expect(answerPosts).toHaveLength(postCount);
+      }
       const nextName = index === 19 ? "See my results" : "Next question";
       if (index === 1) {
         // Selecting does not commit: change the pick, then Next sends the final one.
@@ -156,10 +194,12 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
       }
       await page.getByRole("radio").first().check();
       if (index < 3) await armTransition(page, { path: api, ordinal: index + 2, total: 20 });
+      const postsBeforeSave = answerPosts.length;
       const acceptedResponse = page.waitForResponse(response => response.url().endsWith(`${api}/answer`) && response.request().method() === "POST");
       await page.getByRole("button", { name: nextName }).click();
       const accepted = await acceptedResponse;
       expect(accepted.status()).toBe(200);
+      expect(answerPosts).toHaveLength(postsBeforeSave + 1);
       const answer = await accepted.json() as DiagnosticAnswerResponse;
       expect(answer).toMatchObject({ answeredCount: index + 1, totalQuestions: 20, completed: index === 19, progress: { answeredCount: index + 1, currentQuestion: index === 19 ? null : { ordinal: index + 2 } } });
       noAnswerKeys(answer);
@@ -168,7 +208,8 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
     await expect(page).toHaveURL(new RegExp(`/diagnostic/${sessionId}/results$`));
     await expect(page.getByRole("heading", { name: "PMLE readiness report", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Score by domain", exact: true })).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
+    if (page.viewportSize()!.width < 1024) await expect(page.locator("summary[aria-label=Menu]")).toBeVisible();
+    else await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
     await expect(page.getByRole("contentinfo")).toBeVisible();
     await expect(page.locator("main").getByText(/Study guidance, not a prediction/i)).toHaveCount(1);
     await captureV3(page, "diagnostic-results");
@@ -209,6 +250,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
     expect(result.score).toBe(Math.round(actualCorrect / 20 * 100));
     const completed = await (await page.request.get(api)).json() as DiagnosticProgress;
     expect(completed.currentQuestion).toBeNull();
+    expect(completed.answeredQuestions).toEqual([]);
     expect(completed.status).toBe("completed");
     await page.reload();
     await expect(page.getByRole("heading", { name: "PMLE readiness report", exact: true })).toBeVisible();

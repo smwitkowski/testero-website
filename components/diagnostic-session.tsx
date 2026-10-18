@@ -18,6 +18,11 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
   const path = `/api/diagnostic/${encodeURIComponent(sessionId)}`;
   const { data, error, reload, setData } = useDiagnosticResource<DiagnosticProgress>(path, initialData);
   const [selected, setSelected] = useState("");
+  const [viewOrdinal, setViewOrdinal] = useState<number | null>(null);
+  const savedQuestion = data?.answeredQuestions.find(question => question.ordinal === viewOrdinal);
+  const question = savedQuestion ?? data?.currentQuestion;
+  const readOnly = !!savedQuestion;
+  const displayedSelection = savedQuestion?.selectedLabel ?? selected;
   const [pending, setPending] = useState(false);
   const [answerError, setAnswerError] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);
@@ -32,12 +37,15 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
   }, []);
   useEffect(() => {
     if (data?.status === "completed") router.replace(resultsPath);
-    else if (data?.currentQuestion) heading.current?.focus();
-  }, [data, router, resultsPath]);
+  }, [data?.status, router, resultsPath]);
+  useEffect(() => {
+    heading.current?.focus();
+  }, [question?.id]);
 
   function retry() {
     setAnswerError(null);
     setSelected("");
+    setViewOrdinal(null);
     reload();
   }
 
@@ -45,7 +53,7 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
     event.preventDefault();
     const question = data?.currentQuestion;
     const signal = controller.current?.signal;
-    if (!question || !selected || !signal || submitting.current) return;
+    if (!question || readOnly || pending || !selected || !signal || submitting.current) return;
     submitting.current = true;
     setPending(true);
     let completed = false;
@@ -62,6 +70,7 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
         router.replace(resultsPath);
       } else {
         setSelected("");
+        setViewOrdinal(null);
         setData(result.progress);
       }
     } catch (reason) {
@@ -74,12 +83,11 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
     }
   }
 
-  const header = <header className="mx-auto flex max-w-[760px] flex-wrap items-center justify-between gap-3 border-b border-border pb-5">
+  const header = <header className="mx-auto flex max-w-[720px] flex-wrap items-center justify-between gap-3 border-b border-border pb-5">
     <SiteLogo />
   </header>;
   if (error || answerError) return <div className="space-y-6">{header}<DiagnosticError message={error || answerError!} onRetry={retry} /></div>;
   if (!data || data.status === "completed") return <div className="space-y-6">{header}<DiagnosticLoading message={data ? "Opening your results…" : "Loading your saved progress…"} /></div>;
-  const question = data.currentQuestion;
   if (!question) return <div className="space-y-6">{header}<DiagnosticError message="Your next question could not be loaded. Retry to load your saved progress." onRetry={retry} /></div>;
 
   // ~60s per remaining question (this one included), rounded up; hidden under a minute.
@@ -87,12 +95,12 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
   const minutesLeft = secondsLeft >= 60 ? Math.ceil(secondsLeft / 60) : 0;
   const last = question.ordinal === data.totalQuestions;
   // Shown only while answering question 11, i.e. right after the 10th answer was committed.
-  const halfway = data.answeredCount === 10 && question.ordinal === 11;
+  const halfway = !readOnly && data.answeredCount === 10 && question.ordinal === 11;
 
   return (
     <div className="fixed inset-0 z-0 flex flex-col bg-background">
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-[max(1.25rem,env(safe-area-inset-left),env(safe-area-inset-right))] py-10 sm:px-8 sm:py-16">
-        <div className="mx-auto max-w-[760px] space-y-6">
+        <div className="mx-auto max-w-[720px] space-y-6">
           {header}
           <div className="space-y-3">
             <div className="flex flex-wrap justify-between gap-2 text-sm text-muted-foreground">
@@ -104,19 +112,23 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
             </div>
           </div>
           {halfway && <p role="status" className="halfway-note rounded-md border border-border bg-muted px-4 py-3 text-sm font-medium">Halfway there. Your domain picture is taking shape.</p>}
-          <Card>
-            <CardHeader className="space-y-4"><p className="text-sm text-muted-foreground">{PMLE_BLUEPRINT_MAP[question.domainCode]?.displayName ?? question.domainCode}</p><h1 ref={heading} tabIndex={-1} className="whitespace-pre-line text-lg font-normal leading-relaxed sm:text-xl">{question.stem}</h1></CardHeader>
-            <CardContent>
+          <Card className="rounded-none border-0 bg-transparent shadow-none sm:rounded-lg sm:border sm:bg-card sm:shadow-sm">
+            <CardHeader className="space-y-4 px-0 pt-0 pb-6 sm:p-8">
+              <p className="text-sm text-muted-foreground">{PMLE_BLUEPRINT_MAP[question.domainCode]?.displayName ?? question.domainCode}</p>
+              <h1 ref={heading} tabIndex={-1} className="whitespace-pre-line text-xl font-normal leading-relaxed sm:text-2xl">{question.stem}</h1>
+            </CardHeader>
+            <CardContent className="px-0 pb-0 sm:px-8 sm:pb-8">
               <form id="diagnostic-answer" onSubmit={submit} className="space-y-6" aria-busy={pending}>
-                <fieldset disabled={pending} className="space-y-3">
-                  <legend className="mb-3 text-sm font-medium">Choose one answer</legend>
+                <fieldset disabled={pending || readOnly} className="space-y-3">
+                  <legend className="mb-3 text-sm font-medium">{readOnly ? "Your saved answer" : "Choose one answer"}</legend>
                   {question.options.map((option) => (
-                    <label key={option.label} className={`answer-option flex min-h-14 cursor-pointer items-start gap-3 rounded-md border p-4 leading-relaxed ${selected === option.label ? "border-primary bg-muted" : "border-input hover:bg-muted/50"}`}>
-                      <input type="radio" name="answer" value={option.label} checked={selected === option.label} onChange={() => setSelected(option.label)} className="mt-1.5 size-4 shrink-0" />
+                    <label key={option.label} className={`answer-option flex min-h-14 cursor-pointer items-start gap-3 rounded-md border p-4 text-[17px] leading-relaxed sm:p-5 sm:text-lg ${displayedSelection === option.label ? "border-primary bg-muted" : "border-input hover:bg-muted/50"}`}>
+                      <input type="radio" name="answer" value={option.label} checked={displayedSelection === option.label} onChange={() => setSelected(option.label)} className="mt-1.5 size-4 shrink-0" />
                       <span><span className="mr-2 font-semibold">{option.label}.</span>{option.text}</span>
                     </label>
                   ))}
                 </fieldset>
+                {readOnly && <p className="text-sm text-muted-foreground">Saved answer. Previous answers are read-only and cannot be changed.</p>}
                 {pending && <p role="status" className="text-sm text-muted-foreground">Saving your answer…</p>}
               </form>
             </CardContent>
@@ -126,8 +138,13 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
       </div>
       {/* Keep actions outside the scrolling pane so they cannot cover an answer. */}
       <div data-diagnostic-actions className="shrink-0 border-t border-border bg-card px-[max(1.25rem,env(safe-area-inset-left),env(safe-area-inset-right))] pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-8">
-        <div className="mx-auto flex max-w-[760px] justify-end">
-          <Button type="submit" form="diagnostic-answer" className="w-full sm:w-auto" disabled={!selected || pending}>{pending ? "Saving answer…" : last ? "See my results" : "Next question"}</Button>
+        <div className="mx-auto flex max-w-[720px] gap-3">
+          <Button type="button" variant="outline" disabled={pending || question.ordinal <= 1} onClick={() => setViewOrdinal(question.ordinal - 1)}>Previous</Button>
+          {readOnly ? (
+            <Button key="history-next" type="button" className="ml-auto" disabled={pending} onClick={() => setViewOrdinal(question.ordinal + 1)}>Next</Button>
+          ) : (
+            <Button key="answer-submit" type="submit" form="diagnostic-answer" className="ml-auto" disabled={!selected || pending}>{pending ? "Saving answer…" : last ? "See my results" : "Next question"}</Button>
+          )}
         </div>
       </div>
     </div>

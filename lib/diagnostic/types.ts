@@ -15,6 +15,7 @@ export interface DiagnosticProgress {
   totalQuestions: number;
   answeredCount: number;
   currentQuestion: DiagnosticQuestion | null;
+  answeredQuestions: (DiagnosticQuestion & { selectedLabel: string })[];
 }
 
 export interface DiagnosticResult {

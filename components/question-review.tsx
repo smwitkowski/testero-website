@@ -1,19 +1,39 @@
 "use client";
 
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { ReportQuestion } from "@/components/report-question";
 
 import { useFreshAccessOnFocus } from "@/components/billing-account";
 import type { PaidQuestionReview } from "@/lib/diagnostic/types";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-export function QuestionReviewList({ review, sessionId, kind = "diagnostic" }: { review: PaidQuestionReview[]; sessionId?: string; kind?: "diagnostic" | "practice" }) {
+export function QuestionReviewList({ review, sessionId, kind = "diagnostic", paginated = kind === "diagnostic" }: { review: PaidQuestionReview[]; sessionId?: string; kind?: "diagnostic" | "practice"; paginated?: boolean }) {
   useFreshAccessOnFocus();
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const selectedIndex = Math.max(0, review.findIndex(question => question.itemId === selectedItemId));
+  const visibleReview = paginated ? review.slice(selectedIndex, selectedIndex + 1) : review;
+  function selectQuestion(index: number) {
+    setSelectedItemId(review[index].itemId);
+  }
   return (
     <section aria-labelledby="question-review-heading" className="space-y-4">
       <h2 id="question-review-heading" className="text-xl font-semibold">Question review</h2>
-      <ol className="space-y-6">
-        {review.map(question => (
-          <li key={question.itemId}>
+      {paginated && review.length > 0 && <nav aria-label="Question review navigation" className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <Button variant="outline" size="sm" disabled={selectedIndex === 0} onClick={() => selectQuestion(selectedIndex - 1)}>Previous</Button>
+          <p role="status" className="text-sm text-muted-foreground">Question {review[selectedIndex].ordinal} · {selectedIndex + 1} of {review.length}</p>
+          <Button variant="outline" size="sm" disabled={selectedIndex === review.length - 1} onClick={() => selectQuestion(selectedIndex + 1)}>Next</Button>
+        </div>
+        <ol className="flex flex-wrap gap-2">
+          {review.map((question, index) => <li key={question.itemId}>
+            <Button variant={index === selectedIndex ? "default" : "outline"} size="sm" className="min-w-11" aria-current={index === selectedIndex ? "step" : undefined} aria-label={`Review question ${question.ordinal}${question.isCorrect ? ", correct" : ", incorrect"}`} onClick={() => selectQuestion(index)}>{question.ordinal}</Button>
+          </li>)}
+        </ol>
+      </nav>}
+      <ol data-question-review-items className="space-y-6">
+        {visibleReview.map(question => (
+          <li key={question.itemId} value={question.ordinal}>
             <Card>
               <CardHeader className="space-y-3">
                 <p className="text-sm text-muted-foreground">Question {question.ordinal} · {question.domainName}</p>

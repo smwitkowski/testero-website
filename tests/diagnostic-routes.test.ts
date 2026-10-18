@@ -37,9 +37,9 @@ function getRequest() { return new Request(`http://localhost:3000/api/diagnostic
 beforeEach(() => {
   mocks.cookie = undefined;
   mocks.getUser.mockReset().mockResolvedValue({ data: { user: null }, error: null });
-  vi.mocked(createDiagnosticStart).mockReset().mockResolvedValue({ sessionId, href: `/diagnostic/${sessionId}`, progress: { sessionId, status: "in_progress", answeredCount: 0, totalQuestions: 20, currentQuestion: { id: itemId, ordinal: 1, domainCode: "TEST", stem: "Safe stem", options: [{ label: "A", text: "Safe option" }] } } });
-  vi.mocked(readDiagnostic).mockReset().mockResolvedValue({ sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 0, currentQuestion: null });
-  vi.mocked(answerDiagnostic).mockReset().mockResolvedValue({ answeredCount: 1, totalQuestions: 20, completed: false, progress: { sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 1, currentQuestion: null } });
+  vi.mocked(createDiagnosticStart).mockReset().mockResolvedValue({ sessionId, href: `/diagnostic/${sessionId}`, progress: { sessionId, status: "in_progress", answeredCount: 0, totalQuestions: 20, answeredQuestions: [], currentQuestion: { id: itemId, ordinal: 1, domainCode: "TEST", stem: "Safe stem", options: [{ label: "A", text: "Safe option" }] } } });
+  vi.mocked(readDiagnostic).mockReset().mockResolvedValue({ sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 0, answeredQuestions: [], currentQuestion: null });
+  vi.mocked(answerDiagnostic).mockReset().mockResolvedValue({ answeredCount: 1, totalQuestions: 20, completed: false, progress: { sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 1, answeredQuestions: [], currentQuestion: null } });
   vi.mocked(diagnosticResults).mockReset().mockResolvedValue({ sessionId, score: 0, totalQuestions: 20, correctAnswers: 0, readiness: { id: "low", label: "Low", description: "Guidance" }, domainBreakdown: [] });
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -173,7 +173,7 @@ describe("diagnostic progress, answer, and aggregate result routes", () => {
     expect(response.status).toBe(200);
     expect(answerDiagnostic).toHaveBeenCalledWith(mocks.client, sessionId, { userId: null, anonymousToken: token }, itemId, "B", undefined, expect.anything());
     expect(response.headers.get("Server-Timing")).toMatch(/^credentials;dur=\d+\.\d, total;dur=\d+\.\d$/);
-    expect(await response.json()).toEqual({ answeredCount: 1, totalQuestions: 20, completed: false, progress: { sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 1, currentQuestion: null } });
+    expect(await response.json()).toEqual({ answeredCount: 1, totalQuestions: 20, completed: false, progress: { sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 1, answeredQuestions: [], currentQuestion: null } });
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     expect(response.headers.get("set-cookie")).toBeNull();
   });
@@ -260,7 +260,7 @@ it("tracks successful creation and completed answers only", async () => {
   vi.mocked(scheduleFunnelEvent).mockClear();
   await answer(request({ itemId, selectedLabel: "A" }), context);
   expect(scheduleFunnelEvent).not.toHaveBeenCalled();
-  vi.mocked(answerDiagnostic).mockResolvedValue({ answeredCount: 20, totalQuestions: 20, completed: true, progress: { sessionId, status: "completed", totalQuestions: 20, answeredCount: 20, currentQuestion: null } });
+  vi.mocked(answerDiagnostic).mockResolvedValue({ answeredCount: 20, totalQuestions: 20, completed: true, progress: { sessionId, status: "completed", totalQuestions: 20, answeredCount: 20, answeredQuestions: [], currentQuestion: null } });
   await answer(request({ itemId, selectedLabel: "A" }), context);
   expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_completed", sessionId, { session_id: sessionId });
   vi.mocked(scheduleFunnelEvent).mockClear();

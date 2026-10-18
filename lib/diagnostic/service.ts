@@ -19,7 +19,7 @@ interface SessionItem {
   correct_label?: string; selected_label?: string | null;
 }
 const SESSION_FIELDS = "id,user_id,anonymous_owner_hash,question_count,expires_at,completed_at";
-const ITEM_FIELDS = "id,ordinal,stem,options,domain_code,domain_name,is_correct,answered_at";
+const ITEM_FIELDS = "id,ordinal,stem,options,domain_code,domain_name,is_correct,answered_at,selected_label";
 const unavailable = () => new DiagnosticError(503, "The diagnostic is unavailable. Please try again.");
 
 /** Questions from this owner's earlier diagnostics. Freshness is best effort: errors mean "none seen". */
@@ -109,10 +109,19 @@ function diagnosticProgress(session: Pick<StudySession, "id" | "question_count" 
   const completed = !!session.completed_at || answeredCount === session.question_count;
   const current = completed ? null : items.find(item => item.answered_at === null);
   if (!completed && !current) throw unavailable();
+  const displayQuestion = (item: SessionItem) => ({
+    id: item.id, ordinal: item.ordinal, domainCode: item.domain_code, stem: item.stem,
+    options: item.options.map(option => ({ label: option.label, text: option.text })),
+  });
+  const answeredQuestions = completed ? [] : items.filter(item => item.answered_at !== null).map(item => {
+    if (typeof item.selected_label !== "string" || !item.options.some(option => option.label === item.selected_label)) throw unavailable();
+    return { ...displayQuestion(item), selectedLabel: item.selected_label };
+  });
   return {
     sessionId: session.id, status: completed ? "completed" : "in_progress",
     totalQuestions: session.question_count, answeredCount,
-    currentQuestion: current ? { id: current.id, ordinal: current.ordinal, domainCode: current.domain_code, stem: current.stem, options: current.options.map(option => ({ label: option.label, text: option.text })) } : null,
+    currentQuestion: current ? displayQuestion(current) : null,
+    answeredQuestions,
   };
 }
 

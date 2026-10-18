@@ -144,7 +144,17 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     }
     await page.getByRole("link", { name: "View diagnostic results", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Question review", exact: true })).toBeVisible();
-    await expect(page.locator("#question-review-heading + ol > li")).toHaveCount(20);
+    await expect(page.locator("[data-question-review-items] > li")).toHaveCount(1);
+    const reviewNav = page.getByRole("navigation", { name: "Question review navigation" });
+    await expect(reviewNav.getByRole("button", { name: "Previous", exact: true })).toBeDisabled();
+    await expect(reviewNav.getByRole("button", { name: /^Review question / })).toHaveCount(20);
+    await reviewNav.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(reviewNav.getByRole("button", { name: /^Review question 2,/ })).toHaveAttribute("aria-current", "step");
+    await reviewNav.getByRole("button", { name: /^Review question 20,/ }).click();
+    await expect(reviewNav.getByRole("button", { name: "Next", exact: true })).toBeDisabled();
+    await expect(page.locator("[data-question-review-items] > li")).toHaveCount(1);
+    await reviewNav.getByRole("button", { name: "Previous", exact: true }).click();
+    await expect(reviewNav.getByRole("button", { name: /^Review question 19,/ })).toHaveAttribute("aria-current", "step");
     await page.goto("/dashboard");
 
     const startedResponse = page.waitForResponse(response => response.url().endsWith("/api/practice") && response.request().method() === "POST");
@@ -206,7 +216,7 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     }
     await expect(page.getByRole("heading", { name: "Your practice summary", exact: true })).toBeVisible();
     await captureV3(page, "practice-summary");
-    await expect(page.locator("#question-review-heading + ol > li")).toHaveCount(5);
+    await expect(page.locator("[data-question-review-items] > li")).toHaveCount(5);
     await checkLayout("summary");
     const summaryResponse = await page.request.get(`/api/practice/${practiceId}/summary`);
     expect(summaryResponse.status()).toBe(200);

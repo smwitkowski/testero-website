@@ -158,19 +158,29 @@ describe("ownership-first reads and results", () => {
   it("whitelists current question and options even when stored options contain secret fields", async () => {
     const db = database();
     const result = await readDiagnostic(db.client, sessionId, credentials, now);
-    expect(result).toEqual({ sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 0,
+    expect(result).toEqual({ sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 0, answeredQuestions: [],
       currentQuestion: { id: itemId, ordinal: 1, domainCode: "A", stem: "Secret stem 0", options: [{ label: "A", text: "Display only" }, { label: "B", text: "Other" }] } });
     expect(JSON.stringify(result)).not.toMatch(/is_correct|correct_label|explanation|domain_code/);
   });
-  it("reads the next unanswered item without exposing previous questions", async () => {
+  it("returns display-safe saved history alongside the next unanswered item", async () => {
     const rows = items(); rows[0].answered_at = "2026-10-03T11:00:00Z"; rows[0].is_correct = true;
     const result = await readDiagnostic(database({ items: rows }).client, sessionId, credentials, now);
     expect(result.answeredCount).toBe(1); expect(result.currentQuestion?.ordinal).toBe(2);
+    expect(result.answeredQuestions).toEqual([{
+      id: itemId, ordinal: 1, domainCode: "A", stem: "Secret stem 0",
+      options: [{ label: "A", text: "Display only" }, { label: "B", text: "Other" }], selectedLabel: "A",
+    }]);
+    expect(result.currentQuestion).not.toHaveProperty("selectedLabel");
+    expect(JSON.stringify(result)).not.toMatch(/correct_label|correctLabel|is_correct|isCorrect|explanation|selected_label/);
+  });
+  it("fails closed rather than invent a saved selection when history is inconsistent", async () => {
+    const rows = items(); rows[0].answered_at = "2026-10-03T11:00:00Z"; rows[0].selected_label = "Z";
+    await expect(readDiagnostic(database({ items: rows }).client, sessionId, credentials, now)).rejects.toMatchObject({ status: 503 });
   });
   it("does not expose questions on completed progress", async () => {
     const rows = items().map((i) => ({ ...i, answered_at: "2026-10-03T11:00:00Z", is_correct: true }));
     const result = await readDiagnostic(database({ session: session({ completed_at: "done" }), items: rows }).client, sessionId, credentials, now);
-    expect(result.currentQuestion).toBeNull(); expect(result.status).toBe("completed"); expect(result.answeredCount).toBe(20);
+    expect(result.currentQuestion).toBeNull(); expect(result.answeredQuestions).toEqual([]); expect(result.status).toBe("completed"); expect(result.answeredCount).toBe(20);
   });
   it.each([null, []])("fails closed for missing/inconsistent items %#", async (rows) => {
     await expect(readDiagnostic(database({ items: rows }).client, sessionId, credentials, now)).rejects.toMatchObject({ status: 503 });
@@ -180,7 +190,7 @@ describe("ownership-first reads and results", () => {
     // read follows it. Infer completion from the full answered snapshot.
     const rows = items().map((i) => ({ ...i, answered_at: "2026-10-03T11:00:00Z", is_correct: true }));
     const result = await readDiagnostic(database({ session: session({ completed_at: null }), items: rows }).client, sessionId, credentials, now);
-    expect(result).toEqual({ sessionId, status: "completed", totalQuestions: 20, answeredCount: 20, currentQuestion: null });
+    expect(result).toEqual({ sessionId, status: "completed", totalQuestions: 20, answeredCount: 20, answeredQuestions: [], currentQuestion: null });
     expect(JSON.stringify(result)).not.toMatch(/stem|options|correct_label|is_correct|explanation/);
   });
   it("returns 409 without reading items for an incomplete result", async () => {
@@ -298,7 +308,7 @@ describe("account-owned diagnostic review", () => {
   it("does not reveal correctness or review during account-owned progress", async () => {
     const db = database({ session: accountSession({ completed_at: null }), items: items() });
     const progress = await readDiagnostic(db.client, sessionId, signedIn, now);
-    expect(JSON.stringify(progress)).not.toMatch(/review|correctLabel|selectedLabel|isCorrect|correct_label|selected_label|explanation/);
+    expect(JSON.stringify(progress)).not.toMatch(/review|correctLabel|isCorrect|correct_label|selected_label|explanation/);
     expect(db.from.mock.results[1].value.select).not.toHaveBeenCalledWith(expect.stringContaining("correct_label"));
   });
   it("does not read question review before completion", async () => {
@@ -377,7 +387,7 @@ describe("seen-question history", () => {
 it("returns committed first-item identity with an exact safe display whitelist after create", async () => {
   const db = database();
   const result = await createDiagnosticStart(db.client, token, now);
-  expect(result).toEqual({ sessionId, href: `/diagnostic/${sessionId}`, progress: { sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 0, currentQuestion: { id: itemId, ordinal: 1, domainCode: items()[0].domain_code, stem: items()[0].stem, options: items()[0].options.map(({ label, text }) => ({ label, text })) } } });
+  expect(result).toEqual({ sessionId, href: `/diagnostic/${sessionId}`, progress: { sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 0, answeredQuestions: [], currentQuestion: { id: itemId, ordinal: 1, domainCode: items()[0].domain_code, stem: items()[0].stem, options: items()[0].options.map(({ label, text }) => ({ label, text })) } } });
   expect(JSON.stringify(result)).not.toMatch(/correct_label|is_correct|explanation|selected_label|anonymous_owner_hash/);
 });
 

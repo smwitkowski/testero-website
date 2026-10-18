@@ -15,6 +15,16 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   const timings: Record<string, number | number[]> = { diagnosticAnswers: [], practiceAnswers: [] };
   // Warm compilation only; measured diagnostic session remains real and uncached.
   await page.goto("/diagnostic");
+  const lengthOptions = page.locator("input[name=diagnostic-length]");
+  for (const [index, count] of [5, 10, 20].entries()) {
+    await lengthOptions.nth(index).check();
+    await expect(page.locator("dl").getByText(`~${count} min`, { exact: true })).toBeVisible();
+    const values = await page.locator("dl dd").allTextContents();
+    expect(values).toEqual([String(count), `~${count} min`, count === 5 ? "5" : "6"]);
+  }
+  await expect(page.getByRole("table")).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Approx. weight" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Read the official PMLE exam guide" })).toHaveAttribute("href", /professional_machine_learning_engineer_exam_guide/);
   const warm = await page.request.post("/api/diagnostic", { data: {} });
   expect(warm.status()).toBe(201);
   const warmId = (await warm.json()).sessionId;
@@ -30,6 +40,12 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   const pane = page.locator(".overscroll-contain");
   const actionBounds = await actions.boundingBox();
   const paneBounds = await pane.boundingBox();
+  await expect(actions.getByRole("button", { name: "Previous", exact: true })).toBeInViewport();
+  await expect(actions.getByRole("button", { name: "Next question", exact: true })).toBeInViewport();
+  if (page.viewportSize()!.width < 640) {
+    const optionBounds = await page.locator(".answer-option").first().boundingBox();
+    expect(optionBounds!.width).toBeGreaterThanOrEqual(page.viewportSize()!.width - 42);
+  }
   expect(actionBounds).not.toBeNull();
   expect(paneBounds).not.toBeNull();
   expect(paneBounds!.y + paneBounds!.height).toBeLessThanOrEqual(actionBounds!.y);
@@ -51,7 +67,19 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   await page.keyboard.press("Enter");
   await expect(page.getByText("Question 2 of 20", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
+  await page.getByRole("radio").nth(1).check();
+  await page.getByRole("button", { name: "Previous", exact: true }).click();
+  await expect(page.getByText("Question 1 of 20", { exact: true })).toBeVisible();
+  await expect(page.getByRole("radio").first()).toBeChecked();
+  for (const radio of await page.getByRole("radio").all()) await expect(radio).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Previous", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByText("Question 2 of 20", { exact: true })).toBeVisible();
+  await expect(page.getByRole("radio").nth(1)).toBeChecked();
   const sessionId = new URL(page.url()).pathname.split("/").at(-1);
+  const resumedProgress = await (await page.request.get(`/api/diagnostic/${sessionId}`)).json() as DiagnosticProgress;
+  expect(resumedProgress.currentQuestion?.ordinal).toBe(2);
+  expect(resumedProgress.answeredCount).toBe(1);
   for (let ordinal = 2; ordinal <= 20; ordinal++) {
     const progress = await (await page.request.get(`/api/diagnostic/${sessionId}`)).json() as DiagnosticProgress;
     expect(progress.totalQuestions).toBe(20);
@@ -68,6 +96,11 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   await expect(page.getByRole("heading", { name: "Score by domain", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "One full explanation, free", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Question review", exact: true })).toHaveCount(1);
+  const freeReviewNav = page.getByRole("navigation", { name: "Question review navigation" });
+  await expect(freeReviewNav.getByRole("button", { name: "Previous", exact: true })).toBeDisabled();
+  await expect(freeReviewNav.getByRole("button", { name: "Next", exact: true })).toBeDisabled();
+  await expect(freeReviewNav.getByRole("button", { name: /^Review question / })).toHaveCount(1);
+  await expect(page.locator("[data-question-review-items] > li")).toHaveCount(1);
   await expect(page.getByRole("link", { name: "Unlock explanations for all questions + unlimited practice: $39 one-time, 90 days", exact: true })).toHaveAttribute("href", "/signup?next=%2Fpricing");
   const accounts = JSON.parse(await readFile(".qa/accounts.json", "utf8"));
   const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
