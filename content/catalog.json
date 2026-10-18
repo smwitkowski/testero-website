@@ -1,6 +1,21 @@
 {
   "blog": [
     {
+      "slug": "canary-vs-shadow-deployment-agent-platform-pmle",
+      "title": "Canary vs shadow deployment on Agent Platform: PMLE rules",
+      "href": "/blog/canary-vs-shadow-deployment-agent-platform-pmle"
+    },
+    {
+      "slug": "colab-enterprise-vs-agent-platform-workbench",
+      "title": "Colab Enterprise vs Agent Platform Workbench (PMLE 2026)",
+      "href": "/blog/colab-enterprise-vs-agent-platform-workbench"
+    },
+    {
+      "slug": "bigquery-ml-vs-automl-vs-custom-training",
+      "title": "BigQuery ML vs AutoML vs custom training: PMLE rules",
+      "href": "/blog/bigquery-ml-vs-automl-vs-custom-training"
+    },
+    {
       "slug": "professional-agentic-architect-exam-ga-2026",
       "title": "Agentic Architect exam: GA registration, format and labs",
       "href": "/blog/professional-agentic-architect-exam-ga-2026",
