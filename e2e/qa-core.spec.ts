@@ -140,10 +140,13 @@ test("instant start measurement", async ({ page }, info) => {
 });
 
 test("instant start restores URL, refresh and back/forward without creating another session", async ({ page }) => {
+  const diagnosticLink = () => page.viewportSize()!.width < 1024
+    ? page.getByRole("link", { name: "Start free", exact: true })
+    : page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Diagnostic", exact: true });
   test.skip(process.env.TESTERO_QA !== "1");
   const beginRequests: string[] = []; let recordingBegin = false;
   let creates = 0; page.on("request", request => { if (recordingBegin) beginRequests.push(`${request.method()} ${new URL(request.url()).pathname}${new URL(request.url()).search}`); if (new URL(request.url()).pathname === "/api/diagnostic" && request.method() === "POST") creates++; });
-  await page.goto("/"); await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Diagnostic", exact: true }).click();
+  await page.goto("/"); await diagnosticLink().click();
   recordingBegin = true;
   await page.getByRole("button", { name: "Begin diagnostic", exact: true }).click();
   await expect(page.getByText("Question 1 of 20", { exact: true })).toBeVisible();
@@ -165,7 +168,7 @@ test("instant start restores URL, refresh and back/forward without creating anot
   await page.reload(); await expect(page.getByText("Question 2 of 20",{exact:true})).toBeVisible();
   expect(creates).toBe(1);
   await page.getByRole("link", {name:"Testero home"}).click(); await expect(page).toHaveURL(/\/$/);
-  await page.getByRole("navigation",{name:"Main navigation"}).getByRole("link",{name:"Diagnostic",exact:true}).click();
+  await diagnosticLink().click();
   await expect(page.getByRole("heading",{name:"PMLE readiness diagnostic",exact:true})).toBeVisible();
   await page.getByRole("button",{name:"Start over",exact:true}).click();
   await expect(page.getByText("Question 1 of 20",{exact:true})).toBeVisible();
