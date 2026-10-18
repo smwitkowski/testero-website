@@ -176,10 +176,20 @@ test("local return fulfillment grants paid explanations and unlimited practice; 
     expect(paidReview.review!.every(item => item.explanation && item.options.every(option => option.explanation))).toBe(true);
     assertRestoredPaidReview(paidReview.review!, diagnosticBank);
     await expect(page.getByRole("heading", { name: "Explanation", exact: true })).toHaveCount(0);
-    const firstReview = page.locator("#question-review-heading + ol > li").first();
+    const firstReview = page.locator("[data-question-review-items] > li").first();
     for (const option of paidReview.review![0].options) {
       await expect(firstReview.getByText(option.explanation!, { exact: true })).toHaveCount(1);
     }
+    const reviewNav = page.getByRole("navigation", { name: "Question review navigation" });
+    await expect(page.locator("[data-question-review-items] > li")).toHaveCount(1);
+    for (const [index, question] of paidReview.review!.entries()) {
+      await reviewNav.getByRole("button", { name: new RegExp(`^Review question ${question.ordinal},`) }).click();
+      await expect(page.locator("[data-question-review-items] > li")).toHaveCount(1);
+      await expect(reviewNav.getByRole("button", { name: new RegExp(`^Review question ${question.ordinal},`) })).toHaveAttribute("aria-current", "step");
+      for (const option of question.options) await expect(page.locator("[data-question-review-items]").getByText(option.explanation!, { exact: true })).toHaveCount(1);
+      if (index === paidReview.review!.length - 1) await expect(reviewNav.getByRole("button", { name: "Next", exact: true })).toBeDisabled();
+    }
+    await reviewNav.getByRole("button", { name: /^Review question 1,/ }).click();
     await layout("diagnostic-paid");
     const paidPracticeIds: string[] = [];
     for (let i = 0; i < 3; i++) {
@@ -212,7 +222,7 @@ test("local return fulfillment grants paid explanations and unlimited practice; 
     await expect(page.getByRole("heading", { name: "Your practice summary", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Explanation", exact: true })).toHaveCount(0);
     for (const [index, question] of paidSummary.review.entries()) {
-      const reviewItem = page.locator("#question-review-heading + ol > li").nth(index);
+      const reviewItem = page.locator("[data-question-review-items] > li").nth(index);
       for (const option of question.options) {
         await expect(reviewItem.getByText(option.explanation!, { exact: true })).toHaveCount(1);
       }

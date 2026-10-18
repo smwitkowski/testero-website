@@ -57,14 +57,15 @@ export function DiagnosticStart({ resumeId = null, children }: { resumeId?: stri
     </header>
     <fieldset disabled={pending} className="space-y-3">
       <legend className="font-medium">Choose your diagnostic length</legend>
-      <div className="flex flex-wrap gap-4">{[{ count: 5, label: "Quick check (5)" }, { count: 10, label: "Short (10)" }, { count: 20, label: "Full readiness (20)" }].map(({ count, label }) => <label key={count} className="flex cursor-pointer items-center gap-2"><input type="radio" name="diagnostic-length" value={count} checked={questionCount === count} onChange={() => setQuestionCount(count)} />{label}</label>)}</div>
-      <p className="text-sm text-muted-foreground">{questionCount === 5 ? "A quick signal across the five highest-weight domains." : "Questions across all six exam domains."} Shorter checks give lower-confidence results than the full 20.</p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">{[{ count: 5, label: "Quick check (5)" }, { count: 10, label: "Short (10)" }, { count: 20, label: "Full readiness (20)" }].map(({ count, label }) => <label key={count} className="answer-option flex min-h-14 cursor-pointer items-center gap-3 rounded-md border border-input bg-card p-4 text-sm font-medium"><input type="radio" name="diagnostic-length" value={count} checked={questionCount === count} onChange={() => setQuestionCount(count)} />{label}</label>)}</div>
+      <p className="text-sm leading-relaxed text-muted-foreground">{questionCount === 5 ? "A quick signal across the five highest-weight domains." : "Questions across all six exam domains."} Shorter checks give lower-confidence results than the full 20.</p>
     </fieldset>
     <dl className="grid grid-cols-3 divide-x divide-border rounded-lg border border-border bg-card">
-      <div className="p-4 sm:px-5"><dt className="text-sm text-muted-foreground">Questions</dt><dd className="text-2xl font-semibold">{questionCount}</dd></div>
-      <div className="p-4 sm:px-5"><dt className="text-sm text-muted-foreground">Time</dt><dd className="text-2xl font-semibold">~{questionCount} min</dd></div>
-      <div className="p-4 sm:px-5"><dt className="text-sm text-muted-foreground">Domains</dt><dd className="text-2xl font-semibold">{questionCount === 5 ? 5 : 6}</dd></div>
+      <div className="min-w-0 px-3 py-4 sm:px-5"><dt className="text-sm text-muted-foreground">Questions</dt><dd className="whitespace-nowrap text-xl font-semibold sm:text-2xl">{questionCount}</dd></div>
+      <div className="min-w-0 px-3 py-4 sm:px-5"><dt className="text-sm text-muted-foreground">Time</dt><dd className="whitespace-nowrap text-xl font-semibold sm:text-2xl">~{questionCount} min</dd></div>
+      <div className="min-w-0 px-3 py-4 sm:px-5"><dt className="text-sm text-muted-foreground">Domains</dt><dd className="whitespace-nowrap text-xl font-semibold sm:text-2xl">{questionCount === 5 ? 5 : 6}</dd></div>
     </dl>
+    <p className="-mt-5 text-xs text-muted-foreground">Time is an estimate based on about one minute per question. Go at your own pace.</p>
     {resumeId ? <section aria-labelledby="resume-heading" className="space-y-3 rounded-lg border border-border bg-card p-5">
       <h2 id="resume-heading" className="font-semibold">You have a diagnostic in progress</h2>
       <p className="text-sm text-muted-foreground">Your saved answers are kept. Starting over begins a new set of {questionCount} questions.</p>

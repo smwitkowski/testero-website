@@ -12,6 +12,24 @@ const source = {
 };
 
 describe("shared question review", () => {
+  it("renders one diagnostic question with a step for each server-returned item", () => {
+    const first = mapReview(source);
+    const second = { ...first, itemId: "item-2", ordinal: 2, stem: "Second private stem" };
+    const html = renderToStaticMarkup(createElement(QuestionReviewList, { review: [first, second] }));
+    expect(html).toContain("Question review navigation");
+    expect(html).toContain('aria-current="step"');
+    expect(html).toContain("Review question 2, incorrect");
+    expect(html).not.toContain(second.stem);
+    expect(html).toContain(first.stem);
+  });
+  it("keeps practice summaries as a full list without diagnostic navigation", () => {
+    const first = mapReview(source);
+    const second = { ...first, itemId: "item-2", ordinal: 2, stem: "Second practice stem" };
+    const html = renderToStaticMarkup(createElement(QuestionReviewList, { review: [first, second], kind: "practice" }));
+    expect(html).toContain(first.stem);
+    expect(html).toContain(second.stem);
+    expect(html).not.toContain("Question review navigation");
+  });
   it("offers reporting for session-bound review without exposing bank identity", () => {
     const html = renderToStaticMarkup(createElement(QuestionReviewList, { review: [mapReview(source)], sessionId: "session", kind: "practice" }));
     expect(html).toContain("Report a problem with this question");

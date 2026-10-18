@@ -1,3 +1,4 @@
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { DiagnosticResult } from "@/lib/diagnostic/types";
 import { getDomainStatus, getExamReadinessTier, questionsToReady, weakestFirst } from "@/lib/readiness";
 
@@ -15,15 +16,17 @@ export function ScoreBar({ score }: { score: number }) {
 
 export function ScoreReport({ score, correctAnswers, totalQuestions }: Pick<DiagnosticResult, "score" | "correctAnswers" | "totalQuestions">) {
   const tier = getExamReadinessTier(score);
-  return <section aria-label="Overall score" className="space-y-5 rounded-lg border border-border bg-card p-5 sm:p-7">
-    <h2 className="text-sm font-medium text-muted-foreground">Overall score</h2>
+  return <Card variant="featured" aria-label="Overall score">
+    <CardHeader><h2 className="text-sm font-medium text-muted-foreground">Overall score</h2></CardHeader>
+    <CardContent className="space-y-5">
     <div className="flex flex-wrap items-baseline gap-3">
       <p className="text-[52px] font-semibold leading-none">{score}<span className="ml-3 text-base font-normal text-muted-foreground">/ 100</span></p>
       <span className="ml-auto rounded border border-input px-2 py-0.5 text-sm font-medium">Tier: {tier.label}</span>
     </div>
     <p className="text-sm text-muted-foreground"><span>{correctAnswers} of {totalQuestions} correct</span>{questionsToReady(score, totalQuestions) > 0 && <> · ≈{questionsToReady(score, totalQuestions)} {questionsToReady(score, totalQuestions) === 1 ? "question" : "questions"} to Ready</>}</p>
     <ScoreBar score={score} />
-  </section>;
+    </CardContent>
+  </Card>;
 }
 
 export function DomainStatus({ correct, total }: { correct: number; total: number }) {
