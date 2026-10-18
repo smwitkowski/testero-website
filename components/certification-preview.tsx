@@ -41,7 +41,7 @@ export function CertificationPreview() {
     setPlaying(false);
     setIndex(value => (value + direction + previews.length) % previews.length);
   }
-  return <section aria-label="Certification readiness previews" aria-roledescription="carousel" className="min-w-0 space-y-4" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setPlaying(false)}>
+  return <section aria-label="Certification readiness previews" aria-roledescription="carousel" className="min-w-0 space-y-4" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={event => { if (!(event.target as HTMLElement).closest("[data-autoplay-control]")) setPlaying(false); }}>
     <Card variant="featured" className="min-h-[29rem] space-y-5 p-5 sm:p-7" aria-live={playing && !reducedMotion ? "off" : "polite"} aria-atomic="true">
       <p className="flex flex-wrap justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><span>Readiness report preview</span><span>{index === 0 ? "PMLE · Live" : "Coming soon"}</span></p>
       <h2 className="text-xl font-semibold">{preview.name}</h2>
@@ -59,7 +59,7 @@ export function CertificationPreview() {
     </Card>
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex items-center gap-1"><Button variant="ghost" onClick={() => move(-1)} aria-label="Previous certification">←</Button><span className="text-sm text-muted-foreground">{index + 1} / {previews.length}</span><Button variant="ghost" onClick={() => move(1)} aria-label="Next certification">→</Button></div>
-      {!reducedMotion && <Button variant="ghost" onClick={() => setPlaying(value => !value)}>{playing ? "Pause previews" : "Play previews"}</Button>}
+      {!reducedMotion && <Button data-autoplay-control variant="ghost" onClick={() => setPlaying(value => !value)}>{playing ? "Pause previews" : "Play previews"}</Button>}
     </div>
   </section>;
 }
