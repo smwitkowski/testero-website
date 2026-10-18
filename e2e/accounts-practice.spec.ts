@@ -229,7 +229,8 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     await expect(page.getByRole("heading", { name: "PMLE Pass", exact: true })).toBeVisible();
     await expect(page.getByText(/Coming in Phase 3/i)).toHaveCount(0);
 
-    await page.getByRole("link", { name: "Account", exact: true }).click();
+    if (page.viewportSize()!.width < 1024) await page.locator("summary").click();
+    await page.getByRole("navigation", { name: page.viewportSize()!.width < 1024 ? "Mobile navigation" : "Main navigation", exact: true }).getByRole("link", { name: "Account", exact: true }).click();
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page).toHaveURL("http://127.0.0.1:3000/");
     expect((await page.request.get("/dashboard", { maxRedirects: 0 })).status()).toBe(307);
@@ -265,7 +266,8 @@ test("local account confirmation claims only owned diagnostics, practices five, 
       await page.getByRole("button", { name: "Sign in", exact: true }).click();
     }
     await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
-    await page.getByRole("link", { name: "Account", exact: true }).click();
+    if (page.viewportSize()!.width < 1024) await page.locator("summary").click();
+    await page.getByRole("navigation", { name: page.viewportSize()!.width < 1024 ? "Mobile navigation" : "Main navigation", exact: true }).getByRole("link", { name: "Account", exact: true }).click();
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page).toHaveURL("http://127.0.0.1:3000/");
     await page.goto("/login");
