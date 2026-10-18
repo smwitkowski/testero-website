@@ -9,6 +9,7 @@ import { certificationEditorial } from "@/lib/certifications/editorial";
 import { certificationStructuredData } from "@/lib/certifications/structured-data";
 import { serializeJsonLd } from "@/lib/structured-data";
 import sitemap from "@/app/sitemap";
+import overviews from "@/lib/certifications/verified-overviews.json";
 
 describe("sourced certification directory", () => {
   it("generates exactly the registry, groups levels and links PMLE practice", () => {
@@ -30,6 +31,15 @@ describe("sourced certification directory", () => {
       expect(html).toContain("Google recommends:");
       expect(cert.recommended_experience_source?.url).toBe(cert.cert_url);
       expect(Number.isNaN(Date.parse(cert.recommended_experience_source!.retrieved_at))).toBe(false);
+    }
+    if (entry.cert_id !== "machine-learning-engineer" && entry.cert_id !== "agentic-architect") {
+      const overview = overviews[entry.cert_id as keyof typeof overviews];
+      expect(overview).toBeDefined();
+      expect(html).toContain(overview.checked);
+      for (const area of overview.areas) expect(html).toContain(area.replaceAll("&", "&amp;"));
+      expect(html).toContain('id="cert-overview"');
+      expect(html).toContain('href="/certifications/machine-learning-engineer"');
+      expect(html).toContain("Notify me");
     }
     const prose = certificationEditorial[entry.cert_id];
     const wordCount = [prose.audience, ...prose.steps].join(" ").split(/\s+/).length;
