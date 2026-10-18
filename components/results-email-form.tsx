@@ -33,6 +33,7 @@ export function ResultsEmailForm({ sessionId }: { sessionId: string }) {
       <label className="flex min-h-11 items-center gap-3 text-sm"><input name="consent" type="checkbox" required className="size-5 shrink-0" />Send me this one results email and study plan.</label>
       <Button variant="outline" type="submit" disabled={pending}>{pending ? "Sending…" : "Email my results"}</Button>
     </form>}
+    <p className="text-sm text-muted-foreground">See how we handle your requested email in our <a href="/privacy" className="underline">privacy policy</a>.</p>
     {message && <p role="status" className="text-sm">{message}</p>}
     </CardContent>
   </Card>;
