@@ -136,6 +136,141 @@ await denied(`BEGIN; INSERT INTO public.questions(exam,domain_id,stem,status,que
 console.log("PASS per-exam domain uniqueness, cross-exam FK, default single-select and non-live multiple-select storage");
 
 
+// Variant fixtures and every successful session/quota write roll back together.
+const variantOwner = randomUUID(), variantParent = randomUUID(), variantId = randomUUID();
+const variantFixture = `
+ INSERT INTO auth.users(id) VALUES (${q(variantOwner)});
+ INSERT INTO public.questions(id,exam,domain_id,stem,status)
+ VALUES (${q(variantParent)},'GCP_PM_ML_ENG',${q(pmleDomain)},'Variant parent fixture','DRAFT');
+ INSERT INTO public.questions(id,exam,domain_id,stem,status,parent_question_id)
+ VALUES (${q(variantId)},'GCP_PM_ML_ENG',${q(pmleDomain)},'Variant fixture','DRAFT',${q(variantParent)});
+`;
+const variantSnapshot = (id) => [{ question_id: id, domain_code: pmleCode,
+  domain_name: "Variant fixture", stem: "Variant fixture", correct_label: "A",
+  options: [{ label: "A", text: "First" }, { label: "B", text: "Second" }],
+  // A spoofed snapshot flag must not override membership stored in questions.
+  parent_question_id: null }];
+const variantItems = q(JSON.stringify(variantSnapshot(variantId)));
+const variantStrict = (items = variantItems) => `SELECT public.create_free_practice_session(${q(variantOwner)},${items}::jsonb,now()+interval '1 hour');`;
+const variantTransaction = (sql) => `BEGIN; ${variantFixture} ${sql} ROLLBACK;`;
+async function variantDenied(sql, sqlstate, reason) {
+  const result = await run(`\\set VERBOSITY verbose
+${variantTransaction(sql)}`, true);
+  assert.notEqual(result.code, 0, reason);
+  assert.match(result.error, new RegExp(sqlstate), reason + ": expected SQLSTATE");
+}
+await variantDenied(`UPDATE public.questions SET parent_question_id=id WHERE id=${q(variantParent)};`, "23514", "self-parent rejected");
+await variantDenied(`UPDATE public.questions SET parent_question_id=${q(randomUUID())} WHERE id=${q(variantId)};`, "23503", "missing parent rejected");
+await variantDenied(`DELETE FROM public.questions WHERE id=${q(variantParent)};`, "23503", "referenced parent deletion restricted");
+assert.equal(await scalar("SELECT count(*) FROM pg_index WHERE indrelid='public.questions'::regclass AND indexrelid='public.questions_parent_question_id_idx'::regclass AND indisvalid;"), "1");
+// The practice UI embeds one question per item through this FK to the PK.
+assert.equal(await scalar(`SELECT count(*) FROM pg_constraint c
+ JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=ANY(c.conkey)
+ JOIN pg_attribute target ON target.attrelid=c.confrelid AND target.attnum=ANY(c.confkey)
+ WHERE c.contype='f' AND c.conrelid='public.session_items'::regclass
+ AND c.confrelid='public.questions'::regclass AND a.attname='question_id'
+ AND target.attname='id' AND a.attnotnull AND array_length(c.conkey,1)=1;`), "1");
+await variantDenied(`SET LOCAL ROLE service_role; ${variantStrict()}`, "22023", "free RPC rejects bank variant despite spoofed null snapshot");
+await variantDenied(`SET LOCAL ROLE service_role;
+ SELECT public.create_study_session('practice',${q(variantOwner)},NULL,${variantItems}::jsonb,now()+interval '1 hour');`,
+"42501", "unpaid legacy practice rejects variants");
+for (const user of ["NULL", q(variantOwner)]) {
+  const anonymous = user === "NULL" ? q("a".repeat(64)) : "NULL";
+  await variantDenied(`SET LOCAL ROLE service_role;
+    SELECT public.create_study_session('diagnostic',${user},${anonymous},${variantItems}::jsonb,now()+interval '1 hour');`,
+  "22023", "anonymous and signed diagnostic RPCs reject variants");
+}
+await variantDenied(`SET LOCAL ROLE service_role;
+ SELECT public.v2_create_study_session('diagnostic',NULL,${q("a".repeat(64))},${variantItems}::jsonb,now()+interval '1 hour',true);`,
+"22023", "central diagnostic path cannot bypass variant guard");
+await run(variantTransaction(`
+ SET LOCAL ROLE service_role;
+ DO $test$
+ BEGIN
+  BEGIN
+   PERFORM public.create_free_practice_session(${q(variantOwner)},${variantItems}::jsonb,now()+interval '1 hour');
+   RAISE EXCEPTION 'variant unexpectedly accepted';
+  EXCEPTION WHEN invalid_parameter_value THEN
+   IF SQLERRM <> 'Variants are only available in paid practice' THEN RAISE; END IF;
+  END;
+  BEGIN
+   PERFORM public.create_study_session('practice',${q(variantOwner)},NULL,${variantItems}::jsonb,now()+interval '1 hour');
+   RAISE EXCEPTION 'unpaid legacy variant unexpectedly accepted';
+  EXCEPTION WHEN insufficient_privilege THEN
+   IF SQLERRM <> 'Paid access required for variants' THEN RAISE; END IF;
+  END;
+  IF EXISTS (SELECT 1 FROM public.free_practice_quota WHERE user_id=${q(variantOwner)})
+   OR EXISTS (SELECT 1 FROM public.study_sessions WHERE user_id=${q(variantOwner)}) THEN
+   RAISE EXCEPTION 'variant rejection charged quota or created session';
+  END IF;
+ END;
+ $test$;
+ ${variantStrict(q(JSON.stringify(variantSnapshot(variantParent))))}
+ DO $test$ BEGIN
+ IF (SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(variantOwner)}) <> 1
+ OR (SELECT count(*) FROM public.study_sessions WHERE user_id=${q(variantOwner)}) <> 1 THEN
+  RAISE EXCEPTION 'parent free session must reserve exactly one question';
+ END IF;
+ END $test$;
+`));
+const variantPaidFixture = `INSERT INTO public.user_subscriptions(user_id,stripe_customer_id,status)
+ VALUES (${q(variantOwner)},${q("local-variant-" + randomUUID())},'active');`;
+await variantDenied(`${variantPaidFixture} SET LOCAL ROLE service_role; ${variantStrict()}`, "22023", "paid access cannot bypass strict free variant guard");
+await run(variantTransaction(`${variantPaidFixture} SET LOCAL ROLE service_role;
+ SELECT public.create_study_session('practice',${q(variantOwner)},NULL,${variantItems}::jsonb,now()+interval '1 hour');
+ DO $test$ BEGIN
+ IF EXISTS (SELECT 1 FROM public.free_practice_quota WHERE user_id=${q(variantOwner)})
+ OR (SELECT count(*) FROM public.study_sessions WHERE user_id=${q(variantOwner)}) <> 1 THEN
+  RAISE EXCEPTION 'paid variant session must not charge free quota';
+ END IF;
+ END $test$;
+`));
+// Deterministic revocation at the old guard->quota boundary. This replacement
+// exists only in this transaction: a variant must never reach the fallback.
+await run(variantTransaction(`${variantPaidFixture}
+ CREATE OR REPLACE FUNCTION public.consume_free_practice_quota(p_user_id UUID, p_question_count INTEGER)
+ RETURNS VOID LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, pg_temp AS $race$
+ BEGIN
+  UPDATE public.user_subscriptions SET status='canceled' WHERE user_id=p_user_id;
+  UPDATE public.pmle_passes SET refunded_at=now() WHERE user_id=p_user_id;
+  PERFORM public.v2_consume_free_practice_quota(p_user_id,p_question_count);
+ END $race$;
+ SET LOCAL ROLE service_role;
+ SELECT public.create_study_session('practice',${q(variantOwner)},NULL,${variantItems}::jsonb,now()+interval '1 hour');
+ DO $test$ BEGIN
+ IF EXISTS (SELECT 1 FROM public.free_practice_quota WHERE user_id=${q(variantOwner)}) THEN
+  RAISE EXCEPTION 'variant entered revocation/free fallback';
+ END IF;
+ END $test$;
+ SELECT public.create_study_session('practice',${q(variantOwner)},NULL,${q(JSON.stringify(variantSnapshot(variantParent)))}::jsonb,now()+interval '1 hour');
+ DO $test$ BEGIN
+ IF (SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(variantOwner)}) <> 1
+ OR NOT EXISTS (SELECT 1 FROM public.user_subscriptions WHERE user_id=${q(variantOwner)} AND status='canceled') THEN
+  RAISE EXCEPTION 'nonvariant no longer uses original paid-or-free helper';
+ END IF;
+ END $test$;
+`));
+// The legacy wrapper must recheck current pass state, not trust the caller.
+const variantPassFixture = (expires, refunded) => `INSERT INTO public.pmle_passes
+ (user_id,stripe_checkout_session_id,stripe_payment_intent_id,stripe_customer_id,paid_at,expires_at,refunded_at)
+ VALUES (${q(variantOwner)},${q("local-variant-checkout-" + randomUUID())},${q("local-variant-intent-" + randomUUID())},
+ ${q("local-variant-customer-" + randomUUID())},now()-interval '2 days',${expires},${refunded});`;
+for (const pass of [variantPassFixture("now()-interval '1 day'", "NULL"), variantPassFixture("now()+interval '88 days'", "now()")]) {
+  await variantDenied(`${pass} SET LOCAL ROLE service_role;
+   SELECT public.create_study_session('practice',${q(variantOwner)},NULL,${variantItems}::jsonb,now()+interval '1 hour');`,
+  "42501", "expired and refunded passes cannot access variants");
+}
+await run(variantTransaction(`${variantPassFixture("now()+interval '88 days'", "NULL")}
+ SET LOCAL ROLE service_role;
+ SELECT public.create_study_session('practice',${q(variantOwner)},NULL,${variantItems}::jsonb,now()+interval '1 hour');
+ DO $test$ BEGIN
+ IF EXISTS (SELECT 1 FROM public.free_practice_quota WHERE user_id=${q(variantOwner)}) THEN
+  RAISE EXCEPTION 'valid pass variant charged free quota';
+ END IF;
+ END $test$;
+`));
+console.log("PASS variant parent FK/self-check/index, strict free and diagnostic rejection, rollback, original free quota and paid inclusion");
+
 const owner = randomUUID(), other = randomUUID(), paidOwner = randomUUID(), legacyOwner = randomUUID();
 const strictOwner = randomUUID(), claimOwner = randomUUID(), claimOther = randomUUID();
 const phase3Fixtures = ["race", "refund-first", "grant-first"].map((name) => ({
