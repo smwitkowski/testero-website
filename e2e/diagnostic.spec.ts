@@ -60,6 +60,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
   }
   await page.goto("/diagnostic");
   await captureV3(page, "diagnostic");
+  await page.getByRole("radio", { name: "Full readiness (20)" }).check();
   const createdResponse = page.waitForResponse(response => response.url().endsWith("/api/diagnostic") && response.request().method() === "POST");
   await page.getByRole("button", { name: "Begin diagnostic" }).click();
   const created = await createdResponse;
@@ -127,7 +128,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
         await page.keyboard.press("Tab");
         await expect(page.getByRole("button", { name: "Report a problem with this question", exact: true })).toBeFocused();
         await page.keyboard.press("Tab");
-        const submit = page.getByRole("button", { name: "Next question" });
+        const submit = page.getByRole("button", { name: "Check answer" });
         await expect(submit).toBeFocused();
         const ring = await submit.evaluate(element => { const style = getComputedStyle(element); return { outline: style.outlineColor, width: style.outlineWidth, shadow: style.boxShadow }; });
         expect(ring).toEqual({ outline: "rgb(16, 24, 40)", width: "3px", shadow: "rgb(255, 255, 255) 0px 0px 0px 3px" });
@@ -187,23 +188,30 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
         await expect(radios.nth(0)).not.toBeChecked();
         expect(await (await page.request.get(api)).json()).toMatchObject({ answeredCount: 1 });
         const sent = page.waitForRequest(request => request.url().endsWith(`${api}/answer`));
-        await page.getByRole("button", { name: nextName }).click();
+        await page.getByRole("button", { name: "Check answer" }).click();
         expect(JSON.parse((await sent).postData()!).selectedLabel).toBe(progress.currentQuestion!.options[1].label);
+        await page.getByRole("button", { name: nextName }).click();
         await expect(page.getByText("Question 3 of 20", { exact: true })).toBeVisible();
         continue;
       }
       await page.getByRole("radio").first().check();
-      if (index < 3) await armTransition(page, { path: api, ordinal: index + 2, total: 20 });
+      if (index < 3) await armTransition(page, { path: api, ordinal: index + 1, total: 20, feedback: true });
       const postsBeforeSave = answerPosts.length;
       const acceptedResponse = page.waitForResponse(response => response.url().endsWith(`${api}/answer`) && response.request().method() === "POST");
-      await page.getByRole("button", { name: nextName }).click();
+      await page.getByRole("button", { name: "Check answer" }).click();
       const accepted = await acceptedResponse;
       expect(accepted.status()).toBe(200);
       expect(answerPosts).toHaveLength(postsBeforeSave + 1);
       const answer = await accepted.json() as DiagnosticAnswerResponse;
       expect(answer).toMatchObject({ answeredCount: index + 1, totalQuestions: 20, completed: index === 19, progress: { answeredCount: index + 1, currentQuestion: index === 19 ? null : { ordinal: index + 2 } } });
-      noAnswerKeys(answer);
-      if (index < 3) await assertTransition(page, api, "diagnostic");
+      // Progress stays key-free; only the answered item's right/wrong and correct label are revealed.
+      noAnswerKeys(answer.progress);
+      expect(answer.feedback).toEqual({ itemId: progress.currentQuestion!.id, selectedLabel: progress.currentQuestion!.options[0].label, correctLabel: expect.stringMatching(/^[A-D]$/), isCorrect: expect.any(Boolean) });
+      if (index < 3) await assertTransition(page, api, "feedback");
+      await expect(page.getByRole("status")).toContainText(`the correct answer is ${answer.feedback.correctLabel}.`);
+      if (index < 3) await armTransition(page, { path: api, ordinal: index + 2, total: 20 });
+      await page.getByRole("button", { name: nextName }).click();
+      if (index < 3) await assertTransition(page, api, "next");
     }
     await expect(page).toHaveURL(new RegExp(`/diagnostic/${sessionId}/results$`));
     await expect(page.getByRole("heading", { name: "PMLE readiness report", exact: true })).toBeVisible();

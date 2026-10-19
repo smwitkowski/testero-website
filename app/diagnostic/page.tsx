@@ -7,11 +7,13 @@ import { createServiceSupabaseClient } from "@/lib/supabase/service";
 
 export const metadata = pageMetadata("Start your free PMLE diagnostic", "Choose 5, 10 or 20 PMLE questions. See your readiness and study focus without an account.", "/diagnostic");
 export const dynamic = "force-dynamic";
-export default async function DiagnosticStartPage() {
+export default async function DiagnosticStartPage({ searchParams }: { searchParams: Promise<{ length?: string | string[] }> }) {
+  const length = Number((await searchParams).length);
+  const initialCount = length === 10 || length === 20 ? length : 5;
   let resumeId: string | null = null;
   try { resumeId = await findOpenDiagnostic(createServiceSupabaseClient(), await diagnosticCredentials()); }
   catch { /* Resume is a convenience; starting fresh always works. */ }
-  return <DiagnosticStart resumeId={resumeId}>
+  return <DiagnosticStart resumeId={resumeId} initialCount={initialCount}>
     <section aria-labelledby="diagnostic-coverage" className="mx-auto mt-10 max-w-[696px] space-y-4 border-t border-border pt-6">
       <h2 id="diagnostic-coverage" className="text-xl font-semibold">What the PMLE diagnostic covers</h2>
       <p className="leading-relaxed text-muted-foreground">Choose 5, 10 or 20 questions based on the six domains in Google&apos;s June 1, 2026 Professional Machine Learning Engineer exam guide. The guide assigns these approximate weights:</p>

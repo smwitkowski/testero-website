@@ -9,11 +9,11 @@ import { trackDiagnostic } from "@/lib/analytics/client";
 import { Button } from "@/components/ui/button";
 import { diagnosticRequest, requestError } from "@/components/diagnostic-resource";
 
-export function DiagnosticStart({ resumeId = null, children }: { resumeId?: string | null; children?: ReactNode }) {
+export function DiagnosticStart({ resumeId = null, initialCount = 5, children }: { resumeId?: string | null; initialCount?: 5 | 10 | 20; children?: ReactNode }) {
   const pathname = usePathname();
   const restoredId = /^\/diagnostic\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i.exec(pathname)?.[1] ?? null;
   const [created, setCreated] = useState<DiagnosticStartResponse | null>(null);
-  const [questionCount, setQuestionCount] = useState(20);
+  const [questionCount, setQuestionCount] = useState<number>(initialCount);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);
@@ -57,7 +57,7 @@ export function DiagnosticStart({ resumeId = null, children }: { resumeId?: stri
     </header>
     <fieldset disabled={pending} className="space-y-3">
       <legend className="font-medium">Choose your diagnostic length</legend>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">{[{ count: 5, label: "Quick check (5)" }, { count: 10, label: "Short (10)" }, { count: 20, label: "Full readiness (20)" }].map(({ count, label }) => <label key={count} className="answer-option flex min-h-14 cursor-pointer items-center gap-3 rounded-md border border-input bg-card p-4 text-sm font-medium"><input type="radio" name="diagnostic-length" value={count} checked={questionCount === count} onChange={() => setQuestionCount(count)} /><span>{label}{count === 20 && <span className="mt-1 block text-xs text-primary">Recommended</span>}</span></label>)}</div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">{[{ count: 5, label: "Quick check (5)" }, { count: 10, label: "Short (10)" }, { count: 20, label: "Full readiness (20)" }].map(({ count, label }) => <label key={count} className="answer-option flex min-h-14 cursor-pointer items-center gap-3 rounded-md border border-input bg-card p-4 text-sm font-medium"><input type="radio" name="diagnostic-length" value={count} checked={questionCount === count} onChange={() => setQuestionCount(count)} /><span>{label}</span></label>)}</div>
       <p className="text-sm leading-relaxed text-muted-foreground">{questionCount === 5 ? "A quick signal across the five highest-weight domains." : "Questions across all six exam domains."} Shorter checks give lower-confidence results than the full 20.</p>
     </fieldset>
     <dl className="grid grid-cols-3 divide-x divide-border rounded-lg border border-border bg-card">
@@ -79,7 +79,7 @@ export function DiagnosticStart({ resumeId = null, children }: { resumeId?: stri
     </div>}
     {error && <p role="alert" className="text-sm leading-relaxed text-destructive">{error}</p>}
     {pending && <p role="status" className="text-sm text-muted-foreground">Preparing your questions…</p>}
-    <p className="leading-relaxed text-muted-foreground">Questions appear one at a time. Answers are recorded as you go and can&apos;t be changed once submitted. Results are shown at the end. Keep cookies enabled.</p>
+    <p className="leading-relaxed text-muted-foreground">Questions appear one at a time. After each answer you&apos;ll see whether you got it right and which option is correct. Answers can&apos;t be changed once submitted. Your full report comes at the end. Keep cookies enabled.</p>
     <section aria-labelledby="report" className="space-y-3 border-t border-border pt-6">
       <h2 id="report" className="text-xl font-semibold">Your report includes</h2>
       <ul className="list-disc space-y-2 pl-5 text-body"><li>An overall score out of 100 and a readiness tier (Low, Building, Ready or Strong)</li><li>Scores for the domains covered, weakest first</li><li>A recommended domain to practice next</li></ul>

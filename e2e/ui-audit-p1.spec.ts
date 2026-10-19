@@ -80,7 +80,7 @@ test("P1 audit: stable manual previews, PMLE discovery and anonymous/free/paid r
       const score = page.locator('[aria-label="Overall score"]');
       const note = page.getByText(`Based on ${count} questions.`, { exact: false });
       expect((await score.boundingBox())!.y).toBeLessThan((await note.boundingBox())!.y);
-      await expect(note.getByRole("link")).toHaveAttribute("href", "/diagnostic");
+      await expect(note.getByRole("link")).toHaveAttribute("href", "/diagnostic?length=20");
     }
     await capture(page, `anonymous-results-${count}`);
   }

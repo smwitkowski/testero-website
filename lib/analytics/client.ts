@@ -74,9 +74,9 @@ export function analyticsHeaders(): Record<string, string> {
   return { "X-PostHog-Distinct-Id": posthog.get_distinct_id() };
 }
 
-export function trackDiagnosticAnswer(sessionId: string, ordinal: number, domainCode: string) {
+export function trackDiagnosticAnswer(sessionId: string, ordinal: number, domainCode: string, isCorrect: boolean) {
   if (initialized) posthog.capture("diagnostic_question_answered", {
-    session_id: sessionId, ordinal, domain_code: domainCode,
+    session_id: sessionId, ordinal, domain_code: domainCode, is_correct: isCorrect,
   });
 }
 

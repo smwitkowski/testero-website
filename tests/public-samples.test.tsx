@@ -39,7 +39,7 @@ describe("public-only PMLE sample publication", () => {
       expect(html).toContain("Samples are being prepared");
       expect(html).not.toContain("application/ld+json");
     }
-    expect(html).toContain('href="/diagnostic"');
+    expect(html).toContain('href="/diagnostic?length=20"');
     expect(html).toContain("Take the free 20-question diagnostic");
     expect(sitemap().map(entry => entry.url)).toContain("https://testero.ai/pmle/sample-questions");
     expect(renderToStaticMarkup(<RelatedPmleGuides exam="Professional Machine Learning Engineer" />)).toContain('href="/pmle/sample-questions"');

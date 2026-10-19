@@ -142,10 +142,16 @@ export async function answerDiagnostic(client: SupabaseClient, id: string, crede
   }
   const result = data as DiagnosticAnswerResponse | null;
   if (!result || !Number.isInteger(result.answeredCount) || result.answeredCount < 0 || result.answeredCount > session.question_count || result.totalQuestions !== session.question_count || typeof result.completed !== "boolean" || result.completed !== (result.answeredCount === session.question_count)) throw unavailable();
-  // Whitelist fields even if the RPC changes: correctness must never cross this boundary.
-  const progress = diagnosticProgress(session, await measure("progress_read", () => sessionItems(client, id)));
+  // Whitelist fields even if the RPC changes. Progress never carries correctness; only the
+  // item just answered gets right/wrong and its correct label (no explanation), as in free practice (D-039).
+  const items = await measure("progress_read", () => sessionItems(client, id, true));
+  const progress = diagnosticProgress(session, items);
   if (progress.answeredCount < result.answeredCount) throw unavailable();
-  return { answeredCount: progress.answeredCount, totalQuestions: progress.totalQuestions, completed: progress.status === "completed", progress };
+  const answered = items.find(item => item.id === itemId);
+  if (!answered?.answered_at || typeof answered.is_correct !== "boolean" || typeof answered.selected_label !== "string" || typeof answered.correct_label !== "string" ||
+      !answered.options.some(option => option.label === answered.correct_label)) throw unavailable();
+  const feedback = { itemId, selectedLabel: answered.selected_label, correctLabel: answered.correct_label, isCorrect: answered.is_correct };
+  return { answeredCount: progress.answeredCount, totalQuestions: progress.totalQuestions, completed: progress.status === "completed", progress, feedback };
 }
 
 export async function diagnosticResults(client: SupabaseClient, id: string, credentials: OwnerCredentials, now = Date.now()): Promise<DiagnosticResult> {

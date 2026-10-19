@@ -45,6 +45,8 @@ export interface DiagnosticAnswerResponse {
   answeredCount: number;
   totalQuestions: number;
   completed: boolean;
+  /** Only the item just answered: no explanation, never other items. */
+  feedback: { itemId: string; selectedLabel: string; correctLabel: string; isCorrect: boolean };
 }
 
 /** Completed, account-owned question review. Explanations are never included. */

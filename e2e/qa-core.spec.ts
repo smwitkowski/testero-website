@@ -36,6 +36,7 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   await expect(page.getByText("Question 1 of 20", { exact: true })).toBeVisible();
   await page.context().clearCookies();
   await page.goto("/diagnostic");
+  await page.getByRole("radio", { name: "Full readiness (20)" }).check();
   const started = performance.now();
   await page.getByRole("button", { name: "Begin diagnostic" }).click();
   await expect(page.getByText("Question 1 of 20", { exact: true })).toBeVisible();
@@ -45,7 +46,7 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   const actionBounds = await actions.boundingBox();
   const paneBounds = await pane.boundingBox();
   await expect(actions.getByRole("button", { name: "Previous", exact: true })).toBeInViewport();
-  await expect(actions.getByRole("button", { name: "Next question", exact: true })).toBeInViewport();
+  await expect(actions.getByRole("button", { name: "Check answer", exact: true })).toBeInViewport();
   if (page.viewportSize()!.width < 640) {
     const optionBounds = await page.locator(".answer-option").first().boundingBox();
     expect(optionBounds!.width).toBeGreaterThanOrEqual(page.viewportSize()!.width - 42);
@@ -58,7 +59,7 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
     const bounds = await option.boundingBox();
     expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(actionBounds!.y + 1);
   }
-  await expect(page.getByRole("button", { name: "Next question", exact: true })).toBeInViewport();
+  await expect(page.getByRole("button", { name: "Check answer", exact: true })).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(timings.diagnosticStart).toBeLessThanOrEqual(2000);
   expect(await pane.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
@@ -67,8 +68,10 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Report a problem with this question", exact: true })).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Next question", exact: true })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Check answer", exact: true })).toBeFocused();
   await page.keyboard.press("Enter");
+  await expect(page.getByRole("status")).toContainText("the correct answer is");
+  await page.getByRole("button", { name: "Next question", exact: true }).click();
   await expect(page.getByText("Question 2 of 20", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
   await page.getByRole("radio").nth(1).check();
@@ -157,7 +160,7 @@ test("instant start measurement", async ({ page }, info) => {
   });
   const runs=[];
   for(let i=0;i<6;i++) {
-    await page.context().clearCookies(); await page.goto("/diagnostic");
+    await page.context().clearCookies(); await page.goto("/diagnostic?length=20");
     await page.getByRole("button",{name:"Begin diagnostic",exact:true}).click(); await expect(page.getByText("Question 1 of 20",{exact:true})).toBeVisible();
     await expect(page.getByRole("heading",{level:1})).toBeFocused();
     const events = await page.evaluate(()=>(window as unknown as {instantEvents:{kind:string;at?:number}[]}).instantEvents);
@@ -181,6 +184,7 @@ test("instant start restores URL, refresh and back/forward without creating anot
   const beginRequests: string[] = []; let recordingBegin = false;
   let creates = 0; page.on("request", request => { if (recordingBegin) beginRequests.push(`${request.method()} ${new URL(request.url()).pathname}${new URL(request.url()).search}`); if (new URL(request.url()).pathname === "/api/diagnostic" && request.method() === "POST") creates++; });
   await page.goto("/"); await diagnosticLink().click();
+  await page.getByRole("radio", { name: "Full readiness (20)" }).check();
   recordingBegin = true;
   await page.getByRole("button", { name: "Begin diagnostic", exact: true }).click();
   await expect(page.getByText("Question 1 of 20", { exact: true })).toBeVisible();
@@ -191,7 +195,8 @@ test("instant start restores URL, refresh and back/forward without creating anot
   await expect(page.getByRole("heading", {name:"What the PMLE diagnostic covers"})).toHaveCount(0);
   await expect(page.getByRole("navigation",{name:"Main navigation"})).toHaveCount(0);
   await expect(page.getByRole("heading",{level:1})).toBeFocused();
-  await page.getByRole("radio").first().check(); await page.getByRole("button",{name:"Next question",exact:true}).click();
+  await page.getByRole("radio").first().check(); await page.getByRole("button",{name:"Check answer",exact:true}).click();
+  await page.getByRole("button",{name:"Next question",exact:true}).click();
   await expect(page.getByText("Question 2 of 20",{exact:true})).toBeVisible();
   await page.goBack(); await expect(page).toHaveURL(/\/$/);
   await page.goForward(); await expect(page).toHaveURL(sessionURL);
@@ -204,6 +209,7 @@ test("instant start restores URL, refresh and back/forward without creating anot
   await page.getByRole("link", {name:"Testero home"}).click(); await expect(page).toHaveURL(/\/$/);
   await diagnosticLink().click();
   await expect(page.getByRole("heading",{name:"PMLE readiness diagnostic",exact:true})).toBeVisible();
+  await page.getByRole("radio", { name: "Full readiness (20)" }).check();
   await page.getByRole("button",{name:"Start over",exact:true}).click();
   await expect(page.getByText("Question 1 of 20",{exact:true})).toBeVisible();
   expect(page.url()).not.toBe(sessionURL); expect(creates).toBe(2);
