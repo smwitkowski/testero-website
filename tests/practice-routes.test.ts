@@ -25,7 +25,7 @@ beforeEach(() => {
   vi.mocked(createPractice).mockReset().mockResolvedValue(id);
   vi.mocked(readPractice).mockReset().mockResolvedValue({ sessionId: id, status: "in_progress", totalQuestions: 5, answeredCount: 0, currentQuestion: null });
   vi.mocked(answerPractice).mockReset().mockResolvedValue({ answeredCount: 1, totalQuestions: 5, completed: false, progress: { sessionId: id, status: "in_progress", totalQuestions: 5, answeredCount: 1, currentQuestion: null }, feedback: { itemId, selectedLabel: "A", correctLabel: "A", isCorrect: true } });
-  vi.mocked(practiceSummary).mockReset().mockResolvedValue({ sessionId: id, score: 80, totalQuestions: 5, correctAnswers: 4, readiness: { id: "strong", label: "Strong", description: "Guidance" }, domainBreakdown: [], review: [] });
+  vi.mocked(practiceSummary).mockReset().mockResolvedValue({ hasPaidTracking: true, sessionId: id, score: 80, totalQuestions: 5, correctAnswers: 4, readiness: { id: "strong", label: "Strong", description: "Guidance" }, domainBreakdown: [], review: [] });
 });
 const routes = ["start", "read", "answer", "summary"] as const;
 function invoke(route: typeof routes[number]) { return route === "start" ? start(request({ domainCode })) : route === "read" ? read(getRequest(), context) : route === "answer" ? answer(request({ itemId, selectedLabel: "A" }), context) : summary(getRequest(), context); }
@@ -61,7 +61,7 @@ describe("practice route auth and privacy", () => {
   it("returns atomic exhaustion with the real upgrade CTA and no paid fallback", async () => {
     vi.mocked(createPractice).mockRejectedValue(new PracticeQuotaError());
     const response = await start(request({ domainCode })); expect(response.status).toBe(429);
-    expect(await response.json()).toEqual({ error: "You have used your five free practice questions this week.", upgradeHref: "/pricing" });
+    expect(await response.json()).toEqual({ error: "You have used your 60 free practice questions this month.", upgradeHref: "/pricing" });
     expect(createPractice).toHaveBeenCalledOnce(); expect(response.headers.get("Cache-Control")).toBe("private, no-store");
   });
   it("passes verified identity to progress, answer and owned summary", async () => {

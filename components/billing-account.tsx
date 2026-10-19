@@ -27,7 +27,7 @@ export function PassStatus({ access }: { access: PaidAccess }) {
     {refunded && <p>Your PMLE Pass was refunded on <time dateTime={access.refundedAt}>{refunded}</time>.</p>}
     {until ? <p>Access until <time dateTime={access.pass!.expires_at}>{until}</time> <span className="text-muted-foreground">({remaining === 1 ? "1 day" : `${remaining} days`} left)</span></p>
       : access.isLegacySubscriber && access.hasPaidAccess ? <p>Active legacy subscription</p>
-      : <p>Free account. 5 practice questions each week.</p>}
+      : <p>Free account. 60 practice questions each month.</p>}
   </div>;
 }
 

@@ -2,7 +2,7 @@ import { loadPaidExplanations } from "@/lib/billing/explanations";
 import { getPaidAccess } from "@/lib/billing/paid-access";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createPractice, readPractice, answerPractice, practiceSummary, freePracticeQuota, utcWeekStart } from "@/lib/practice/service";
+import { createPractice, readPractice, answerPractice, practiceSummary, freePracticeQuota, utcMonthStart } from "@/lib/practice/service";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
 
 vi.mock("@/lib/billing/explanations", async original => ({ ...await original<typeof import("@/lib/billing/explanations")>(), loadPaidExplanations: vi.fn() }));
@@ -50,7 +50,7 @@ function db(options: Options = {}) {
   return { client: { from, rpc } as unknown as SupabaseClient, from, rpc, queries };
 }
 
-describe("strict five-question free practice", () => {
+describe("monthly free practice", () => {
   it("reserves exactly five chosen-domain valid shuffled snapshots with the free atomic RPC", async () => {
     vi.spyOn(Math, "random").mockReturnValue(0);
     const database = db({ bank: [...bank(), { ...bank()[0], id: "foreign", exam_domains: { code: "foreign", name: "Foreign" } }, { ...bank()[0], id: "invalid", answers: [] }] });
@@ -67,7 +67,7 @@ describe("strict five-question free practice", () => {
     expect(database.queries[1].filters).toContainEqual(["status", "ACTIVE"]);
     expect(database.queries[1].filters).toContainEqual(["review_status", "GOOD"]);
   });
-  it.each([1, 4, 5])("does not query bank or RPC with partially/full consumed quota %s", async used => {
+  it.each([60])("does not query bank or RPC with exhausted quota %s", async used => {
     const database = db({ used }); await expect(createPractice(database.client, userId, domain, now)).rejects.toMatchObject({ status: 429 });
     expect(database.from.mock.calls).toEqual([["free_practice_quota"]]); expect(database.rpc).not.toHaveBeenCalled();
   });
@@ -85,19 +85,32 @@ describe("strict five-question free practice", () => {
     expect(database.from.mock.calls.map(([table]) => table)).not.toContain("pmle_passes");
   });
   it("trusts only atomic reservation under eight concurrent creation attempts", async () => {
-    let used = 0;
-    const database = db({ rpc: async () => { if (used + 5 > 5) return { data: null, error: { code: "P0001", message: "Free practice quota exceeded" } }; used += 5; return { data: sessionId, error: null }; } });
+    let used = 55;
+    const database = db({ rpc: async () => { if (used + 5 > 60) return { data: null, error: { code: "P0001", message: "Free practice quota exceeded" } }; used += 5; return { data: sessionId, error: null }; } });
     const results = await Promise.allSettled(Array.from({ length: 8 }, () => createPractice(database.client, userId, domain, now)));
     expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
     expect(results.filter(result => result.status === "rejected").every(result => result.status === "rejected" && result.reason.status === 429)).toBe(true);
-    expect(used).toBe(5); expect(database.rpc).toHaveBeenCalledTimes(8);
+    expect(used).toBe(60); expect(database.rpc).toHaveBeenCalledTimes(8);
   });
-  it.each([-1, 6, 1.5, "5"])('rejects corrupt quota %s', async used => { await expect(freePracticeQuota(db({ used }).client, userId)).rejects.toMatchObject({ status: 503 }); });
+  it.each([-1, 61, 1.5, "5"])('rejects corrupt quota %s', async used => { await expect(freePracticeQuota(db({ used }).client, userId)).rejects.toMatchObject({ status: 503 }); });
   it.each(["free_practice_quota", "questions"])('sanitizes query failures for %s', async errorTable => { await expect(createPractice(db({ errorTable }).client, userId, domain, now)).rejects.toMatchObject({ status: 503 }); });
-  it("uses UTC Monday weeks including Sunday and year boundaries", () => {
-    expect(utcWeekStart(new Date("2026-10-04T23:59:59Z"))).toBe("2026-09-28");
-    expect(utcWeekStart(new Date("2026-10-05T00:00:00Z"))).toBe("2026-10-05");
-    expect(utcWeekStart(new Date("2027-01-01T00:00:00Z"))).toBe("2026-12-28");
+  it("uses UTC calendar months including rollover and year boundaries", () => {
+    expect(utcMonthStart(new Date("2026-10-31T23:59:59Z"))).toBe("2026-10-01");
+    expect(utcMonthStart(new Date("2026-11-01T00:00:00Z"))).toBe("2026-11-01");
+    expect(utcMonthStart(new Date("2027-01-01T00:00:00Z"))).toBe("2027-01-01");
+  });
+  it.each([[55, 5], [56, 4], [59, 1]])("caps session length at remaining questions: used %s", async (used, length) => {
+    const database = db({ used });
+    await createPractice(database.client, userId, domain, now);
+    expect(database.rpc).toHaveBeenCalledWith("create_free_practice_session", expect.objectContaining({ p_items: expect.arrayContaining([expect.any(Object)]) }));
+    expect((database.rpc.mock.calls[0] as unknown as [string, { p_items: unknown[] }])[1].p_items).toHaveLength(length);
+  });
+  it("reads a new quota bucket at month rollover", async () => {
+    const database = db();
+    const before = await freePracticeQuota(database.client, userId, new Date("2026-10-31T23:59:59Z"));
+    const after = await freePracticeQuota(database.client, userId, new Date("2026-11-01T00:00:00Z"));
+    expect(before.monthStart).toBe("2026-10-01"); expect(after).toEqual({ remaining: 60, monthStart: "2026-11-01" });
+    expect(database.queries[1].filters).toContainEqual(["month_start", "2026-11-01"]);
   });
 });
 
@@ -123,7 +136,8 @@ describe("practice ownership and no early correctness", () => {
   it("blocks incomplete summaries before item reads", async () => { const database = db(); await expect(practiceSummary(database.client, sessionId, userId, now)).rejects.toMatchObject({ status: 409 }); expect(database.from.mock.calls).toEqual([["study_sessions"]]); });
   it("returns completed scoring and review without explanations even after expiry", async () => {
     const result = await practiceSummary(db({ session: { ...session, completed_at: "done", expires_at: "2026-10-01T00:00:00Z" }, items: rows().map((row, index) => ({ ...row, answered_at: "done", selected_label: index === 0 ? "B" : "A", is_correct: index !== 0 })) }).client, sessionId, userId, now);
-    expect(result).toMatchObject({ score: 80, correctAnswers: 4, totalQuestions: 5 }); expect(result.review).toHaveLength(5);
+    expect(result).toMatchObject({ hasPaidTracking: false, totalQuestions: 5 });
+    expect(result).not.toHaveProperty("score"); expect(result).not.toHaveProperty("correctAnswers"); expect(result).not.toHaveProperty("domainBreakdown"); expect(result).not.toHaveProperty("readiness"); expect(result.review).toHaveLength(5);
     expect(result.review[0]).toMatchObject({ selectedLabel: "B", correctLabel: "A", isCorrect: false });
     expect(JSON.stringify(result)).not.toMatch(/explanation|source_url|question_id|secret/);
   });
@@ -176,7 +190,7 @@ describe("paid practice uses fresh access, never charges the free counter", () =
   const content = { explanation: "Question reason", optionExplanations: [{ label: "A", text: "Correct", explanation: "Correct reason" }, { label: "B", text: "Wrong", explanation: "Wrong reason" }] };
   it("allows repeated five-question paid sessions with no quota read", async () => {
     vi.mocked(getPaidAccess).mockResolvedValue(paid);
-    const database = db({ used: 5 });
+    const database = db({ used: 60 });
     for (let index = 0; index < 3; index++) expect(await createPractice(database.client, userId, domain, now)).toBe(sessionId);
     expect(database.from.mock.calls).toEqual([["questions"], ["questions"], ["questions"]]);
     expect(database.rpc).toHaveBeenCalledTimes(3);
@@ -192,7 +206,7 @@ describe("paid practice uses fresh access, never charges the free counter", () =
   });
   it("access failure takes strict free path without paid fallback", async () => {
     vi.mocked(getPaidAccess).mockResolvedValue({ ...freeAccess, unavailable: true });
-    const database = db({ used: 5 }); await expect(createPractice(database.client, userId, domain, now)).rejects.toMatchObject({ status: 429 }); expect(database.rpc).not.toHaveBeenCalled();
+    const database = db({ used: 60 }); await expect(createPractice(database.client, userId, domain, now)).rejects.toMatchObject({ status: 429 }); expect(database.rpc).not.toHaveBeenCalled();
   });
   it("still redacts all progress before an answer, even if paid", async () => {
     vi.mocked(getPaidAccess).mockResolvedValue(paid);
@@ -215,6 +229,8 @@ describe("paid practice uses fresh access, never charges the free counter", () =
     vi.mocked(loadPaidExplanations).mockResolvedValue(new Map([[itemId, content]]));
     const database = db({ session: { ...session, completed_at: "done" }, items: rows().map(row => ({ ...row, selected_label: "A", is_correct: true, answered_at: "done" })) });
     const result = await practiceSummary(database.client, sessionId, userId, now);
+    expect(result).toMatchObject({ hasPaidTracking: true, score: 100, correctAnswers: 5 });
+    expect(result).toHaveProperty("domainBreakdown");
     expect(result.review[0].explanation).toBe(content.explanation); expect(result.review[0].options[0].explanation).toBe("Correct reason");
     expect(JSON.stringify(result)).not.toMatch(/question_id|source_url|secret/);
     expect(JSON.stringify(await practiceSummary(database.client, sessionId, userId, now))).not.toMatch(/explanation|reason/);

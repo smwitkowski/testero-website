@@ -30,7 +30,7 @@ export function AuthScreen({ mode: initialMode, next, confirmationFailed }: { mo
       </div>
     {mode === "signup" && <aside aria-label="Free account includes" className="space-y-3 border-t border-border pt-6 text-sm text-body">
       <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Your free account</h2>
-      <ul className="list-disc space-y-2 pl-5"><li>Review your diagnostic answers against the correct ones</li><li>Keep your report on your dashboard</li><li>5 free practice questions a week</li></ul>
+      <ul className="list-disc space-y-2 pl-5"><li>Review your diagnostic answers against the correct ones</li><li>Keep your report on your dashboard</li><li>60 free practice questions per month</li></ul>
     </aside>}
     </Card>
   </div>;

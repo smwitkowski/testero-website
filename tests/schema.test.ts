@@ -191,3 +191,14 @@ describe("approved legacy cleanup safety", () => {
     ]);
   });
 });
+
+describe("D-039 effective monthly quota", () => {
+  const monthly = readFileSync("supabase/migrations/20261019000000_monthly_free_practice.sql", "utf8");
+  it("preserves previous usage and changes the atomic bucket and ceiling", () => {
+    expect(monthly).toContain("RENAME COLUMN week_start TO month_start");
+    expect(monthly).toContain("sum(questions_used)");
+    expect(monthly).toContain("date_trunc('month', now() AT TIME ZONE 'UTC')");
+    expect(monthly).toContain("ON CONFLICT (user_id, month_start) DO UPDATE");
+    expect(monthly).toContain("questions_used + EXCLUDED.questions_used <= 60");
+  });
+});

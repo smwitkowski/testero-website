@@ -159,6 +159,8 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     await expect(reviewNav.getByRole("button", { name: /^Review question 19,/ })).toHaveAttribute("aria-current", "step");
     await page.goto("/dashboard");
 
+    const seededQuota = await service.from("free_practice_quota").insert({ user_id: userId, month_start: new Date().toISOString().slice(0, 7) + "-01", questions_used: 55 });
+    expect(seededQuota.error).toBeNull();
     const startedResponse = page.waitForResponse(response => response.url().endsWith("/api/practice") && response.request().method() === "POST");
     await page.getByRole("button", { name: /^Practice / }).first().click();
     const started = await startedResponse;
@@ -224,8 +226,10 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     expect(summaryResponse.status()).toBe(200);
     const summary = await summaryResponse.json() as PracticeSummary;
     expect(summary.review).toHaveLength(5);
-    expect(summary.correctAnswers).toBe(summary.review.filter(question => question.isCorrect).length);
-    expect(summary.score).toBe(summary.correctAnswers * 20);
+    expect(summary.hasPaidTracking).toBe(false);
+    expect(summary).not.toHaveProperty("correctAnswers"); expect(summary).not.toHaveProperty("score"); expect(summary).not.toHaveProperty("domainBreakdown");
+    await expect(page.getByRole("heading", { name: "Practice score", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Explore PMLE Pass", exact: true })).toBeVisible();
     noExplanations(summary);
     expect((await foreign.request.get(`http://127.0.0.1:3000/api/practice/${practiceId}/summary`)).status()).toBe(401);
     await page.getByRole("link", { name: "Back to dashboard", exact: true }).click();

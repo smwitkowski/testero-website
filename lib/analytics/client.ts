@@ -52,8 +52,8 @@ export function trackDiagnostic(event: "diagnostic_started" | "diagnostic_comple
 export function trackSignupCompleted() {
   if (initialized) posthog.capture("signup_completed");
 }
-export function trackPractice(sessionId: string) {
-  if (initialized) posthog.capture("practice_started", { session_id: sessionId });
+export function trackPractice(sessionId: string, remaining: number | null = null) {
+  if (initialized) posthog.capture("practice_started", { session_id: sessionId, free_questions_remaining_at_check: remaining });
 }
 export function trackCheckoutStarted() {
   if (initialized) posthog.capture("checkout_started", { plan_name: "PMLE Pass" });

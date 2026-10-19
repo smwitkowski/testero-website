@@ -57,7 +57,7 @@ const bankTables = tables.slice(0, 5);
 const bankDigestSQL = bankTables.map((table) => `SELECT '${table}', count(*), md5(coalesce(string_agg(row_to_json(t)::text, '|' ORDER BY row_to_json(t)::text), '')) FROM public.${table} t;`).join("\n");
 const bankBefore = prodSchema ? await scalar(bankDigestSQL) : null;
 const before = await scalar(digestSQL);
-await run(baseline);
+await run(baseline.replace(/COMMIT;\s*$/, "ROLLBACK;"));
 assert.equal(await scalar(digestSQL), before, "second baseline apply must not change any rows");
 if (prodSchema) {
   // No seed read or execution in restored-bank mode. The approved restore stays immutable.
@@ -187,27 +187,32 @@ try {
   await denied(service(answerSQL(rows[0].id, firstWrong)), "expired session denied");
   console.log("PASS anonymous ownership, next ordinal, options, retry, server correctness, completion, expiry");
 
-  // Real concurrent session-creation transactions contend on the same quota row.
+  const monthSQL = "date_trunc('month', now() AT TIME ZONE 'UTC')::date";
+  // At 59 used, only one of eight real concurrent one-question reservations can win.
+  await run(`INSERT INTO public.free_practice_quota (user_id,month_start,questions_used) VALUES (${q(owner)},${monthSQL},59);`);
   const concurrent = await Promise.all(Array.from({ length: 8 }, () => run(service(createSQL("practice", owner, null, items.slice(0, 1))), true)));
-  assert.equal(concurrent.filter((result) => result.code === 0).length, 5, "only five concurrent free one-question sessions succeed");
-  assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(owner)};`), "5");
-  assert.equal(await scalar(`SELECT count(*) FROM public.study_sessions WHERE user_id=${q(owner)};`), "5");
+  assert.equal(concurrent.filter(result => result.code === 0).length, 1, "59 to 60 has one concurrent winner");
+  assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(owner)} AND month_start=${monthSQL};`), "60");
+  assert.equal(await scalar(`SELECT count(*) FROM public.study_sessions WHERE user_id=${q(owner)};`), "1");
   const invalidItem = { ...items[0], question_id: randomUUID() };
   await denied(service(createSQL("practice", other, null, [invalidItem])), "failed insert rolls back quota");
   assert.equal(await scalar(`SELECT count(*) FROM public.free_practice_quota WHERE user_id=${q(other)};`), "0");
-  await denied(service(createSQL("practice", other, null, items)), "six questions exceed free quota");
-  assert.equal(await scalar(`SELECT count(*) FROM public.free_practice_quota WHERE user_id=${q(other)};`), "0");
-  // Phase 2 uses the explicit free-only RPC: eight five-question requests charge exactly once.
+  // Last month's exhausted bucket does not consume this month's allowance.
+  await run(`INSERT INTO public.free_practice_quota (user_id,month_start,questions_used) VALUES (${q(other)},(${monthSQL} - interval '1 month')::date,60);`);
+  await scalar(service(strictSQL(other, items.slice(0, 1))));
+  assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(other)} AND month_start=${monthSQL};`), "1", "month rollover starts fresh");
+  await run(`DELETE FROM public.study_sessions WHERE user_id=${q(other)}; DELETE FROM public.free_practice_quota WHERE user_id=${q(other)};`);
+  // Strict RPC remains race-safe for full-size sessions near the cap.
+  await run(`INSERT INTO public.free_practice_quota (user_id,month_start,questions_used) VALUES (${q(strictOwner)},${monthSQL},55);`);
   const strictConcurrent = await Promise.all(Array.from({ length: 8 }, () => run(service(strictSQL(strictOwner, items.slice(0, 5))), true)));
-  assert.equal(strictConcurrent.filter((result) => result.code === 0).length, 1, "one five-question free-only request wins");
-  assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(strictOwner)};`), "5");
+  assert.equal(strictConcurrent.filter(result => result.code === 0).length, 1, "one five-question request wins at 55 used");
+  assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(strictOwner)};`), "60");
   assert.equal(await scalar(`SELECT count(*) FROM public.study_sessions WHERE user_id=${q(strictOwner)} AND kind='practice';`), "1");
   assert.equal(await scalar(`SELECT count(*) FROM public.session_items i JOIN public.study_sessions s ON s.id=i.session_id WHERE s.user_id=${q(strictOwner)};`), "5");
   await denied(service(strictSQL(other, [invalidItem])), "strict snapshot FK failure rolls back charge");
   assert.equal(await scalar(`SELECT count(*) FROM public.free_practice_quota WHERE user_id=${q(other)};`), "0");
-  assert.equal(await scalar(`SELECT count(*) FROM public.study_sessions WHERE user_id=${q(other)};`), "0");
-  await denied(service(strictSQL(other, items)), "strict path refuses more than five questions");
-  console.log("PASS Phase 2 strict eight-way five-question creation, exact single charge and snapshot FK rollback");
+  await denied(service(strictSQL(other, Array.from({ length: 61 }, () => items[0]))), "strict path refuses more than sixty questions");
+  console.log("PASS monthly 59→60 concurrency, month rollover, strict 55→60 contention and snapshot rollback");
 
   // Claims attach every diagnostic for the cookie, including completed/expired rows, once only.
   const claimSessions = await Promise.all(Array.from({ length: 3 }, () => scalar(service(createSQL("diagnostic", null, claimHash, items.slice(0, 1))))));
@@ -394,14 +399,16 @@ try {
   await run(`UPDATE public.pmle_passes SET paid_at=now()-interval '1 hour',expires_at=now()+interval '90 days' WHERE id=${q(validPassId)};`);
   await run(service(createSQL("practice", paidOwner, null, items)));
   assert.equal(await scalar(`SELECT count(*) FROM public.free_practice_quota WHERE user_id=${q(paidOwner)};`), "0", "valid pass bypasses free counter");
+  await run(`INSERT INTO public.free_practice_quota(user_id,month_start,questions_used) VALUES (${q(paidOwner)},${monthSQL},55);`);
   await run(service(strictSQL(paidOwner, items.slice(0, 5))));
-  assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(paidOwner)};`), "5", "Phase 2 charges valid pass holder");
+  assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(paidOwner)};`), "60", "Phase 2 charges valid pass holder");
   await denied(service(strictSQL(paidOwner, items.slice(0, 1))), "valid pass cannot bypass Phase 2 exhaustion");
   await run(service(`SELECT public.refund_pmle_pass(${q(intentAfter)},now())`));
   await denied(service(createSQL("practice", paidOwner, null, items)), "refund-after-fulfillment revokes unlimited practice");
   await run(`INSERT INTO public.user_subscriptions(user_id,stripe_customer_id,status,current_period_end) VALUES (${q(legacyOwner)},${q("local-legacy-" + randomUUID())},'active',NULL);`);
   await run(service(createSQL("practice", legacyOwner, null, items)));
   assert.equal(await scalar(`SELECT count(*) FROM public.free_practice_quota WHERE user_id=${q(legacyOwner)};`), "0", "legacy active subscription bypasses quota");
+  await run(`INSERT INTO public.free_practice_quota(user_id,month_start,questions_used) VALUES (${q(legacyOwner)},${monthSQL},55);`);
   await run(service(strictSQL(legacyOwner, items.slice(0, 5))));
   await denied(service(strictSQL(legacyOwner, items.slice(0, 1))), "legacy active cannot bypass strict Phase 2 exhaustion");
   await denied(service(strictSQL(paidOwner, items.slice(0, 1))), "refunded pass cannot bypass strict Phase 2 exhaustion");

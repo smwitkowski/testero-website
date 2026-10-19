@@ -12,11 +12,12 @@ import { computeResult } from "@/lib/diagnostic/scoring";
 import { mapReview, type QuestionReviewSource } from "@/lib/diagnostic/types";
 import type { PracticeProgress, PracticeAnswerResponse, PracticeSummary } from "@/lib/practice/types";
 
-export const FREE_PRACTICE_LENGTH = 5;
+export const PRACTICE_SESSION_LENGTH = 5;
+export const FREE_PRACTICE_MONTHLY_LIMIT = 60;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const unavailable = () => new DiagnosticError(503, "Practice is unavailable. Please try again.");
 export class PracticeQuotaError extends DiagnosticError {
-  constructor() { super(429, "You have used your five free practice questions this week."); }
+  constructor() { super(429, "You have used your 60 free practice questions this month."); }
 }
 interface Session { id: string; user_id: string | null; anonymous_owner_hash: string | null; question_count: number; completed_at: string | null; expires_at: string }
 interface Item extends Omit<QuestionReviewSource, "selected_label" | "is_correct"> { question_id?: string; selected_label: string | null; is_correct: boolean | null; answered_at: string | null }
@@ -29,30 +30,30 @@ function validAnsweredItem(row: Pick<Item, "options" | "selected_label" | "corre
     && labels.includes(row.selected_label) && labels.includes(row.correct_label) && typeof row.is_correct === "boolean"
     && row.is_correct === (row.selected_label === row.correct_label);
 }
-export function utcWeekStart(now = new Date()): string {
-  const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
-  return day.toISOString().slice(0, 10);
+export function utcMonthStart(now = new Date()): string {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
 }
 export async function freePracticeQuota(client: SupabaseClient, userId: string, now = new Date()) {
-  const weekStart = utcWeekStart(now);
-  const { data, error } = await client.from("free_practice_quota").select("questions_used").eq("user_id", userId).eq("week_start", weekStart).maybeSingle();
+  const monthStart = utcMonthStart(now);
+  const { data, error } = await client.from("free_practice_quota").select("questions_used").eq("user_id", userId).eq("month_start", monthStart).maybeSingle();
   const used = data?.questions_used ?? 0;
-  if (error || !Number.isInteger(used) || used < 0 || used > 5) throw unavailable();
-  return { remaining: 5 - used, weekStart };
+  if (error || !Number.isInteger(used) || used < 0 || used > FREE_PRACTICE_MONTHLY_LIMIT) throw unavailable();
+  return { remaining: FREE_PRACTICE_MONTHLY_LIMIT - used, monthStart };
 }
 export async function createPractice(client: SupabaseClient, userId: string, domainCode: string, now = Date.now()): Promise<string> {
   if (!UUID.test(userId)) throw new DiagnosticError(401, "Please sign in to continue");
   if (!PMLE_BLUEPRINT.some(domain => domain.domainCode === domainCode)) throw new DiagnosticError(400, "Choose a valid practice domain");
   const paidAccess = await getPaidAccess(userId, client, now);
-  if (!paidAccess.hasPaidAccess && (await freePracticeQuota(client, userId, new Date(now))).remaining < FREE_PRACTICE_LENGTH) throw new PracticeQuotaError();
+  const remaining = paidAccess.hasPaidAccess ? null : (await freePracticeQuota(client, userId, new Date(now))).remaining;
+  if (remaining === 0) throw new PracticeQuotaError();
+  const length = Math.min(PRACTICE_SESSION_LENGTH, remaining ?? PRACTICE_SESSION_LENGTH);
   const { data, error } = await client.from("questions")
     .select("id,stem,answers(choice_label,choice_text,is_correct),exam_domains!inner(code,name)")
     .eq("exam", "GCP_PM_ML_ENG").eq("status", "ACTIVE").eq("review_status", "GOOD").eq("exam_domains.code", domainCode);
   if (error || !Array.isArray(data)) throw unavailable();
   const valid = (data as unknown as Question[]).filter(question => question.exam_domains?.code === domainCode && typeof question.stem === "string" && question.stem.trim() && hasValidAnswers(question.answers));
-  const questions = shuffleArray(valid).slice(0, FREE_PRACTICE_LENGTH);
-  if (questions.length !== FREE_PRACTICE_LENGTH || new Set(questions.map(q => q.id)).size !== FREE_PRACTICE_LENGTH) throw unavailable();
+  const questions = shuffleArray(valid).slice(0, length);
+  if (questions.length !== length || new Set(questions.map(q => q.id)).size !== length) throw unavailable();
   const items = questions.map(question => ({
     question_id: question.id, domain_code: domainCode, domain_name: question.exam_domains.name,
     stem: question.stem, ...createAnswerSnapshot(question.answers.map(answer => ({ text: answer.choice_text, is_correct: answer.is_correct }))),
@@ -125,5 +126,6 @@ export async function practiceSummary(client: SupabaseClient, id: string, userId
   if (rows.length !== session.question_count || rows.some(row => !row.answered_at || !validAnsweredItem(row))) throw unavailable();
   const access = await getPaidAccess(userId, client, now);
   const explanations = access.hasPaidAccess ? await loadPaidExplanations(client, rows) : null;
-  return { ...computeResult(id, rows), review: rows.map(row => addPaidReview(mapReview(row as QuestionReviewSource), explanations?.get(row.id))) };
+  return { ...(access.hasPaidAccess ? { ...computeResult(id, rows), hasPaidTracking: true as const } : { sessionId: id, totalQuestions: rows.length, hasPaidTracking: false as const }),
+    review: rows.map(row => addPaidReview(mapReview(row as QuestionReviewSource), explanations?.get(row.id))) };
 }

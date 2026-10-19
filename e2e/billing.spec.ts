@@ -117,6 +117,8 @@ test("local return fulfillment grants paid explanations and unlimited practice; 
     const freeReview = await (await page.request.get(`/api/diagnostic/${diagnosticId}/results`)).json() as DiagnosticResult;
     expect(freeReview.review).toHaveLength(20); noPaidContent(freeReview);
     const domainCode = freeReview.domainBreakdown[0].domainCode;
+    const seededQuota = await service.from("free_practice_quota").insert({ user_id: userId, month_start: new Date().toISOString().slice(0, 7) + "-01", questions_used: 55 });
+    expect(seededQuota.error).toBeNull();
     const freeStart = await page.request.post("/api/practice", { data: { domainCode } });
     expect(freeStart.status()).toBe(201);
     const { sessionId: freePracticeId } = await freeStart.json() as { sessionId: string };
@@ -200,7 +202,7 @@ test("local return fulfillment grants paid explanations and unlimited practice; 
       await assertRestoredSession(service, paidSessionId, 5);
     }
     const quota = await service.from("free_practice_quota").select("questions_used").eq("user_id", userId).single();
-    expect(quota.data!.questions_used).toBe(5);
+    expect(quota.data!.questions_used).toBe(60);
     const paidPracticeId = paidPracticeIds[0];
     await page.goto(`/practice/${paidPracticeId}`);
     await expect(page.getByText("Question 1 of 5", { exact: true })).toBeVisible();

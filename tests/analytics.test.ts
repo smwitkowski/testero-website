@@ -55,10 +55,10 @@ describe("private analytics event wiring", () => {
     analytics.initializeAnalytics(); analytics.trackSignupCompleted();
     expect(sdk.capture.mock.calls).toEqual([["signup_completed"]]);
   });
-  it("sends practice start with only its validated session identifier", async () => {
+  it("sends practice start with session and remaining quota metadata", async () => {
     const analytics = await import("@/lib/analytics/client");
-    analytics.initializeAnalytics(); analytics.trackPractice("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
-    expect(sdk.capture.mock.calls).toEqual([["practice_started", { session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }]]);
+    analytics.initializeAnalytics(); analytics.trackPractice("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", 1);
+    expect(sdk.capture.mock.calls).toEqual([["practice_started", { session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", free_questions_remaining_at_check: 1 }]]);
   });
   it("sends checkout start with only the public offer name", async () => {
     const analytics = await import("@/lib/analytics/client");

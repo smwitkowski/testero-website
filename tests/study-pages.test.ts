@@ -18,7 +18,7 @@ vi.mock("@/lib/analytics/client", () => ({ trackPractice: vi.fn(), trackSignupCo
 beforeEach(() => {
   mocks.requireUser.mockReset().mockResolvedValue({ id: "verified-owner" });
   mocks.claim.mockReset().mockResolvedValue(0);
-  mocks.load.mockReset().mockResolvedValue({ paidAccess: { hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null }, diagnostic: null, weakestDomains: [], domains: [], openPractice: null, quota: { remaining: 5, weekStart: "2026-09-28" } });
+  mocks.load.mockReset().mockResolvedValue({ paidAccess: { hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null }, diagnostic: null, weakestDomains: [], domains: [], openPractice: null, quota: { remaining: 60, monthStart: "2026-10-01" } });
   mocks.cookies.mockReset().mockResolvedValue({ get: (name: string) => name === "testero_anon" ? { value: "actual-cookie-token" } : undefined });
 });
 
