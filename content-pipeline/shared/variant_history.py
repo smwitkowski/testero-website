@@ -454,6 +454,10 @@ def validate_prior_variants(history):
     snapshot digest detects edits; it is not an authorization signature.
     """
     try:
+        if isinstance(history, dict) and "policy" in history:
+            from shared.variant_live_history import LIVE_HISTORY_POLICY, validate_live_priors
+            if history["policy"] == LIVE_HISTORY_POLICY:
+                return validate_live_priors(history)
         return _validate_prior_variants(history)
     except (KeyError, TypeError, UnicodeError) as error:
         raise ValueError(f"Invalid frozen variant history ({type(error).__name__})") from error
