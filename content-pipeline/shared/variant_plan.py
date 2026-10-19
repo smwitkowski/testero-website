@@ -52,11 +52,12 @@ def make_scope(base, parent, ordinal, *, policy_version, index, total, moment=No
 def validate_repair_history(payload):
     """Repair artifacts cannot discard the approved live-family dedupe snapshot."""
     if payload.get("repair_mode") is not None:
-        from shared.variant_live_history import LIVE_HISTORY_POLICY, validate_live_priors
+        from shared.variant_live_history import (
+            LIVE_HISTORY_POLICY, CUMULATIVE_LIVE_HISTORY_POLICY, validate_live_priors)
         history = payload.get("prior_variants")
         if (payload["repair_mode"] != REPAIR_MODE or not isinstance(history, dict)
-                or history.get("policy") != LIVE_HISTORY_POLICY):
-            raise ValueError("Repair replay requires the approved 13-live prior snapshot")
+                or history.get("policy") not in (LIVE_HISTORY_POLICY, CUMULATIVE_LIVE_HISTORY_POLICY)):
+            raise ValueError("Repair replay requires the approved 13-live prior snapshot or cumulative 15 prior snapshot")
         validate_live_priors(history)
 
 

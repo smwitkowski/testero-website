@@ -5,8 +5,9 @@ round 2 predates option-rewrite/shortest-key and batch industry-allocation rules
 Rebuilding its requests with today's writer/reviewer would silently lose accepted
 scenarios. Instead bind the saved DSPy inputs to the actual content and receipts,
 and replay the original v5 gates (including the then-valid v5.1 style waiver).
-Round4 artifacts use a lazy current report replay for their strict style and
+Round4/5 artifacts use a lazy current report replay for their strict style and
 reviewed-sibling/prior-history policy, plus independent request/gate verification.
+Round5 additionally replays policy-5 scope, gates and actual key-length batch rules.
 No saved candidate accepted flag or report accepted-ID list is used as sole proof.
 """
 from copy import deepcopy
@@ -17,6 +18,7 @@ import re
 
 HISTORY_POLICY = "frozen_v5_history_v1"
 ROUND4_HISTORY_POLICY = "frozen_v5_round4_history_v1"
+ROUND5_HISTORY_POLICY = "frozen_v5_round5_history_v1"
 HISTORY_NOTE = (
     "History-only comparison rows, not publication approval. Frozen v5 gates use "
     "their original style policy, including the historical v5.1 allowance waiver. "
@@ -27,6 +29,12 @@ ROUND4_HISTORY_NOTE = (
     "History-only comparison rows, not publication approval. Round4 acceptance "
     "replays strict variant style, frozen prior history, and reviewed sibling "
     "eligibility through the offline report, plus independent request/gate binding."
+)
+ROUND5_HISTORY_NOTE = (
+    "History-only comparison rows, not publication approval. Round5 acceptance "
+    "replays policy-5 scope, strict variant style, frozen approved priors, reviewed "
+    "sibling eligibility, and actual key-length batch policy through the offline "
+    "report, plus independent request/gate binding."
 )
 
 
@@ -181,7 +189,9 @@ def _bind_request(payload, entry, scope, question, parent, evidence, request):
                 ("decision_objective", "decision_plan", "decision_proof", "key_length_rank")})):
         raise ValueError("Historical request identity/policy mismatch")
     signatures = gate_signatures(5, distractor_evidence=scope.get("distractor_evidence"),
-                                 cert_id=scope["cert_id"])
+                                 cert_id=scope["cert_id"],
+                                 **({"variant_policy_version": 5}
+                                    if scope.get("variant_policy_version") == 5 else {}))
     if set(request["gates"]) != set(signatures):
         raise ValueError("Historical request requires three gates")
     for name, signature in signatures.items():
@@ -193,6 +203,13 @@ def _bind_request(payload, entry, scope, question, parent, evidence, request):
     inputs = {name: _inputs(call) for name, call in request["gates"].items()}
     review = _inputs(request["argon"]["calls"]["review"])
     learner = build_gate_inputs(question, "", "", evidence)["blind_solver"]
+    expected_reference = review.get("style_reference", "") + policy_instructions(policy)
+    if scope.get("variant_policy_version") == 5:
+        if request.get("variant_policy_version") != 5 or request.get("variant_mode") != 1:
+            raise ValueError("Historical round5 request policy mismatch")
+        expected_reference = build_gate_inputs(
+            question, "", "", evidence, style_reference=review.get("style_reference", ""),
+            style_policy=policy, variant_policy_version=5)["style"]["style_reference"]
     if (inputs["blind_solver"] != learner
             or {key: inputs["style"].get(key) for key in learner} != learner
             or set(inputs["style"]) != {*learner, "style_reference"}
@@ -202,7 +219,7 @@ def _bind_request(payload, entry, scope, question, parent, evidence, request):
             or set(review) != {*inputs["evidence"], "style_reference"}
             or any(review[name] != value for name, value in inputs["evidence"].items())
             or not review["style_reference"].strip()
-            or inputs["style"]["style_reference"] != review["style_reference"] + policy_instructions(policy)):
+            or inputs["style"]["style_reference"] != expected_reference):
         raise ValueError("Historical request question/receipt inputs changed")
     context = inputs["evidence"]["domain_context"]
     frozen_parent = {"parent_stem": parent["question"]["stem"],
@@ -253,7 +270,7 @@ def _load_prior_variants(paths):
     Repeated artifact paths and conflicting repeated accepted IDs are rejected.
     Identical rows from distinct artifacts retain their separate provenance.
     No models, retrieval, database access or writes occur. Legacy requests are
-    not rebuilt; round4 also uses the coordinator's current request validation.
+    not rebuilt; round4/5 also use the coordinator's current request validation.
     """
     from shared.external_judge import validate_candidate_records
     from shared.near_duplicates import comparison_row
@@ -281,23 +298,27 @@ def _load_prior_variants(paths):
             raise ValueError("Unsupported historical variant policy")
         validate_candidate_records(payload)
         versions = {scope.get("variant_policy_version", 3) for scope in payload["plan"]}
-        if versions not in ({3}, {4}):
+        if versions not in ({3}, {4}, {5}):
             raise ValueError("Mixed or unsupported historical variant presentation policies")
         round4 = versions == {4}
+        round5 = versions == {5}
+        reviewed = round4 or round5
         require_independent_models(payload["model"], "claude")
         require_independent_models(payload["model"], MODEL)
         verdict_dir = path.with_suffix(".verdicts")
         if not verdict_dir.is_dir() or verdict_dir.is_symlink():
             raise ValueError("Missing or unsafe historical verdict directory")
         report_ids = None
-        if round4:
+        if reviewed:
             # Lazy import avoids the coordinator -> generator -> history cycle.
-            # Its reviewed-sibling/prior-family policy is part of round4 acceptance.
+            # Reviewed siblings, priors and (round5) batch gates are replayed.
             from scripts.variants_ab import report
             report_ids = set(report(path, verdict_dir)["accepted_variant_ids"])
         provenance = {"path": str(path), "sha256": digest,
-                      "policy": ROUND4_HISTORY_POLICY if round4 else HISTORY_POLICY,
-                      "note": ROUND4_HISTORY_NOTE if round4 else HISTORY_NOTE,
+                      "policy": (ROUND5_HISTORY_POLICY if round5 else
+                                 ROUND4_HISTORY_POLICY if round4 else HISTORY_POLICY),
+                      "note": (ROUND5_HISTORY_NOTE if round5 else
+                               ROUND4_HISTORY_NOTE if round4 else HISTORY_NOTE),
                       "accepted_variant_ids": [], "judgments": []}
         for entry in payload["candidates"]:
             if not entry.get("external_judge_request"):
@@ -315,7 +336,8 @@ def _load_prior_variants(paths):
                 raise ValueError("Historical judgment requires all four gates")
             base = {name: gates[name] for name in ("style", "evidence", "blind_solver")}
             decision = aggregate_gate_verdict(question, verdict_with_policy(base, policy), version=5,
-                style_policy=scope.get("style_policy"), distractor_evidence=policy, variant=round4)
+                style_policy=scope.get("style_policy"), distractor_evidence=policy, variant=reviewed,
+                **({"variant_policy_version": 5} if round5 else {}))
             if gates["argon"] == {"status": "skipped", "reason": "prior_gate_failed"}:
                 if decision.passed:
                     raise ValueError("Historical Argon skip cannot approve content")
@@ -324,7 +346,7 @@ def _load_prior_variants(paths):
                 argon_passed, _ = evaluate_argon(question, gates["argon"], request["argon"])
             others = payload["existing_questions"]["questions"] + [comparison_row(other)
                 for other in payload["candidates"] if other is not entry and other.get("variant") and other.get("options")]
-            duplicate_passed = (entry["candidate_id"] in report_ids if round4 else
+            duplicate_passed = (entry["candidate_id"] in report_ids if reviewed else
                                 _historical_duplicate(entry, others, parent, payload["candidates"]))
             accepted = decision.passed and argon_passed and duplicate_passed
             provenance["judgments"].append({"candidate_id": entry["candidate_id"],
@@ -389,7 +411,8 @@ def _validate_prior_variants(history):
         require(absolute(path) and Path(path).suffix == ".json" and path not in artifacts
                 and digest(artifact["sha256"])
                 and (artifact["policy"], artifact["note"]) in (
-                    (HISTORY_POLICY, HISTORY_NOTE), (ROUND4_HISTORY_POLICY, ROUND4_HISTORY_NOTE)),
+                    (HISTORY_POLICY, HISTORY_NOTE), (ROUND4_HISTORY_POLICY, ROUND4_HISTORY_NOTE),
+                    (ROUND5_HISTORY_POLICY, ROUND5_HISTORY_NOTE)),
                 "Invalid frozen history artifact provenance")
         require(isinstance(artifact["accepted_variant_ids"], list) and all(text(i) for i in artifact["accepted_variant_ids"])
                 and len(set(artifact["accepted_variant_ids"])) == len(artifact["accepted_variant_ids"])
@@ -455,8 +478,9 @@ def validate_prior_variants(history):
     """
     try:
         if isinstance(history, dict) and "policy" in history:
-            from shared.variant_live_history import LIVE_HISTORY_POLICY, validate_live_priors
-            if history["policy"] == LIVE_HISTORY_POLICY:
+            from shared.variant_live_history import (
+                LIVE_HISTORY_POLICY, CUMULATIVE_LIVE_HISTORY_POLICY, validate_live_priors)
+            if history["policy"] in (LIVE_HISTORY_POLICY, CUMULATIVE_LIVE_HISTORY_POLICY):
                 return validate_live_priors(history)
         return _validate_prior_variants(history)
     except (KeyError, TypeError, UnicodeError) as error:
