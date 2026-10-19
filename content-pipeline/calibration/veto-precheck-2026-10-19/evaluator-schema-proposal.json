@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "attempt_identity": {
+    "arm": "string",
+    "candidate_index": "integer",
+    "attempt": "integer 1..3",
+    "plan_sha256": "hex64",
+    "sources_sha256": "hex64"
+  },
+  "commitments": [
+    {
+      "field": "best_action | mistakes[i].scenario_reason (all i=0,1,2 required)",
+      "target_claim": "exact plan claim or explicit atomic claim mapping",
+      "official_page_url": "string",
+      "section": "nonempty exact section heading or fragment mapped to fetched text",
+      "documentation_relation": "capability | limitation | prerequisite | scenario_application",
+      "unresolved_ambiguities": [],
+      "unresolved_prerequisites": []
+    }
+  ],
+  "precheck": {
+    "status": "pass | block | historical_not_evaluable",
+    "flags": [
+      {
+        "code": "missing_commitment | nonofficial_url | url_not_fetched | section_unresolved | unresolved_issue",
+        "field": "string",
+        "evidence": "specific commitment/source identity"
+      }
+    ],
+    "semantic_support_assured": false
+  },
+  "shadow_full_document_verifier": {
+    "passed": "boolean or null",
+    "reason": "string"
+  },
+  "candidate_outcome": {
+    "eventual_proof_pass": "boolean",
+    "external_judge_pass": "boolean",
+    "accepted": "boolean"
+  }
+}

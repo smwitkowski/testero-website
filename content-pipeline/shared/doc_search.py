@@ -323,7 +323,8 @@ def _search_objective_docs(objective_text: str, services: list[str], num_results
 def search_objective_docs(objective_text: str, services: list[str], *,
                           cache: DocumentationCache | None = None,
                           objective_id: str | None = None,
-                          decision_plan: dict | None = None) -> list[dict]:
+                          decision_plan: dict | None = None,
+                          allow_empty: bool = False) -> list[dict]:
     """Return fetched source records for one registry objective plus its services.
 
     Each record binds requested_url and final url to the same fetched text,
@@ -332,6 +333,8 @@ def search_objective_docs(objective_text: str, services: list[str], *,
     Decision plans retain at most two documents per option (eight extra);
     bounded reserve results and 404 path aliases do not consume that source cap;
     missing support remains a veto, never permission to invent evidence.
+    allow_empty lets an enabled commitment precheck try its bounded proposed pages
+    when normal decision discovery fetched nothing; default behavior is unchanged.
     """
     if decision_plan is None:
         if cache is None:
@@ -359,7 +362,7 @@ def search_objective_docs(objective_text: str, services: list[str], *,
                 sources.append(source)
             elif previous["text_sha256"] != source["text_sha256"]:
                 raise DocumentationError("Conflicting text for one final documentation URL")
-    if not sources:
+    if not sources and not allow_empty:
         raise DocumentationError("No official documentation was successfully fetched")
     return sources
 

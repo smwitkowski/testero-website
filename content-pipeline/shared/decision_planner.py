@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Annotated
+from typing import Annotated, Literal
 
 import dspy
 from shared.call_logging import log_lm_calls
@@ -65,6 +65,49 @@ class DecisionPlanSignature(dspy.Signature):
     replacement_feedback: str = dspy.InputField(desc="Empty initially; previous unsupported decision and veto on replacement")
     existing_scenarios: str = dspy.InputField(desc="Bounded scenario summaries and keyed actions to avoid repeating")
     plan: DecisionPlan = dspy.OutputField()
+
+
+class DocumentationAnchor(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+    option_label: Literal["A", "B", "C", "D"]
+    target_claim: Text
+    support_claim: Text
+    url: Text
+    section: Text
+
+
+class DocumentationIssue(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+    kind: Literal["prerequisite", "ambiguity", "conflict"]
+    detail: Text
+
+
+class DocumentationCommitments(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+    anchors: Annotated[list[DocumentationAnchor], Field(min_length=4, max_length=4)]
+    unresolved_issues: Annotated[list[DocumentationIssue], Field(max_length=8)]
+
+
+class DecisionPlanWithCommitmentsSignature(DecisionPlanSignature):
+    """Propose a decision and explicit, unverified documentation commitments.
+
+    Supply exactly one anchor per A-D. target_claim must copy best_action for A
+    and the matching mistake's scenario_reason for B-D exactly. support_claim states
+    the factual documentation claim needed to support that target, clearly
+    separating expected documented behavior from the scenario inference. Check
+    prerequisites, the feasibility of every alternative and conflicting guidance
+    before committing. Propose an official Google Cloud documentation URL and
+    exact expected section heading or fragment for each anchor.
+    These are unverified discovery hints, never evidence or fetched quotes. Record
+    unresolved prerequisites, ambiguities and conflicts in unresolved_issues; use
+    an empty list only when none are known. Do not invent quotes or claim verification.
+    """
+    commitments: DocumentationCommitments = dspy.OutputField()
+
+
+DecisionPlanWithCommitmentsSignature.instructions = (
+    DecisionPlanSignature.instructions + "\n\n" + DecisionPlanWithCommitmentsSignature.instructions
+)
 
 
 class VerifiedReason(OptionEvidence):
@@ -180,6 +223,24 @@ def plan_decision(scope, *, model, difficulty="MEDIUM", replacement_feedback="",
     if len(set(a.casefold() for a in actions)) != 4:
         raise ValueError("Decision alternatives must be distinct")
     return plan
+
+
+def plan_decision_with_commitments(scope, *, model, difficulty="MEDIUM", replacement_feedback="", existing_scenarios=(), reasoning_effort="high", predictor=None):
+    """Plan with unverified discovery hints; leave the baseline planner unchanged."""
+    from shared.cli_models import output_model
+    from shared.question_style import practitioner_signature
+    from shared.objective_style import policy_instructions
+    inputs = {"objective_scope": scope["domain_prompt"] + policy_instructions(scope.get("style_policy")),
+              "difficulty": difficulty, "replacement_feedback": replacement_feedback,
+              "existing_scenarios": json.dumps(existing_scenarios, ensure_ascii=False)}
+    signature = practitioner_signature(DecisionPlanWithCommitmentsSignature, scope.get("cert_id"))
+    raw = predictor(**inputs) if predictor else _predict(signature, inputs, model, reasoning_effort)
+    result = output_model(DecisionPlanWithCommitmentsSignature).model_validate(raw).model_dump()
+    # Reuse the baseline objective and alternative checks without another LM call.
+    plan_decision(scope, model=model, predictor=lambda **_: {"plan": result["plan"]})
+    if {row["option_label"] for row in result["commitments"]["anchors"]} != set("ABCD"):
+        raise ValueError("Documentation commitments must cover A-D")
+    return result
 
 
 def verify_decision(scope, plan, sources, *, model, reasoning_effort="medium", predictor=None):

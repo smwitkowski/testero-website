@@ -1,0 +1,214 @@
+{
+  "scope": "Offline read-only; no model/API/env/prod calls",
+  "counts": {
+    "machine-learning-engineer-v5-b28-scaling-1018": {
+      "candidates": 30,
+      "attempts": 69,
+      "retained_plans": 69,
+      "proofs": 69,
+      "proof_passes": 15,
+      "proof_failures": 54,
+      "veto_reasons": 54,
+      "accepted": 8,
+      "eventual_proof_pass_candidates": 15,
+      "judge_pass_candidates": 8,
+      "no_proof_attempts": 0
+    },
+    "cloud-engineer-v5-ace-b1-1017": {
+      "candidates": 15,
+      "attempts": 23,
+      "retained_plans": 23,
+      "proofs": 22,
+      "proof_passes": 14,
+      "proof_failures": 8,
+      "veto_reasons": 8,
+      "accepted": 7,
+      "eventual_proof_pass_candidates": 14,
+      "judge_pass_candidates": 7,
+      "no_proof_attempts": 1
+    },
+    "cloud-engineer-v5-ace-b2-1018": {
+      "candidates": 15,
+      "attempts": 22,
+      "retained_plans": 22,
+      "proofs": 22,
+      "proof_passes": 13,
+      "proof_failures": 9,
+      "veto_reasons": 9,
+      "accepted": 9,
+      "eventual_proof_pass_candidates": 13,
+      "judge_pass_candidates": 9,
+      "no_proof_attempts": 0
+    },
+    "cloud-engineer-v5-ace-b3-1018": {
+      "candidates": 15,
+      "attempts": 28,
+      "retained_plans": 28,
+      "proofs": 28,
+      "proof_passes": 13,
+      "proof_failures": 15,
+      "veto_reasons": 15,
+      "accepted": 4,
+      "eventual_proof_pass_candidates": 13,
+      "judge_pass_candidates": 4,
+      "no_proof_attempts": 0
+    },
+    "cloud-engineer-v5-ace-b4-1018": {
+      "candidates": 15,
+      "attempts": 25,
+      "retained_plans": 25,
+      "proofs": 21,
+      "proof_passes": 10,
+      "proof_failures": 11,
+      "veto_reasons": 11,
+      "accepted": 4,
+      "eventual_proof_pass_candidates": 10,
+      "judge_pass_candidates": 4,
+      "no_proof_attempts": 4
+    },
+    "baseline": {
+      "candidates": 12,
+      "attempts": 27,
+      "retained_plans": 27,
+      "proofs": 27,
+      "proof_passes": 6,
+      "proof_failures": 21,
+      "veto_reasons": 21,
+      "accepted": 0,
+      "eventual_proof_pass_candidates": 6,
+      "judge_pass_candidates": 5,
+      "no_proof_attempts": 0
+    },
+    "treatment": {
+      "candidates": 12,
+      "attempts": 36,
+      "retained_plans": 36,
+      "proofs": 36,
+      "proof_passes": 1,
+      "proof_failures": 35,
+      "veto_reasons": 35,
+      "accepted": 0,
+      "eventual_proof_pass_candidates": 1,
+      "judge_pass_candidates": 0,
+      "no_proof_attempts": 0
+    }
+  },
+  "historical_totals": {
+    "candidates": 90,
+    "attempts": 167,
+    "retained_plans": 167,
+    "proofs": 162,
+    "proof_passes": 65,
+    "proof_failures": 97,
+    "veto_reasons": 97,
+    "accepted": 32,
+    "eventual_proof_pass_candidates": 65,
+    "judge_pass_candidates": 32,
+    "no_proof_attempts": 5
+  },
+  "live_totals": {
+    "candidates": 24,
+    "attempts": 63,
+    "retained_plans": 63,
+    "proofs": 63,
+    "proof_passes": 7,
+    "proof_failures": 56,
+    "veto_reasons": 56,
+    "accepted": 0,
+    "eventual_proof_pass_candidates": 7,
+    "judge_pass_candidates": 5,
+    "no_proof_attempts": 0
+  },
+  "claim_ledger": {
+    "rows": 1010,
+    "labels": {
+      "supported": 297,
+      "not_found": 665,
+      "partial": 47,
+      "contradicted": 1
+    },
+    "kinds": {
+      "scenario": 191,
+      "documentation": 515,
+      "judgment": 304
+    },
+    "by_kind": {
+      "documentation": {
+        "not_found": 406,
+        "partial": 41,
+        "supported": 67,
+        "contradicted": 1
+      },
+      "judgment": {
+        "not_found": 259,
+        "supported": 39,
+        "partial": 6
+      },
+      "scenario": {
+        "supported": 191
+      }
+    }
+  },
+  "retrospective_anchor_rows": 77,
+  "precheck_catch_rate": null,
+  "precheck_false_block_rate": null,
+  "reason": "New commitment metadata absent historically; neither taxonomy nor absent new fields is a historical catch.",
+  "evidence": [
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-retrieval-1019/content-pipeline/calibration/retrieval-2026-10-19/veto-analysis.md",
+      "sha256": "7a99e078923608273afad0b10ffc40122c8f14af197368c46890f8cc6a9343fd"
+    },
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline/.cache/generation/machine-learning-engineer-v5-b28-scaling-1018.json",
+      "sha256": "2c50b82e9d1c10493d949a24bdb9d58d2a2955e8bc634d888aa794ca83b7699c"
+    },
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline/.cache/generation/cloud-engineer-v5-ace-b1-1017.json",
+      "sha256": "5cbbf1f8722dba71e924e9f5f30707080422da7416c2c42e59c42fa21d1ea821"
+    },
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline/.cache/generation/cloud-engineer-v5-ace-b2-1018.json",
+      "sha256": "85d81dce77d6b4a1fe6f1575f11087d7ead99ca58bc07321c1ecfac5c50a1ab1"
+    },
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline/.cache/generation/cloud-engineer-v5-ace-b3-1018.json",
+      "sha256": "d8e3c8c651e4f7ca4a13615df5348f3c032373f5040e4f463ee890bc285149d7"
+    },
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline/.cache/generation/cloud-engineer-v5-ace-b4-1018.json",
+      "sha256": "b6aca189e0fbb607e887ae828a74f5b3222ace37d57cf5a2cb577fb412ffdba1"
+    },
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-retrieval-1019/content-pipeline/.cache/generation/retrieval-1019-b/baseline.json",
+      "sha256": "6c39536af7ff7cf1bc7ae201c114e691921cb7e8b7e53db957d3fff32bf76138"
+    },
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-retrieval-1019/content-pipeline/.cache/generation/retrieval-1019-b/treatment.json",
+      "sha256": "f8c48c83573d0ee255fafd8c4b1af44ce26a192ace71a19903021172b0c54e1a"
+    },
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-retrieval-1019/content-pipeline/calibration/retrieval-2026-10-19/live-ab-failure/baseline-claims.json",
+      "sha256": "0bde90d3b4afe81273b83c0db82a04d92b7d111b001da4b6e227937f4247c761"
+    },
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-retrieval-1019/content-pipeline/calibration/retrieval-2026-10-19/live-ab-failure/treatment-second.json",
+      "sha256": "cd3cd90c63ff80bfe544915a5e5cf2557a554d802a3f29396763e66da32cc5fa"
+    },
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-retrieval-1019/content-pipeline/calibration/retrieval-2026-10-19/live-ab-failure/claim-support-selected.json",
+      "sha256": "38416b3fbc82e785dc96b08bbe13ff3fdd8841dd37606d5d328e035ced646943"
+    },
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-retrieval-1019/content-pipeline/calibration/retrieval-2026-10-19/live-ab-failure/token-model.json",
+      "sha256": "3d2b908d0ed272cb61613cb00a0ce255f48906f70a0c1846e11bc1a8cc20604e"
+    },
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-retrieval-1019/content-pipeline/calibration/retrieval-2026-10-19/live-ab-failure/diagnosis-counts.json",
+      "sha256": "0fc9be7d22107da0609abd03fa41c72a3bbaec74be622e96b948d4c409ad6f20"
+    },
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-retrieval-1019/content-pipeline/calibration/retrieval-2026-10-19/live-ab-failure/treatment-first.json",
+      "sha256": "ffa5d3dee43580e2ed86629308c7a971fe3a33ca941d318ce590e3c19d31e4ac"
+    }
+  ]
+}

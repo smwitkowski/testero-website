@@ -9,6 +9,7 @@ from pathlib import Path
 import sys
 
 import click
+from pydantic import ValidationError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from shared.cert_context import DEFAULT_CERT, plan_questions, load_cert_context
@@ -24,9 +25,10 @@ from shared.parallel import run_bounded
 from shared.evidence import check_evidence
 from shared.call_logging import call_context
 from shared.llm_generator import generate_question, cite_question, GenerationOutputError
-from shared.decision_planner import plan_decision, verify_decision, writer_decision_context, writer_documentation_context, DecisionVetoError
+from shared.decision_planner import plan_decision, plan_decision_with_commitments, verify_decision, writer_decision_context, writer_documentation_context, DecisionVetoError
+from shared.doc_precheck import check_doc_commitments, fetch_commitment_sources
 from shared.llm_limits import MaxTokensTruncation
-from shared.cli_models import CLIModelError, CLIUsageLimitError, CLIAuthError, CodexModelRejectedError
+from shared.cli_models import CLIModelError, CLIUsageLimitError, CLIAuthError, CodexModelRejectedError, CLISchemaError
 from shared.completion_diagnostics import _safe_completion
 from shared.model_policy import DEFAULT_GENERATOR_MODEL, DEFAULT_JUDGE_MODEL, require_independent_models
 from shared.quality_gate import JudgeVerdict, QUESTION_FIELDS, judge_question, judge_three_gates
@@ -137,6 +139,8 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 
 
 @click.command()
+@click.option("--planner-doc-precheck", is_flag=True, help="Experimental planner page/section commitments and cheap pre-verifier rejection; default off.")
+@click.option("--doc-precheck-shadow", is_flag=True, help="Measure precheck without blocking: requires --planner-doc-precheck; full verifier still runs.")
 @click.option("--cert", default=DEFAULT_CERT, show_default=True)
 @click.option("--n-questions", type=click.IntRange(min=1), default=None, help="Total candidate count across the plan, not per domain (default: 10).")
 @click.option("--target-accepted", type=click.IntRange(min=1), default=None, help="Plan ceil(K / expected-yield) candidates; alternative to --n-questions, not a quality guarantee.")
@@ -161,8 +165,10 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--cite-effort", type=click.Choice(["low", "medium", "high"]), default="medium", show_default=True)
 def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge_model, difficulty, dry_run, artifact, exam, seed,
          parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None, existing_questions=None, argon_gate=False,
-         target_accepted=None, expected_yield=0.29, distractor_evidence="strict", plan_only=False):
+         target_accepted=None, expected_yield=0.29, distractor_evidence="strict", plan_only=False, planner_doc_precheck=False, doc_precheck_shadow=False):
     try:
+        if doc_precheck_shadow and not planner_doc_precheck:
+            raise ValueError("--doc-precheck-shadow requires --planner-doc-precheck")
         from shared.distractor_evidence import evidence_policy
         frozen_evidence = evidence_policy(distractor_evidence)
         n_questions = candidate_budget(n_questions, target_accepted, expected_yield)
@@ -200,7 +206,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                "parallel": effective_parallel, "gen_effort": gen_effort, "cite_effort": cite_effort,
                "rules_version": 5, "style_policy_version": "5.1", "section_allocation": allocation, "decision_first": True,
                "distractor_evidence": frozen_evidence,
-               "existing_questions": bank, "argon_gate": argon_gate, "execution_policy": "short_circuit_v1"}
+               "existing_questions": bank, "argon_gate": argon_gate, "execution_policy": "short_circuit_v1",
+               "planner_doc_precheck": {"version": 1, "enabled": planner_doc_precheck, "shadow": doc_precheck_shadow}}
     exam = exam or ("GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert)
     payload.update({"difficulty": difficulty, "exam": exam})
     if plan_only:
@@ -292,13 +299,31 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                         [decision for earlier, decision in sorted(planning_history.items()) if earlier < index])
                 with call_context(stage="plan", candidate_id=entry.get("candidate_id"), index=index,
                                   attempt=decision_attempt + 1, calls_path=str(artifact) + ".calls.jsonl"):
-                    decision = plan_decision(scope, model=model, difficulty=difficulty,
-                        replacement_feedback=feedback, existing_scenarios=summaries, reasoning_effort=gen_effort)
+                    plan_options = {"model": model, "difficulty": difficulty, "replacement_feedback": feedback,
+                                    "existing_scenarios": summaries, "reasoning_effort": gen_effort}
+                    if planner_doc_precheck:
+                        try:
+                            proposed = plan_decision_with_commitments(scope, **plan_options)
+                        except (ValidationError, ValueError, GenerationOutputError, CLISchemaError):
+                            # Malformed commitments cannot become evidence or escape the shared budget.
+                            proof = {"passed": False, "reason": "Invalid planner decision or missing/malformed documentation commitments"}
+                            entry["decision_attempts"].append({"attempt": decision_attempt + 1,
+                                "replacement_feedback": feedback, "existing_scenarios": summaries,
+                                "verification_skipped": "doc_precheck_schema", "precheck_rejection": proof["reason"]})
+                            veto_feedback.append({"veto_reason": proof["reason"]})
+                            feedback = json.dumps({"previous_vetoes": veto_feedback,
+                                "instruction": "Replace the decision and supply complete A-D page/section commitments."})
+                            continue
+                        decision, commitments = proposed["plan"], proposed["commitments"]
+                    else:
+                        decision = plan_decision(scope, **plan_options)
                 attempt = {"attempt": decision_attempt + 1, "replacement_feedback": feedback,
                            "existing_scenarios": summaries, "plan": decision}
                 with write_lock:
                     planning_history[index] = decision
                 entry["decision_attempts"].append(attempt)
+                if planner_doc_precheck:
+                    attempt["doc_commitments"] = commitments
                 if decision["engineering_decision"].casefold() in vetoed_decisions:
                     stage = "decision_veto"
                     attempt["proof"] = {"passed": False, "reason": "Replacement must change the unsupported engineering decision"}
@@ -312,17 +337,30 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     return
                 stage = "documentation"
                 sources = search_objective_docs(scope["objective_text"], scope["services"],
-                    cache=docs_cache, objective_id=scope["objective_id"], decision_plan=decision)
-                if not sources:
+                    cache=docs_cache, objective_id=scope["objective_id"], decision_plan=decision,
+                    **({"allow_empty": True} if planner_doc_precheck else {}))
+                if not sources and not planner_doc_precheck:
                     raise ValueError("No fetched documentation")
+                if planner_doc_precheck:
+                    sources, fetch_errors = fetch_commitment_sources(commitments, docs_cache, sources)
+                    attempt["doc_precheck"] = check_doc_commitments(decision, commitments, sources)
+                    attempt["doc_precheck"]["fetch_errors"] = fetch_errors
+                    attempt["doc_precheck"]["shadow"] = doc_precheck_shadow
                 attempt["sources"] = sources
                 entry["sources"] = sources  # Frozen current sources for final receipts.
-                context = documentation_context(sources)
+                context = documentation_context(sources) if sources else ""
                 stage = "decision_veto"
-                with call_context(stage="verify", candidate_id=entry.get("candidate_id"), index=index,
-                                  attempt=decision_attempt + 1, calls_path=str(artifact) + ".calls.jsonl"):
-                    proof = verify_decision(scope, decision, sources, model=model, reasoning_effort=cite_effort)
-                attempt["proof"] = proof
+                if planner_doc_precheck and not attempt["doc_precheck"]["passed"] and (not doc_precheck_shadow or not sources):
+                    # This is an eligibility rejection, never a semantic docs verdict.
+                    proof = {"passed": False, "reason": "Documentation commitment precheck: " + "; ".join(attempt["doc_precheck"]["reasons"]),
+                             "mechanical_check": {"passed": False, "errors": []}}
+                    attempt["verification_skipped"] = "doc_precheck"
+                    attempt["precheck_rejection"] = proof["reason"]
+                else:
+                    with call_context(stage="verify", candidate_id=entry.get("candidate_id"), index=index,
+                                      attempt=decision_attempt + 1, calls_path=str(artifact) + ".calls.jsonl"):
+                        proof = verify_decision(scope, decision, sources, model=model, reasoning_effort=cite_effort)
+                    attempt["proof"] = proof
                 if proof["passed"]:
                     break
                 vetoed_decisions.append(decision["engineering_decision"].casefold())

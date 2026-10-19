@@ -1445,3 +1445,31 @@ See [the retrieval A/B runbook](calibration/retrieval-2026-10-17/README.md) for 
 strict-default `--distractor-evidence` flag, frozen provenance, offline measurements
 and coordinator-only comparison commands. This does not change strict prompts
 or authorize production ingestion.
+
+## Experimental planner documentation commitments (2026-10-19)
+
+`--planner-doc-precheck` is OFF by default, independent of PR283. The flag uses
+an alternate planner output schema but preserves the original strict DecisionPlan
+and full-document verifier signature. It commits a proposed official page and
+section for the best action and every mistake reason before fetching. Proposed
+URLs/headings are guesses, never receipts. Each target copies its original plan
+field; support_claim names underlying documented behavior, not an unsupported
+negative conclusion. Explicit unresolved prerequisites, ambiguities and conflicts
+are rejected for replanning. Missing/unfetched/invalid anchors are also rejected.
+
+Normal discovery remains; up to4 approved proposed pages may supplement it via the
+same bounded documentation fetcher/cache. Full source records and hashes remain
+for the unchanged full verifier, writer and independent judges. Matching a heading
+only proves navigation, not semantic claim support or unique correctness. A failed
+precheck skips the expensive verifier and replans within the existing3-attempt
+budget, never grants a pass. Rejections are recorded separately, not fake proofs.
+
+Use `--planner-doc-precheck --doc-precheck-shadow` first to record would-block
+results while still running full verification. Same-plan shadow verdicts allow
+catch/false-block measurement; baseline/treatment generation is stochastic even
+with the same objective seed. Historical plans have no commitments and cannot
+measure this feature by pretending missing new metadata was a historical defect.
+Targets are ≥40% of shadow full-verifier vetoes caught and ≤5% false blocks among
+eventual independently passing plans, NOT established results. Keep OFF until a
+coordinator-owned fresh evaluation meets both targets and independently checks
+quality. See `calibration/veto-precheck-2026-10-19/README.md` for commands/limits.
