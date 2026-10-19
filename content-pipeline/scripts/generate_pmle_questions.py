@@ -148,6 +148,10 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--subsection", default=None, help="Optional guide subsection filter.")
 @click.option("--objective", "objective_ids", multiple=True, help="Repeatable registry objective ID; overrides weights with round-robin targets in flag order.")
 @click.option("--distractor-evidence", type=click.Choice(["strict", "consistent"]), default="strict", show_default=True, help="Freeze decision/evidence review policy for this batch.")
+@click.option("--doc-cache", is_flag=True, help="Opt in to 7-day on-disk public official-document snapshots.")
+@click.option("--verify-retrieval", is_flag=True, help="Opt in to per-option local BM25 verifier passages (at most about 15k estimated doc tokens).")
+@click.option("--verify-stable-prefix", is_flag=True, help="Opt in to documentation-first verifier field ordering; provider cache hits must be measured.")
+@click.option("--decision-attempts", type=click.IntRange(min=1, max=3), default=3, show_default=True, help="Total decision plans including initial attempt; lower caps are experimental.")
 @click.option("--argon-gate", is_flag=True, help="Freeze mandatory independent Gemini 4 Argon blind/full review requests.")
 @click.option("--existing-questions", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Local ACTIVE/DRAFT question export for near-duplicate veto; no DB access.")
 @click.option("--section-allocation", default=None, help="Comma-separated counts in included guide section order, summing to N; pilot: 4,5,6,6,5,4. Cannot combine with scope filters.")
@@ -165,7 +169,8 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--cite-effort", type=click.Choice(["low", "medium", "high"]), default="medium", show_default=True)
 def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge_model, difficulty, dry_run, artifact, exam, seed,
          parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None, existing_questions=None, argon_gate=False,
-         target_accepted=None, expected_yield=0.29, distractor_evidence="strict", plan_only=False, emit_taxonomy=False):
+         target_accepted=None, expected_yield=0.29, distractor_evidence="strict", plan_only=False, emit_taxonomy=False,
+         doc_cache=False, verify_retrieval=False, verify_stable_prefix=False, decision_attempts=3):
     try:
         from shared.distractor_evidence import evidence_policy
         frozen_evidence = evidence_policy(distractor_evidence)
@@ -206,7 +211,11 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                "parallel": effective_parallel, "gen_effort": gen_effort, "cite_effort": cite_effort,
                "rules_version": 5, "style_policy_version": "5.1", "section_allocation": allocation, "decision_first": True,
                "distractor_evidence": frozen_evidence,
-               "existing_questions": bank, "argon_gate": argon_gate, "execution_policy": "short_circuit_v1"}
+               "existing_questions": bank, "argon_gate": argon_gate, "execution_policy": "short_circuit_v1",
+               "retrieval_experiment": {"version": 1, "disk_cache": doc_cache,
+                                         "per_option_retrieval": verify_retrieval,
+                                         "stable_prefix": verify_stable_prefix,
+                                         "decision_attempts": decision_attempts}}
     if emit_taxonomy:
         payload["taxonomy_enabled"] = True
     exam = exam or ("GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert)
@@ -249,7 +258,11 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     write_lock = RLock()
     commit_order = Condition(write_lock)
     next_commit = 1
-    docs_cache = DocumentationCache()
+    from shared.doc_disk_cache import DiskDocumentationCache
+    from shared.doc_retrieval import RetrievalSession
+    disk_cache = DiskDocumentationCache(Path(__file__).resolve().parent.parent / ".cache/documentation") if doc_cache else None
+    docs_cache = DocumentationCache(disk_cache=disk_cache)
+    retrieval_session = RetrievalSession() if verify_retrieval else None
     planning_history = {}
     objective_rotations = {}
     registry = load_cert_context(cert)
@@ -293,7 +306,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             feedback = ""
             vetoed_decisions = []
             veto_feedback = []
-            for decision_attempt in range(3):
+            for decision_attempt in range(decision_attempts):
                 stage = "decision_plan"
                 with write_lock:
                     summaries = existing_scenarios(scope, bank["questions"], payload["candidates"],
@@ -323,13 +336,23 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     cache=docs_cache, objective_id=scope["objective_id"], decision_plan=decision)
                 if not sources:
                     raise ValueError("No fetched documentation")
+                retrieval = None
+                if retrieval_session is not None:
+                    retrieval = retrieval_session.prepare(scope, decision, sources)
+                    sources = retrieval["sources"]
+                    attempt["retrieval"] = retrieval["metadata"]
                 attempt["sources"] = sources
-                entry["sources"] = sources  # Frozen current sources for final receipts.
+                entry["sources"] = sources  # Frozen full sources for final receipts and independent judges.
                 context = documentation_context(sources)
                 stage = "decision_veto"
                 with call_context(stage="verify", candidate_id=entry.get("candidate_id"), index=index,
                                   attempt=decision_attempt + 1, calls_path=str(artifact) + ".calls.jsonl"):
-                    proof = verify_decision(scope, decision, sources, model=model, reasoning_effort=cite_effort)
+                    verify_options = {}
+                    if retrieval is not None:
+                        verify_options["retrieval"] = retrieval
+                    if verify_stable_prefix:
+                        verify_options["stable_prefix"] = True
+                    proof = verify_decision(scope, decision, sources, model=model, reasoning_effort=cite_effort, **verify_options)
                 attempt["proof"] = proof
                 if proof["passed"]:
                     break
