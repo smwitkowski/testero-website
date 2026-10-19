@@ -17,7 +17,8 @@
     "test:e2e": "playwright test",
     "dev:local": "node scripts/local.mjs dev",
     "test:e2e:local": "node scripts/local.mjs e2e",
-    "test:db:local": "node scripts/local.mjs verify-db"
+    "test:db:local": "node scripts/local.mjs verify-db",
+    "test:taxonomy:db:local": "node scripts/local.mjs verify-taxonomy-db"
   },
   "dependencies": {
     "@radix-ui/react-slot": "1.2.3",

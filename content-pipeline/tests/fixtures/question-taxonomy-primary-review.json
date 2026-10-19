@@ -1,0 +1,2706 @@
+{
+  "version": 1,
+  "method": "Single analyst manual primary decision coding; no live classifier run; not independently adjudicated",
+  "questions": [
+    {
+      "question_id": "0000f457-e10a-4599-9132-f1add5014a34",
+      "decision_type": "prepare_data",
+      "confidence": "low",
+      "reason": "Combines versioned raw storage, metadata and processing for collaborative dataset preparation."
+    },
+    {
+      "question_id": "003d2229-5d48-5daf-8a60-7985f55edbb5",
+      "decision_type": "configure_environment",
+      "confidence": "high",
+      "reason": "Opens candidate tuning notebooks in Workbench to minimize interactive setup."
+    },
+    {
+      "question_id": "00649ff6-c21b-5aa2-99f1-6312b906bfe9",
+      "decision_type": "scale_capacity",
+      "confidence": "high",
+      "reason": "Sets GPU autoscaling and replica bounds for changing endpoint demand."
+    },
+    {
+      "question_id": "0125c482-05ab-4fa0-a27b-8086929ec873",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Defines preprocessing, training and evaluation as pipeline components."
+    },
+    {
+      "question_id": "0168b5cc-7806-5dd2-ad26-465ebd8a51a1",
+      "decision_type": "manage_features",
+      "confidence": "low",
+      "reason": "Registers source feature groups and combined views with scheduled sync; identity restrictions are secondary."
+    },
+    {
+      "question_id": "017bade5-e8a4-4a3e-81ae-81fdb4f6ab6b",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "Adapter tuning replaces lengthy few-shot prompts using labeled pairs."
+    },
+    {
+      "question_id": "01a20c13-00a2-41dc-8a80-3710a16e6fb9",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses SQL BigQuery ML classification for churn."
+    },
+    {
+      "question_id": "01f968d3-efeb-436a-9ada-b1e6429a2edc",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "AI Protection threat detection and CMEK protect sensitive AI assets."
+    },
+    {
+      "question_id": "0510992d-1b7d-5c3c-9105-26da27615003",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Custom Predictor packages normalization and response conversion without owned HTTP server."
+    },
+    {
+      "question_id": "0525308c-520c-599e-b8e2-7fb1ac5312da",
+      "decision_type": "scale_capacity",
+      "confidence": "high",
+      "reason": "Reserves measured Gemini throughput rather than changing validated model."
+    },
+    {
+      "question_id": "060fbb68-b02a-5928-80ad-9146b569e0b5",
+      "decision_type": "track_provenance",
+      "confidence": "high",
+      "reason": "Groups retrained releases as registry versions with movable aliases."
+    },
+    {
+      "question_id": "068dd61f-810c-428c-b580-38a704de833e",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects warehouse-native churn classification."
+    },
+    {
+      "question_id": "06d48e09-d881-4458-bf9a-b35871973d1e",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Composer DAG coordinates Oracle, Dataflow, training and external BI dependencies."
+    },
+    {
+      "question_id": "0709fe16-2e3a-5fbf-a3cf-26e80c94de53",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Repackages polling job as request-driven service with Pub/Sub push."
+    },
+    {
+      "question_id": "07af49eb-940c-5737-bf95-52b3e0409ca5",
+      "decision_type": "validate_quality",
+      "confidence": "low",
+      "reason": "Staging parity gate compares raw requests and final quantities; does not explicitly export fitted state."
+    },
+    {
+      "question_id": "07d2870c-4535-52e4-a2a5-0044a3749f75",
+      "decision_type": "explain_predictions",
+      "confidence": "high",
+      "reason": "GLOBAL_EXPLAIN supplies mean absolute contributions instead of repeated local explanations."
+    },
+    {
+      "question_id": "098b917b-bc84-4fe9-8695-497689643229",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses ARIMA_PLUS for SQL weekly forecasting."
+    },
+    {
+      "question_id": "0992cf85-6f92-5674-b233-ff00fb97c122",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Publishes parameterized reusable pipeline template per plant."
+    },
+    {
+      "question_id": "0a5086e2-f940-5afb-ac22-66ea31255a75",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "low",
+      "reason": "Managed Ray retains existing task/actor workflow graph; compute hosting is secondary."
+    },
+    {
+      "question_id": "0d410acb-3582-4553-afc5-e0623d7f0eb2",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects managed Retail recommendations API."
+    },
+    {
+      "question_id": "0d68cdb3-68e7-4330-89e3-7faadc853fbb",
+      "decision_type": "optimize_training",
+      "confidence": "high",
+      "reason": "Defines F1 objective, parameter ranges and bounded parallel search."
+    },
+    {
+      "question_id": "0d6a70e4-ba4f-5ae4-a8f0-facb95d52b71",
+      "decision_type": "scale_capacity",
+      "confidence": "high",
+      "reason": "Sets four serving replicas using measured peak throughput."
+    },
+    {
+      "question_id": "0dc42748-1863-41af-8c96-f91634f4f624",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Selects TPU-suitable fixed-shape large-batch training workload."
+    },
+    {
+      "question_id": "0ee006ac-b8f2-5ce1-8b6c-8c0c27756cc8",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "Grounds existing Gemini with current relevant BigQuery departures."
+    },
+    {
+      "question_id": "0f2e7a7c-e09d-4f3d-af65-58e1e3266a9a",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects embeddings and semantic similarity functions for product retrieval."
+    },
+    {
+      "question_id": "0f701a7e-671a-47d9-b711-7fc230c68cfa",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses matrix factorization for movie recommendations."
+    },
+    {
+      "question_id": "0ff10f7d-b5e4-59b6-9c8a-a0cce8abddd2",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Organization custom role preserves narrow permissions across projects."
+    },
+    {
+      "question_id": "1036412a-effb-5e8e-9a29-93a073283d32",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "Switches existing model to parameter-efficient regional tuning."
+    },
+    {
+      "question_id": "123a2a9d-357c-59f1-b49e-55de6b5f7144",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Combines project metrics scope for shared dashboards and alerts."
+    },
+    {
+      "question_id": "12e8f38b-872a-41d6-a5fa-b76631301f19",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Composer coordinates hybrid extraction through downstream ML pipeline."
+    },
+    {
+      "question_id": "134825ff-b028-4154-8142-b69988ee9b0e",
+      "decision_type": "manage_access",
+      "confidence": "low",
+      "reason": "Private Service Connect dedicated endpoint establishes inference network boundary."
+    },
+    {
+      "question_id": "13801bc1-9939-53dc-b8c5-40ebe7f837f2",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses pretrained embeddings and vector distance for semantic case retrieval."
+    },
+    {
+      "question_id": "13c2a2e8-40ba-52c8-8f09-71684bca37fd",
+      "decision_type": "manage_features",
+      "confidence": "low",
+      "reason": "Registers source groups and combined feature view; dedicated identities constrain source access."
+    },
+    {
+      "question_id": "13e611d2-d2e5-4aee-97f9-012d06809244",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses matrix factorization over ratings in BigQuery."
+    },
+    {
+      "question_id": "13f2c17a-4673-5928-9d4e-489af36817db",
+      "decision_type": "manage_features",
+      "confidence": "high",
+      "reason": "Registers shared features and scheduled view sync to propagate corrections."
+    },
+    {
+      "question_id": "16199e25-a779-546d-9b7f-90474f226f4f",
+      "decision_type": "manage_features",
+      "confidence": "high",
+      "reason": "Registers existing columns centrally for feature discovery without duplication."
+    },
+    {
+      "question_id": "16bb43dc-74ad-57ae-8374-cecc1bf2cdc0",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "Supervised tuning on approved report-summary pairs changes summary style."
+    },
+    {
+      "question_id": "17326f1f-8c94-478b-a895-fad9a811e9d2",
+      "decision_type": "track_provenance",
+      "confidence": "low",
+      "reason": "Training pipeline uploads a new version under existing registry model; A/B delivery is downstream."
+    },
+    {
+      "question_id": "17cb70c0-3887-563c-bcdd-f5c170374f87",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Trajectory recall compares optimized test runs against essential-call references."
+    },
+    {
+      "question_id": "184cd34b-5b52-4002-a34f-54694e469d9c",
+      "decision_type": "package_inference",
+      "confidence": "low",
+      "reason": "Chooses separate private online and batch inference execution paths."
+    },
+    {
+      "question_id": "18a1601e-b3f8-59ab-af41-975c1b4125f5",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "SklearnPredictor hooks centralize serving normalization and reorder postprocessing."
+    },
+    {
+      "question_id": "192845db-1cb2-568a-9a3c-635c7e8e5158",
+      "decision_type": "trigger_automation",
+      "confidence": "high",
+      "reason": "Separate approval-required deployment trigger preserves unattended training."
+    },
+    {
+      "question_id": "19fd7339-8eca-5703-8cf8-9c84628a663b",
+      "decision_type": "optimize_training",
+      "confidence": "high",
+      "reason": "L1 regularization selects nonzero original attribute coefficients."
+    },
+    {
+      "question_id": "1a40a4a2-71fe-4e0a-a3b5-e19eeb456915",
+      "decision_type": "package_inference",
+      "confidence": "low",
+      "reason": "Dedicated GPU online endpoint packages serving; autoscaling is supporting configuration."
+    },
+    {
+      "question_id": "1a52e25a-0284-4934-a431-40a4700dbf1a",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses BigQuery boosted tree classifier for structured churn."
+    },
+    {
+      "question_id": "1b72758a-8a10-4961-a1b8-8cedf63de1a2",
+      "decision_type": "prepare_data",
+      "confidence": "low",
+      "reason": "Moves HDFS and SQL exports then joins data for training; orchestration also present."
+    },
+    {
+      "question_id": "1be37ba6-edf6-5313-af10-04a1468cf037",
+      "decision_type": "manage_features",
+      "confidence": "high",
+      "reason": "Registers selected source columns and combines groups without offline duplication."
+    },
+    {
+      "question_id": "1bf88651-e62b-4e27-b6bc-9a768e4dd93a",
+      "decision_type": "track_provenance",
+      "confidence": "high",
+      "reason": "Logs experiment parameters metrics and TensorBoard curves centrally."
+    },
+    {
+      "question_id": "1c387937-8c0b-5703-8fd5-be920e0793c5",
+      "decision_type": "monitor_behavior",
+      "confidence": "low",
+      "reason": "Pairs offline session tests with sampled continuous live trace monitoring."
+    },
+    {
+      "question_id": "1c6ff783-cc91-463d-a795-d0aec92db162",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects managed Agent Builder RAG system."
+    },
+    {
+      "question_id": "1dc5c5f0-c9c6-5a26-a687-03530e2986bd",
+      "decision_type": "select_solution",
+      "confidence": "low",
+      "reason": "Chooses managed SMB storage compatible with AD and Windows clients."
+    },
+    {
+      "question_id": "1e63870e-e8db-5d04-b859-a03a18487556",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "high",
+      "reason": "Embeds learned TensorFlow Transform graph in exported model."
+    },
+    {
+      "question_id": "1eaba98c-3398-5611-b792-250571905518",
+      "decision_type": "track_provenance",
+      "confidence": "high",
+      "reason": "Links dataset/model artifacts and preprocessing/training executions through events."
+    },
+    {
+      "question_id": "1eac5dc2-26bb-4fd9-8242-bf4f765012bb",
+      "decision_type": "track_provenance",
+      "confidence": "low",
+      "reason": "Versioned datasets and registry lineage enable audit and recovery within pipeline."
+    },
+    {
+      "question_id": "1ecf2aeb-ab71-53d1-b9a6-500d930a654f",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects batch Document Translation with glossary and preserved layout."
+    },
+    {
+      "question_id": "1fe444e4-a7bf-5808-85a7-159568e108e8",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Automated canary increases live traffic using metric analysis."
+    },
+    {
+      "question_id": "20d82e48-7793-581b-8457-228960f3aa8c",
+      "decision_type": "package_inference",
+      "confidence": "low",
+      "reason": "Configures custom route forwarding and model-loaded health probe with warm replicas."
+    },
+    {
+      "question_id": "21eea280-9379-40d3-a9bf-e43c605e75bc",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects scalable ARIMA_PLUS product forecasts."
+    },
+    {
+      "question_id": "221b0b10-ba56-5738-869b-4a0d4ac1a143",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Exports XGBoost into compatible prebuilt prediction containers."
+    },
+    {
+      "question_id": "225d1750-9eba-575b-8240-e0fe67bb4bdc",
+      "decision_type": "optimize_training",
+      "confidence": "high",
+      "reason": "Bayesian tuning minimizes held-out forecast error over learning rate and dropout."
+    },
+    {
+      "question_id": "22973a99-1112-4dd3-b78b-ced7aedc69c8",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Cloud Deploy automatically shifts canary traffic at defined percentages."
+    },
+    {
+      "question_id": "239716e7-b4f8-5f3e-8677-eac201b70ce5",
+      "decision_type": "explain_predictions",
+      "confidence": "high",
+      "reason": "Uses local Tree SHAP and global feature influence summaries."
+    },
+    {
+      "question_id": "248c6667-2cdf-5b44-9ed4-9c2fcfea04e5",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Deterministic tokenization preserves joins while denying analyst re-identification."
+    },
+    {
+      "question_id": "24c5eb11-1d04-4bb2-bd1d-b855bce72bf4",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Pipeline components coordinate on-prem training and cloud ingestion/deployment."
+    },
+    {
+      "question_id": "2552fa69-5a20-5744-90a3-2c76eba518d2",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Per-run BigQuery snapshots preserve cohorts cheaply for repeat training."
+    },
+    {
+      "question_id": "263ac070-2935-5987-8a39-50a1956f153c",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Scheduled production-week feature comparisons alert on drift."
+    },
+    {
+      "question_id": "26c5cd9e-daa8-59df-8e23-e66abb66fdfb",
+      "decision_type": "manage_features",
+      "confidence": "high",
+      "reason": "Observation-time feature semantics replace arrival-time online selection."
+    },
+    {
+      "question_id": "279270ba-857b-40bc-85d0-40f82e85cd7b",
+      "decision_type": "manage_features",
+      "confidence": "high",
+      "reason": "Separate source groups combine in online view retaining historical sources."
+    },
+    {
+      "question_id": "27cf498c-5d92-5298-be30-ac61e1144790",
+      "decision_type": "provision_compute",
+      "confidence": "low",
+      "reason": "Regional Standard cluster retains node control and resilient control plane."
+    },
+    {
+      "question_id": "27e120b8-960f-47bb-a63a-5bc5571f834f",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Dedicated private PSC endpoint limits inference to internal network."
+    },
+    {
+      "question_id": "282d73bb-f7db-5d41-9dc6-da85f0d0c6a3",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects editable DOCX translation rather than fixed-layout reconstruction."
+    },
+    {
+      "question_id": "2853199e-a5fb-548d-8650-996abfe1d198",
+      "decision_type": "trigger_automation",
+      "confidence": "low",
+      "reason": "Enforcing label-targeted OS policies continuously apply package baseline."
+    },
+    {
+      "question_id": "29350172-99ce-4ba2-bebf-9fcf9a7f1073",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Runs TFX component workflow on managed Pipelines."
+    },
+    {
+      "question_id": "2959b970-3c45-4621-bbe8-da230d3c3c82",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses Document AI for varied contract entity extraction."
+    },
+    {
+      "question_id": "2a450889-4cd6-5495-9a85-5ab53f5f1353",
+      "decision_type": "scale_capacity",
+      "confidence": "high",
+      "reason": "Keeps one warm Cloud Run instance to avoid repeated model cold loads."
+    },
+    {
+      "question_id": "2a56df9f-76cc-4983-9d2f-f66f5c44ee38",
+      "decision_type": "protect_information",
+      "confidence": "low",
+      "reason": "De-identifies raw PHI before controlled shared feature access and training."
+    },
+    {
+      "question_id": "2ca51a55-820e-4d27-a467-90f344931793",
+      "decision_type": "package_inference",
+      "confidence": "low",
+      "reason": "Model Garden SDK inspects verified container/hardware options and deploys open model endpoint without manual artifact packaging; notebook is context."
+    },
+    {
+      "question_id": "2cd24636-8488-5a41-8d48-d0098bf90046",
+      "decision_type": "manage_features",
+      "confidence": "low",
+      "reason": "Historical point-in-time backlog values restore feature availability semantics; production lookup remains unchanged."
+    },
+    {
+      "question_id": "2d57b084-12a9-4cfe-b389-5de2d2fa765f",
+      "decision_type": "monitor_behavior",
+      "confidence": "low",
+      "reason": "Ongoing drift/skew detection supports attribution investigation and fairness retraining."
+    },
+    {
+      "question_id": "2e3684ad-0dce-5944-9551-0c4be92471fc",
+      "decision_type": "validate_quality",
+      "confidence": "low",
+      "reason": "Both viable alternatives tune models; key discriminator is representative staging tail-latency measurement, not training duration or batch throughput."
+    },
+    {
+      "question_id": "2f6eeb51-1b1f-513b-a4dd-9f5d22438c56",
+      "decision_type": "track_provenance",
+      "confidence": "high",
+      "reason": "Queries recorded lineage to compare upstream datasets and preprocessing executions."
+    },
+    {
+      "question_id": "2fa2b2bc-1bb9-4913-a79c-99357b09f662",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Endpoint dashboards alerts and ingestion logs diagnose running prediction failures."
+    },
+    {
+      "question_id": "309a5c15-18d6-5b3a-b2ed-e611f3f75c3a",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "One multi-series ARIMA_PLUS model replaces per-depot forecasting models."
+    },
+    {
+      "question_id": "3104fe4f-c133-5eb7-868a-9c21cdd699d4",
+      "decision_type": "scale_capacity",
+      "confidence": "high",
+      "reason": "Reserves sustained Gemini capacity with spillover for peaks."
+    },
+    {
+      "question_id": "311eb1a7-ce75-5354-96c6-ee5c8f008a31",
+      "decision_type": "explain_predictions",
+      "confidence": "high",
+      "reason": "Retrieves local feature attributions for individual warranty estimates."
+    },
+    {
+      "question_id": "31249273-5c68-4b65-b738-12db83397dba",
+      "decision_type": "explain_predictions",
+      "confidence": "low",
+      "reason": "Feature attributions identify inputs driving underperforming recommendations; drift alerts provide supporting detection."
+    },
+    {
+      "question_id": "312fa658-fa0f-5cd4-9f57-81a513d5543c",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Compares model-card candidates in playground to choose replacement summarizer."
+    },
+    {
+      "question_id": "333ae8b1-02d1-4ecd-a00f-e70201e1d1c8",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "high",
+      "reason": "Exports fitted TFX Transform graph with model for consistent online inference."
+    },
+    {
+      "question_id": "3399af78-134c-5d69-a681-ee6f8da088f7",
+      "decision_type": "scale_capacity",
+      "confidence": "high",
+      "reason": "Scheduled warm capacity plus CPU autoscaling matches irregular ticket openings."
+    },
+    {
+      "question_id": "33bd5313-dc6f-4599-9d3d-d13e31219754",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Rolling replacement identifies previous deployed model and controls surge/unavailability."
+    },
+    {
+      "question_id": "33fea696-f5d5-525c-b364-be984e527922",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "Supervised image tuning uses selective resolution to control token cost."
+    },
+    {
+      "question_id": "346beeb9-8c34-4d96-b950-60a8d893001d",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses warehouse-native time-series forecasting."
+    },
+    {
+      "question_id": "35583f92-1e29-5bc6-bb87-c4a230d8696c",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Reserves untouched representative test split after tuning on validation tickets."
+    },
+    {
+      "question_id": "358252c2-e168-5fc9-b61b-168efb9dcc9d",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Managed daily S3 transfer replaces notebook video copying."
+    },
+    {
+      "question_id": "38264b4b-2f7b-5c91-9f2f-2532a5361a6d",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Grants repository reader to added node pool service account."
+    },
+    {
+      "question_id": "38680990-e226-5da3-a85a-000661aa2954",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Schedules source feature-group statistics and drift monitoring."
+    },
+    {
+      "question_id": "3897e2f0-aa29-4f66-aed6-c943485621f2",
+      "decision_type": "manage_features",
+      "confidence": "high",
+      "reason": "Registers table columns in feature groups and combined serving view."
+    },
+    {
+      "question_id": "3a6a779c-f0e2-4768-a6fd-e2262ae13d9c",
+      "decision_type": "configure_environment",
+      "confidence": "high",
+      "reason": "Workbench with Python Spark Git and IAM provides collaborative development."
+    },
+    {
+      "question_id": "3bdc0c89-44ea-43f4-8e5a-5953590f8112",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses pretrained remote text-generation model through SQL."
+    },
+    {
+      "question_id": "3c46b864-6b45-4230-9605-544bb5c18f50",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects Document AI for scanned entity extraction."
+    },
+    {
+      "question_id": "3ca55396-0395-59b3-a208-3c8694ccfd54",
+      "decision_type": "trigger_automation",
+      "confidence": "high",
+      "reason": "Persistent realized-error threshold triggers existing retraining pipeline."
+    },
+    {
+      "question_id": "3d4f9dd0-907e-5c0b-80b1-f44c24484072",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Redacts contact details in photos before developer training access."
+    },
+    {
+      "question_id": "3d6ee7a5-0fe1-5931-a603-a0dac1fa9526",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Layout-aware parsing prepares context-preserving retrieval chunks."
+    },
+    {
+      "question_id": "3e6e1400-1293-4caa-9a2f-c1d2c1c18bc4",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "SQL remote-model supervised tuning uses stored prompt/response pairs."
+    },
+    {
+      "question_id": "3e8dd330-13cf-4366-96e6-500ffa9235a4",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "RDMA-capable accelerator machine shapes address distributed training communication."
+    },
+    {
+      "question_id": "3ee5b00d-5f2c-510c-a121-6c2e08c13dec",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Predictor packages existing preprocessing prediction and postprocessing behavior."
+    },
+    {
+      "question_id": "3efb52d9-026a-5147-91dd-70a0610fa1b9",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Workload Identity impersonation replaces mounted service-account key."
+    },
+    {
+      "question_id": "403c5002-ee6b-4463-b19c-8ffdc432d57b",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Composer tasks coordinate on-prem extraction custom transform and ML pipeline."
+    },
+    {
+      "question_id": "40c0e4f4-e944-4cd4-9804-2ad3bfa0eefe",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Inspect-only Model Armor screens prompt and response boundaries with logs."
+    },
+    {
+      "question_id": "40c9dec1-4009-5f1f-9552-c29b5ee7e67d",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "PCA transforms correlated sensors into reduced classifier features."
+    },
+    {
+      "question_id": "41cd8676-7e5f-5c63-a1a2-488718e4ffe3",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Internal-only notebook IP and Private Google Access enforce network policy."
+    },
+    {
+      "question_id": "4205c4a2-29c4-41f5-9fda-a54a2bdeb676",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Private PSC endpoint integrates internal network and VPC controls."
+    },
+    {
+      "question_id": "420f7f83-b69a-5c8e-9621-b293c171fedc",
+      "decision_type": "track_provenance",
+      "confidence": "high",
+      "reason": "Registry versions and production/candidate aliases identify retrained artifacts."
+    },
+    {
+      "question_id": "4252cfb6-cf4c-48d1-ac8a-b78eadc28181",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses Retail search and recommendations service."
+    },
+    {
+      "question_id": "4292a568-d0e8-5b3c-b6eb-4ad3074161bf",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Daily monitoring compares GKE production inputs against training baseline."
+    },
+    {
+      "question_id": "429304aa-8500-57a4-a26f-855054ff196e",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Online Monitor samples live traces with quality/safety metrics and sample caps."
+    },
+    {
+      "question_id": "42a3fba2-2942-4045-80ad-f185fbd445b4",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Pipeline components extract multimodal sources and pass locations to training."
+    },
+    {
+      "question_id": "431e20e4-077b-464b-8ae3-27feaf97d484",
+      "decision_type": "monitor_behavior",
+      "confidence": "low",
+      "reason": "Segment-specific input drift monitoring supports attribution diagnosis."
+    },
+    {
+      "question_id": "431ec14e-421e-53ad-a9c8-e9f6d9e5f1fb",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "high",
+      "reason": "Uses stored training transformations through existing model ML.PREDICT."
+    },
+    {
+      "question_id": "43c7af87-c1ca-4e97-b4e6-4d942837c047",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "SQL remote Gemini model creation fine-tunes prompt-label examples."
+    },
+    {
+      "question_id": "44160099-17db-55a5-be6d-cacfa977a6ed",
+      "decision_type": "explain_predictions",
+      "confidence": "high",
+      "reason": "Normal-operation baseline defines sampled Shapley forecast explanations."
+    },
+    {
+      "question_id": "446ad16d-ff7b-4e04-a7c1-e31896cc2049",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Custom pipeline components combine multimodal sources then train."
+    },
+    {
+      "question_id": "4499ea9a-8e3c-5fab-a7b0-a93a72bcd8b2",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Separate containerized custom jobs independently provision catalog training resources."
+    },
+    {
+      "question_id": "44aa6df6-72d0-548e-a635-4f204425bc7c",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Departure-date partitions and depot clustering reduce exploration scans."
+    },
+    {
+      "question_id": "453a41d4-2910-51bf-be80-5b068fc3877a",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Metric-driven automated canary advances small live traffic shares."
+    },
+    {
+      "question_id": "45bdea42-5dbc-4dbd-998e-fefe66ab068a",
+      "decision_type": "monitor_behavior",
+      "confidence": "low",
+      "reason": "Intermediate preprocessing statistics and training diagnostics investigate inconsistent scaled runs; pipeline structure supports observation."
+    },
+    {
+      "question_id": "45c254a9-b85b-51ce-824b-40eed1fedfa2",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "high",
+      "reason": "ML.PREDICT reuses existing k-means scaling state rather than copied parameters."
+    },
+    {
+      "question_id": "4695fa25-0e7f-5638-a992-a6e5a74c5e30",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Offline groundedness rubric is calibrated against expert-labeled sample."
+    },
+    {
+      "question_id": "46a0aaf9-5790-5086-8acd-686932eb61ac",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Per-experiment table clones isolate small changes without full copies."
+    },
+    {
+      "question_id": "471afd8e-8d9c-5be7-828c-4d8832722843",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Named revision traffic split promotes proven cached revision."
+    },
+    {
+      "question_id": "4735181f-5e5b-53cf-9424-da477448fabb",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Response malicious-URL detection blocks flagged recommendations before display."
+    },
+    {
+      "question_id": "47f5d2b6-9241-59a4-b6ed-21619715cacf",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "Supervised tuning learns specialized image categories from labeled descriptions."
+    },
+    {
+      "question_id": "4862b1e0-0745-4290-8005-2209c0bcf25c",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects BigQuery ML churn and AutoML image classification."
+    },
+    {
+      "question_id": "49d23472-6455-48c0-b65f-b367c2034404",
+      "decision_type": "manage_features",
+      "confidence": "low",
+      "reason": "Transforms interactions into shared Feature Store values for online retrieval."
+    },
+    {
+      "question_id": "49fb57d1-75c2-5aeb-94ba-3fbbb829d175",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Sampled online quality monitor detects live response-quality changes."
+    },
+    {
+      "question_id": "4ac80737-56e4-5874-a818-17dfda6169fb",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Custom Handler deserializes CSV and Predictor owns lookup normalization and risk labels."
+    },
+    {
+      "question_id": "4adf2b1d-a1c0-529b-a659-f279e4003321",
+      "decision_type": "provision_compute",
+      "confidence": "low",
+      "reason": "VPA Initial assigns resource recommendations only at Pod creation, avoiding evictions."
+    },
+    {
+      "question_id": "4c2d7db9-bf7b-4768-9cfe-caa5636e926e",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses BigQuery autoencoder anomaly detection for sensors."
+    },
+    {
+      "question_id": "4c68d6c6-df02-4b07-aa00-2999c27fb576",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Private PSC inference with VPC controls prevents external access."
+    },
+    {
+      "question_id": "4c9641e8-9f72-423f-8515-1c7e3966f66b",
+      "decision_type": "track_provenance",
+      "confidence": "high",
+      "reason": "Experiments centrally records parameters metrics and artifacts for comparison."
+    },
+    {
+      "question_id": "4ccda897-ef7b-5dcf-ab83-beb2c19d30d8",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "K-means replaces spending regression tiers with behavior clusters."
+    },
+    {
+      "question_id": "4f7ee124-a4e1-5a17-b0cd-c2ecb57f622b",
+      "decision_type": "explain_predictions",
+      "confidence": "high",
+      "reason": "Exact Tree SHAP explains individual player prediction against baseline."
+    },
+    {
+      "question_id": "5002d30b-43a7-52f7-a67a-28263ce0bc87",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Separate blocking input injection and output de-identification templates."
+    },
+    {
+      "question_id": "50c94a4c-b552-4654-8edd-afddc63939d1",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Static dense large-batch training is selected for TPU execution."
+    },
+    {
+      "question_id": "50cf270b-d6b3-4d7f-8bea-b07f2f414c77",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "CPR Predictor and local endpoint package and test custom serving hooks."
+    },
+    {
+      "question_id": "50cffcc3-45bb-46c9-bff4-e559a1c7850a",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Asynchronous sampled Online Monitor evaluates live quality and safety."
+    },
+    {
+      "question_id": "518fee06-1a74-4eae-b2a8-47cab236c9f2",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "H100 machine and optimized communication address GPU synchronization overhead."
+    },
+    {
+      "question_id": "5190e061-ae6c-4384-95f5-05482c185f1e",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Pipeline coordinates ingestion Dataflow GPU training and registration."
+    },
+    {
+      "question_id": "51b6fb95-8ab0-56de-b296-fa6bdc1a29a2",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Transaction-date partitioning and merchant clustering reduce SQL scans."
+    },
+    {
+      "question_id": "52fe87cc-0e7e-4ffb-8486-8c049307412b",
+      "decision_type": "validate_quality",
+      "confidence": "low",
+      "reason": "Structured human evaluation of generated ad copy supplies predeployment quality gate."
+    },
+    {
+      "question_id": "532fb45c-7f86-542a-a470-39ad0df5d199",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Masks tenant contact details before Gemini receives messages."
+    },
+    {
+      "question_id": "5415b814-d051-50c8-8b5b-b748248fcd6c",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Borrower-grouped predefined split measures new-borrower generalization."
+    },
+    {
+      "question_id": "544d880c-14a4-4d07-9343-8ca97da1a7d4",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects BigQuery boosted-tree default-risk model."
+    },
+    {
+      "question_id": "570cb0ee-52bc-5f8f-b9d8-4028bd14c16a",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Document Translation of editable originals with glossary preserves formatting."
+    },
+    {
+      "question_id": "57a86c1e-99b0-4dfc-b404-09f1af89002e",
+      "decision_type": "explain_predictions",
+      "confidence": "high",
+      "reason": "Exact local Tree SHAP and global summaries satisfy explanation scope."
+    },
+    {
+      "question_id": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Property-grouped split and held-out recall measure new-property damage detection."
+    },
+    {
+      "question_id": "580f8c13-47ea-5645-88ec-a57723565dcf",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Automated canary uses progressive traffic with metric-based advancement."
+    },
+    {
+      "question_id": "58435331-18ad-5510-a144-34c341f65906",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "high",
+      "reason": "Persists fitted scaling encoding and classifier in single sklearn pipeline."
+    },
+    {
+      "question_id": "58450231-f145-49e8-bb14-fb81664e467a",
+      "decision_type": "package_inference",
+      "confidence": "low",
+      "reason": "Self-deployed prebuilt model container supplies dedicated serving without custom image."
+    },
+    {
+      "question_id": "586e2c3d-ed99-5a25-96de-fc511dc02cec",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Time-series models forecast daily demand per product-store through SQL."
+    },
+    {
+      "question_id": "588d6149-5c94-5486-9414-a1b2c992ef30",
+      "decision_type": "explain_predictions",
+      "confidence": "high",
+      "reason": "Retains model and adds local/global Tree SHAP views."
+    },
+    {
+      "question_id": "58af669b-fc8b-515e-bb6a-5a763d68dc65",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Custom container training preserves compiled operators and pinned dependencies."
+    },
+    {
+      "question_id": "59a4db53-8c42-5359-9bc6-ca3317bbadad",
+      "decision_type": "explain_predictions",
+      "confidence": "high",
+      "reason": "Local and global Tree SHAP show player feature contributions."
+    },
+    {
+      "question_id": "59af268d-882e-5093-8af2-f25abf9f852d",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Scheduled production feature comparisons use historical baseline and alerts."
+    },
+    {
+      "question_id": "5a71e1e1-9c6d-482a-b5db-07a76ad771cf",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects custom AutoML object detection on labeled site images."
+    },
+    {
+      "question_id": "5a726ab7-4430-5c6f-9bbf-be02c1998331",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Spot GPU jobs resume saved checkpoints to lower training costs."
+    },
+    {
+      "question_id": "5af57ab0-7550-46aa-908a-533d6d83ea9c",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects BigQuery native classification for churn."
+    },
+    {
+      "question_id": "5b41e71f-b6e9-5da2-b1a0-17842c601651",
+      "decision_type": "scale_capacity",
+      "confidence": "high",
+      "reason": "Raises inference minimum replicas using measured node throughput."
+    },
+    {
+      "question_id": "5b694f15-4727-5b2a-ab13-4817dae9645e",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Context-keyed date shifting hides exact dates while preserving claim intervals."
+    },
+    {
+      "question_id": "5d7ff592-02be-4ad2-be70-33d1353a2e4f",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "high",
+      "reason": "Exports fitted Transform graph to apply identical training-serving transforms."
+    },
+    {
+      "question_id": "5dadf57a-d5fa-4fcb-b1f2-c9e71be7d915",
+      "decision_type": "track_provenance",
+      "confidence": "low",
+      "reason": "Snapshot/object-version references on registry versions trace exact training inputs."
+    },
+    {
+      "question_id": "5e27bea6-fd15-49b2-ae75-930a672490ba",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects BigQuery ML loan classification."
+    },
+    {
+      "question_id": "5e85c9c6-b597-4497-a95c-087bf39bfe30",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects unlabeled autoencoder anomaly detection through SQL."
+    },
+    {
+      "question_id": "5ebd2b7d-b99f-4499-8034-313439025eeb",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "JSONL image/expected-description tuning pairs and high resolution adapt visual model."
+    },
+    {
+      "question_id": "5fe9a001-ea13-48a7-a586-4436a0615145",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects synchronous native-PDF Document Translation."
+    },
+    {
+      "question_id": "6036d18b-d726-5a9f-bd7d-968507828e44",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Recurring signed-error averages detect systematic neighborhood undervaluation."
+    },
+    {
+      "question_id": "605059a3-044b-586c-a7e3-97f50c804fca",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Recurring subgroup false-negative gaps raise alerts on age disparities."
+    },
+    {
+      "question_id": "60b6d73d-e15f-52b0-a7e0-d1a8cd33b7f9",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Long-running Ray cluster reuses cached resources for repeated short jobs."
+    },
+    {
+      "question_id": "615c89b1-d2a2-43ae-bce4-67c57895acfa",
+      "decision_type": "package_inference",
+      "confidence": "low",
+      "reason": "Model Garden SDK inspects verified container/hardware options and deploys open model endpoint without manual artifact packaging; notebook is context."
+    },
+    {
+      "question_id": "631f20f1-243a-4a51-a3f6-295cfac63048",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects warehouse generation/classification over video object table."
+    },
+    {
+      "question_id": "63ae0946-b85f-4464-b5fd-2c7e74f41d62",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "high",
+      "reason": "Includes fitted Transform graph in exported inference model."
+    },
+    {
+      "question_id": "63bf8c23-f6b0-4ade-9f6f-615369ade02f",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses boosted-tree credit classification within BigQuery."
+    },
+    {
+      "question_id": "63cd2057-2538-5816-941b-57da6a620578",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Benchmarks training throughput per chip/dollar and scaling across GPU/TPU sizes."
+    },
+    {
+      "question_id": "64453839-98b9-4f9b-8d87-3ecc8fc80e86",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Small endpoint traffic split tests new version before progressive exposure."
+    },
+    {
+      "question_id": "64e707c3-2cd2-4d83-8fbc-8005448916f5",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Rolling deploy reuses current resources with surge and unavailability thresholds."
+    },
+    {
+      "question_id": "65e66c34-f9af-5fef-a0c9-8ff92921eb48",
+      "decision_type": "provision_compute",
+      "confidence": "low",
+      "reason": "Benchmarks serving hardware for cheapest configuration meeting tail latency."
+    },
+    {
+      "question_id": "664409bf-747d-417c-adee-12e40b062e30",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses matrix factorization for rating-based recommendations."
+    },
+    {
+      "question_id": "66dce3c9-8683-4d43-ad9a-05e6520fe4eb",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Existing endpoint routes 95/5 traffic to champion and challenger."
+    },
+    {
+      "question_id": "685450c7-4bed-5375-9db8-378d58afd712",
+      "decision_type": "optimize_training",
+      "confidence": "high",
+      "reason": "Logarithmic learning-rate sampling allocates trials to useful small values."
+    },
+    {
+      "question_id": "68a8711d-bfd4-57dd-ba49-63c28f32d31f",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "low",
+      "reason": "Durable task queue coordinates idempotent postprocessing after acknowledgement."
+    },
+    {
+      "question_id": "696b533d-6be0-5445-acb0-1e1a6f4a610a",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Screens generated billing messages before sending to tenants."
+    },
+    {
+      "question_id": "699f5025-0bcc-4027-8ee2-384d9cab45f6",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Continuous skew quality and endpoint telemetry alerts drive diagnosis."
+    },
+    {
+      "question_id": "6b3c8410-30c5-4c99-a62d-175b3c9d9065",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses AutoML tabular churn classification."
+    },
+    {
+      "question_id": "6c339954-0a4d-5918-aeef-1aebed61b7e6",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Training-serving skew uses original training baseline rather than successive windows."
+    },
+    {
+      "question_id": "6d669299-828a-459a-86e9-02b0cd88f992",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects Retail integrated search and recommendations."
+    },
+    {
+      "question_id": "70760b7d-8bf0-4b0b-9591-145c464d7c74",
+      "decision_type": "manage_features",
+      "confidence": "high",
+      "reason": "Registers separate source groups into combined online feature view."
+    },
+    {
+      "question_id": "70987ec3-aa54-46a1-be9d-19078b043fdb",
+      "decision_type": "prepare_data",
+      "confidence": "low",
+      "reason": "Dataflow combines large-scale feature engineering and batch XGBoost scoring."
+    },
+    {
+      "question_id": "70b2a021-f089-566b-9365-5adb594f8c3f",
+      "decision_type": "explain_predictions",
+      "confidence": "high",
+      "reason": "Local and global Tree SHAP show individual and aggregate feature influence."
+    },
+    {
+      "question_id": "714323e3-f502-54ba-87a4-a2aa1c52266d",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "SQL supervised remote-model tuning teaches approved summaries."
+    },
+    {
+      "question_id": "71f05554-d8ff-50fe-9916-25775297023a",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Measurement-date partitions and utility clustering prune training scans."
+    },
+    {
+      "question_id": "7244c09a-eaed-5a4f-b764-522c50c4424e",
+      "decision_type": "manage_features",
+      "confidence": "high",
+      "reason": "Combines registered groups into one synchronized lookup view."
+    },
+    {
+      "question_id": "728f2199-c820-59fb-935d-65a9dd792c08",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Connects Python component outputs to inputs in recurring managed workflow."
+    },
+    {
+      "question_id": "7349b446-9df2-5f66-b1ea-2bc9affac1d2",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Recurring attribution-distribution comparisons alert on feature-influence drift."
+    },
+    {
+      "question_id": "7395197c-3a06-5c18-aa40-3c334a09ede6",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Folder establishes common administrative parent without replacing projects."
+    },
+    {
+      "question_id": "74a53d4b-9896-5f1d-8b57-0f6ed7f1d500",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Regional input de-identification replaces internal IPs before model call."
+    },
+    {
+      "question_id": "754acef0-bf8d-5848-9e2f-d761710a96b6",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses original-document translation to preserve layout."
+    },
+    {
+      "question_id": "758cc679-909f-5e3d-96b3-ed3ab3d51219",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "high",
+      "reason": "Every replica reuses training-fitted encoders and normalization artifacts."
+    },
+    {
+      "question_id": "75971450-e235-5825-918c-891db8d880d3",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "Regional supervised LoRA tuning learns incident categories from labeled reports."
+    },
+    {
+      "question_id": "75b6c79d-3127-58ed-9d6e-91b26465a744",
+      "decision_type": "validate_quality",
+      "confidence": "low",
+      "reason": "Pretraining schema/statistics validation blocks bad batches before compute use."
+    },
+    {
+      "question_id": "75debba6-f749-4f0b-9679-af8a22249f32",
+      "decision_type": "package_inference",
+      "confidence": "low",
+      "reason": "Model Garden SDK inspects verified container/hardware options and deploys open model endpoint without manual artifact packaging; notebook is context."
+    },
+    {
+      "question_id": "761dd1b8-8211-5be3-ad9e-90d6a70f6dda",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Custom prediction routine retains Python preprocessing and repair-queue output."
+    },
+    {
+      "question_id": "77175a8a-a85b-4cce-8cfe-877c76942114",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Pipeline messages coordinate on-prem preprocessing and deployment with cloud training."
+    },
+    {
+      "question_id": "77e1ad30-6b05-5e96-9ddb-8b841a680941",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Sampled capped Online Monitor supplies ongoing quality scores."
+    },
+    {
+      "question_id": "780329f8-bfb3-537d-a943-d7e4bbbc9f23",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "low",
+      "reason": "Uses materialized transformed training examples while retaining same serving graph."
+    },
+    {
+      "question_id": "78127205-caf8-4f71-8841-5f392116518f",
+      "decision_type": "select_solution",
+      "confidence": "low",
+      "reason": "Chooses reference-image-conditioned Veo video generation rather than unsupported Gemini/Imagen tuning."
+    },
+    {
+      "question_id": "7840c545-042a-5515-b55b-0f5c7228f853",
+      "decision_type": "track_provenance",
+      "confidence": "high",
+      "reason": "Records immutable registry model/version IDs with historical monitoring reports."
+    },
+    {
+      "question_id": "790af438-7ce9-5813-9eb0-f8058364c59a",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Benchmarks hardware cost to validation target before morning deadline."
+    },
+    {
+      "question_id": "79462eef-45c6-565b-aac3-08de34dd47ff",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Small live traffic share assesses replacement before expanded rollout."
+    },
+    {
+      "question_id": "79854b49-48de-459c-8be9-c6f8fa0cc7d7",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Separates prompt and response sanitization with latest-message input boundary."
+    },
+    {
+      "question_id": "7a30f28a-6d6c-5950-a138-c6aa0da12ecc",
+      "decision_type": "trigger_automation",
+      "confidence": "high",
+      "reason": "Per-model repository file filters trigger only affected lifecycle workflows."
+    },
+    {
+      "question_id": "7b8f375f-63ee-56a5-a304-3f1190074600",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Live trace quality monitor detects answer degradation despite stable API errors."
+    },
+    {
+      "question_id": "7ba07518-eca8-4395-b16a-d531c7ff27d2",
+      "decision_type": "provision_compute",
+      "confidence": "low",
+      "reason": "Custom container GPU training preserves bespoke fine-tuning loop and dependencies."
+    },
+    {
+      "question_id": "7bafd960-9d3a-4dcc-a25c-033fa63c33de",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Golden training baseline detects serving skew and alerts for investigation."
+    },
+    {
+      "question_id": "7bd883b7-e61d-46fe-b887-aec2d7ae21f1",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses AutoML custom defect image classification."
+    },
+    {
+      "question_id": "7c6cd282-b6e0-5ac6-8c0e-3232c6008c73",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Enforces separate input and output security verdicts around inference."
+    },
+    {
+      "question_id": "7d74029c-9c5a-5d7c-9b66-1b754bfeae5d",
+      "decision_type": "trigger_automation",
+      "confidence": "high",
+      "reason": "Cloud Build invokes existing workflow and automates quality-gated candidate deployment."
+    },
+    {
+      "question_id": "7de6ef2f-380f-41b5-9e3b-ac66a6db643e",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Synchronous native-PDF translation applies glossary and preserves layout."
+    },
+    {
+      "question_id": "7f1c209d-72e7-464d-bb0d-830fca1261d3",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "AI Protection findings detect threats to sensitive AI assets."
+    },
+    {
+      "question_id": "7f55e40b-ad44-50f0-89c5-df7927e7cc21",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Recurring prediction-score drift uses fixed stable-month baseline."
+    },
+    {
+      "question_id": "7f68bdae-c348-4db8-b3c6-20957f009a30",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses annotated object detection through AutoML."
+    },
+    {
+      "question_id": "80960636-4303-49ad-8b03-66067cfb008b",
+      "decision_type": "protect_information",
+      "confidence": "low",
+      "reason": "Security protection and encryption defend PHI assets; drift monitoring is supporting control."
+    },
+    {
+      "question_id": "80c326be-201c-451a-9c78-d3bf17e700aa",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "low",
+      "reason": "TFX Transform addresses training-serving mismatch alongside downstream canary release."
+    },
+    {
+      "question_id": "81057f1b-abe0-49c3-9fc1-a8cda4c87350",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Versioned image buckets and Beam preprocessing preserve scalable dataset generation."
+    },
+    {
+      "question_id": "8129d382-a98b-41ee-a4e8-9e83228ea148",
+      "decision_type": "track_provenance",
+      "confidence": "low",
+      "reason": "Experiments records quantitative and qualitative evaluations with unified comparison."
+    },
+    {
+      "question_id": "816a1b31-3b12-5554-aa28-ba92270918f3",
+      "decision_type": "validate_quality",
+      "confidence": "low",
+      "reason": "Groundedness scores saved responses against retrieved excerpts by supplier category."
+    },
+    {
+      "question_id": "822ecf62-0337-5d15-8ea7-7798645c218a",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Distributed custom job synchronizes primary and worker training replicas."
+    },
+    {
+      "question_id": "8529a248-1d59-5434-9a21-e6a5aa56f06a",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "K-means discovers consumption-profile groups for retrofit playbooks."
+    },
+    {
+      "question_id": "85459888-a8ae-57c3-9bba-afeb2265b845",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "LoRA supervised tuning adapts existing return classifier."
+    },
+    {
+      "question_id": "859947d6-7423-554f-a0dd-8b65c10442a5",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Automated canary starts at ten percent with analyzed phase advancement."
+    },
+    {
+      "question_id": "85f04249-8e65-5ef6-ba63-0590100239c1",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Execution caching reuses deterministic preprocessing by snapshot/version inputs."
+    },
+    {
+      "question_id": "8691b7a0-4bb9-4609-a43b-b56862daffde",
+      "decision_type": "prepare_data",
+      "confidence": "low",
+      "reason": "Curated multimodal datasets use versioned storage with controlled team access."
+    },
+    {
+      "question_id": "874157a9-0ea2-5df9-aa5a-af23c1a22b5e",
+      "decision_type": "scale_capacity",
+      "confidence": "high",
+      "reason": "Lowers Cloud Run concurrency so autoscaling spreads single-threaded bursts."
+    },
+    {
+      "question_id": "876eeb20-1aa7-444d-8d6f-64f120111bbc",
+      "decision_type": "configure_environment",
+      "confidence": "high",
+      "reason": "Workbench integrates Git and interactive Dataproc Spark kernels."
+    },
+    {
+      "question_id": "880e8275-4fba-5721-bd44-58f8aa8241b1",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Pairwise custom rubric compares prompt outputs on age suitability and engagement."
+    },
+    {
+      "question_id": "8974fa33-db27-5901-81bb-43094748b2a1",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Schema checks and held-out comparison gate quality before candidate release."
+    },
+    {
+      "question_id": "89df2f3e-08fa-46fe-bea8-6b13a488d75a",
+      "decision_type": "configure_environment",
+      "confidence": "high",
+      "reason": "Secure JupyterLab with corporate Git integration supports development."
+    },
+    {
+      "question_id": "8b097fea-1001-44c3-a978-f0f9cb81be3c",
+      "decision_type": "adapt_model",
+      "confidence": "low",
+      "reason": "Collaborative workflow adapts foundation model with tuning tracking and evaluation."
+    },
+    {
+      "question_id": "8b689945-17a0-5a31-8d12-406385052412",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Sampled live quality/safety monitoring inspects dashboard and trace scores."
+    },
+    {
+      "question_id": "8b76bfe6-f7e9-5216-88c5-1dc51aa1ce87",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Periodic restoreable checkpoints recover interrupted Spot training progress."
+    },
+    {
+      "question_id": "8bae2bbe-916d-4515-a5bb-d45c05efdb97",
+      "decision_type": "trigger_automation",
+      "confidence": "high",
+      "reason": "Approval-state polling/webhook starts reusable evaluation/deployment pipeline."
+    },
+    {
+      "question_id": "8d5c36ee-52dc-5ecf-8d2a-8369f2f15141",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "high",
+      "reason": "Saves fitted imputer encoding and regressor together for raw-input predictions."
+    },
+    {
+      "question_id": "8e055249-9b69-43d3-9d6a-21b7dfa39e02",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Predeployment generation evaluation combines automated metrics and human review."
+    },
+    {
+      "question_id": "8ea261db-591f-4847-bb2c-c8cb71ee3392",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects AutoML tabular churn prediction."
+    },
+    {
+      "question_id": "8f19f171-ea1f-5894-908e-108c59c67a03",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "high",
+      "reason": "TRANSFORM quantile boundaries are fitted once and reused during ML.PREDICT."
+    },
+    {
+      "question_id": "9073ede8-e867-5382-a894-949c884d49be",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Predictor centralizes saved normalization and forecast-to-order conversion."
+    },
+    {
+      "question_id": "90f886c9-3f2d-5dee-a9b2-f995f60c11cf",
+      "decision_type": "provision_compute",
+      "confidence": "low",
+      "reason": "Hyperdisk Balanced provisions storage capacity IOPS and throughput independently."
+    },
+    {
+      "question_id": "91126e8a-9939-48dc-a500-47c76defba50",
+      "decision_type": "protect_information",
+      "confidence": "low",
+      "reason": "Anonymizes PHI before sharing derived features across teams."
+    },
+    {
+      "question_id": "9181f688-02a8-555d-a92b-564557c1edbb",
+      "decision_type": "track_provenance",
+      "confidence": "high",
+      "reason": "Groups recommender revisions as versions and resolves mutable approval alias."
+    },
+    {
+      "question_id": "91bdbbd2-acbf-55cd-b24b-fd6b76c47f88",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "One-time batch load appends matching export without transformations."
+    },
+    {
+      "question_id": "9224c6c7-3c60-5c38-81d3-9db3578ad30b",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Dedicated user-managed application identity survives VM consolidation."
+    },
+    {
+      "question_id": "92b723ec-4c8a-439a-a6f2-c321450b617a",
+      "decision_type": "explain_predictions",
+      "confidence": "low",
+      "reason": "Feature attributions identify inputs driving changed predictions; drift/skew monitoring supports root-cause diagnosis."
+    },
+    {
+      "question_id": "94b03339-a0dc-526a-a8c6-ae4bb8e51e99",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Managed Pipelines runs existing TFX workflow without orchestration host."
+    },
+    {
+      "question_id": "96775d44-6656-5a96-b153-c477aaf2fc09",
+      "decision_type": "scale_capacity",
+      "confidence": "high",
+      "reason": "Request-based autoscaling replaces uncorrelated CPU signal using load-tested throughput."
+    },
+    {
+      "question_id": "968378bd-18ad-56f1-8ae2-d4f483851603",
+      "decision_type": "release_safely",
+      "confidence": "low",
+      "reason": "Deprecates faulty image family head while retaining explicit reproduction access."
+    },
+    {
+      "question_id": "96aa7d75-4740-5265-bbfd-214ccebc3750",
+      "decision_type": "configure_environment",
+      "confidence": "high",
+      "reason": "Resizes notebook host memory to complete pandas preparation."
+    },
+    {
+      "question_id": "96c86ef5-d282-5b8f-b1bd-4ae17ba077f5",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Dedicated public serving route reduces shared-endpoint routing overhead."
+    },
+    {
+      "question_id": "9782b065-7d99-4f63-b8a7-f3bff0c95ef8",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "low",
+      "reason": "KFP component graph preserves MLFlow integration within managed lifecycle."
+    },
+    {
+      "question_id": "97ab4ef4-937c-5a2f-a81e-08b650e3b86e",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "low",
+      "reason": "Pub/Sub fan-out decouples each independently acknowledged downstream event consumer."
+    },
+    {
+      "question_id": "98f3a861-ec15-4e32-9b18-6f081cc208f6",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Managed workflow coordinates custom preprocessing GPU tuning and evaluation steps."
+    },
+    {
+      "question_id": "990c61fb-da2e-5557-ad5c-d538d63199ec",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Parallel Storage Read streams replace slow paginated training retrieval."
+    },
+    {
+      "question_id": "994fce9b-c6ea-53d9-b4d2-c51877b5e968",
+      "decision_type": "manage_features",
+      "confidence": "high",
+      "reason": "Shared materialized feature table and synchronized serving view remove duplicate aggregates."
+    },
+    {
+      "question_id": "99e25df0-0b06-51d2-a7b3-407b37eefaff",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "SQL supervised tuning uses existing train/eval markers and approved summaries."
+    },
+    {
+      "question_id": "9a174e39-5c98-524a-abec-952a689185d0",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses AutoML image classifier to reduce bespoke trainer upkeep."
+    },
+    {
+      "question_id": "9c808102-5404-5660-ab0e-d22d1a7b87c5",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Staging compares final decisions quality and latency for changed transformations."
+    },
+    {
+      "question_id": "9d718d8e-0a64-5e85-a0fb-81e5989b3270",
+      "decision_type": "manage_features",
+      "confidence": "high",
+      "reason": "Post-refresh on-demand sync exposes new tower entities through existing view."
+    },
+    {
+      "question_id": "9db4c8c1-9aec-5edc-805f-244b5c06922b",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Per-feature drift thresholds reduce expected campaign noise without weakening sensitive feature."
+    },
+    {
+      "question_id": "9dcfad11-90c6-5577-9570-16f5b546af20",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "LoRA supervised tuning adapts selected Qwen classifier."
+    },
+    {
+      "question_id": "9e7d2329-dbdf-5290-aef6-76c2ab7ff59d",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "Managed LoRA learns expert-labeled company ticket categories."
+    },
+    {
+      "question_id": "9f13f42e-4a8b-4821-8383-c33b304a5138",
+      "decision_type": "manage_features",
+      "confidence": "high",
+      "reason": "Source groups and combined online view register historical customer features."
+    },
+    {
+      "question_id": "9f8b301d-aa4b-45c6-954d-f3cbb4e325b7",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Multi-worker H100 machine choice addresses distributed communication bottleneck."
+    },
+    {
+      "question_id": "9fed98a5-92e0-40a3-b241-a909c360e75d",
+      "decision_type": "explain_predictions",
+      "confidence": "high",
+      "reason": "Individual attributions compare poorly performing and strong customer segments."
+    },
+    {
+      "question_id": "a058667c-2991-5d29-94fb-593189174d33",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Recurring audited subgroup false-negative rates with uncertainty track fairness gaps."
+    },
+    {
+      "question_id": "a11fc5cb-cc77-5360-88ab-10cd96d57962",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Batch Document Translation handles multi-file multilingual release with glossaries."
+    },
+    {
+      "question_id": "a1a6eed5-b068-496d-a071-ec833de3a435",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Batch ML.PREDICT scores daily customers in warehouse."
+    },
+    {
+      "question_id": "a23ed85e-042b-5eaf-ba0d-ccf52b149bd8",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "K-means forms maintenance peer groups from standardized operating measurements."
+    },
+    {
+      "question_id": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Long-running Cloud Run job saves transcripts rather than timed-out HTTP request."
+    },
+    {
+      "question_id": "a33f1f8a-efce-408a-9e44-1d410ae61aa2",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Pipelines coordinates preprocessing and distributed custom training jobs."
+    },
+    {
+      "question_id": "a38621be-d293-5dce-8df0-35e79615d611",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Stable randomized shopper cohorts compare concurrent purchase outcomes."
+    },
+    {
+      "question_id": "a452092c-d1e9-5137-ac48-fcf4ce64e4e7",
+      "decision_type": "trigger_automation",
+      "confidence": "high",
+      "reason": "Weekly retraining waits for complete thirty-day readmission labels."
+    },
+    {
+      "question_id": "a5351107-31bd-58aa-9bc8-18f8d8aab3e4",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Runs tested native-dependency container as managed custom training job."
+    },
+    {
+      "question_id": "a64fa108-2ca1-5a30-aa7e-0e8743a53528",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Batch document translation converts native PDFs to editable translated DOCX outputs."
+    },
+    {
+      "question_id": "a6a110b9-9792-4701-a46b-ed5518f4374e",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "low",
+      "reason": "TFX ingestion validation transformation training and export form managed end-to-end graph."
+    },
+    {
+      "question_id": "a6eb59e1-680c-56fc-87da-90bca2689bf0",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Shared CPR packages client transformations and log-time postprocessing centrally."
+    },
+    {
+      "question_id": "a756283a-edf6-551f-a72f-f23e9fca9561",
+      "decision_type": "optimize_training",
+      "confidence": "high",
+      "reason": "MAE training objective matches equal per-minute dispatch cost."
+    },
+    {
+      "question_id": "a81ea1e5-a319-4848-89db-5fa02a130a9e",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Custom containers isolate each stage dependency within managed workflow."
+    },
+    {
+      "question_id": "a9035cb6-38c1-44f0-9b59-2720feb5b403",
+      "decision_type": "manage_features",
+      "confidence": "low",
+      "reason": "Validated Dataflow features are published centrally for downstream team reuse."
+    },
+    {
+      "question_id": "a9cc2c8e-8147-5397-80d8-07805351f91f",
+      "decision_type": "optimize_training",
+      "confidence": "high",
+      "reason": "Per-example financial-loss weights change fraud training objective."
+    },
+    {
+      "question_id": "a9cec4ba-3225-532f-8ec8-0b66e502c186",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Blocks injected inputs and returns de-identified sensitive outputs."
+    },
+    {
+      "question_id": "aa4d4d03-3c79-404c-ad39-b3ae1e049afe",
+      "decision_type": "track_provenance",
+      "confidence": "low",
+      "reason": "Unified experiment tracking compares traditional and generative runs with metrics."
+    },
+    {
+      "question_id": "aa8e4917-96c6-5e6d-a271-553bed2539c3",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Regional N2 quota increase permits sixty-four-vCPU worker fleet."
+    },
+    {
+      "question_id": "aacbb99e-0e6e-59be-8b9d-12cb78c5b1f7",
+      "decision_type": "configure_environment",
+      "confidence": "high",
+      "reason": "Separate Conda environment and Jupyter kernel isolate PyTorch dependencies."
+    },
+    {
+      "question_id": "ad1e8700-7acb-445d-9124-94fee5a6f5f6",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses ARIMA_PLUS category sales forecasting."
+    },
+    {
+      "question_id": "ad996355-7053-56e6-bf42-77ede8ab7cf8",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Independent distributed GPU jobs replace shared notebook experiments."
+    },
+    {
+      "question_id": "ae8ad436-1e4b-5cd6-bb28-409b1a33b0ce",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "SQL supervised Gemini tuning replaces repeated long examples."
+    },
+    {
+      "question_id": "af4bbe73-6812-457e-af96-03fde201cfa5",
+      "decision_type": "configure_environment",
+      "confidence": "high",
+      "reason": "Shared Workbench supports Python and Spark kernels with central Git."
+    },
+    {
+      "question_id": "afce7e4a-4591-5cc0-a87b-6f6d946c6b63",
+      "decision_type": "package_inference",
+      "confidence": "low",
+      "reason": "Managed APIs provide occasional prototype inference without deploying candidate serving infrastructure."
+    },
+    {
+      "question_id": "afe50de9-334a-57ac-9759-8f1117111d94",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Cost-normalized hardware benchmark includes stalls and checkpoint recovery."
+    },
+    {
+      "question_id": "b0b21ff7-10a6-5f7d-99e4-767a03d5f45a",
+      "decision_type": "optimize_training",
+      "confidence": "high",
+      "reason": "Sequential Bayesian trials exploit expensive completed tuning results."
+    },
+    {
+      "question_id": "b1eab246-021f-5728-80e6-d7d5b612b619",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Schema validation rejects missing-feature billing batches before training."
+    },
+    {
+      "question_id": "b1fed2cf-a0a4-4440-ad1d-3e223e6b6398",
+      "decision_type": "explain_predictions",
+      "confidence": "high",
+      "reason": "EXPLAIN_FORECAST attributes individual forecasts with external regressors."
+    },
+    {
+      "question_id": "b2052c2a-8839-460b-892b-b4baaa1909c3",
+      "decision_type": "package_inference",
+      "confidence": "low",
+      "reason": "Model Garden SDK inspects verified container/hardware options and deploys open model endpoint without manual artifact packaging; notebook is context."
+    },
+    {
+      "question_id": "b20c0758-9fae-419e-b5a0-e4dadbac805c",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Spot custom training machine configuration lowers prototype compute spend."
+    },
+    {
+      "question_id": "b3d9df5c-7a73-5ce4-93a6-973667f153d9",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses multimodal embeddings for cross-modal nearest-neighbor retrieval."
+    },
+    {
+      "question_id": "b482b322-d1e2-5959-9830-071e46212dd5",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Groups product views into same partition to measure new-product performance."
+    },
+    {
+      "question_id": "b573cc1b-d464-5278-b9e9-9a934287139f",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "low",
+      "reason": "Configurable AutoML component workflow exposes feature engineering and search stages."
+    },
+    {
+      "question_id": "b708933d-d1da-45b5-92ef-821ba2d2b254",
+      "decision_type": "scale_capacity",
+      "confidence": "high",
+      "reason": "Request-count autoscaling tracks I/O-bound demand rather than low CPU."
+    },
+    {
+      "question_id": "b7af913f-be67-52c0-b9db-a1fac94eae78",
+      "decision_type": "package_inference",
+      "confidence": "low",
+      "reason": "Stateless request container moves to managed Cloud Run service."
+    },
+    {
+      "question_id": "b8c3bba0-a1e8-5c26-81bf-80542da73233",
+      "decision_type": "trigger_automation",
+      "confidence": "high",
+      "reason": "New reviewed-label count and class coverage trigger existing retraining workflow."
+    },
+    {
+      "question_id": "b90dba43-8849-4a85-b8ec-c5ed2adc2255",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Selects document search application for cited internal answers."
+    },
+    {
+      "question_id": "bb4ecb46-5caa-4122-8716-5e8eecfac72a",
+      "decision_type": "monitor_behavior",
+      "confidence": "low",
+      "reason": "Drift and performance alerting provide ongoing quality checks with explanations."
+    },
+    {
+      "question_id": "bb9a85be-6ea7-5116-996f-6b3affbcadc0",
+      "decision_type": "track_provenance",
+      "confidence": "high",
+      "reason": "Registers existing artifacts and image references as model release versions."
+    },
+    {
+      "question_id": "bc81cb14-594b-55ed-8e01-118e14e263c1",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Replaces names and emails before crash reports reach Gemini."
+    },
+    {
+      "question_id": "bcaca377-5838-4f25-a451-7a9d9d8d0930",
+      "decision_type": "package_inference",
+      "confidence": "low",
+      "reason": "Splits lightweight optimized device inference from GPU cloud online analysis."
+    },
+    {
+      "question_id": "bdc40a91-efc3-57fc-a40d-b877c234bce6",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Event-time streaming windows with late-data handling replace arrival-time summaries."
+    },
+    {
+      "question_id": "be451e57-ca16-4954-bb73-085f57a8097a",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "PSC provides private feature enrichment and inference connectivity."
+    },
+    {
+      "question_id": "be9d0bad-ab6a-5eee-a7c9-aae0a0f65cd8",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Custom Handler inspects headers and CSV while Predictor handles scoring transformations."
+    },
+    {
+      "question_id": "bfaa8dc4-624d-5489-881c-8d3f2048d611",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Playground comparison on representative articles selects replacement text model."
+    },
+    {
+      "question_id": "c05005fd-b9f4-5052-8d14-c5a8575eb720",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Chronological folds evaluate future-week generalization for tuning configurations."
+    },
+    {
+      "question_id": "c18de19b-579c-550d-98a9-ff3088788f3d",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Lower log sampling retains hourly baseline checks and drift thresholds."
+    },
+    {
+      "question_id": "c1d0d071-5190-4b61-8d25-a9b796d293af",
+      "decision_type": "track_provenance",
+      "confidence": "high",
+      "reason": "Shared TensorBoard logs and experiment metadata centralize cross-framework tracking."
+    },
+    {
+      "question_id": "c2196e0a-7d74-5bd0-b7ca-be267a177c42",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "SQL supervised tuning learns editor-approved summary style."
+    },
+    {
+      "question_id": "c28676fc-1fa7-5874-b8c5-23f39d8d7c11",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Managed runner retains existing TFX component graph for candidate experiments."
+    },
+    {
+      "question_id": "c380c580-a622-5161-8fa6-14627d8b9e14",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "Supervised tuning on labeled notes reduces long-prompt dependence."
+    },
+    {
+      "question_id": "c3a25113-aa93-51b7-9800-cb54b4e07e3a",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Custom routine adds existing Python normalization and output library to XGBoost serving."
+    },
+    {
+      "question_id": "c41171d6-5166-40b5-80fb-480159f7d276",
+      "decision_type": "trigger_automation",
+      "confidence": "high",
+      "reason": "Monthly schedule and market-event Pub/Sub trigger lifecycle retraining."
+    },
+    {
+      "question_id": "c5ae110b-3f9f-5ef8-a33a-5e580bda8052",
+      "decision_type": "manage_access",
+      "confidence": "low",
+      "reason": "Expands existing subnet address boundary to reserved block without network replacement."
+    },
+    {
+      "question_id": "c6146f19-66ec-5a5c-80ca-7eb865d7616f",
+      "decision_type": "optimize_training",
+      "confidence": "high",
+      "reason": "PR-AUC tuning objective reflects ranking quality for rare urgent referrals."
+    },
+    {
+      "question_id": "c61a2a48-3c61-5a06-822a-8b86cd608d39",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Platform-optimized GPU/TPU benchmarks and roofline analysis compare useful training cost."
+    },
+    {
+      "question_id": "c651e4ee-ae04-50ea-adda-ea5c82f8afa1",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Regional and overall held-out MAE thresholds gate release."
+    },
+    {
+      "question_id": "c6dc860a-8c6b-58e6-a509-f4646a71d56e",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Notebook-level group Code Editor grants scale district collaboration permissions."
+    },
+    {
+      "question_id": "c6e21ce5-b563-5a8d-9616-e2906d68ed52",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Sales-date partitioning prunes daily training-window scans."
+    },
+    {
+      "question_id": "c78a6c3e-ba92-52c2-be1f-3ebb8379a0ae",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "high",
+      "reason": "Loads fixed training normalization statistics with matching model release."
+    },
+    {
+      "question_id": "c854adf8-239c-4029-9cf7-666d76f7c9d7",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "CSV Handler and Predictor package custom serving hooks and local tests."
+    },
+    {
+      "question_id": "c8f7b347-c8d2-4058-b4f0-b1a069b3ccab",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Input/output Model Armor screening and AI Protection defend diagnostic assets."
+    },
+    {
+      "question_id": "c8fefd99-17e6-5a98-b896-affa7c043705",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "Managed supervised image-summary tuning learns defect wording."
+    },
+    {
+      "question_id": "c90d0792-551e-5530-9e04-9d451bc3f607",
+      "decision_type": "validate_quality",
+      "confidence": "low",
+      "reason": "Compares candidate throughput and held-out fraud recall before selecting replacement."
+    },
+    {
+      "question_id": "cad3689d-2038-4707-a0c0-2ddb525945cb",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses warehouse matrix factorization recommendations."
+    },
+    {
+      "question_id": "cadbca53-6ad5-4753-a567-e2d56ca3f55a",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses warehouse generative functions for sentiment and entities."
+    },
+    {
+      "question_id": "cb311d87-69a8-595c-8a3c-8c18b24c31b3",
+      "decision_type": "trigger_automation",
+      "confidence": "high",
+      "reason": "Notebook executor schedule runs stable workflow after nightly refresh."
+    },
+    {
+      "question_id": "cba7a4cb-6d80-4cb8-a08f-488ae1cb937a",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "Per-part high resolution and global low resolution configure image tuning representation."
+    },
+    {
+      "question_id": "cc850a99-d8b8-4ed2-8e52-ee404a258b56",
+      "decision_type": "protect_information",
+      "confidence": "low",
+      "reason": "Streaming ingestion de-identifies PHI before online inference."
+    },
+    {
+      "question_id": "ccddb3b2-fae7-4dc9-8c19-9a94eff8ceb7",
+      "decision_type": "trigger_automation",
+      "confidence": "high",
+      "reason": "Storage object events invoke function that submits parameterized PipelineJob."
+    },
+    {
+      "question_id": "cda83992-e7c9-4e2f-b855-c452a16ead4b",
+      "decision_type": "package_inference",
+      "confidence": "low",
+      "reason": "Custom PyTorch container becomes request-scaled Cloud Run inference service."
+    },
+    {
+      "question_id": "ce6885c2-f624-47f9-a866-3f3fe56c68b6",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Multi-node A3/A4 GPU worker pools leverage optimized interconnect."
+    },
+    {
+      "question_id": "ce88457c-6c2e-4357-bb99-cf90ec1adcbd",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Dataflow executes scalable TFX preprocessing on large interaction data."
+    },
+    {
+      "question_id": "cf42c25f-04b0-4315-9219-d0b9d05473d2",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Composer coordinates weather enrichment validation ML and external BI tasks."
+    },
+    {
+      "question_id": "cf4b9a2e-f411-5d4d-bc50-a64c2f26ffa4",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Screens retrieved supplier text before prompt construction to block injected instructions."
+    },
+    {
+      "question_id": "cf5f490c-5a78-5d9e-bc9c-d3b8ad973a7c",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Folder-level US allow-list overrides broader inherited location policy."
+    },
+    {
+      "question_id": "cff8ca1c-5e4a-5c73-ab88-fb2a60d7702a",
+      "decision_type": "trigger_automation",
+      "confidence": "high",
+      "reason": "Season-transition schedule triggers retraining before predictable degradation."
+    },
+    {
+      "question_id": "d1a65afb-4e36-4e0d-aa3c-ced477fa2215",
+      "decision_type": "track_provenance",
+      "confidence": "high",
+      "reason": "Experiments and registry preserve traceable training runs and versions."
+    },
+    {
+      "question_id": "d1eb2514-d947-5159-846f-a1e67f3349b1",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Parallel table streams load labels and matching recording references."
+    },
+    {
+      "question_id": "d2dcacf1-59a0-5fc9-b4f4-b68b0dbb326c",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "high",
+      "reason": "TRANSFORM stores custom bucket logic for raw-input ML.PREDICT."
+    },
+    {
+      "question_id": "d3120ee3-d646-5b1b-b0ec-028bea9d1b5d",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Progressive metric-analyzed canary automatically advances traffic."
+    },
+    {
+      "question_id": "d3515698-4a19-5c39-8813-e7b67b823e47",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Reference answers and groundedness evaluation calibrated with specialist ratings select configuration."
+    },
+    {
+      "question_id": "d48ef594-a3a7-57f4-acf3-0a80903bee1d",
+      "decision_type": "explain_predictions",
+      "confidence": "high",
+      "reason": "Standardized regression coefficients compare sign and magnitude of learned effects."
+    },
+    {
+      "question_id": "d54d1bc9-0676-53f3-896d-d26a46ed4061",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Hardware microbenchmarks and scaled goodput measure cost-effective training."
+    },
+    {
+      "question_id": "d55dfee9-c596-552a-a056-05a019d73640",
+      "decision_type": "track_provenance",
+      "confidence": "high",
+      "reason": "Logs parameters scores and model artifact in same experiment run."
+    },
+    {
+      "question_id": "d5af9e46-2b62-5d72-b065-fb1d715a5b28",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Column-pruned parallel streams feed matching images to training workers."
+    },
+    {
+      "question_id": "d5ba9052-857f-5b69-9250-97941bc23a86",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Finalized older outcome cohorts avoid premature precision estimates."
+    },
+    {
+      "question_id": "d5d98407-fcb0-5eaf-952f-3541dfd95566",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Nightly batch Beam processing replaces idle streaming execution over completed data."
+    },
+    {
+      "question_id": "d611a5fa-caa9-5b19-9cde-ca6f7d7f808e",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Recurring language-group false-negative analysis alerts on sustained supported disparities."
+    },
+    {
+      "question_id": "d675addd-0c68-4034-87fb-b6658237db8b",
+      "decision_type": "provision_compute",
+      "confidence": "low",
+      "reason": "Custom GPU training container preserves multimodal architecture with interpretability methods."
+    },
+    {
+      "question_id": "d72c997f-4071-5f76-919c-aa632b44722a",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Source-grounded summary evaluation selects candidate using supported-claim rate."
+    },
+    {
+      "question_id": "d7941043-2cf6-5afa-9c48-2b0a1c663da4",
+      "decision_type": "manage_features",
+      "confidence": "high",
+      "reason": "Source groups register shared columns in one synchronized online feature view."
+    },
+    {
+      "question_id": "d852748b-8edb-5d4c-8f3e-60caa6b4a092",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "Parameter-efficient supervised tuning replaces prohibited in-prompt examples."
+    },
+    {
+      "question_id": "d9bebed8-fd13-48de-ae5c-36ce0617fcd4",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Composer coordinates on-prem proprietary transformation and cloud ML stages."
+    },
+    {
+      "question_id": "dac72ec0-a439-506f-8acd-027c37675d9c",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Attribute-based dynamic identity group replaces manual roster membership."
+    },
+    {
+      "question_id": "dacbbfb3-0bc6-4f29-b0c2-3ba8f71d7cd4",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "low",
+      "reason": "Build plus pipeline coordinates external artifact fetch registration deployment and monitoring."
+    },
+    {
+      "question_id": "dff8ea5c-ac2c-5578-b253-cd76ec847ca3",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Model-card/playground comparison selects suitable replacement summarizer."
+    },
+    {
+      "question_id": "e0336b5a-dc2b-5a3f-926d-2ed750cc8a30",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "Model-card fine-tuning pipeline teaches support examples to existing Gemma."
+    },
+    {
+      "question_id": "e036b61c-427f-4ca4-9f7d-9e5632da03e2",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Custom container components orchestrate multi-step distributed GPU pipeline."
+    },
+    {
+      "question_id": "e04b021d-85bc-57d1-ac41-6d4db1ab6b08",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Request-based scale-to-zero HTTP serving matches bursty synchronous quotations."
+    },
+    {
+      "question_id": "e09b1ddb-e7fa-47ba-9a89-e20b31503f0c",
+      "decision_type": "prepare_data",
+      "confidence": "low",
+      "reason": "Transfers on-prem sources and prepares datasets for downstream custom training."
+    },
+    {
+      "question_id": "e0de5166-7774-5720-ad34-5232ad72eacb",
+      "decision_type": "explain_predictions",
+      "confidence": "high",
+      "reason": "Local feature attributions explain disputed vehicle valuations relative to baseline."
+    },
+    {
+      "question_id": "e1d51300-e82f-4767-b6fb-8ba1941ed408",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses AutoML tabular CLTV regression."
+    },
+    {
+      "question_id": "e21a7ba0-d4fb-5079-869c-3101614e0090",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Assigns dedicated runtime service identity while retaining ADC."
+    },
+    {
+      "question_id": "e26d6239-7009-52df-b057-336c4ad157db",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "CSV Handler and Predictor centralize normalization and risk-band responses."
+    },
+    {
+      "question_id": "e27e8752-0688-534c-922e-281a25b92231",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "High-confidence injection screening plus IP redaction protect inputs without blanket rejection."
+    },
+    {
+      "question_id": "e34ca181-5746-4f39-95ca-63bf3f02c938",
+      "decision_type": "configure_environment",
+      "confidence": "high",
+      "reason": "Matches Spark deep-learning and collaborative analysis environments with shared Git."
+    },
+    {
+      "question_id": "e36357f4-d06a-5947-8ed5-5f325b51634e",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Pairwise teaching rubric is checked against teacher-labeled reply preferences."
+    },
+    {
+      "question_id": "e3dade44-7798-4074-99e0-359307c88a48",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Asynchronous Online Monitor evaluates sampled live traces over time."
+    },
+    {
+      "question_id": "e4796430-bafa-47d9-b456-c325b26f6c83",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "AI Protection threat findings provide centralized asset security monitoring."
+    },
+    {
+      "question_id": "e49ca718-6499-5d70-b725-1d80837c5198",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Filters playground-tested standard MaaS candidates for replacement assistant."
+    },
+    {
+      "question_id": "e4f46fb3-e383-4f1b-b469-1a71f5a382eb",
+      "decision_type": "scale_capacity",
+      "confidence": "high",
+      "reason": "Updates autoscaling signal to GPU duty cycle through deployment mutation."
+    },
+    {
+      "question_id": "e550f32c-9e59-58e5-8218-353897a56d8f",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "high",
+      "reason": "TRANSFORM fitted scaler makes predictions independent of scoring-batch composition."
+    },
+    {
+      "question_id": "e6a65b91-af36-4b8f-aa17-e4e067bd98ba",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Compiled KFP graph runs through managed PipelineJob with artifact root."
+    },
+    {
+      "question_id": "e6adc74a-0a26-5962-bc09-ae6e1fd09110",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Cloud Deploy canary progressively advances traffic after latency analysis."
+    },
+    {
+      "question_id": "e6ca486b-f372-5430-8c40-6dec3501bb10",
+      "decision_type": "explain_predictions",
+      "confidence": "high",
+      "reason": "Approximate local contributions and global explanations reduce attribution cost."
+    },
+    {
+      "question_id": "e6d3ed28-5eed-41cb-bb1a-1855514529f5",
+      "decision_type": "explain_predictions",
+      "confidence": "high",
+      "reason": "Segment-specific feature attributions explain Electronics recommendation failures."
+    },
+    {
+      "question_id": "e73eefc3-3d0d-548c-844a-d05992f819f4",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Direct translation automatically detects per-message language without extra request."
+    },
+    {
+      "question_id": "e80bca5c-efc1-54da-b5dc-b47b67d4f5b2",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "K-anonymity finds small quasi-identifier groups for suppression/generalization."
+    },
+    {
+      "question_id": "e86b5c79-6673-5fe4-a8bf-a3b7cb209bdf",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Daily output-distribution comparisons use approved launch-week prediction baseline."
+    },
+    {
+      "question_id": "e93b97ec-6839-57a3-ac99-18943c46d5fb",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Custom container and readiness probe avoid serving before weights load."
+    },
+    {
+      "question_id": "e9a90c85-3697-567a-8ee9-a2765ddc231d",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Handler and Predictor package record parsing normalization and approved categories."
+    },
+    {
+      "question_id": "e9d9f655-0e9e-5f84-9ccb-896961705543",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Private endpoint forwarding rule connects application's VPC through PSC."
+    },
+    {
+      "question_id": "ea6a659a-75b1-5ccd-b1d7-8089c045dfde",
+      "decision_type": "protect_information",
+      "confidence": "high",
+      "reason": "Screens injected notes and redacts sensitive values before inference/distribution."
+    },
+    {
+      "question_id": "eb165168-44a6-4a3b-86bc-62219abc3712",
+      "decision_type": "track_provenance",
+      "confidence": "high",
+      "reason": "Experiments and TensorBoard compare cross-framework parameters and training curves."
+    },
+    {
+      "question_id": "eb46f0bf-0190-4786-9e18-b37ad4b5d697",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Canary automatic traffic control manages incremental live version exposure."
+    },
+    {
+      "question_id": "ebaf70e3-a7d2-5f9a-9012-985903cc9f3a",
+      "decision_type": "package_inference",
+      "confidence": "low",
+      "reason": "OCR migration packages EU processor output conversion for existing parser."
+    },
+    {
+      "question_id": "ebfcd154-4d4d-44f5-959c-82856c863e7e",
+      "decision_type": "monitor_behavior",
+      "confidence": "low",
+      "reason": "Ongoing input/output monitoring and attribution track changing feature influence."
+    },
+    {
+      "question_id": "ec96bfc1-b582-4339-a123-6f2f3c9dff1b",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Automatic canary traffic control uses twenty/fifty phases and omits manifest traffic."
+    },
+    {
+      "question_id": "ecf15ac9-a45f-561c-a9e9-7df4856cd6ff",
+      "decision_type": "trigger_automation",
+      "confidence": "high",
+      "reason": "Quality checks and unit correction gate drift-triggered retraining."
+    },
+    {
+      "question_id": "ed3e2b33-59ea-5c6d-b237-dafa278e869d",
+      "decision_type": "manage_features",
+      "confidence": "high",
+      "reason": "Point-in-time historical feature lookups preserve availability semantics without changing live serving."
+    },
+    {
+      "question_id": "ed72b5ec-428c-5595-83f6-a1ddc850c864",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Custom container preserves native PyTorch server and adapts health/inference routes."
+    },
+    {
+      "question_id": "eed8f3e9-c842-5090-b75d-bf9c5731cb4d",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Workforce group principal set replaces individual Logs Viewer bindings."
+    },
+    {
+      "question_id": "ef032c7c-bcec-422a-8a27-7387ec91fafe",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses low-code custom video classification and detection."
+    },
+    {
+      "question_id": "ef560d4d-021f-5fe5-b974-ac47fb5b6c8f",
+      "decision_type": "manage_features",
+      "confidence": "high",
+      "reason": "Registers historical sources and synchronizes latest combined feature view."
+    },
+    {
+      "question_id": "f0f4d346-881f-5aa9-99d9-e70c43ab4cde",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Persistent randomized customer cohorts route tagged revisions for purchase comparison."
+    },
+    {
+      "question_id": "f13f0db6-9b9b-5682-8b0c-c574e85fac6c",
+      "decision_type": "configure_environment",
+      "confidence": "high",
+      "reason": "Provided model tuning notebooks reduce Workbench experiment setup."
+    },
+    {
+      "question_id": "f258a379-2f89-5804-b57a-b14fd95333c8",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "SQL supervised tuning uses existing reserved-row evaluation marker."
+    },
+    {
+      "question_id": "f36dcbd0-8782-596f-b55b-5924b3f840e2",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Reserved-claim accuracy/completeness comparison gates candidate promotion, not training loss."
+    },
+    {
+      "question_id": "f38baa20-0650-589f-8af9-19acf10f0eac",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Container port health and prediction route configuration repairs endpoint compatibility."
+    },
+    {
+      "question_id": "f3be3812-f3a1-52ea-b13a-3921f58c3650",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Dependent KFP stages run nightly serverlessly with lineage."
+    },
+    {
+      "question_id": "f4143336-b6ad-4e93-9bcc-6f126ec4d516",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Continuous drift/performance tracking integrates alerting and audit logs."
+    },
+    {
+      "question_id": "f4d2e283-be15-402e-b44d-9a16982570e4",
+      "decision_type": "configure_environment",
+      "confidence": "high",
+      "reason": "GPU Workbench notebooks integrate internal Git for interactive development."
+    },
+    {
+      "question_id": "f4dac2cf-667e-50b5-a9e3-6e98919d0854",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Automated canary compares live performance and advances controlled traffic."
+    },
+    {
+      "question_id": "f744f585-88d1-5a22-b860-1cb61875ba57",
+      "decision_type": "release_safely",
+      "confidence": "high",
+      "reason": "Progressive canary phases increase exposure only after acceptable analysis."
+    },
+    {
+      "question_id": "f75eec6e-9c4b-4ab0-991f-6552067e864e",
+      "decision_type": "prepare_data",
+      "confidence": "low",
+      "reason": "Consolidates transformed HDFS warehouse and image data for custom training."
+    },
+    {
+      "question_id": "f794f0e8-4c5b-50eb-bfa1-9cba629e6d5a",
+      "decision_type": "validate_quality",
+      "confidence": "high",
+      "reason": "Persistent per-pump split keeps overlapping windows out of other partitions."
+    },
+    {
+      "question_id": "f7eb866b-21f3-4820-a223-a63a10a8cdcb",
+      "decision_type": "monitor_behavior",
+      "confidence": "low",
+      "reason": "Profiler, interactive shell and GPU memory telemetry diagnose running training failures before batch/data-loader changes."
+    },
+    {
+      "question_id": "f8170f4c-30fa-5e70-8bb3-d9f53066f4d9",
+      "decision_type": "track_provenance",
+      "confidence": "high",
+      "reason": "Approved/candidate aliases provide movable release-role references."
+    },
+    {
+      "question_id": "f892797e-96c3-4723-9ea6-50d5e2e5af0e",
+      "decision_type": "provision_compute",
+      "confidence": "low",
+      "reason": "Custom TensorFlow container and GPU job preserve controlled training/artifacts."
+    },
+    {
+      "question_id": "f8d30aab-2681-401d-a54b-e6c78506a5b6",
+      "decision_type": "manage_features",
+      "confidence": "high",
+      "reason": "Timestamped source groups register discoverable features in single online view."
+    },
+    {
+      "question_id": "f99cb41b-96eb-591f-ad2b-a889157d0045",
+      "decision_type": "scale_capacity",
+      "confidence": "high",
+      "reason": "Four minimum TPU replicas cover measured 350-request demand."
+    },
+    {
+      "question_id": "f9cba264-ac35-4697-977c-7fb0a545ad9e",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Distributed TPU custom training meets large daily training deadline."
+    },
+    {
+      "question_id": "fa1cfe57-8300-428a-a341-73c925fc482e",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "KFP graph coordinates Beam Dataflow custom training evaluation and registration."
+    },
+    {
+      "question_id": "fa398eb0-60b3-57bc-b1c7-d019072ce0d0",
+      "decision_type": "provision_compute",
+      "confidence": "high",
+      "reason": "Cost-normalized useful throughput includes faults stalls and checkpoint recovery."
+    },
+    {
+      "question_id": "fa4e3787-96d9-4599-94c6-6dcd41cc9f2c",
+      "decision_type": "orchestrate_workflow",
+      "confidence": "high",
+      "reason": "Custom KFP component encapsulates proprietary validation/transformation in workflow."
+    },
+    {
+      "question_id": "fa608af4-0825-5dd2-96a7-685188e62c6b",
+      "decision_type": "prepare_data",
+      "confidence": "high",
+      "reason": "Warehouse SQL replaces memory-bound pandas joins imputations and totals."
+    },
+    {
+      "question_id": "fa6cea49-10d3-5ef5-a16e-30e5b8c3003c",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Existing selected model is exposed through managed API without owned serving."
+    },
+    {
+      "question_id": "faf8f473-f8df-5306-b3bb-ea15359d818d",
+      "decision_type": "preserve_preprocessing",
+      "confidence": "high",
+      "reason": "Bundles fitted tokenizer/vocabulary with corresponding classifier version."
+    },
+    {
+      "question_id": "fb142002-f7d7-47d8-8ba8-f06772596eef",
+      "decision_type": "package_inference",
+      "confidence": "high",
+      "reason": "Prebuilt vLLM container self-deploys selected open model on dedicated endpoint."
+    },
+    {
+      "question_id": "fc840f4f-1945-4454-8ace-c643d4043f6b",
+      "decision_type": "select_solution",
+      "confidence": "high",
+      "reason": "Chooses BigQuery classification without data movement."
+    },
+    {
+      "question_id": "fcae04bf-e64e-539e-94c9-e360d365f416",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "SQL selects final approved translation pairs for supervised tuning."
+    },
+    {
+      "question_id": "fce0ba5c-f199-5d69-8d09-5eab26dba836",
+      "decision_type": "optimize_training",
+      "confidence": "high",
+      "reason": "Training objective maximizes recall at fixed eighty-percent precision."
+    },
+    {
+      "question_id": "fd53cf85-f311-5f59-b85f-fbbbabe9cf3a",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Live sampled capped quality monitoring replaces release-only saved checks."
+    },
+    {
+      "question_id": "fe07c37d-d5d8-47b6-ab85-53333a524346",
+      "decision_type": "protect_information",
+      "confidence": "low",
+      "reason": "AI threat protection and encryption defend lifecycle integrity alongside drift telemetry."
+    },
+    {
+      "question_id": "fea4f5b8-4fa0-4a3e-80b5-915f83b8d94f",
+      "decision_type": "manage_access",
+      "confidence": "high",
+      "reason": "Dedicated private PSC endpoint enforces nonpublic inference boundary."
+    },
+    {
+      "question_id": "ff30ea9e-0242-5c83-8933-56e9788feff0",
+      "decision_type": "monitor_behavior",
+      "confidence": "high",
+      "reason": "Recent representative production baseline detects new drift without old training mismatch noise."
+    },
+    {
+      "question_id": "ffdad7d3-1906-46bc-afe5-10401898b39a",
+      "decision_type": "adapt_model",
+      "confidence": "high",
+      "reason": "Supervised tuning teaches proprietary JSON outputs and removes few-shot prompt bulk."
+    }
+  ]
+}
