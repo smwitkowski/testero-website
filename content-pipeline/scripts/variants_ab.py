@@ -54,6 +54,12 @@ def report(artifact, verdicts):
     accepted, errors = [], []
     parent_scores, sibling_scores, family_scores = [], [], []
     pairs = []
+    # Read actual bound quality decisions before any family-stem comparison.
+    # Missing verdicts remain eligible; rejected copies cannot consume slots.
+    from shared.variant_eligibility import reviewed_siblings
+    from shared.variants import eligible_sibling
+    siblings = [entry for entry in reviewed_siblings(artifact, payload, verdicts)
+                if entry.get("variant") and entry.get("options") and eligible_sibling(entry)]
     for entry in payload["candidates"]:
         ident = entry["candidate_id"]
         for name, field in (("schema", "schema_check"), ("near_duplicate", "near_duplicate_check")):
@@ -70,7 +76,7 @@ def report(artifact, verdicts):
             parent_scores.append({"candidate_id": ident, "parent_question_id": entry["parent_question_id"],
                 **similarity(row["stem"], row["key"], original["stem"], original["key"])})
             duplicate = variant_duplicates(entry, payload["existing_questions"]["questions"], parent,
-                                            siblings=payload["candidates"])
+                                            siblings=siblings, prior=payload.get("prior_variants", {}).get("questions", []))
             family_scores.append({"candidate_id": ident,
                 "max_family_stem_similarity": duplicate["max_family_stem_similarity"],
                 "family_stem_threshold": duplicate["family_stem_threshold"]})
@@ -85,7 +91,8 @@ def report(artifact, verdicts):
                 if gate.get("status") == "skipped":
                     counts[name]["skipped"] += 1
                     continue
-                passed, _ = evaluate_gate(name, gate, question, version=5, style_policy=entry.get("style_policy"))
+                passed, _ = evaluate_gate(name, gate, question, version=5,
+                                          style_policy=entry.get("style_policy"), variant=True)
                 counts[name]["measured"] += 1
                 counts[name]["passed"] += passed
                 if name == "blind_solver":
@@ -104,8 +111,16 @@ def report(artifact, verdicts):
                 payload["model"], gate_version=2, rules_version=5, argon_request=request["argon"])
             # Recompute diversity rather than trusting saved generation booleans.
             others = payload["existing_questions"]["questions"] + [comparison_row(e)
-                for e in payload["candidates"] if e.get("variant") and e is not entry and e.get("options")]
-            if decision.passed and variant_duplicates(entry, others, parent, siblings=payload["candidates"])["passed"]:
+                for e in siblings if e["candidate_id"] != ident and eligible_sibling(e)]
+            diversity_passed = variant_duplicates(entry, others, parent, siblings=siblings,
+                prior=payload.get("prior_variants", {}).get("questions", []))["passed"]
+            if decision.passed and not diversity_passed:
+                # A rejected candidate must not veto a later eligible sibling.
+                for sibling in siblings:
+                    if sibling["candidate_id"] == ident:
+                        sibling.update(failure_stage="near_duplicate", awaiting_external_judge=False,
+                                       accepted=False)
+            if decision.passed and diversity_passed:
                 accepted.append(ident)
                 if len(pairs) < 3 and not any(p["parent_question_id"] == entry["parent_question_id"] for p in pairs):
                     pairs.append({"parent_question_id": entry["parent_question_id"], "candidate_id": ident,
@@ -122,6 +137,7 @@ def report(artifact, verdicts):
     known = sum(r.get(k, 0) for r in rows for k in ("input_tokens", "output_tokens") if type(r.get(k)) is int)
     usage_complete = bool(rows) and all(type(r.get(k)) is int for r in rows for k in ("input_tokens", "output_tokens"))
     expected_stages = {"variant_write": len(payload.get("variant_attempts", [])),
+        "variant_length_repair": sum(max(a.get("calls_started", 1) - 1, 0) for a in payload.get("variant_attempts", [])),
         "judge_style": counts["style"]["measured"], "judge_evidence": counts["evidence"]["measured"],
         "judge_blind": counts["blind_solver"]["measured"], "argon_review": counts["argon"]["measured"]}
     recorded_stages = Counter(r.get("stage") for r in rows)
@@ -134,8 +150,8 @@ def report(artifact, verdicts):
         stage["calls"] += 1
         stage["known_tokens"] += sum(r[k] for k in ("input_tokens", "output_tokens") if type(r.get(k)) is int)
     attempted = len(payload.get("variant_attempts", []))
-    generation_rows = [r for r in rows if r.get("stage") == "variant_write"]
-    generation_complete = (len(generation_rows) == attempted and attempted > 0
+    generation_rows = [r for r in rows if r.get("stage") in ("variant_write", "variant_length_repair")]
+    generation_complete = (len(generation_rows) == attempted + expected_stages["variant_length_repair"] and attempted > 0
         and all(type(r.get(k)) is int for r in generation_rows for k in ("input_tokens", "output_tokens")))
     generation_cost = (sum(r[k] for r in generation_rows for k in ("input_tokens", "output_tokens"))
                        / len(accepted) if generation_complete and accepted else None)
@@ -208,7 +224,7 @@ def prepare_rejudge(artifact, *, threshold=FAMILY_STEM_THRESHOLD):
             parent = payload["variant_parents"][entry["parent_question_id"]]
             bank_and_others = payload["existing_questions"]["questions"] + [comparison_row(e)
                 for e in payload["candidates"] if e.get("options") and e is not entry]
-            duplicate = variant_duplicates(entry, bank_and_others, parent, siblings=payload["candidates"])
+            duplicate = variant_duplicates(entry, bank_and_others, parent, siblings=payload["candidates"], prior=payload.get("prior_variants", {}).get("questions", []))
             entry["near_duplicate_check"] = duplicate
             # Old verdicts remain archived by export, never used as new-policy passes.
             entry["accepted"] = False
@@ -243,7 +259,7 @@ def review_pairs(artifact, output, count=3):
     for index, entry in enumerate(chosen, 1):
         parent = payload["variant_parents"][entry["parent_question_id"]]
         duplicate = variant_duplicates(entry, payload["existing_questions"]["questions"], parent,
-                                       siblings=payload["candidates"])
+                                       siblings=payload["candidates"], prior=payload.get("prior_variants", {}).get("questions", []))
         lines += [f"## Pair {index}", "", f"Max family stem Jaccard: {duplicate['max_family_stem_similarity']:.4f}", ""]
         for heading, question in (("Parent", parent["entry"]), ("Variant", entry)):
             lines += [f"### {heading} `{question['candidate_id']}`", "", question["stem"], ""]
@@ -260,12 +276,16 @@ def main():
     parser.add_argument("--bank", type=Path)
     parser.add_argument("--artifact", type=Path, required=True)
     parser.add_argument("--allow-live", action="store_true")
+    parser.add_argument("--prior-artifact", type=Path, action="append", default=[],
+                        help="Prior variant artifact; repeat for each earlier run (frozen offline acceptance).")
     parser.add_argument("--family-stem-threshold", type=float, default=FAMILY_STEM_THRESHOLD)
     parser.add_argument("--review-pairs", type=int, default=3)
     parser.add_argument("--pairs-output", type=Path, help="Markdown review output (default beside artifact).")
     args = parser.parse_args()
     if args.artifact.suffix != ".json":
         parser.error("--artifact must end in .json for shared writer/judge telemetry")
+    if args.prior_artifact and args.mode not in ("prepare", "run"):
+        parser.error("--prior-artifact is generation-only; replay uses the artifact's frozen history")
     os.environ["PYTHON_DOTENV_DISABLED"] = "1"
     family_threshold(args.family_stem_threshold)
     pairs_output = args.pairs_output or args.artifact.with_name(args.artifact.stem + ".pairs.md")
@@ -283,7 +303,7 @@ def main():
         ids = [ident for _, ident in PARENTS]
         payload = generate(artifact_paths, ids, args.bank or args.parent_dir / BANK, args.artifact,
                            variants_per_parent=3, enable_variants=args.mode == "run",
-                           family_stem_threshold=args.family_stem_threshold)
+                           family_stem_threshold=args.family_stem_threshold, prior_artifacts=args.prior_artifact)
         if args.mode == "prepare":
             print(json.dumps({k: v for k, v in payload["dry_run"].items() if k != "prompts"}, indent=2))
             return

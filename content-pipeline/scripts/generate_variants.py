@@ -53,9 +53,9 @@ def select_parents(artifacts, ids, bank_path):
     return [selected[ident] for ident in ids], bank
 
 
-def build_plan(parents, count):
+def build_plan(parents, count, *, prior=()):
     from shared.variants import variant_scope, industry_allocation
-    allocation = industry_allocation(parents, {p["question_id"]: count for p in parents})
+    allocation = industry_allocation(parents, {p["question_id"]: count for p in parents}, prior=prior)
     plan, assignments = [], []
     for parent in parents:
         for ordinal in range(1, count + 1):
@@ -72,7 +72,8 @@ def build_plan(parents, count):
     return plan, assignments
 
 def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable_variants=False,
-             model="codex", effort="low", predictor=None, family_stem_threshold=FAMILY_STEM_THRESHOLD):
+             model="codex", effort="low", predictor=None, family_stem_threshold=FAMILY_STEM_THRESHOLD,
+             length_repair_predictor=None, prior_artifacts=()):
     os.environ["PYTHON_DOTENV_DISABLED"] = "1"
     family_stem_threshold = family_threshold(family_stem_threshold)
     output = Path(output).absolute()
@@ -83,14 +84,16 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
     require_independent_models(model, "anthropic/claude-sonnet-5.5")
     require_independent_models(model, "openrouter/google/gemini-4-argon")
     parents, bank = select_parents(artifacts, ids, bank_path)
-    plan, assignments = build_plan(parents, variants_per_parent)
+    from shared.variant_history import load_prior_variants
+    history = load_prior_variants([Path(path).absolute() for path in prior_artifacts])
+    plan, assignments = build_plan(parents, variants_per_parent, prior=history["questions"])
     payload = {"cert_id": DEFAULT_CERT, "model": model, "judge_model": "external",
                "external_judge_version": 2, "rules_version": 5, "style_policy_version": "5.1",
                "execution_policy": "short_circuit_v1", "argon_gate": True,
                "difficulty": "MEDIUM", "exam": "GCP_PM_ML_ENG", "generation_runs": {},
                "variant_mode": 1, "family_stem_threshold": family_stem_threshold, "variant_parents": {p["question_id"]: p for p in parents},
                "existing_questions": bank, "plan": plan, "candidates": [],
-               "variant_attempts": [], "offline": not enable_variants}
+               "variant_attempts": [], "offline": not enable_variants, "prior_variants": history}
     if "distractor_evidence" in parents[0]["scope"]:
         payload["distractor_evidence"] = parents[0]["scope"]["distractor_evidence"]
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -135,10 +138,37 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
                 validation.is_valid = False
             entry["schema_check"] = {"passed": validation.is_valid, "errors": validation.errors,
                                      "warnings": validation.warnings}
-            from shared.variants import option_rewrite_check
-            entry["option_rewrite_check"] = option_rewrite_check(question, parent)
-            if not entry["option_rewrite_check"]["passed"]:
-                validation.errors.append("Options must be rewritten below 0.65 Jaccard; key cannot be uniquely shortest")
+            from shared.variants import (option_rewrite_check, option_rewrite_errors,
+                length_repair_inputs, repair_option_lengths, OptionLengthRepairSignature)
+            rewrite = option_rewrite_check(question, parent)
+            # One small option-only retry, never a new scenario or a general repair loop.
+            length_only = all(error.startswith("Choice ") and " word count (" in error
+                              for error in validation.errors)
+            if ((validation.is_valid or length_only) and rewrite["key_uniquely_shortest"]
+                    and raw["industry"] == scope["industry"]
+                    and all(v < rewrite["threshold"] for v in rewrite["option_jaccard"].values())):
+                entry["option_rewrite_check"] = rewrite
+                entry["length_repair"] = {"before": deepcopy(rewrite), "status": "started"}
+                entry["failure_stage"] = "variant_length_repair"
+                attempt["calls_started"] = 2
+                write_artifact(output, payload)
+                repair_inputs = length_repair_inputs(question, rewrite)
+                with call_context(stage="variant_length_repair", index=index, attempt=2, calls_path=calls):
+                    repaired = (length_repair_predictor(repair_inputs) if length_repair_predictor
+                                else repair_option_lengths(repair_inputs, model=model))
+                repaired = output_model(OptionLengthRepairSignature).model_validate(repaired).model_dump()
+                question = clean_question({**question, **repaired})
+                entry.update(candidate_id=candidate_id(index, scope, question), stem=question["stem"])
+                store_options(entry, question, parent["evidence"])
+                validation = validate_question(question, industry_only=True)
+                rewrite = option_rewrite_check(question, parent)
+                entry["length_repair"].update(status="completed", after=deepcopy(rewrite))
+                entry["schema_check"] = {"passed": validation.is_valid, "errors": validation.errors,
+                                         "warnings": validation.warnings}
+                entry["failure_stage"] = "schema"
+            entry["option_rewrite_check"] = rewrite
+            validation.errors.extend(option_rewrite_errors(rewrite))
+            if not rewrite["passed"]:
                 validation.is_valid = False
                 entry["schema_check"]["passed"] = False
             if not validation.is_valid:
@@ -146,12 +176,12 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
             entry["failure_stage"] = "lineage"
             validate_variant(payload, entry)
             entry["failure_stage"] = "near_duplicate"
-            duplicate = variant_duplicates(entry, seen, parent, siblings=payload["candidates"])
+            duplicate = variant_duplicates(entry, seen, parent, siblings=payload["candidates"],
+                                           prior=history["questions"])
             entry["near_duplicate_check"] = duplicate
             if not duplicate["passed"]:
                 entry["failure_stage"] = "near_duplicate"
                 raise ValueError(duplicate["reason"])
-            seen.append(comparison_row(entry))
             entry.update(mechanical_check={"passed": True, "errors": []},
                          awaiting_external_judge=True, status="awaiting_external_judge",
                          judge_verdict={"passed": False, "score": 0.0, "model": "external",
@@ -167,6 +197,7 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
             entry["external_judge_request"] = {"path": str(destination.relative_to(output.parent)),
                                               "sha256": hashlib.sha256(_encode(request)).hexdigest()}
             entry.pop("failure_stage")
+            seen.append(comparison_row(entry))
             attempt["status"] = "awaiting_external_judge"
         except Exception as error:
             if not any(e is entry for e in payload["candidates"]):
@@ -210,6 +241,8 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
 @click.option("--artifact", "output", required=True, type=click.Path(path_type=Path))
 @click.option("--variants-per-parent", default=3, type=click.IntRange(1, 5), show_default=True)
 @click.option("--family-stem-threshold", default=FAMILY_STEM_THRESHOLD, type=click.FloatRange(min=0, max=1, min_open=True), show_default=True)
+@click.option("--prior-artifact", "prior_artifacts", multiple=True, type=click.Path(exists=True, path_type=Path),
+              help="Earlier variant artifacts; freeze their bound all-gate passes for family dedupe.")
 @click.option("--enable-variants", is_flag=True, help="Opt in to live writer calls; default renders prompts offline.")
 @click.option("--model", default="codex", show_default=True)
 @click.option("--effort", default="low", type=click.Choice(["low", "medium", "high"]))

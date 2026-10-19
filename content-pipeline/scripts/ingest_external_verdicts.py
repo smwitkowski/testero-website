@@ -103,7 +103,8 @@ def _scope(payload, entry):
         origin = scope["variant_origin"]
         if payload.get("variant_mode") != 1 or not isinstance(origin, dict) or set(origin) != {"parent_question_id", "ordinal"}:
             raise ValueError("Invalid variant scope origin")
-        expected = variant_scope(expected, payload["variant_parents"][origin["parent_question_id"]], origin["ordinal"])
+        expected = variant_scope(expected, payload["variant_parents"][origin["parent_question_id"]], origin["ordinal"],
+                                 policy_version=scope.get("variant_policy_version", 3))
         expected["industry"] = frozen_industry(payload, scope)
     elif payload.get("variant_mode") is not None:
         raise ValueError("Variant mode requires frozen variant scope origins")
@@ -242,13 +243,15 @@ def _external_decision(question, scope, sources, evidence, raw, generator_model,
             base = {name: raw[name] for name in ("blind_solver", "style", "evidence")}
             if raw["argon"] == {"status": "skipped", "reason": "prior_gate_failed"}:
                 decision = aggregate_gate_verdict(question, verdict_with_policy(base, policy), model=EXTERNAL_JUDGE_PROVENANCE,
-                    version=rules_version, style_policy=scope.get("style_policy"), distractor_evidence=policy)
+                    version=rules_version, style_policy=scope.get("style_policy"), distractor_evidence=policy,
+                    variant="variant_origin" in scope)
                 if argon_request["version"] != 2 or decision.passed:
                     raise ValueError("Argon skip cannot approve content")
                 return decision
             passed, reason = evaluate_argon(question, raw["argon"], argon_request)
         decision = aggregate_gate_verdict(question, verdict_with_policy(base, policy), model=EXTERNAL_JUDGE_PROVENANCE, version=rules_version,
-                                          style_policy=scope.get("style_policy"), distractor_evidence=policy)
+                                          style_policy=scope.get("style_policy"), distractor_evidence=policy,
+                                          variant="variant_origin" in scope)
         if argon_request is not None and not passed:
             from shared.quality_gate import JudgeVerdict
             return JudgeVerdict(False, 0.0, ("Argon: " + reason)[:300], EXTERNAL_JUDGE_PROVENANCE)
@@ -427,6 +430,10 @@ def ingest(path, verdicts, *, dry_run=False):
                 raise click.ClickException("Malformed local export snapshot")
             tokens(row["stem"]); tokens(row["key"])
         near_seen = list(bank["questions"])
+    variant_siblings = payload["candidates"]
+    if payload.get("variant_mode") == 1:
+        from shared.variant_eligibility import reviewed_siblings
+        variant_siblings = reviewed_siblings(path, payload, verdicts)
     pending, seen = [], set()
     # Include completed content before pending validation, regardless of list order.
     if payload.get("rules_version") == 5:
@@ -501,13 +508,18 @@ def ingest(path, verdicts, *, dry_run=False):
                 if "variant" in entry:
                     from shared.variants import variant_duplicates
                     duplicate = variant_duplicates(entry, near_seen,
-                        payload["variant_parents"][entry["parent_question_id"]], siblings=payload["candidates"])
+                        payload["variant_parents"][entry["parent_question_id"]], siblings=variant_siblings,
+                        prior=payload.get("prior_variants", {}).get("questions", []))
                 else:
                     duplicate = check_near_duplicate(entry, near_seen,
                         exclude=(ident, entry.get("repair", {}).get("parent_candidate_id")))
                 entry["near_duplicate_check"] = duplicate
                 if not duplicate["passed"]:
                     _reject(entry, "near_duplicate", duplicate["reason"])
+                    if "variant" in entry:
+                        for sibling in variant_siblings:
+                            if sibling["candidate_id"] == ident:
+                                sibling.update(failure_stage="near_duplicate", awaiting_external_judge=False)
                     rejected += 1
                     click.echo(f"{ident}: rejected; {duplicate['reason']}")
                     continue

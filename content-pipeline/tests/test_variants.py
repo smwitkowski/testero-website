@@ -644,7 +644,12 @@ def test_failed_attempt_records_check_details(parents, tmp_path, defect, check):
         if defect == "name": raw["stem"] = raw["stem"].replace("Your company", "Northstar uses")
         if defect == "industry": raw["industry"] = "unassigned domain"
         return raw
-    payload = generate(parents, tmp_path, enable_variants=True, predictor=writer)
+    def unchanged_repair(inputs):
+        from shared.option_order import OPTION_FIELDS
+        current = json.loads(inputs["current_question"])
+        return {field: current[field] for field in OPTION_FIELDS}
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=writer,
+                       length_repair_predictor=unchanged_repair)
     attempt = payload["variant_attempts"][0]
     assert attempt["status"] == "failed"
     assert attempt["failure_stage"] == "schema"
@@ -731,3 +736,108 @@ def test_unrecoverable_failed_output_keeps_stage_and_exception_class():
     assert details["error_class"] == "ValueError"
     entry["failure_stage"] = "variant_write"
     assert failure_details({}, entry)["failure_checks"] == {}
+
+
+@pytest.mark.parametrize("repair_ok", [True, False])
+def test_round4_one_small_length_retry_revalidates_content_and_request(parents, tmp_path, repair_ok):
+    from shared.option_order import OPTION_FIELDS
+    writes, repairs = [], []
+    def writer(inputs):
+        raw = variant_for(inputs)
+        raw["correct_answer"] = "Run the containerized handler on Cloud Run with autoscaling"
+        writes.append(deepcopy(raw))
+        return raw
+    def repair(inputs):
+        repairs.append(inputs)
+        current = json.loads(inputs["current_question"])
+        assert current["correct_answer"] == "Run the containerized handler on Cloud Run with autoscaling"
+        assert "documentation_context" not in inputs
+        return {field: (VARIANT[field] if repair_ok else current[field]) for field in OPTION_FIELDS}
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=writer,
+                       length_repair_predictor=repair)
+    entry = payload["candidates"][0]
+    assert len(writes) == len(repairs) == 1
+    assert payload["variant_attempts"][0]["calls_started"] == 2
+    assert entry["length_repair"]["before"]["key_uniquely_shortest"] is True
+    assert entry["length_repair"]["status"] == "completed"
+    question = candidate_question(entry)
+    assert all(question[field] == writes[0][field] for field in QUESTION if field not in OPTION_FIELDS)
+    assert canonical_evidence(entry) == payload["variant_parents"][entry["parent_question_id"]]["evidence"]
+    assert entry["candidate_id"] == candidate_id(1, payload["plan"][0], question)
+    if repair_ok:
+        assert entry.get("failure_stage") is None
+        assert entry["option_rewrite_check"]["passed"] is True
+        ingest._validate_candidate(tmp_path / "variants.json", payload, entry)
+    else:
+        assert entry["failure_stage"] == "schema"
+        assert entry["schema_check"]["errors"] == ["Key cannot be uniquely shortest; balance option word counts"]
+        assert "external_judge_request" not in entry
+
+
+def test_round4_no_length_retry_for_copied_options(parents, tmp_path):
+    retry = Mock(side_effect=AssertionError("No general repair"))
+    def writer(inputs):
+        raw = variant_for(inputs)
+        raw["correct_answer"] = "Run Cloud Run"
+        raw["distractor_1"] = QUESTION["distractor_1"]
+        return raw
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=writer,
+                       length_repair_predictor=retry)
+    retry.assert_not_called()
+    errors = payload["candidates"][0]["schema_check"]["errors"]
+    assert "Matched options must be rewritten below 0.65 Jaccard" in errors
+    assert "Key cannot be uniquely shortest; balance option word counts" in errors
+    assert payload["variant_attempts"][0]["calls_started"] == 1
+
+
+@pytest.mark.parametrize("state", ["schema", "near_duplicate", "style", "eligible", "accepted"])
+def test_round4_rejected_siblings_do_not_consume_family_stem_slot(parents, tmp_path, state):
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=variant_for)
+    entry = payload["candidates"][0]
+    parent = payload["variant_parents"][entry["parent_question_id"]]
+    sibling = deepcopy(entry)
+    sibling["candidate_id"] = "older-sibling"
+    if state not in ("eligible", "accepted"):
+        sibling["failure_stage"] = state
+        sibling["awaiting_external_judge"] = False
+    if state == "accepted":
+        sibling["accepted"] = True
+    from shared.near_duplicates import comparison_row
+    result = variant_duplicates(entry, [comparison_row(sibling)], parent, siblings=[sibling])
+    assert result["passed"] is (state not in ("eligible", "accepted"))
+    assert ("older-sibling" in {s["matched_id"] for s in result["family_similarity"]}) is (state in ("eligible", "accepted"))
+
+
+def test_round4_prior_industry_exclusion_and_no_forced_cost_moment(parents):
+    from shared.variants import variant_scope
+    _, _, payload, bank = parents
+    parent = parent_snapshot(payload, payload["candidates"][0], bank)
+    original, _ = variants.build_plan([parent], 3)
+    prior = [{"parent_question_id": parent["question_id"], "industry": original[0]["industry"]}]
+    current, _ = variants.build_plan([parent], 3, prior=prior)
+    assert prior[0]["industry"] not in {s["industry"] for s in current}
+    assert len({s["scenario_moment"] for s in current}) == 3
+    assert all(s["scenario_moment"] != "cost/latency reduction" for s in current)
+    assert all(s["variant_policy_version"] == 4 for s in current)
+    old = variant_scope(plan_questions(DEFAULT_CERT, 1, objective_ids=[parent["scope"]["objective_id"]])[0], parent, 3, policy_version=3)
+    assert "variant_policy_version" not in old
+
+
+def test_round4_report_counts_length_repair_telemetry(parents, tmp_path):
+    from scripts.variants_ab import report
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=variant_for)
+    entry = payload["candidates"][0]
+    verdicts = verdict_for(entry, tmp_path)
+    artifact = tmp_path / "variants.json"
+    payload["variant_attempts"][0]["calls_started"] = 2
+    artifact.write_text(json.dumps(payload))
+    rows = [{"stage":stage,"input_tokens":10,"output_tokens":5} for stage in
+            ("variant_write", "variant_length_repair", "judge_style", "judge_evidence", "judge_blind", "argon_review")]
+    artifact.with_suffix(".json.calls.jsonl").write_text("\n".join(json.dumps(r) for r in rows))
+    result = report(artifact, verdicts)
+    assert result["tokens"]["tokens_per_gate_pass"] == 90
+    assert result["generation_only_tokens_per_gate_pass"] == 30
+    assert result["tokens"]["stage_coverage"]["variant_length_repair"]["expected_at_least"] == 1
+    rows.pop(1)
+    artifact.with_suffix(".json.calls.jsonl").write_text("\n".join(json.dumps(r) for r in rows))
+    assert report(artifact, verdicts)["tokens"]["complete_usage"] is False

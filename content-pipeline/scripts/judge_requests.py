@@ -102,9 +102,13 @@ def _read_request(path, ident, canonical, *, with_digest=False):
                    gate_fields | {"argon", "style_policy"})
     base_fields = (*base_fields, *(fields | {"distractor_evidence"} for fields in base_fields))
     modern_fields = (*base_fields, *(fields | {"execution_policy"} for fields in base_fields))
+    modern_fields = (*modern_fields, *(fields | {"variant_mode"} for fields in modern_fields))
     if not isinstance(request, dict) or set(request) not in (legacy_fields, *modern_fields):
         raise RequestValidationError("Request must contain exactly the exported request fields")
     is_gates = set(request) in modern_fields
+    if "variant_mode" in request and (type(request["variant_mode"]) is not int or request["variant_mode"] != 1
+                                      or "argon" not in request or request.get("gate_version") != 5):
+        raise RequestValidationError("Variants require rules-v5 gates and Argon")
     if "execution_policy" in request and request["execution_policy"] != "short_circuit_v1":
         raise RequestValidationError("Unsupported execution policy")
     if "distractor_evidence" in request:
@@ -321,7 +325,8 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
                         raw[name] = cli_models.run_claude_request(judge_model, gate["judge_prompt"], gate["verdict_schema"])
                     parse_gate_output(name, raw[name], version=request["gate_version"])
                     if short and not evaluate_gate(name, raw[name], question, version=request["gate_version"],
-                                                   style_policy=request.get("style_policy"))[0]:
+                                                   style_policy=request.get("style_policy"),
+                                                   variant=request.get("variant_mode") == 1)[0]:
                         failed_at = failed_at or name
             else:
                 sub_call = "claude.quality"

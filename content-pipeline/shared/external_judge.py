@@ -353,6 +353,8 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
                                         "verdict_schema": output_model(gate_signature).model_json_schema()}
                                  for name, gate_signature in signatures.items()},
                        "trimming": trimming}
+        if variant_context is not None and scope.get("variant_policy_version") == 4:
+            request["variant_mode"] = 1
         if execution_policy is not None:
             if signature is not None:
                 raise ValueError("Short circuit requires independent gates")

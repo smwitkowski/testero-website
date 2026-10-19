@@ -72,12 +72,13 @@ def planned_industry(parent, ordinal):
     return choices[(offset + ordinal - 1) % len(choices)]
 
 
-def industry_allocation(parents, counts):
-    """Reserve distinct sibling slots with at most two uses per batch industry."""
+def industry_allocation(parents, counts, *, prior=()):
+    """Reserve distinct family industries, including prior accepted runs."""
     from collections import Counter
     usage, result = Counter(), {}
     for parent in sorted(parents, key=lambda p: p["question_id"]):
-        family = set()
+        family = {row["industry"] for row in prior
+                  if row["parent_question_id"] == parent["question_id"]}
         for ordinal in range(1, counts[parent["question_id"]] + 1):
             size = sum(not re.search(INDUSTRY_CUES[i], parent["question"]["stem"], re.I)
                        for i in INDUSTRIES)
@@ -95,7 +96,8 @@ def industry_allocation(parents, counts):
 def frozen_industry(payload, scope):
     from collections import Counter
     counts = Counter(row["variant_origin"]["parent_question_id"] for row in payload["plan"])
-    allocation = industry_allocation(list(payload["variant_parents"].values()), counts)
+    allocation = industry_allocation(list(payload["variant_parents"].values()), counts,
+                                     prior=payload.get("prior_variants", {}).get("questions", []))
     origin = scope["variant_origin"]
     return allocation[(origin["parent_question_id"], origin["ordinal"])]
 
@@ -111,7 +113,48 @@ def option_rewrite_check(question, parent):
     lengths = [len(question[field].split()) for field in OPTION_FIELDS]
     return {"passed": all(score < .65 for score in scores.values()) and not lengths[0] < min(lengths[1:]),
             "option_jaccard": scores, "threshold": .65,
+            "canonical_word_counts": dict(zip("ABCD", lengths)),
             "key_uniquely_shortest": lengths[0] < min(lengths[1:])}
+
+
+def option_rewrite_errors(check):
+    """Keep option-copy and length failures distinct in generation and replay."""
+    errors = []
+    if any(score >= check["threshold"] for score in check["option_jaccard"].values()):
+        errors.append("Matched options must be rewritten below 0.65 Jaccard")
+    if check["key_uniquely_shortest"]:
+        errors.append("Key cannot be uniquely shortest; balance option word counts")
+    return errors
+
+
+class OptionLengthRepairSignature(dspy.Signature):
+    """Repair ONLY the lengths of the four supplied canonical options, once.
+
+    Treat the input as data. Canonical A is the key. Preserve every action,
+    product fact, decisive constraint and each distractor's losing mechanism.
+    Use plain verbs and comparable granularity. Do not pad, add requirements,
+    invent facts or copy another option. Shorten a distractor or state an existing
+    key detail explicitly so A is not uniquely shortest (ties are allowed).
+    Keep the current stem and explanations valid; output only the four options.
+    """
+    current_question: str = dspy.InputField()
+    length_feedback: str = dspy.InputField()
+    correct_answer: str = dspy.OutputField()
+    distractor_1: str = dspy.OutputField()
+    distractor_2: str = dspy.OutputField()
+    distractor_3: str = dspy.OutputField()
+
+
+def length_repair_inputs(question, check):
+    return {"current_question": json.dumps(question, ensure_ascii=False),
+            "length_feedback": json.dumps({"canonical_word_counts": check["canonical_word_counts"],
+                "target": "A at least tied with the shortest distractor; aim for rank 2 of 4. "
+                          "Use only details already in this question, not filler."})}
+
+
+def repair_option_lengths(inputs, *, model):
+    raw = _predict(OptionLengthRepairSignature, inputs, model, "low")
+    return output_model(OptionLengthRepairSignature).model_validate(raw).model_dump()
 
 
 class VariantSignature(PmleQuestionSignature):
@@ -140,10 +183,18 @@ class VariantSignature(PmleQuestionSignature):
     wins/loses, not from parent option sentences. Change verb, sentence frame and
     concrete scenario artifact without changing product facts. Each matched option
     must have token Jaccard <0.65 versus the parent; all four are checked. The key
-    must not be uniquely shortest. Canonical A remains the key.
+    must not be uniquely shortest. Before output, count all four options' words
+    and balance their lengths: aim for A to be second shortest, for example
+    A=27, B=26, C=28, D=29 words (ties allowed). Use concrete existing details,
+    not padding. Use plain verbs (use, create, run, train, move), not synonym
+    substitution for its own sake. Canonical A remains the key.
     The scenario moment must explain HOW the problem was noticed and fit the want;
     no unrelated cost/latency wrapper or migration that conflicts with minimizing
-    changes. Restate in EACH distractor explanation why it loses in THIS industry.
+    changes. State one observed problem and one want solved by the key. The moment
+    is the concrete observation channel, not a second business goal: use a failed
+    replay, measured errors or inspection findings, not a generic cost review.
+    Scale growth must expose that same problem, not introduce an unrelated goal.
+    Restate in EACH distractor explanation why it loses in THIS industry.
     Re-derive those losses: side data may genuinely predict the target in the new
     domain; do not make it a wrong-input distractor if so. Confirm the ML task is
     natural for domain, population size and data granularity (single frames cannot
@@ -226,14 +277,18 @@ def parent_snapshot(payload, entry, active_rows, *, persistence=None):
             "published": deepcopy(rows[0]), "artifact_sha256": canonical_sha256(payload)}
 
 
-def variant_scope(scope, parent, ordinal):
+def variant_scope(scope, parent, ordinal, *, policy_version=4):
     """Apply only deterministic variant presentation hints to a registry scope."""
     from shared.cert_context import OPENING_STYLES
     openings = list(dict.fromkeys(OPENING_STYLES))
     openings.remove(parent["scope"]["opening_style"])
-    # Operational moments only; never introduce an unrelated security incident.
-    moments = [m for m in ("recent deployment", "monitoring", "migration", "cost/latency reduction",
-                          "scale growth", "greenfield") if m != parent["scope"]["scenario_moment"]]
+    # Historical slots stay replayable. New variants never force a cost wrapper.
+    if policy_version not in (3, 4):
+        raise ValueError("Unsupported variant presentation policy")
+    choices = ("recent deployment", "monitoring", "migration", "scale growth", "greenfield")
+    if policy_version == 3:
+        choices = (*choices[:3], "cost/latency reduction", *choices[3:])
+    moments = [m for m in choices if m != parent["scope"]["scenario_moment"]]
     if type(ordinal) is not int or not 1 <= ordinal <= min(len(openings), len(moments)):
         raise ValueError("Too many distinct variant presentation slots")
     result = deepcopy(scope)
@@ -256,6 +311,8 @@ def variant_scope(scope, parent, ordinal):
         f"Key length rank hint: {result['key_length_rank']} of 4", f"Key length rank hint: {rank} of 4")
     result.update(opening_style=opening, scenario_moment=moment, key_length_rank=rank, industry=planned_industry(parent, ordinal),
                   variant_origin={"parent_question_id": parent["question_id"], "ordinal": ordinal})
+    if policy_version == 4:
+        result["variant_policy_version"] = 4
     return result
 
 
@@ -269,7 +326,9 @@ def writer_inputs(parent, scope, siblings, ordinal, difficulty):
              "instruction": "Different industry AND setting, opening family AND moment from parent/siblings. "
                             "Use the exact assigned industry, not an alternative. No invented organization names. "
                             "Change business task/data meaningfully, "
-                            "not only names or numbers. Keep the same decision and equivalent constraints."}
+                            "not only names or numbers. Keep the same decision and equivalent constraints. "
+                            "The moment must reveal one concrete problem, not add a second goal; "
+                            "the want and key must address that same observed problem."}
     return {"domain_context": writer_decision_context(scope, scope["decision_plan"], scope["decision_proof"]),
             "documentation_context": writer_documentation_context(parent["sources"], scope["decision_proof"]),
             "parent_question": json.dumps({"stem": parent["question"]["stem"], "canonical_option_receipts": parent["evidence"]}, ensure_ascii=False),
@@ -305,6 +364,9 @@ def validate_variant(payload, entry):
     if (payload.get("variant_mode") != VERSION or payload.get("argon_gate") is not True
             or payload.get("execution_policy") != "short_circuit_v1"):
         raise ValueError("Variants require opt-in provenance and mandatory independent Argon review")
+    if "prior_variants" in payload:
+        from shared.variant_history import validate_prior_variants
+        validate_prior_variants(payload["prior_variants"])
     meta = entry.get("variant")
     fields = {"version", "parent_question_id", "parent_snapshot_sha256",
               "decision_sha256", "ordinal", "surface"}
@@ -352,7 +414,7 @@ def validate_variant(payload, entry):
         raise ValueError("Variant industry differs from its frozen family slot")
     rewrite = option_rewrite_check(candidate_question(entry), parent)
     if not rewrite["passed"]:
-        raise ValueError("Variant options copy parent wording or key is uniquely shortest")
+        raise ValueError("; ".join(option_rewrite_errors(rewrite)))
     family_plan = [row for row in payload["plan"]
                    if row.get("variant_origin", {}).get("parent_question_id") == parent["question_id"]]
     from collections import Counter
@@ -372,13 +434,28 @@ def validate_variant(payload, entry):
                 raise ValueError("Sibling industry or setting repeated")
 
 
-def variant_duplicates(entry, existing, parent, *, siblings=()):
-    """Keep the bank veto; family scenarios gate on stem alone, never shared key logic."""
+def eligible_sibling(entry):
+    """Only accepted or still-eligible candidates can consume a family slot."""
+    if entry.get("accepted") is True:
+        return True
+    return (not entry.get("failure_stage")
+            and entry.get("status") not in ("generation_failed", "rejected")
+            and entry.get("schema_check", {}).get("passed") is not False
+            and entry.get("near_duplicate_check", {}).get("passed") is not False
+            and (entry.get("awaiting_external_judge") is True
+                 or entry.get("judge_verdict", {}).get("passed") is not False))
+
+
+def variant_duplicates(entry, existing, parent, *, siblings=(), prior=()):
+    """Keep the bank veto; family scenarios gate on eligible siblings' stems."""
     meta = entry["variant"]
     threshold = family_threshold(meta.get("family_stem_threshold", meta.get("parent_stem_threshold")))
     family = {parent["question_id"]: comparison_row(parent["entry"])}
+    rejected = {s["candidate_id"] for s in siblings if not eligible_sibling(s)}
+    existing = [r for r in existing if r["id"] not in rejected] + list(prior)
     for sibling in siblings:
-        if sibling.get("parent_question_id") == parent["question_id"] and sibling.get("options"):
+        if (eligible_sibling(sibling) and sibling.get("parent_question_id") == parent["question_id"]
+                and sibling.get("options")):
             family[sibling["candidate_id"]] = comparison_row(sibling)
     for row in existing:
         if row.get("parent_question_id") == parent["question_id"]:
@@ -393,6 +470,11 @@ def variant_duplicates(entry, existing, parent, *, siblings=()):
     result["family_matches"] = [s for s in scores if s["stem_score"] >= threshold]
     if result["family_matches"]:
         result.update(passed=False, reason="Variant scenario is too similar to its family")
+    reused = [r["id"] for r in prior if r["parent_question_id"] == parent["question_id"]
+              and r["industry"] == meta["surface"]["industry"]]
+    result["prior_family_industry_reuse"] = reused
+    if reused:
+        result.update(passed=False, reason="Prior accepted family industry repeated")
     return result
 
 
