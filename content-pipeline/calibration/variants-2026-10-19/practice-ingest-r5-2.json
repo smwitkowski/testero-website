@@ -1,0 +1,188 @@
+{
+  "purpose": "Founder-approved round5 two-winner insert-only publication; generated offline, no production writes",
+  "publication_state": "Approved offline; coordinator SQL application pending. Original13 LIVE is coordinator context, not a database observation.",
+  "sql_path": "/Users/switkowski/Projects/Testero/hq/drafts/variants/ingest-r5-2.sql",
+  "sql_sha256": "cdc3a5b69ceaf95a9016ff3c195d221c2e3ad03716c0d004fb77dea1e3424358",
+  "approval": {
+    "path": "/Users/switkowski/Projects/Testero/hq/drafts/variants/subagent-review-r5-2026-10-19.md",
+    "sha256": "2ab2f0f82534643ab8549baeb0a2fb7524c8f5c2946b138e133d3e7f8a0b4d82"
+  },
+  "artifacts": [
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.json",
+      "sha256": "7a8dbedfd7c4cd16896134586463b435832db677de06aa87e6a24ddfa628a5ac"
+    }
+  ],
+  "exporter_sha256": "fdedec41ba40fd7336bd3ab7437f4fb1d2e3828bb9dbbfaab837430b96a97849",
+  "count": 2,
+  "answers": 8,
+  "explanations": 2,
+  "generation_runs": [
+    {
+      "id": "fa8972f4-f5b0-5808-99e0-c3fa501b845f",
+      "exam": "GCP_PM_ML_ENG",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "target_count": 2,
+      "generated_count": 1,
+      "model": "codex",
+      "prompt_version": "registry-grounded-v1",
+      "notes": "{\"artifact\":\"repair-r5-live.json\",\"artifact_sha256\":\"7a8dbedfd7c4cd16896134586463b435832db677de06aa87e6a24ddfa628a5ac\",\"cert_id\":\"machine-learning-engineer\",\"founder_approval_sha256\":\"2ab2f0f82534643ab8549baeb0a2fb7524c8f5c2946b138e133d3e7f8a0b4d82\",\"judge_model\":\"anthropic/claude-sonnet-5.5 via Claude Code subagent\"}"
+    },
+    {
+      "id": "ee9e6202-ed67-538d-a7e3-9034f37d0633",
+      "exam": "GCP_PM_ML_ENG",
+      "domain_code": "AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES",
+      "target_count": 2,
+      "generated_count": 1,
+      "model": "codex",
+      "prompt_version": "registry-grounded-v1",
+      "notes": "{\"artifact\":\"repair-r5-live.json\",\"artifact_sha256\":\"7a8dbedfd7c4cd16896134586463b435832db677de06aa87e6a24ddfa628a5ac\",\"cert_id\":\"machine-learning-engineer\",\"founder_approval_sha256\":\"2ab2f0f82534643ab8549baeb0a2fb7524c8f5c2946b138e133d3e7f8a0b4d82\",\"judge_model\":\"anthropic/claude-sonnet-5.5 via Claude Code subagent\"}"
+    }
+  ],
+  "questions": [
+    {
+      "id": "d4b10e1f-bfe3-51d6-b74b-4481d2207d19",
+      "parent": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "industry": "hospital operations",
+      "artifact": "repair-r5-live.json"
+    },
+    {
+      "id": "5fe281b2-b348-5829-ad5a-80de90cd4235",
+      "parent": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+      "industry": "public transit",
+      "artifact": "repair-r5-live.json"
+    }
+  ],
+  "approval_profile": "round5-winners",
+  "validation_reports": {
+    "key_length": {
+      "enforced": true,
+      "count": 2,
+      "shortest_or_tied_count": 0,
+      "unique_longest_count": 1,
+      "shortest_or_tied_fraction": 0.0,
+      "maximum_shortest_fraction": 0.25,
+      "passed": true,
+      "errors": [],
+      "items": [
+        {
+          "candidate_id": "d4b10e1f-bfe3-51d6-b74b-4481d2207d19",
+          "word_counts": [
+            29,
+            27,
+            26,
+            27
+          ],
+          "shortest_or_tied": false,
+          "unique_longest": true
+        },
+        {
+          "candidate_id": "5fe281b2-b348-5829-ad5a-80de90cd4235",
+          "word_counts": [
+            27,
+            24,
+            28,
+            31
+          ],
+          "shortest_or_tied": false,
+          "unique_longest": false
+        }
+      ]
+    },
+    "key_position": {
+      "count": 2,
+      "counts": {
+        "A": 0,
+        "B": 0,
+        "C": 1,
+        "D": 1
+      },
+      "target_max_rate": 0.4,
+      "minimum_count": 10,
+      "enforced": false,
+      "passed": true
+    },
+    "template_diversity": {
+      "count": 1,
+      "generic_count": 0,
+      "target_max_rate": 0.2,
+      "passed": true
+    },
+    "duplicates": [
+      {
+        "id": "d4b10e1f-bfe3-51d6-b74b-4481d2207d19",
+        "report": {
+          "passed": true,
+          "threshold": 0.2,
+          "method": "min(stem token Jaccard, correct-option token Jaccard), NFKC/casefold/stopwords",
+          "matches": [],
+          "reason": "No near-duplicate scenario and decision",
+          "family_stem_threshold": 0.45,
+          "family_similarity": [
+            {
+              "matched_id": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+              "stem_score": 0.3333333333333333,
+              "key_score": 0.37037037037037035,
+              "score": 0.3333333333333333
+            },
+            {
+              "matched_id": "221bf8b2-e221-5a96-9c47-d993886db178",
+              "stem_score": 0.34177215189873417,
+              "key_score": 0.3333333333333333,
+              "score": 0.3333333333333333
+            },
+            {
+              "matched_id": "ff63a277-deb2-5e69-a739-64517f81a912",
+              "stem_score": 0.32098765432098764,
+              "key_score": 0.3793103448275862,
+              "score": 0.32098765432098764
+            }
+          ],
+          "max_family_stem_similarity": 0.34177215189873417,
+          "parent_similarity": {
+            "matched_id": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+            "stem_score": 0.3333333333333333,
+            "key_score": 0.37037037037037035,
+            "score": 0.3333333333333333
+          },
+          "family_matches": [],
+          "prior_family_industry_reuse": []
+        }
+      },
+      {
+        "id": "5fe281b2-b348-5829-ad5a-80de90cd4235",
+        "report": {
+          "passed": true,
+          "threshold": 0.2,
+          "method": "min(stem token Jaccard, correct-option token Jaccard), NFKC/casefold/stopwords",
+          "matches": [],
+          "reason": "No near-duplicate scenario and decision",
+          "family_stem_threshold": 0.45,
+          "family_similarity": [
+            {
+              "matched_id": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+              "stem_score": 0.3384615384615385,
+              "key_score": 0.25,
+              "score": 0.25
+            },
+            {
+              "matched_id": "20a0b44d-e652-513d-968e-19be6bcc1965",
+              "stem_score": 0.2602739726027397,
+              "key_score": 0.3793103448275862,
+              "score": 0.2602739726027397
+            }
+          ],
+          "max_family_stem_similarity": 0.3384615384615385,
+          "parent_similarity": {
+            "matched_id": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+            "stem_score": 0.3384615384615385,
+            "key_score": 0.25,
+            "score": 0.25
+          },
+          "family_matches": [],
+          "prior_family_industry_reuse": []
+        }
+      }
+    ]
+  }
+}

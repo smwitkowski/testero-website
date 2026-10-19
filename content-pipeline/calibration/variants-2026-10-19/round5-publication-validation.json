@@ -1,0 +1,325 @@
+{
+  "purpose": "Offline approved two-winner publication and cumulative15 comparison-prior verification; not a production DB receipt",
+  "sql_path": "/Users/switkowski/Projects/Testero/hq/drafts/variants/ingest-r5-2.sql",
+  "sql_sha256": "cdc3a5b69ceaf95a9016ff3c195d221c2e3ad03716c0d004fb77dea1e3424358",
+  "tracked_sql_mirror": "content-pipeline/calibration/variants-2026-10-19/ingest-r5-2.sql",
+  "dry_run": {
+    "count": 2,
+    "answers": 8,
+    "explanations": 2,
+    "generation_runs": 2,
+    "questions": [
+      {
+        "id": "d4b10e1f-bfe3-51d6-b74b-4481d2207d19",
+        "parent": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+        "industry": "hospital operations",
+        "artifact": "repair-r5-live.json"
+      },
+      {
+        "id": "5fe281b2-b348-5829-ad5a-80de90cd4235",
+        "parent": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+        "industry": "public transit",
+        "artifact": "repair-r5-live.json"
+      }
+    ]
+  },
+  "bound_winners": [
+    {
+      "bound_gates_passed": true,
+      "candidate_id": "d4b10e1f-bfe3-51d6-b74b-4481d2207d19",
+      "family_duplicate_passed": true,
+      "industry": "hospital operations",
+      "max_family_stem_similarity": 0.34177215189873417,
+      "parent": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "run_id": "fa8972f4-f5b0-5808-99e0-c3fa501b845f",
+      "score": 0.82
+    },
+    {
+      "bound_gates_passed": true,
+      "candidate_id": "5fe281b2-b348-5829-ad5a-80de90cd4235",
+      "family_duplicate_passed": true,
+      "industry": "public transit",
+      "max_family_stem_similarity": 0.3384615384615385,
+      "parent": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+      "run_id": "ee9e6202-ed67-538d-a7e3-9034f37d0633",
+      "score": 0.84
+    }
+  ],
+  "original_selected_length_report": {
+    "count": 2,
+    "enforced": true,
+    "errors": [],
+    "items": [
+      {
+        "candidate_id": "d4b10e1f-bfe3-51d6-b74b-4481d2207d19",
+        "shortest_or_tied": false,
+        "unique_longest": true,
+        "word_counts": [
+          29,
+          27,
+          26,
+          27
+        ]
+      },
+      {
+        "candidate_id": "5fe281b2-b348-5829-ad5a-80de90cd4235",
+        "shortest_or_tied": false,
+        "unique_longest": false,
+        "word_counts": [
+          27,
+          24,
+          28,
+          31
+        ]
+      }
+    ],
+    "maximum_shortest_fraction": 0.25,
+    "passed": true,
+    "shortest_or_tied_count": 0,
+    "shortest_or_tied_fraction": 0.0,
+    "unique_longest_count": 1
+  },
+  "actual_cumulative15_and_sql_proof": {
+    "selected_count": 15,
+    "complete_history_count": 38,
+    "accepted_counts": [
+      12,
+      7,
+      15,
+      4
+    ],
+    "judgment_counts": [
+      15,
+      11,
+      17,
+      6
+    ],
+    "old34_history_prefix_and_digest_equal": true,
+    "v1_v2_frozen_validation_read_free": true,
+    "snapshot_sha256": "98c749a6e20e51e7d44b7007ba680026738e664b543ee26a36402b03e5533e22",
+    "history_sha256": "2806ad1fdd6f80c23a7c5e76457712449bf74aee69be14b8f39c73fe492e3e66",
+    "sql_question_targets": [
+      "5fe281b2-b348-5829-ad5a-80de90cd4235",
+      "d4b10e1f-bfe3-51d6-b74b-4481d2207d19"
+    ],
+    "answers": 8,
+    "explanations": 2,
+    "generation_runs": 2,
+    "new_targets_and_runs_disjoint_from_original13": true,
+    "all_existing_id_guards_before_first_insert": true,
+    "parent_ids_current_domains_and_generation_owned_tag_copy": true,
+    "insert_only_no_original13_write_targets": true,
+    "comparison_metadata_may_reference_original13": true,
+    "sql_and_mirror_byte_identical": true,
+    "sql_sha256": "cdc3a5b69ceaf95a9016ff3c195d221c2e3ad03716c0d004fb77dea1e3424358",
+    "sql_executed": false,
+    "production_database_observed": false
+  },
+  "focused_tests": {
+    "exporter": {
+      "passed": 59,
+      "files": [
+        "tests/test_approved_variant_sql.py",
+        "tests/test_approved_variant_round5_sql.py"
+      ]
+    },
+    "manifest_history": {
+      "passed": 179,
+      "files": [
+        "tests/test_variant_live_history.py",
+        "tests/test_variant_live_history_round5.py",
+        "tests/test_variant_history.py",
+        "tests/test_variant_round5_integration.py",
+        "tests/test_variant_history_integration.py"
+      ]
+    }
+  },
+  "tested_implementation_sha256": {
+    "content-pipeline/scripts/export_approved_variants_sql.py": "fdedec41ba40fd7336bd3ab7437f4fb1d2e3828bb9dbbfaab837430b96a97849",
+    "content-pipeline/shared/variant_live_history.py": "a40d877f5e6b8cad09c970ba23a0876fbe58a36d713eca4dcccef36023f337df",
+    "content-pipeline/shared/variant_history.py": "b404f672a793e5330e112142fe8581fb7a5caccbd058da0fb629d3cf77c1975c",
+    "content-pipeline/shared/variant_plan.py": "21a4fe4a2e63ca522af515d00a78ff6396c633b71f70390477569f6c17f9c9b4",
+    "content-pipeline/tests/test_approved_variant_round5_sql.py": "e1a9c5c5336c1e897e88ebd19ac800b102c4bc5699dfa99c9169ce247b425c3e",
+    "content-pipeline/tests/test_variant_live_history_round5.py": "21c8e76abb6a2b05104bfe2b19e18dcc1fb7d5b351d9b30278826b7523cb96c7"
+  },
+  "immutable_output_sha256": {
+    "/Users/switkowski/Projects/Testero/hq/drafts/variants/ingest-r5-2.sql": "cdc3a5b69ceaf95a9016ff3c195d221c2e3ad03716c0d004fb77dea1e3424358",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/calibration/variants-2026-10-19/ingest-r5-2.sql": "cdc3a5b69ceaf95a9016ff3c195d221c2e3ad03716c0d004fb77dea1e3424358",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/calibration/variants-2026-10-19/practice-ingest-r5-2.json": "d0e346aa1785913b3f6b0ec31e5169718034230f35273edfaa25223a15485d59",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/calibration/variants-2026-10-19/practice-ingest-15.json": "d75757e06e6d4b6e2570d410e0ca72730511d7dfba5c206000a162838f4bafe1"
+  },
+  "protected_input_sha256": {
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.verdicts/a3785aee-27f5-5889-a433-168d0069bae5.json": "058e1953994db5af497aad3205985231fdec37b20baf9c17347c58fb6fd9f56c",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/0d916c2b-62da-5bf9-971b-71a252366bc5.json": "e0ba21d2a384eaba53b8b1c3099a37e082d2ccbacc8ffe51d4bed7836b1114cf",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/c2bd1146-a036-5a97-9d57-133b6c70fe60.json": "ded6842e2d98b3fd166674f8cc7f894113190fa4d90cf9caff543ac9a8aede7b",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/194f91d8-c4d7-58f5-84b7-7d1e70f0ad18.json": "3cbb8a91bc6f0747b432fc3a1e65787237ee1d2b6fc9944a41947362dac58a87",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.judge-requests/20a8e081-d75e-5b60-8531-5a6b25f3284e.json": "af90cdec1c4747dd4aa9e90703afcda7d0dcd70908c03d176875bd0f95dbd5ee",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.judge-requests/.judge-requests.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/f699cf9d-53b2-510a-a14f-d7fb1de2a8ef.json": "121d82249b4ca2f2da8f6b4b965c49b3f382e9f6c510cfb183147065e50bdd8b",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/109e0038-4aed-5d43-9178-7cf3977976ef.json": "5f92ed564d45746957b89aba9d04905feaddcb492a205289eac5adb2c3be025f",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/6fc94925-0645-5d28-b66d-b259ccc62301.json": "de6b1b1c2e60042d3e004e28305004274edcd2e531d6f35f30c2872df5ed4248",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/bbe787c2-4922-58b5-92fd-2211f0684bb8.json": "e2486678e99df0caf684c13a773b7629eb487eedb1c5abe8d5fd381dbe341e30",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/80c7579b-ac30-56ce-a1f5-25babc113440.json": "9573cbd5e48d45c8f328e6ae2938f409cc4326bc68f4e776b76b9053ed619f53",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/99b466fc-7444-5468-8a36-c3d3aea9cdc1.json": "c398f84d104190fe008d809b4dc11e692b092665ea4cac0a92b7374073bb4fa3",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/.sampling/policy.json": "80e6a0e204c6a907cf0905f270f996a45c983359ff2397ccd2c470d6296b74b6",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/bf0a3625-7bb1-5d8d-af2d-a177117b0364.json": "ba75a3fee73a8996558ed9c133268e69f3d5a92004e67aaaf59d36fe97c9389f",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.judge-requests/5881b1ea-0e7b-51de-8a2e-649f39685345.json": "7156fa6f7487bc113b777deec78b99145f639e352302da73a042c2ac650ec90d",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.judge-requests/84d6933d-c283-55dd-8d62-1905915d3add.json": "9415b19786aa977f7dd3e18ab8be823d04b7d55e42c1842c626328c511bae94e",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/43486a72-650c-5682-8561-83b0e8decb07.json": "2f38af23ef5b6d9952205a01cc49bcd4117383e9a34ae01d1a0969582c220d90",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.judge-requests/e6360a04-5cc6-55c6-ab74-5c9fc70c16bd.json": "9399699b465cd1956b3fc71c9faf103075514980d2942109dea70c65bf0ba7ca",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/6c27098a-3f06-552a-8391-c15cdd620238.json": "64b11698741a7c88d1297412f4129d5ed4b1308cbdad95f2bbc78c02973baee8",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/91ccf175-0a5c-545e-94e9-fdb5cd010d2d.json": "2d35efa493b3d709501b3087c24f8e141fe55010f5b3fc0318d42176578d5fb5",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/.judge-requests.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/ff63a277-deb2-5e69-a739-64517f81a912.json": "7241131021ed1c25325e4dc0d95d2880142b74f2ad41a2f4b6dca79003856073",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.judge-requests/9883f4a8-1adb-594f-8fad-b6ecd5cd82f7.json": "ede2ba48076fa35679839b5035e9ee12418ef2838faf6037ade8994cc5903687",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/ca4626d0-d1b2-520e-a88d-e6ef99ef9434.json": "d71bea0dbe035d4cddbceb8bbee7ecf515a49221df279b8900bd73317c4d2a87",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/67a2319a-65de-59d3-a5c8-360335cd1339.json": "a818faa5a44dd559ac39820575a53935699877a323d7229262a9c6a52ac1fe8c",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/4bb5f3c9-4787-5e36-9163-c9744551d3fb.json": "be10971097590cd56d8cc099c4ab808e8abebbf205a7384c8fb5eda71e710cff",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.judge-requests/4b65a4c1-30e3-5ccc-97a5-ae6e5da7adb1.json": "df7491994e8308dd79b588b405630b54fc2d0ff5d6e2700abef1d6ee1b6bb4f8",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.judge-requests/a3785aee-27f5-5889-a433-168d0069bae5.json": "5df434312440a9363a12fec93730d384f8044586bf5b41d1f3d256c14a008f1d",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/645d6579-1e7a-5766-be87-7ccce0de200c.json": "c6e712f8c6f6cfe5c5dfd087f11db0aa4c63454ced686fe020e7a6e3787ab058",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/.judge-requests.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/c4c26333-3d73-558c-b339-b683cb2d900d.json": "28de84405d26c47f17684e547fc7b203c2ece1e05cc8737d8a93b0d96047ee19",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.verdicts/20a0b44d-e652-513d-968e-19be6bcc1965.json": "a86a11bf5164bf0964fa16f956316fca5e87904955f96d2736d0bc33b75bcb8d",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/054402bd-a1cf-5d13-a5c6-0b3425117df7.json": "0e26a43ce16189b65c97426a7b854955f892a13ae811d1586c775e8792c7fc15",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/.sampling/policy.json": "c35ee8d59e6ca2a92144ee8256f411cc286139857e21087d846af7e66645de29",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/2d9a9b9e-dbc3-51dd-b859-d3d45d035696.json": "61b692190abcbe6d305c30556d01530312757a919548bfcd7c92f5e9484061c1",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/194f91d8-c4d7-58f5-84b7-7d1e70f0ad18.json": "641726e961f6dd9e75bec3ee81a7852bb3102ce5f4439177129968a0235c8e24",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/95c6f14a-2584-5caf-be50-f22f66ff2d61.json": "0201b8eabbf88c0b085ea24fe3db3c00a83cce2085f070b3f1d58d1b74cd9525",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/2d9a9b9e-dbc3-51dd-b859-d3d45d035696.json": "ab8558c434bbc2c1bb03735103ce4a79d655d097e1f2606b1d9d2f1bf6a52fd4",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/2da39ae1-5bc7-53fc-9c62-0d22b732975e.json": "d1a04019cb77e9c5f8ad38143faadbc39b58bc738b41c419b2c4c7ebe0822d27",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.verdicts/a8bd607c-7573-5521-b7b3-31af8b5c2621.json": "57222c7b215da65b6bd8d54c6cdc561cef78f1978721974d68698262e9d26cbe",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/109e0038-4aed-5d43-9178-7cf3977976ef.json": "279fa94eced0a14c6f685446be5bd2568bba86d13af03a0abb1f830cf054ac1b",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/bbe787c2-4922-58b5-92fd-2211f0684bb8.json": "3114f0f55732ec4a3abb6cf418c51dd791bef8043bbb19726d2bcfa202c28dab",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/d0640986-bd3a-5849-ab73-043a6772e377.json": "d9486cec07d681ea355b19e62a3b5886f66fca67f0e53b9fea88ca7c8a28d806",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/5a4d1512-1b49-5af7-a47c-1bf2ce6bb847.json": "b4e7a4b95e5b12800f7ec6e618c7525e81a20a7225375b92981fdc744b10cd57",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/80c7579b-ac30-56ce-a1f5-25babc113440.json": "72bd536b0bc8289e57e1b1612a7b1eaf4f49e220fe18061254fa9c35e5943ff5",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/221bf8b2-e221-5a96-9c47-d993886db178.json": "f40d88ba07822bf7c084b239da38ace963e847529eddf77f7abcc9dbef07924a",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/99b466fc-7444-5468-8a36-c3d3aea9cdc1.json": "099b58722233b897ce0ef6820b20d549404fad61e8f4ce66252058cd51f86bc9",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.json": "1e75434fd6960c9e255dc769b0fb18a987d4c9f0ca88a03d3b12ad1deb255830",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/d0640986-bd3a-5849-ab73-043a6772e377.json": "744abda68ff7950c0673bd42e18d5079a7140927efb423a2ebb4b4645dbecef9",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.report.json": "108a74ce3f186eccaa1e2e484db359e5044288714d229a0b41affd64942af6dc",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/5a4d1512-1b49-5af7-a47c-1bf2ce6bb847.json": "09a9ca5763ab409a336c029962c4891c1cf395b0c0ce2b09ec3a67fbfdcf9e1f",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/.judge-requests.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/43486a72-650c-5682-8561-83b0e8decb07.json": "43dd164957b6863619a205a29f3a631a05bb5208cd58757be8562b9911eb991e",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/6fc94925-0645-5d28-b66d-b259ccc62301.json": "65b938460e893b249e632b6247d8fe5434e3998004741555e9185f6d6a42cabf",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/ff63a277-deb2-5e69-a739-64517f81a912.json": "5afb88a21e4d434993e2836c076ae08a48f413652822389bd93bfe05ce434708",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.judge-requests/.verdict-directories.json": "337bdc76f7934fc881eec50ad14725a34419b00cb2f9abc61732d6d8b0fa9362",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/67a2319a-65de-59d3-a5c8-360335cd1339.json": "0605bce11be3c3feeed0de46271faafe2de5ba077576c59deb2de4f5ba45679e",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/3f84f6fb-e30e-5e54-b895-1b2555fd45d4.json": "51c202f4299acad522a244c798188cb32baaf21b8f2ce79f3561f5c2a5a1add5",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.judge-requests/20a0b44d-e652-513d-968e-19be6bcc1965.json": "b304c0514d99eb6af2023683bd84c1f8526730cbda31cecc523da7885ba5c26b",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.json": "2c709d9d4f4953507d228ba264a54ddf4657b946a6c016b81071a05432dd2862",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/150d6959-5ce0-5446-bf73-deabf054a0c3.json": "c3f4c9135fa7227e765a31b39ae3bdd7c5f20ff199431011f160bcea7589e0aa",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.verdicts/14bda326-6560-5527-87fb-2ca614672b8a.json": "d8dc957ccd635b0130b847a1b5c09ef1a9d9abedf211198314678d4d1494c99c",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/ca4626d0-d1b2-520e-a88d-e6ef99ef9434.json": "78935e57a574e2ca3ee12191cba5d9a7611112e8b3b8b1d8338b682c2820ef76",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.verdicts/10325250-d63b-5aa3-9571-6166a11fe84e.json": "af5a890ac681345118086b1bae311ab43df840a23d3be554a585adb79316abc2",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/.judge-requests.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/150d6959-5ce0-5446-bf73-deabf054a0c3.json": "f8a23bad6487b04091ba371154c1b3954efc49251dfdeb834e30743718c8eee0",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/ee3c3f10-a3cf-51e9-99ff-9b766fc18de7.json": "e1baa3572f45b06c59e12b5c17e8da037237f3a5cc674961b67976f85353f69c",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.json": "638a665c3b8d9296d9200ee2cd5380a5ff948d2ea6bd98e7aceb8337fbc2c477",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/.verdict-directories.json": "02b3335d24ed68f231ef553df03267cd2e77c3789b1c7f92a86c58eb9aea0379",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/e3475ee6-3f79-5bf3-aa76-89d8edf95030.json": "d25b9e1c06bf58efe5b6b08035fc28a7d5d865c1ed6224cb6b2708feaf663f18",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.judge-requests/a8bd607c-7573-5521-b7b3-31af8b5c2621.json": "7ba1d694554fe759f5eb86643badc8e6c39046d0f0cb515bf8a0208308933b9d",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/a6125008-d95f-5a0b-9b52-7a55f9289236.json": "1d39e870d207a7b4fa60dda2ca64d9b3310d8242c35fb834fd58e8f589760fab",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/c2bd1146-a036-5a97-9d57-133b6c70fe60.json": "f18f3ecf3f0918872a72368b54e1c574d2dfb7c4e3f153c47cddd1f328f695cc",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/a6125008-d95f-5a0b-9b52-7a55f9289236.json": "919e5f9962da37395b1236d436345c70f90e54ff05c614051ddd227c103894cb",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.report.json": "23bebdbdec07c88944971a0dc4da6bc0e53f2ca3325d1f66b7052bd09c930728",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/f699cf9d-53b2-510a-a14f-d7fb1de2a8ef.json": "5d5607e793c1c00f60dce4181da6f30391563b6020a8e4bbe7961ba121606019",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/221bf8b2-e221-5a96-9c47-d993886db178.json": "9b2c3a8bc9ab09721fa0bb1513a5d7eeb5dd0bee5bcf54893a10463175484d0b",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/.verdict-directories.json": "c542acfacdae6463d139093f2c612b0dba3d3c65f77cc24c5da3bc17d4aa97e4",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.verdicts/20a8e081-d75e-5b60-8531-5a6b25f3284e.json": "cfeb791053698a7970e9ec856ff4ea294f1f6951904abfbd6726b2e4abc5d13f",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.verdicts/.judge-requests.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/5d009ada-9363-5cb8-8bf8-e45fa0f011d2.json": "a68240802abe4ca89d7f3159e6a41207d1a9aa21f00044f40d208bfb59eb61a7",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/bf0a3625-7bb1-5d8d-af2d-a177117b0364.json": "0ae3fca9c70f632236300b135634ef42cd15504fa1a54b7bc70357f1a6b2704f",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/645d6579-1e7a-5766-be87-7ccce0de200c.json": "33ae7d871bd0b1dc96973545c06ebb4b2190fb48d5352a260477b52e02e1837e",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/3f84f6fb-e30e-5e54-b895-1b2555fd45d4.json": "470a98956300f6ff9583a4cb761ceb89464d18a42ba84bd55e4aac0b214d742d",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.judge-requests/14bda326-6560-5527-87fb-2ca614672b8a.json": "286e1cd7b4910aa81444624e368ce3866b74ca740a518f73e4d37169679f395b",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/6c27098a-3f06-552a-8391-c15cdd620238.json": "76a8a5f5b1b0194d8354ff011f975c322645024453e092e9dfb0a4d061c28f56",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/91ccf175-0a5c-545e-94e9-fdb5cd010d2d.json": "a4f029a1b09d48ff4a9969419fcf4e20b077f4ca01f3d3b11d3e4c46c6214cbf",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/5d009ada-9363-5cb8-8bf8-e45fa0f011d2.json": "d82bcb7aa3532cf612a9d63c2edcf858e4efb8c864ece3933efd202ad020c95f",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.judge-requests/10325250-d63b-5aa3-9571-6166a11fe84e.json": "afdcbfdf08737dd76f6a9a62bcd54f25f0be73f4a3c16b17f225fdde1a70b036",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.verdicts/5881b1ea-0e7b-51de-8a2e-649f39685345.json": "061f3a7ca90c24baa3645c08c26d4eaf36e1ce2d820cb9e53069b469a4472a1e",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.verdicts/84d6933d-c283-55dd-8d62-1905915d3add.json": "d59845655a59f98dc45edb737c59bc55c4aab4faf21671567b4cd2bdee64d3b7",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/4bb5f3c9-4787-5e36-9163-c9744551d3fb.json": "5c35b01cc58b316a929f158f682d8c5c32fdcf4f083b4f708c7fdeb7011e738a",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.verdicts/e6360a04-5cc6-55c6-ab74-5c9fc70c16bd.json": "9c312fe57944c17d9475788f2a06473350f8dc274ac8a680f00c727a4a0a0a6a",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.verdicts/.sampling/policy.json": "fc558725886857e988e9b721af0a54245a7627be3b951cbd7a04214a46f835a3",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.verdicts/9883f4a8-1adb-594f-8fad-b6ecd5cd82f7.json": "a32bf4b614d33ff0194f7a8caa268b6e413fa471497c7ea608a0e08e03d62387",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.report.json": "c0c3194defe4155774ce02acb0c00a7c9a17f017baff035150cf535c9ff612c5",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/ee3c3f10-a3cf-51e9-99ff-9b766fc18de7.json": "9f65c1fa9c50799b1559b7d81f5edbc46e3cf236ce23d038277c1da0abc1ede9",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.verdicts/e3475ee6-3f79-5bf3-aa76-89d8edf95030.json": "b5613a709d64e0df2a2973077773bdc702e4f99566da520e11e8761c76c45ff4",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/95c6f14a-2584-5caf-be50-f22f66ff2d61.json": "78d2fcb53fa4d068ab03fbace755f99eba26b2b011091e30aee08f3c5b55a793",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.verdicts/4b65a4c1-30e3-5ccc-97a5-ae6e5da7adb1.json": "a0d259e223dfa6baa4aabcb01080f3237e5fa980331aa66d9518de2962fc4e06",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.verdicts/2da39ae1-5bc7-53fc-9c62-0d22b732975e.json": "2f45ce5e5061448d8f549dda1fc14f6e950a014f9684d6e525d5a970ac37e8f8",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/0d916c2b-62da-5bf9-971b-71a252366bc5.json": "d05286c3900c27b04f2a472f61b20bc0c4530b4466a4f56b80c03d69cea075c3",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.judge-requests/054402bd-a1cf-5d13-a5c6-0b3425117df7.json": "31bfc4fb51378f64943cbecdc0efd4672cc10d63e75a98fcc1393c1737fa3438",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.judge-requests/c4c26333-3d73-558c-b339-b683cb2d900d.json": "e9fffb0a574927795bf56aa46e810d46333c72774ff5a0aa04640173bd4165ba",
+    "/Users/switkowski/Projects/Testero/hq/drafts/variants/ingest-13.sql": "cf6020f661f66a0cb63788203e6fb8aa3af593c3712dd460e8d5d32f3769450b",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/calibration/variants-2026-10-19/practice-ingest-13.json": "9fb8752b818d7ab491af468067b5d1e60ffeb7d26bd8f9d4c420c7e567deaea6",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.json": "7a8dbedfd7c4cd16896134586463b435832db677de06aa87e6a24ddfa628a5ac",
+    "/Users/switkowski/Projects/Testero/hq/drafts/variants/subagent-review-r5-2026-10-19.md": "2ab2f0f82534643ab8549baeb0a2fb7524c8f5c2946b138e133d3e7f8a0b4d82",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.judge-requests/788d3e62-a344-5d22-a96e-787fe4dddc08.json": "22660e0a613a5ee3d7b874c3801177d6b15d8f7342d69f65c36044d537398a31",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.judge-requests/388fe57b-86c3-59ab-a746-2e264ca739ce.json": "b38d5884c035e3bb9c2fc9ce4c01efb26a97a83dad2ef97d17e5113e738faf8e",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.judge-requests/5fe281b2-b348-5829-ad5a-80de90cd4235.json": "460f661843c79c58688df5ab0aa91f943f5d0720ad9c0ad446683ac63e8eb8ed",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.judge-requests/.judge-requests.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.judge-requests/d4b10e1f-bfe3-51d6-b74b-4481d2207d19.json": "32f58481fda0b0e16270aa571345671fa6832746b8dd789c0398dc19f464bfd4",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.judge-requests/8e054d09-7f62-5f19-aea4-48065fd94e15.json": "19338bb946f4b24396a62d6dbeb96bd3fba6a15a05dedf8468d40ea1281225eb",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.judge-requests/88a3e358-b45b-5dcc-8fb8-42689770fb5b.json": "9f10d8fa725558de77163fe6e78d1663dce4dd9bb5e400bcc465e85bc880d94f",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.judge-requests/.verdict-directories.json": "20614a1771aba57d4c573d0ef59413187392e6e8d2ef1d8cb9b4d36b8820b4b6",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/788d3e62-a344-5d22-a96e-787fe4dddc08.json": "2511483c27cb4114934d999f9cacd775a6296b16acbf90cb6118ff7f8b7b6c1e",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/388fe57b-86c3-59ab-a746-2e264ca739ce.json": "9afc42222b8d162c6f285a468578a832ce2f0db570dfff20f82517d467e5750b",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/5fe281b2-b348-5829-ad5a-80de90cd4235.json": "e123bd666902443e17bd740dba35ae5bbe9b02c2cf6eede7f1f230ce9b2f465d",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/.judge-requests.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/d4b10e1f-bfe3-51d6-b74b-4481d2207d19.json": "716e911591f8ed6d2eafe2a103eb7175a2209421ef95336766b8349f0446ad43",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/8e054d09-7f62-5f19-aea4-48065fd94e15.json": "3504e17a663c1b1e638914e9d53ab77c53c79e1d9ce7d432a5b08122fb4684b4",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/88a3e358-b45b-5dcc-8fb8-42689770fb5b.json": "38e1f6278c05f63953b58ef2513af2ea46eec0bb0e4af2048435f3a90a6ee6cb",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/.sampling/policy.json": "097c0f28fee1a4532130a6c32cd150da7fafe93fb5cdcdc40add9e8fa135d7ea"
+  },
+  "old13": {
+    "receipt_path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/calibration/variants-2026-10-19/practice-ingest-13.json",
+    "receipt_raw_sha256": "9fb8752b818d7ab491af468067b5d1e60ffeb7d26bd8f9d4c420c7e567deaea6",
+    "sql_path": "/Users/switkowski/Projects/Testero/hq/drafts/variants/ingest-13.sql",
+    "sql_sha256": "cf6020f661f66a0cb63788203e6fb8aa3af593c3712dd460e8d5d32f3769450b",
+    "row_status": "13 LIVE is coordinator context; worker did not query the database"
+  },
+  "observation_boundary": {
+    "models_called": false,
+    "database_queried": false,
+    "sql_executed": false,
+    "production_writes": false,
+    "merge": false,
+    "new_two_state": "approved offline; coordinator SQL application pending",
+    "fifteen_live_rows_independently_observed": false
+  },
+  "initial_full_suite": {
+    "exit_code": 1,
+    "summary": "1 failed, 2732 passed, 3 skipped, 25 warnings, 48 subtests passed in 154.54s (0:02:34)",
+    "failure": "tests/test_variant_round5_writer.py::test_direct_policy5_replay_cannot_strip_required_repair_priors: legacy diagnostic substring changed; rejection behavior was correct",
+    "fix": "Only the error message now preserves approved 13-live prior snapshot and adds cumulative15 alternative. No validation logic or pinned output changed."
+  },
+  "compatibility_focused_regression": {
+    "exit_code": 0,
+    "summary": "54 passed, 25 warnings in 33.56s"
+  },
+  "final_code_frozen_snapshot_readfree": {
+    "v1_count": 13,
+    "v2_count": 15,
+    "both_read_free_on_final_code": true
+  },
+  "final_full_suite": {
+    "command": "cd content-pipeline && env -i PATH=\"$PATH\" HOME=\"$HOME\" uv run pytest -q",
+    "exit_code": 0,
+    "passed": 2733,
+    "skipped": 3,
+    "warnings": 25,
+    "subtests": 48,
+    "seconds": 122.0,
+    "summary": "2733 passed, 3 skipped, 25 warnings, 48 subtests passed in 122.00s (0:02:02)"
+  },
+  "post_suite_verification": {
+    "tested_sources_unchanged": true,
+    "protected_input_count": 124,
+    "all_protected_inputs_unchanged": true,
+    "all_immutable_outputs_unchanged": true,
+    "independent_review": "Clear: exporter, actual SQL/persistence projections, pinned cumulative manifest and dispatch. Read-only comparison references to old13 IDs are not write targets."
+  }
+}

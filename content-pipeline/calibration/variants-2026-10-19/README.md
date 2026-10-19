@@ -607,3 +607,80 @@ Final schema-fix gate: `cd content-pipeline && env -i PATH="$PATH" HOME="$HOME" 
 CLI/captured-output replays:72 passed. Independent final review is clear. All four
 tested source/fixture hashes and all124 protected historical/current saved inputs
 are unchanged. No live model calls, generation or database writes were made.
+
+
+## Approved round-5 publication: two new rows only
+
+The approval in `hq/drafts/variants/subagent-review-r5-2026-10-19.md` selects:
+
+| Candidate | Original parent | Industry |
+| --- | --- | --- |
+| `d4b10e1f-bfe3-51d6-b74b-4481d2207d19` | `a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf` | hospital operations |
+| `5fe281b2-b348-5829-ad5a-80de90cd4235` | `57b9d0c7-8d93-5858-a699-4fc0afeae507` | public transit |
+
+The same exporter has an explicit `round5-winners` approval profile. It selects
+only the Decision table's Winner column, never backups or every accepted candidate.
+The original thirteen-row approval/profile and SQL remain unchanged. The new SQL
+at `/Users/switkowski/Projects/Testero/hq/drafts/variants/ingest-r5-2.sql` contains
+only the two new IDs. It never reinserts, updates or deletes the original thirteen.
+
+From `content-pipeline/`, the offline dry-run is:
+
+```sh
+env -i PATH="$PATH" HOME="$HOME" uv run python scripts/export_approved_variants_sql.py \
+  --approval-profile round5-winners \
+  --review ../../hq/drafts/variants/subagent-review-r5-2026-10-19.md \
+  --artifact .cache/variants/repair-r5-live.json --dry-run
+```
+
+Replace `--dry-run` with `--output ../../hq/drafts/variants/ingest-r5-2.sql` to
+reproduce the insert-only transaction. Any existing new variant ID or generation
+run aborts the entire batch before inserts. Parent IDs, current domains and all
+current parent tags are read under the existing parent-locking flow. All copied
+tags on each **new variant** receive source `generation`; parent tags are not
+filtered by source or rewritten. The existing taxonomy/parent migrations and
+`replace_question_tags` RPC remain deployment prerequisites, not new DB checks.
+
+`practice-ingest-r5-2.json` binds the new approval, source artifact, bound
+request/verdict evidence and generated SQL. `practice-ingest-15.json` is the new
+cumulative comparison-prior manifest. It embeds the unchanged original
+`practice-ingest-13.json` and the two-row addition, preserving all fifteen IDs and
+requiring all four source artifacts. Old v1 snapshots remain valid. The original
+thirteen-question receipt is immutable and remains available at its old path.
+
+The fifteen are **approved comparison priors**, not fifteen independently observed
+LIVE database rows. The coordinator confirms the original thirteen are live. The
+new two remain approved/offline until the coordinator applies the SQL. No model
+calls, database writes, production SQL execution or merge are done by this worker.
+
+### Offline publication verification
+
+- Actual exporter dry-run: **2 questions, 8 answers, 2 explanations, 2 runs**.
+- Selected two: bound style/evidence/blind/Argon gates, family duplicate checks,
+  and selected key-length/key-position/template checks pass. Only copied display
+  labels are balanced (C/D); saved candidate bodies and requests are unchanged.
+- Actual cumulative manifest replay: **15 selected; 38 full-history comparisons**
+  (12 + 7 + 15 + 4), with the original 34-history prefix and digest identical.
+- Both frozen v1 and v2 snapshots validate without reading source files.
+- New question/answer/explanation/tag write targets and generation-run IDs are
+  disjoint from the original thirteen. Read-only duplicate-comparison metadata
+  can still reference those thirteen; it is not a write target.
+- Existing variant-ID and generation-run guards precede the first INSERT.
+- SQL SHA256: `cdc3a5b69ceaf95a9016ff3c195d221c2e3ad03716c0d004fb77dea1e3424358`.
+  The tracked `ingest-r5-2.sql` mirror has exactly the same bytes as the HQ file.
+- Focused exporter tests: **59 passed**. Focused history/manifest tests:
+  **179 passed**. The final full-suite result is recorded below after completion.
+
+`practice-ingest-r5-2.json` and `practice-ingest-15.json` were pinned once and
+are immutable. Later verification belongs in the separate
+`round5-publication-validation.json`, not in either pinned receipt.
+
+The first full run exposed one legacy error-text compatibility assertion; the
+missing-prior rejection itself was correct. The message now preserves the old
+substring while naming the cumulative alternative. The focused follow-up
+completed: `54 passed, 25 warnings in 33.56s`. Pinned SQL/receipts did not change.
+
+Final exact clean-environment suite after the compatibility fix:
+**2733 passed, 3 skipped, 25 warnings, 48 subtests passed in 122.00s (0:02:02)**. All six tested Python-file hashes,
+all 124 protected input hashes and all four pinned output-file hashes
+were unchanged after completion. Independent publication review is clear.
