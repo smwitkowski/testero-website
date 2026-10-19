@@ -16,7 +16,7 @@ const itemId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const now = Date.parse("2026-10-03T12:00:00Z");
 const domain = PMLE_BLUEPRINT[0].domainCode;
 const session = { id: sessionId, kind: "practice", user_id: userId, anonymous_owner_hash: null, question_count: 5, completed_at: null, expires_at: "2026-10-04T12:00:00Z" };
-function bank() { return Array.from({ length: 6 }, (_, index) => ({ id: `bank-${index}`, stem: `Question ${index}`, exam_domains: { code: domain, name: "Domain A" }, answers: [{ choice_label: "A", choice_text: "Correct", is_correct: true }, { choice_label: "B", choice_text: "Wrong", is_correct: false }] })); }
+function bank() { return Array.from({ length: 6 }, (_, index) => ({ id: `bank-${index}`, parent_question_id: null as string | null, stem: `Question ${index}`, exam_domains: { code: domain, name: "Domain A" }, answers: [{ choice_label: "A", choice_text: "Correct", is_correct: true }, { choice_label: "B", choice_text: "Wrong", is_correct: false }] })); }
 function rows() { return Array.from({ length: 5 }, (_, index) => ({ id: index === 0 ? itemId : `item-${index}`, ordinal: index + 1, stem: `Question ${index}`, options: [{ label: "A", text: "Correct", explanation: "secret" }, { label: "B", text: "Wrong" }], selected_label: null as string | null, correct_label: "A", is_correct: null as boolean | null, answered_at: null as string | null, domain_code: domain, domain_name: "Domain A", explanation: "secret", source_url: "secret", question_id: "secret bank" })); }
 interface Options { session?: unknown; items?: unknown; bank?: unknown; used?: unknown; errorTable?: string; rpcData?: unknown; rpcError?: { code: string; message: string }; feedback?: unknown; rpc?: () => Promise<{ data: unknown; error: unknown }> }
 function db(options: Options = {}) {
@@ -41,6 +41,7 @@ function db(options: Options = {}) {
     const query = {
       select: vi.fn((fields: string) => { call.selected = fields; return query; }),
       eq: vi.fn((key: string, value: unknown) => { call.filters.push([key, value]); return query; }),
+      is: vi.fn((key: string, value: unknown) => { call.filters.push([key, value]); return query; }),
       order: vi.fn(() => query), maybeSingle: vi.fn(async () => result()),
       then: (resolve: (value: ReturnType<typeof result>) => unknown) => Promise.resolve(result()).then(resolve),
     };
@@ -66,6 +67,17 @@ describe("monthly free practice", () => {
     expect(database.queries[1].filters).toContainEqual(["exam", "GCP_PM_ML_ENG"]);
     expect(database.queries[1].filters).toContainEqual(["status", "ACTIVE"]);
     expect(database.queries[1].filters).toContainEqual(["review_status", "GOOD"]);
+  });
+  it("excludes variants in the free bank query and rejects variant rows defensively", async () => {
+    const variant = { ...bank()[0], id: "variant", parent_question_id: "bank-0" };
+    const database = db({ bank: [...bank(), variant] });
+    await createPractice(database.client, userId, domain, now);
+    expect(database.queries.find(query => query.table === "questions")?.filters).toContainEqual(["parent_question_id", null]);
+    const [, args] = database.rpc.mock.calls[0] as unknown as [string, { p_items: { question_id: string }[] }];
+    expect(args.p_items.map(item => item.question_id)).not.toContain("variant");
+    const variantsOnly = db({ bank: bank().map(question => ({ ...question, parent_question_id: "parent" })) });
+    await expect(createPractice(variantsOnly.client, userId, domain, now)).rejects.toMatchObject({ status: 503 });
+    expect(variantsOnly.rpc).not.toHaveBeenCalled();
   });
   it.each([60])("does not query bank or RPC with exhausted quota %s", async used => {
     const database = db({ used }); await expect(createPractice(database.client, userId, domain, now)).rejects.toMatchObject({ status: 429 });
@@ -132,6 +144,14 @@ describe("practice ownership and no early correctness", () => {
     expect(progress.currentQuestion).toEqual({ id: itemId, ordinal: 1, domainCode: domain, stem: "Question 0", options: [{ label: "A", text: "Correct" }, { label: "B", text: "Wrong" }] });
     expect(JSON.stringify(progress)).not.toMatch(/correctLabel|selectedLabel|isCorrect|correct_label|selected_label|explanation|source|question_id/);
   });
+  it("exposes only a variant boolean, not the parent ID, on saved practice progress", async () => {
+    const items = rows().map(row => ({ ...row, questions: { parent_question_id: "private-parent-id" } }));
+    const database = db({ items });
+    const progress = await readPractice(database.client, sessionId, userId, now);
+    expect(progress.currentQuestion).toMatchObject({ isVariant: true });
+    expect(database.queries[1].selected).toContain("questions(parent_question_id)");
+    expect(JSON.stringify(progress)).not.toMatch(/private-parent-id|parent_question_id|questions":/);
+  });
   it("infers completed progress when final answer arrives after session read", async () => { const result = await readPractice(db({ items: rows().map(row => ({ ...row, answered_at: "done", is_correct: true })) }).client, sessionId, userId, now); expect(result).toEqual({ sessionId, status: "completed", totalQuestions: 5, answeredCount: 5, currentQuestion: null }); });
   it("blocks incomplete summaries before item reads", async () => { const database = db(); await expect(practiceSummary(database.client, sessionId, userId, now)).rejects.toMatchObject({ status: 409 }); expect(database.from.mock.calls).toEqual([["study_sessions"]]); });
   it("returns completed scoring and review without explanations even after expiry", async () => {
@@ -197,6 +217,36 @@ describe("paid practice uses fresh access, never charges the free counter", () =
     expect(getPaidAccess).toHaveBeenCalledTimes(3);
     expect(database.rpc.mock.calls[0]).toEqual(["create_study_session", expect.objectContaining({ p_kind: "practice", p_user_id: userId, p_anonymous_owner_hash: null, p_items: expect.any(Array) })]);
     const args = database.rpc.mock.calls[0] as unknown as [string, { p_items: unknown[] }]; expect(args[1].p_items).toHaveLength(5);
+  });
+  it("allows paid variants but never selects their parent or a sibling in the same session", async () => {
+    vi.mocked(getPaidAccess).mockResolvedValue(paid);
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const parent = bank()[0];
+    const candidates = [parent, { ...parent, id: "variant", parent_question_id: parent.id }, { ...parent, id: "sibling", parent_question_id: parent.id }, ...bank().slice(1, 5)];
+    const database = db({ bank: candidates });
+    await createPractice(database.client, userId, domain, now);
+    expect(database.queries[0].filters).not.toContainEqual(["parent_question_id", null]);
+    const [, args] = database.rpc.mock.calls[0] as unknown as [string, { p_items: { question_id: string }[] }];
+    const selected = args.p_items.map(item => candidates.find(candidate => candidate.id === item.question_id)!);
+    expect(selected).toHaveLength(5);
+    expect(selected.some(question => question.parent_question_id !== null)).toBe(true);
+    expect(new Set(selected.map(question => question.parent_question_id ?? question.id)).size).toBe(5);
+  });
+  it("fails closed when a variant itself has a variant in the paid pool", async () => {
+    vi.mocked(getPaidAccess).mockResolvedValue(paid);
+    const root = bank()[0];
+    const parent = { ...root, id: "nested-parent", parent_question_id: root.id };
+    const nested = { ...root, id: "nested-child", parent_question_id: parent.id };
+    const database = db({ bank: [...bank(), parent, nested] });
+    await expect(createPractice(database.client, userId, domain, now)).rejects.toMatchObject({ status: 503 });
+    expect(database.rpc).not.toHaveBeenCalled();
+  });
+  it("fails closed without charging quota when paid inventory has too few distinct families", async () => {
+    vi.mocked(getPaidAccess).mockResolvedValue(paid);
+    const database = db({ bank: bank().map(question => ({ ...question, parent_question_id: "one-parent" })) });
+    await expect(createPractice(database.client, userId, domain, now)).rejects.toMatchObject({ status: 503 });
+    expect(database.rpc).not.toHaveBeenCalled();
+    expect(database.from.mock.calls).toEqual([["questions"]]);
   });
   it("does not fall back to free RPC after a paid DB recheck rejects access", async () => {
     vi.mocked(getPaidAccess).mockResolvedValue(paid);

@@ -121,6 +121,12 @@ describe("dashboard and practice states", () => {
 describe("practice explanation display boundary", () => {
   const question = { id: "item", ordinal: 1, stem: "Current question", options: [{ label: "A", text: "First" }, { label: "B", text: "Second" }] };
   const feedback = { itemId: "item", selectedLabel: "B", correctLabel: "A", isCorrect: false, explanation: "Saved-answer explanation", optionExplanations: [{ label: "A", text: "First snapshot", explanation: "Saved option explanation" }] };
+  it.each([false, true])("shows the context label only for a variant: %s", isVariant => {
+    state.progress = { sessionId: "owned", status: "in_progress", answeredCount: 0, totalQuestions: 5, currentQuestion: { ...question, isVariant } };
+    const html = renderToStaticMarkup(createElement(PracticeSession, { sessionId: "owned" }));
+    expect(html.includes("Same decision, new context")).toBe(isVariant);
+    expect(html).toContain("Current question");
+  });
   it("does not render correctness or explanation fields before an answer, even if received on the current question", () => {
     state.progress = { sessionId: "owned", status: "in_progress", answeredCount: 0, totalQuestions: 5, currentQuestion: { ...question, explanation: "Premature explanation", correctLabel: "A", options: [{ ...question.options[0], explanation: "Premature option explanation" }, question.options[1]] } };
     const html = renderToStaticMarkup(createElement(PracticeSession, { sessionId: "owned" }));

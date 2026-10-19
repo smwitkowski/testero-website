@@ -89,7 +89,7 @@ export function PracticeSession({ sessionId, initialData = null }: { sessionId: 
       </div>
     </div>
     <Card>
-      <CardHeader className="space-y-4"><p className="text-sm text-muted-foreground">{PMLE_BLUEPRINT_MAP[question.domainCode]?.displayName ?? question.domainCode}</p><h1 ref={heading} tabIndex={-1} className="whitespace-pre-line text-lg font-normal leading-relaxed sm:text-xl">{question.stem}</h1></CardHeader>
+      <CardHeader className="space-y-4"><p className="text-sm text-muted-foreground">{PMLE_BLUEPRINT_MAP[question.domainCode]?.displayName ?? question.domainCode}</p>{question.isVariant && <p className="text-sm text-muted-foreground">Same decision, new context</p>}<h1 ref={heading} tabIndex={-1} className="whitespace-pre-line text-lg font-normal leading-relaxed sm:text-xl">{question.stem}</h1></CardHeader>
       <CardContent className="space-y-6">
         {answer && <div role="status" className={`space-y-2 rounded-md p-4 ${answer.feedback.isCorrect ? "bg-solid-background text-solid" : "bg-focus-area-background text-focus-area"}`}>
           <p className="text-lg font-semibold">{answer.feedback.isCorrect ? "Correct" : "Incorrect"}. You chose {answer.feedback.selectedLabel}; the correct answer is {answer.feedback.correctLabel}.</p>

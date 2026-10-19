@@ -36,6 +36,7 @@ function bank(counts: number[]) {
     id: `question-${index}-${number}`,
     stem: `Question ${index}-${number}`,
     domain_id: `domain-${index}`,
+    parent_question_id: null as string | null,
     difficulty: "medium",
     answers: goodAnswers.map((answer) => ({ ...answer })),
     exam_domains: { code: codes[index], name: PMLE_BLUEPRINT[index].displayName },
@@ -45,16 +46,22 @@ function bank(counts: number[]) {
 type BankRow = ReturnType<typeof bank>[number];
 
 function client(rows: BankRow[], errors: { counts?: string; domain?: string } = {}) {
-  const filters: [string, string][] = [];
+  const filters: [string, string | null][] = [];
   const supabase = {
     from: vi.fn((table: string) => {
       expect(table).toBe("questions");
       let domainId: string | undefined;
+      let originalsOnly = false;
       let first = 0, last = rows.length;
       const query = {
         select: vi.fn(() => query),
         order: vi.fn(() => query),
         range: vi.fn((from: number, to: number) => { first = from; last = to + 1; return query; }),
+        is: vi.fn((column: string, value: null) => {
+          filters.push([column, value]);
+          if (column === "parent_question_id" && value === null) originalsOnly = true;
+          return query;
+        }),
         eq: vi.fn((column: string, value: string) => {
           filters.push([column, value]);
           if (column === "domain_id") domainId = value;
@@ -63,7 +70,7 @@ function client(rows: BankRow[], errors: { counts?: string; domain?: string } = 
         then(resolve: (result: { data: BankRow[] | null; error: { message: string } | null }) => unknown) {
           const message = domainId ? errors.domain : errors.counts;
           return Promise.resolve(resolve({
-            data: message ? null : rows.filter((row) => !domainId || row.domain_id === domainId).slice(first, last),
+            data: message ? null : rows.filter((row) => (!domainId || row.domain_id === domainId) && (!originalsOnly || row.parent_question_id === null)).slice(first, last),
             error: message ? { message } : null,
           }));
         },
@@ -179,15 +186,37 @@ describe("ported Supabase selector", () => {
       expect(filters).toContainEqual(["exam", "GCP_PM_ML_ENG"]);
       expect(filters).toContainEqual(["status", "ACTIVE"]);
       expect(filters).toContainEqual(["review_status", "GOOD"]);
+      expect(filters).toContainEqual(["parent_question_id", null]);
     }
     expect(rows).toEqual(bank([5, 5, 5, 5, 5, 5]));
   });
 
   it("includes domains beyond the first inventory page", async () => {
-    const { supabase } = client(bank([1000, 5, 5, 5, 5, 5]));
+    const { supabase, filters } = client(bank([1000, 5, 5, 5, 5, 5]));
     const result = await selectPmleQuestionsByBlueprint(supabase, 20);
     expect(result.domainDistribution.map(domain => domain.selectedCount)).toEqual([3, 3, 4, 4, 3, 3]);
     expect(supabase.from).toHaveBeenCalledTimes(2);
+    expect(filters.filter(([column]) => column === "parent_question_id")).toEqual([
+      ["parent_question_id", null], ["parent_question_id", null],
+    ]);
+  });
+
+  it("excludes variants from diagnostic selection and domain availability", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const originals = bank([20, 0, 0, 0, 0, 0]);
+    const variants = bank([0, 5, 0, 0, 0, 0]).map(row => ({ ...row, parent_question_id: originals[0].id }));
+    const { supabase, filters } = client([...variants, ...originals]);
+    const result = await selectPmleQuestionsByBlueprint(supabase, 20);
+    expect(result.questions.map(row => row.id).sort()).toEqual(originals.map(row => row.id).sort());
+    expect(result.domainDistribution.map(domain => domain.availableCount)).toEqual([20, 0, 0, 0, 0, 0]);
+    expect(filters).toContainEqual(["parent_question_id", null]);
+  });
+
+  it("does not use variants to fill a diagnostic inventory shortfall", async () => {
+    const originals = bank([19, 0, 0, 0, 0, 0]);
+    const variant = { ...originals[0], id: "variant", parent_question_id: originals[0].id };
+    await expect(selectPmleQuestionsByBlueprint(client([...originals, variant]).supabase, 20))
+      .rejects.toThrow("Insufficient questions: requested 20, selected 19, total available 19");
   });
 
   it("samples beyond a fixed prefix using deterministic Fisher-Yates seeds", async () => {

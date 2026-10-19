@@ -20,9 +20,9 @@ export class PracticeQuotaError extends DiagnosticError {
   constructor() { super(429, "You have used your 60 free practice questions this month."); }
 }
 interface Session { id: string; user_id: string | null; anonymous_owner_hash: string | null; question_count: number; completed_at: string | null; expires_at: string }
-interface Item extends Omit<QuestionReviewSource, "selected_label" | "is_correct"> { question_id?: string; selected_label: string | null; is_correct: boolean | null; answered_at: string | null }
-interface Question { id: string; stem: string; answers: CanonicalAnswer[]; exam_domains: { code: string; name: string } }
-const ITEM_FIELDS = "id,question_id,ordinal,stem,options,domain_code,domain_name,selected_label,correct_label,is_correct,answered_at";
+interface Item extends Omit<QuestionReviewSource, "selected_label" | "is_correct"> { question_id?: string; selected_label: string | null; is_correct: boolean | null; answered_at: string | null; questions?: { parent_question_id: string | null } | null }
+interface Question { id: string; parent_question_id: string | null; stem: string; answers: CanonicalAnswer[]; exam_domains: { code: string; name: string } }
+const ITEM_FIELDS = "id,question_id,ordinal,stem,options,domain_code,domain_name,selected_label,correct_label,is_correct,answered_at,questions(parent_question_id)";
 function validAnsweredItem(row: Pick<Item, "options" | "selected_label" | "correct_label" | "is_correct">): boolean {
   if (!Array.isArray(row.options) || row.options.length < 2 || row.options.some(option => !option || typeof option.label !== "string" || !option.label.trim() || typeof option.text !== "string" || !option.text.trim())) return false;
   const labels = row.options.map(option => option.label);
@@ -47,12 +47,25 @@ export async function createPractice(client: SupabaseClient, userId: string, dom
   const remaining = paidAccess.hasPaidAccess ? null : (await freePracticeQuota(client, userId, new Date(now))).remaining;
   if (remaining === 0) throw new PracticeQuotaError();
   const length = Math.min(PRACTICE_SESSION_LENGTH, remaining ?? PRACTICE_SESSION_LENGTH);
-  const { data, error } = await client.from("questions")
-    .select("id,stem,answers(choice_label,choice_text,is_correct),exam_domains!inner(code,name)")
+  let query = client.from("questions")
+    .select("id,parent_question_id,stem,answers(choice_label,choice_text,is_correct),exam_domains!inner(code,name)")
     .eq("exam", "GCP_PM_ML_ENG").eq("status", "ACTIVE").eq("review_status", "GOOD").eq("exam_domains.code", domainCode);
+  if (!paidAccess.hasPaidAccess) query = query.is("parent_question_id", null);
+  const { data, error } = await query;
   if (error || !Array.isArray(data)) throw unavailable();
-  const valid = (data as unknown as Question[]).filter(question => question.exam_domains?.code === domainCode && typeof question.stem === "string" && question.stem.trim() && hasValidAnswers(question.answers));
-  const questions = shuffleArray(valid).slice(0, length);
+  const bank = data as unknown as Question[];
+  const byId = new Map(bank.map(question => [question.id, question]));
+  // A family has an original parent. Never mix levels of a malformed nested family.
+  if (bank.some(question => question.parent_question_id && byId.get(question.parent_question_id)?.parent_question_id)) throw unavailable();
+  const valid = bank.filter(question => question.exam_domains?.code === domainCode && typeof question.stem === "string" && question.stem.trim() && hasValidAnswers(question.answers));
+  const families = new Set<string>();
+  const questions = shuffleArray(valid).filter(question => {
+    if (!paidAccess.hasPaidAccess && question.parent_question_id !== null) return false;
+    const family = question.parent_question_id ?? question.id;
+    if (families.has(family)) return false;
+    families.add(family);
+    return true;
+  }).slice(0, length);
   if (questions.length !== length || new Set(questions.map(q => q.id)).size !== length) throw unavailable();
   const items = questions.map(question => ({
     question_id: question.id, domain_code: domainCode, domain_name: question.exam_domains.name,
@@ -78,7 +91,8 @@ async function ownedPractice(client: SupabaseClient, id: string, userId: string,
 async function items(client: SupabaseClient, id: string): Promise<Item[]> {
   const { data, error } = await client.from("session_items").select(ITEM_FIELDS).eq("session_id", id).order("ordinal");
   if (error || !Array.isArray(data)) throw unavailable();
-  return data as Item[];
+  // session_items.question_id is a to-one FK; the untyped client infers joins as arrays.
+  return data as unknown as Item[];
 }
 export async function readPractice(client: SupabaseClient, id: string, userId: string, now = Date.now()): Promise<PracticeProgress> {
   const session = await ownedPractice(client, id, userId, now);
@@ -92,7 +106,7 @@ function practiceProgress(session: Session, rows: Item[]): PracticeProgress {
   const current = completed ? null : rows.find(row => row.answered_at === null);
   if (!completed && !current) throw unavailable();
   return { sessionId: session.id, status: completed ? "completed" : "in_progress", totalQuestions: session.question_count, answeredCount,
-    currentQuestion: current ? { id: current.id, ordinal: current.ordinal, domainCode: current.domain_code, stem: current.stem, options: current.options.map(option => ({ label: option.label, text: option.text })) } : null };
+    currentQuestion: current ? { id: current.id, ordinal: current.ordinal, domainCode: current.domain_code, stem: current.stem, ...(current.questions?.parent_question_id ? { isVariant: true } : {}), options: current.options.map(option => ({ label: option.label, text: option.text })) } : null };
 }
 export async function answerPractice(client: SupabaseClient, id: string, userId: string, itemId: string, selectedLabel: string, now = Date.now(), timing?: ServerTiming): Promise<PracticeAnswerResponse> {
   const measure = <T>(name: string, task: () => Promise<T>) => timing ? timing.measure(name, task) : task();

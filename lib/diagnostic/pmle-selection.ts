@@ -204,6 +204,7 @@ export async function selectPmleQuestionsByBlueprint(
     const page = await supabase.from('questions')
       .select('id,stem,domain_id,difficulty,created_at,exam_domains!inner(code,name),answers(choice_label,choice_text,is_correct)')
       .eq('exam', 'GCP_PM_ML_ENG').eq('status', 'ACTIVE').eq('review_status', 'GOOD')
+      .is('parent_question_id', null)
       .order('id').range(offset, offset + pageSize - 1);
     if (page.error) throw new Error(`Failed to fetch domain counts: ${page.error.message}`);
     const rows = (page.data ?? []) as unknown as Row[];

@@ -14,6 +14,7 @@ const readPmleInventory = unstable_cache(async () => {
     const { data, error } = await client.from("questions")
       .select("id,stem,answers(choice_label,choice_text,is_correct),exam_domains!inner(code)")
       .eq("exam", "GCP_PM_ML_ENG").eq("status", "ACTIVE").eq("review_status", "GOOD")
+      .is("parent_question_id", null)
       .order("id").range(offset, offset + pageSize - 1);
     if (error || !Array.isArray(data)) throw new Error("PMLE inventory unavailable");
     for (const question of data as unknown as InventoryQuestion[]) {
