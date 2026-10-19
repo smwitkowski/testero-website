@@ -12,11 +12,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from shared.cli_models import signature_prompt
 from shared.decision_planner import verification_prompt
-from shared.doc_retrieval import DEFAULT_CONTEXT_CHARS, RetrievalSession, quote_in_chunks
+from shared.doc_retrieval import DEFAULT_CONTEXT_CHARS, DEFAULT_CONFIG, RetrievalConfig, RetrievalSession, quote_in_chunks
 
 
-def replay(artifact, *, budget=DEFAULT_CONTEXT_CHARS, stable_prefix=True):
-    session = RetrievalSession()
+def replay(artifact, *, budget=DEFAULT_CONTEXT_CHARS, stable_prefix=True, config=DEFAULT_CONFIG):
+    session = RetrievalSession(config)
     rows, recovered, quotes = [], 0, 0
     for candidate in artifact["candidates"]:
         index = candidate["index"]
@@ -49,7 +49,7 @@ def replay(artifact, *, budget=DEFAULT_CONTEXT_CHARS, stable_prefix=True):
                     Path(__file__).resolve().parents[1] / "shared/decision_planner.py",
                     Path(__file__).resolve().parents[1] / "shared/cli_models.py"]
     source_hash = hashlib.sha256(b"".join(path.read_bytes() for path in source_paths)).hexdigest()
-    return {"implementation_sha256": source_hash,
+    return {"implementation_sha256": source_hash, "config": config.__dict__, "stable_prefix": stable_prefix,
             "method": "Exact live signature_prompt; character/4 token estimates, NOT provider-measured tokens. No verifier rejudging.",
             "calls_replayed": len(rows), "baseline_estimated_prompt_tokens": math.ceil(before / 4),
             "treatment_estimated_prompt_tokens": math.ceil(after / 4),
@@ -65,9 +65,11 @@ def main():
     parser.add_argument("--artifact", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--budget-chars", type=int, default=DEFAULT_CONTEXT_CHARS)
+    parser.add_argument("--config", type=Path, help="JSON RetrievalConfig overrides; absent uses live default")
     args = parser.parse_args()
     raw = args.artifact.read_bytes()
-    report = replay(json.loads(raw), budget=args.budget_chars)
+    config = RetrievalConfig(**json.loads(args.config.read_text())) if args.config else DEFAULT_CONFIG
+    report = replay(json.loads(raw), budget=args.budget_chars, config=config)
     report["artifact_sha256"] = hashlib.sha256(raw).hexdigest()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n")

@@ -149,7 +149,7 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--objective", "objective_ids", multiple=True, help="Repeatable registry objective ID; overrides weights with round-robin targets in flag order.")
 @click.option("--distractor-evidence", type=click.Choice(["strict", "consistent"]), default="strict", show_default=True, help="Freeze decision/evidence review policy for this batch.")
 @click.option("--doc-cache", is_flag=True, help="Opt in to 7-day on-disk public official-document snapshots.")
-@click.option("--verify-retrieval", is_flag=True, help="Opt in to per-option local BM25 verifier passages (at most about 15k estimated doc tokens).")
+@click.option("--verify-retrieval", is_flag=True, help="Opt in to per-option BM25/product queries with adjacent spans (at most about 32.5k estimated doc tokens).")
 @click.option("--verify-stable-prefix", is_flag=True, help="Opt in to documentation-first verifier field ordering; provider cache hits must be measured.")
 @click.option("--decision-attempts", type=click.IntRange(min=1, max=3), default=3, show_default=True, help="Total decision plans including initial attempt; lower caps are experimental.")
 @click.option("--argon-gate", is_flag=True, help="Freeze mandatory independent Gemini 4 Argon blind/full review requests.")

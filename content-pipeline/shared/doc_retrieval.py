@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from shared.doc_search import documentation_context
 
 # Character budgets are conservative token estimates, not provider token counts.
-DEFAULT_CONTEXT_CHARS = 60000
+DEFAULT_CONTEXT_CHARS = 130000
 OBJECTIVE_PREFIX_CHARS = 8000
 CHUNK_CHARS = 2200
 CHUNK_OVERLAP = 350  # At least the maximum receipt length (300 characters).
@@ -19,6 +19,25 @@ STOP = frozenset("a an the and or to of in on for with is are be by as it this t
 
 def terms(text):
     return [word for word in re.findall(r"[a-z0-9]+", text.casefold()) if word not in STOP]
+
+
+@dataclass(frozen=True)
+class RetrievalConfig:
+    chunk_chars: int = CHUNK_CHARS
+    overlap: int = CHUNK_OVERLAP
+    top_k: int = 0  # Zero means all positive-scoring hits, bounded by context budget.
+    query_mode: str = "objective"
+    neighbors: int = 0
+    sections: bool = False
+
+    def __post_init__(self):
+        if self.chunk_chars <= self.overlap or self.overlap < 300:
+            raise ValueError("Chunks need size > overlap >= 300")
+        if self.top_k < 0 or self.neighbors not in (0, 1) or self.query_mode not in ("plan", "objective", "products"):
+            raise ValueError("Invalid retrieval query/expansion configuration")
+
+
+DEFAULT_CONFIG = RetrievalConfig(top_k=3, query_mode="products", neighbors=1)
 
 
 @dataclass(frozen=True)
@@ -85,12 +104,20 @@ class BM25:
         return [chunk for score, chunk in sorted(scored, key=lambda row: (-row[0], row[1].id)) if score > 0]
 
 
-def plan_queries(scope, plan):
+def plan_queries(scope, plan, mode="objective"):
     constraints = " ".join(plan["decisive_constraints"])
-    return [scope.get("objective_text", "") + " " + plan["engineering_decision"] + " " + constraints,
-            plan["best_action"], constraints,
-            *(mistake["action"] for mistake in plan["mistakes"]),
-            *(mistake["scenario_reason"] for mistake in plan["mistakes"])]
+    queries = [plan["engineering_decision"] + " " + constraints, plan["best_action"], constraints,
+               *(mistake["action"] for mistake in plan["mistakes"]),
+               *(mistake["scenario_reason"] for mistake in plan["mistakes"])]
+    if mode != "plan":
+        queries[0] = scope.get("objective_text", "") + " " + queries[0]
+        queries.append(scope.get("objective_text", ""))
+    if mode == "products":
+        # Names come only from the proposed plan, never from proof receipts.
+        text = " ".join(queries)
+        names = re.findall(r'[“"`]([^”"`]{2,80})[”"`]|\b((?:[A-Z][A-Za-z0-9-]*\s+){1,4}[A-Z][A-Za-z0-9-]*)', text)
+        queries.extend(dict.fromkeys(first or second for first, second in names))
+    return [query for query in queries if query.strip()]
 
 
 def render_chunk(chunk):
@@ -115,17 +142,37 @@ def merge_chunks(chunks):
     return merged
 
 
-def select_chunks(chunks, queries, budget):
+def select_chunks(chunks, queries, budget, *, top_k=0, neighbors=0, sections=False):
     """Round-robin query ranks so every option gets its own retrieval budget."""
     ranker = BM25(chunks)
-    rankings = [ranker.rank(query) for query in queries]
+    rankings = [ranker.rank(query)[:top_k or None] for query in queries]
+    by_url = {}
+    for chunk in chunks:
+        by_url.setdefault(chunk.url, []).append(chunk)
+    for rows in by_url.values():
+        rows.sort(key=lambda chunk: chunk.start)
     chosen, used = [], set()
     for rank in range(max((len(rows) for rows in rankings), default=0)):
         for rows in rankings:
             if rank >= len(rows) or rows[rank].id in used:
                 continue
             chunk = rows[rank]
-            merged = merge_chunks([*chosen, chunk])
+            additions = [chunk]
+            if neighbors:
+                page = by_url[chunk.url]
+                position = page.index(chunk)
+                additions = page[max(0, position - neighbors):position + neighbors + 1]
+            if sections:
+                # Preserve a whole bounded local section when independent hits
+                # cluster. Historic flattened HTML has no reliable headings;
+                # its deterministic 6k span is a local context window, not a heading.
+                page = by_url[chunk.url]
+                section = chunk.start // 6000
+                hits = {hit.id for ranking in rankings for hit in ranking
+                        if hit.url == chunk.url and hit.start // 6000 == section}
+                if len(hits) >= 2:
+                    additions = [row for row in page if row.start // 6000 == section]
+            merged = merge_chunks([*chosen, *additions])
             size = sum(len(render_chunk(row)) + 2 for row in merged)
             if size <= budget:
                 chosen = merged
@@ -135,7 +182,8 @@ def select_chunks(chunks, queries, budget):
 
 class RetrievalSession:
     """Freeze a small objective prefix per run; candidate evidence stays separate."""
-    def __init__(self):
+    def __init__(self, config=DEFAULT_CONFIG):
+        self.config = config
         from threading import Lock
         self._lock = Lock()
         self._prefixes = {}
@@ -143,7 +191,7 @@ class RetrievalSession:
     def prepare(self, scope, plan, sources, *, budget=DEFAULT_CONTEXT_CHARS):
         if not isinstance(budget, int) or isinstance(budget, bool) or budget < 4000:
             raise ValueError("Retrieval budget must be at least 4000 characters")
-        chunks = chunk_sources(sources)
+        chunks = chunk_sources(sources, size=self.config.chunk_chars, overlap=self.config.overlap)
         key = (scope["objective_id"], budget)
         with self._lock:
             if key not in self._prefixes:
@@ -159,7 +207,7 @@ class RetrievalSession:
             if previous and previous["text_sha256"] != source["text_sha256"]:
                 raise ValueError("Conflicting source versions in retrieval session")
             merged.setdefault(source["url"], source)
-        chunks = chunk_sources([merged[source["url"]] for source in sources])
+        chunks = chunk_sources([merged[source["url"]] for source in sources], size=self.config.chunk_chars, overlap=self.config.overlap)
         prefix_ids = {chunk.id for chunk in prefix}
         prefix_text = "\n\n".join(render_chunk(chunk) for chunk in prefix)
         # A short introduction from every discovered page keeps broad capability,
@@ -168,17 +216,18 @@ class RetrievalSession:
         anchor_cost = sum(len(render_chunk(chunk)) + 2 for chunk in anchors)
         remaining = budget - len(prefix_text) - 200
         if anchor_cost > remaining // 2:
-            anchors = select_chunks(anchors, plan_queries(scope, plan), remaining // 2)
+            anchors = select_chunks(anchors, plan_queries(scope, plan, self.config.query_mode), remaining // 2)
         anchor_ids = {chunk.id for chunk in anchors}
         anchor_cost = sum(len(render_chunk(chunk)) + 2 for chunk in anchors)
         selected = merge_chunks([*anchors, *select_chunks([chunk for chunk in chunks if chunk.id not in prefix_ids | anchor_ids],
-                                 plan_queries(scope, plan), remaining - anchor_cost)])
+                                 plan_queries(scope, plan, self.config.query_mode), remaining - anchor_cost,
+                                 top_k=self.config.top_k, neighbors=self.config.neighbors, sections=self.config.sections)])
         prefix_context = "Official fetched Google Cloud documentation excerpts (quote only these passages):\n" + prefix_text
         candidate_context = "Candidate-specific per-option passages:\n" + "\n\n".join(render_chunk(chunk) for chunk in selected)
         context = prefix_context + "\n\n" + candidate_context
         return {"context": context, "prefix_context": prefix_context, "candidate_context": candidate_context,
                 "chunks": [*prefix, *selected], "sources": list(merged.values()),
-                "metadata": {"version": 1, "budget_chars": budget, "context_chars": len(context),
+                "metadata": {"version": 2, "config": self.config.__dict__, "budget_chars": budget, "context_chars": len(context),
                              "estimated_doc_tokens": math.ceil(len(context) / 4),
                              "objective_prefix_sha256": hashlib.sha256(prefix_text.encode()).hexdigest(),
                              "chunk_ids": [chunk.id for chunk in [*prefix, *selected]]}}

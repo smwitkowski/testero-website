@@ -248,3 +248,53 @@ def test_generator_opt_in_retrieval_preserves_full_sources(pipeline, monkeypatch
     artifact = json.loads((path / "batch.json").read_text())
     assert artifact["candidates"][0]["decision_attempts"][0]["retrieval"] == seen[0]
     assert artifact["candidates"][0]["sources"] == [source()]
+
+
+@pytest.mark.parametrize("neighbors,sections", [(0, False), (1, False), (0, True)])
+def test_expansion_uses_only_original_spans_and_keeps_budget(neighbors, sections):
+    from shared.doc_retrieval import RetrievalConfig
+    value = page(("Cloud Run request pricing. " + "Other background. " * 50) * 30)
+    config = RetrievalConfig(chunk_chars=1200, overlap=300, top_k=4,
+                             query_mode="products", neighbors=neighbors, sections=sections)
+    retrieved = RetrievalSession(config).prepare(scope(), decision(), [value], budget=10000)
+    assert len(retrieved["context"]) <= 10000
+    assert all(chunk.text == value["text"][chunk.start:chunk.end] for chunk in retrieved["chunks"])
+    assert retrieved["metadata"]["config"] == config.__dict__
+
+
+def test_query_modes_use_plan_and_objective_not_proof_receipts():
+    from shared.doc_retrieval import RetrievalConfig
+    plan = decision()
+    base = plan_queries(scope(), plan, "plan")
+    objective = plan_queries(scope(), plan, "objective")
+    products = plan_queries(scope(), plan, "products")
+    assert scope()["objective_text"] in objective
+    assert len(products) >= len(objective) > len(base)
+    assert all(mistake["action"] in base for mistake in plan["mistakes"])
+    with pytest.raises(ValueError): RetrievalConfig(chunk_chars=800, overlap=800)
+
+
+def test_pair_gate_needs_both_current_default_reports(tmp_path, monkeypatch):
+    from scripts import run_retrieval_ab as runner
+    from shared.doc_retrieval import DEFAULT_CONTEXT_CHARS, DEFAULT_CONFIG
+    paths = [runner.ROOT / "scripts/replay_doc_retrieval.py", runner.ROOT / "shared/doc_retrieval.py",
+             runner.ROOT / "shared/decision_planner.py", runner.ROOT / "shared/cli_models.py"]
+    digest = hashlib.sha256(b"".join(path.read_bytes() for path in paths)).hexdigest()
+    bank = tmp_path / "bank.json"
+    bank.write_text("[]")
+    reports = []
+    for index in range(2):
+        path = tmp_path / f"replay{index}.json"
+        path.write_text(json.dumps({"recall_gate_passed": True, "quote_recall": .96,
+            "budget_chars": DEFAULT_CONTEXT_CHARS, "config": DEFAULT_CONFIG.__dict__,
+            "implementation_sha256": digest, "stable_prefix": True,
+            "artifact_sha256": ["2c50b82e9d1c10493d949a24bdb9d58d2a2955e8bc634d888aa794ca83b7699c",
+                                "85d81dce77d6b4a1fe6f1575f11087d7ead99ca58bc07321c1ecfac5c50a1ab1"][index]}))
+        reports.append(path)
+    # After valid authorization, creating a cohort is the first live action.
+    monkeypatch.setattr(runner.Path, "mkdir", lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("authorized")))
+    base = ["run_retrieval_ab", "--bank", str(bank), "--tag", "paired-offline-test", "--execute"]
+    monkeypatch.setattr("sys.argv", base + ["--replay-report", str(reports[0])])
+    with pytest.raises(SystemExit): runner.main()
+    monkeypatch.setattr("sys.argv", base + ["--replay-report", str(reports[0]), "--replay-report", str(reports[1])])
+    with pytest.raises(RuntimeError, match="authorized"): runner.main()
