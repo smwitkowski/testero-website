@@ -23,7 +23,8 @@ it("puts the score before the short-run note and keeps value before optional ema
   mocks.resource.mockReturnValue({ data: { sessionId: "session", score: 40, correctAnswers: 2, totalQuestions: 5, domainBreakdown: [{ domainCode: "A", domainName: "Domain A", total: 2, correct: 1, percentage: 50 }] } });
   const html = renderToStaticMarkup(createElement(DiagnosticResults, { sessionId: "session" }));
   expect(html.indexOf('aria-label="Overall score"')).toBeLessThan(html.indexOf("Based on 5 questions"));
-  expect(html.indexOf("Score by domain")).toBeLessThan(html.indexOf("Free explanation"));
+  expect(html).not.toContain("Score by domain");
+  expect(html).not.toContain("Domain A");
   expect(html.indexOf("Free explanation")).toBeLessThan(html.indexOf("Default email form"));
   expect(html).toContain("review your answers");
   expect(html).not.toContain(">Review your answers</h2>");
@@ -35,4 +36,33 @@ it("replaces email acquisition with account review and pass access check for sig
   expect(html).not.toContain("Default email form");
   expect(html).not.toContain("Free explanation");
   expect(html.indexOf("Question review")).toBeLessThan(html.indexOf("Signed-in unlock"));
+});
+
+it.each([false, true])("keeps quick-check advice neutral and practice untargeted (signed in: %s)", signedIn => {
+  mocks.resource.mockReturnValue({ data: { sessionId: "session", score: 40, correctAnswers: 2, totalQuestions: 5, domainBreakdown: [{ domainCode: "WEAK", domainName: "Weakest domain", total: 1, correct: 0, percentage: 0 }], ...(signedIn ? { review: [] } : {}) } });
+  const html = renderToStaticMarkup(createElement(DiagnosticResults, { sessionId: "session" }));
+  expect(html).toContain('aria-label="Overall score"');
+  expect(html).toContain("Tier: Building");
+  expect(html).toContain("Keep building your readiness");
+  expect(html).not.toContain("Score by domain");
+  expect(html).not.toContain("Domain results");
+  expect(html).not.toContain("Weakest domain");
+  expect(html).not.toContain("domain=");
+  expect(html).toContain(`href="${signedIn ? "/dashboard" : "/signup?next=%2Fdashboard"}"`);
+  expect(html).toContain('href="/diagnostic?length=20"');
+  expect(html).toContain("per-domain breakdown");
+  expect(html).toContain(signedIn ? "Signed-in unlock" : "Secondary pass option");
+  if (!signedIn) {
+    expect(html).toContain("60 free practice questions per month");
+    expect(html).toContain("Create a free account to continue.");
+  }
+});
+it.each([10, 20])("preserves domain scores and targeted next steps for %s-question results", totalQuestions => {
+  mocks.resource.mockReturnValue({ data: { sessionId: "session", score: 40, correctAnswers: totalQuestions * 0.4, totalQuestions, domainBreakdown: [{ domainCode: "WEAK", domainName: "Weakest domain", total: 2, correct: 0, percentage: 0 }], review: [] } });
+  const html = renderToStaticMarkup(createElement(DiagnosticResults, { sessionId: "session" }));
+  expect(html).toContain("Score by domain");
+  expect(html).toContain("Domain results, weakest first");
+  expect(html).toContain('id="next-step">Weakest domain');
+  expect(html).toContain('href="/dashboard?domain=WEAK"');
+  expect(html).toContain("Choose this domain on your dashboard");
 });

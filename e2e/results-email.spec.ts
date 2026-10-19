@@ -28,7 +28,8 @@ test("completed diagnostic offers optional results email with consent (mocked su
     }
     await page.goto(`/diagnostic/${sessionId}/results`);
     await expect(page.getByRole("heading", { name: "PMLE readiness report", exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Score by domain", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Score by domain", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "take the 20-question diagnostic →", exact: true })).toHaveAttribute("href", "/diagnostic?length=20");
     const section = page.getByRole("region", { name: "Email me my results + a 4-week plan", exact: true });
     await expect(section).toContainText("Optional: one email with your results; no newsletter.");
     const consent = section.getByRole("checkbox");

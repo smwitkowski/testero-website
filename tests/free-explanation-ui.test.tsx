@@ -16,6 +16,10 @@ it.each([5, 10, 20])("shows rationales, report control and count-safe CTA for %i
   const node = FreeDiagnosticExplanation({ result: report });
   const html = renderToStaticMarkup(node);
   expect(html).toContain("Why wrong"); expect(html).toContain("Why right");
+  if (totalQuestions < 10) {
+    expect(html).toContain("Review one question with a full explanation of each option.");
+    expect(html).not.toContain("lowest-scoring domain");
+  } else expect(html).toContain("lowest-scoring domain");
   expect(html).toContain("Report a problem with this question");
   expect(html).toContain("Unlock PMLE Pass: $39");
   expect(html).toContain('href="/signup?next=%2Fpricing"');
