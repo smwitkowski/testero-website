@@ -97,7 +97,7 @@ class DecisionPlanWithCommitmentsSignature(DecisionPlanSignature):
     separating expected documented behavior from the scenario inference. Check
     prerequisites, the feasibility of every alternative and conflicting guidance
     before committing. Propose an official Google Cloud documentation URL and
-    exact expected section heading or fragment for each anchor.
+    exact expected visible section heading text for each anchor, not a URL fragment.
     These are unverified discovery hints, never evidence or fetched quotes. Record
     unresolved prerequisites, ambiguities and conflicts in unresolved_issues; use
     an empty list only when none are known. Do not invent quotes or claim verification.
