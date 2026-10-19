@@ -1,0 +1,134 @@
+{
+  "mode": "offline copy; no live judges, no regeneration",
+  "source_artifact_sha256": "52c69db02f183e76c823edda8469e470285ba7faf68f2dfa34fc84dc5e4d9c79",
+  "generated": 18,
+  "eligible_requests": 15,
+  "family_rejections": 3,
+  "question_identity_evidence_fields_equal": [
+    "candidate_id",
+    "stem",
+    "options",
+    "key",
+    "sources",
+    "option_evidence",
+    "decision_plan",
+    "decision_proof",
+    "decision_objective"
+  ],
+  "question_identity_evidence_unchanged": true,
+  "family_stem_threshold": 0.45,
+  "nonfamily_policy": "unchanged min(stem,key) >= 0.20 veto",
+  "max_request_characters": 147224,
+  "request_character_limit": 150000,
+  "max_family_stem_similarity": 0.5068493150684932,
+  "variants": [
+    {
+      "candidate_id": "b26f4827-3cf7-5e83-9446-f277bdd6296f",
+      "parent_question_id": "a23ed85e-042b-5eaf-ba0d-ccf52b149bd8",
+      "eligible": true,
+      "max_family_stem_similarity": 0.32894736842105265
+    },
+    {
+      "candidate_id": "6b1f0619-09a1-5b9a-8d9b-a9505c20ab77",
+      "parent_question_id": "a23ed85e-042b-5eaf-ba0d-ccf52b149bd8",
+      "eligible": true,
+      "max_family_stem_similarity": 0.32894736842105265
+    },
+    {
+      "candidate_id": "70447594-7691-5ff3-b10a-c64eb3f2a69b",
+      "parent_question_id": "a23ed85e-042b-5eaf-ba0d-ccf52b149bd8",
+      "eligible": true,
+      "max_family_stem_similarity": 0.3037974683544304
+    },
+    {
+      "candidate_id": "ad7207d5-cc2b-5db0-adf1-359c7c3534c4",
+      "parent_question_id": "2552fa69-5a20-5744-90a3-2c76eba518d2",
+      "eligible": true,
+      "max_family_stem_similarity": 0.4246575342465753
+    },
+    {
+      "candidate_id": "b747287b-a65c-590f-9eff-2fbf6d7652a7",
+      "parent_question_id": "2552fa69-5a20-5744-90a3-2c76eba518d2",
+      "eligible": false,
+      "max_family_stem_similarity": 0.5068493150684932
+    },
+    {
+      "candidate_id": "f3e8b6b9-ddce-5221-a05c-7ab66e65567b",
+      "parent_question_id": "2552fa69-5a20-5744-90a3-2c76eba518d2",
+      "eligible": false,
+      "max_family_stem_similarity": 0.5068493150684932
+    },
+    {
+      "candidate_id": "fc352b8a-1171-593e-b174-e41368ec21be",
+      "parent_question_id": "9a174e39-5c98-524a-abec-952a689185d0",
+      "eligible": true,
+      "max_family_stem_similarity": 0.35526315789473684
+    },
+    {
+      "candidate_id": "d032f91a-a4a8-5a17-8bf8-e29099a46db5",
+      "parent_question_id": "9a174e39-5c98-524a-abec-952a689185d0",
+      "eligible": true,
+      "max_family_stem_similarity": 0.35064935064935066
+    },
+    {
+      "candidate_id": "397e80a2-0d4e-5a6b-96c7-9b33c01c53b8",
+      "parent_question_id": "9a174e39-5c98-524a-abec-952a689185d0",
+      "eligible": true,
+      "max_family_stem_similarity": 0.35526315789473684
+    },
+    {
+      "candidate_id": "6cc24c9f-5227-5a4c-b4d9-bff98bb6aa2c",
+      "parent_question_id": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "eligible": true,
+      "max_family_stem_similarity": 0.4473684210526316
+    },
+    {
+      "candidate_id": "ae7d2022-c464-5f79-89b9-0ca1f1f764e5",
+      "parent_question_id": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "eligible": false,
+      "max_family_stem_similarity": 0.4838709677419355
+    },
+    {
+      "candidate_id": "028858c3-a032-563e-b7e8-4c5dcd597b30",
+      "parent_question_id": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "eligible": true,
+      "max_family_stem_similarity": 0.40298507462686567
+    },
+    {
+      "candidate_id": "a49ee066-63f9-5abd-a81d-8e9b8574e5d8",
+      "parent_question_id": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+      "eligible": true,
+      "max_family_stem_similarity": 0.3870967741935484
+    },
+    {
+      "candidate_id": "6d897de5-d4ce-53d8-a164-e05469e555cb",
+      "parent_question_id": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+      "eligible": true,
+      "max_family_stem_similarity": 0.3728813559322034
+    },
+    {
+      "candidate_id": "16d2fc36-0092-5ede-8a98-fcf9601fc7bb",
+      "parent_question_id": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+      "eligible": true,
+      "max_family_stem_similarity": 0.3728813559322034
+    },
+    {
+      "candidate_id": "2547a8c2-93c3-5a2e-b448-0b3e582cc35e",
+      "parent_question_id": "532fb45c-7f86-542a-a470-39ad0df5d199",
+      "eligible": true,
+      "max_family_stem_similarity": 0.35714285714285715
+    },
+    {
+      "candidate_id": "0156433c-e0ab-5e5c-ac18-72982823028b",
+      "parent_question_id": "532fb45c-7f86-542a-a470-39ad0df5d199",
+      "eligible": true,
+      "max_family_stem_similarity": 0.4107142857142857
+    },
+    {
+      "candidate_id": "775ddfdc-e7e9-571f-af0c-fab4e8df8ccc",
+      "parent_question_id": "532fb45c-7f86-542a-a470-39ad0df5d199",
+      "eligible": true,
+      "max_family_stem_similarity": 0.3793103448275862
+    }
+  ]
+}

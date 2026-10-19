@@ -134,7 +134,7 @@ def test_ingest_blocks_changed_lineage_before_judging(parents, tmp_path, defect)
     with pytest.raises(ValueError): ingest._validate_candidate(tmp_path / "variants.json", result, entry)
 
 
-def test_parent_only_similarity_exception_bank_and_siblings_remain_strict(parents, tmp_path):
+def test_family_similarity_exception_nonfamily_bank_remains_strict(parents, tmp_path):
     result = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
     entry = result["candidates"][0]; parent = result["variant_parents"][entry["parent_question_id"]]
     assert variant_duplicates(entry, [], parent)["passed"]
@@ -142,6 +142,7 @@ def test_parent_only_similarity_exception_bank_and_siblings_remain_strict(parent
     assert not variant_duplicates(entry, [{**comparison_row(entry), "id": "other-bank-question"}], parent)["passed"]
     renamed = deepcopy(parent["entry"])
     renamed["candidate_id"] = entry["candidate_id"]
+    renamed["variant"] = entry["variant"]
     renamed["stem"] = renamed["stem"].replace("retailer", "museum")
     assert not variant_duplicates(renamed, [], parent)["passed"]
 
@@ -235,3 +236,148 @@ def test_request_export_retains_variant_context_and_binding(parents, tmp_path):
     original = (tmp_path / entry["external_judge_request"]["path"]).read_bytes()
     export_requests(tmp_path / "variants.json")
     assert (tmp_path / entry["external_judge_request"]["path"]).read_bytes() == original
+
+
+
+def historical_reject(payload, artifact):
+    """Match the first A/B: written questions, old 0.20 policy, no judge requests."""
+    payload.pop("family_stem_threshold")
+    for entry in payload["candidates"]:
+        entry["variant"].pop("family_stem_threshold")
+        entry["variant"]["parent_stem_threshold"] = 0.20
+        request = entry.pop("external_judge_request", None)
+        if request:
+            (artifact.parent / request["path"]).unlink()
+        entry.update(status="generation_failed", failure_stage="near_duplicate", awaiting_external_judge=False)
+    artifact.write_text(json.dumps(payload))
+
+
+def test_family_stem_threshold_and_key_diagnostics(parents, tmp_path):
+    result = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
+    entry = result["candidates"][0]; parent = result["variant_parents"][entry["parent_question_id"]]
+    sibling = deepcopy(entry)
+    sibling["candidate_id"] = "sibling"
+    # Jaccard 0.3, same answer => strict generic guard rejects; family must pass.
+    entry["stem"] = "alpha beta gamma delta epsilon zeta"
+    sibling["stem"] = "alpha beta gamma theta iota kappa lambda"
+    from shared.near_duplicates import comparison_row, check_near_duplicate
+    row = comparison_row(sibling)
+    assert not check_near_duplicate(entry, [row])["passed"]
+    result = variant_duplicates(entry, [row], parent, siblings=[sibling])
+    assert result["passed"]
+    assert result["max_family_stem_similarity"] == pytest.approx(.3)
+    assert result["family_similarity"][-1]["key_score"] == 1
+    assert not variant_duplicates(entry, [row], parent)["passed"]  # unknown family remains strict
+    entry["variant"]["family_stem_threshold"] = .3
+    assert not variant_duplicates(entry, [row], parent, siblings=[sibling])["passed"]
+
+
+def test_rejudge_old_reject_no_writer_calls_and_full_judge_submission(parents, tmp_path, monkeypatch):
+    from scripts import variants_ab
+    from scripts.judge_requests import Summary
+    import sys
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
+    artifact = tmp_path / "variants.json"
+    historical_reject(payload, artifact)
+    original = candidate_question(payload["candidates"][0])
+    monkeypatch.setattr(variants_ab, "generate", Mock(side_effect=AssertionError("No regeneration")))
+    def judges(requests, verdicts, **kwargs):
+        frozen = json.loads(artifact.read_text())["candidates"][0]
+        assert kwargs["full_gate_sample"] == 1
+        assert kwargs["argon_gate"] is True
+        assert kwargs["candidate_ids"] == [frozen["candidate_id"]]
+        verdict_for(frozen, tmp_path)
+        rows = [{"stage": stage, "input_tokens": 20, "output_tokens": 10}
+                for stage in ("variant_write", "judge_style", "judge_evidence", "judge_blind", "argon_review")]
+        artifact.with_suffix(".json.calls.jsonl").write_text("\n".join(json.dumps(r) for r in rows))
+        return Summary(completed=1)
+    mock = Mock(side_effect=judges)
+    monkeypatch.setattr("scripts.judge_requests.run_requests", mock)
+    monkeypatch.setattr(sys, "argv", ["variants_ab.py", "rejudge", "--allow-live", "--artifact", str(artifact), "--review-pairs", "3"])
+    variants_ab.main()
+    assert mock.call_count == 1
+    saved = json.loads(artifact.read_text())
+    entry = saved["candidates"][0]
+    assert candidate_question(entry) == original
+    assert saved["family_stem_threshold"] == .45
+    assert entry["near_duplicate_check"]["passed"]
+    assert entry["status"] == "awaiting_external_judge"
+    assert (tmp_path / "variants.pairs.md").exists()
+    for option in entry["options"]:
+        assert option["text"] in (tmp_path / "variants.pairs.md").read_text()
+    result = json.loads((tmp_path / "variants.report.json").read_text())
+    assert result["all_gate_passed"] == 1
+    assert result["tokens"]["tokens_per_gate_pass"] == 150
+    assert all(v is not None for v in result["historical_saving_factors"].values())
+    assert result["b28_generation_only_saving_factor"] > 1
+    assert result["family_similarity"][0]["max_family_stem_similarity"] < .45
+    assert result["gates"]["near_duplicate"]["passed"] == 1
+
+
+def test_rejudge_rejects_changed_request_before_policy_change(parents, tmp_path):
+    from scripts.variants_ab import prepare_rejudge
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
+    entry = payload["candidates"][0]
+    (tmp_path / entry["external_judge_request"]["path"]).write_text("{}")
+    original = (tmp_path / "variants.json").read_bytes()
+    with pytest.raises(ValueError): prepare_rejudge(tmp_path / "variants.json")
+    assert (tmp_path / "variants.json").read_bytes() == original
+
+
+@pytest.mark.parametrize("threshold", [0, -1, 2, float("nan"), True])
+def test_family_invalid_threshold_rejected(threshold):
+    from shared.variants import family_threshold
+    with pytest.raises(ValueError): family_threshold(threshold)
+
+
+
+def test_rejudge_ineligible_existing_request_is_retained_but_not_submitted(parents, tmp_path):
+    from scripts.variants_ab import prepare_rejudge
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
+    artifact = tmp_path / "variants.json"
+    eligible = prepare_rejudge(artifact, threshold=.01)
+    assert eligible == []
+    saved = json.loads(artifact.read_text())["candidates"][0]
+    assert not saved["awaiting_external_judge"]
+    assert saved["status"] == "generation_failed"
+    assert saved["failure_stage"] == "near_duplicate"
+    assert not saved["near_duplicate_check"]["passed"]
+    assert (tmp_path / saved["external_judge_request"]["path"]).exists()
+    ingest._validate_candidate(artifact, json.loads(artifact.read_text()), saved)
+
+
+
+def test_rejudge_runner_executes_every_gate_even_if_style_fails(parents, tmp_path, monkeypatch):
+    from scripts import variants_ab, judge_requests
+    from shared.argon_gate import MODEL
+    from shared.call_logging import model_call
+    import sys
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
+    artifact = tmp_path / "variants.json"
+    historical_reject(payload, artifact)
+    question = candidate_question(payload["candidates"][0])
+    outputs = bundle(question)
+    outputs["style"]["verdict"] = "FAIL"
+    called = []
+    def claude(model, prompt, schema):
+        gate = next(k for k in ("style", "evidence", "blind_solver")
+                    if schema == json.loads(next((tmp_path / "variants.judge-requests").glob("*.json")).read_text())["gates"][k]["verdict_schema"])
+        called.append(gate)
+        with model_call(model) as usage:
+            usage.update(input_tokens=10, output_tokens=5)
+        return outputs[gate]
+    def argon(request):
+        called.append("argon")
+        with model_call(MODEL) as usage:
+            usage.update(input_tokens=10, output_tokens=5)
+        return {"model": MODEL, "version": 2, "request_sha256": canonical_sha256(request),
+            "review": {"verdict": "PASS", "key_correct": True, "other_defensible_option": False,
+                       "issues": [], "fix": "No changes needed"}}
+    monkeypatch.setattr(judge_requests.cli_models, "run_claude_request", claude)
+    monkeypatch.setattr(judge_requests.argon, "run_argon", argon)
+    monkeypatch.setattr(variants_ab, "generate", Mock(side_effect=AssertionError("No regeneration")))
+    monkeypatch.setattr(sys, "argv", ["variants_ab.py", "rejudge", "--allow-live", "--artifact", str(artifact)])
+    variants_ab.main()
+    assert called == ["style", "evidence", "blind_solver", "argon"]
+    result = json.loads((tmp_path / "variants.report.json").read_text())
+    assert all(result["gates"][k]["measured"] == 1 for k in ("style", "evidence", "blind_solver", "argon"))

@@ -75,6 +75,8 @@ def load_export(path, *, cert_id=None):
             if provenance != cert_id:
                 raise ValueError("Export must contain only the selected certification with exam provenance")
         selected.append({**comparison_row(row),
+                         **({"parent_question_id": row["parent_question_id"]}
+                            if isinstance(row.get("parent_question_id"), str) and row["parent_question_id"].strip() else {}),
                          **({"cert_id": provenance} if provenance is not None else {}),
                          **({"objective_id": row["objective_id"]} if isinstance(row.get("objective_id"), str) and row["objective_id"].strip() else {})})
     if len({row["id"] for row in selected}) != len(selected):

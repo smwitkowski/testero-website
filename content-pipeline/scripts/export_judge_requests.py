@@ -103,6 +103,10 @@ def _build_outputs(artifact, out, payload, *, force):
             # This snapshot belongs to the lineage journal; even --force cannot alter it.
             ingestion._validate_candidate(artifact, payload, entry)
             continue
+        variant_rejected = ("variant" in entry and (entry.get("schema_check", {}).get("passed") is False
+                or entry.get("near_duplicate_check", {}).get("passed") is False))
+        if variant_rejected and "external_judge_request" not in entry:
+            continue
         waiting = entry.get("status") == "awaiting_external_judge" or entry.get("awaiting_external_judge") is True
         if not waiting and "external_judge_request" not in entry:
             continue
@@ -143,11 +147,13 @@ def _build_outputs(artifact, out, payload, *, force):
                 "path": str(destination.relative_to(artifact.parent)),
                 "sha256": hashlib.sha256(raw).hexdigest()}
             if force:
-                for field in ("external_verdict", "reason", "failure_stage"):
-                    entry.pop(field, None)
-                entry["judge_verdict"] = {"passed": False, "score": 0.0,
-                                          "reason": "Awaiting external judge", "model": "external"}
-                entry.update(status="awaiting_external_judge", awaiting_external_judge=True, accepted=False)
+                entry.pop("external_verdict", None)
+                if not variant_rejected:
+                    for field in ("reason", "failure_stage"):
+                        entry.pop(field, None)
+                    entry["judge_verdict"] = {"passed": False, "score": 0.0,
+                                              "reason": "Awaiting external judge", "model": "external"}
+                    entry.update(status="awaiting_external_judge", awaiting_external_judge=True, accepted=False)
             outputs.append((destination, raw))
             trimmed += int(request["trimming"]["enabled"])
         except (ValueError, KeyError, TypeError, StopIteration):

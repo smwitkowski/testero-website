@@ -14,7 +14,7 @@ from shared.option_order import canonical_evidence
 from shared.question_style import STYLE_INSTRUCTIONS
 
 VERSION = 1
-PARENT_STEM_THRESHOLD = 0.20
+FAMILY_STEM_THRESHOLD = 0.45
 SKELETON_FIELDS = ("decision_plan", "decision_proof", "decision_objective")
 INDUSTRIES = ("marine conservation", "performing arts", "water utilities", "agricultural equipment",
               "public transit", "sports broadcasting", "museum archives", "food distribution",
@@ -172,12 +172,18 @@ def render_prompt(inputs):
     return signature_prompt(VariantSignature, inputs)
 
 
-def lineage(parent, ordinal, surface):
+def family_threshold(value):
+    if type(value) not in (int, float) or not 0 < value <= 1:
+        raise ValueError("Family stem threshold must be in (0, 1]")
+    return value
+
+
+def lineage(parent, ordinal, surface, threshold=FAMILY_STEM_THRESHOLD):
     return {"version": VERSION, "parent_question_id": parent["question_id"],
             "parent_snapshot_sha256": canonical_sha256(parent),
             "decision_sha256": canonical_sha256(parent["scope"]["decision_plan"]),
             "ordinal": ordinal, "surface": surface,
-            "parent_stem_threshold": PARENT_STEM_THRESHOLD}
+            "family_stem_threshold": family_threshold(threshold)}
 
 
 def validate_variant(payload, entry):
@@ -186,12 +192,17 @@ def validate_variant(payload, entry):
             or payload.get("execution_policy") != "short_circuit_v1"):
         raise ValueError("Variants require opt-in provenance and mandatory independent Argon review")
     meta = entry.get("variant")
-    if not isinstance(meta, dict) or set(meta) != {"version", "parent_question_id", "parent_snapshot_sha256",
-            "decision_sha256", "ordinal", "surface", "parent_stem_threshold"}:
+    fields = {"version", "parent_question_id", "parent_snapshot_sha256",
+              "decision_sha256", "ordinal", "surface"}
+    if not isinstance(meta, dict) or set(meta) not in (fields | {"family_stem_threshold"}, fields | {"parent_stem_threshold"}):
         raise ValueError("Invalid variant metadata")
+    if "family_stem_threshold" in meta:
+        if family_threshold(meta["family_stem_threshold"]) != payload.get("family_stem_threshold"):
+            raise ValueError("Variant family threshold differs from the frozen artifact policy")
+    elif meta["parent_stem_threshold"] != 0.20 or "family_stem_threshold" in payload:
+        raise ValueError("Invalid historical variant policy")
     if (meta["version"] != VERSION or type(meta["version"]) is not int
             or type(meta["ordinal"]) is not int or meta["ordinal"] < 1
-            or meta["parent_stem_threshold"] != PARENT_STEM_THRESHOLD
             or entry.get("parent_question_id") != meta["parent_question_id"]):
         raise ValueError("Invalid variant version or parent")
     parent = payload["variant_parents"][meta["parent_question_id"]]
@@ -233,18 +244,27 @@ def validate_variant(payload, entry):
                 raise ValueError("Sibling industry or setting repeated")
 
 
-def variant_duplicates(entry, existing, parent):
-    """Only the exact parent uses stem-only diversity; siblings/bank stay strict."""
-    ident = parent["question_id"]
-    result = check_near_duplicate(entry, existing, exclude=(entry["candidate_id"], ident))
+def variant_duplicates(entry, existing, parent, *, siblings=()):
+    """Keep the bank veto; family scenarios gate on stem alone, never shared key logic."""
+    meta = entry["variant"]
+    threshold = family_threshold(meta.get("family_stem_threshold", meta.get("parent_stem_threshold")))
+    family = {parent["question_id"]: comparison_row(parent["entry"])}
+    for sibling in siblings:
+        if sibling.get("parent_question_id") == parent["question_id"] and sibling.get("options"):
+            family[sibling["candidate_id"]] = comparison_row(sibling)
+    for row in existing:
+        if row.get("parent_question_id") == parent["question_id"]:
+            family[row["id"]] = row
+    result = check_near_duplicate(entry, existing, exclude=(*family, entry["candidate_id"]))
     row = comparison_row(entry)
-    original = comparison_row(parent["entry"])
-    scores = similarity(row["stem"], row["key"], original["stem"], original["key"])
-    result["parent_similarity"] = scores
-    result["parent_stem_threshold"] = PARENT_STEM_THRESHOLD
-    if scores["stem_score"] >= PARENT_STEM_THRESHOLD:
-        result["passed"] = False
-        result["reason"] = "Variant scenario is too similar to its parent"
+    scores = [{"matched_id": ident, **similarity(row["stem"], row["key"], other["stem"], other["key"])}
+              for ident, other in family.items() if ident != entry["candidate_id"]]
+    result.update(family_stem_threshold=threshold, family_similarity=scores,
+                  max_family_stem_similarity=max(s["stem_score"] for s in scores),
+                  parent_similarity=next(s for s in scores if s["matched_id"] == parent["question_id"]))
+    result["family_matches"] = [s for s in scores if s["stem_score"] >= threshold]
+    if result["family_matches"]:
+        result.update(passed=False, reason="Variant scenario is too similar to its family")
     return result
 
 
@@ -256,5 +276,5 @@ def review_context(meta, parent):
             "different decision. Confirm materially different industry, setting, opening and moment. "
             "A rename or changed numbers is insufficient. Mark evidence_supported/scenario_relevant "
             "false when these invariants fail (Argon: REVISE/REJECT). Frozen parent:\n"
-            + json.dumps({"question": parent["question"], "decision_plan": parent["scope"]["decision_plan"],
-                          "decision_proof": parent["scope"]["decision_proof"], "variant": meta}, ensure_ascii=False))
+            + json.dumps({"parent_stem": parent["question"]["stem"], "decision_plan": parent["scope"]["decision_plan"],
+                          "variant": meta}, ensure_ascii=False, separators=(",", ":")))

@@ -10,7 +10,13 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.generate_variants import generate
-from scripts.ingest_external_verdicts import _read_json, _validate_candidate, _external_decision
+from scripts.ingest_external_verdicts import (_read_json, _validate_candidate, _external_decision,
+    _scope, artifact_lock, _flush)
+from shared.variants import FAMILY_STEM_THRESHOLD, family_threshold, validate_variant, variant_duplicates
+from shared.validator import validate_question
+from shared.option_order import canonical_evidence
+from shared.evidence import check_evidence
+from shared.external_judge import candidate_storage_id, validate_candidate_records
 from shared.external_judge import request_directory, candidate_question
 from shared.gates import evaluate_gate, blind_choice_map
 from shared.near_duplicates import similarity, comparison_row
@@ -46,7 +52,7 @@ def report(artifact, verdicts):
     counts = {name: Counter() for name in ("schema", "near_duplicate", "style", "evidence", "blind_solver", "argon")}
     accuracy, argon_revise, argon_n = 0, 0, 0
     accepted, errors = [], []
-    parent_scores, sibling_scores = [], []
+    parent_scores, sibling_scores, family_scores = [], [], []
     pairs = []
     for entry in payload["candidates"]:
         ident = entry["candidate_id"]
@@ -63,6 +69,11 @@ def report(artifact, verdicts):
             row, original = comparison_row(entry), comparison_row(parent["entry"])
             parent_scores.append({"candidate_id": ident, "parent_question_id": entry["parent_question_id"],
                 **similarity(row["stem"], row["key"], original["stem"], original["key"])})
+            duplicate = variant_duplicates(entry, payload["existing_questions"]["questions"], parent,
+                                            siblings=payload["candidates"])
+            family_scores.append({"candidate_id": ident,
+                "max_family_stem_similarity": duplicate["max_family_stem_similarity"],
+                "family_stem_threshold": duplicate["family_stem_threshold"]})
             raw_path = verdicts / (ident + ".json")
             if not raw_path.exists():
                 continue
@@ -92,10 +103,9 @@ def report(artifact, verdicts):
             decision = _external_decision(question, scope, entry["sources"], checked["options"], raw,
                 payload["model"], gate_version=2, rules_version=5, argon_request=request["argon"])
             # Recompute diversity rather than trusting saved generation booleans.
-            from shared.variants import variant_duplicates
             others = payload["existing_questions"]["questions"] + [comparison_row(e)
                 for e in payload["candidates"] if e.get("variant") and e is not entry and e.get("options")]
-            if decision.passed and variant_duplicates(entry, others, parent)["passed"]:
+            if decision.passed and variant_duplicates(entry, others, parent, siblings=payload["candidates"])["passed"]:
                 accepted.append(ident)
                 if len(pairs) < 3 and not any(p["parent_question_id"] == entry["parent_question_id"] for p in pairs):
                     pairs.append({"parent_question_id": entry["parent_question_id"], "candidate_id": ident,
@@ -148,20 +158,117 @@ def report(artifact, verdicts):
             "b28_generation_only_saving_factor": (BASELINES["b28_generation_tokens_per_accepted"] / generation_cost
                                                    if generation_cost else None),
             "parent_similarity": parent_scores, "sibling_similarity": sibling_scores,
+            "family_similarity": family_scores,
             "human_review_pairs": pairs}
+
+
+def prepare_rejudge(artifact, *, threshold=FAMILY_STEM_THRESHOLD):
+    """Rebuild existing questions' requests offline; archive prior verdicts, never regenerate."""
+    from scripts.export_judge_requests import export_requests
+    threshold = family_threshold(threshold)
+    artifact = Path(artifact).absolute()
+    with artifact_lock(artifact):
+        payload = _read_json(artifact)
+        if (payload.get("variant_mode") != 1 or payload.get("generation_runs")
+                or payload.get("external_run_journal")
+                or any(e.get("persistence_status") is not None or e.get("inserted_question_id") is not None
+                       for e in payload["candidates"])):
+            raise ValueError("Rejudge requires an unpersisted variant artifact")
+        validate_candidate_records(payload)
+        # Verify the OLD policy/lineage before explicitly changing only its threshold.
+        for entry in payload["candidates"]:
+            _scope(payload, entry)
+            if "variant" in entry:
+                validate_variant(payload, entry)
+                if entry.get("external_judge_request"):
+                    _validate_candidate(artifact, payload, entry)
+            elif entry.get("options"):
+                raise ValueError("Written variant is missing frozen lineage")
+        payload["family_stem_threshold"] = threshold
+        for entry in payload["candidates"]:
+            if "variant" not in entry:
+                continue
+            meta = entry["variant"]
+            meta.pop("parent_stem_threshold", None)
+            meta["family_stem_threshold"] = threshold
+            validate_variant(payload, entry)
+            scope = _scope(payload, entry)
+            question = candidate_question(entry)
+            candidate_storage_id(entry, scope, question)
+            validation = validate_question(question)
+            checked = check_evidence(canonical_evidence(entry), entry["sources"])
+            if not checked["passed"] or checked["options"] != canonical_evidence(entry):
+                raise ValueError("Frozen evidence changed")
+            entry["schema_check"] = {"passed": validation.is_valid, "errors": validation.errors,
+                                     "warnings": validation.warnings}
+            parent = payload["variant_parents"][entry["parent_question_id"]]
+            bank_and_others = payload["existing_questions"]["questions"] + [comparison_row(e)
+                for e in payload["candidates"] if e.get("options") and e is not entry]
+            duplicate = variant_duplicates(entry, bank_and_others, parent, siblings=payload["candidates"])
+            entry["near_duplicate_check"] = duplicate
+            # Old verdicts remain archived by export, never used as new-policy passes.
+            entry["accepted"] = False
+            entry["awaiting_external_judge"] = validation.is_valid and duplicate["passed"]
+            if entry["awaiting_external_judge"]:
+                entry.update(status="awaiting_external_judge", mechanical_check={"passed": True, "errors": []})
+                for field in ("failure_stage", "reason", "error_class", "error_message", "external_verdict"):
+                    entry.pop(field, None)
+            else:
+                entry.update(status="generation_failed", failure_stage="schema" if not validation.is_valid else "near_duplicate")
+        _flush(artifact, payload)
+    # Existing exporter owns safe atomic requests, locks, digests and verdict archives.
+    export_requests(artifact, force=True)
+    payload = _read_json(artifact)
+    return [e["candidate_id"] for e in payload["candidates"] if e.get("awaiting_external_judge")]
+
+
+def review_pairs(artifact, output, count=3):
+    """Print three complete stored parent/variant questions, even before judging."""
+    if type(count) is not int or count < 1:
+        raise ValueError("Review pair count must be positive")
+    payload = _read_json(artifact)
+    chosen, families = [], set()
+    for entry in payload["candidates"]:
+        if not entry.get("variant") or not entry.get("options") or entry["parent_question_id"] in families:
+            continue
+        families.add(entry["parent_question_id"])
+        chosen.append(entry)
+        if len(chosen) == count:
+            break
+    lines = ["# Parent / variant review", "", "Keys are shown for founder review; these are not publication approvals.", ""]
+    for index, entry in enumerate(chosen, 1):
+        parent = payload["variant_parents"][entry["parent_question_id"]]
+        duplicate = variant_duplicates(entry, payload["existing_questions"]["questions"], parent,
+                                       siblings=payload["candidates"])
+        lines += [f"## Pair {index}", "", f"Max family stem Jaccard: {duplicate['max_family_stem_similarity']:.4f}", ""]
+        for heading, question in (("Parent", parent["entry"]), ("Variant", entry)):
+            lines += [f"### {heading} `{question['candidate_id']}`", "", question["stem"], ""]
+            lines += [f"- **{o['label']}**: {o['text']}" for o in question["options"]]
+            lines += ["", f"**Key: {question['key']}**", ""]
+    Path(output).write_text("\n".join(lines) + "\n")
+    return len(chosen)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("prepare", "run", "report"))
+    parser.add_argument("mode", choices=("prepare", "run", "report", "rejudge", "pairs"))
     parser.add_argument("--parent-dir", type=Path)
     parser.add_argument("--bank", type=Path)
     parser.add_argument("--artifact", type=Path, required=True)
     parser.add_argument("--allow-live", action="store_true")
+    parser.add_argument("--family-stem-threshold", type=float, default=FAMILY_STEM_THRESHOLD)
+    parser.add_argument("--review-pairs", type=int, default=3)
+    parser.add_argument("--pairs-output", type=Path, help="Markdown review output (default beside artifact).")
     args = parser.parse_args()
     if args.artifact.suffix != ".json":
         parser.error("--artifact must end in .json for shared writer/judge telemetry")
     os.environ["PYTHON_DOTENV_DISABLED"] = "1"
+    family_threshold(args.family_stem_threshold)
+    pairs_output = args.pairs_output or args.artifact.with_name(args.artifact.stem + ".pairs.md")
+    if args.mode == "pairs":
+        review_pairs(args.artifact, pairs_output, args.review_pairs)
+        print(pairs_output)
+        return
     verdicts = args.artifact.with_name(args.artifact.stem + ".verdicts")
     if args.mode in ("prepare", "run"):
         if args.parent_dir is None:
@@ -171,7 +278,8 @@ def main():
         artifact_paths = [args.parent_dir / name for name, _ in PARENTS]
         ids = [ident for _, ident in PARENTS]
         payload = generate(artifact_paths, ids, args.bank or args.parent_dir / BANK, args.artifact,
-                           variants_per_parent=3, enable_variants=args.mode == "run")
+                           variants_per_parent=3, enable_variants=args.mode == "run",
+                           family_stem_threshold=args.family_stem_threshold)
         if args.mode == "prepare":
             print(json.dumps({k: v for k, v in payload["dry_run"].items() if k != "prompts"}, indent=2))
             return
@@ -181,6 +289,17 @@ def main():
                                   argon_gate=True, full_gate_sample=1)
             if result.failed or result.usage_stopped:
                 print("Judge errors/stops: inspect receipts before any retry", file=sys.stderr)
+    if args.mode == "rejudge":
+        if not args.allow_live:
+            parser.error("rejudge requires --allow-live; existing questions are never regenerated")
+        eligible = prepare_rejudge(args.artifact, threshold=args.family_stem_threshold)
+        if eligible:
+            from scripts.judge_requests import run_requests
+            result = run_requests(request_directory(args.artifact), verdicts, judge_model="claude", parallel=3,
+                                  argon_gate=True, full_gate_sample=1, candidate_ids=eligible)
+            if result.failed or result.usage_stopped:
+                print("Judge errors/stops: inspect receipts before retrying", file=sys.stderr)
+    review_pairs(args.artifact, pairs_output, args.review_pairs)
     result = report(args.artifact, verdicts)
     output = args.artifact.with_name(args.artifact.stem + ".report.json")
     output.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n")

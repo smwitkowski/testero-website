@@ -25,7 +25,7 @@ from shared.option_order import store_options
 from shared.quality_gate import QUESTION_FIELDS
 from shared.validator import validate_question
 from shared.variants import (parent_snapshot, writer_inputs, write_variant, render_prompt, lineage,
-                             validate_variant, variant_duplicates, SKELETON_FIELDS)
+                             validate_variant, variant_duplicates, SKELETON_FIELDS, FAMILY_STEM_THRESHOLD, family_threshold)
 
 
 def select_parents(artifacts, ids, bank_path):
@@ -70,8 +70,9 @@ def build_plan(parents, count):
     return plan, assignments
 
 def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable_variants=False,
-             model="codex", effort="low", predictor=None):
+             model="codex", effort="low", predictor=None, family_stem_threshold=FAMILY_STEM_THRESHOLD):
     os.environ["PYTHON_DOTENV_DISABLED"] = "1"
+    family_stem_threshold = family_threshold(family_stem_threshold)
     output = Path(output).absolute()
     requests = request_directory(output)
     calls = output.with_suffix(output.suffix + ".calls.jsonl")
@@ -85,7 +86,7 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
                "external_judge_version": 2, "rules_version": 5, "style_policy_version": "5.1",
                "execution_policy": "short_circuit_v1", "argon_gate": True,
                "difficulty": "MEDIUM", "exam": "GCP_PM_ML_ENG", "generation_runs": {},
-               "variant_mode": 1, "variant_parents": {p["question_id"]: p for p in parents},
+               "variant_mode": 1, "family_stem_threshold": family_stem_threshold, "variant_parents": {p["question_id"]: p for p in parents},
                "existing_questions": bank, "plan": plan, "candidates": [],
                "variant_attempts": [], "offline": not enable_variants}
     if "distractor_evidence" in parents[0]["scope"]:
@@ -122,7 +123,7 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
             raw = output_model(VariantSignature).model_validate(raw).model_dump()
             question = clean_question(raw)
             entry.update(candidate_id=candidate_id(index, scope, question), stem=question["stem"],
-                         variant=lineage(parent, ordinal, {k: raw[k] for k in ("industry", "setting")}))
+                         variant=lineage(parent, ordinal, {k: raw[k] for k in ("industry", "setting")}, family_stem_threshold))
             store_options(entry, question, parent["evidence"])
             payload["candidates"].append(entry)
             validate_variant(payload, entry)
@@ -131,7 +132,7 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
                                      "warnings": validation.warnings}
             if not validation.is_valid:
                 raise ValueError("Variant failed schema/mechanical style validation")
-            duplicate = variant_duplicates(entry, seen, parent)
+            duplicate = variant_duplicates(entry, seen, parent, siblings=payload["candidates"])
             entry["near_duplicate_check"] = duplicate
             if not duplicate["passed"]:
                 entry["failure_stage"] = "near_duplicate"
@@ -181,6 +182,7 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
 @click.option("--existing-questions", "bank_path", required=True, type=click.Path(exists=True, path_type=Path))
 @click.option("--artifact", "output", required=True, type=click.Path(path_type=Path))
 @click.option("--variants-per-parent", default=3, type=click.IntRange(1, 5), show_default=True)
+@click.option("--family-stem-threshold", default=FAMILY_STEM_THRESHOLD, type=click.FloatRange(min=0, max=1, min_open=True), show_default=True)
 @click.option("--enable-variants", is_flag=True, help="Opt in to live writer calls; default renders prompts offline.")
 @click.option("--model", default="codex", show_default=True)
 @click.option("--effort", default="low", type=click.Choice(["low", "medium", "high"]))

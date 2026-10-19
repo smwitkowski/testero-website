@@ -500,7 +500,7 @@ def ingest(path, verdicts, *, dry_run=False):
                 if "variant" in entry:
                     from shared.variants import variant_duplicates
                     duplicate = variant_duplicates(entry, near_seen,
-                        payload["variant_parents"][entry["parent_question_id"]])
+                        payload["variant_parents"][entry["parent_question_id"]], siblings=payload["candidates"])
                 else:
                     duplicate = check_near_duplicate(entry, near_seen,
                         exclude=(ident, entry.get("repair", {}).get("parent_candidate_id")))

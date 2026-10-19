@@ -24,9 +24,14 @@ existing evidence and Argon reviews; this is semantic model enforcement, not a
 perfect deterministic detector. Blind solver gets no parent/key/explanations.
 All variants require Claude style/evidence/blind **and Argon** (no production
 sampling relaxation). Existing deterministic shuffle and ingest key balancing
-retain receipt/rationale associations. Parent-only stem Jaccard threshold is
-**<0.20** (`PARENT_STEM_THRESHOLD`); unchanged bank/sibling veto remains
-`min(stem, key) >= 0.20`. Merely renaming the parent fails the diversity check.
+retain receipt/rationale associations. Family (parent + siblings) stem Jaccard must be **<0.45** by default
+(`FAMILY_STEM_THRESHOLD`, configurable `--family-stem-threshold`). Key similarity
+is reported, not gated within a family. The **non-family** bank veto remains
+unchanged: `min(stem, key) >= 0.20`. Each variant reports maximum family stem
+similarity. Supplied bank exports may carry `parent_question_id` to recognize
+published siblings; rows without family metadata conservatively remain non-family.
+Merely renaming the parent still fails. Threshold and sibling checks are frozen
+and revalidated through generation, rejudge, report and ingest.
 
 Lineage persists under existing `review_notes.grounding.parent_question_id` and
 `.variant`; no new DB column or migration is needed. The app must later cap
@@ -103,3 +108,46 @@ Denominators/scopes differ. Compare generation-only stages to b28 generation,
 all-model totals to A/B totals. Saving factors are indicative historical ratios,
 not causal A/B evidence. Approve only after a complete usage audit, ≥5× target
 check, all invariant gates and human comparison of the 3 pairs.
+
+## Recover the existing 18-variant A/B (no regeneration)
+
+Coordinator reported 587,568 writer input/output tokens across all 18 questions;
+the original 0.20 policy rejected all before independent gates. That is not
+acceptance or quality evidence. The approved change uses **family stem <0.45**;
+non-family bank policy stays strict.
+
+Exact coordinator-only command (not run live by this worker):
+
+```sh
+cd /Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline && PYTHON_DOTENV_DISABLED=1 uv run python scripts/variants_ab.py rejudge --allow-live --artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-live.json --family-stem-threshold 0.45 --review-pairs 3
+```
+
+`rejudge` validates existing frozen lineage/evidence and any existing request
+before changing the threshold. It recomputes schema and family/non-family
+similarity for the complete cohort, rebuilds hash-locked requests and archives
+prior verdicts with the existing exporter. No writer, planner, retrieval or DB
+call. The recovery path targets schema-valid stored questions; a linked request
+whose stored question no longer passes schema validation fails closed. All eligible IDs run style → evidence against parent → blind → Argon with
+`full_gate_sample=1`, even when an earlier quality gate fails. Provider errors
+can still stop execution; inspect failure receipts, not just report counts.
+
+Writer telemetry remains in the original `.calls.jsonl`; new gate calls append
+there. Report fills `tokens.tokens_per_gate_pass` and historical saving factors
+when at least one question passes and all expected usage is present. Zero passes
+or missing usage correctly leaves these null, not zero or fabricated savings.
+
+`--review-pairs 3` writes `<artifact-stem>.pairs.md`: full parent and variant stems,
+stored A-D options and keys, plus maximum family stem score. Pairs are drawn from
+three different families, including candidates awaiting/failed review; they are
+not silently labeled accepted. Use `pairs --artifact <path> --review-pairs 3` to
+write the Markdown offline without rejudging; `--pairs-output <path>` overrides
+its location.
+
+Offline replay on an untouched-question copy of the real cohort produced
+**15 eligible requests /18**, with **3 retained family rejections** (see
+`rejudge-preflight.json`; full founder pairs are in `review-pairs.md`; maximum
+family stem Jaccard 0.50685). All 15 requests fit the unchanged 150,000-character
+limit (max 147,224) by including parent stem + complete decision plan instead of
+repeating full parent rationales/proof in review context. Frozen source windows,
+all evidence and every independent rubric are unchanged. No live judgments were
+run by the worker.
