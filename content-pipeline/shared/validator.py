@@ -32,6 +32,46 @@ GCP_SERVICES = [
 ]
 
 
+# Technical terms outside the registry service vocabulary; never learned from a
+# candidate or source text, which could whitelist its invented organization.
+_TECHNICAL_STEM_TERMS = (
+    "Google Cloud", "Google", "SQL", "ML", "AI", "CPU", "GPU", "API", "HTTP", "HTTPS",
+    "JSON", "CSV", "SDK", "SLA", "SLO", "KPI", "PII", "ETL", "IAM", "I/O",
+    "Python", "Java", "JavaScript", "R", "Linux", "Docker", "Kubernetes", "Git",
+    "GitHub", "GitLab", "Jenkins", "MLflow", "TFX", "TensorBoard", "Apache Beam",
+    "Apache Hadoop", "Apache Airflow", "XGBoost", "scikit-learn", "REST", "RPC", "gRPC",
+    "TCP", "TLS", "SSL", "DNS", "IP", "URL", "URI", "OAuth", "OIDC", "JWT",
+    "ID", "IDs", "PDF", "OCR", "NLP", "LLM", "LLMs", "RMSE", "AUC", "ROC",
+    "MAE", "MSE", "F1", "GB", "TB", "MB", "RAM", "SSD", "UTC",
+)
+
+
+def has_invented_organization_name(stem: str) -> bool:
+    """Flag unexplained proper names in industry-only variant stems, not entity recognition."""
+    from shared.cert_context import services_in_text
+    if re.search(r"\b(?:organization|organisation|company|team|operator)(?:\s+(?:is\s+)?(?:called|named)\s+\w|,\s*(?!which\b|after\b|before\b|while\b|where\b|with\b|a\b|an\b|the\b)[A-Za-z][\w-]*(?:\s+(?-i:[A-Z][\w-]*))*\s*,)", stem, re.I):
+        return True
+    masked = stem
+    terms = (*services_in_text(stem), *_TECHNICAL_STEM_TERMS)
+    for term in sorted(terms, key=len, reverse=True):
+        masked = re.sub(r"(?<!\w)" + re.escape(term) + r"(?!\w)",
+                        lambda m: "_" * len(m.group()), masked)
+    for match in re.finditer(r"\b[A-Za-z][A-Za-z0-9]*(?:[-'][A-Za-z0-9]+)*\b", masked):
+        word = match.group()
+        if not word[0].isupper():
+            continue
+        before = masked[:match.start()].rstrip()
+        sentence_start = not before or before[-1] in ".!?"
+        # Ordinary sentence-leading words (You, Curators, Which) are not names.
+        # Mixed capitals and organization-as-subject openings remain suspect.
+        if sentence_start and (word.istitle() or word in ("A", "I")):
+            after = masked[match.end():]
+            if word in ("You", "It", "This", "That", "Which", "What", "Who", "How") or not re.match(r"\s+(?:operates|provides|owns|employs|specializes|uses|needs|runs|Inc\b|Corp\b|Ltd\b)", after):
+                continue
+        return True
+    return False
+
+
 @dataclass
 class ValidationResult:
     """Result of question validation."""
@@ -177,7 +217,7 @@ def option_length_metrics(question_data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
+def validate_question(question_data: Dict[str, Any], *, industry_only: bool = False) -> ValidationResult:
     """Validate LLM-generated question data against quality rubric.
     
     Validates:
@@ -245,6 +285,9 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
         structural_score -= 1.0
     else:
         stem = stem.strip()
+        if industry_only and has_invented_organization_name(stem):
+            errors.append("Variant stem must describe an industry, not name an invented organization")
+            style_score -= 0.2
         stem_length = len(stem)
         word_count = len(stem.split())
         sentence_count = len(re.findall(r'[.!?]+', stem))

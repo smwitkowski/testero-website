@@ -169,7 +169,7 @@ def _validate_candidate(path, payload, entry):
             from shared.variants import validate_variant
             validate_variant(payload, entry)
         stage = "schema"
-        if not validate_question(question).is_valid:
+        if not validate_question(question, industry_only="variant" in entry).is_valid:
             raise ValueError("Question schema validation failed")
         stage = "mechanical"
         checked = check_evidence(canonical_evidence(entry), entry.get("sources"))

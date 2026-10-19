@@ -122,7 +122,7 @@ def _build_outputs(artifact, out, payload, *, force):
             if "variant_origin" in scope or "variant" in entry or "parent_question_id" in entry:
                 from shared.variants import validate_variant
                 validate_variant(payload, entry)
-            if not validate_question(question).is_valid:
+            if not validate_question(question, industry_only="variant" in entry).is_valid:
                 raise ValueError()
             checked = check_evidence(canonical_evidence(entry), entry.get("sources"))
             if not checked["passed"] or checked["options"] != canonical_evidence(entry):

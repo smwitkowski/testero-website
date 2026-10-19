@@ -151,3 +151,45 @@ limit (max 147,224) by including parent stem + complete decision plan instead of
 repeating full parent rationales/proof in review context. Frozen source windows,
 all evidence and every independent rubric are unchanged. No live judgments were
 run by the worker.
+
+## Founder feedback: industry-only scenarios (2026-10-19)
+
+The earlier `review-pairs.md` is **rejected historical feedback evidence**, not an
+approved new sample. Do not rejudge/reuse its named-organization variants. Fresh
+variant plans now contain a deterministic `industry` slot. Parent-ID rotation
+spreads first choices across families; each family excludes recognized parent
+domain cues and gets distinct sibling industries. Writer `industry` must match
+the exact frozen slot; ingest recomputes that slot and rejects repeated family
+industries. The 12-industry vocabulary and <0.45 family threshold are unchanged.
+See `industry-preflight.json` for all 6 ×3 assignments (18 offline prompts).
+
+Writer instructions require generic industry/domain framing, not invented company,
+organization, team or project names (including acronyms/aliases). Industry and
+sibling content stays in the existing dynamic diversity input after the stable
+instructions and parent context; no per-question data is added to the reusable
+system prefix. Offline tests compare that prefix across changed industry/siblings.
+
+The variant-only schema check masks exact registry product spans and a fixed
+technical vocabulary, then rejects unexplained capitalized names, organization
+naming clauses and common name-as-subject patterns. It runs before expensive
+judges, and is rechecked during request building, export, rejudge and ingest.
+It deliberately does not change schema policy for original questions or require
+an entity model/API. This cheap heuristic is not exhaustive: ambiguous
+sentence-leading words, lowercase aliases and parent-domain synonyms can escape.
+Parent cue exclusion is also heuristic; the six-parent allocation receipt was
+reviewed against their water utility, transit, parcel logistics, municipal
+recordings, insurance and property-maintenance contexts. Full semantic compliance remains a
+writer + independent evidence/Argon review + founder review responsibility.
+
+Coordinator-only **fresh generation + all eligible independent gates in one go**:
+
+```sh
+cd /Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline && PYTHON_DOTENV_DISABLED=1 uv run python scripts/variants_ab.py run --allow-live --parent-dir /Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline/.cache/generation --artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.json --family-stem-threshold 0.45 --review-pairs 3
+```
+
+Use a fresh basename if that artifact exists. `run` writes one variant per slot,
+then judges eligible generated questions with style/evidence/blind/Argon and
+`full_gate_sample=1`, writes usage/acceptance reports and 3 complete review pairs.
+It is **not** a separate `rejudge` invocation: old questions cannot have their
+industry/organization content corrected without regeneration. No live calls
+were made for this change. Cost and unchanged-quality targets remain unproven.

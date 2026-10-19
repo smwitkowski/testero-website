@@ -126,12 +126,17 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
                          variant=lineage(parent, ordinal, {k: raw[k] for k in ("industry", "setting")}, family_stem_threshold))
             store_options(entry, question, parent["evidence"])
             payload["candidates"].append(entry)
-            validate_variant(payload, entry)
-            validation = validate_question(question)
+            entry["failure_stage"] = "schema"
+            validation = validate_question(question, industry_only=True)
+            if raw["industry"] != scope["industry"]:
+                validation.errors.append("Variant industry differs from its assigned plan industry")
+                validation.is_valid = False
             entry["schema_check"] = {"passed": validation.is_valid, "errors": validation.errors,
                                      "warnings": validation.warnings}
             if not validation.is_valid:
                 raise ValueError("Variant failed schema/mechanical style validation")
+            validate_variant(payload, entry)
+            entry.pop("failure_stage")
             duplicate = variant_duplicates(entry, seen, parent, siblings=payload["candidates"])
             entry["near_duplicate_check"] = duplicate
             if not duplicate["passed"]:

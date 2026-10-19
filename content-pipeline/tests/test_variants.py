@@ -66,6 +66,14 @@ VARIANT = {**QUESTION, "stem": "Your company operates a museum archive that iden
     "Which approach should you use?", "industry": "museum archives", "setting": "Photograph damage classification"}
 
 
+def variant_for(inputs):
+    question = deepcopy(VARIANT)
+    industry = json.loads(inputs["diversity"])["industry"]
+    question["industry"] = industry
+    question["stem"] = question["stem"].replace("museum archive", industry + " organization").replace("The archive", "The organization")
+    return question
+
+
 def generate(parents, tmp_path, **kwargs):
     artifact, export, payload, _ = parents
     return variants.generate([artifact], [payload["candidates"][0]["candidate_id"]], export,
@@ -103,7 +111,7 @@ def test_parent_restrictions_fail_closed(parents, defect):
 def test_one_writer_frozen_evidence_requests_blind_isolation_and_ingest(parents, tmp_path):
     calls = []
     result = generate(parents, tmp_path, enable_variants=True,
-                      predictor=lambda inputs: calls.append(inputs) or deepcopy(VARIANT))
+                      predictor=lambda inputs: calls.append(inputs) or variant_for(inputs))
     assert len(calls) == 1
     entry = result["candidates"][0]
     assert entry.get("failure_stage") is None, entry
@@ -116,13 +124,13 @@ def test_one_writer_frozen_evidence_requests_blind_isolation_and_ingest(parents,
     assert "VARIANT INVARIANTS" in request["argon"]["calls"]["review"]["judge_prompt"]
     assert "VARIANT INVARIANTS" not in request["gates"]["blind_solver"]["judge_prompt"]
     scope, question, checked = ingest._validate_candidate(tmp_path / "variants.json", result, entry)
-    assert question == {k: VARIANT[k] for k in QUESTION}
+    assert question == {k: variant_for(calls[0])[k] for k in QUESTION}
     assert checked["passed"]
 
 
 @pytest.mark.parametrize("defect", ["decision", "sources", "receipts", "parent_hash", "origin", "no_argon", "strip_lineage"])
 def test_ingest_blocks_changed_lineage_before_judging(parents, tmp_path, defect):
-    result = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
+    result = generate(parents, tmp_path, enable_variants=True, predictor=variant_for)
     entry = result["candidates"][0]
     if defect == "decision": entry["decision_plan"]["best_action"] += " changed"
     elif defect == "sources": entry["sources"][0]["text"] += " changed"
@@ -135,7 +143,7 @@ def test_ingest_blocks_changed_lineage_before_judging(parents, tmp_path, defect)
 
 
 def test_family_similarity_exception_nonfamily_bank_remains_strict(parents, tmp_path):
-    result = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
+    result = generate(parents, tmp_path, enable_variants=True, predictor=variant_for)
     entry = result["candidates"][0]; parent = result["variant_parents"][entry["parent_question_id"]]
     assert variant_duplicates(entry, [], parent)["passed"]
     from shared.near_duplicates import comparison_row
@@ -174,7 +182,7 @@ def verdict_for(entry, tmp_path):
 
 def test_report_counts_all_attempt_tokens_and_missing_usage(parents, tmp_path):
     from scripts.variants_ab import report
-    payload = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=variant_for)
     entry = payload["candidates"][0]
     verdicts = verdict_for(entry, tmp_path)
     calls = tmp_path / "variants.json.calls.jsonl"
@@ -201,7 +209,7 @@ def test_report_counts_all_attempt_tokens_and_missing_usage(parents, tmp_path):
 def test_ingest_dry_run_retains_grounding_lineage_and_rebalanced_evidence(parents, tmp_path, monkeypatch):
     client = Mock(side_effect=AssertionError("No database"))
     monkeypatch.setattr(ingest, "database_client", client)
-    payload = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=variant_for)
     entry = payload["candidates"][0]
     verdicts = verdict_for(entry, tmp_path)
     ingest.ingest(tmp_path / "variants.json", verdicts, dry_run=True)
@@ -231,7 +239,7 @@ def test_selection_rechecks_original_frozen_request_and_run(parents, tmp_path, d
 
 def test_request_export_retains_variant_context_and_binding(parents, tmp_path):
     from scripts.export_judge_requests import export_requests
-    payload = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=variant_for)
     entry = payload["candidates"][0]
     original = (tmp_path / entry["external_judge_request"]["path"]).read_bytes()
     export_requests(tmp_path / "variants.json")
@@ -253,7 +261,7 @@ def historical_reject(payload, artifact):
 
 
 def test_family_stem_threshold_and_key_diagnostics(parents, tmp_path):
-    result = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
+    result = generate(parents, tmp_path, enable_variants=True, predictor=variant_for)
     entry = result["candidates"][0]; parent = result["variant_parents"][entry["parent_question_id"]]
     sibling = deepcopy(entry)
     sibling["candidate_id"] = "sibling"
@@ -276,7 +284,7 @@ def test_rejudge_old_reject_no_writer_calls_and_full_judge_submission(parents, t
     from scripts import variants_ab
     from scripts.judge_requests import Summary
     import sys
-    payload = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=variant_for)
     artifact = tmp_path / "variants.json"
     historical_reject(payload, artifact)
     original = candidate_question(payload["candidates"][0])
@@ -316,7 +324,7 @@ def test_rejudge_old_reject_no_writer_calls_and_full_judge_submission(parents, t
 
 def test_rejudge_rejects_changed_request_before_policy_change(parents, tmp_path):
     from scripts.variants_ab import prepare_rejudge
-    payload = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=variant_for)
     entry = payload["candidates"][0]
     (tmp_path / entry["external_judge_request"]["path"]).write_text("{}")
     original = (tmp_path / "variants.json").read_bytes()
@@ -333,7 +341,7 @@ def test_family_invalid_threshold_rejected(threshold):
 
 def test_rejudge_ineligible_existing_request_is_retained_but_not_submitted(parents, tmp_path):
     from scripts.variants_ab import prepare_rejudge
-    payload = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=variant_for)
     artifact = tmp_path / "variants.json"
     eligible = prepare_rejudge(artifact, threshold=.01)
     assert eligible == []
@@ -352,7 +360,7 @@ def test_rejudge_runner_executes_every_gate_even_if_style_fails(parents, tmp_pat
     from shared.argon_gate import MODEL
     from shared.call_logging import model_call
     import sys
-    payload = generate(parents, tmp_path, enable_variants=True, predictor=lambda _: deepcopy(VARIANT))
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=variant_for)
     artifact = tmp_path / "variants.json"
     historical_reject(payload, artifact)
     question = candidate_question(payload["candidates"][0])
@@ -381,3 +389,124 @@ def test_rejudge_runner_executes_every_gate_even_if_style_fails(parents, tmp_pat
     assert called == ["style", "evidence", "blind_solver", "argon"]
     result = json.loads((tmp_path / "variants.report.json").read_text())
     assert all(result["gates"][k]["measured"] == 1 for k in ("style", "evidence", "blind_solver", "argon"))
+
+
+
+@pytest.mark.parametrize("stem", [
+    "Your organization, Reefward Conservancy, monitors coral damage.",
+    "You work for ReefWatch to classify reef photographs.",
+    "Your organization uses StageKeep for maintenance.",
+    "Reefward Conservancy monitors coral damage.",
+    "StageKeep operates a ticket service.",
+    "Your team monitors quality. Northstar uses a classifier.",
+    "Your team monitors quality. Reefward needs a new model.",
+    "You work at ExampleCo, a recycling operator.",
+    "Your organization is called reefwatch and monitors reefs.",
+    "Your organization, reefwatch, monitors reefs.",
+])
+def test_variant_schema_rejects_invented_organization_names(stem):
+    from shared.validator import validate_question
+    question = {**VARIANT, "stem": stem + " " + VARIANT["stem"]}
+    result = validate_question(question, industry_only=True)
+    assert not result.is_valid
+    assert any("invented organization" in e for e in result.errors)
+    assert not any("invented organization" in e for e in validate_question(question).errors)
+
+
+@pytest.mark.parametrize("stem", [
+    "Your organization operates a water utility. BigQuery holds station summaries. What should you do?",
+    "You are maintaining an insurer's roof classifier in Agent Platform Pipelines. What should you do?",
+    "You work for a transit operator using Google Cloud, BigQuery ML and Cloud Run. What should you do?",
+    "Your team uses Vertex AI, AutoML, TensorFlow, PyTorch, GKE and SQL. What should you do?",
+    "You are using Gemini to summarize repair messages. Dispatchers found PII. What should you do?",
+    "A museum archive uses Cloud Storage. Curators submit images. What should you do?",
+    "You work for a recycling operator. Monitoring shows an increase in CPU use. What should you do?",
+    "Your company, which runs a forecasting service, uses BigQuery. What should you do?",
+    "Your organization, after a recent deployment, monitors a classifier. What should you do?",
+])
+def test_industry_only_framing_and_product_vocabulary_are_allowed(stem):
+    from shared.validator import has_invented_organization_name
+    assert not has_invented_organization_name(stem)
+
+
+def test_industry_plan_excludes_parent_and_rotates_siblings(parents):
+    _, _, payload, bank = parents
+    parent = parent_snapshot(payload, payload["candidates"][0], bank)
+    parent["question"]["stem"] = "You are maintaining a marine conservation reef monitor."
+    plan, _ = variants.build_plan([parent], 3)
+    industries = [s["industry"] for s in plan]
+    assert len(set(industries)) == 3
+    assert "marine conservation" not in industries
+    assert variants.build_plan([parent], 3)[0] == plan
+
+
+def test_industry_output_must_match_plan_and_reject_before_judges(parents, tmp_path):
+    def wrong_industry(inputs):
+        result = variant_for(inputs)
+        result["industry"] = "a made-up industry"
+        return result
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=wrong_industry)
+    entry = payload["candidates"][0]
+    assert entry["failure_stage"] == "schema"
+    assert not entry["schema_check"]["passed"]
+    assert "external_judge_request" not in entry
+
+
+def test_invented_name_rejected_in_generation_schema_gate(parents, tmp_path):
+    def named(inputs):
+        result = variant_for(inputs)
+        result["stem"] = result["stem"].replace("Your company", "Your organization, StageKeep,")
+        return result
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=named)
+    entry = payload["candidates"][0]
+    assert entry["failure_stage"] == "schema"
+    assert not entry["schema_check"]["passed"]
+    assert "external_judge_request" not in entry
+
+
+def test_frozen_duplicate_industry_and_surface_mutations_rejected(parents, tmp_path):
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=variant_for)
+    entry = payload["candidates"][0]
+    sibling_plan = deepcopy(payload["plan"][0])
+    sibling_plan["variant_origin"]["ordinal"] = 2
+    payload["plan"].append(sibling_plan)
+    with pytest.raises(ValueError, match="Repeated planned industry"):
+        validate_variant(payload, entry)
+    payload["plan"].pop()
+    entry["variant"]["surface"]["industry"] = "marine conservation"
+    with pytest.raises(ValueError, match="frozen family slot"):
+        validate_variant(payload, entry)
+
+
+def test_writer_stable_prefix_not_changed_by_industry_or_sibling_data(parents):
+    _, _, payload, bank = parents
+    parent = parent_snapshot(payload, payload["candidates"][0], bank)
+    plan, _ = variants.build_plan([parent], 3)
+    inputs = writer_inputs(parent, plan[0], [], 1, "MEDIUM")
+    other = deepcopy(inputs)
+    diversity = json.loads(inputs["diversity"])
+    diversity["industry"] = "public transit"
+    diversity["siblings"] = [{"stem": "A sibling scenario"}]
+    other["diversity"] = json.dumps(diversity)
+    a, b = render_prompt(inputs), render_prompt(other)
+    assert a != b
+    assert a.split(inputs["diversity"])[0] == b.split(other["diversity"])[0]
+    assert a.index(inputs["parent_question"]) < a.index(inputs["diversity"])
+
+
+
+@pytest.mark.parametrize("stem,excluded", [
+    ("You work for a municipal drinking-water supplier.", "water utilities"),
+    ("You work for a passenger rail service.", "public transit"),
+])
+def test_parent_industry_domain_aliases_excluded(stem, excluded):
+    from shared.variants import planned_industry
+    parent = {"question_id": "test", "question": {"stem": stem}}
+    assert excluded not in {planned_industry(parent, n) for n in range(1, 6)}
+
+
+def test_no_industry_slots_fails_closed():
+    from shared.variants import planned_industry, INDUSTRIES
+    parent = {"question_id": "test", "question": {"stem": " ".join(INDUSTRIES)}}
+    with pytest.raises(ValueError, match="No distinct industry slot"):
+        planned_industry(parent, 1)

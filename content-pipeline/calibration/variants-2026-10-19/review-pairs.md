@@ -1,5 +1,7 @@
 # Parent / variant review
 
+**Historical, rejected by founder:** invented organization names and repeated marine framing. Regenerate with the industry-only plan; these are not approved examples.
+
 Keys are shown for founder review; these are not publication approvals.
 
 ## Pair 1

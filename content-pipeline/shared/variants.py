@@ -1,6 +1,8 @@
 """Frozen verified-parent variants; no retrieval, planning, verification or DB access."""
 from copy import deepcopy
+import hashlib
 import json
+import re
 
 import dspy
 from shared.cli_models import output_model, signature_prompt
@@ -19,6 +21,32 @@ SKELETON_FIELDS = ("decision_plan", "decision_proof", "decision_objective")
 INDUSTRIES = ("marine conservation", "performing arts", "water utilities", "agricultural equipment",
               "public transit", "sports broadcasting", "museum archives", "food distribution",
               "renewable energy", "construction logistics", "scientific publishing", "waste recycling")
+# Keywords recognize parent domains, not organization names or product claims.
+INDUSTRY_CUES = {
+    "marine conservation": r"reef|marine|ocean|conservan",
+    "performing arts": r"theat(?:er|re)|performing arts|stage|concert",
+    "water utilities": r"water utilit|pumping station|pump maintenance|drinking.water|water suppl|water treatment",
+    "agricultural equipment": r"agricultur|farm|tractor",
+    "public transit": r"transit|bus.delay|bus operator|rail operator|passenger rail|rail service",
+    "sports broadcasting": r"sports|broadcast",
+    "museum archives": r"museum|archive|manuscript",
+    "food distribution": r"food|grocery|grocer",
+    "renewable energy": r"renewable|solar|wind farm",
+    "construction logistics": r"construction|building site",
+    "scientific publishing": r"scientific publish|research journal",
+    "waste recycling": r"recycl|waste",
+}
+
+
+def planned_industry(parent, ordinal):
+    """Rotate deterministic family slots, excluding recognized parent domains."""
+    stem = parent["question"]["stem"]
+    choices = [industry for industry in INDUSTRIES
+               if not re.search(INDUSTRY_CUES[industry], stem, re.I)]
+    if type(ordinal) is not int or not 1 <= ordinal <= len(choices):
+        raise ValueError("No distinct industry slot")
+    offset = int(hashlib.sha256(parent["question_id"].encode()).hexdigest()[:8], 16) % len(choices)
+    return choices[(offset + ordinal - 1) % len(choices)]
 
 
 class VariantSignature(PmleQuestionSignature):
@@ -29,8 +57,14 @@ class VariantSignature(PmleQuestionSignature):
     mechanism. Preserve which exact evidence quote supports each canonical A-D
     action; no receipt substitution. Recombine and paraphrase the wants naturally,
     without adding or dropping a decisive constraint or making a distractor fail
-    literally. Use a materially different industry, company, data, setting, opening
-    style and scenario moment from the parent and every sibling. A rename is not
+    literally. Use the exact industry assigned in diversity, with materially different
+    data, setting, opening style and scenario moment from the parent and every
+    sibling. Describe the organization ONLY by industry and domain (a water
+    utility, an insurer, a transit operator). NEVER invent a company, organization,
+    team or project name, acronym or branded alias. No Reefward Conservancy,
+    ReefWatch, StageKeep, or 'Your organization, X,'. Real product names from the
+    frozen evidence remain allowed. Output industry must exactly match the assigned
+    industry, and the scenario must actually use that industry. A rename is not
     enough. Follow diversity instructions unless they change the decision: then
     return no usable question rather than inventing a new product fact.
     Only scenario facts may be invented. Every product, capability, limitation,
@@ -41,8 +75,8 @@ class VariantSignature(PmleQuestionSignature):
     """
     parent_question: str = dspy.InputField()
     diversity: str = dspy.InputField()
-    industry: str = dspy.OutputField(desc="Specific new industry, not the parent's or a sibling's")
-    setting: str = dspy.OutputField(desc="New company, concrete data and ML task")
+    industry: str = dspy.OutputField(desc="Exact assigned industry from diversity; no alternatives or synonyms")
+    setting: str = dspy.OutputField(desc="Industry-only organization description, concrete data and ML task; no invented names")
 
 
 VariantSignature.instructions += "\n\n" + STYLE_INSTRUCTIONS
@@ -141,20 +175,21 @@ def variant_scope(scope, parent, ordinal):
         result["domain_prompt"] = result["domain_prompt"].replace(" Keep the incident within this security/privacy/governance objective.", "")
     result["domain_prompt"] = result["domain_prompt"].replace(
         f"Opening style: {result['opening_style']}.", f"Opening style: {opening}.")
-    result.update(opening_style=opening, scenario_moment=moment,
+    result.update(opening_style=opening, scenario_moment=moment, industry=planned_industry(parent, ordinal),
                   variant_origin={"parent_question_id": parent["question_id"], "ordinal": ordinal})
     return result
 
 
 def writer_inputs(parent, scope, siblings, ordinal, difficulty):
-    hints = {"industry_hint": INDUSTRIES[(ordinal - 1) % len(INDUSTRIES)],
+    hints = {"industry": scope["industry"],
              "opening_style": scope["opening_style"], "scenario_moment": scope["scenario_moment"],
              "parent_opening_style": parent["scope"]["opening_style"],
              "parent_scenario_moment": parent["scope"]["scenario_moment"],
              "siblings": [{"stem": row["stem"], **row.get("variant", {}).get("surface", {})}
                           for row in siblings],
              "instruction": "Different industry AND setting, opening family AND moment from parent/siblings. "
-                            "Use an alternative if the hint overlaps. Change business task/data meaningfully, "
+                            "Use the exact assigned industry, not an alternative. No invented organization names. "
+                            "Change business task/data meaningfully, "
                             "not only names or numbers. Keep the same decision and equivalent constraints."}
     return {"domain_context": writer_decision_context(scope, scope["decision_plan"], scope["decision_proof"]),
             "documentation_context": writer_documentation_context(parent["sources"], scope["decision_proof"]),
@@ -233,6 +268,14 @@ def validate_variant(payload, entry):
     if (not isinstance(surface, dict) or set(surface) != {"industry", "setting"}
             or any(not isinstance(v, str) or not v.strip() for v in surface.values())):
         raise ValueError("Missing variant surface description")
+    if (surface["industry"] != scope.get("industry")
+            or scope["industry"] != planned_industry(parent, meta["ordinal"])):
+        raise ValueError("Variant industry differs from its frozen family slot")
+    family_plan = [row for row in payload["plan"]
+                   if row.get("variant_origin", {}).get("parent_question_id") == parent["question_id"]]
+    industries = [row.get("industry") for row in family_plan]
+    if len(set(industries)) != len(industries):
+        raise ValueError("Repeated planned industry within family")
     for sibling in payload["candidates"]:
         if sibling is entry or sibling.get("candidate_id") == entry["candidate_id"]:
             continue

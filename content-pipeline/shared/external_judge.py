@@ -296,6 +296,9 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
     if execution_policy not in (None, "short_circuit_v1"):
         raise ValueError("Unsupported execution policy")
     if variant_context is not None:
+        from shared.validator import validate_question
+        if not validate_question(question, industry_only=True).is_valid:
+            raise ValueError("Variant question fails industry-only schema validation")
         from shared.variants import review_context
         scope = dict(scope)
         scope["domain_prompt"] += review_context(variant_context["metadata"], variant_context["parent"])

@@ -1,0 +1,68 @@
+{
+  "mode": "offline prompt rendering; no model or DB calls",
+  "planned_variants": 18,
+  "family_count": 6,
+  "estimated_writer_input_tokens": 316638,
+  "estimate_method": "ceil(prompt characters / 4); not measured provider tokens",
+  "allocations": [
+    {
+      "parent_question_id": "a23ed85e-042b-5eaf-ba0d-ccf52b149bd8",
+      "parent_context": "You are improving a water utility's recently deployed dashboard for planning pump maintenance",
+      "industries": [
+        "marine conservation",
+        "performing arts",
+        "agricultural equipment"
+      ]
+    },
+    {
+      "parent_question_id": "2552fa69-5a20-5744-90a3-2c76eba518d2",
+      "parent_context": "You are maintaining a recently deployed bus-delay predictor for a transit operator",
+      "industries": [
+        "scientific publishing",
+        "waste recycling",
+        "marine conservation"
+      ]
+    },
+    {
+      "parent_question_id": "9a174e39-5c98-524a-abec-952a689185d0",
+      "parent_context": "Your company uses a custom image classifier to route damaged parcels for manual inspection",
+      "industries": [
+        "sports broadcasting",
+        "museum archives",
+        "food distribution"
+      ]
+    },
+    {
+      "parent_question_id": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "parent_context": "You are maintaining a transcription application that makes city council recordings searchable for residents",
+      "industries": [
+        "sports broadcasting",
+        "museum archives",
+        "food distribution"
+      ]
+    },
+    {
+      "parent_question_id": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+      "parent_context": "You are maintaining a recently deployed roof-damage classifier that helps an insurer prioritize inspections",
+      "industries": [
+        "public transit",
+        "sports broadcasting",
+        "museum archives"
+      ]
+    },
+    {
+      "parent_question_id": "532fb45c-7f86-542a-a470-39ad0df5d199",
+      "parent_context": "You are maintaining a recently deployed property-maintenance assistant that uses Gemini to summarize tenant repair messages",
+      "industries": [
+        "renewable energy",
+        "construction logistics",
+        "scientific publishing"
+      ]
+    }
+  ],
+  "limits": [
+    "Parent domain exclusion uses reviewed keyword cues, not semantic classification.",
+    "Stem name detector uses fixed technical/product vocabulary and capitalization/naming patterns; it is not exhaustive entity recognition.",
+    "No new questions generated; founder review required after live generation."
+  ]
+}

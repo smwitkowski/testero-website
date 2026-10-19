@@ -195,7 +195,7 @@ def prepare_rejudge(artifact, *, threshold=FAMILY_STEM_THRESHOLD):
             scope = _scope(payload, entry)
             question = candidate_question(entry)
             candidate_storage_id(entry, scope, question)
-            validation = validate_question(question)
+            validation = validate_question(question, industry_only=True)
             checked = check_evidence(canonical_evidence(entry), entry["sources"])
             if not checked["passed"] or checked["options"] != canonical_evidence(entry):
                 raise ValueError("Frozen evidence changed")
