@@ -95,10 +95,118 @@ def _validate_payload(payload):
         raise click.ClickException("Frozen plan differs from the current registry") from None
 
 
-def _build_outputs(artifact, out, payload, *, force):
+def _resume_candidates(payload):
+    """Validate saved generation and recover only pre-judge request failures in memory."""
+    from copy import deepcopy
+    import re
+    from shared.external_judge import validate_decision_provenance
+    from shared.near_duplicates import comparison_row, tokens
+    from shared.variant_history import validate_prior_variants
+    from shared.variants import validate_variant, variant_duplicates, option_rewrite_check
+
+    if (type(payload.get("variant_mode")) is not int or payload["variant_mode"] != 1
+            or payload.get("offline") is not False or "dry_run" in payload
+            or payload.get("external_judge_version") != 2 or payload.get("rules_version") != 5
+            or payload.get("argon_gate") is not True
+            or payload.get("execution_policy") != "short_circuit_v1"
+            or not isinstance(payload.get("variant_parents"), dict) or not payload["variant_parents"]
+            or not isinstance(payload.get("variant_attempts"), list) or not payload["variant_attempts"]):
+        raise click.ClickException("Resume requires saved live generation with full frozen variant provenance; never regenerate this artifact")
+    validate_prior_variants(payload["prior_variants"])
+    bank = payload.get("existing_questions")
+    if (not isinstance(bank, dict) or not isinstance(bank.get("questions"), list)
+            or not isinstance(bank.get("sha256"), str) or not re.fullmatch(r"[0-9a-f]{64}", bank["sha256"])):
+        raise click.ClickException("Resume requires the frozen existing-question bank")
+    for row in bank["questions"]:
+        if not isinstance(row.get("id"), str) or not row["id"]:
+            raise ValueError("Invalid frozen bank ID")
+        tokens(row["stem"]); tokens(row["key"])
+    entries, recover = [], []
+    for entry in payload["candidates"]:
+        # Failed schema, duplicate, judge, or persistence attempts are never revived.
+        stage = entry.get("failure_stage")
+        if stage not in (None, "request"):
+            continue
+        if (entry.get("status") != "awaiting_external_judge"
+                or entry.get("external_verdict") is not None
+                or entry.get("schema_check", {}).get("passed") is not True
+                or entry.get("near_duplicate_check", {}).get("passed") is not True
+                or entry.get("mechanical_check", {}).get("passed") is not True):
+            continue
+        if stage is None and entry.get("awaiting_external_judge") is not True:
+            continue
+        if not entry.get("variant") or not entry.get("options"):
+            raise ValueError("Missing frozen variant content")
+        scope = ingestion._scope(payload, entry)
+        question = candidate_question(entry)
+        candidate_storage_id(entry, scope, question)
+        validate_decision_provenance(scope, entry)
+        validate_variant(payload, entry)
+        validation = validate_question(question, industry_only=True)
+        checked = check_evidence(canonical_evidence(entry), entry["sources"])
+        if not validation.is_valid or not checked["passed"] or checked["options"] != canonical_evidence(entry):
+            raise ValueError("Saved variant schema or evidence failed; resume cannot repair content")
+        entries.append(entry)
+        if stage == "request":
+            recover.append((entry, validation, scope))
+    if not entries:
+        raise click.ClickException("No judge-ready saved variants or recoverable request failures; inspect diagnostics, do not rerun generation")
+    # Restore the writer's intended seen population in frozen generation order.
+    # Request construction used to fail before seen.append(), hiding prior siblings.
+    # Existing valid requests stay untouched; only newly recovered candidates can
+    # become new generation duplicate rejects. All static validation above finishes
+    # before any diagnostic field is cleared, and nothing is published here.
+    from shared.variants import eligible_sibling
+    cohort = deepcopy(payload["candidates"])
+    by_id = {entry["candidate_id"]: entry for entry in cohort}
+    ready = {entry["candidate_id"] for entry in entries}
+    diagnostics = ("failure_stage", "reason", "error_class", "error_message", "external_verdict")
+    for entry, validation, scope in sorted(recover, key=lambda row: row[0]["index"]):
+        ident = entry["candidate_id"]
+        parent = payload["variant_parents"][entry["parent_question_id"]]
+        prospective = by_id[ident]
+        prospective.pop("failure_stage", None)
+        prospective.update(awaiting_external_judge=True, status="awaiting_external_judge")
+        duplicate = variant_duplicates(entry,
+            bank["questions"] + [comparison_row(s) for s in cohort
+                if s.get("options") and s["candidate_id"] != ident and eligible_sibling(s)],
+            parent, siblings=cohort, prior=payload["prior_variants"]["questions"])
+        passed = duplicate["passed"]
+        payload.setdefault("request_recovery_journal", []).append({"candidate_id": ident,
+            "diagnostics": {field: entry[field] for field in diagnostics if field in entry},
+            "outcome": "ready" if passed else "near_duplicate", "near_duplicate_check": duplicate})
+        entry["schema_check"] = {"passed": True, "errors": validation.errors, "warnings": validation.warnings}
+        entry["mechanical_check"] = {"passed": True, "errors": []}
+        entry["option_rewrite_check"] = option_rewrite_check(candidate_question(entry), parent,
+            **({"key_length_rank": scope["key_length_rank"]} if scope.get("variant_policy_version") == 5 else {}))
+        entry["near_duplicate_check"] = duplicate
+        for field in diagnostics:
+            entry.pop(field, None)
+        entry.update(awaiting_external_judge=passed, accepted=False)
+        if passed:
+            entry["status"] = "awaiting_external_judge"
+        else:
+            ready.remove(ident)
+            entry.update(status="generation_failed", failure_stage="near_duplicate",
+                         reason=duplicate["reason"], error_class="ValueError", error_message=duplicate["reason"])
+        prospective.update(deepcopy(entry))
+    if not ready:
+        raise click.ClickException("No judge-ready saved variants remain after duplicate replay; inspect diagnostics, do not repeat generation")
+    return [entry["candidate_id"] for entry in sorted(entries, key=lambda row: row["index"])
+            if entry["candidate_id"] in ready]
+
+
+def _build_outputs(artifact, out, payload, *, force, resume_ids=None):
     outputs, trimmed = [], 0
     superseded = {entry["repair"]["parent_candidate_id"] for entry in payload["candidates"] if "repair" in entry}
     for entry in payload["candidates"]:
+        if resume_ids is not None:
+            if entry["candidate_id"] not in resume_ids:
+                continue
+            metadata = entry.get("external_judge_request")
+            if metadata is not None and (artifact.parent / metadata["path"]).exists():
+                ingestion._validate_candidate(artifact, payload, entry)
+                continue  # Never rewrite an existing valid request on resume.
         if entry["candidate_id"] in superseded:
             # This snapshot belongs to the lineage journal; even --force cannot alter it.
             ingestion._validate_candidate(artifact, payload, entry)
@@ -135,7 +243,7 @@ def _build_outputs(artifact, out, payload, *, force):
                                             if "variant" in entry else None)} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
             raw = _encode(request)
             if len(raw.decode("utf-8")) > REQUEST_CHARACTER_LIMIT:
-                raise ValueError()
+                raise ValueError("External request exceeds the character bound even with wide quote-centered excerpts")
             destination = out / (entry["candidate_id"] + ".json")
             runner._no_symlinks(destination)
             if destination.exists() and not destination.is_file():
@@ -156,7 +264,10 @@ def _build_outputs(artifact, out, payload, *, force):
                     entry.update(status="awaiting_external_judge", awaiting_external_judge=True, accepted=False)
             outputs.append((destination, raw))
             trimmed += int(request["trimming"]["enabled"])
-        except (ValueError, KeyError, TypeError, StopIteration):
+        except (ValueError, KeyError, TypeError, StopIteration) as error:
+            if (type(error) is ValueError and str(error) ==
+                    "External request exceeds the character bound even with wide quote-centered excerpts"):
+                raise click.ClickException("Request still exceeds the character limit after bounded excerpting; inspect frozen sources and request sizing offline, then retry prepare-resume. Do not repeat generation.") from None
             raise click.ClickException("Frozen candidate question, ID, schema or evidence validation failed") from None
     # Validate the complete final artifact before publishing any request.
     _encode(payload)
@@ -176,6 +287,8 @@ def _request_directories(artifact, out, payload):
             raise click.ClickException("Unsafe existing external judge request path")
         path = artifact.parent / given
         runner._no_symlinks(path)
+        if path.exists() and not path.is_file():
+            raise click.ClickException("Existing request must be a regular file")
         directory = path.parent.resolve()
         if directory == artifact.parent or not directory.is_relative_to(artifact.parent):
             raise click.ClickException("Existing request directory must be beneath the artifact parent")
@@ -248,7 +361,7 @@ def _prior_results(directories, out, ids, *, preserved_ids=()):
                 data = ingestion._read_json(path)
                 is_request = isinstance(data, dict) and (set(data) == REQUEST_FIELDS or
                     GATE_REQUEST_FIELDS <= set(data) <= GATE_REQUEST_FIELDS | {
-                        "argon", "style_policy", "execution_policy", "distractor_evidence", "variant_mode"})
+                        "argon", "style_policy", "execution_policy", "distractor_evidence", "variant_mode", "variant_policy_version"})
             except (ValueError, UnicodeError, RecursionError):
                 is_request = False
             if path.stem in preserved_ids:
@@ -282,8 +395,10 @@ def _archive(results):
     return list(archives.values())
 
 
-def export_requests(artifact, out=None, *, force=False, verdicts=()):
-    """Rebuild eligible requests and update only their artifact path/hash metadata."""
+def export_requests(artifact, out=None, *, force=False, verdicts=(), recover_request_failures=False):
+    """Export frozen requests; optional variant resume never archives or regenerates."""
+    if recover_request_failures and (force or out is not None):
+        raise click.ClickException("Resume cannot force rejudge or relocate frozen requests")
     artifact = Path(artifact).absolute()
     runner._no_symlinks(artifact)
     runner._no_symlinks(artifact.with_suffix(artifact.suffix + ".lock"))
@@ -301,6 +416,11 @@ def export_requests(artifact, out=None, *, force=False, verdicts=()):
             payload = ingestion._read_json(artifact)
             _validate_payload(payload)
             request_directories = _request_directories(artifact, out, payload)
+            if recover_request_failures and any(directory != out for directory in request_directories):
+                raise click.ClickException("Resume requires all frozen requests in the default request directory; reconcile custom request roots offline without moving or archiving saved files")
+            journal_size = len(payload.get("request_recovery_journal", []))
+            resume_ids = _resume_candidates(payload) if recover_request_failures else None
+            recovered = len(payload.get("request_recovery_journal", [])) - journal_size
             old_requests = []
             superseded = {entry["repair"]["parent_candidate_id"] for entry in payload["candidates"] if "repair" in entry}
             for entry in payload["candidates"]:
@@ -313,7 +433,7 @@ def export_requests(artifact, out=None, *, force=False, verdicts=()):
                         if not old.is_file():
                             raise click.ClickException("Existing request must be a regular file")
                         old_requests.append(old)
-            outputs, trimmed = _build_outputs(artifact, out, payload, force=force)
+            outputs, trimmed = _build_outputs(artifact, out, payload, force=force, resume_ids=resume_ids)
             # Complete validation precedes directory creation and every replacement.
             # Readers lock requests first, so even a newly created verdict directory
             # cannot let a runner race this export.
@@ -323,22 +443,24 @@ def export_requests(artifact, out=None, *, force=False, verdicts=()):
                     locks.enter_context(runner.batch_lock(directory))
                     held.add(directory)
             additional = _additional_verdict_directories(artifact, request_directories, verdicts)
-            # Do not create a custom output if an old reader is active or a registry is invalid.
-            if outputs and not out.exists():
-                out.mkdir(parents=True)
-                _sync_directory(out.parent)
-                locks.enter_context(runner.batch_lock(out))
-                held.add(out)
             directories = sorted(set(_verdict_directories(artifact, out))
                                  | {directory for directory in additional if directory.is_dir()})
             for directory in directories:
                 if directory not in held:
                     locks.enter_context(runner.batch_lock(directory))
                     held.add(directory)
-            results, found = _prior_results(directories, out, {path.stem for path, _ in outputs}, preserved_ids=superseded)
-            if found and not force:
-                raise click.ClickException("Prior verdicts exist; --force archives them before exporting")
-            archives = _archive(results) if results else []
+            result_ids = ({entry["candidate_id"] for entry in payload["candidates"]}
+                          if recover_request_failures else {path.stem for path, _ in outputs})
+            results, found = _prior_results(directories, out, result_ids, preserved_ids=superseded)
+            if found and not force and (not recover_request_failures or outputs or recovered):
+                raise click.ClickException("Prior verdicts exist; missing requests cannot be resumed without human reconciliation"
+                    if recover_request_failures else "Prior verdicts exist; --force archives them before exporting")
+            # Validate every local output and prior-result condition before creating files.
+            if outputs and not out.exists():
+                out.mkdir(parents=True)
+                _sync_directory(out.parent)
+                locks.enter_context(runner.batch_lock(out))
+            archives = _archive(results) if results and not recover_request_failures else []
             request_archives = []
             if outputs:
                 for path, raw in outputs:
@@ -346,6 +468,8 @@ def export_requests(artifact, out=None, *, force=False, verdicts=()):
                 # Retire only metadata-linked old candidate files, while both roots
                 # remain locked, before the artifact can point at the new root.
                 request_archives = _archive(old_requests) if old_requests else []
+                ingestion._flush(artifact, payload)
+            elif recovered:
                 ingestion._flush(artifact, payload)
     except click.ClickException:
         raise
@@ -357,10 +481,16 @@ def export_requests(artifact, out=None, *, force=False, verdicts=()):
     summary = {"count": len(sizes), "min_chars": sizes[0] if sizes else 0,
                "p50_chars": percentile(.5), "p95_chars": percentile(.95),
                "max_chars": sizes[-1] if sizes else 0, "trimmed": trimmed,
-               "archived_verdicts": len(results),
+               "archived_verdicts": len(results) if not recover_request_failures else 0,
                "quarantine_paths": [str(path.relative_to(artifact.parent)) for path in archives],
                "retired_requests": len(old_requests),
                "request_quarantine_paths": [str(path.relative_to(artifact.parent)) for path in request_archives]}
+    if recover_request_failures:
+        summary["ready_candidate_ids"] = resume_ids
+        summary["ready_count"] = len(resume_ids)
+        summary["blocked_candidate_ids"] = [entry["candidate_id"] for entry in sorted(payload["candidates"], key=lambda row: row["index"])
+                                            if entry["candidate_id"] not in resume_ids]
+        summary["blocked_count"] = len(summary["blocked_candidate_ids"])
     click.echo(json.dumps(summary, sort_keys=True))
     return summary
 

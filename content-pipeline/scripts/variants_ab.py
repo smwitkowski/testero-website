@@ -255,6 +255,28 @@ def prepare_rejudge(artifact, *, threshold=FAMILY_STEM_THRESHOLD):
     return [e["candidate_id"] for e in payload["candidates"] if e.get("awaiting_external_judge")]
 
 
+def prepare_resume(artifact):
+    """Prepare saved candidates for judging offline, with no generation or DB access."""
+    from scripts.export_judge_requests import export_requests
+    artifact = Path(artifact).absolute()
+    calls_path = artifact.with_suffix(artifact.suffix + ".calls.jsonl")
+    from scripts.judge_requests import _no_symlinks
+    _no_symlinks(calls_path)
+    # Preflight telemetry before export can publish any artifact/request changes.
+    try:
+        if calls_path.exists() and not calls_path.is_file():
+            raise ValueError("Nonregular call log")
+        calls_logged = (sum(bool(line.strip()) for line in calls_path.read_text(encoding="utf-8").splitlines())
+                        if calls_path.exists() else 0)
+    except (OSError, UnicodeError, ValueError):
+        import click
+        raise click.ClickException("Resume requires a readable regular UTF-8 call log; inspect the saved ledger without rewriting it") from None
+    summary = export_requests(artifact, recover_request_failures=True)
+    # Metadata only. Never print saved prompts, plans, source text or rationales.
+    summary["calls_logged"] = calls_logged
+    return summary
+
+
 def review_pairs(artifact, output, count=3):
     """Write complete review pairs; repair mode may show every slot alternative."""
     if type(count) is not int or count < 1:
@@ -285,7 +307,7 @@ def review_pairs(artifact, output, count=3):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("prepare", "run", "prepare-repair", "repair", "report", "rejudge", "pairs"))
+    parser.add_argument("mode", choices=("prepare", "run", "prepare-repair", "repair", "prepare-resume", "resume", "report", "rejudge", "pairs"))
     parser.add_argument("--parent-dir", type=Path)
     parser.add_argument("--bank", type=Path)
     parser.add_argument("--artifact", type=Path, required=True)
@@ -308,6 +330,10 @@ def main():
         parser.error("Repair mode requires --live-prior-manifest for the 13 live family variants")
     if args.live_prior_manifest and not repair_mode:
         parser.error("--live-prior-manifest is repair-mode only")
+    if args.mode == "resume" and not args.allow_live:
+        parser.error("resume requires --allow-live; saved questions are never regenerated")
+    if args.mode in ("prepare-resume", "resume") and (args.parent_dir is not None or args.bank is not None):
+        parser.error("Resume uses only frozen artifact inputs; do not pass --parent-dir or --bank")
     os.environ["PYTHON_DOTENV_DISABLED"] = "1"
     family_threshold(args.family_stem_threshold)
     pairs_output = args.pairs_output or args.artifact.with_name(args.artifact.stem + ".pairs.md")
@@ -316,6 +342,16 @@ def main():
         print(pairs_output)
         return
     verdicts = args.artifact.with_name(args.artifact.stem + ".verdicts")
+    if args.mode in ("prepare-resume", "resume"):
+        saved = prepare_resume(args.artifact)
+        if args.mode == "prepare-resume":
+            print(json.dumps({key: saved[key] for key in ("ready_count", "blocked_count", "blocked_candidate_ids", "calls_logged")}, sort_keys=True))
+            return
+        from scripts.judge_requests import run_requests
+        result = run_requests(request_directory(args.artifact), verdicts, judge_model="claude", parallel=3,
+                              argon_gate=True, full_gate_sample=1, candidate_ids=saved["ready_candidate_ids"])
+        if result.failed or result.usage_stopped:
+            print("Judge errors/stops: inspect receipts before retrying; never repeat generation", file=sys.stderr)
     if args.mode in generation_modes:
         from shared.variant_plan import REPAIR_MODE, REPAIR_SLOTS
         if args.parent_dir is None:
@@ -352,7 +388,7 @@ def main():
             if result.failed or result.usage_stopped:
                 print("Judge errors/stops: inspect receipts before retrying", file=sys.stderr)
     result = report(args.artifact, verdicts)
-    if result["accepted_variant_ids"]:
+    if result["accepted_variant_ids"] and args.mode != "resume":
         from shared.option_order import balance_options
         with artifact_lock(args.artifact):
             payload = _read_json(args.artifact)
