@@ -99,11 +99,12 @@ def _scope(payload, entry):
     current = plan_questions(payload["cert_id"], index, objective_ids=[scope["objective_id"]])
     expected = current[index - 1]
     if "variant_origin" in scope:
-        from shared.variants import variant_scope
+        from shared.variants import variant_scope, frozen_industry
         origin = scope["variant_origin"]
         if payload.get("variant_mode") != 1 or not isinstance(origin, dict) or set(origin) != {"parent_question_id", "ordinal"}:
             raise ValueError("Invalid variant scope origin")
         expected = variant_scope(expected, payload["variant_parents"][origin["parent_question_id"]], origin["ordinal"])
+        expected["industry"] = frozen_industry(payload, scope)
     elif payload.get("variant_mode") is not None:
         raise ValueError("Variant mode requires frozen variant scope origins")
     # Deterministic registry scope stays exact; LLM decision/proof data is frozen separately.

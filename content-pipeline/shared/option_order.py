@@ -52,7 +52,10 @@ def balance_options(entries):
     import json
     from shared.external_judge import candidate_question
 
-    ordered = sorted(entries, key=lambda entry: entry["candidate_id"])
+    # Keep sibling indices consecutive so the existing four-letter cycle gives
+    # distinct sibling keys (up to four), as well as global balance.
+    ordered = sorted(entries, key=lambda entry: (entry.get("parent_question_id", ""),
+        entry.get("variant", {}).get("ordinal", 0), entry["candidate_id"]))
     ids = [entry["candidate_id"] for entry in ordered]
     if len(set(ids)) != len(ids):
         raise ValueError("Duplicate eligible candidate IDs")

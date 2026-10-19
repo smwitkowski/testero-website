@@ -54,13 +54,15 @@ def select_parents(artifacts, ids, bank_path):
 
 
 def build_plan(parents, count):
-    from shared.variants import variant_scope
+    from shared.variants import variant_scope, industry_allocation
+    allocation = industry_allocation(parents, {p["question_id"]: count for p in parents})
     plan, assignments = [], []
     for parent in parents:
         for ordinal in range(1, count + 1):
             scope = plan_questions(DEFAULT_CERT, len(plan) + 1,
                 objective_ids=[parent["scope"]["objective_id"]])[-1]
             scope = variant_scope(scope, parent, ordinal)
+            scope["industry"] = allocation[(parent["question_id"], ordinal)]
             for name in SKELETON_FIELDS:
                 scope[name] = deepcopy(parent["scope"][name])
             if "distractor_evidence" in parent["scope"]:
@@ -133,6 +135,12 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
                 validation.is_valid = False
             entry["schema_check"] = {"passed": validation.is_valid, "errors": validation.errors,
                                      "warnings": validation.warnings}
+            from shared.variants import option_rewrite_check
+            entry["option_rewrite_check"] = option_rewrite_check(question, parent)
+            if not entry["option_rewrite_check"]["passed"]:
+                validation.errors.append("Options must be rewritten below 0.65 Jaccard; key cannot be uniquely shortest")
+                validation.is_valid = False
+                entry["schema_check"]["passed"] = False
             if not validation.is_valid:
                 raise ValueError("Variant failed schema/mechanical style validation")
             validate_variant(payload, entry)
@@ -177,6 +185,14 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
                               "citation_calls": 0, "judge_tokens": "not estimated: depend on resulting question"}
         write_artifact(output, payload)
     elif payload["candidates"]:
+        from shared.option_order import balance_options
+        written = [e for e in payload["candidates"] if e.get("variant") and e.get("options")]
+        if written:
+            balance_options(written)
+            write_artifact(output, payload)
+            from scripts.export_judge_requests import export_requests
+            export_requests(output, force=True)
+            payload = _read_json(output)
         validate_candidate_records(payload)
     return payload
 

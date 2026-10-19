@@ -60,7 +60,12 @@ def parents(tmp_path, monkeypatch):
     return artifact, export, payload, bank
 
 
-VARIANT = {**QUESTION, "stem": "Your company operates a museum archive that identifies damaged manuscripts from visitor photographs. "
+VARIANT = {**QUESTION,
+    "correct_answer": "Deploy the containerized handler on Cloud Run with managed request-driven capacity",
+    "distractor_1": "Schedule offline analytical jobs in BigQuery to process incoming image submissions",
+    "distractor_2": "Place the application files in Cloud Storage buckets for direct execution",
+    "distractor_3": "Provision Compute Engine instances and configure the serving infrastructure yourself",
+    "stem": "Your company operates a museum archive that identifies damaged manuscripts from visitor photographs. "
     "Curators submit images through a web endpoint during exhibition openings, creating bursts of traffic. "
     "The archive has packaged its image classifier as a container and wants the engineering staff focused on collection quality instead of maintaining infrastructure. "
     "Which approach should you use?", "industry": "museum archives", "setting": "Photograph damage classification"}
@@ -510,3 +515,120 @@ def test_no_industry_slots_fails_closed():
     parent = {"question_id": "test", "question": {"stem": " ".join(INDUSTRIES)}}
     with pytest.raises(ValueError, match="No distinct industry slot"):
         planned_industry(parent, 1)
+
+
+
+@pytest.mark.parametrize("field", ["correct_answer", "distractor_1", "distractor_2", "distractor_3"])
+def test_round3_each_matched_option_copy_rejected(parents, tmp_path, field):
+    from shared.variants import option_rewrite_check
+    def copied(inputs):
+        result = variant_for(inputs)
+        result[field] = QUESTION[field]
+        return result
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=copied)
+    entry = payload["candidates"][0]
+    assert entry["failure_stage"] == "schema"
+    assert entry["option_rewrite_check"]["option_jaccard"]["ABCD"[("correct_answer", "distractor_1", "distractor_2", "distractor_3").index(field)]] == 1
+    assert "external_judge_request" not in entry
+
+
+def test_round3_exact_jaccard_boundary_and_shortest_key():
+    from shared.variants import option_rewrite_check
+    from shared.option_order import OPTION_FIELDS
+    original = " ".join(f"term{i}" for i in range(20))
+    parent = {"question": {field: original for field in OPTION_FIELDS}}
+    question = {field: " ".join(f"term{i}" for i in range(13)) for field in OPTION_FIELDS}
+    check = option_rewrite_check(question, parent)
+    assert check["option_jaccard"]["A"] == .65
+    assert not check["passed"]
+    question = {field: " ".join(f"term{i}" for i in range(12)) for field in OPTION_FIELDS}
+    assert option_rewrite_check(question, parent)["passed"]
+    question["correct_answer"] = "entirely fresh brief action"
+    assert option_rewrite_check(question, parent)["key_uniquely_shortest"]
+    assert not option_rewrite_check(question, parent)["passed"]
+
+
+def test_round3_prompt_uses_skeleton_not_parent_options_and_rechecks_context(parents, tmp_path):
+    calls = []
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=lambda inputs: calls.append(inputs) or variant_for(inputs))
+    inputs = calls[0]
+    assert "question" not in json.loads(inputs["parent_question"])
+    assert json.loads(inputs["parent_question"])["stem"] == QUESTION["stem"]
+    assert "Verified decision plan" in inputs["domain_context"]
+    entry = payload["candidates"][0]
+    request = json.loads((tmp_path / entry["external_judge_request"]["path"]).read_text())
+    for prompt in (request["gates"]["evidence"]["judge_prompt"], request["argon"]["calls"]["review"]["judge_prompt"]):
+        assert "FAIL scenario_relevant" in prompt
+        assert "Re-derive EACH distractor loss in THIS industry" in prompt
+        assert "Single frames cannot establish temporal plays" in prompt
+    assert "FAIL scenario_relevant" not in request["gates"]["blind_solver"]["judge_prompt"]
+
+
+def test_round3_allocation_caps_and_sibling_key_layout(parents):
+    from shared.variants import industry_allocation, INDUSTRIES
+    from collections import Counter
+    from shared.option_order import balance_options, canonical_evidence
+    _, _, payload, bank = parents
+    parent = parent_snapshot(payload, payload["candidates"][0], bank)
+    parents6 = [{**deepcopy(parent), "question_id": f"parent{i}"} for i in range(6)]
+    allocation = industry_allocation(parents6, {p["question_id"]: 3 for p in parents6})
+    assert len(INDUSTRIES) == 30
+    assert max(Counter(allocation.values()).values()) <= 2
+    assert all(len({allocation[(p["question_id"], i)] for i in (1,2,3)}) == 3 for p in parents6)
+    entries = []
+    for index in range(18):
+        entry = deepcopy(parent["entry"])
+        entry.pop("persistence_status"); entry["candidate_id"] = f"candidate{index}"
+        # Store new deterministic mappings before balancing.
+        entry.pop("option_order"); entry["key"] = "A"
+        store_options(entry, QUESTION, parent["evidence"])
+        entry.update(parent_question_id=f"parent{index // 3}", variant={"ordinal": index % 3 + 1})
+        entries.append(entry)
+    before = [(candidate_question(e), canonical_evidence(e)) for e in entries]
+    balance_options(entries)
+    counts = Counter(e["key"] for e in entries)
+    assert max(counts.values()) / 18 <= .4
+    for parent_id in {e["parent_question_id"] for e in entries}:
+        assert len({e["key"] for e in entries if e["parent_question_id"] == parent_id}) == 3
+    assert before == [(candidate_question(e), canonical_evidence(e)) for e in entries]
+    # Same guarantees after selective rejects at the final accepted/ingest balance.
+    kept = [e for i,e in enumerate(entries) if i % 4 != 0]
+    balance_options(kept)
+    assert max(Counter(e["key"] for e in kept).values()) / len(kept) <= .4
+    assert all(len({e["key"] for e in kept if e["parent_question_id"] == p}) == sum(e["parent_question_id"] == p for e in kept) for p in {e["parent_question_id"] for e in kept})
+
+
+
+def test_round3_allocation_stable_after_sorted_json_roundtrip(parents):
+    from shared.variants import frozen_industry
+    _, _, payload, bank = parents
+    parent = parent_snapshot(payload, payload["candidates"][0], bank)
+    parents6 = [{**deepcopy(parent), "question_id": f"parent{i}"} for i in reversed(range(6))]
+    plan, _ = variants.build_plan(parents6, 3)
+    artifact = json.loads(json.dumps({"plan": plan, "variant_parents": {p["question_id"]:p for p in parents6}}, sort_keys=True))
+    assert all(scope["industry"] == frozen_industry(artifact, scope) for scope in artifact["plan"])
+    assert all(scope["key_length_rank"] == 2 for scope in artifact["plan"])
+    # The key-length hint is in the stable domain prefix, not per-sibling data.
+    scopes = [s for s in plan if s["variant_origin"]["parent_question_id"] == "parent0"]
+    hints = [s["domain_prompt"].split("Key length rank hint: ", 1)[1].split("\n", 1)[0] for s in scopes]
+    assert len(set(hints)) == 1
+
+
+def test_round3_schema_fail_does_not_skip_other_families(parents, tmp_path):
+    _, _, payload, bank = parents
+    parent = parent_snapshot(payload, payload["candidates"][0], bank)
+    plan, _ = variants.build_plan([parent], 3)
+    assert len({row["industry"] for row in plan}) == 3
+    calls = []
+    def writer(inputs):
+        calls.append(inputs)
+        result = variant_for(inputs)
+        # Rewrite gate rejects one option regardless of generated keys.
+        result["distractor_1"] = QUESTION["distractor_1"]
+        return result
+    artifact, export, source, _ = parents
+    result = variants.generate([artifact], [source["candidates"][0]["candidate_id"]], export,
+        tmp_path / "reject-three.json", variants_per_parent=3, enable_variants=True, predictor=writer)
+    assert len(calls) == 3
+    assert len({e["variant"]["surface"]["industry"] for e in result["candidates"]}) == 3
+    assert all(e["failure_stage"] == "schema" for e in result["candidates"])

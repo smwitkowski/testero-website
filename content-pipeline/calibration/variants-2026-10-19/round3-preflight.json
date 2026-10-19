@@ -1,0 +1,127 @@
+{
+  "mode": "offline_prepare_no_models",
+  "parents": 6,
+  "variants": 18,
+  "family_stem_threshold": 0.45,
+  "option_jaccard_strict_threshold": 0.65,
+  "industry_pool_size": 30,
+  "max_industry_uses": 1,
+  "industry_counts": {
+    "forestry management": 1,
+    "pharmaceutical manufacturing": 1,
+    "hotel operations": 1,
+    "sports broadcasting": 1,
+    "museum archives": 1,
+    "food distribution": 1,
+    "textile manufacturing": 1,
+    "telecommunications": 1,
+    "aviation maintenance": 1,
+    "hospital operations": 1,
+    "mining safety": 1,
+    "banking fraud prevention": 1,
+    "agricultural equipment": 1,
+    "scientific publishing": 1,
+    "waste recycling": 1,
+    "public transit": 1,
+    "renewable energy": 1,
+    "construction logistics": 1
+  },
+  "key_length_ranks": {
+    "2": 18
+  },
+  "estimated_writer_input_tokens": 309524,
+  "estimate_method": "ceil(prompt characters / 4); not measured provider tokens",
+  "measured_usage_or_quality": false,
+  "assignments": [
+    {
+      "parent": "a23ed85e-042b-5eaf-ba0d-ccf52b149bd8",
+      "ordinal": 1,
+      "industry": "forestry management"
+    },
+    {
+      "parent": "a23ed85e-042b-5eaf-ba0d-ccf52b149bd8",
+      "ordinal": 2,
+      "industry": "pharmaceutical manufacturing"
+    },
+    {
+      "parent": "a23ed85e-042b-5eaf-ba0d-ccf52b149bd8",
+      "ordinal": 3,
+      "industry": "hotel operations"
+    },
+    {
+      "parent": "2552fa69-5a20-5744-90a3-2c76eba518d2",
+      "ordinal": 1,
+      "industry": "sports broadcasting"
+    },
+    {
+      "parent": "2552fa69-5a20-5744-90a3-2c76eba518d2",
+      "ordinal": 2,
+      "industry": "museum archives"
+    },
+    {
+      "parent": "2552fa69-5a20-5744-90a3-2c76eba518d2",
+      "ordinal": 3,
+      "industry": "food distribution"
+    },
+    {
+      "parent": "9a174e39-5c98-524a-abec-952a689185d0",
+      "ordinal": 1,
+      "industry": "textile manufacturing"
+    },
+    {
+      "parent": "9a174e39-5c98-524a-abec-952a689185d0",
+      "ordinal": 2,
+      "industry": "telecommunications"
+    },
+    {
+      "parent": "9a174e39-5c98-524a-abec-952a689185d0",
+      "ordinal": 3,
+      "industry": "aviation maintenance"
+    },
+    {
+      "parent": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "ordinal": 1,
+      "industry": "hospital operations"
+    },
+    {
+      "parent": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "ordinal": 2,
+      "industry": "mining safety"
+    },
+    {
+      "parent": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "ordinal": 3,
+      "industry": "banking fraud prevention"
+    },
+    {
+      "parent": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+      "ordinal": 1,
+      "industry": "agricultural equipment"
+    },
+    {
+      "parent": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+      "ordinal": 2,
+      "industry": "scientific publishing"
+    },
+    {
+      "parent": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+      "ordinal": 3,
+      "industry": "waste recycling"
+    },
+    {
+      "parent": "532fb45c-7f86-542a-a470-39ad0df5d199",
+      "ordinal": 1,
+      "industry": "public transit"
+    },
+    {
+      "parent": "532fb45c-7f86-542a-a470-39ad0df5d199",
+      "ordinal": 2,
+      "industry": "renewable energy"
+    },
+    {
+      "parent": "532fb45c-7f86-542a-a470-39ad0df5d199",
+      "ordinal": 3,
+      "industry": "construction logistics"
+    }
+  ]
+}

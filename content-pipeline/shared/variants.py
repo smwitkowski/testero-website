@@ -20,7 +20,12 @@ FAMILY_STEM_THRESHOLD = 0.45
 SKELETON_FIELDS = ("decision_plan", "decision_proof", "decision_objective")
 INDUSTRIES = ("marine conservation", "performing arts", "water utilities", "agricultural equipment",
               "public transit", "sports broadcasting", "museum archives", "food distribution",
-              "renewable energy", "construction logistics", "scientific publishing", "waste recycling")
+              "renewable energy", "construction logistics", "scientific publishing", "waste recycling",
+              "textile manufacturing", "telecommunications", "aviation maintenance", "hospital operations",
+              "mining safety", "forestry management", "pharmaceutical manufacturing", "hotel operations",
+              "banking fraud prevention", "retail inventory", "port operations", "road maintenance",
+              "wildlife research", "insurance claims", "property maintenance", "parcel logistics",
+              "municipal records", "electronics manufacturing")
 # Keywords recognize parent domains, not organization names or product claims.
 INDUSTRY_CUES = {
     "marine conservation": r"reef|marine|ocean|conservan",
@@ -35,6 +40,24 @@ INDUSTRY_CUES = {
     "construction logistics": r"construction|building site",
     "scientific publishing": r"scientific publish|research journal",
     "waste recycling": r"recycl|waste",
+    "textile manufacturing": r"textile|fabric|garment",
+    "telecommunications": r"telecom|cellular|phone network",
+    "aviation maintenance": r"aviation|aircraft|airline",
+    "hospital operations": r"hospital|patient|clinic",
+    "mining safety": r"mining|mine safety",
+    "forestry management": r"forestry|timber|forest",
+    "pharmaceutical manufacturing": r"pharmaceut|medicine manufactur",
+    "hotel operations": r"hotel|hospitality",
+    "banking fraud prevention": r"banking|bank|fraud",
+    "retail inventory": r"retail|inventory|store stock",
+    "port operations": r"port operations|cargo|shipping terminal",
+    "road maintenance": r"road|pavement|highway",
+    "wildlife research": r"wildlife|animal research",
+    "insurance claims": r"insur|claims review",
+    "property maintenance": r"property.maintenance|tenant|repair messages",
+    "parcel logistics": r"parcel|shipment|delivery",
+    "municipal records": r"city council|municipal|residents",
+    "electronics manufacturing": r"electronic|circuit|semiconductor",
 }
 
 
@@ -47,6 +70,48 @@ def planned_industry(parent, ordinal):
         raise ValueError("No distinct industry slot")
     offset = int(hashlib.sha256(parent["question_id"].encode()).hexdigest()[:8], 16) % len(choices)
     return choices[(offset + ordinal - 1) % len(choices)]
+
+
+def industry_allocation(parents, counts):
+    """Reserve distinct sibling slots with at most two uses per batch industry."""
+    from collections import Counter
+    usage, result = Counter(), {}
+    for parent in sorted(parents, key=lambda p: p["question_id"]):
+        family = set()
+        for ordinal in range(1, counts[parent["question_id"]] + 1):
+            size = sum(not re.search(INDUSTRY_CUES[i], parent["question"]["stem"], re.I)
+                       for i in INDUSTRIES)
+            choices = [planned_industry(parent, n) for n in range(1, size + 1)]
+            available = [i for i in choices if i not in family and usage[i] < 2]
+            if not available:
+                raise ValueError("Industry pool exhausted for this batch")
+            industry = min(available, key=lambda i: usage[i])
+            result[(parent["question_id"], ordinal)] = industry
+            usage[industry] += 1
+            family.add(industry)
+    return result
+
+
+def frozen_industry(payload, scope):
+    from collections import Counter
+    counts = Counter(row["variant_origin"]["parent_question_id"] for row in payload["plan"])
+    allocation = industry_allocation(list(payload["variant_parents"].values()), counts)
+    origin = scope["variant_origin"]
+    return allocation[(origin["parent_question_id"], origin["ordinal"])]
+
+
+def option_rewrite_check(question, parent):
+    """Compare matched canonical A-D options, independent of stored shuffles."""
+    from shared.near_duplicates import tokens
+    from shared.option_order import OPTION_FIELDS
+    scores = {}
+    for label, field in zip("ABCD", OPTION_FIELDS):
+        a, b = tokens(question[field]), tokens(parent["question"][field])
+        scores[label] = len(a & b) / len(a | b)
+    lengths = [len(question[field].split()) for field in OPTION_FIELDS]
+    return {"passed": all(score < .65 for score in scores.values()) and not lengths[0] < min(lengths[1:]),
+            "option_jaccard": scores, "threshold": .65,
+            "key_uniquely_shortest": lengths[0] < min(lengths[1:])}
 
 
 class VariantSignature(PmleQuestionSignature):
@@ -71,7 +136,18 @@ class VariantSignature(PmleQuestionSignature):
     lifecycle or technical claim must be supported by the frozen parent evidence.
     Never add a factual claim requiring new retrieval. Keep the same answer logic
     and all three mistake mechanisms, including in rewritten explanations.
-    Canonical A remains the key. No inline citations in learner prose.
+    Write EVERY option fresh from the decision skeleton's archetype and why it
+    wins/loses, not from parent option sentences. Change verb, sentence frame and
+    concrete scenario artifact without changing product facts. Each matched option
+    must have token Jaccard <0.65 versus the parent; all four are checked. The key
+    must not be uniquely shortest. Canonical A remains the key.
+    The scenario moment must explain HOW the problem was noticed and fit the want;
+    no unrelated cost/latency wrapper or migration that conflicts with minimizing
+    changes. Restate in EACH distractor explanation why it loses in THIS industry.
+    Re-derive those losses: side data may genuinely predict the target in the new
+    domain; do not make it a wrong-input distractor if so. Confirm the ML task is
+    natural for domain, population size and data granularity (single frames cannot
+    detect temporal plays). Avoid ambiguous domain/tech terms. No inline citations.
     """
     parent_question: str = dspy.InputField()
     diversity: str = dspy.InputField()
@@ -175,7 +251,10 @@ def variant_scope(scope, parent, ordinal):
         result["domain_prompt"] = result["domain_prompt"].replace(" Keep the incident within this security/privacy/governance objective.", "")
     result["domain_prompt"] = result["domain_prompt"].replace(
         f"Opening style: {result['opening_style']}.", f"Opening style: {opening}.")
-    result.update(opening_style=opening, scenario_moment=moment, industry=planned_industry(parent, ordinal),
+    rank = 2
+    result["domain_prompt"] = result["domain_prompt"].replace(
+        f"Key length rank hint: {result['key_length_rank']} of 4", f"Key length rank hint: {rank} of 4")
+    result.update(opening_style=opening, scenario_moment=moment, key_length_rank=rank, industry=planned_industry(parent, ordinal),
                   variant_origin={"parent_question_id": parent["question_id"], "ordinal": ordinal})
     return result
 
@@ -193,7 +272,7 @@ def writer_inputs(parent, scope, siblings, ordinal, difficulty):
                             "not only names or numbers. Keep the same decision and equivalent constraints."}
     return {"domain_context": writer_decision_context(scope, scope["decision_plan"], scope["decision_proof"]),
             "documentation_context": writer_documentation_context(parent["sources"], scope["decision_proof"]),
-            "parent_question": json.dumps({"question": parent["question"], "canonical_option_receipts": parent["evidence"]}, ensure_ascii=False),
+            "parent_question": json.dumps({"stem": parent["question"]["stem"], "canonical_option_receipts": parent["evidence"]}, ensure_ascii=False),
             "diversity": json.dumps(hints, ensure_ascii=False), "difficulty": difficulty,
             "exam_subsection": scope["subsection"], "gap_analysis_guidance": ""}
 
@@ -269,10 +348,16 @@ def validate_variant(payload, entry):
             or any(not isinstance(v, str) or not v.strip() for v in surface.values())):
         raise ValueError("Missing variant surface description")
     if (surface["industry"] != scope.get("industry")
-            or scope["industry"] != planned_industry(parent, meta["ordinal"])):
+            or scope["industry"] != frozen_industry(payload, scope)):
         raise ValueError("Variant industry differs from its frozen family slot")
+    rewrite = option_rewrite_check(candidate_question(entry), parent)
+    if not rewrite["passed"]:
+        raise ValueError("Variant options copy parent wording or key is uniquely shortest")
     family_plan = [row for row in payload["plan"]
                    if row.get("variant_origin", {}).get("parent_question_id") == parent["question_id"]]
+    from collections import Counter
+    if max(Counter(row.get("industry") for row in payload["plan"]).values()) > 2:
+        raise ValueError("Industry used more than twice in batch")
     industries = [row.get("industry") for row in family_plan]
     if len(set(industries)) != len(industries):
         raise ValueError("Repeated planned industry within family")
@@ -317,7 +402,14 @@ def review_context(meta, parent):
             "Require the same engineering decision, equivalent decisive constraints, the same best-action "
             "logic and EACH distractor failure mechanism. Reject added/removed constraints or a "
             "different decision. Confirm materially different industry, setting, opening and moment. "
-            "A rename or changed numbers is insufficient. Mark evidence_supported/scenario_relevant "
+            "The scenario moment must explain how the problem was noticed and fit its want; "
+            "FAIL scenario_relevant for a migration/minimal-change conflict or unrelated cost/latency wrapper. "
+            "Re-verify the task is natural for this industry, data granularity and population size. "
+            "Single frames cannot establish temporal plays; meaningful side data must not be dismissed "
+            "as wrong inputs when it predicts the label. Re-derive EACH distractor loss in THIS industry; "
+            "require its explanation to state that losing reason. FAIL distractors_incorrect, "
+            "no_credible_second_answer or scenario_relevant when the swap strengthens an alternative "
+            "or makes the ML task implausible. A rename or changed numbers is insufficient. Mark evidence_supported/scenario_relevant "
             "false when these invariants fail (Argon: REVISE/REJECT). Frozen parent:\n"
             + json.dumps({"parent_stem": parent["question"]["stem"], "decision_plan": parent["scope"]["decision_plan"],
                           "variant": meta}, ensure_ascii=False, separators=(",", ":")))

@@ -1405,6 +1405,10 @@ frozen-parent contract, offline prompt estimates and coordinator-only 18-variant
 comparison. `scripts/generate_variants.py` defaults to zero-call prompt rendering;
 `--enable-variants` is required for a writer call. Plan/verify/cite are skipped,
 not independent judgment. No production ingestion is authorized by this mode.
+Round 3 additionally rejects matched option Jaccard >=0.65 and uniquely shortest
+keys, rechecks industry realism and moment/want fit in evidence/Argon review,
+and balances sibling keys and batch industries. See the handoff's round-3 section
+for the fresh six-parent coordinator command and offline-only limitations.
 
 ## Source boundaries
 

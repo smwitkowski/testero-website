@@ -193,3 +193,50 @@ then judges eligible generated questions with style/evidence/blind/Argon and
 It is **not** a separate `rejudge` invocation: old questions cannot have their
 industry/organization content corrected without regeneration. No live calls
 were made for this change. Cost and unchanged-quality targets remain unproven.
+
+
+## Round 3: fresh options and industry realism
+
+Use fresh generation, not rejudge of historical rejected questions. The writer
+sees parent stem and frozen receipts, with the complete verified decision plan
+and scenario reasons in the stable domain context; parent option sentences are
+not supplied as rewrite templates. Each canonical matched A-D option is checked
+with the existing normalized token-set Jaccard, strictly **<0.65**. A copy of any
+key or distractor rejects before judges; export/ingest independently recompute
+the check. A uniquely shortest key also rejects (ties allowed); frozen key-length
+hints now use rank 2 rather than rank 1, constant across siblings to retain
+parent-prefix reuse.
+
+Evidence and Argon review explicitly fail a moment/want conflict, implausible
+industry/task/data granularity, or a distractor that gains merit after a domain
+swap. They require each explanation's losing reason in the new industry. These
+are semantic judge checks, not a claim of deterministic semantic classification.
+Blind solving remains isolated from parent/answer hints.
+
+Industry vocabulary is now **30**, allocated deterministically across the whole
+frozen batch with distinct family industries and at most **2 uses per industry**.
+Parent-domain cue exclusions remain heuristic. Sibling-aware option balancing
+groups siblings before cycling the four keys, both after generation and over the
+final accepted/ingest population. Three siblings receive different letters; the
+18-candidate batch has 4/5 of each letter. Smaller accepted subsets are balanced
+again. A <=40% cap is impossible with only 1 or 2 accepted questions; the report
+shows actual counts rather than hiding that limitation. No canonical judged
+content, evidence binding or frozen request digest changes during label shuffles.
+
+Family stems remain strictly <0.45, non-family policy unchanged. Industry-only
+framing, no-name gate, stable-prefix ordering, full independent gates and Argon
+remain mandatory. Offline `round3-preflight.json` records the same six ×3 plan:
+1 maximum industry use, 309,524 estimated writer input tokens
+(character-based, not provider usage). No round-3 quality/cost result exists yet.
+
+Coordinator-only command (NOT executed by this worker):
+
+```sh
+cd /Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline && PYTHON_DOTENV_DISABLED=1 uv run python scripts/variants_ab.py run --allow-live --parent-dir /Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline/.cache/generation --artifact .cache/variants/ab-six-r3-live.json --family-stem-threshold 0.45 --review-pairs 3
+```
+
+The artifact basename must be fresh. This writes one candidate per slot, runs all
+independent gates on every eligible candidate (`full_gate_sample=1`), then writes
+token/rejection reports and three full parent/variant review pairs. Human quality
+review and the complete all-model token audit are still required to establish
+quality parity and >=5× savings. No live calls, merge or production writes.

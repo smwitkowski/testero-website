@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.generate_variants import generate
 from scripts.ingest_external_verdicts import (_read_json, _validate_candidate, _external_decision,
     _scope, artifact_lock, _flush)
-from shared.variants import FAMILY_STEM_THRESHOLD, family_threshold, validate_variant, variant_duplicates
+from shared.variants import FAMILY_STEM_THRESHOLD, family_threshold, validate_variant, variant_duplicates, option_rewrite_check
 from shared.validator import validate_question
 from shared.option_order import canonical_evidence
 from shared.evidence import check_evidence
@@ -159,6 +159,10 @@ def report(artifact, verdicts):
                                                    if generation_cost else None),
             "parent_similarity": parent_scores, "sibling_similarity": sibling_scores,
             "family_similarity": family_scores,
+            "option_rewrite": [{"candidate_id": e["candidate_id"], **option_rewrite_check(
+                candidate_question(e), payload["variant_parents"][e["parent_question_id"]])} for e in valid],
+            "key_positions": dict(Counter(e["key"] for e in valid if e["candidate_id"] in accepted)),
+            "industry_counts": dict(Counter(s["industry"] for s in payload["plan"])),
             "human_review_pairs": pairs}
 
 
@@ -299,8 +303,16 @@ def main():
                                   argon_gate=True, full_gate_sample=1, candidate_ids=eligible)
             if result.failed or result.usage_stopped:
                 print("Judge errors/stops: inspect receipts before retrying", file=sys.stderr)
-    review_pairs(args.artifact, pairs_output, args.review_pairs)
     result = report(args.artifact, verdicts)
+    if result["accepted_variant_ids"]:
+        from shared.option_order import balance_options
+        with artifact_lock(args.artifact):
+            payload = _read_json(args.artifact)
+            accepted = set(result["accepted_variant_ids"])
+            balance_options([e for e in payload["candidates"] if e["candidate_id"] in accepted])
+            _flush(args.artifact, payload)
+        result = report(args.artifact, verdicts)
+    review_pairs(args.artifact, pairs_output, args.review_pairs)
     output = args.artifact.with_name(args.artifact.stem + ".report.json")
     output.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n")
     print(json.dumps(result, indent=2, ensure_ascii=False))
