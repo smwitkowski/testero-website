@@ -364,6 +364,40 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
     raise ValueError("External request exceeds the character bound even with wide quote-centered excerpts")
 
 
+def _validate_retrieval_metadata(metadata, plan):
+    """Validate optional v3 retrieval provenance, not the proof verdict."""
+    from shared.doc_claims import plan_claims
+    from shared.doc_retrieval import RetrievalConfig
+    fields = {"version", "claims", "config", "budget_chars", "context_chars",
+              "estimated_doc_tokens", "objective_prefix_sha256", "chunk_ids"}
+    if not isinstance(metadata, dict) or set(metadata) != fields or type(metadata["version"]) is not int or metadata["version"] != 3:
+        raise ValueError("Invalid retrieval metadata")
+    config = metadata["config"]
+    if (not isinstance(config, dict) or set(config) != set(RetrievalConfig.__dataclass_fields__)
+            or any(type(config[key]) is not int for key in ("chunk_chars", "overlap", "top_k", "neighbors"))
+            or type(config["sections"]) is not bool or not isinstance(config["query_mode"], str)):
+        raise ValueError("Invalid retrieval configuration")
+    RetrievalConfig(**config)
+    if (any(type(metadata[key]) is not int for key in ("budget_chars", "context_chars", "estimated_doc_tokens"))
+            or metadata["budget_chars"] < 4000 or metadata["context_chars"] < 0
+            or metadata["estimated_doc_tokens"] != (metadata["context_chars"] + 3) // 4
+            or not isinstance(metadata["objective_prefix_sha256"], str)
+            or not re.fullmatch(r"[0-9a-f]{64}", metadata["objective_prefix_sha256"])):
+        raise ValueError("Invalid retrieval context metadata")
+    ids = metadata["chunk_ids"]
+    if (not isinstance(ids, list) or any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{24}", value) for value in ids)):
+        raise ValueError("Invalid retrieval chunk IDs")
+    claims = metadata["claims"]
+    expected = plan_claims(plan) if config["query_mode"] == "claims" else []
+    if not isinstance(claims, list) or len(claims) != len(expected):
+        raise ValueError("Invalid retrieval claims")
+    for row, claim in zip(claims, expected):
+        if (not isinstance(row, dict) or set(row) != {"claim", "chunk_ids"} or row["claim"] != claim
+                or not isinstance(row["chunk_ids"], list) or len(row["chunk_ids"]) > 3
+                or any(not isinstance(value, str) or value not in ids for value in row["chunk_ids"])):
+            raise ValueError("Invalid retrieval claim provenance")
+
+
 def validate_decision_provenance(scope, entry):
     """Validate a frozen v4 decision and the original docs veto offline.
 
@@ -399,8 +433,10 @@ def validate_decision_provenance(scope, entry):
             raise ValueError()
         signature = decision_proof_signature(policy)
         output_fields = set(signature.output_fields)
-        if not isinstance(proof, dict) or set(proof) != output_fields | {"passed", "mechanical_check"} | ({"distractor_evidence"} if policy is not None else set()):
+        if not isinstance(proof, dict) or set(proof) != output_fields | {"passed", "mechanical_check"} | ({"distractor_evidence"} if policy is not None else set()) | ({"retrieval"} if "retrieval" in proof else set()):
             raise ValueError()
+        if "retrieval" in proof:
+            _validate_retrieval_metadata(proof["retrieval"], plan)
         parsed = parse_output(json.dumps({name: proof[name] for name in output_fields}, allow_nan=False), signature)
         if (proof["passed"] is not True or not parsed["reason"].strip()
                 or any(parsed[name] is not True for name in

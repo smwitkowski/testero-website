@@ -14,11 +14,11 @@ TOKEN_FIELDS = ("input_tokens", "output_tokens", "cached_input_tokens",
 
 
 @contextmanager
-def call_context(*, stage=None, candidate_id=None, index=None, attempt=None, calls_path=None):
+def call_context(*, stage=None, candidate_id=None, index=None, attempt=None, calls_path=None, escalation=None, verify_context=None):
     """Inherit unspecified metadata; threads must enter their own context."""
     values = dict(_CONTEXT.get())
     values.update({k: v for k, v in locals().copy().items()
-                   if k in ("stage", "candidate_id", "index", "attempt", "calls_path") and v is not None})
+                   if k in ("stage", "candidate_id", "index", "attempt", "calls_path", "escalation", "verify_context") and v is not None})
     token = _CONTEXT.set(values)
     try:
         yield
@@ -86,7 +86,7 @@ def model_call(model):
     finally:
         if path is not None:
             record = {"ts": datetime.now(timezone.utc).isoformat(),
-                      **{key: context.get(key) for key in ("stage", "candidate_id", "index", "attempt")},
+                      **{key: context.get(key) for key in ("stage", "candidate_id", "index", "attempt", "escalation", "verify_context")},
                       "model": model, **{key: _count(usage.get(key)) for key in TOKEN_FIELDS},
                       "seconds": time.monotonic() - started,
                       "ok": error_class is None, "error_class": error_class}

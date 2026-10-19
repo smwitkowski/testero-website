@@ -164,14 +164,31 @@ def _predict(signature, inputs, model, reasoning_effort):
         raise GenerationOutputError(adapter.raw_response, adapter.capture.failure()) from None
 
 
-def plan_decision(scope, *, model, difficulty="MEDIUM", replacement_feedback="", existing_scenarios=(), reasoning_effort="high", predictor=None):
+def ordered_signature(signature, names):
+    """Move existing input fields without adding, dropping or rewriting content."""
+    if set(names) != set(signature.input_fields) or len(names) != len(signature.input_fields):
+        raise ValueError("Ordering must contain each input field exactly once")
+    fields = {name: (signature.fields[name].annotation, signature.fields[name]) for name in names}
+    fields.update({name: (field.annotation, field) for name, field in signature.output_fields.items()})
+    return dspy.Signature(fields, instructions=signature.instructions)
+
+
+def planning_prompt(scope, *, difficulty="MEDIUM", replacement_feedback="", existing_scenarios=(), stable_prefix=False):
     from shared.objective_style import policy_instructions
+    from shared.question_style import practitioner_signature
     inputs = {"objective_scope": scope["domain_prompt"] + policy_instructions(scope.get("style_policy")), "difficulty": difficulty,
               "replacement_feedback": replacement_feedback,
               "existing_scenarios": json.dumps(existing_scenarios, ensure_ascii=False)}
-    from shared.cli_models import output_model
-    from shared.question_style import practitioner_signature
     signature = practitioner_signature(DecisionPlanSignature, scope.get("cert_id"))
+    if stable_prefix:
+        signature = ordered_signature(signature, ["objective_scope", "difficulty", "existing_scenarios", "replacement_feedback"])
+    return signature, inputs
+
+
+def plan_decision(scope, *, model, difficulty="MEDIUM", replacement_feedback="", existing_scenarios=(), reasoning_effort="high", predictor=None, stable_prefix=False):
+    from shared.cli_models import output_model
+    signature, inputs = planning_prompt(scope, difficulty=difficulty, replacement_feedback=replacement_feedback,
+                                        existing_scenarios=existing_scenarios, stable_prefix=stable_prefix)
     output = predictor(**inputs) if predictor else _predict(signature, inputs, model, reasoning_effort)
     plan = output_model(DecisionPlanSignature).model_validate(output).model_dump()["plan"]
     if plan["objective_id"] != scope["objective_id"]:
@@ -182,17 +199,39 @@ def plan_decision(scope, *, model, difficulty="MEDIUM", replacement_feedback="",
     return plan
 
 
-def verify_decision(scope, plan, sources, *, model, reasoning_effort="medium", predictor=None):
-    from shared.cli_models import output_model
-    inputs = {"objective_scope": scope["domain_prompt"], "proposed_plan": json.dumps(plan, ensure_ascii=False),
-              "fetched_documentation": documentation_context(sources)}
+def verification_prompt(scope, plan, sources, *, retrieval=None, stable_prefix=False):
+    """Build both live and offline-replay inputs through the same seam."""
+    documentation_context(sources)
+    context = retrieval["context"] if retrieval is not None else documentation_context(sources)
     signature = decision_proof_signature(scope.get("distractor_evidence"))
+    inputs = {"objective_scope": scope["domain_prompt"], "proposed_plan": json.dumps(plan, ensure_ascii=False),
+              "fetched_documentation": context}
+    if retrieval is not None and retrieval.get("claims"):
+        inputs["proposed_plan"] += ("\n\nClaim-to-passage navigation (lexical matches, NOT proof of support; "
+                                    "judge every claim and report missing evidence):\n" + json.dumps([
+                                        {"id": row["claim"]["id"], "claim": row["claim"]["text"], "chunk_ids": row["chunk_ids"]}
+                                        for row in retrieval["claims"]], ensure_ascii=False))
+    if stable_prefix:
+        signature = ordered_signature(signature, ["fetched_documentation", "objective_scope", "proposed_plan"])
+    return signature, inputs
+
+def verify_decision(scope, plan, sources, *, model, reasoning_effort="medium", predictor=None,
+                    retrieval=None, stable_prefix=False):
+    from shared.cli_models import output_model
+    signature, inputs = verification_prompt(scope, plan, sources, retrieval=retrieval, stable_prefix=stable_prefix)
     raw = predictor(**inputs) if predictor else _predict(signature, inputs, model, reasoning_effort)
     proof = output_model(signature).model_validate(raw).model_dump()
     if "distractor_evidence" in scope:
         proof["distractor_evidence"] = dict(scope["distractor_evidence"])
     receipts = [{k: row[k] for k in ("option_label", "url", "quote")} for row in proof["reasons"]]
     checked = check_evidence(receipts, sources)
+    if retrieval is not None:
+        from shared.doc_retrieval import quote_in_chunks
+        for row in receipts:
+            if not quote_in_chunks(row, retrieval["chunks"]):
+                checked["errors"].append(f"Option {row['option_label']}: quote absent from supplied retrieval chunks")
+        checked["passed"] = not checked["errors"]
+        proof["retrieval"] = retrieval["metadata"]
     proof["mechanical_check"] = {"passed": checked["passed"], "errors": checked["errors"]}
     proof["passed"] = all(proof[k] is True for k in (
         "supported", "uniquely_best", "scenario_reasons_supported", "no_feature_gotchas"
@@ -200,6 +239,22 @@ def verify_decision(scope, plan, sources, *, model, reasoning_effort="medium", p
     if not proof["reason"].strip():
         proof["passed"] = False
     return proof
+
+
+def evidence_missing_veto(proof):
+    """Retry missing/uncertain evidence, not an explicit contradiction alone."""
+    import re
+    if proof.get("passed") is True:
+        return False
+    if any("quote absent from supplied retrieval chunks" in error
+           for error in proof.get("mechanical_check", {}).get("errors", [])):
+        return True
+    reason = proof.get("reason", "").casefold()
+    return bool(re.search(
+        r"(?:no|missing|insufficient|lack\w*|absen\w*|without|not|doesn't|don't|cannot|can't|couldn't)"
+        r".{0,100}(?:support|evidence|receipt|passage|document|establish|substantiate|verify|prove|anchor)"
+        r"|(?:support|evidence|receipt|passage|document).{0,80}(?:missing|insufficient|unverified|uncertain|absent)"
+        r"|unsupported|insufficiently evidenced", reason))
 
 
 def writer_decision_context(scope, plan, proof):

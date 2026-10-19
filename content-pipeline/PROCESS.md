@@ -1,5 +1,37 @@
 # Docs-grounded question process
 
+## Safe documentation efficiency defaults (2026-10-19)
+
+Founder decision: **passage retrieval is parked**. Per-claim ranking and bounded
+full-document escalation stay implemented but `--verify-retrieval` remains OFF.
+No batch runner enables it. Prior all-plan recall remains calibration only.
+
+`--doc-cache` and `--verify-stable-prefix` are now ON by default. Opt out with
+`--no-doc-cache --no-verify-stable-prefix`. Cache only avoids public-document IO;
+it preserves original URL, requested URL, retrieval timestamp, full text/hash,
+7-day TTL, bounded reads and atomic writes. It does not cache verifier decisions.
+The verifier still sees full fetched pages and all existing independent gates.
+
+Stable ordering is **content-identical**, not a prompt rewrite. It moves the
+existing verifier fields to `fetched_documentation, objective_scope, proposed_plan`
+and planner fields to `objective_scope, difficulty, existing_scenarios,
+replacement_feedback`. Field names, types, descriptions, instructions, output
+schema and every input value stay identical. Earlier experimental extra
+`stable_objective` and `objective_documentation` fields were removed; no objective
+text is added or lost. Restoring input order produces byte-identical JSON/Chat
+adapter messages and CLI prompt text (see `test_safe_prefix_defaults.py`).
+Planner scope already contains presentation hints, so this is a cache opportunity,
+not a promised stable prefix length or measured provider cache hit improvement.
+
+The coordinator runner explicitly passes cache/prefix flags and never retrieval.
+The locally maintained `../hq/tools/run-domain-batch.sh` wrapper now defaults to
+`frontend.prime-testero-retrieval-1019`; this untracked HQ script is outside this
+PR and was patched in place, not added to either repository.
+Default decision attempts remain3. No live semantic-quality or token-per-accepted
+improvement is claimed. Retrieval evidence/history is retained under
+`../hq/drafts/retrieval-calibration-2026-10-19/` (outside this repository);
+fresh approval is required to unpark it.
+
 ## Pipeline efficiency (2026-10-17)
 
 New generation keeps full fetched docs for the decision verifier and independent

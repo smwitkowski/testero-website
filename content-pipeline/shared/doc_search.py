@@ -53,7 +53,8 @@ class DocumentationCache:
     Returned values are deep copies, so callers cannot change cached evidence.
     """
 
-    def __init__(self):
+    def __init__(self, *, disk_cache=None):
+        self._disk_cache = disk_cache
         self._lock = Lock()
         self._discoveries = {}
         self._documents = {}
@@ -90,7 +91,14 @@ class DocumentationCache:
                     source = deepcopy(previous)
                     source["requested_url"] = url
                     return source
-            source = _fetch_documentation(url)
+            source = self._disk_cache.get(url) if self._disk_cache is not None else None
+            if source is None:
+                source = _fetch_documentation(url)
+                if self._disk_cache is not None:
+                    try:
+                        self._disk_cache.put(url, source)
+                    except OSError:
+                        logger.warning("Could not persist public documentation snapshot; using fresh fetched evidence")
             with self._lock:
                 previous = self._final_documents.get(source["url"])
                 if previous is None:

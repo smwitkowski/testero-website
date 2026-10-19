@@ -81,7 +81,8 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False):
     generate = [sys.executable, "scripts/generate_all_domains.py", "--cert", cert,
                 "--n-questions", str(count), "--model", "codex", "--judge-model", "external",
                 "--parallel", str(parallel), "--gen-effort", "high", "--cite-effort", "medium",
-                "--argon-gate", "--distractor-evidence", "consistent", "--artifact", str(artifact)]
+                "--argon-gate", "--distractor-evidence", "consistent",
+                "--doc-cache", "--verify-stable-prefix", "--artifact", str(artifact)]
     for objective in domain["objectives"]:
         generate += ["--objective", objective["objective_id"]]
     if plan_only:

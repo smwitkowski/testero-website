@@ -17,3 +17,6 @@ review/
 
 # Local generation candidates and frozen documentation for founder review
 .cache/generation/
+
+# Opt-in public technical-document snapshots (never commit full page bodies)
+.cache/documentation/
