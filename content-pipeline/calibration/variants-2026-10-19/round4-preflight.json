@@ -1,0 +1,237 @@
+{
+  "artifact": ".cache/variants/ab-six-r4-offline-preflight.json",
+  "offline": true,
+  "parents": 6,
+  "planned_variants": 18,
+  "estimated_writer_input_tokens": 313041,
+  "estimate_method": "ceil(prompt characters / 4); not measured provider tokens",
+  "actual_model_calls": 0,
+  "actual_judge_calls": 0,
+  "family_stem_threshold": 0.45,
+  "prior_history_snapshot_sha256": "eb20cbd7b36e8819e427595ec0c1f0e73966c16a3cbf2dbc22ef5f6ae0d29000",
+  "prior_artifacts": [
+    {
+      "path": ".cache/variants/ab-six-industry-live.json",
+      "sha256": "2c709d9d4f4953507d228ba264a54ddf4657b946a6c016b81071a05432dd2862",
+      "historical_all_gate_passes": 12
+    },
+    {
+      "path": ".cache/variants/ab-six-r3-live.json",
+      "sha256": "638a665c3b8d9296d9200ee2cd5380a5ff948d2ea6bd98e7aceb8337fbc2c477",
+      "historical_all_gate_passes": 7
+    }
+  ],
+  "historical_acceptance_note": "Historical original-policy passes are dedupe inputs only, not new-policy or publication approvals; includes old style-waived 84d6.",
+  "moments": {
+    "monitoring": 5,
+    "migration": 6,
+    "scale growth": 6,
+    "recent deployment": 1
+  },
+  "industries": {
+    "hotel operations": 1,
+    "banking fraud prevention": 1,
+    "retail inventory": 1,
+    "sports broadcasting": 1,
+    "food distribution": 1,
+    "renewable energy": 1,
+    "scientific publishing": 1,
+    "hospital operations": 1,
+    "mining safety": 1,
+    "forestry management": 1,
+    "pharmaceutical manufacturing": 1,
+    "port operations": 1,
+    "construction logistics": 1,
+    "telecommunications": 1,
+    "aviation maintenance": 1,
+    "museum archives": 1,
+    "waste recycling": 1,
+    "textile manufacturing": 1
+  },
+  "max_industry_use": 1,
+  "prior_same_parent_industry_reuses": 0,
+  "assignments": [
+    {
+      "index": 1,
+      "parent_question_id": "a23ed85e-042b-5eaf-ba0d-ccf52b149bd8",
+      "ordinal": 1,
+      "industry": "hotel operations",
+      "moment": "monitoring",
+      "opening": "Your company/organization/team"
+    },
+    {
+      "index": 2,
+      "parent_question_id": "a23ed85e-042b-5eaf-ba0d-ccf52b149bd8",
+      "ordinal": 2,
+      "industry": "banking fraud prevention",
+      "moment": "migration",
+      "opening": "You work for"
+    },
+    {
+      "index": 3,
+      "parent_question_id": "a23ed85e-042b-5eaf-ba0d-ccf52b149bd8",
+      "ordinal": 3,
+      "industry": "retail inventory",
+      "moment": "scale growth",
+      "opening": "You have/manage/use"
+    },
+    {
+      "index": 4,
+      "parent_question_id": "2552fa69-5a20-5744-90a3-2c76eba518d2",
+      "ordinal": 1,
+      "industry": "sports broadcasting",
+      "moment": "monitoring",
+      "opening": "Your company/organization/team"
+    },
+    {
+      "index": 5,
+      "parent_question_id": "2552fa69-5a20-5744-90a3-2c76eba518d2",
+      "ordinal": 2,
+      "industry": "food distribution",
+      "moment": "migration",
+      "opening": "You work for"
+    },
+    {
+      "index": 6,
+      "parent_question_id": "2552fa69-5a20-5744-90a3-2c76eba518d2",
+      "ordinal": 3,
+      "industry": "renewable energy",
+      "moment": "scale growth",
+      "opening": "You have/manage/use"
+    },
+    {
+      "index": 7,
+      "parent_question_id": "9a174e39-5c98-524a-abec-952a689185d0",
+      "ordinal": 1,
+      "industry": "scientific publishing",
+      "moment": "recent deployment",
+      "opening": "You are"
+    },
+    {
+      "index": 8,
+      "parent_question_id": "9a174e39-5c98-524a-abec-952a689185d0",
+      "ordinal": 2,
+      "industry": "hospital operations",
+      "moment": "migration",
+      "opening": "You work for"
+    },
+    {
+      "index": 9,
+      "parent_question_id": "9a174e39-5c98-524a-abec-952a689185d0",
+      "ordinal": 3,
+      "industry": "mining safety",
+      "moment": "scale growth",
+      "opening": "You have/manage/use"
+    },
+    {
+      "index": 10,
+      "parent_question_id": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "ordinal": 1,
+      "industry": "forestry management",
+      "moment": "monitoring",
+      "opening": "Your company/organization/team"
+    },
+    {
+      "index": 11,
+      "parent_question_id": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "ordinal": 2,
+      "industry": "pharmaceutical manufacturing",
+      "moment": "migration",
+      "opening": "You work for"
+    },
+    {
+      "index": 12,
+      "parent_question_id": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "ordinal": 3,
+      "industry": "port operations",
+      "moment": "scale growth",
+      "opening": "You have/manage/use"
+    },
+    {
+      "index": 13,
+      "parent_question_id": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+      "ordinal": 1,
+      "industry": "construction logistics",
+      "moment": "monitoring",
+      "opening": "Your company/organization/team"
+    },
+    {
+      "index": 14,
+      "parent_question_id": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+      "ordinal": 2,
+      "industry": "telecommunications",
+      "moment": "migration",
+      "opening": "You work for"
+    },
+    {
+      "index": 15,
+      "parent_question_id": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+      "ordinal": 3,
+      "industry": "aviation maintenance",
+      "moment": "scale growth",
+      "opening": "You have/manage/use"
+    },
+    {
+      "index": 16,
+      "parent_question_id": "532fb45c-7f86-542a-a470-39ad0df5d199",
+      "ordinal": 1,
+      "industry": "museum archives",
+      "moment": "monitoring",
+      "opening": "Your company/organization/team"
+    },
+    {
+      "index": 17,
+      "parent_question_id": "532fb45c-7f86-542a-a470-39ad0df5d199",
+      "ordinal": 2,
+      "industry": "waste recycling",
+      "moment": "migration",
+      "opening": "You work for"
+    },
+    {
+      "index": 18,
+      "parent_question_id": "532fb45c-7f86-542a-a470-39ad0df5d199",
+      "ordinal": 3,
+      "industry": "textile manufacturing",
+      "moment": "scale growth",
+      "opening": "You have/manage/use"
+    }
+  ],
+  "round3_cost_latency_diagnosis": {
+    "indices": [
+      3,
+      6,
+      9,
+      12,
+      15,
+      18
+    ],
+    "accepted": 0,
+    "rejection_counts": {
+      "key_uniquely_shortest": 3,
+      "family_stem": 1,
+      "style": 1,
+      "argon_moment": 1
+    },
+    "note": "Only one gate rejection was a moment conflict. Replacing a forced moment is not proof of six recovered passes."
+  },
+  "cross_run_solar_pair": {
+    "round2_id": "c4c26333-3d73-558c-b339-b683cb2d900d",
+    "round3_id": "9883f4a8-1adb-594f-8fad-b6ecd5cd82f7",
+    "industry": "renewable energy",
+    "stem_score": 0.3088235294117647,
+    "key_score": 0.275,
+    "family_threshold_alone_catches_pair": false,
+    "fix": "Exclude prior accepted same-parent industries in allocation and reject prior_family_industry_reuse separately."
+  },
+  "offline_verification": {
+    "required_gate": "cd content-pipeline && env -i PATH=\"$PATH\" HOME=\"$HOME\" uv run pytest -q",
+    "passed": 2282,
+    "skipped": 3,
+    "subtests_passed": 48,
+    "warnings": 25,
+    "final_duration_seconds": 95.48,
+    "independent_source_review": "no concrete blocker",
+    "frontend_checks": "not rerun; no frontend changes",
+    "prior_artifact_request_verdict_files_unchanged": 56
+  }
+}

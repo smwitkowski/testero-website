@@ -4,8 +4,10 @@
 
 Opt-in only. Default `generate_variants.py` renders prompts without any model,
 retrieval or DB call; `--enable-variants` authorizes one writer call per attempt.
-It skips plan, verify and cite calls. No retries or automatic repair. Unknown or
-interrupted attempts remain consumed; use a fresh artifact basename.
+It skips plan, verify and cite calls. Round 4 permits one small option-only length
+repair when the key is uniquely shortest and no unrelated check fails; no scenario
+regeneration or general repair loop. Unknown or interrupted attempts remain consumed;
+use a fresh artifact basename.
 
 Parents must be accepted persisted originals, current rules v5, with passing
 saved independent gates and verified decision/evidence. Selection validates the
@@ -282,3 +284,78 @@ PYTHON_DOTENV_DISABLED=1 uv run python scripts/backfill_variant_failures.py --ar
 metadata. Repeating it without changes is a no-op. This artifact was backfilled
 offline; candidates, plan, frozen parents, decisions and all26 request/verdict/
 usage files are unchanged. No new acceptance, model calls, merge or prod writes.
+
+
+## Round 4: length repair, strict variant style, and prior-run diversity
+
+The round-3 cost/latency slots (3, 6, 9, 12, 15, 18) went 0/6 for **three length
+failures, one family duplicate, one style failure and one Argon moment failure**.
+Only #6 was gate-rejected for an incoherent discovery story. #9 also combined two
+problems and #15 had a weak cost wrapper. Replacing the forced slot does not prove
+six recovered passes. New presentation policy 4 omits forced cost/latency reduction;
+scale growth is the third slot for these six parents. The prompt requires one
+observed problem, its concrete observation channel and one want addressed by the
+key. Historical policy-3 scopes keep their original moments for offline replay.
+
+Options must still be fresh (each canonical matched option Jaccard <0.65), and
+canonical A must not be uniquely shortest. These now have separate errors. The
+writer counts words up front and aims for rank 2. If only option-length checks fail,
+one low-effort DSPy call receives the current question and word-count feedback,
+and returns only four options. It cannot edit the stem, explanations, industry,
+or frozen decision/evidence metadata; option semantics are independently reviewed.
+All schema, rewrite, lineage, duplicate and independent
+reviews run on the resulting question with a new content-bound ID. A second
+failure rejects; interruption never triggers an automatic replay. Repair calls
+are logged as `variant_length_repair` and included in generation/all-model usage.
+
+For variants, a raw style FAIL is now a veto even when v5.1 allows an ML-practice
+hinge. Original-question waiver behavior is unchanged. New variant requests freeze
+`variant_mode: 1`; the runner, aggregate decision, report and ingest all enforce it.
+Older frozen requests are not silently rewritten by this change.
+
+Use repeatable `--prior-artifact` inputs for earlier runs. The offline loader binds
+actual saved questions, parent snapshots, receipts, source excerpts, requests and
+verdicts; it does not trust `accepted=false/true` flags or a mutable report list.
+Round 2 and round 3 replay as 12 + 7 **historical-policy passes**, including the old
+style-waived 84d6. This conservative history is for dedupe only, not new approval.
+Their comparison rows and artifact/request/verdict hashes are frozen in the new
+artifact with a snapshot digest. Later report/export/rejudge/ingest validate that
+snapshot without rereading mutable prior paths. Missing/tampered evidence blocks
+preflight rather than silently dropping earlier questions.
+
+The family stem threshold stays <0.45. Earlier accepted same-parent industries
+also become unavailable to allocation, with a separate
+`prior_family_industry_reuse` rejection. This matters: round-2 c4c2 versus round-3
+9883 has stem Jaccard **0.3088235294**, below 0.45, but both use renewable energy for
+the same parent. The lexical threshold alone would not catch that scenario repeat.
+Non-family vetoes stay `min(stem, key) >=0.20`. These lexical/industry checks are
+not general semantic duplicate detection.
+
+Family comparisons include only accepted or still-eligible siblings. Generation
+rejects no longer consume a slot. Report and ingest first validate actual bound
+quality verdicts across the cohort, so even a later style/evidence/blind/Argon
+reject cannot veto a valid earlier sibling. Missing verdicts remain eligible;
+newly rejected duplicate copies do not veto later siblings. Source artifacts and
+verdicts are never changed by this read-only population calculation.
+
+`round4-preflight.json` records the same six ×3 offline plan with prior history:
+18 prompts, 313,041 estimated writer input tokens (character heuristic), no forced
+cost slot, no prior same-parent industry reuse, 30-industry pool and at most two
+uses per industry. This is not a live yield, quality or saving result.
+
+Coordinator-only fresh live command (**not executed by the worker**):
+
+```sh
+cd /Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline && PYTHON_DOTENV_DISABLED=1 uv run python scripts/variants_ab.py run --allow-live --parent-dir /Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline/.cache/generation --artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.json --prior-artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.json --prior-artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.json --family-stem-threshold 0.45 --review-pairs 3
+```
+
+The round-4 basename must be fresh. This writes new candidates, judges all eligible
+ones with style/evidence/blind/Argon (`full_gate_sample=1`), then writes reports and
+three founder-review pairs. No merge or production persistence is performed.
+Human quality review and a complete cache-inclusive usage audit are still required.
+
+Final offline gate for round 4:
+`cd content-pipeline && env -i PATH="$PATH" HOME="$HOME" uv run pytest -q`
+→ **2,282 passed, 3 skipped, 48 subtests passed** (25 dependency deprecation
+warnings). Independent source review found no remaining concrete blocker.
+No frontend files changed; frontend/Docker checks were not rerun for this round.
