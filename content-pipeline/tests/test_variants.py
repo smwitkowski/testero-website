@@ -632,3 +632,102 @@ def test_round3_schema_fail_does_not_skip_other_families(parents, tmp_path):
     assert len(calls) == 3
     assert len({e["variant"]["surface"]["industry"] for e in result["candidates"]}) == 3
     assert all(e["failure_stage"] == "schema" for e in result["candidates"])
+
+
+
+@pytest.mark.parametrize("defect,check", [("copy", "option_jaccard"), ("shortest", "key_length"), ("name", "name_detector"), ("industry", "industry")])
+def test_failed_attempt_records_check_details(parents, tmp_path, defect, check):
+    def writer(inputs):
+        raw = variant_for(inputs)
+        if defect == "copy": raw["distractor_1"] = QUESTION["distractor_1"]
+        if defect == "shortest": raw["correct_answer"] = "Run Cloud Run"
+        if defect == "name": raw["stem"] = raw["stem"].replace("Your company", "Northstar uses")
+        if defect == "industry": raw["industry"] = "unassigned domain"
+        return raw
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=writer)
+    attempt = payload["variant_attempts"][0]
+    assert attempt["status"] == "failed"
+    assert attempt["failure_stage"] == "schema"
+    assert check in attempt["failed_checks"]
+    assert check in attempt["reason"]
+    assert attempt["failure_checks"][check]["passed"] is False
+    if defect == "copy":
+        assert attempt["failure_checks"][check]["values"]["B"] == 1
+    if defect == "shortest":
+        assert attempt["failure_checks"][check]["canonical_word_counts"]["A"] == 3
+
+
+def test_attempt_backfill_metadata_only_idempotent_and_backup(parents, tmp_path):
+    from scripts.backfill_variant_failures import backfill
+    def writer(inputs):
+        return {**variant_for(inputs), "distractor_1": QUESTION["distractor_1"]}
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=writer)
+    path = tmp_path / "variants.json"
+    attempt = payload["variant_attempts"][0]
+    for field in ("candidate_id", "failure_stage", "reason", "failed_checks", "failure_checks", "error_class"):
+        attempt.pop(field)
+    path.write_text(json.dumps(payload))
+    before = path.read_bytes()
+    preview = backfill(path)
+    assert path.read_bytes() == before
+    result = backfill(path, write=True)
+    assert result == preview
+    assert result["checks"]["option_jaccard"] == 1
+    assert set(result["checks"]) <= {"schema", "option_jaccard"}
+    after = json.loads(path.read_text())
+    assert after["candidates"] == payload["candidates"]
+    assert after["plan"] == payload["plan"]
+    assert path.with_name("variants.before-failure-backfill.json").read_bytes() == before
+    assert backfill(path, write=True) == result
+    restored = deepcopy(after); restored["variant_attempts"] = payload["variant_attempts"]
+    assert restored == payload
+
+
+def test_provider_failure_records_class_without_exception_body(parents, tmp_path):
+    def writer(inputs):
+        raise RuntimeError("secret provider body must not appear")
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=writer)
+    attempt = payload["variant_attempts"][0]
+    assert attempt["failure_stage"] == "variant_write"
+    assert attempt["error_class"] == "RuntimeError"
+    assert attempt["failed_checks"] == []
+    assert "secret provider" not in json.dumps(attempt)
+    assert "No recoverable check" in attempt["reason"]
+
+
+
+def test_backfill_keeps_original_near_duplicate_cohort(parents, tmp_path):
+    from shared.variant_diagnostics import backfill_failures
+    payload = generate(parents, tmp_path, enable_variants=True, predictor=variant_for)
+    entry = payload["candidates"][0]
+    entry["failure_stage"] = "near_duplicate"
+    entry["near_duplicate_check"] = {"passed": False, "reason": "Variant scenario is too similar to its family",
+                                    "max_family_stem_similarity": .485714285714, "family_stem_threshold": .45,
+                                    "family_matches": [{"matched_id": "original-sibling", "stem_score": .485714285714}]}
+    payload["variant_attempts"][0]["status"] = "failed"
+    result = backfill_failures(payload)
+    check = result["attempts"][0]["failure_checks"]["near_duplicate"]
+    assert check == entry["near_duplicate_check"]
+    assert result["checks"] == {"near_duplicate": 1}
+    assert ".485714" in result["attempts"][0]["reason"]
+
+
+def test_diagnostics_do_not_mask_missing_normalized_option_tokens(parents, tmp_path):
+    payload = generate(parents, tmp_path, enable_variants=True,
+                       predictor=lambda inputs: {**variant_for(inputs), "correct_answer": "the and"})
+    attempt = payload["variant_attempts"][0]
+    assert attempt["status"] == "failed"
+    assert attempt["failure_checks"]["option_jaccard"]["error"] == "Missing or empty normalized option tokens"
+
+
+
+def test_unrecoverable_failed_output_keeps_stage_and_exception_class():
+    from shared.variant_diagnostics import failure_details
+    entry = {"failure_stage": "schema", "error_class": "ValueError", "options": [{"label": "A", "text": "partial"}],
+             "variant": {"ordinal": 1}}
+    details = failure_details({}, entry)
+    assert details["failed_checks"] == []
+    assert details["failure_checks"]["reconstruction"]["passed"] is None
+    assert details["error_class"] == "ValueError"
+    entry["failure_stage"] = "variant_write"
+    assert failure_details({}, entry)["failure_checks"] == {}

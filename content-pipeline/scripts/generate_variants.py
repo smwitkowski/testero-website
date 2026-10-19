@@ -143,8 +143,9 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
                 entry["schema_check"]["passed"] = False
             if not validation.is_valid:
                 raise ValueError("Variant failed schema/mechanical style validation")
+            entry["failure_stage"] = "lineage"
             validate_variant(payload, entry)
-            entry.pop("failure_stage")
+            entry["failure_stage"] = "near_duplicate"
             duplicate = variant_duplicates(entry, seen, parent, siblings=payload["candidates"])
             entry["near_duplicate_check"] = duplicate
             if not duplicate["passed"]:
@@ -155,6 +156,7 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
                          awaiting_external_judge=True, status="awaiting_external_judge",
                          judge_verdict={"passed": False, "score": 0.0, "model": "external",
                                         "reason": "Awaiting independent gates"})
+            entry["failure_stage"] = "request"
             request = build_request(entry["candidate_id"], scope, question, entry["sources"], parent["evidence"],
                                     gate_version=5, argon_gate=True, execution_policy="short_circuit_v1",
                                     variant_context={"metadata": entry["variant"], "parent": parent})
@@ -164,6 +166,7 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
                 raise ValueError("Request already exists")
             entry["external_judge_request"] = {"path": str(destination.relative_to(output.parent)),
                                               "sha256": hashlib.sha256(_encode(request)).hexdigest()}
+            entry.pop("failure_stage")
             attempt["status"] = "awaiting_external_judge"
         except Exception as error:
             if not any(e is entry for e in payload["candidates"]):
@@ -172,6 +175,9 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
                          reason="Variant rejected: " + type(error).__name__,
                          error_class=type(error).__name__, awaiting_external_judge=False)
             attempt["status"] = "failed"
+            from shared.variant_diagnostics import record_failure
+            record_failure(attempt, payload, entry)
+            entry["reason"] = attempt["reason"]
             write_artifact(output, payload)
             from shared.cli_models import CLIUsageLimitError, CLIAuthError, CodexModelRejectedError
             if isinstance(error, (CLIUsageLimitError, CLIAuthError, CodexModelRejectedError)):

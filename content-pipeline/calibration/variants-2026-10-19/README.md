@@ -240,3 +240,45 @@ independent gates on every eligible candidate (`full_gate_sample=1`), then write
 token/rejection reports and three full parent/variant review pairs. Human quality
 review and the complete all-model token audit are still required to establish
 quality parity and >=5× savings. No live calls, merge or production writes.
+
+
+## Round-3 failed-attempt diagnostics
+
+The coordinator's stored run passed schema13/18;7/18 passed all gates. Its7
+failed writer attempts previously stored only `status: failed`. Offline recovery
+from canonical stored outputs identifies:
+
+| Failed indices | Check | Measured values |
+| --- | --- | --- |
+|3,4,8,9,15|Key uniquely shortest|A/B/C/D words:25/26/27/27;21/22/22/23;29/31/32/30;30/31/32/31;30/32/33/31|
+|11|Family stem duplicate|0.4857142857142857 >=0.45|
+|12|Family stem duplicate|0.4507042253521127 >=0.45|
+
+No option Jaccard, name-detector, or industry-assignment failures in these7.
+Shortest-key rejection is not a key-letter balancing failure. All four matched
+option Jaccards and canonical word counts are retained per failed attempt in
+`round3-failure-breakdown.json`. Base schema independently passes all7; the saved
+aggregate schema errors combined option-rewrite and shortest-key language. The
+family failures use the **saved generation-time cohort**, not later siblings.
+Index12 matches index11, itself rejected; this preserves existing policy rather
+than silently changing the threshold or sibling population. Duplicate checks
+were not reached for the five schema rejects.
+
+Future failures now record `candidate_id`, `failure_stage`, `reason`,
+`error_class`, `failed_checks`, and detailed `failure_checks` on the attempt.
+Stages separate writer/schema/lineage/near_duplicate/request. Provider error
+bodies are never copied. Missing stored output is explicitly unresolved; no
+reason or verdict is fabricated.
+
+Offline preview/backfill (no generation, judge, API, or DB calls):
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/backfill_variant_failures.py --artifact .cache/variants/ab-six-r3-live.json
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/backfill_variant_failures.py --artifact .cache/variants/ab-six-r3-live.json --write
+```
+
+`--write` holds the artifact lock, saves an exclusive exact-byte backup as
+`ab-six-r3-live.before-failure-backfill.json`, and updates only failed-attempt
+metadata. Repeating it without changes is a no-op. This artifact was backfilled
+offline; candidates, plan, frozen parents, decisions and all26 request/verdict/
+usage files are unchanged. No new acceptance, model calls, merge or prod writes.

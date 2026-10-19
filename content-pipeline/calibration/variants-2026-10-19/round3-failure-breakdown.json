@@ -1,0 +1,426 @@
+{
+  "artifact": ".cache/variants/ab-six-r3-live.json",
+  "original_sha256": "754b8440dc312d48896f636f7f53b2bbc7fbfe9b9fd2b0aee32f5a7fac3149d6",
+  "backfilled_sha256": "638a665c3b8d9296d9200ee2cd5380a5ff948d2ea6bd98e7aceb8337fbc2c477",
+  "backup": "ab-six-r3-live.before-failure-backfill.json",
+  "only_attempt_metadata_changed": true,
+  "request_verdict_usage_files_unchanged": true,
+  "protected_file_count": 26,
+  "failed_attempts": 7,
+  "stages": {
+    "schema": 5,
+    "near_duplicate": 2
+  },
+  "checks": {
+    "key_length": 5,
+    "near_duplicate": 2
+  },
+  "unresolved": [],
+  "attempts": [
+    {
+      "index": 3,
+      "candidate_id": "86932ee6-6484-5306-bdf7-efdb6929dd06",
+      "failure_stage": "schema",
+      "reason": "key_length: key uniquely shortest; canonical word counts {'A': 25, 'B': 26, 'C': 27, 'D': 27}",
+      "failed_checks": [
+        "key_length"
+      ],
+      "failure_checks": {
+        "schema": {
+          "passed": true,
+          "errors": [],
+          "recorded_errors": [
+            "Options must be rewritten below 0.65 Jaccard; key cannot be uniquely shortest"
+          ]
+        },
+        "name_detector": {
+          "passed": true
+        },
+        "industry": {
+          "passed": true,
+          "assigned": "hotel operations",
+          "actual": "hotel operations"
+        },
+        "option_jaccard": {
+          "passed": true,
+          "values": {
+            "A": 0.3448275862068966,
+            "B": 0.3076923076923077,
+            "C": 0.2727272727272727,
+            "D": 0.37037037037037035
+          },
+          "strict_threshold": 0.65,
+          "failed_options": []
+        },
+        "key_length": {
+          "passed": false,
+          "canonical_word_counts": {
+            "A": 25,
+            "B": 26,
+            "C": 27,
+            "D": 27
+          },
+          "key_uniquely_shortest": true
+        }
+      }
+    },
+    {
+      "index": 4,
+      "candidate_id": "fb5231e3-c0ba-5189-9a29-130777827fee",
+      "failure_stage": "schema",
+      "reason": "key_length: key uniquely shortest; canonical word counts {'A': 21, 'B': 22, 'C': 22, 'D': 23}",
+      "failed_checks": [
+        "key_length"
+      ],
+      "failure_checks": {
+        "schema": {
+          "passed": true,
+          "errors": [],
+          "recorded_errors": [
+            "Options must be rewritten below 0.65 Jaccard; key cannot be uniquely shortest"
+          ]
+        },
+        "name_detector": {
+          "passed": true
+        },
+        "industry": {
+          "passed": true,
+          "assigned": "sports broadcasting",
+          "actual": "sports broadcasting"
+        },
+        "option_jaccard": {
+          "passed": true,
+          "values": {
+            "A": 0.3157894736842105,
+            "B": 0.24,
+            "C": 0.1724137931034483,
+            "D": 0.14814814814814814
+          },
+          "strict_threshold": 0.65,
+          "failed_options": []
+        },
+        "key_length": {
+          "passed": false,
+          "canonical_word_counts": {
+            "A": 21,
+            "B": 22,
+            "C": 22,
+            "D": 23
+          },
+          "key_uniquely_shortest": true
+        }
+      }
+    },
+    {
+      "index": 8,
+      "candidate_id": "3e8da8d2-00b3-508a-ae84-fb134c391dd7",
+      "failure_stage": "schema",
+      "reason": "key_length: key uniquely shortest; canonical word counts {'A': 29, 'B': 31, 'C': 32, 'D': 30}",
+      "failed_checks": [
+        "key_length"
+      ],
+      "failure_checks": {
+        "schema": {
+          "passed": true,
+          "errors": [],
+          "recorded_errors": [
+            "Options must be rewritten below 0.65 Jaccard; key cannot be uniquely shortest"
+          ]
+        },
+        "name_detector": {
+          "passed": true
+        },
+        "industry": {
+          "passed": true,
+          "assigned": "telecommunications",
+          "actual": "telecommunications"
+        },
+        "option_jaccard": {
+          "passed": true,
+          "values": {
+            "A": 0.25,
+            "B": 0.28205128205128205,
+            "C": 0.16279069767441862,
+            "D": 0.22857142857142856
+          },
+          "strict_threshold": 0.65,
+          "failed_options": []
+        },
+        "key_length": {
+          "passed": false,
+          "canonical_word_counts": {
+            "A": 29,
+            "B": 31,
+            "C": 32,
+            "D": 30
+          },
+          "key_uniquely_shortest": true
+        }
+      }
+    },
+    {
+      "index": 9,
+      "candidate_id": "cd7a319d-04f1-5343-a813-0d41b2e10d56",
+      "failure_stage": "schema",
+      "reason": "key_length: key uniquely shortest; canonical word counts {'A': 30, 'B': 31, 'C': 32, 'D': 31}",
+      "failed_checks": [
+        "key_length"
+      ],
+      "failure_checks": {
+        "schema": {
+          "passed": true,
+          "errors": [],
+          "recorded_errors": [
+            "Options must be rewritten below 0.65 Jaccard; key cannot be uniquely shortest"
+          ]
+        },
+        "name_detector": {
+          "passed": true
+        },
+        "industry": {
+          "passed": true,
+          "assigned": "aviation maintenance",
+          "actual": "aviation maintenance"
+        },
+        "option_jaccard": {
+          "passed": true,
+          "values": {
+            "A": 0.3125,
+            "B": 0.2702702702702703,
+            "C": 0.28205128205128205,
+            "D": 0.22857142857142856
+          },
+          "strict_threshold": 0.65,
+          "failed_options": []
+        },
+        "key_length": {
+          "passed": false,
+          "canonical_word_counts": {
+            "A": 30,
+            "B": 31,
+            "C": 32,
+            "D": 31
+          },
+          "key_uniquely_shortest": true
+        }
+      }
+    },
+    {
+      "index": 11,
+      "candidate_id": "9ce7d546-233c-5bea-8c23-8d828d210547",
+      "failure_stage": "near_duplicate",
+      "reason": "near_duplicate: Variant scenario is too similar to its family; max family stem=0.4857142857142857; threshold=0.45",
+      "failed_checks": [
+        "near_duplicate"
+      ],
+      "failure_checks": {
+        "schema": {
+          "passed": true,
+          "errors": [],
+          "recorded_errors": []
+        },
+        "name_detector": {
+          "passed": true
+        },
+        "industry": {
+          "passed": true,
+          "assigned": "mining safety",
+          "actual": "mining safety"
+        },
+        "option_jaccard": {
+          "passed": true,
+          "values": {
+            "A": 0.2413793103448276,
+            "B": 0.25806451612903225,
+            "C": 0.37037037037037035,
+            "D": 0.2903225806451613
+          },
+          "strict_threshold": 0.65,
+          "failed_options": []
+        },
+        "key_length": {
+          "passed": true,
+          "canonical_word_counts": {
+            "A": 28,
+            "B": 27,
+            "C": 27,
+            "D": 27
+          },
+          "key_uniquely_shortest": false
+        },
+        "near_duplicate": {
+          "passed": false,
+          "threshold": 0.2,
+          "method": "min(stem token Jaccard, correct-option token Jaccard), NFKC/casefold/stopwords",
+          "matches": [],
+          "reason": "Variant scenario is too similar to its family",
+          "family_stem_threshold": 0.45,
+          "family_similarity": [
+            {
+              "matched_id": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+              "stem_score": 0.3582089552238806,
+              "key_score": 0.2413793103448276,
+              "score": 0.2413793103448276
+            },
+            {
+              "matched_id": "e6360a04-5cc6-55c6-ab74-5c9fc70c16bd",
+              "stem_score": 0.4857142857142857,
+              "key_score": 0.3103448275862069,
+              "score": 0.3103448275862069
+            }
+          ],
+          "max_family_stem_similarity": 0.4857142857142857,
+          "parent_similarity": {
+            "matched_id": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+            "stem_score": 0.3582089552238806,
+            "key_score": 0.2413793103448276,
+            "score": 0.2413793103448276
+          },
+          "family_matches": [
+            {
+              "matched_id": "e6360a04-5cc6-55c6-ab74-5c9fc70c16bd",
+              "stem_score": 0.4857142857142857,
+              "key_score": 0.3103448275862069,
+              "score": 0.3103448275862069
+            }
+          ]
+        }
+      }
+    },
+    {
+      "index": 12,
+      "candidate_id": "9071780a-04cd-52cf-ab72-0d553d9bc686",
+      "failure_stage": "near_duplicate",
+      "reason": "near_duplicate: Variant scenario is too similar to its family; max family stem=0.4507042253521127; threshold=0.45",
+      "failed_checks": [
+        "near_duplicate"
+      ],
+      "failure_checks": {
+        "schema": {
+          "passed": true,
+          "errors": [],
+          "recorded_errors": []
+        },
+        "name_detector": {
+          "passed": true
+        },
+        "industry": {
+          "passed": true,
+          "assigned": "banking fraud prevention",
+          "actual": "banking fraud prevention"
+        },
+        "option_jaccard": {
+          "passed": true,
+          "values": {
+            "A": 0.26666666666666666,
+            "B": 0.3333333333333333,
+            "C": 0.39285714285714285,
+            "D": 0.32432432432432434
+          },
+          "strict_threshold": 0.65,
+          "failed_options": []
+        },
+        "key_length": {
+          "passed": true,
+          "canonical_word_counts": {
+            "A": 32,
+            "B": 32,
+            "C": 34,
+            "D": 36
+          },
+          "key_uniquely_shortest": false
+        },
+        "near_duplicate": {
+          "passed": false,
+          "threshold": 0.2,
+          "method": "min(stem token Jaccard, correct-option token Jaccard), NFKC/casefold/stopwords",
+          "matches": [],
+          "reason": "Variant scenario is too similar to its family",
+          "family_stem_threshold": 0.45,
+          "family_similarity": [
+            {
+              "matched_id": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+              "stem_score": 0.4153846153846154,
+              "key_score": 0.26666666666666666,
+              "score": 0.26666666666666666
+            },
+            {
+              "matched_id": "e6360a04-5cc6-55c6-ab74-5c9fc70c16bd",
+              "stem_score": 0.36363636363636365,
+              "key_score": 0.5384615384615384,
+              "score": 0.36363636363636365
+            },
+            {
+              "matched_id": "9ce7d546-233c-5bea-8c23-8d828d210547",
+              "stem_score": 0.4507042253521127,
+              "key_score": 0.2903225806451613,
+              "score": 0.2903225806451613
+            }
+          ],
+          "max_family_stem_similarity": 0.4507042253521127,
+          "parent_similarity": {
+            "matched_id": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+            "stem_score": 0.4153846153846154,
+            "key_score": 0.26666666666666666,
+            "score": 0.26666666666666666
+          },
+          "family_matches": [
+            {
+              "matched_id": "9ce7d546-233c-5bea-8c23-8d828d210547",
+              "stem_score": 0.4507042253521127,
+              "key_score": 0.2903225806451613,
+              "score": 0.2903225806451613
+            }
+          ]
+        }
+      }
+    },
+    {
+      "index": 15,
+      "candidate_id": "118faf9d-02a0-5373-b146-e5189cfee6f1",
+      "failure_stage": "schema",
+      "reason": "key_length: key uniquely shortest; canonical word counts {'A': 30, 'B': 32, 'C': 33, 'D': 31}",
+      "failed_checks": [
+        "key_length"
+      ],
+      "failure_checks": {
+        "schema": {
+          "passed": true,
+          "errors": [],
+          "recorded_errors": [
+            "Options must be rewritten below 0.65 Jaccard; key cannot be uniquely shortest"
+          ]
+        },
+        "name_detector": {
+          "passed": true
+        },
+        "industry": {
+          "passed": true,
+          "assigned": "waste recycling",
+          "actual": "waste recycling"
+        },
+        "option_jaccard": {
+          "passed": true,
+          "values": {
+            "A": 0.21875,
+            "B": 0.21212121212121213,
+            "C": 0.21052631578947367,
+            "D": 0.23529411764705882
+          },
+          "strict_threshold": 0.65,
+          "failed_options": []
+        },
+        "key_length": {
+          "passed": false,
+          "canonical_word_counts": {
+            "A": 30,
+            "B": 32,
+            "C": 33,
+            "D": 31
+          },
+          "key_uniquely_shortest": true
+        }
+      }
+    }
+  ]
+}
