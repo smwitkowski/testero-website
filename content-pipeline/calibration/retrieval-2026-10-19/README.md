@@ -1,10 +1,29 @@
 # Documentation retrieval experiment — 2026-10-19
 
-**Draft / default-off.** No live models, production requests or DB writes were
-run. The original3–5× tokens-per-accepted target is **not demonstrated**. Quote
-recall does not rejudge semantic support or independent quality.
+**Draft / default-off.** This worker made no live calls or production writes.
+The coordinator's live A/B failed quality; historical quote recall was biased
+by successful full-document plans. It does not authorize rollout.
+The original3–5× tokens-per-accepted target is **not demonstrated**.
 
-## Recommendation and selected configuration
+## Live-failure repair (current)
+
+See [live diagnosis and repair](live-ab-failure/README.md). Current opt-in policy:
+clause queries from every best action, constraint, distractor action and reason;
+adjacent technical-word ranking; chunk2,200/overlap350/top3/neighbors1; **180,000
+characters**, increased from130,000. Claim-to-chunk navigation is lexical, not
+proof of support. Unsupported/partial/contradicted claims remain visible.
+
+A cheap evidence-missing veto may receive **one full-document escalation per
+candidate**, never per replacement. It uses the unchanged baseline verifier
+signature and gates; cheap and final proofs plus call metadata are retained.
+All flags remain off and default attempts remain3. Original full documents
+remain available to receipt checks, writer and independent judges.
+
+The new A/B gate requires a current all-plan claim-support report, not the old
+successful-receipt reports. Analyst calibration is not held-out quality proof.
+
+
+## Historical receipt-only configuration (superseded by live failure)
 
 Use the cheapest **measured** paired-pass point as the retrieval flag's default
 configuration, while leaving the flag **off**. Selected: **2,200-character chunks,
@@ -96,43 +115,13 @@ cached input(10.56% of generation input). OpenAI cached input is a subset of inp
 Anthropic uncached/cache-read/cache-write are additive separate native fields.
 Do not mix those raw ratios, and do not treat missing usage as zero.
 
-## Coordinator A/B — not run here
+## Current coordinator A/B
 
-Same checkout, bank, objectives,N12,seed1710,models/efforts,consistent distractors,
-parallel1 and **all four independent gates for every candidate**
-(`--full-gate-sample1`). Both arms retain attempts3. Flags off versus cache+
-retrieval+stable-prefix on. No publication. Manifest records bank/code/replay
-hashes, exact config/cap, commands, cold/warm cache, stage exits and wall time.
-Normal execution requires **both exact frozen artifact hashes**, stable-prefix
-mode, >=95% per-set recall, current source fingerprint and current default
-config/cap. A stale, wrong-mode or arbitrary pair cannot authorize execution.
-
-Exact safe command (prints only):
-```sh
-cd /Users/switkowski/Projects/Testero/frontend.prime-testero-retrieval-1019/content-pipeline && env -i PATH="$PATH" HOME="$HOME" uv run python scripts/run_retrieval_ab.py --bank /Users/switkowski/Projects/Testero/hq/drafts/ab-2026-10-17/existing-export.json --tag retrieval-1019-b --replay-report calibration/retrieval-2026-10-19/replay-b28-selected.json --replay-report calibration/retrieval-2026-10-19/replay-ace-b2-selected.json
-```
-
-Coordinator may append `--execute` using their approved credential environment
-(omit `env -i` only when needed for injected keys). **This report is not permission
-to run models or enable rollout.** `--allow-failed-recall` remains an explicit
-exploratory override, not required for these current passing reports. Repeat
-paired cohorts in both arm orders and inspect actual objective allocation.
-`RESULTS-template.md` requires stage/provider usage per accepted, yield, all-gate
-quality,Argon REVISE,cache accounting and wall time. A small N smoke test cannot
-establish semantic noninferiority. Get fresh held-out receipt evidence before
-considering rollout; selection reused both calibration sets.
-
-Reproduce selected standalone reports with the ordinary replay CLI (no flags
-needed; `--config selected-config.json` makes the same config explicit):
-```sh
-cd /Users/switkowski/Projects/Testero/frontend.prime-testero-retrieval-1019/content-pipeline
-env -i PATH="$PATH" HOME="$HOME" uv run python scripts/replay_doc_retrieval.py \
-  --artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline/.cache/generation/machine-learning-engineer-v5-b28-scaling-1018.json \
-  --output calibration/retrieval-2026-10-19/replay-b28-selected.json
-env -i PATH="$PATH" HOME="$HOME" uv run python scripts/replay_doc_retrieval.py \
-  --artifact /Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline/.cache/generation/cloud-engineer-v5-ace-b2-1018.json \
-  --output calibration/retrieval-2026-10-19/replay-ace-b2-selected.json
-```
+The historical receipt-only commands/reports above are retained as calibration
+history, not authorization. Use the **current exact command** in
+[live-ab-failure/README.md](live-ab-failure/README.md), with a fresh cohort tag and
+`--claim-report`. Appending`--execute` is coordinator-only. Neither this worker
+nor offline fixtures established live quality or repair savings.
 
 ## Verification
 

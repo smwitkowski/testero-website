@@ -1,0 +1,1584 @@
+{
+  "method": "Actual recorded proof.retrieval.chunk_ids resolved by hash enumeration over exact original source chunk start/end pairs, including merged spans, using old module chunk_sources imported through native uv. Reconstruction comparison retained for transparency only; coverage uses actual resolved recorded IDs, no query replay. a means at least one supported documentation row has full-source valid evidence but not ALL annotated supports are contained in old shown spans. Counts overlap; unknown does not mean no failure.",
+  "current_artifact_sha256": "f8c48c83573d0ee255fafd8c4b1af44ce26a192ace71a19903021172b0c54e1a",
+  "old_module_sha256": "809077b8d90ebca233dd5618ae5c458bec8e3af7e9501979ba0f243fe9cb19bc",
+  "ledger_sha256": {
+    "treatment-first.json": "ffa5d3dee43580e2ed86629308c7a971fe3a33ca941d318ce590e3c19d31e4ac",
+    "treatment-second.json": "cd3cd90c63ff80bfe544915a5e5cf2557a554d802a3f29396763e66da32cc5fa"
+  },
+  "attempt_count": 36,
+  "metadata_comparison": [
+    {
+      "candidate_index": 1,
+      "attempt": 1,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": true,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 18,
+      "resolved_chunk_count": 18,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 1,
+      "attempt": 2,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 17,
+      "resolved_chunk_count": 17,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 1,
+      "attempt": 3,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 18,
+      "resolved_chunk_count": 18,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 2,
+      "attempt": 1,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": true,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 27,
+      "resolved_chunk_count": 27,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 2,
+      "attempt": 2,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 23,
+      "resolved_chunk_count": 23,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 2,
+      "attempt": 3,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 22,
+      "resolved_chunk_count": 22,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 3,
+      "attempt": 1,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 27,
+      "resolved_chunk_count": 27,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 3,
+      "attempt": 2,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 17,
+      "resolved_chunk_count": 17,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 3,
+      "attempt": 3,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 24,
+      "resolved_chunk_count": 24,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 4,
+      "attempt": 1,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": true,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 21,
+      "resolved_chunk_count": 21,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 4,
+      "attempt": 2,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 19,
+      "resolved_chunk_count": 19,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 4,
+      "attempt": 3,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 20,
+      "resolved_chunk_count": 20,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 5,
+      "attempt": 1,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 24,
+      "resolved_chunk_count": 24,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 5,
+      "attempt": 2,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 21,
+      "resolved_chunk_count": 21,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 5,
+      "attempt": 3,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 24,
+      "resolved_chunk_count": 24,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 6,
+      "attempt": 1,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 16,
+      "resolved_chunk_count": 16,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 6,
+      "attempt": 2,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 18,
+      "resolved_chunk_count": 18,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 6,
+      "attempt": 3,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 15,
+      "resolved_chunk_count": 15,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 7,
+      "attempt": 1,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 21,
+      "resolved_chunk_count": 21,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 7,
+      "attempt": 2,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 20,
+      "resolved_chunk_count": 20,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 7,
+      "attempt": 3,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 19,
+      "resolved_chunk_count": 19,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 8,
+      "attempt": 1,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 17,
+      "resolved_chunk_count": 17,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 8,
+      "attempt": 2,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": true,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 23,
+      "resolved_chunk_count": 23,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 8,
+      "attempt": 3,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 12,
+      "resolved_chunk_count": 12,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 9,
+      "attempt": 1,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 24,
+      "resolved_chunk_count": 24,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 9,
+      "attempt": 2,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 26,
+      "resolved_chunk_count": 26,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 9,
+      "attempt": 3,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 23,
+      "resolved_chunk_count": 23,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 10,
+      "attempt": 1,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 21,
+      "resolved_chunk_count": 21,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 10,
+      "attempt": 2,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 15,
+      "resolved_chunk_count": 15,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 10,
+      "attempt": 3,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 17,
+      "resolved_chunk_count": 17,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 11,
+      "attempt": 1,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 25,
+      "resolved_chunk_count": 25,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 11,
+      "attempt": 2,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 16,
+      "resolved_chunk_count": 16,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 11,
+      "attempt": 3,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 22,
+      "resolved_chunk_count": 22,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 12,
+      "attempt": 1,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 21,
+      "resolved_chunk_count": 21,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 12,
+      "attempt": 2,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": false,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 15,
+      "resolved_chunk_count": 15,
+      "unresolved_ids": []
+    },
+    {
+      "candidate_index": 12,
+      "attempt": 3,
+      "recorded_metadata_exists": true,
+      "chunk_ids_equal": true,
+      "prefix_hash_equal": true,
+      "recorded_chunk_count": 20,
+      "resolved_chunk_count": 20,
+      "unresolved_ids": []
+    }
+  ],
+  "supported_doc_rows": 33,
+  "all_supports_shown_rows": 31,
+  "classes": {
+    "a": [
+      6
+    ],
+    "b": [],
+    "c": [
+      11
+    ]
+  },
+  "overlap_counts": {
+    "a": 1,
+    "b": 0,
+    "c": 1
+  },
+  "unknown_remainder": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    7,
+    8,
+    9,
+    10,
+    12
+  ],
+  "unknown_remainder_count": 10,
+  "a_evidence": [
+    {
+      "arm": "treatment",
+      "candidate_index": 6,
+      "attempt": 3,
+      "claim_id": "t6-a3-014",
+      "claim_text": "Object detection can output individual object bounding boxes and labels.",
+      "field": "best_action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/docs/industry",
+          "source_sha256": "0d9aafcf309a950c87f9dc01a4540d69f2aabf50e373f40e4216f2941245e82b",
+          "start": 3019,
+          "end": 3160,
+          "text": "Train custom machine learning models that are capable of detecting individual objects in a given image along with its bounding box and label."
+        }
+      ],
+      "note": "Deprecated AutoML product catalog statement; supports task/output distinction, not fine-tuning a pretrained detector or cost comparison.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/docs/industry",
+          "source_sha256": "0d9aafcf309a950c87f9dc01a4540d69f2aabf50e373f40e4216f2941245e82b",
+          "start": 3019,
+          "end": 3160,
+          "text": "Train custom machine learning models that are capable of detecting individual objects in a given image along with its bounding box and label.",
+          "valid_recorded_source": true,
+          "shown_old": false
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 6,
+      "attempt": 3,
+      "claim_id": "t6-a3-015",
+      "claim_text": "Image classification can assign defined labels to images.",
+      "field": "mistakes[0].action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/docs/industry",
+          "source_sha256": "0d9aafcf309a950c87f9dc01a4540d69f2aabf50e373f40e4216f2941245e82b",
+          "start": 2894,
+          "end": 2952,
+          "text": "classify your images according to your own defined labels."
+        }
+      ],
+      "note": "Does not establish sliding window costs or merging behavior.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/docs/industry",
+          "source_sha256": "0d9aafcf309a950c87f9dc01a4540d69f2aabf50e373f40e4216f2941245e82b",
+          "start": 2894,
+          "end": 2952,
+          "text": "classify your images according to your own defined labels.",
+          "valid_recorded_source": true,
+          "shown_old": false
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": false
+    }
+  ],
+  "c_evidence": [
+    {
+      "arm": "treatment",
+      "candidate_index": 11,
+      "attempt": 1,
+      "claim_id": "t11-a1-015",
+      "claim_text": "Retaining online prediction necessarily retains provisioned idle capacity.",
+      "field": "mistakes[0].scenario_reason",
+      "kind": "documentation",
+      "label": "contradicted",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/autoscaling",
+          "source_sha256": "33b855e682870ec9463b4fc9ff68326856dad91cf81b9e0fcf2ce53bc3255156",
+          "start": 650,
+          "end": 865,
+          "text": "Alternatively, if you accept using the Scale To Zero feature (Preview), the dedicatedResources.minReplicaCount field can be set to 0 and the workload scales to zero replicas when there is no traffic on the endpoint."
+        }
+      ],
+      "note": "Contradicts unconditional assertion; B does not explicitly choose preview scale-to-zero. Does not prove B meets deadline or has lower total cost."
+    }
+  ],
+  "b_evidence": [],
+  "cache_note": "No validated cache-only semantic support in either assigned analyst ledger; first ledger discoveries are explicitly not gold, second did not inspect cache. b=0 confirmed, not absence.",
+  "supported_doc_coverage": [
+    {
+      "arm": "treatment",
+      "candidate_index": 1,
+      "attempt": 1,
+      "claim_id": "t1-a1-014",
+      "claim_text": "BigQuery ML supports a boosted tree classifier.",
+      "field": "mistakes[2].action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/bigquery/docs/export-model-tutorial",
+          "source_sha256": "8b0d5b8ab7376be8fadb0a278bde6083ddef39f28edc39966afb184d63b09ff9",
+          "start": 833,
+          "end": 881,
+          "text": "Train and deploy a boosted tree classifier model"
+        }
+      ],
+      "note": "",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/bigquery/docs/export-model-tutorial",
+          "source_sha256": "8b0d5b8ab7376be8fadb0a278bde6083ddef39f28edc39966afb184d63b09ff9",
+          "start": 833,
+          "end": 881,
+          "text": "Train and deploy a boosted tree classifier model",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 1,
+      "attempt": 1,
+      "claim_id": "t1-a1-015",
+      "claim_text": "Logistic regression is a classification model.",
+      "field": "best_action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/Overview",
+          "source_sha256": "891a397af3f3e561e07a33a3a220314474c84e090161a3078219dd73746c2c30",
+          "start": 174307,
+          "end": 174374,
+          "text": "LOGISTIC_REGRESSION Logistic regression based classification model."
+        }
+      ],
+      "note": "Does not establish TF-IDF, regularization, sparse inference efficiency, or 30 ms feasibility.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/Overview",
+          "source_sha256": "891a397af3f3e561e07a33a3a220314474c84e090161a3078219dd73746c2c30",
+          "start": 174307,
+          "end": 174374,
+          "text": "LOGISTIC_REGRESSION Logistic regression based classification model.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 1,
+      "attempt": 2,
+      "claim_id": "t1-a2-014",
+      "claim_text": "BigQuery model types include boosted tree classification.",
+      "field": "mistakes[1].action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/Overview",
+          "source_sha256": "891a397af3f3e561e07a33a3a220314474c84e090161a3078219dd73746c2c30",
+          "start": 174658,
+          "end": 174712,
+          "text": "BOOSTED_TREE_CLASSIFIER Boosted tree classifier model."
+        }
+      ],
+      "note": "",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/Overview",
+          "source_sha256": "891a397af3f3e561e07a33a3a220314474c84e090161a3078219dd73746c2c30",
+          "start": 174658,
+          "end": 174712,
+          "text": "BOOSTED_TREE_CLASSIFIER Boosted tree classifier model.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 1,
+      "attempt": 3,
+      "claim_id": "t1-a3-014",
+      "claim_text": "A pretrained LLM can summarize conversations.",
+      "field": "best_action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/dataflow/docs/notebooks/gemma_2_sentiment_and_summarization",
+          "source_sha256": "ddd2119f1e2d93ed42635c32c51d306a6db0d41ed0136f33dfd49eea84599fe3",
+          "start": 570,
+          "end": 757,
+          "text": "The example in this notebook demonstrates how to use Gemma to gauge the sentiment of a conversation, summarize that conversation's content, and draft a reply for a difficult conversation."
+        }
+      ],
+      "note": "Does not prove consolidation quality, instruction tuning, factual grounding, or superiority with 250 examples.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/dataflow/docs/notebooks/gemma_2_sentiment_and_summarization",
+          "source_sha256": "ddd2119f1e2d93ed42635c32c51d306a6db0d41ed0136f33dfd49eea84599fe3",
+          "start": 570,
+          "end": 757,
+          "text": "The example in this notebook demonstrates how to use Gemma to gauge the sentiment of a conversation, summarize that conversation's content, and draft a reply for a difficult conversation.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 2,
+      "attempt": 2,
+      "claim_id": "t2-a2-014",
+      "claim_text": "Cloud Run can keep a minimum number of instances active.",
+      "field": "mistakes[2].scenario_reason",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/run/docs/overview/what-is-cloud-run",
+          "source_sha256": "1aaf497b459f928a162fb5a7573a7ae165a36e617f39e1e2406324150bbbad11",
+          "start": 5182,
+          "end": 5309,
+          "text": "Minimum instances: Configure Cloud Run to keep a minimum amount of instances active so that your service doesn't scale to zero."
+        }
+      ],
+      "note": "",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/run/docs/overview/what-is-cloud-run",
+          "source_sha256": "1aaf497b459f928a162fb5a7573a7ae165a36e617f39e1e2406324150bbbad11",
+          "start": 5182,
+          "end": 5309,
+          "text": "Minimum instances: Configure Cloud Run to keep a minimum amount of instances active so that your service doesn't scale to zero.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 2,
+      "attempt": 3,
+      "claim_id": "t2-a3-015",
+      "claim_text": "Autoscaling minimum replicas can be updated on an existing deployed model.",
+      "field": "best_action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/autoscaling",
+          "source_sha256": "33b855e682870ec9463b4fc9ff68326856dad91cf81b9e0fcf2ce53bc3255156",
+          "start": 13201,
+          "end": 13345,
+          "text": "To update the autoscaling configuration of a deployed model using the REST API, use the projects.locations.endpoints.mutateDeployedModel method."
+        }
+      ],
+      "note": "Supports updating serving configuration, not proving sufficient lead time or automatic schedule orchestration.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/autoscaling",
+          "source_sha256": "33b855e682870ec9463b4fc9ff68326856dad91cf81b9e0fcf2ce53bc3255156",
+          "start": 13201,
+          "end": 13345,
+          "text": "To update the autoscaling configuration of a deployed model using the REST API, use the projects.locations.endpoints.mutateDeployedModel method.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 2,
+      "attempt": 3,
+      "claim_id": "t2-a3-016",
+      "claim_text": "Endpoint CPU utilization autoscaling has a configurable target.",
+      "field": "mistakes[1].action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/autoscaling",
+          "source_sha256": "33b855e682870ec9463b4fc9ff68326856dad91cf81b9e0fcf2ce53bc3255156",
+          "start": 3865,
+          "end": 4086,
+          "text": "CPU utilization (aiplatform.googleapis.com/prediction/online/cpu/utilization): Scales based on CPU usage. Its unit is CPU utilization per replica. The target value is a percentage (0-100). The default target value is 60%."
+        }
+      ],
+      "note": "",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/autoscaling",
+          "source_sha256": "33b855e682870ec9463b4fc9ff68326856dad91cf81b9e0fcf2ce53bc3255156",
+          "start": 3865,
+          "end": 4086,
+          "text": "CPU utilization (aiplatform.googleapis.com/prediction/online/cpu/utilization): Scales based on CPU usage. Its unit is CPU utilization per replica. The target value is a percentage (0-100). The default target value is 60%.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 2,
+      "attempt": 3,
+      "claim_id": "t2-a3-017",
+      "claim_text": "Cloud Run minimum instances can avoid cold starts.",
+      "field": "mistakes[2].scenario_reason",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/run/docs/configuring",
+          "source_sha256": "55455381b16b89cd6076f8ae329cbd1d8bce52e597f3b7e530aabbd850f8f5f0",
+          "start": 1816,
+          "end": 1935,
+          "text": "You can avoid cold starts for your application and reduce application latency by setting a minimum number of instances."
+        }
+      ],
+      "note": "Does not imply every request with zero minimum has a cold start.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/run/docs/configuring",
+          "source_sha256": "55455381b16b89cd6076f8ae329cbd1d8bce52e597f3b7e530aabbd850f8f5f0",
+          "start": 1816,
+          "end": 1935,
+          "text": "You can avoid cold starts for your application and reduce application latency by setting a minimum number of instances.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 3,
+      "attempt": 1,
+      "claim_id": "t3-a1-014",
+      "claim_text": "Dedicated minimum replicas remain deployed.",
+      "field": "mistakes[0].scenario_reason",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/reference/rest/v1/DedicatedResources",
+          "source_sha256": "ce23575bdf57c9471ea3bd7a670b9c363555885a7f46a71df6aac62b59d4f568",
+          "start": 490,
+          "end": 561,
+          "text": "The minimum number of machine replicas that will be always deployed on."
+        }
+      ],
+      "note": "Resource API additionally calls this field Immutable; current autoscaling guide elsewhere documents mutation. Do not treat schema wording alone as contradiction.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/reference/rest/v1/DedicatedResources",
+          "source_sha256": "ce23575bdf57c9471ea3bd7a670b9c363555885a7f46a71df6aac62b59d4f568",
+          "start": 490,
+          "end": 561,
+          "text": "The minimum number of machine replicas that will be always deployed on.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 3,
+      "attempt": 3,
+      "claim_id": "t3-a3-016",
+      "claim_text": "Endpoint traffic split gives a model a percentage of traffic.",
+      "field": "mistakes[0].scenario_reason",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/general/deployment",
+          "source_sha256": "94657e611c1cdd923196c276190fc98ba3f41ececa57e5ad0e6be240e92c350c",
+          "start": 4136,
+          "end": 4322,
+          "text": "You can add the new model to the same endpoint, serving a small percentage of traffic, and gradually increase the traffic split for the new model until it is serving 100% of the traffic."
+        }
+      ],
+      "note": "Supports percentage allocation, not explicit documentation of no duplication; latter remains logical interpretation.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/general/deployment",
+          "source_sha256": "94657e611c1cdd923196c276190fc98ba3f41ececa57e5ad0e6be240e92c350c",
+          "start": 4136,
+          "end": 4322,
+          "text": "You can add the new model to the same endpoint, serving a small percentage of traffic, and gradually increase the traffic split for the new model until it is serving 100% of the traffic.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 4,
+      "attempt": 1,
+      "claim_id": "t4-a1-014",
+      "claim_text": "BigQuery model types include logistic regression classification.",
+      "field": "mistakes[1].action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/Overview",
+          "source_sha256": "891a397af3f3e561e07a33a3a220314474c84e090161a3078219dd73746c2c30",
+          "start": 174307,
+          "end": 174374,
+          "text": "LOGISTIC_REGRESSION Logistic regression based classification model."
+        }
+      ],
+      "note": "",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/Overview",
+          "source_sha256": "891a397af3f3e561e07a33a3a220314474c84e090161a3078219dd73746c2c30",
+          "start": 174307,
+          "end": 174374,
+          "text": "LOGISTIC_REGRESSION Logistic regression based classification model.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 4,
+      "attempt": 2,
+      "claim_id": "t4-a2-015",
+      "claim_text": "BigQuery ML supports training logistic regression using SQL.",
+      "field": "best_action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/bigquery/docs/create-machine-learning-model",
+          "source_sha256": "b20bb54c4f651ad18841118d4ab2fad64675106f13d73e96531edb516da5632e",
+          "start": 211,
+          "end": 310,
+          "text": "This tutorial shows you how to create a logistic regression model by using BigQuery ML SQL queries."
+        }
+      ],
+      "note": "Does not establish sigmoid scoring cost or lower latency than this DNN.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/bigquery/docs/create-machine-learning-model",
+          "source_sha256": "b20bb54c4f651ad18841118d4ab2fad64675106f13d73e96531edb516da5632e",
+          "start": 211,
+          "end": 310,
+          "text": "This tutorial shows you how to create a logistic regression model by using BigQuery ML SQL queries.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 4,
+      "attempt": 2,
+      "claim_id": "t4-a2-016",
+      "claim_text": "BigQuery ML boosted trees support classification.",
+      "field": "mistakes[1].action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/bigquery/docs/bqml-introduction",
+          "source_sha256": "b4754fafe06d872c04f618561284d677cc41f28e563cd2bdc7f8a2d2df60ae57",
+          "start": 7124,
+          "end": 7217,
+          "text": "Boosted trees is for creating classification and regression models that are based on XGBoost."
+        }
+      ],
+      "note": "",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/bigquery/docs/bqml-introduction",
+          "source_sha256": "b4754fafe06d872c04f618561284d677cc41f28e563cd2bdc7f8a2d2df60ae57",
+          "start": 7124,
+          "end": 7217,
+          "text": "Boosted trees is for creating classification and regression models that are based on XGBoost.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 4,
+      "attempt": 3,
+      "claim_id": "t4-a3-016",
+      "claim_text": "Matrix factorization can generate recommendations from implicit feedback.",
+      "field": "mistakes[0].action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/bigquery/docs/bigqueryml-mf-implicit-tutorial",
+          "source_sha256": "00c23645a2261ab3564465c673193851e7a099c497b895a2458e5b521eb8f20a",
+          "start": 510,
+          "end": 647,
+          "text": "Using indirect customer preference information, like user session duration, to train the model is called training with implicit feedback."
+        }
+      ],
+      "note": "Does not establish absence of new-item factors or infer full cold-start behavior.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/bigquery/docs/bigqueryml-mf-implicit-tutorial",
+          "source_sha256": "00c23645a2261ab3564465c673193851e7a099c497b895a2458e5b521eb8f20a",
+          "start": 510,
+          "end": 647,
+          "text": "Using indirect customer preference information, like user session duration, to train the model is called training with implicit feedback.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 5,
+      "attempt": 2,
+      "claim_id": "t5-a2-015",
+      "claim_text": "An endpoint can be created and models deployed to it.",
+      "field": "best_action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/deploy-model-console",
+          "source_sha256": "145f71cf726dd0e4f2dd7343f50a50c7ff8fd001accf17f5d52017e0b8ac038f",
+          "start": 437,
+          "end": 542,
+          "text": "In the Online prediction page, you can create an endpoint and deploy one or more models to it as follows:"
+        }
+      ],
+      "note": "Does not establish issuing-country routing; that is application logic.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/deploy-model-console",
+          "source_sha256": "145f71cf726dd0e4f2dd7343f50a50c7ff8fd001accf17f5d52017e0b8ac038f",
+          "start": 437,
+          "end": 542,
+          "text": "In the Online prediction page, you can create an endpoint and deploy one or more models to it as follows:",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 5,
+      "attempt": 2,
+      "claim_id": "t5-a2-016",
+      "claim_text": "Existing endpoints allow per-model traffic percentages summing to 100.",
+      "field": "mistakes[0].action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/deploy-model-console",
+          "source_sha256": "145f71cf726dd0e4f2dd7343f50a50c7ff8fd001accf17f5d52017e0b8ac038f",
+          "start": 2219,
+          "end": 2374,
+          "text": "you must update the Traffic split percentage for the model you are deploying and the already deployed models so that all of the percentages add up to 100%."
+        }
+      ],
+      "note": "",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/deploy-model-console",
+          "source_sha256": "145f71cf726dd0e4f2dd7343f50a50c7ff8fd001accf17f5d52017e0b8ac038f",
+          "start": 2219,
+          "end": 2374,
+          "text": "you must update the Traffic split percentage for the model you are deploying and the already deployed models so that all of the percentages add up to 100%.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 6,
+      "attempt": 2,
+      "claim_id": "t6-a2-014",
+      "claim_text": "Logistic regression is a classification model.",
+      "field": "best_action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/Overview",
+          "source_sha256": "891a397af3f3e561e07a33a3a220314474c84e090161a3078219dd73746c2c30",
+          "start": 174307,
+          "end": 174374,
+          "text": "LOGISTIC_REGRESSION Logistic regression based classification model."
+        }
+      ],
+      "note": "",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/Overview",
+          "source_sha256": "891a397af3f3e561e07a33a3a220314474c84e090161a3078219dd73746c2c30",
+          "start": 174307,
+          "end": 174374,
+          "text": "LOGISTIC_REGRESSION Logistic regression based classification model.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 6,
+      "attempt": 3,
+      "claim_id": "t6-a3-014",
+      "claim_text": "Object detection can output individual object bounding boxes and labels.",
+      "field": "best_action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/docs/industry",
+          "source_sha256": "0d9aafcf309a950c87f9dc01a4540d69f2aabf50e373f40e4216f2941245e82b",
+          "start": 3019,
+          "end": 3160,
+          "text": "Train custom machine learning models that are capable of detecting individual objects in a given image along with its bounding box and label."
+        }
+      ],
+      "note": "Deprecated AutoML product catalog statement; supports task/output distinction, not fine-tuning a pretrained detector or cost comparison.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/docs/industry",
+          "source_sha256": "0d9aafcf309a950c87f9dc01a4540d69f2aabf50e373f40e4216f2941245e82b",
+          "start": 3019,
+          "end": 3160,
+          "text": "Train custom machine learning models that are capable of detecting individual objects in a given image along with its bounding box and label.",
+          "valid_recorded_source": true,
+          "shown_old": false
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 6,
+      "attempt": 3,
+      "claim_id": "t6-a3-015",
+      "claim_text": "Image classification can assign defined labels to images.",
+      "field": "mistakes[0].action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/docs/industry",
+          "source_sha256": "0d9aafcf309a950c87f9dc01a4540d69f2aabf50e373f40e4216f2941245e82b",
+          "start": 2894,
+          "end": 2952,
+          "text": "classify your images according to your own defined labels."
+        }
+      ],
+      "note": "Does not establish sliding window costs or merging behavior.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/docs/industry",
+          "source_sha256": "0d9aafcf309a950c87f9dc01a4540d69f2aabf50e373f40e4216f2941245e82b",
+          "start": 2894,
+          "end": 2952,
+          "text": "classify your images according to your own defined labels.",
+          "valid_recorded_source": true,
+          "shown_old": false
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 7,
+      "attempt": 1,
+      "claim_id": "t7-a1-013",
+      "claim_text": "Batch prediction requests do not require deployment to an endpoint.",
+      "field": "best_action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/python-sdk/prediction-classes",
+          "source_sha256": "43d8c03e17e82ac632bc847f30df78d2b3c4e9ca3d17bd407e991dad17bbc0cf",
+          "start": 551,
+          "end": 656,
+          "text": "You request batch predictions from the model resource without needing to deploy the model to an endpoint."
+        }
+      ],
+      "note": "Not found as an entailed technical claim in reviewed recorded sources; not evidence of global absence.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/python-sdk/prediction-classes",
+          "source_sha256": "43d8c03e17e82ac632bc847f30df78d2b3c4e9ca3d17bd407e991dad17bbc0cf",
+          "start": 551,
+          "end": 656,
+          "text": "You request batch predictions from the model resource without needing to deploy the model to an endpoint.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 7,
+      "attempt": 1,
+      "claim_id": "t7-a1-014",
+      "claim_text": "Batch prediction can read input and write output in Cloud Storage.",
+      "field": "best_action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/python-sdk/prediction-classes",
+          "source_sha256": "43d8c03e17e82ac632bc847f30df78d2b3c4e9ca3d17bd407e991dad17bbc0cf",
+          "start": 1458,
+          "end": 1659,
+          "text": "gcs_source: A list of one or more Cloud Storage paths to your batch prediction requests. gcs_destination_prefix: The Cloud Storage path to which Gemini Enterprise Agent Platform writes the predictions."
+        }
+      ],
+      "note": "Not found as an entailed technical claim in reviewed recorded sources; not evidence of global absence.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/python-sdk/prediction-classes",
+          "source_sha256": "43d8c03e17e82ac632bc847f30df78d2b3c4e9ca3d17bd407e991dad17bbc0cf",
+          "start": 1458,
+          "end": 1659,
+          "text": "gcs_source: A list of one or more Cloud Storage paths to your batch prediction requests. gcs_destination_prefix: The Cloud Storage path to which Gemini Enterprise Agent Platform writes the predictions.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 7,
+      "attempt": 2,
+      "claim_id": "t7-a2-014",
+      "claim_text": "Batch inference is asynchronous and suits accumulated data without immediate-response requirements.",
+      "field": "mistakes.batch.scenario_reason",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions",
+          "source_sha256": "0778302591a24b700ed0096f519423b3fa98ba9174d7eac44d0316e717341d58",
+          "start": 896,
+          "end": 1208,
+          "text": "Batch inferences are asynchronous requests made to a model that isn't deployed to an endpoint. You send the request (as a BatchPredictionJob resource) directly to the Model resource. Use batch inferences when you don't require an immediate response and want to process accumulated data by using a single request."
+        }
+      ],
+      "note": "Not found as an entailed technical claim in reviewed recorded sources; not evidence of global absence.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions",
+          "source_sha256": "0778302591a24b700ed0096f519423b3fa98ba9174d7eac44d0316e717341d58",
+          "start": 896,
+          "end": 1208,
+          "text": "Batch inferences are asynchronous requests made to a model that isn't deployed to an endpoint. You send the request (as a BatchPredictionJob resource) directly to the Model resource. Use batch inferences when you don't require an immediate response and want to process accumulated data by using a single request.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 7,
+      "attempt": 2,
+      "claim_id": "t7-a2-015",
+      "claim_text": "Online inference sends synchronous requests to a deployed endpoint.",
+      "field": "mistakes.online.action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions",
+          "source_sha256": "0778302591a24b700ed0096f519423b3fa98ba9174d7eac44d0316e717341d58",
+          "start": 465,
+          "end": 556,
+          "text": "Online inferences are synchronous requests made to a model that is deployed to an Endpoint."
+        }
+      ],
+      "note": "Not found as an entailed technical claim in reviewed recorded sources; not evidence of global absence.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions",
+          "source_sha256": "0778302591a24b700ed0096f519423b3fa98ba9174d7eac44d0316e717341d58",
+          "start": 465,
+          "end": 556,
+          "text": "Online inferences are synchronous requests made to a model that is deployed to an Endpoint.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 9,
+      "attempt": 1,
+      "claim_id": "t9-a1-014",
+      "claim_text": "Batch inference is asynchronous and suits accumulated data without immediate-response requirements.",
+      "field": "mistakes.batch.scenario_reason",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions",
+          "source_sha256": "0778302591a24b700ed0096f519423b3fa98ba9174d7eac44d0316e717341d58",
+          "start": 896,
+          "end": 1208,
+          "text": "Batch inferences are asynchronous requests made to a model that isn't deployed to an endpoint. You send the request (as a BatchPredictionJob resource) directly to the Model resource. Use batch inferences when you don't require an immediate response and want to process accumulated data by using a single request."
+        }
+      ],
+      "note": "Not found as an entailed technical claim in reviewed recorded sources; not evidence of global absence.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions",
+          "source_sha256": "0778302591a24b700ed0096f519423b3fa98ba9174d7eac44d0316e717341d58",
+          "start": 896,
+          "end": 1208,
+          "text": "Batch inferences are asynchronous requests made to a model that isn't deployed to an endpoint. You send the request (as a BatchPredictionJob resource) directly to the Model resource. Use batch inferences when you don't require an immediate response and want to process accumulated data by using a single request.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 9,
+      "attempt": 1,
+      "claim_id": "t9-a1-015",
+      "claim_text": "Online inference sends synchronous requests to a deployed endpoint.",
+      "field": "mistakes.online.action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions",
+          "source_sha256": "0778302591a24b700ed0096f519423b3fa98ba9174d7eac44d0316e717341d58",
+          "start": 465,
+          "end": 556,
+          "text": "Online inferences are synchronous requests made to a model that is deployed to an Endpoint."
+        }
+      ],
+      "note": "Not found as an entailed technical claim in reviewed recorded sources; not evidence of global absence.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions",
+          "source_sha256": "0778302591a24b700ed0096f519423b3fa98ba9174d7eac44d0316e717341d58",
+          "start": 465,
+          "end": 556,
+          "text": "Online inferences are synchronous requests made to a model that is deployed to an Endpoint.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 9,
+      "attempt": 3,
+      "claim_id": "t9-a3-013",
+      "claim_text": "Batch prediction requests do not require deployment to an endpoint.",
+      "field": "mistakes[1].action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/python-sdk/prediction-classes",
+          "source_sha256": "43d8c03e17e82ac632bc847f30df78d2b3c4e9ca3d17bd407e991dad17bbc0cf",
+          "start": 551,
+          "end": 656,
+          "text": "You request batch predictions from the model resource without needing to deploy the model to an endpoint."
+        }
+      ],
+      "note": "Not found as an entailed technical claim in reviewed recorded sources; not evidence of global absence.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/python-sdk/prediction-classes",
+          "source_sha256": "43d8c03e17e82ac632bc847f30df78d2b3c4e9ca3d17bd407e991dad17bbc0cf",
+          "start": 551,
+          "end": 656,
+          "text": "You request batch predictions from the model resource without needing to deploy the model to an endpoint.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 9,
+      "attempt": 3,
+      "claim_id": "t9-a3-014",
+      "claim_text": "Batch prediction can read input and write output in Cloud Storage.",
+      "field": "mistakes[1].action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/python-sdk/prediction-classes",
+          "source_sha256": "43d8c03e17e82ac632bc847f30df78d2b3c4e9ca3d17bd407e991dad17bbc0cf",
+          "start": 1458,
+          "end": 1659,
+          "text": "gcs_source: A list of one or more Cloud Storage paths to your batch prediction requests. gcs_destination_prefix: The Cloud Storage path to which Gemini Enterprise Agent Platform writes the predictions."
+        }
+      ],
+      "note": "Not found as an entailed technical claim in reviewed recorded sources; not evidence of global absence.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/python-sdk/prediction-classes",
+          "source_sha256": "43d8c03e17e82ac632bc847f30df78d2b3c4e9ca3d17bd407e991dad17bbc0cf",
+          "start": 1458,
+          "end": 1659,
+          "text": "gcs_source: A list of one or more Cloud Storage paths to your batch prediction requests. gcs_destination_prefix: The Cloud Storage path to which Gemini Enterprise Agent Platform writes the predictions.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 10,
+      "attempt": 2,
+      "claim_id": "t10-a2-016",
+      "claim_text": "BigQuery ML matrix factorization requires a reservation.",
+      "field": "best_action.prerequisite",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/bigquery/docs/bigqueryml-mf-implicit-tutorial",
+          "source_sha256": "00c23645a2261ab3564465c673193851e7a099c497b895a2458e5b521eb8f20a",
+          "start": 803,
+          "end": 876,
+          "text": "You must have a reservation in order to use a matrix factorization model."
+        }
+      ],
+      "note": "Actual prerequisite; scenario does not state whether already satisfied. Not proof model is unsuitable.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/bigquery/docs/bigqueryml-mf-implicit-tutorial",
+          "source_sha256": "00c23645a2261ab3564465c673193851e7a099c497b895a2458e5b521eb8f20a",
+          "start": 803,
+          "end": 876,
+          "text": "You must have a reservation in order to use a matrix factorization model.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 10,
+      "attempt": 3,
+      "claim_id": "t10-a3-014",
+      "claim_text": "Image object detection training uses images annotated with labels and bounding boxes.",
+      "field": "mistakes[1].action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/beginner/beginners-guide",
+          "source_sha256": "fa02dd35556d71724b0774d272ca7cc339c22de6143a96be0e3156295eb7f382",
+          "start": 3833,
+          "end": 4026,
+          "text": "You train, test, and validate the machine learning model with example images that are annotated with labels for classification, or annotated with labels and bounding boxes for object detection."
+        }
+      ],
+      "note": "Not found as an entailed technical claim in reviewed recorded sources; not evidence of global absence.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/beginner/beginners-guide",
+          "source_sha256": "fa02dd35556d71724b0774d272ca7cc339c22de6143a96be0e3156295eb7f382",
+          "start": 3833,
+          "end": 4026,
+          "text": "You train, test, and validate the machine learning model with example images that are annotated with labels for classification, or annotated with labels and bounding boxes for object detection.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 11,
+      "attempt": 2,
+      "claim_id": "t11-a2-016",
+      "claim_text": "DeploymentResourcePool shares VM resources across model deployments and endpoints.",
+      "field": "best_action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/model-co-hosting",
+          "source_sha256": "5f2c9819182510ca07390c63875f8c2152e8573b474951cfc2941e72cbfed4a3",
+          "start": 880,
+          "end": 1110,
+          "text": "Model cohosting support introduces the concept of a DeploymentResourcePool, which groups model deployments that share resources within a single VM. Multiple endpoints can be deployed on the same VM within a DeploymentResourcePool."
+        }
+      ],
+      "note": "Not found as an entailed technical claim in reviewed recorded sources; not evidence of global absence.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions/model-co-hosting",
+          "source_sha256": "5f2c9819182510ca07390c63875f8c2152e8573b474951cfc2941e72cbfed4a3",
+          "start": 880,
+          "end": 1110,
+          "text": "Model cohosting support introduces the concept of a DeploymentResourcePool, which groups model deployments that share resources within a single VM. Multiple endpoints can be deployed on the same VM within a DeploymentResourcePool.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 11,
+      "attempt": 3,
+      "claim_id": "t11-a3-019",
+      "claim_text": "Batch inference is asynchronous and suits accumulated data without immediate-response requirements.",
+      "field": "mistakes.batch.scenario_reason",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions",
+          "source_sha256": "0778302591a24b700ed0096f519423b3fa98ba9174d7eac44d0316e717341d58",
+          "start": 896,
+          "end": 1208,
+          "text": "Batch inferences are asynchronous requests made to a model that isn't deployed to an endpoint. You send the request (as a BatchPredictionJob resource) directly to the Model resource. Use batch inferences when you don't require an immediate response and want to process accumulated data by using a single request."
+        }
+      ],
+      "note": "Not found as an entailed technical claim in reviewed recorded sources; not evidence of global absence.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions",
+          "source_sha256": "0778302591a24b700ed0096f519423b3fa98ba9174d7eac44d0316e717341d58",
+          "start": 896,
+          "end": 1208,
+          "text": "Batch inferences are asynchronous requests made to a model that isn't deployed to an endpoint. You send the request (as a BatchPredictionJob resource) directly to the Model resource. Use batch inferences when you don't require an immediate response and want to process accumulated data by using a single request.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 11,
+      "attempt": 3,
+      "claim_id": "t11-a3-020",
+      "claim_text": "Online inference sends synchronous requests to a deployed endpoint.",
+      "field": "mistakes.online.action",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions",
+          "source_sha256": "0778302591a24b700ed0096f519423b3fa98ba9174d7eac44d0316e717341d58",
+          "start": 465,
+          "end": 556,
+          "text": "Online inferences are synchronous requests made to a model that is deployed to an Endpoint."
+        }
+      ],
+      "note": "Not found as an entailed technical claim in reviewed recorded sources; not evidence of global absence.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/predictions",
+          "source_sha256": "0778302591a24b700ed0096f519423b3fa98ba9174d7eac44d0316e717341d58",
+          "start": 465,
+          "end": 556,
+          "text": "Online inferences are synchronous requests made to a model that is deployed to an Endpoint.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 12,
+      "attempt": 3,
+      "claim_id": "t12-a3-020",
+      "claim_text": "BigQuery ML matrix factorization requires a reservation.",
+      "field": "best_action.prerequisite",
+      "kind": "documentation",
+      "label": "supported",
+      "supports": [
+        {
+          "url": "https://docs.cloud.google.com/bigquery/docs/bigqueryml-mf-implicit-tutorial",
+          "source_sha256": "00c23645a2261ab3564465c673193851e7a099c497b895a2458e5b521eb8f20a",
+          "start": 803,
+          "end": 876,
+          "text": "You must have a reservation in order to use a matrix factorization model."
+        }
+      ],
+      "note": "Actual prerequisite; scenario does not state whether already satisfied. Not proof model is unsuitable.",
+      "support_coverage": [
+        {
+          "url": "https://docs.cloud.google.com/bigquery/docs/bigqueryml-mf-implicit-tutorial",
+          "source_sha256": "00c23645a2261ab3564465c673193851e7a099c497b895a2458e5b521eb8f20a",
+          "start": 803,
+          "end": 876,
+          "text": "You must have a reservation in order to use a matrix factorization model.",
+          "valid_recorded_source": true,
+          "shown_old": true
+        }
+      ],
+      "all_supports_valid": true,
+      "all_supports_shown_old": true
+    }
+  ]
+}

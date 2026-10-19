@@ -2,16 +2,24 @@
 
 ## Default-off retrieval experiment (2026-10-19)
 
-`--doc-cache`, `--verify-retrieval`, `--verify-stable-prefix` are opt-in;
-`--decision-attempts` defaults to the existing three total plans. Full evidence
-and independent judges stay unchanged. **Do not enable by default:** the selected
-130k-character cap (~32.5k estimated doc tokens), top-3 product queries and
-adjacent spans recover57/60 b28 and50/52 ACE-b2 receipts. The original ~15k target
-failed. These are calibration recall, not semantic quality or live efficiency.
-See `calibration/retrieval-2026-10-19/README.md` for the two-set frontier,
-constants, miss diagnosis and coordinator A/B command. Normal execution requires
-two passing, current exact-config/budget reports from those frozen artifacts.
-No live savings, cache-hit or quality-preservation claim is made.
+`--doc-cache`, `--verify-retrieval`, `--verify-stable-prefix` remain opt-in;
+`--decision-attempts` defaults to three total plans. The live A/B failed quality,
+so successful-proof quote recall no longer authorizes a comparison. Current
+clause-based policy uses2,200/350 chunks, top3, neighbors1 and a180k-character cap
+(~45k estimated doc tokens). It includes every option action/reason and constraint,
+with lexical claim-to-chunk navigation (not asserted entailment).
+One evidence-missing cheap veto per candidate may escalate to the baseline
+full-document verifier, with identical gates and explicit proof/call records.
+Full original sources remain available to writer, receipt checks and judges.
+Current all-plan analyst calibration covers63 retained attempts (27 baseline,
+36 treatment), including vetoes; all necessary supporting spans recovered for
+34/34 baseline and33/33 treatment supported documentation claims. Scenario,
+partial, contradiction and not-found rows are separate, not credited as support.
+This is not held-out semantic quality or measured new provider efficiency.
+See `calibration/retrieval-2026-10-19/live-ab-failure/README.md` for diagnosis,
+constants, token model and coordinator A/B command. Execution requires a current
+claim report, exact frozen inputs/config/code and>=95% per arm; old receipt-only
+reports cannot authorize it. All flags remain off. No rollout recommendation.
 
 
 ## Pipeline efficiency (2026-10-17)

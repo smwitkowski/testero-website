@@ -1,0 +1,764 @@
+{
+  "observed_by_stage": {
+    "baseline": {
+      "plan": {
+        "calls": 27,
+        "input": 569410,
+        "output": 51504,
+        "cache_read": 48000,
+        "cache_creation": 0
+      },
+      "verify": {
+        "calls": 27,
+        "input": 2722209,
+        "output": 8854,
+        "cache_read": 0,
+        "cache_creation": 0
+      },
+      "write": {
+        "calls": 6,
+        "input": 185415,
+        "output": 11678,
+        "cache_read": 0,
+        "cache_creation": 0
+      },
+      "judge_style": {
+        "calls": 6,
+        "input": 77669,
+        "output": 5431,
+        "cache_read": 23452,
+        "cache_creation": 54201
+      },
+      "judge_evidence": {
+        "calls": 6,
+        "input": 193084,
+        "output": 4732,
+        "cache_read": 83188,
+        "cache_creation": 109870
+      },
+      "judge_blind": {
+        "calls": 6,
+        "input": 39082,
+        "output": 1951,
+        "cache_read": 20942,
+        "cache_creation": 18124
+      },
+      "argon_review": {
+        "calls": 6,
+        "input": 75322,
+        "output": 318,
+        "cache_read": 0,
+        "cache_creation": 0
+      }
+    },
+    "treatment": {
+      "plan": {
+        "calls": 36,
+        "input": 761688,
+        "output": 68954,
+        "cache_read": 240000,
+        "cache_creation": 0
+      },
+      "verify": {
+        "calls": 36,
+        "input": 1612823,
+        "output": 9804,
+        "cache_read": 112896,
+        "cache_creation": 0
+      },
+      "write": {
+        "calls": 1,
+        "input": 31127,
+        "output": 1837,
+        "cache_read": 0,
+        "cache_creation": 0
+      },
+      "judge_style": {
+        "calls": 1,
+        "input": 22690,
+        "output": 1214,
+        "cache_read": 14124,
+        "cache_creation": 8560
+      },
+      "judge_evidence": {
+        "calls": 1,
+        "input": 37450,
+        "output": 944,
+        "cache_read": 21005,
+        "cache_creation": 16439
+      },
+      "judge_blind": {
+        "calls": 1,
+        "input": 4773,
+        "output": 254,
+        "cache_read": 2206,
+        "cache_creation": 2565
+      },
+      "argon_review": {
+        "calls": 1,
+        "input": 12456,
+        "output": 53,
+        "cache_read": 0,
+        "cache_creation": 0
+      }
+    }
+  },
+  "observed_totals": {
+    "baseline": {
+      "calls": 84,
+      "input": 3862191,
+      "output": 84468,
+      "cache_read": 175582,
+      "cache_creation": 182195
+    },
+    "treatment": {
+      "calls": 77,
+      "input": 2483007,
+      "output": 83060,
+      "cache_read": 390231,
+      "cache_creation": 27564
+    }
+  },
+  "observed_baseline_external_judge_pass": 5,
+  "baseline_input_per_external_judge_pass": 772438.2,
+  "baseline_input_plus_output_per_external_judge_pass": 789331.8,
+  "prompt_estimates": [
+    {
+      "arm": "baseline",
+      "candidate_index": 1,
+      "attempt": 1,
+      "full_estimated_tokens": 145181,
+      "cheap_estimated_tokens": 47795,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 1,
+      "attempt": 2,
+      "full_estimated_tokens": 120431,
+      "cheap_estimated_tokens": 46865,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 1,
+      "attempt": 3,
+      "full_estimated_tokens": 28768,
+      "cheap_estimated_tokens": 26522,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 2,
+      "attempt": 1,
+      "full_estimated_tokens": 212633,
+      "cheap_estimated_tokens": 47700,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 2,
+      "attempt": 2,
+      "full_estimated_tokens": 110078,
+      "cheap_estimated_tokens": 46810,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 2,
+      "attempt": 3,
+      "full_estimated_tokens": 55980,
+      "cheap_estimated_tokens": 41090,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 3,
+      "attempt": 1,
+      "full_estimated_tokens": 107611,
+      "cheap_estimated_tokens": 47478,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 4,
+      "attempt": 1,
+      "full_estimated_tokens": 104688,
+      "cheap_estimated_tokens": 40104,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 4,
+      "attempt": 2,
+      "full_estimated_tokens": 43537,
+      "cheap_estimated_tokens": 38835,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 4,
+      "attempt": 3,
+      "full_estimated_tokens": 117698,
+      "cheap_estimated_tokens": 47460,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 5,
+      "attempt": 1,
+      "full_estimated_tokens": 97662,
+      "cheap_estimated_tokens": 43086,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 6,
+      "attempt": 1,
+      "full_estimated_tokens": 68078,
+      "cheap_estimated_tokens": 47101,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 6,
+      "attempt": 2,
+      "full_estimated_tokens": 167083,
+      "cheap_estimated_tokens": 47455,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 6,
+      "attempt": 3,
+      "full_estimated_tokens": 74400,
+      "cheap_estimated_tokens": 45856,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 7,
+      "attempt": 1,
+      "full_estimated_tokens": 47911,
+      "cheap_estimated_tokens": 44032,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 8,
+      "attempt": 1,
+      "full_estimated_tokens": 208637,
+      "cheap_estimated_tokens": 47721,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 8,
+      "attempt": 2,
+      "full_estimated_tokens": 106728,
+      "cheap_estimated_tokens": 44957,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 8,
+      "attempt": 3,
+      "full_estimated_tokens": 182634,
+      "cheap_estimated_tokens": 48051,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 9,
+      "attempt": 1,
+      "full_estimated_tokens": 108575,
+      "cheap_estimated_tokens": 47726,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 10,
+      "attempt": 1,
+      "full_estimated_tokens": 71680,
+      "cheap_estimated_tokens": 47135,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 10,
+      "attempt": 2,
+      "full_estimated_tokens": 102021,
+      "cheap_estimated_tokens": 33255,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 10,
+      "attempt": 3,
+      "full_estimated_tokens": 64988,
+      "cheap_estimated_tokens": 41747,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 11,
+      "attempt": 1,
+      "full_estimated_tokens": 46755,
+      "cheap_estimated_tokens": 41550,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 11,
+      "attempt": 2,
+      "full_estimated_tokens": 157949,
+      "cheap_estimated_tokens": 47596,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 12,
+      "attempt": 1,
+      "full_estimated_tokens": 45861,
+      "cheap_estimated_tokens": 42841,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 12,
+      "attempt": 2,
+      "full_estimated_tokens": 133187,
+      "cheap_estimated_tokens": 48863,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "baseline",
+      "candidate_index": 12,
+      "attempt": 3,
+      "full_estimated_tokens": 73397,
+      "cheap_estimated_tokens": 45386,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 1,
+      "attempt": 1,
+      "full_estimated_tokens": 120346,
+      "cheap_estimated_tokens": 46790,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 1,
+      "attempt": 2,
+      "full_estimated_tokens": 188393,
+      "cheap_estimated_tokens": 47584,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 1,
+      "attempt": 3,
+      "full_estimated_tokens": 126751,
+      "cheap_estimated_tokens": 47036,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 2,
+      "attempt": 1,
+      "full_estimated_tokens": 207392,
+      "cheap_estimated_tokens": 47601,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 2,
+      "attempt": 2,
+      "full_estimated_tokens": 238610,
+      "cheap_estimated_tokens": 47761,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 2,
+      "attempt": 3,
+      "full_estimated_tokens": 190414,
+      "cheap_estimated_tokens": 47268,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 3,
+      "attempt": 1,
+      "full_estimated_tokens": 216573,
+      "cheap_estimated_tokens": 47994,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 3,
+      "attempt": 2,
+      "full_estimated_tokens": 152862,
+      "cheap_estimated_tokens": 47678,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 3,
+      "attempt": 3,
+      "full_estimated_tokens": 167961,
+      "cheap_estimated_tokens": 48133,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 4,
+      "attempt": 1,
+      "full_estimated_tokens": 148641,
+      "cheap_estimated_tokens": 47086,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 4,
+      "attempt": 2,
+      "full_estimated_tokens": 163363,
+      "cheap_estimated_tokens": 47972,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 4,
+      "attempt": 3,
+      "full_estimated_tokens": 167113,
+      "cheap_estimated_tokens": 48758,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 5,
+      "attempt": 1,
+      "full_estimated_tokens": 321830,
+      "cheap_estimated_tokens": 47449,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 5,
+      "attempt": 2,
+      "full_estimated_tokens": 278884,
+      "cheap_estimated_tokens": 47509,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 5,
+      "attempt": 3,
+      "full_estimated_tokens": 206685,
+      "cheap_estimated_tokens": 47512,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 6,
+      "attempt": 1,
+      "full_estimated_tokens": 111249,
+      "cheap_estimated_tokens": 47428,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 6,
+      "attempt": 2,
+      "full_estimated_tokens": 151023,
+      "cheap_estimated_tokens": 47808,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 6,
+      "attempt": 3,
+      "full_estimated_tokens": 181489,
+      "cheap_estimated_tokens": 47820,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 7,
+      "attempt": 1,
+      "full_estimated_tokens": 221746,
+      "cheap_estimated_tokens": 47128,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 7,
+      "attempt": 2,
+      "full_estimated_tokens": 164103,
+      "cheap_estimated_tokens": 47325,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 7,
+      "attempt": 3,
+      "full_estimated_tokens": 249784,
+      "cheap_estimated_tokens": 47636,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 8,
+      "attempt": 1,
+      "full_estimated_tokens": 124883,
+      "cheap_estimated_tokens": 47873,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 8,
+      "attempt": 2,
+      "full_estimated_tokens": 203271,
+      "cheap_estimated_tokens": 48627,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 8,
+      "attempt": 3,
+      "full_estimated_tokens": 124330,
+      "cheap_estimated_tokens": 48492,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 9,
+      "attempt": 1,
+      "full_estimated_tokens": 251674,
+      "cheap_estimated_tokens": 47373,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 9,
+      "attempt": 2,
+      "full_estimated_tokens": 219505,
+      "cheap_estimated_tokens": 47880,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 9,
+      "attempt": 3,
+      "full_estimated_tokens": 196699,
+      "cheap_estimated_tokens": 46966,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 10,
+      "attempt": 1,
+      "full_estimated_tokens": 233801,
+      "cheap_estimated_tokens": 48117,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 10,
+      "attempt": 2,
+      "full_estimated_tokens": 133508,
+      "cheap_estimated_tokens": 48125,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 10,
+      "attempt": 3,
+      "full_estimated_tokens": 132032,
+      "cheap_estimated_tokens": 47814,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 11,
+      "attempt": 1,
+      "full_estimated_tokens": 309090,
+      "cheap_estimated_tokens": 47762,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 11,
+      "attempt": 2,
+      "full_estimated_tokens": 126789,
+      "cheap_estimated_tokens": 47065,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 11,
+      "attempt": 3,
+      "full_estimated_tokens": 199055,
+      "cheap_estimated_tokens": 47549,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 12,
+      "attempt": 1,
+      "full_estimated_tokens": 149209,
+      "cheap_estimated_tokens": 47761,
+      "historical_missing_evidence_proxy": true
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 12,
+      "attempt": 2,
+      "full_estimated_tokens": 160041,
+      "cheap_estimated_tokens": 48232,
+      "historical_missing_evidence_proxy": false
+    },
+    {
+      "arm": "treatment",
+      "candidate_index": 12,
+      "attempt": 3,
+      "full_estimated_tokens": 152624,
+      "cheap_estimated_tokens": 47670,
+      "historical_missing_evidence_proxy": false
+    }
+  ],
+  "estimate_sums": {
+    "baseline": {
+      "full_estimated_tokens": 2804151,
+      "cheap_estimated_tokens": 1195017
+    },
+    "treatment": {
+      "full_estimated_tokens": 6691723,
+      "cheap_estimated_tokens": 1716582
+    }
+  },
+  "historical_proxy_candidate_counts": {
+    "baseline": 8,
+    "treatment": 12
+  },
+  "baseline_cheap_to_full_estimated_ratio": 0.4261600035090835,
+  "modeled_baseline_fixed_input": 1139982,
+  "modeled_baseline_cheap_verify_input": 1160096.5969924587,
+  "sensitivity": [
+    {
+      "escalations": 0,
+      "full_call_input": 50000,
+      "modeled_input": 2300078.5969924587,
+      "modeled_input_per_accepted_at_5": 460015.7193984917,
+      "input_reduction_factor": 1.6791560971221293
+    },
+    {
+      "escalations": 0,
+      "full_call_input": 100000,
+      "modeled_input": 2300078.5969924587,
+      "modeled_input_per_accepted_at_5": 460015.7193984917,
+      "input_reduction_factor": 1.6791560971221293
+    },
+    {
+      "escalations": 0,
+      "full_call_input": 200000,
+      "modeled_input": 2300078.5969924587,
+      "modeled_input_per_accepted_at_5": 460015.7193984917,
+      "input_reduction_factor": 1.6791560971221293
+    },
+    {
+      "escalations": 3,
+      "full_call_input": 50000,
+      "modeled_input": 2450078.5969924587,
+      "modeled_input_per_accepted_at_5": 490015.7193984917,
+      "input_reduction_factor": 1.576353919723616
+    },
+    {
+      "escalations": 3,
+      "full_call_input": 100000,
+      "modeled_input": 2600078.5969924587,
+      "modeled_input_per_accepted_at_5": 520015.7193984917,
+      "input_reduction_factor": 1.4854131734584646
+    },
+    {
+      "escalations": 3,
+      "full_call_input": 200000,
+      "modeled_input": 2900078.5969924587,
+      "modeled_input_per_accepted_at_5": 580015.7193984918,
+      "input_reduction_factor": 1.3317539062580253
+    },
+    {
+      "escalations": 6,
+      "full_call_input": 50000,
+      "modeled_input": 2600078.5969924587,
+      "modeled_input_per_accepted_at_5": 520015.7193984917,
+      "input_reduction_factor": 1.4854131734584646
+    },
+    {
+      "escalations": 6,
+      "full_call_input": 100000,
+      "modeled_input": 2900078.5969924587,
+      "modeled_input_per_accepted_at_5": 580015.7193984918,
+      "input_reduction_factor": 1.3317539062580253
+    },
+    {
+      "escalations": 6,
+      "full_call_input": 200000,
+      "modeled_input": 3500078.5969924587,
+      "modeled_input_per_accepted_at_5": 700015.7193984918,
+      "input_reduction_factor": 1.1034583632832407
+    },
+    {
+      "escalations": 8,
+      "full_call_input": 50000,
+      "modeled_input": 2700078.5969924587,
+      "modeled_input_per_accepted_at_5": 540015.7193984918,
+      "input_reduction_factor": 1.430399472186471
+    },
+    {
+      "escalations": 8,
+      "full_call_input": 100000,
+      "modeled_input": 3100078.5969924587,
+      "modeled_input_per_accepted_at_5": 620015.7193984918,
+      "input_reduction_factor": 1.2458364777418562
+    },
+    {
+      "escalations": 8,
+      "full_call_input": 200000,
+      "modeled_input": 3900078.5969924587,
+      "modeled_input_per_accepted_at_5": 780015.7193984918,
+      "input_reduction_factor": 0.9902854273189069
+    },
+    {
+      "escalations": 12,
+      "full_call_input": 50000,
+      "modeled_input": 2900078.5969924587,
+      "modeled_input_per_accepted_at_5": 580015.7193984918,
+      "input_reduction_factor": 1.3317539062580253
+    },
+    {
+      "escalations": 12,
+      "full_call_input": 100000,
+      "modeled_input": 3500078.5969924587,
+      "modeled_input_per_accepted_at_5": 700015.7193984918,
+      "input_reduction_factor": 1.1034583632832407
+    },
+    {
+      "escalations": 12,
+      "full_call_input": 200000,
+      "modeled_input": 4700078.596992459,
+      "modeled_input_per_accepted_at_5": 940015.7193984918,
+      "input_reduction_factor": 0.8217290243766101
+    }
+  ],
+  "modeled_acceptance": {
+    "candidates": 12,
+    "verify_survival": 0.5,
+    "external_judge_pass_given_survival": 0.8333333333333334,
+    "expected_accepts": 5,
+    "pessimistic_accepts": 0,
+    "pessimistic_tokens_per_accept": "infinite"
+  },
+  "caveat": "Offline estimates, not provider-measured repair tokens or demonstrated yield. 3\u20135x improvement remains unproven."
+}
