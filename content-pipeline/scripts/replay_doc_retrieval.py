@@ -47,7 +47,8 @@ def replay(artifact, *, budget=DEFAULT_CONTEXT_CHARS, stable_prefix=True, config
     after = sum(row["treatment_prompt_chars"] for row in rows)
     source_paths = [Path(__file__).resolve(), Path(__file__).resolve().parents[1] / "shared/doc_retrieval.py",
                     Path(__file__).resolve().parents[1] / "shared/decision_planner.py",
-                    Path(__file__).resolve().parents[1] / "shared/cli_models.py"]
+                    Path(__file__).resolve().parents[1] / "shared/cli_models.py",
+                    Path(__file__).resolve().parents[1] / "shared/doc_claims.py"]
     source_hash = hashlib.sha256(b"".join(path.read_bytes() for path in source_paths)).hexdigest()
     return {"implementation_sha256": source_hash, "config": config.__dict__, "stable_prefix": stable_prefix,
             "method": "Exact live signature_prompt; character/4 token estimates, NOT provider-measured tokens. No verifier rejudging.",

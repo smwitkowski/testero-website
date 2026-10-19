@@ -291,10 +291,10 @@ def test_pair_gate_needs_both_current_default_reports(tmp_path, monkeypatch):
             "artifact_sha256": ["2c50b82e9d1c10493d949a24bdb9d58d2a2955e8bc634d888aa794ca83b7699c",
                                 "85d81dce77d6b4a1fe6f1575f11087d7ead99ca58bc07321c1ecfac5c50a1ab1"][index]}))
         reports.append(path)
-    # After valid authorization, creating a cohort is the first live action.
+    # Legacy receipt reports never authorize live execution.
     monkeypatch.setattr(runner.Path, "mkdir", lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("authorized")))
     base = ["run_retrieval_ab", "--bank", str(bank), "--tag", "paired-offline-test", "--execute"]
     monkeypatch.setattr("sys.argv", base + ["--replay-report", str(reports[0])])
     with pytest.raises(SystemExit): runner.main()
     monkeypatch.setattr("sys.argv", base + ["--replay-report", str(reports[0]), "--replay-report", str(reports[1])])
-    with pytest.raises(RuntimeError, match="authorized"): runner.main()
+    with pytest.raises(SystemExit): runner.main()

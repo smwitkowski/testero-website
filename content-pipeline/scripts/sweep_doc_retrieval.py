@@ -70,7 +70,7 @@ def main():
         {"config": asdict(RetrievalConfig(chunk_chars=size, overlap=overlap, top_k=k)), "budget": budget}
         for size, overlap, k, budget in itertools.product([800, 1200, 2200], [300, 500], [0, 4, 12], [60000, 100000, 140000, 180000])]
     source_paths = [Path(__file__).resolve().parents[1] / path for path in
-                    ("scripts/replay_doc_retrieval.py", "shared/doc_retrieval.py", "shared/decision_planner.py", "shared/cli_models.py")]
+                    ("scripts/replay_doc_retrieval.py", "shared/doc_retrieval.py", "shared/decision_planner.py", "shared/cli_models.py", "shared/doc_claims.py")]
     provenance = {"sweep_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                   "implementation_sha256": hashlib.sha256(b"".join(path.read_bytes() for path in source_paths)).hexdigest(),
                   "artifacts": {str(path.resolve()): hashlib.sha256(path.read_bytes()).hexdigest() for path in args.artifact},

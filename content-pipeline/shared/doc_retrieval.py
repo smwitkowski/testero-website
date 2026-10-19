@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from shared.doc_search import documentation_context
 
 # Character budgets are conservative token estimates, not provider token counts.
-DEFAULT_CONTEXT_CHARS = 130000
+DEFAULT_CONTEXT_CHARS = 180000
 OBJECTIVE_PREFIX_CHARS = 8000
 CHUNK_CHARS = 2200
 CHUNK_OVERLAP = 350  # At least the maximum receipt length (300 characters).
@@ -33,11 +33,11 @@ class RetrievalConfig:
     def __post_init__(self):
         if self.chunk_chars <= self.overlap or self.overlap < 300:
             raise ValueError("Chunks need size > overlap >= 300")
-        if self.top_k < 0 or self.neighbors not in (0, 1) or self.query_mode not in ("plan", "objective", "products"):
+        if self.top_k < 0 or self.neighbors not in (0, 1) or self.query_mode not in ("plan", "objective", "products", "claims"):
             raise ValueError("Invalid retrieval query/expansion configuration")
 
 
-DEFAULT_CONFIG = RetrievalConfig(top_k=3, query_mode="products", neighbors=1)
+DEFAULT_CONFIG = RetrievalConfig(top_k=3, query_mode="claims", neighbors=1)
 
 
 @dataclass(frozen=True)
@@ -87,24 +87,39 @@ def chunk_sources(sources, *, size=CHUNK_CHARS, overlap=CHUNK_OVERLAP):
 class BM25:
     def __init__(self, chunks):
         self.chunks = chunks
-        self.counts = [Counter(terms(chunk.text)) for chunk in chunks]
+        tokenized = [terms(chunk.text) for chunk in chunks]
+        self.counts = [Counter(words) for words in tokenized]
+        self.adjacent = [set(zip(words, words[1:])) for words in tokenized]
         self.lengths = [sum(count.values()) for count in self.counts]
         self.average = sum(self.lengths) / max(1, len(chunks)) or 1
         df = Counter(word for count in self.counts for word in count)
         self.idf = {word: math.log(1 + (len(chunks) - n + .5) / (n + .5)) for word, n in df.items()}
 
     def rank(self, query):
-        query_terms = set(terms(query))
+        words = terms(query)
+        query_terms = set(words)
+        phrases = set(zip(words, words[1:]))
         scored = []
-        for chunk, count, length in zip(self.chunks, self.counts, self.lengths):
+        for chunk, count, length, adjacent in zip(self.chunks, self.counts, self.lengths, self.adjacent):
             score = sum(self.idf.get(word, 0) * count[word] * 2.5 /
                         (count[word] + 1.5 * (.25 + .75 * length / self.average))
                         for word in query_terms if count[word])
+            # Adjacent technical words distinguish a capability phrase from
+            # a long clause's unrelated term matches. No gold receipt inputs.
+            score += sum(self.idf.get(first, 0) + self.idf.get(second, 0)
+                         for first, second in phrases & adjacent)
             scored.append((score, chunk))
         return [chunk for score, chunk in sorted(scored, key=lambda row: (-row[0], row[1].id)) if score > 0]
 
 
 def plan_queries(scope, plan, mode="objective"):
+    if mode == "claims":
+        from shared.doc_claims import plan_claims, claim_queries
+        # One turn per claim before extra lexical variants of any one claim.
+        claims = plan_claims(plan)
+        variants = [claim_queries(claim) for claim in claims]
+        return list(dict.fromkeys(query for rank in range(max(map(len, variants), default=0))
+                                  for rows in variants for query in rows[rank:rank + 1]))
     constraints = " ".join(plan["decisive_constraints"])
     queries = [plan["engineering_decision"] + " " + constraints, plan["best_action"], constraints,
                *(mistake["action"] for mistake in plan["mistakes"]),
@@ -224,10 +239,17 @@ class RetrievalSession:
                                  top_k=self.config.top_k, neighbors=self.config.neighbors, sections=self.config.sections)])
         prefix_context = "Official fetched Google Cloud documentation excerpts (quote only these passages):\n" + prefix_text
         candidate_context = "Candidate-specific per-option passages:\n" + "\n\n".join(render_chunk(chunk) for chunk in selected)
+        claim_coverage = []
+        if self.config.query_mode == "claims":
+            from shared.doc_claims import plan_claims, claim_queries
+            ranker = BM25([*prefix, *selected])
+            claim_coverage = [{"claim": claim, "chunk_ids": [chunk.id for chunk in ranker.rank(claim_queries(claim)[0])[:3]]}
+                              for claim in plan_claims(plan)]
         context = prefix_context + "\n\n" + candidate_context
         return {"context": context, "prefix_context": prefix_context, "candidate_context": candidate_context,
                 "chunks": [*prefix, *selected], "sources": list(merged.values()),
-                "metadata": {"version": 2, "config": self.config.__dict__, "budget_chars": budget, "context_chars": len(context),
+                "claims": claim_coverage,
+                "metadata": {"version": 3, "claims": claim_coverage, "config": self.config.__dict__, "budget_chars": budget, "context_chars": len(context),
                              "estimated_doc_tokens": math.ceil(len(context) / 4),
                              "objective_prefix_sha256": hashlib.sha256(prefix_text.encode()).hexdigest(),
                              "chunk_ids": [chunk.id for chunk in [*prefix, *selected]]}}

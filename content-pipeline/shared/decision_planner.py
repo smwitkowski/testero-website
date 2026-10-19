@@ -189,6 +189,11 @@ def verification_prompt(scope, plan, sources, *, retrieval=None, stable_prefix=F
     signature = decision_proof_signature(scope.get("distractor_evidence"))
     inputs = {"objective_scope": scope["domain_prompt"], "proposed_plan": json.dumps(plan, ensure_ascii=False),
               "fetched_documentation": context}
+    if retrieval is not None and retrieval.get("claims"):
+        inputs["proposed_plan"] += ("\n\nClaim-to-passage navigation (lexical matches, NOT proof of support; "
+                                    "judge every claim and report missing evidence):\n" + json.dumps([
+                                        {"id": row["claim"]["id"], "claim": row["claim"]["text"], "chunk_ids": row["chunk_ids"]}
+                                        for row in retrieval["claims"]], ensure_ascii=False))
     if stable_prefix:
         stable_scope = scope.get("objective_text", scope["objective_id"])
         if retrieval is not None:
@@ -234,6 +239,22 @@ def verify_decision(scope, plan, sources, *, model, reasoning_effort="medium", p
     if not proof["reason"].strip():
         proof["passed"] = False
     return proof
+
+
+def evidence_missing_veto(proof):
+    """Retry missing/uncertain evidence, not an explicit contradiction alone."""
+    import re
+    if proof.get("passed") is True:
+        return False
+    if any("quote absent from supplied retrieval chunks" in error
+           for error in proof.get("mechanical_check", {}).get("errors", [])):
+        return True
+    reason = proof.get("reason", "").casefold()
+    return bool(re.search(
+        r"(?:no|missing|insufficient|lack\w*|absen\w*|without|not|doesn't|don't|cannot|can't|couldn't)"
+        r".{0,100}(?:support|evidence|receipt|passage|document|establish|substantiate|verify|prove|anchor)"
+        r"|(?:support|evidence|receipt|passage|document).{0,80}(?:missing|insufficient|unverified|uncertain|absent)"
+        r"|unsupported|insufficiently evidenced", reason))
 
 
 def writer_decision_context(scope, plan, proof):

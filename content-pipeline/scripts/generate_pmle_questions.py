@@ -24,7 +24,7 @@ from shared.parallel import run_bounded
 from shared.evidence import check_evidence
 from shared.call_logging import call_context
 from shared.llm_generator import generate_question, cite_question, GenerationOutputError
-from shared.decision_planner import plan_decision, verify_decision, writer_decision_context, writer_documentation_context, DecisionVetoError
+from shared.decision_planner import plan_decision, verify_decision, writer_decision_context, writer_documentation_context, DecisionVetoError, evidence_missing_veto
 from shared.llm_limits import MaxTokensTruncation
 from shared.cli_models import CLIModelError, CLIUsageLimitError, CLIAuthError, CodexModelRejectedError
 from shared.completion_diagnostics import _safe_completion
@@ -149,7 +149,7 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--objective", "objective_ids", multiple=True, help="Repeatable registry objective ID; overrides weights with round-robin targets in flag order.")
 @click.option("--distractor-evidence", type=click.Choice(["strict", "consistent"]), default="strict", show_default=True, help="Freeze decision/evidence review policy for this batch.")
 @click.option("--doc-cache", is_flag=True, help="Opt in to 7-day on-disk public official-document snapshots.")
-@click.option("--verify-retrieval", is_flag=True, help="Opt in to per-option BM25/product queries with adjacent spans (at most about 32.5k estimated doc tokens).")
+@click.option("--verify-retrieval", is_flag=True, help="Opt in to per-claim BM25 queries with adjacent spans and one evidence-missing full-doc escalation (cheap context at most about 45k estimated doc tokens; escalation uses full pages).")
 @click.option("--verify-stable-prefix", is_flag=True, help="Opt in to documentation-first verifier field ordering; provider cache hits must be measured.")
 @click.option("--decision-attempts", type=click.IntRange(min=1, max=3), default=3, show_default=True, help="Total decision plans including initial attempt; lower caps are experimental.")
 @click.option("--argon-gate", is_flag=True, help="Freeze mandatory independent Gemini 4 Argon blind/full review requests.")
@@ -306,6 +306,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             feedback = ""
             vetoed_decisions = []
             veto_feedback = []
+            escalated = False  # At most one full-doc verify per candidate, not per replacement.
             for decision_attempt in range(decision_attempts):
                 stage = "decision_plan"
                 with write_lock:
@@ -336,6 +337,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     cache=docs_cache, objective_id=scope["objective_id"], decision_plan=decision)
                 if not sources:
                     raise ValueError("No fetched documentation")
+                full_sources = sources
                 retrieval = None
                 if retrieval_session is not None:
                     retrieval = retrieval_session.prepare(scope, decision, sources)
@@ -346,13 +348,26 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 context = documentation_context(sources)
                 stage = "decision_veto"
                 with call_context(stage="verify", candidate_id=entry.get("candidate_id"), index=index,
-                                  attempt=decision_attempt + 1, calls_path=str(artifact) + ".calls.jsonl"):
+                                  attempt=decision_attempt + 1, calls_path=str(artifact) + ".calls.jsonl",
+                                  escalation=False, verify_context="retrieved" if retrieval is not None else "full"):
                     verify_options = {}
                     if retrieval is not None:
                         verify_options["retrieval"] = retrieval
                     if verify_stable_prefix:
                         verify_options["stable_prefix"] = True
                     proof = verify_decision(scope, decision, sources, model=model, reasoning_effort=cite_effort, **verify_options)
+                if retrieval is not None and not escalated and evidence_missing_veto(proof):
+                    escalated = True
+                    attempt["cheap_proof"] = proof
+                    attempt["escalation"] = {"count": 1, "reason": "evidence_missing", "context": "full"}
+                    # Baseline signature and original full fetched pages, no narrowed context
+                    # or stable-prefix variant; the same semantic/mechanical gates remain.
+                    with call_context(stage="verify", candidate_id=entry.get("candidate_id"), index=index,
+                                      attempt=decision_attempt + 1, calls_path=str(artifact) + ".calls.jsonl",
+                                      escalation=True, verify_context="full"):
+                        proof = verify_decision(scope, decision, full_sources, model=model, reasoning_effort=cite_effort)
+                    sources = full_sources
+                    attempt["sources"] = entry["sources"] = sources
                 attempt["proof"] = proof
                 if proof["passed"]:
                     break

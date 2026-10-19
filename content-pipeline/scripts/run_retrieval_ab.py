@@ -20,8 +20,45 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from shared.doc_retrieval import DEFAULT_CONTEXT_CHARS, DEFAULT_CONFIG
+from scripts.replay_claim_support import implementation_sha256
 
 DEFAULT_OBJECTIVES = ["machine-learning-engineer:standard:3.1:1", "machine-learning-engineer:standard:3.1:3"]
+
+
+EXPECTED_ARTIFACTS = {
+    "baseline": "6c39536af7ff7cf1bc7ae201c114e691921cb7e8b7e53db957d3fff32bf76138",
+    "treatment": "f8c48c83573d0ee255fafd8c4b1af44ce26a192ace71a19903021172b0c54e1a",
+}
+
+
+def claim_gate_passed(report, current_hash):
+    """Check report freshness against current code, settings and frozen inputs."""
+    if not isinstance(report, dict):
+        return False
+    def sufficient(value):
+        return type(value) in (int, float) and .95 <= value <= 1
+    try:
+        if not (report.get("complete_attempt_coverage") is True
+                and report.get("complete_field_coverage") is True
+                and report.get("gate_passed") is True
+                and sufficient(report.get("claim_support_recall"))
+                and set(report.get("by_arm", {})) == set(EXPECTED_ARTIFACTS)
+                and all(sufficient(report["by_arm"][arm].get("recall")) for arm in EXPECTED_ARTIFACTS)
+                and report.get("implementation_sha256") == current_hash
+                and report.get("config") == DEFAULT_CONFIG.__dict__
+                and report.get("budget_chars") == DEFAULT_CONTEXT_CHARS
+                and report.get("artifacts") == EXPECTED_ARTIFACTS):
+            return False
+        for arm, digest in EXPECTED_ARTIFACTS.items():
+            path = ROOT / ".cache/generation/retrieval-1019-b" / f"{arm}.json"
+            if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                return False
+        ledgers = report.get("ledgers")
+        return isinstance(ledgers, dict) and bool(ledgers) and all(
+            hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest
+            for path, digest in ledgers.items())
+    except (OSError, TypeError, ValueError, AttributeError):
+        return False
 
 
 def commands(args, arm, artifact):
@@ -58,7 +95,8 @@ def main():
     parser.add_argument("--treatment-attempts", type=int, choices=[1, 2, 3], default=3)
     parser.add_argument("--order", choices=["baseline-first", "treatment-first"], default="baseline-first")
     parser.add_argument("--execute", action="store_true", help="LIVE coordinator action; absent means print commands only")
-    parser.add_argument("--replay-report", type=Path, action="append", help="Fresh offline replay JSON; repeat for b28 and ACE-b2")
+    parser.add_argument("--claim-report", type=Path, help="Current complete offline claim-support report")
+    parser.add_argument("--replay-report", type=Path, action="append", help="Informational legacy receipt replay; never authorizes execution")
     parser.add_argument("--allow-failed-recall", action="store_true", help="Explicit exploratory-only override; no rollout approval")
     args = parser.parse_args()
     args.bank = args.bank.resolve()
@@ -68,18 +106,19 @@ def main():
     if cohort.exists():
         parser.error("Cohort already exists; use a fresh tag (never overwrite journals)")
     replay_paths = args.replay_report or []
-    replays = [json.loads(path.read_text()) for path in replay_paths]
-    source_paths = [ROOT / "scripts/replay_doc_retrieval.py", ROOT / "shared/doc_retrieval.py", ROOT / "shared/decision_planner.py", ROOT / "shared/cli_models.py"]
-    current_hash = hashlib.sha256(b"".join(path.read_bytes() for path in source_paths)).hexdigest()
-    expected_artifacts = {"2c50b82e9d1c10493d949a24bdb9d58d2a2955e8bc634d888aa794ca83b7699c",
-                          "85d81dce77d6b4a1fe6f1575f11087d7ead99ca58bc07321c1ecfac5c50a1ab1"}
-    recall_ok = (len(replays) == 2 and {report.get("artifact_sha256") for report in replays} == expected_artifacts
-                 and all(report.get("stable_prefix") is True and report.get("recall_gate_passed") is True and report.get("implementation_sha256") == current_hash
-                         and isinstance(report.get("quote_recall"), (int, float)) and report["quote_recall"] >= .95
-                         and report.get("budget_chars") == DEFAULT_CONTEXT_CHARS
-                         and report.get("config") == DEFAULT_CONFIG.__dict__ for report in replays))
+    current_hash = implementation_sha256()
+    claim_report = None
+    claim_hash = None
+    if args.claim_report:
+        try:
+            raw = args.claim_report.read_bytes()
+            claim_hash = hashlib.sha256(raw).hexdigest()
+            claim_report = json.loads(raw)
+        except (OSError, ValueError):
+            pass
+    recall_ok = claim_gate_passed(claim_report, current_hash)
     if args.execute and not recall_ok and not args.allow_failed_recall:
-        parser.error("Paired recall gate missing/failed/stale: need two current default-config reports or exploratory override")
+        parser.error("Claim-support gate missing/failed/stale: need a current complete claim report or exploratory override")
     arms = ["baseline", "treatment"] if args.order == "baseline-first" else ["treatment", "baseline"]
     planned = {arm: commands(args, arm, cohort / (arm + ".json")) for arm in arms}
     for arm, stages in planned.items():
@@ -97,6 +136,8 @@ def main():
                 "recall_gate_passed": recall_ok, "implementation_sha256": current_hash,
                 "exploratory_override": args.allow_failed_recall,
                 "retrieval_config": DEFAULT_CONFIG.__dict__, "budget_chars": DEFAULT_CONTEXT_CHARS,
+                "claim_report": {"path": str(args.claim_report.resolve()), "sha256": claim_hash,
+                                 "provenance": claim_report} if args.claim_report else None,
                 "replays": [{"path": str(path.resolve()), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
                             for path in replay_paths],
                 "commands": planned, "arms": {}}
