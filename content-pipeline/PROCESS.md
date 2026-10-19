@@ -1398,6 +1398,14 @@ rationales reject URLs and numeric citations, not ordinary “see” words or br
 terms. Service grounding comes from fetched evidence and the judge, not a PMLE-era
 service-name list. The old helper remains only for deferred legacy metrics.
 
+## Verified-parent variants (opt-in)
+
+See [the variants handoff](calibration/variants-2026-10-19/README.md) for the
+frozen-parent contract, offline prompt estimates and coordinator-only 18-variant
+comparison. `scripts/generate_variants.py` defaults to zero-call prompt rendering;
+`--enable-variants` is required for a writer call. Plan/verify/cite are skipped,
+not independent judgment. No production ingestion is authorized by this mode.
+
 ## Source boundaries
 
 See `certs/STYLE.md` for measured sample style, `certs/README.md` for refresh usage,

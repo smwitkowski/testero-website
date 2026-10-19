@@ -291,10 +291,14 @@ def _source_context(cited, evidence, trimmed_urls, *, margin=QUOTE_WINDOW_MARGIN
     return context, metadata
 
 
-def build_request(candidate_id, scope, question, sources, evidence, *, signature=None, gate_version=5, argon_gate=False, execution_policy=None):
+def build_request(candidate_id, scope, question, sources, evidence, *, signature=None, gate_version=5, argon_gate=False, execution_policy=None, variant_context=None):
     """Keep the rubric/schema intact; trim only fetched text around verified quotes."""
     if execution_policy not in (None, "short_circuit_v1"):
         raise ValueError("Unsupported execution policy")
+    if variant_context is not None:
+        from shared.variants import review_context
+        scope = dict(scope)
+        scope["domain_prompt"] += review_context(variant_context["metadata"], variant_context["parent"])
     question = {name: question[name] for name in QUESTION_FIELDS}
     checked = check_evidence(evidence, sources)
     if not checked["passed"]:

@@ -115,6 +115,9 @@ def _build_outputs(artifact, out, payload, *, force):
             candidate_storage_id(entry, scope, question)
             if payload["external_judge_version"] == 2:
                 validate_decision_provenance(scope, entry)
+            if "variant_origin" in scope or "variant" in entry or "parent_question_id" in entry:
+                from shared.variants import validate_variant
+                validate_variant(payload, entry)
             if not validate_question(question).is_valid:
                 raise ValueError()
             checked = check_evidence(canonical_evidence(entry), entry.get("sources"))
@@ -122,7 +125,10 @@ def _build_outputs(artifact, out, payload, *, force):
                 raise ValueError()
             from shared.quality_gate import QuestionQualitySignature
             request = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"],
-                                    **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False), "execution_policy": payload.get("execution_policy")} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
+                                    **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False), "execution_policy": payload.get("execution_policy"),
+                                        "variant_context": ({"metadata": entry["variant"],
+                                            "parent": payload["variant_parents"][entry["parent_question_id"]]}
+                                            if "variant" in entry else None)} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
             raw = _encode(request)
             if len(raw.decode("utf-8")) > REQUEST_CHARACTER_LIMIT:
                 raise ValueError()

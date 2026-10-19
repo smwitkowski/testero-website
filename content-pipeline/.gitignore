@@ -17,3 +17,4 @@ review/
 
 # Local generation candidates and frozen documentation for founder review
 .cache/generation/
+.cache/variants/
