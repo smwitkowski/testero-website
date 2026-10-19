@@ -1,0 +1,205 @@
+{
+  "purpose": "Founder-approved paid-practice publication; generated offline, no production writes",
+  "sql_path": "/Users/switkowski/Projects/Testero/hq/drafts/variants/ingest-13.sql",
+  "sql_sha256": "cf6020f661f66a0cb63788203e6fb8aa3af593c3712dd460e8d5d32f3769450b",
+  "approval": {
+    "path": "/Users/switkowski/Projects/Testero/hq/drafts/variants/subagent-review-r4-2026-10-19.md",
+    "sha256": "50f5810111677116598ed0c184ed4d8a4077f73d67cfc9a9751ea7a628ebed7f"
+  },
+  "artifacts": [
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-industry-live.json",
+      "sha256": "2c709d9d4f4953507d228ba264a54ddf4657b946a6c016b81071a05432dd2862"
+    },
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r3-live.json",
+      "sha256": "638a665c3b8d9296d9200ee2cd5380a5ff948d2ea6bd98e7aceb8337fbc2c477"
+    },
+    {
+      "path": "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/ab-six-r4-live.json",
+      "sha256": "1e75434fd6960c9e255dc769b0fb18a987d4c9f0ca88a03d3b12ad1deb255830"
+    }
+  ],
+  "exporter_sha256": "67a33a6bad1aec2e432c9754d4c4c751617acdf65c29afaf7387c4831a82e844",
+  "count": 13,
+  "answers": 52,
+  "explanations": 13,
+  "generation_runs": [
+    {
+      "id": "68b39c2a-bbf8-52ee-8f5e-00130f0b3726",
+      "exam": "GCP_PM_ML_ENG",
+      "domain_code": "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
+      "target_count": 3,
+      "generated_count": 2,
+      "model": "codex",
+      "prompt_version": "registry-grounded-v1",
+      "notes": "{\"artifact\":\"ab-six-r3-live.json\",\"artifact_sha256\":\"638a665c3b8d9296d9200ee2cd5380a5ff948d2ea6bd98e7aceb8337fbc2c477\",\"cert_id\":\"machine-learning-engineer\",\"founder_approval_sha256\":\"50f5810111677116598ed0c184ed4d8a4077f73d67cfc9a9751ea7a628ebed7f\",\"judge_model\":\"anthropic/claude-sonnet-5.5 via Claude Code subagent\"}"
+    },
+    {
+      "id": "71d11310-7211-5d27-b1e9-cbf88184c803",
+      "exam": "GCP_PM_ML_ENG",
+      "domain_code": "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
+      "target_count": 3,
+      "generated_count": 1,
+      "model": "codex",
+      "prompt_version": "registry-grounded-v1",
+      "notes": "{\"artifact\":\"ab-six-r4-live.json\",\"artifact_sha256\":\"1e75434fd6960c9e255dc769b0fb18a987d4c9f0ca88a03d3b12ad1deb255830\",\"cert_id\":\"machine-learning-engineer\",\"founder_approval_sha256\":\"50f5810111677116598ed0c184ed4d8a4077f73d67cfc9a9751ea7a628ebed7f\",\"judge_model\":\"anthropic/claude-sonnet-5.5 via Claude Code subagent\"}"
+    },
+    {
+      "id": "744720fd-a6c6-5111-ac9e-5bee36f4600c",
+      "exam": "GCP_PM_ML_ENG",
+      "domain_code": "COLLABORATING_TO_MANAGE_DATA_AND_MODELS",
+      "target_count": 3,
+      "generated_count": 2,
+      "model": "codex",
+      "prompt_version": "registry-grounded-v1",
+      "notes": "{\"artifact\":\"ab-six-r4-live.json\",\"artifact_sha256\":\"1e75434fd6960c9e255dc769b0fb18a987d4c9f0ca88a03d3b12ad1deb255830\",\"cert_id\":\"machine-learning-engineer\",\"founder_approval_sha256\":\"50f5810111677116598ed0c184ed4d8a4077f73d67cfc9a9751ea7a628ebed7f\",\"judge_model\":\"anthropic/claude-sonnet-5.5 via Claude Code subagent\"}"
+    },
+    {
+      "id": "feb7295c-f49f-5a06-863e-bb8ce6583a5a",
+      "exam": "GCP_PM_ML_ENG",
+      "domain_code": "COLLABORATING_TO_MANAGE_DATA_AND_MODELS",
+      "target_count": 3,
+      "generated_count": 1,
+      "model": "codex",
+      "prompt_version": "registry-grounded-v1",
+      "notes": "{\"artifact\":\"ab-six-r3-live.json\",\"artifact_sha256\":\"638a665c3b8d9296d9200ee2cd5380a5ff948d2ea6bd98e7aceb8337fbc2c477\",\"cert_id\":\"machine-learning-engineer\",\"founder_approval_sha256\":\"50f5810111677116598ed0c184ed4d8a4077f73d67cfc9a9751ea7a628ebed7f\",\"judge_model\":\"anthropic/claude-sonnet-5.5 via Claude Code subagent\"}"
+    },
+    {
+      "id": "fbbc5554-0d29-5361-af46-c22fd9489092",
+      "exam": "GCP_PM_ML_ENG",
+      "domain_code": "SCALING_PROTOTYPES_INTO_ML_MODELS",
+      "target_count": 3,
+      "generated_count": 1,
+      "model": "codex",
+      "prompt_version": "registry-grounded-v1",
+      "notes": "{\"artifact\":\"ab-six-r4-live.json\",\"artifact_sha256\":\"1e75434fd6960c9e255dc769b0fb18a987d4c9f0ca88a03d3b12ad1deb255830\",\"cert_id\":\"machine-learning-engineer\",\"founder_approval_sha256\":\"50f5810111677116598ed0c184ed4d8a4077f73d67cfc9a9751ea7a628ebed7f\",\"judge_model\":\"anthropic/claude-sonnet-5.5 via Claude Code subagent\"}"
+    },
+    {
+      "id": "19d538a3-da49-5078-bb98-10eb4f1d0a5f",
+      "exam": "GCP_PM_ML_ENG",
+      "domain_code": "SERVING_AND_SCALING_MODELS",
+      "target_count": 3,
+      "generated_count": 2,
+      "model": "codex",
+      "prompt_version": "registry-grounded-v1",
+      "notes": "{\"artifact\":\"ab-six-r4-live.json\",\"artifact_sha256\":\"1e75434fd6960c9e255dc769b0fb18a987d4c9f0ca88a03d3b12ad1deb255830\",\"cert_id\":\"machine-learning-engineer\",\"founder_approval_sha256\":\"50f5810111677116598ed0c184ed4d8a4077f73d67cfc9a9751ea7a628ebed7f\",\"judge_model\":\"anthropic/claude-sonnet-5.5 via Claude Code subagent\"}"
+    },
+    {
+      "id": "4f7decc3-b171-5938-ba5d-a8cc83bc1850",
+      "exam": "GCP_PM_ML_ENG",
+      "domain_code": "AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES",
+      "target_count": 3,
+      "generated_count": 1,
+      "model": "codex",
+      "prompt_version": "registry-grounded-v1",
+      "notes": "{\"artifact\":\"ab-six-r3-live.json\",\"artifact_sha256\":\"638a665c3b8d9296d9200ee2cd5380a5ff948d2ea6bd98e7aceb8337fbc2c477\",\"cert_id\":\"machine-learning-engineer\",\"founder_approval_sha256\":\"50f5810111677116598ed0c184ed4d8a4077f73d67cfc9a9751ea7a628ebed7f\",\"judge_model\":\"anthropic/claude-sonnet-5.5 via Claude Code subagent\"}"
+    },
+    {
+      "id": "69107883-6c79-5a78-9dcc-2eb4c232bf92",
+      "exam": "GCP_PM_ML_ENG",
+      "domain_code": "MONITORING_ML_SOLUTIONS",
+      "target_count": 3,
+      "generated_count": 2,
+      "model": "codex",
+      "prompt_version": "registry-grounded-v1",
+      "notes": "{\"artifact\":\"ab-six-r3-live.json\",\"artifact_sha256\":\"638a665c3b8d9296d9200ee2cd5380a5ff948d2ea6bd98e7aceb8337fbc2c477\",\"cert_id\":\"machine-learning-engineer\",\"founder_approval_sha256\":\"50f5810111677116598ed0c184ed4d8a4077f73d67cfc9a9751ea7a628ebed7f\",\"judge_model\":\"anthropic/claude-sonnet-5.5 via Claude Code subagent\"}"
+    },
+    {
+      "id": "221ca1ba-3c62-5454-bf5e-0711968308d2",
+      "exam": "GCP_PM_ML_ENG",
+      "domain_code": "MONITORING_ML_SOLUTIONS",
+      "target_count": 3,
+      "generated_count": 1,
+      "model": "codex",
+      "prompt_version": "registry-grounded-v1",
+      "notes": "{\"artifact\":\"ab-six-r4-live.json\",\"artifact_sha256\":\"1e75434fd6960c9e255dc769b0fb18a987d4c9f0ca88a03d3b12ad1deb255830\",\"cert_id\":\"machine-learning-engineer\",\"founder_approval_sha256\":\"50f5810111677116598ed0c184ed4d8a4077f73d67cfc9a9751ea7a628ebed7f\",\"judge_model\":\"anthropic/claude-sonnet-5.5 via Claude Code subagent\"}"
+    }
+  ],
+  "questions": [
+    {
+      "id": "14bda326-6560-5527-87fb-2ca614672b8a",
+      "parent": "a23ed85e-042b-5eaf-ba0d-ccf52b149bd8",
+      "industry": "forestry management",
+      "artifact": "ab-six-r3-live.json"
+    },
+    {
+      "id": "20a8e081-d75e-5b60-8531-5a6b25f3284e",
+      "parent": "a23ed85e-042b-5eaf-ba0d-ccf52b149bd8",
+      "industry": "pharmaceutical manufacturing",
+      "artifact": "ab-six-r3-live.json"
+    },
+    {
+      "id": "67a2319a-65de-59d3-a5c8-360335cd1339",
+      "parent": "a23ed85e-042b-5eaf-ba0d-ccf52b149bd8",
+      "industry": "retail inventory",
+      "artifact": "ab-six-r4-live.json"
+    },
+    {
+      "id": "ee3c3f10-a3cf-51e9-99ff-9b766fc18de7",
+      "parent": "2552fa69-5a20-5744-90a3-2c76eba518d2",
+      "industry": "sports broadcasting",
+      "artifact": "ab-six-r4-live.json"
+    },
+    {
+      "id": "a8bd607c-7573-5521-b7b3-31af8b5c2621",
+      "parent": "2552fa69-5a20-5744-90a3-2c76eba518d2",
+      "industry": "museum archives",
+      "artifact": "ab-six-r3-live.json"
+    },
+    {
+      "id": "99b466fc-7444-5468-8a36-c3d3aea9cdc1",
+      "parent": "2552fa69-5a20-5744-90a3-2c76eba518d2",
+      "industry": "renewable energy",
+      "artifact": "ab-six-r4-live.json"
+    },
+    {
+      "id": "f699cf9d-53b2-510a-a14f-d7fb1de2a8ef",
+      "parent": "9a174e39-5c98-524a-abec-952a689185d0",
+      "industry": "scientific publishing",
+      "artifact": "ab-six-r4-live.json"
+    },
+    {
+      "id": "221bf8b2-e221-5a96-9c47-d993886db178",
+      "parent": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "industry": "forestry management",
+      "artifact": "ab-six-r4-live.json"
+    },
+    {
+      "id": "ff63a277-deb2-5e69-a739-64517f81a912",
+      "parent": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "industry": "pharmaceutical manufacturing",
+      "artifact": "ab-six-r4-live.json"
+    },
+    {
+      "id": "20a0b44d-e652-513d-968e-19be6bcc1965",
+      "parent": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+      "industry": "agricultural equipment",
+      "artifact": "ab-six-r3-live.json"
+    },
+    {
+      "id": "5881b1ea-0e7b-51de-8a2e-649f39685345",
+      "parent": "532fb45c-7f86-542a-a470-39ad0df5d199",
+      "industry": "public transit",
+      "artifact": "ab-six-r3-live.json"
+    },
+    {
+      "id": "9883f4a8-1adb-594f-8fad-b6ecd5cd82f7",
+      "parent": "532fb45c-7f86-542a-a470-39ad0df5d199",
+      "industry": "renewable energy",
+      "artifact": "ab-six-r3-live.json"
+    },
+    {
+      "id": "109e0038-4aed-5d43-9178-7cf3977976ef",
+      "parent": "532fb45c-7f86-542a-a470-39ad0df5d199",
+      "industry": "textile manufacturing",
+      "artifact": "ab-six-r4-live.json"
+    }
+  ],
+  "sql_runtime_validation": {
+    "status": "blocked",
+    "reason": "Isolated local PostgreSQL initialization did not expose server socket; no fixture or generated SQL executed"
+  },
+  "independent_source_review": "No blocker found; see status/practice-b-source-review.md",
+  "apply_authority": "Coordinator only, after app PR289 merge and migrations; not executed by agent"
+}

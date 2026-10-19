@@ -359,3 +359,54 @@ Final offline gate for round 4:
 → **2,282 passed, 3 skipped, 48 subtests passed** (25 dependency deprecation
 warnings). Independent source review found no remaining concrete blocker.
 No frontend files changed; frontend/Docker checks were not rerun for this round.
+
+
+## Founder-approved paid-practice publication (13 variants)
+
+Part A is the separate app PR [#289](https://github.com/smwitkowski/testero-website/pull/289).
+Apply its `20261019200000_practice_question_variants.sql` migration and the taxonomy
+migration before the coordinator applies the publication SQL. Do not apply the SQL
+from the pipeline worktree or to production during validation.
+
+From `content-pipeline/`, the offline dry-run prints exactly 13 full candidate IDs,
+parent IDs, industries and source artifact names:
+
+```sh
+env -i PATH="$PATH" HOME="$HOME" uv run python scripts/export_approved_variants_sql.py \
+  --review ../../hq/drafts/variants/subagent-review-r4-2026-10-19.md \
+  --artifact .cache/variants/ab-six-industry-live.json \
+  --artifact .cache/variants/ab-six-r3-live.json \
+  --artifact .cache/variants/ab-six-r4-live.json \
+  --dry-run
+```
+
+Replace `--dry-run` with
+`--output ../../hq/drafts/variants/ingest-13.sql` to reproduce the SQL. The exporter
+makes no database or model calls. It validates actual frozen independent verdicts,
+then captures `persist_candidate` with an in-memory client. The stored option map,
+correct flags, per-option rationales, combined explanation and document links use
+that canonical persistence path. Founder approval explicitly publishes ACTIVE/GOOD
+single-select rows rather than the normal DRAFT rows. It preserves `_run_id` and
+records 9 generation runs for the approved subset, never the parent's run ID.
+
+The transaction resolves current parent domains, locks original ACTIVE PMLE
+single-select parents, and copies each parent's complete tag set through
+`replace_question_tags(..., 'generation', ...)`. Dimension, value and confidence
+are retained; copied rows receive new creation timestamps. An empty parent tag set
+is faithfully copied as empty. Source references name the artifact and full ID.
+Review notes record approval, artifact, request and verdict hashes.
+
+“Idempotent” here means replay-safe, insert-only: **a repeat apply aborts before
+writes**, because the brief explicitly requires aborting when any variant ID
+already exists. There is no silent skip or overwrite. Missing schema, invalid
+parents and existing generation runs also abort the entire transaction. The file
+is generated only; the coordinator applies it after merge. No production writes
+are authorized by this document.
+
+Receipt: `practice-ingest-13.json` records the final SQL SHA256, 13 IDs, source
+hashes and 9 deterministic run records. The final exporter source was independently
+reviewed without a blocker. Local SQL execution validation is **blocked**: the
+isolated PostgreSQL container did not finish initialization, so no fixture or
+publication SQL ran. This is not a passed DB gate. The container was removed;
+production is untouched. App PR #289 separately records its final test timeouts,
+local DB runner setup blocker and pending Docker gate.
