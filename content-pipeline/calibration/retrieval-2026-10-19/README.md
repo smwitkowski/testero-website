@@ -102,10 +102,10 @@ Argon REVISE, cache accounting and wall time; measure ≥3× improvement with no
 loss before proposing enablement. Small N is a smoke test, not noninferiority proof.
 
 ## Verification
-- Clean-env pipeline pytest: completed full gate **2,126 passed, 3 skipped**,
-  48 subtests; after adding replay-index/A/B freshness/integration coverage,
-  focused suite **26 passed**. A second full gate is in progress at PR creation;
-  its final result will be recorded before handoff.
+- Clean-env pipeline pytest: latest full gate **2,128 passed, 3 skipped**,
+  48 subtests (includes replay-index/A/B freshness tests). The last added
+  integration test also passed in the **26-test focused suite**. Earlier full gate:
+  2,126 passed, 3 skipped. No live/network/DB-dependent tests were enabled.
 - Root clean-env npm test, lint, typecheck and Docker build passed. Docker reports
   existing `SecretsUsedInArgOrEnv` warning for its placeholder ENV; unchanged.
 - Independent bounded source review found no remaining concrete blocker after
