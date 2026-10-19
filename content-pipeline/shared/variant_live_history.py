@@ -128,7 +128,8 @@ def _load_live_priors(manifest_path, artifact_paths):
     from shared.external_judge import canonical_sha256
     from shared.variant_history import _read, load_prior_variants
 
-    path = Path(manifest_path)
+    # Normalize the CLI boundary without resolving away a manifest symlink.
+    path = Path(manifest_path).absolute()
     _require(_absolute(str(path)) and path.suffix == ".json",
              "Live-prior manifest requires an absolute JSON path")
     payload, digest = _read(path)
@@ -164,7 +165,8 @@ def _load_live_priors(manifest_path, artifact_paths):
 def load_live_priors(manifest_path, artifact_paths):
     """Replay all three saved artifacts and select exactly 13 approved priors.
 
-    Paths must match the committed manifest. No models, database calls, or writes
+    The manifest path may be relative; frozen paths remain absolute. Artifact
+    paths must match the committed manifest. No models, database calls, or writes
     occur. Missing, changed, ambiguous, or rejected evidence raises ValueError.
     """
     try:

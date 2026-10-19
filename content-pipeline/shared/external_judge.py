@@ -331,14 +331,18 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
     schema = output_model(signature).model_json_schema() if signature is not None else None
     trimmed_urls = set()
     largest_first = sorted(cited, key=lambda source: len(source["text"]), reverse=True)
-    # The optional full Argon review repeats documentation. Only that bundle may
-    # retry with smaller, still-wide windows; historical requests keep 8000.
-    for count in range(len(largest_first) + 1 + int(argon_gate)):
-        tighter_argon = count > len(largest_first)
-        if count and not tighter_argon:
+    # Keep every historical attempt byte-identical, including Argon's 4000
+    # fallback. Policy 5 may then tighten only quote-centered source margins;
+    # repeated evidence/Argon docs otherwise exceed the same fixed request bound.
+    margins = [QUOTE_WINDOW_MARGIN] * (len(largest_first) + 1)
+    if argon_gate:
+        margins.append(ARGON_QUOTE_WINDOW_MARGIN)
+    if variant_policy_version == 5:
+        margins.extend((3000, 2000, 1000))
+    for count, margin in enumerate(margins):
+        if 0 < count <= len(largest_first):
             trimmed_urls.add(largest_first[count - 1]["url"])
-        context, trimming = _source_context(cited, evidence, trimmed_urls,
-            margin=ARGON_QUOTE_WINDOW_MARGIN if tighter_argon else QUOTE_WINDOW_MARGIN)
+        context, trimming = _source_context(cited, evidence, trimmed_urls, margin=margin)
         if signature is not None:
             inputs = {"question_data": question, "domain_context": scope["domain_prompt"],
                       "documentation_context": context, "option_evidence": evidence}

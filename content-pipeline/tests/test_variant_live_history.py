@@ -117,6 +117,33 @@ def test_selects_exactly_13_and_preserves_original_frozen_proofs(receipt):
     assert original["questions"][0]["stem"] != snapshot["questions"][0]["stem"]
 
 
+def test_relative_manifest_matches_absolute_frozen_snapshot(receipt, monkeypatch):
+    path, payload, _, _ = receipt
+    absolute = _load(receipt)
+    monkeypatch.chdir(path.parent)
+    relative = live.load_live_priors(path.name, [Path(a["path"]) for a in payload["artifacts"]])
+    assert relative == absolute
+    assert relative["manifest"]["path"] == str(path)
+    assert Path(relative["manifest"]["path"]).is_absolute()
+    assert live.validate_live_priors(relative) is relative
+    relative["manifest"]["path"] = path.name
+    _sign(relative)
+    with pytest.raises(ValueError, match="Invalid frozen live-prior manifest provenance"):
+        live.validate_live_priors(relative)
+
+
+@pytest.mark.parametrize("relative", [False, True])
+def test_manifest_symlink_rejected_before_replay(receipt, monkeypatch, relative):
+    path, payload, _, calls = receipt
+    link = path.parent / "manifest-link.json"
+    link.symlink_to(path)
+    monkeypatch.chdir(path.parent)
+    with pytest.raises(ValueError, match="regular, non-symlink"):
+        live.load_live_priors(link.name if relative else link,
+                              [Path(a["path"]) for a in payload["artifacts"]])
+    assert not calls
+
+
 def test_validation_is_read_free_and_root_dispatch_can_consume_rows(receipt, monkeypatch):
     snapshot = _load(receipt)
     monkeypatch.setattr(Path, "read_bytes", lambda *a: pytest.fail("Must not read sources"))
