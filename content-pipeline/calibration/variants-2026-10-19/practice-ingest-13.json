@@ -201,5 +201,30 @@
     "reason": "Isolated local PostgreSQL initialization did not expose server socket; no fixture or generated SQL executed"
   },
   "independent_source_review": "No blocker found; see status/practice-b-source-review.md",
-  "apply_authority": "Coordinator only, after app PR289 merge and migrations; not executed by agent"
+  "apply_authority": "Coordinator only, after app PR289 merge and migrations; not executed by agent",
+  "pipeline_validation": {
+    "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" uv run pytest",
+    "exit_code": 0,
+    "passed": 2299,
+    "skipped": 3,
+    "warnings": 25,
+    "pytest_duration_seconds": 371.27,
+    "source_sha256": {
+      "content-pipeline/scripts/export_approved_variants_sql.py": "67a33a6bad1aec2e432c9754d4c4c751617acdf65c29afaf7387c4831a82e844",
+      "content-pipeline/tests/test_approved_variant_sql.py": "d69d77b73adf699ccc9242378ae34767c231c80544473e375bad3f78c524807c"
+    },
+    "log": "practice-b-final-pytest.log"
+  },
+  "app_validation": {
+    "pr": 289,
+    "head": "b5bbdf824980309d62c095d7b5fb7de4ba9f3ce6",
+    "lint": "passed",
+    "typecheck": "passed",
+    "docker": "passed",
+    "final_tests": {
+      "passed": 1189,
+      "timeouts": 4
+    },
+    "local_db": "blocked before verifier"
+  }
 }

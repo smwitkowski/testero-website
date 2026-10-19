@@ -408,5 +408,7 @@ hashes and 9 deterministic run records. The final exporter source was independen
 reviewed without a blocker. Local SQL execution validation is **blocked**: the
 isolated PostgreSQL container did not finish initialization, so no fixture or
 publication SQL ran. This is not a passed DB gate. The container was removed;
-production is untouched. App PR #289 separately records its final test timeouts,
-local DB runner setup blocker and pending Docker gate.
+production is untouched. Final clean-env pipeline pytest passed: **2,299 passed,
+3 skipped, 25 warnings** in 371.27 seconds, including all 17 new exporter tests.
+App PR #289 passed lint, typecheck and the final Docker build. It separately records
+four final test timeouts and the local DB runner setup blocker; those remain open.
