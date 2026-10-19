@@ -19,10 +19,13 @@ async function capture(page: Page, name: string, signedIn = true) {
     } else if (signedIn) {
       await expect(header.getByRole("link", { name: "Dashboard", exact: true }).filter({ visible: true })).toBeVisible();
       await expect(header.getByRole("link", { name: "Start free", exact: true })).toHaveCount(0);
-    } else {
+    } else if (width === 1280) {
       const navigation = header.getByRole("navigation", { name: "Main navigation", exact: true });
-      await expect(navigation.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(1);
+      await expect(navigation.getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
       await expect(navigation.getByRole("link", { name: "Account", exact: true })).toHaveCount(0);
+    } else {
+      await expect(header.getByRole("link", { name: "Start free", exact: true })).toBeVisible();
+      await expect(header.getByRole("link", { name: "Dashboard", exact: true })).toHaveCount(0);
     }
     await page.evaluate(() => document.fonts.ready);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
