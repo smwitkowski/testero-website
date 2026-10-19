@@ -4,10 +4,26 @@ import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 
 const shots = "test-results/free-tier-monthly";
-async function capture(page: Page, name: string) {
+async function capture(page: Page, name: string, signedIn = true) {
   await mkdir(shots, { recursive: true });
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 900 });
+    // The header verifies identity separately from the server-rendered dashboard.
+    // Wait for its settled state after login, reload and paid-access changes.
+    const header = page.getByRole("banner");
+    if (signedIn && width === 1280) {
+      const navigation = header.getByRole("navigation", { name: "Main navigation", exact: true });
+      await expect(navigation.getByRole("link", { name: "Dashboard", exact: true })).toBeVisible();
+      await expect(navigation.getByRole("link", { name: "Account", exact: true })).toBeVisible();
+      await expect(navigation.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
+    } else if (signedIn) {
+      await expect(header.getByRole("link", { name: "Dashboard", exact: true }).filter({ visible: true })).toBeVisible();
+      await expect(header.getByRole("link", { name: "Start free", exact: true })).toHaveCount(0);
+    } else {
+      const navigation = header.getByRole("navigation", { name: "Main navigation", exact: true });
+      await expect(navigation.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(1);
+      await expect(navigation.getByRole("link", { name: "Account", exact: true })).toHaveCount(0);
+    }
     await page.evaluate(() => document.fonts.ready);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: `${shots}/${name}-${width}.png`, fullPage: true });
@@ -27,7 +43,7 @@ test("monthly free questions: fresh, 59→60 concurrent boundary, paid tracking 
   const domainCode = "MONITORING_ML_SOLUTIONS";
   try {
     await page.goto("/pricing"); await expect(page.getByRole("heading", { name: "Pricing", exact: true })).toBeVisible();
-    await capture(page, "pricing");
+    await capture(page, "pricing", false);
     await page.goto("/login?next=/dashboard");
     await page.getByLabel("Email", { exact: true }).fill(email); await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();

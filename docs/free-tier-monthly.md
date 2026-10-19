@@ -21,4 +21,6 @@ No original blog file contains a five-free-practice-questions/week offer. Hash-l
 
 ## Local verification artifacts
 
+The header fetches verified identity separately from the dashboard. On both this branch and unchanged `origin/main`, login/reload can render the dashboard heading while the header still shows its initial signed-out state; the successful navigation response then renders Dashboard/Account. Screenshot capture now asserts the settled desktop and mobile header identity, not just the dashboard heading. No persistent stale header was reproduced and no auth behavior was changed.
+
 Focused e2e: `e2e/free-tier-monthly.spec.ts`; screenshots: `test-results/free-tier-monthly/*-{1280,390}.png`. QA and Stripe transport are local fixtures, not evidence of live Stripe validation.
