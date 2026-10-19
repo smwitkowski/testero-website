@@ -1,0 +1,107 @@
+{
+  "scope": "Offline repair of round5 Claude request schema allowlist; no live calls by worker",
+  "diagnosis": "Transport request-schema preflight omitted the three policy5 DSPy signatures. The six style failures occurred before Claude launch; they are not malformed model output.",
+  "protected_saved_inputs": {
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.json": "7a8dbedfd7c4cd16896134586463b435832db677de06aa87e6a24ddfa628a5ac",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.json.calls.jsonl": "bf14925941afae4bd7d1c4b0d4e2bbb7f1c8819222b26bd83b2e54de605c243c",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-resume.log": "f5088d20d874ab20b60ad79201176e72be4b2774922f1280314eb67a2663ac73",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/.judge-requests.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/.failures/788d3e62-a344-5d22-a96e-787fe4dddc08.json": "f43aebdf23dd643f82ca230b386406658ef15393b07ef3209d18ecf24c4aa6cd",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/.failures/388fe57b-86c3-59ab-a746-2e264ca739ce.json": "7bfc456eb3a71ee1a3e90c38de129b947f5c6449bd473669a3445e070c65d15a",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/.failures/5fe281b2-b348-5829-ad5a-80de90cd4235.json": "5d3680b5181015ab08b3a23461084bbceef009616103e04b3fb7f5274a70deb6",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/.failures/d4b10e1f-bfe3-51d6-b74b-4481d2207d19.json": "6c6a76ae25b0fcbf9b47c1143b5cd0af8dc4273ee08735c6ad02601a42fd9851",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/.failures/8e054d09-7f62-5f19-aea4-48065fd94e15.json": "273dcebe8fe1da8bb83d9016c0d3ec527ff83ba8f9d93676f70007358bfc6680",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/.failures/88a3e358-b45b-5dcc-8fb8-42689770fb5b.json": "b1018fbf167520168b6843540e50961c7bf9de75d7d1762c160b1721b16e35a2",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.verdicts/.sampling/policy.json": "097c0f28fee1a4532130a6c32cd150da7fafe93fb5cdcdc40add9e8fa135d7ea",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.judge-requests/788d3e62-a344-5d22-a96e-787fe4dddc08.json": "22660e0a613a5ee3d7b874c3801177d6b15d8f7342d69f65c36044d537398a31",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.judge-requests/388fe57b-86c3-59ab-a746-2e264ca739ce.json": "b38d5884c035e3bb9c2fc9ce4c01efb26a97a83dad2ef97d17e5113e738faf8e",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.judge-requests/5fe281b2-b348-5829-ad5a-80de90cd4235.json": "460f661843c79c58688df5ab0aa91f943f5d0720ad9c0ad446683ac63e8eb8ed",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.judge-requests/d4b10e1f-bfe3-51d6-b74b-4481d2207d19.json": "32f58481fda0b0e16270aa571345671fa6832746b8dd789c0398dc19f464bfd4",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.judge-requests/8e054d09-7f62-5f19-aea4-48065fd94e15.json": "19338bb946f4b24396a62d6dbeb96bd3fba6a15a05dedf8468d40ea1281225eb",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.judge-requests/88a3e358-b45b-5dcc-8fb8-42689770fb5b.json": "9f10d8fa725558de77163fe6e78d1663dce4dd9bb5e400bcc465e85bc880d94f",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.judge-requests/.verdict-directories.json": "20614a1771aba57d4c573d0ef59413187392e6e8d2ef1d8cb9b4d36b8820b4b6"
+  },
+  "before_fix": {
+    "frozen_candidates": 6,
+    "gate_preflights": 18,
+    "accepted": 6,
+    "rejected": 12,
+    "rejected_gates": [
+      "style",
+      "evidence"
+    ],
+    "transport_patched_to_forbid_calls": true
+  },
+  "after_fix": {
+    "gate_preflights": 18,
+    "accepted": 18,
+    "transport_patched_to_forbid_calls": true
+  },
+  "signatures_added": [
+    "VariantPolicy5StyleCriticSignature",
+    "VariantPolicy5EvidenceReviewerSignature",
+    "VariantPolicy5ConsistentEvidenceReviewerSignature"
+  ],
+  "captured_request": {
+    "path": "tests/fixtures/cli_models/round5-style-preflight-request.json",
+    "sha256": "19338bb946f4b24396a62d6dbeb96bd3fba6a15a05dedf8468d40ea1281225eb",
+    "bytes": 140827,
+    "candidate_id": "8e054d09-7f62-5f19-aea4-48065fd94e15"
+  },
+  "existing_real_response": {
+    "path": "tests/fixtures/cli_models/judge-exported-output.json",
+    "sha256": "94d3bdc059c89a7147ba7913c756194002b68f10232b7c129abeee44a006a0de",
+    "role": "Historical envelope replay must still fail current policy5 output validation; not relabeled as policy5 output"
+  },
+  "current_run_raw_output": "None: Claude was not launched. Failure receipts are not raw model responses.",
+  "successful_policy5_live_capture": "Unavailable; coordinator single-candidate live smoke remains required. Synthetic positive responses are explicitly test doubles.",
+  "coordinator_single_candidate_smoke": "PYTHON_DOTENV_DISABLED=1 uv run python scripts/judge_requests.py --requests .cache/variants/repair-r5-live.judge-requests --verdicts .cache/variants/repair-r5-live.verdicts --argon-gate --full-gate-sample 1 --parallel 1 --candidate-id 8e054d09-7f62-5f19-aea4-48065fd94e15",
+  "coordinator_remaining_resume": "PYTHON_DOTENV_DISABLED=1 uv run python scripts/variants_ab.py resume --allow-live --artifact .cache/variants/repair-r5-live.json --review-pairs 8",
+  "command_cwd": "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline",
+  "validation_status": "All offline validation passed. No live model calls or database writes by worker; real policy5 live smoke remains coordinator-only.",
+  "existing_cli_capture_tests": {
+    "summary": "72 passed, 2 warnings in 2.04s",
+    "exit_code": 0
+  },
+  "new_transport_replay_tests": {
+    "passed": 63,
+    "warnings": 25,
+    "seconds": 2.38,
+    "status": "Final focused suite passed with full_gate_sample=1 in both integration invocations"
+  },
+  "line_references": {
+    "fix": {
+      "from shared.gates import (GATE_SIGNATURES": 271,
+      "signatures = [QuestionQualitySignature": 274
+    },
+    "tests": {
+      "def test_actual_request_reaches_real_transport": 140,
+      "def test_unmodified_real_historical_envelope": 163,
+      "def test_every_new_check_is_required": 182,
+      "def test_generated_consistent_policy5": 260,
+      "def test_real_runner_selected_actual": 278
+    }
+  },
+  "independent_review": "Final clear, including exact two-literal sampling-profile alignment",
+  "tested_source_and_fixture_sha256": {
+    "content-pipeline/shared/cli_models.py": "f05972f60e1bf24c25809d7f06c11d21c2addbe2635eb091b7e0916945f068eb",
+    "content-pipeline/tests/test_variant_cli_schema_replay.py": "f881578bd63fda292e1fed7dc2bcf7699ca179e89afeede0ded6ab55d0593b12",
+    "content-pipeline/tests/fixtures/cli_models/round5-style-preflight-request.json": "19338bb946f4b24396a62d6dbeb96bd3fba6a15a05dedf8468d40ea1281225eb",
+    "content-pipeline/tests/fixtures/cli_models/round5-style-preflight-provenance.json": "b828c8e17f25be31ccd01197ea8996ec1a763d5d70016480f413657ba3583937"
+  },
+  "full_suite": {
+    "passed": 2638,
+    "skipped": 3,
+    "warnings": 25,
+    "subtests_passed": 48,
+    "seconds": 97.34,
+    "summary": "2638 passed, 3 skipped, 25 warnings, 48 subtests passed in 97.34s (0:01:37)",
+    "exit_code": 0,
+    "command": "cd content-pipeline && env -i PATH=\"$PATH\" HOME=\"$HOME\" uv run pytest -q"
+  },
+  "protected_inputs_unchanged": {
+    "count": 124,
+    "all_unchanged": true
+  },
+  "tested_sources_and_fixtures_unchanged": true
+}

@@ -563,3 +563,47 @@ Final resume gate: `cd content-pipeline && env -i PATH="$PATH" HOME="$HOME" uv r
 final tested tree. All108 protected historical/paid-generation inputs remain
 unchanged. Independent final source review is clear. Live judging remains
 coordinator-only; this worker made no live model calls or database writes.
+
+
+## Round-5 Claude schema preflight fix (no live retry by worker)
+
+The coordinator's six `claude.style` failures occurred before launching Claude.
+`run_claude_request` recognized only the old strict gate signatures. Its transport
+allowlist omitted policy5 style, strict evidence and consistent evidence schemas.
+The frozen request schemas were correct; output parsing never ran. The unchanged
+nine-row generation ledger and offline instrumented preflight support this diagnosis.
+No raw Claude response exists for these failures. Failure receipts are diagnostics,
+not captured model output.
+
+The allowlist now includes the three policy5 DSPy signatures. Exact schema matching,
+required new checks, strict output types and rejection of unknown fields remain.
+No prompts, frozen requests, candidate bodies or old verdicts are rewritten.
+Regression coverage uses an exact captured request from this run, synthetic positive
+policy5 responses explicitly marked as doubles, and an existing unmodified real
+historical Claude envelope. That historical response still fails current policy5
+validation; it is not relabeled or extended into a supposed live policy5 success.
+A successful real policy5 output remains a coordinator smoke-test boundary.
+
+From `content-pipeline/`, coordinator-only **single-candidate** smoke:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/judge_requests.py --requests .cache/variants/repair-r5-live.judge-requests --verdicts .cache/variants/repair-r5-live.verdicts --argon-gate --full-gate-sample 1 --parallel 1 --candidate-id 8e054d09-7f62-5f19-aea4-48065fd94e15
+```
+
+If the smoke completes without transport/schema errors, resume the remaining batch:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/variants_ab.py resume --allow-live --artifact .cache/variants/repair-r5-live.json --review-pairs 8
+```
+
+The smoke uses the original full sampling cohort and `full_gate_sample=1`. It
+selects one candidate without copying or changing request directories. The batch
+resume skips its completed verdict; failed attempts without a verdict can retry.
+Neither command regenerates questions. A valid quality FAIL is not a transport
+error or a publication approval. The worker runs neither live command.
+
+Final schema-fix gate: `cd content-pipeline && env -i PATH="$PATH" HOME="$HOME" uv run pytest -q`
+→ **2638 passed, 3 skipped, 25 warnings, 48 subtests passed in 97.34s (0:01:37)**. Targeted new transport replays:63 passed; existing
+CLI/captured-output replays:72 passed. Independent final review is clear. All four
+tested source/fixture hashes and all124 protected historical/current saved inputs
+are unchanged. No live model calls, generation or database writes were made.
