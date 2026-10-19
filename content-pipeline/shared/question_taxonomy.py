@@ -21,14 +21,27 @@ class QuestionTag(BaseModel):
 
 class QuestionTaxonomySignature(dspy.Signature):
     """Classify only from supplied question evidence. Use only scoped vocabulary values.
-    Select exactly one decision_type, up to 3 constraints, 6 products and 3 failure modes.
-    Do not infer a product just because a distractor mentions it. Platform branding alone
-    is not product evidence: Gemini Enterprise Agent Platform does not imply Gemini models.
+    Select exactly one decision_type, up to 3 constraints, 3 products and 3 failure modes.
+    Select the most specific decision hinge. select_solution is a last resort for choosing
+    a task/model/platform approach, not for runtime, packaging, compute, features or environment.
+    Workspace/tool integration or notebook dependency isolation is configure_environment,
+    not adapt_model unless prompting, grounding or tuning changes model behavior.
+    Shared feature identity, registry, online views or reuse is manage_features,
+    not prepare_data when ingestion or transformation is only the supporting step.
+    Batch versus online inference, serving containers or request handlers is package_inference,
+    not select_solution when the model approach is already fixed.
+    Execution hardware, accelerator topology or resource shape is provision_compute,
+    not select_solution; interactive notebook setup instead belongs to configure_environment.
+    Tag a product only when its capability changes which answer is correct; omit incidental
+    mentions, surrounding stack context and distractor-only products. Use at most 3 products.
+    Prefer the specific vocabulary subservice; do not also tag its parent platform unless
+    the parent independently changes the correct answer. Platform branding alone is not
+    product evidence: Gemini Enterprise Agent Platform does not imply Gemini models.
     Constraints must eliminate a plausible alternative, not merely appear as scenario prose.
     Failure modes summarize supported wrong-option reasons, not inferred learner misconceptions.
-    Select the most specific decision hinge; use one primary even for compound items and lower
-    confidence when the fit is uncertain. Never align rationale letters to options without the
-    actual option text/is_correct evidence. Prefer final question evidence over a stale plan.
+    Use one primary even for compound items and lower confidence when the fit is uncertain.
+    Never align rationale letters to options without the actual option text/is_correct evidence.
+    Prefer final question evidence over a stale plan.
     Confidence is finite 0..1; it is model self-assessment, not calibrated probability.
     """
     question_json: str = dspy.InputField(desc="Question, options, rationales, documentation and optional decision plan")
@@ -106,7 +119,10 @@ def classify_question(question, vocabulary, cert_id, *, model="claude", predicto
         "vocabulary_json": json.dumps(vocabulary, sort_keys=True, allow_nan=False)})
     if not isinstance(output, dict) or set(output) != {"tags"}:
         raise TaxonomyError("Unexpected classification fields")
-    return validate_tags(output["tags"], vocabulary, cert_id)
+    tags = validate_tags(output["tags"], vocabulary, cert_id)
+    if sum(tag["dimension"] == "product" for tag in tags) > 3:
+        raise TaxonomyError("Classifier must select at most 3 decisive products")
+    return tags
 
 
 def generation_receipt(scope, *, model="claude", predictor=run_signature):
