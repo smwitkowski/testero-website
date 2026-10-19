@@ -103,12 +103,18 @@ def _read_request(path, ident, canonical, *, with_digest=False):
     base_fields = (*base_fields, *(fields | {"distractor_evidence"} for fields in base_fields))
     modern_fields = (*base_fields, *(fields | {"execution_policy"} for fields in base_fields))
     modern_fields = (*modern_fields, *(fields | {"variant_mode"} for fields in modern_fields))
+    modern_fields = (*modern_fields, *(fields | {"variant_policy_version"} for fields in modern_fields
+                                      if "variant_mode" in fields))
     if not isinstance(request, dict) or set(request) not in (legacy_fields, *modern_fields):
         raise RequestValidationError("Request must contain exactly the exported request fields")
     is_gates = set(request) in modern_fields
     if "variant_mode" in request and (type(request["variant_mode"]) is not int or request["variant_mode"] != 1
                                       or "argon" not in request or request.get("gate_version") != 5):
         raise RequestValidationError("Variants require rules-v5 gates and Argon")
+    if "variant_policy_version" in request and (
+            type(request["variant_policy_version"]) is not int or request["variant_policy_version"] != 5
+            or request.get("variant_mode") != 1 or request.get("gate_version") != 5):
+        raise RequestValidationError("Invalid frozen variant policy version")
     if "execution_policy" in request and request["execution_policy"] != "short_circuit_v1":
         raise RequestValidationError("Unsupported execution policy")
     if "distractor_evidence" in request:
@@ -133,16 +139,22 @@ def _read_request(path, ident, canonical, *, with_digest=False):
                 or not re.fullmatch(r"[0-9a-f]{64}", request["decision_provenance_sha256"])
                 or not isinstance(request["gates"], dict) or set(request["gates"]) != set(GATE_SIGNATURES)):
             raise RequestValidationError("Request must contain all current independent gates")
-        for name, signature in gate_signatures(request["gate_version"], distractor_evidence=request.get("distractor_evidence"), cert_id=request["objective_id"].split(":", 1)[0]).items():
+        signatures = gate_signatures(request["gate_version"],
+                                     distractor_evidence=request.get("distractor_evidence"),
+                                     cert_id=request["objective_id"].split(":", 1)[0],
+                                     variant_policy_version=request.get("variant_policy_version"))
+        for name, signature in signatures.items():
             gate = request["gates"][name]
             if (not isinstance(gate, dict) or set(gate) != {"judge_prompt", "verdict_schema"}
                     or not isinstance(gate["judge_prompt"], str) or not gate["judge_prompt"].strip()
                     or gate["verdict_schema"] != output_model(signature).model_json_schema()):
                 raise RequestValidationError("Gate request differs from the strict current schema")
-            if name == "evidence" and "distractor_evidence" in request:
+            if ((name == "evidence" and "distractor_evidence" in request)
+                    or (request.get("variant_policy_version") == 5 and name in ("style", "evidence"))):
                 system = gate["judge_prompt"].split("\n\nUSER:\n", 1)[0]
                 if " ".join(signature.instructions.split()) not in " ".join(system.split()):
-                    raise RequestValidationError("Evidence prompt differs from frozen mode")
+                    raise RequestValidationError("Gate prompt differs from frozen policy" if request.get("variant_policy_version") == 5
+                                                 else "Evidence prompt differs from frozen mode")
     if request["candidate_id"] != ident:
         raise RequestValidationError("Request candidate ID must match its filename")
     if not isinstance(request["objective_id"], str) or not request["objective_id"].strip():
@@ -323,10 +335,12 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
                                       candidate_id=ident,
                                       attempt=1, calls_path=calls_path):
                         raw[name] = cli_models.run_claude_request(judge_model, gate["judge_prompt"], gate["verdict_schema"])
-                    parse_gate_output(name, raw[name], version=request["gate_version"])
+                    parse_gate_output(name, raw[name], version=request["gate_version"],
+                                      variant_policy_version=request.get("variant_policy_version"))
                     if short and not evaluate_gate(name, raw[name], question, version=request["gate_version"],
                                                    style_policy=request.get("style_policy"),
-                                                   variant=request.get("variant_mode") == 1)[0]:
+                                                   variant=request.get("variant_mode") == 1,
+                                                   variant_policy_version=request.get("variant_policy_version"))[0]:
                         failed_at = failed_at or name
             else:
                 sub_call = "claude.quality"

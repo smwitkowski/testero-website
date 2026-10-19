@@ -103,8 +103,12 @@ def _scope(payload, entry):
         origin = scope["variant_origin"]
         if payload.get("variant_mode") != 1 or not isinstance(origin, dict) or set(origin) != {"parent_question_id", "ordinal"}:
             raise ValueError("Invalid variant scope origin")
-        expected = variant_scope(expected, payload["variant_parents"][origin["parent_question_id"]], origin["ordinal"],
-                                 policy_version=scope.get("variant_policy_version", 3))
+        if scope.get("variant_policy_version") == 5:
+            from shared.variant_plan import replay_scope
+            expected = replay_scope(payload, index, expected)
+        else:
+            expected = variant_scope(expected, payload["variant_parents"][origin["parent_question_id"]], origin["ordinal"],
+                                     policy_version=scope.get("variant_policy_version", 3))
         expected["industry"] = frozen_industry(payload, scope)
     elif payload.get("variant_mode") is not None:
         raise ValueError("Variant mode requires frozen variant scope origins")
@@ -228,6 +232,10 @@ def _reject(entry, stage, reason):
 
 
 def _external_decision(question, scope, sources, evidence, raw, generator_model, *, gate_version=2, rules_version=4, argon_request=None):
+    from shared.gates import validate_variant_policy_version
+    variant_policy_version = validate_variant_policy_version(scope.get("variant_policy_version"))
+    if variant_policy_version == 5 and (gate_version != 2 or rules_version != 5):
+        raise ValueError("Variant policy 5 requires rules-v5 independent gates")
     require_independent_models(generator_model, EXTERNAL_POLICY_MODEL)
     if gate_version == 2:
         from shared.gates import aggregate_gate_verdict
@@ -244,14 +252,16 @@ def _external_decision(question, scope, sources, evidence, raw, generator_model,
             if raw["argon"] == {"status": "skipped", "reason": "prior_gate_failed"}:
                 decision = aggregate_gate_verdict(question, verdict_with_policy(base, policy), model=EXTERNAL_JUDGE_PROVENANCE,
                     version=rules_version, style_policy=scope.get("style_policy"), distractor_evidence=policy,
-                    variant="variant_origin" in scope)
+                    variant="variant_origin" in scope,
+                    variant_policy_version=variant_policy_version)
                 if argon_request["version"] != 2 or decision.passed:
                     raise ValueError("Argon skip cannot approve content")
                 return decision
             passed, reason = evaluate_argon(question, raw["argon"], argon_request)
         decision = aggregate_gate_verdict(question, verdict_with_policy(base, policy), model=EXTERNAL_JUDGE_PROVENANCE, version=rules_version,
                                           style_policy=scope.get("style_policy"), distractor_evidence=policy,
-                                          variant="variant_origin" in scope)
+                                          variant="variant_origin" in scope,
+                                          variant_policy_version=variant_policy_version)
         if argon_request is not None and not passed:
             from shared.quality_gate import JudgeVerdict
             return JudgeVerdict(False, 0.0, ("Argon: " + reason)[:300], EXTERNAL_JUDGE_PROVENANCE)
@@ -435,6 +445,8 @@ def ingest(path, verdicts, *, dry_run=False):
         from shared.variant_eligibility import reviewed_siblings
         variant_siblings = reviewed_siblings(path, payload, verdicts)
     pending, seen = [], set()
+    revalidated_complete = []
+    variant_policy5 = any(scope.get("variant_policy_version") == 5 for scope in payload["plan"])
     # Include completed content before pending validation, regardless of list order.
     if payload.get("rules_version") == 5:
         near_seen.extend(comparison_row(entry) for entry in payload["candidates"] if _is_complete(entry))
@@ -469,6 +481,7 @@ def ingest(path, verdicts, *, dry_run=False):
                                           argon_request=_argon_request(path, entry, payload))
                     if not decision.passed:
                         raise ValueError("Stored verdict no longer passes")
+                    revalidated_complete.append(entry)
                     seen.add(normalize_stem(question["stem"]))
                 except Exception:
                     entry["persistence_validation_failed"] = True
@@ -589,11 +602,17 @@ def ingest(path, verdicts, *, dry_run=False):
         entry["accepted"] = False
         pending.append((entry, scope, question, judge, grounding))
         click.echo(f"{ident}: passing external verdict; {judge.reason}")
+    # Policy 5 statistics must use this invocation's validated population, never
+    # mutable stored PASS flags on generation rejects or otherwise skipped rows.
+    validated_ids = {entry["candidate_id"] for entry in revalidated_complete}
+    validated_ids.update(item[0]["candidate_id"] for item in pending)
+    validated_population = [entry for entry in payload["candidates"] if entry["candidate_id"] in validated_ids]
     if payload.get("rules_version") == 5 and not blocked:
-        eligible = [entry for entry in payload["candidates"]
-                    if entry["candidate_id"] not in superseded
-                    and entry.get("judge_verdict", {}).get("passed") is True
-                    and not entry.get("persistence_validation_failed")]
+        eligible = (validated_population if variant_policy5 else
+                    [entry for entry in payload["candidates"]
+                     if entry["candidate_id"] not in superseded
+                     and entry.get("judge_verdict", {}).get("passed") is True
+                     and not entry.get("persistence_validation_failed")])
         try:
             balance_options(eligible)
         except ValueError:
@@ -603,18 +622,24 @@ def ingest(path, verdicts, *, dry_run=False):
     payload["option_prefix_report"] = option_prefix_report(payload["candidates"])
     if payload.get("rules_version") == 5:
         payload["all_candidate_key_position_report"] = key_position_report(payload["candidates"])
-        payload["key_position_report"] = key_position_report([entry for entry in payload["candidates"]
-            if entry["candidate_id"] not in superseded and entry.get("judge_verdict", {}).get("passed") is True
-            and not entry.get("persistence_validation_failed")])
-        payload["template_diversity_report"] = template_diversity_report([entry for entry in payload["candidates"]
-            if entry["candidate_id"] not in superseded])
+        payload["key_position_report"] = key_position_report(validated_population if variant_policy5 else
+            [entry for entry in payload["candidates"]
+             if entry["candidate_id"] not in superseded and entry.get("judge_verdict", {}).get("passed") is True
+             and not entry.get("persistence_validation_failed")])
+        payload["template_diversity_report"] = template_diversity_report(validated_population if variant_policy5 else
+            [entry for entry in payload["candidates"] if entry["candidate_id"] not in superseded])
         click.echo(format_key_position_report(payload["key_position_report"]))
         payload["ml_practice_report"] = ml_practice_report(payload["candidates"])
         click.echo("ML practice allowance: " + json.dumps(payload["ml_practice_report"]))
         click.echo("Template diversity: " + json.dumps(payload["template_diversity_report"]))
+        if variant_policy5:
+            from shared.variant_plan import key_length_batch_report
+            payload["variant_key_length_batch_report"] = key_length_batch_report(payload, validated_population)
         _flush(path, payload)
         if blocked:
             raise click.ClickException("Persistence journal requires reconciliation; no new DB writes")
+        if variant_policy5 and payload["variant_key_length_batch_report"]["passed"] is False:
+            raise click.ClickException("Variant key-length batch report failed; no new DB writes")
         if not payload["key_position_report"]["count"]:
             raise click.ClickException("No passing candidates; no new DB writes")
         if payload["key_position_report"]["passed"] is False or not payload["template_diversity_report"]["passed"]:

@@ -295,6 +295,10 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
     """Keep the rubric/schema intact; trim only fetched text around verified quotes."""
     if execution_policy not in (None, "short_circuit_v1"):
         raise ValueError("Unsupported execution policy")
+    from shared.gates import validate_variant_policy_version
+    variant_policy_version = validate_variant_policy_version(scope.get("variant_policy_version"))
+    if variant_policy_version == 5 and (signature is not None or gate_version != 5):
+        raise ValueError("Variant policy 5 requires rules-v5 independent gates")
     if variant_context is not None:
         from shared.validator import validate_question
         if not validate_question(question, industry_only=True).is_valid:
@@ -322,7 +326,8 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
         validate_policy(frozen_evidence)
         if signature is not None or gate_version != 5:
             raise ValueError("Distractor-evidence policy requires rules-v5 gates")
-    signatures = gate_signatures(gate_version, distractor_evidence=frozen_evidence, cert_id=scope.get("cert_id"))
+    signatures = gate_signatures(gate_version, distractor_evidence=frozen_evidence, cert_id=scope.get("cert_id"),
+                                 variant_policy_version=variant_policy_version)
     schema = output_model(signature).model_json_schema() if signature is not None else None
     trimmed_urls = set()
     largest_first = sorted(cited, key=lambda source: len(source["text"]), reverse=True)
@@ -344,7 +349,7 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
             from shared.question_style import RULES_V4_STYLE_INSTRUCTIONS
             inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence,
                                        style_reference=RULES_V4_STYLE_INSTRUCTIONS if gate_version == 4 else None,
-                                       style_policy=policy)
+                                       style_policy=policy, variant_policy_version=variant_policy_version)
             request = {"candidate_id": candidate_id, "objective_id": scope["objective_id"],
                        "gate_version": gate_version,
                        "decision_provenance_sha256": canonical_sha256({name: scope.get(name) for name in
@@ -353,8 +358,11 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
                                         "verdict_schema": output_model(gate_signature).model_json_schema()}
                                  for name, gate_signature in signatures.items()},
                        "trimming": trimming}
-        if variant_context is not None and scope.get("variant_policy_version") == 4:
+        if variant_context is not None and variant_policy_version == 4:
             request["variant_mode"] = 1
+        if variant_policy_version == 5:
+            request["variant_mode"] = 1
+            request["variant_policy_version"] = 5
         if execution_policy is not None:
             if signature is not None:
                 raise ValueError("Short circuit requires independent gates")

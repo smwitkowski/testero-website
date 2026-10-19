@@ -29,7 +29,8 @@ def failure_details(payload, entry):
         checks["industry"] = {"passed": actual == scope["industry"],
                               "assigned": scope["industry"], "actual": actual}
         try:
-            rewrite = option_rewrite_check(question, parent)
+            rewrite = option_rewrite_check(question, parent,
+                **({"key_length_rank": scope["key_length_rank"]} if scope.get("variant_policy_version") == 5 else {}))
         except ValueError:
             checks["option_jaccard"] = {"passed": False, "error": "Missing or empty normalized option tokens"}
         else:
@@ -37,7 +38,9 @@ def failure_details(payload, entry):
             checks["option_jaccard"] = {"passed": all(v < rewrite["threshold"] for v in scores.values()),
                                         "values": scores, "strict_threshold": rewrite["threshold"],
                                         "failed_options": [k for k,v in scores.items() if v >= rewrite["threshold"]]}
-            checks["key_length"] = {"passed": not rewrite["key_uniquely_shortest"],
+            checks["key_length"] = {"passed": not rewrite["key_uniquely_shortest"] and rewrite.get("key_length_rank_passed", True),
+                                    "assigned_rank": scope.get("key_length_rank"),
+                                    "rank_check": rewrite.get("key_length_rank_passed"),
                                     "canonical_word_counts": dict(zip("ABCD", [len(question[f].split()) for f in OPTION_FIELDS])),
                                     "key_uniquely_shortest": rewrite["key_uniquely_shortest"]}
         # The saved comparison is the actual generation cohort, not later siblings.
@@ -52,7 +55,8 @@ def failure_details(payload, entry):
         elif name == "option_jaccard":
             reasons.append("option_jaccard: " + ", ".join(f"{k}={check['values'][k]:.6f} >= {check['strict_threshold']}" for k in check["failed_options"]))
         elif name == "key_length":
-            reasons.append("key_length: key uniquely shortest; canonical word counts " + str(check["canonical_word_counts"]))
+            label = ("key uniquely shortest" if check["key_uniquely_shortest"] else "key differs from assigned rank " + str(check["assigned_rank"]))
+            reasons.append("key_length: " + label + "; canonical word counts " + str(check["canonical_word_counts"]))
         elif name == "near_duplicate":
             reasons.append("near_duplicate: " + check.get("reason", "rejected") +
                            f"; max family stem={check.get('max_family_stem_similarity')}; threshold={check.get('family_stem_threshold')}")

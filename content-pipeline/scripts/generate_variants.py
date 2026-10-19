@@ -53,27 +53,32 @@ def select_parents(artifacts, ids, bank_path):
     return [selected[ident] for ident in ids], bank
 
 
-def build_plan(parents, count, *, prior=()):
-    from shared.variants import variant_scope, industry_allocation
-    allocation = industry_allocation(parents, {p["question_id"]: count for p in parents}, prior=prior)
+def build_plan(parents, count, *, prior=(), policy_version=4, repair_mode=None):
+    from collections import Counter
+    from shared.variants import industry_allocation
+    from shared.variant_plan import assignments as planned_assignments, make_scope
+    rows = planned_assignments(parents, count, repair_mode=repair_mode)
+    counts = Counter(parent["question_id"] for parent, _, _ in rows)
+    allocation = industry_allocation(parents, counts, prior=prior)
     plan, assignments = [], []
-    for parent in parents:
-        for ordinal in range(1, count + 1):
-            scope = plan_questions(DEFAULT_CERT, len(plan) + 1,
-                objective_ids=[parent["scope"]["objective_id"]])[-1]
-            scope = variant_scope(scope, parent, ordinal)
-            scope["industry"] = allocation[(parent["question_id"], ordinal)]
-            for name in SKELETON_FIELDS:
-                scope[name] = deepcopy(parent["scope"][name])
-            if "distractor_evidence" in parent["scope"]:
-                scope["distractor_evidence"] = deepcopy(parent["scope"]["distractor_evidence"])
-            plan.append(scope)
-            assignments.append((len(plan), parent, ordinal))
+    for index, (parent, ordinal, moment) in enumerate(rows, 1):
+        scope = plan_questions(DEFAULT_CERT, index,
+            objective_ids=[parent["scope"]["objective_id"]])[-1]
+        scope = make_scope(scope, parent, ordinal, policy_version=policy_version,
+                           index=index, total=len(rows), moment=moment)
+        scope["industry"] = allocation[(parent["question_id"], ordinal)]
+        for name in SKELETON_FIELDS:
+            scope[name] = deepcopy(parent["scope"][name])
+        if "distractor_evidence" in parent["scope"]:
+            scope["distractor_evidence"] = deepcopy(parent["scope"]["distractor_evidence"])
+        plan.append(scope)
+        assignments.append((index, parent, ordinal))
     return plan, assignments
 
 def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable_variants=False,
              model="codex", effort="low", predictor=None, family_stem_threshold=FAMILY_STEM_THRESHOLD,
-             length_repair_predictor=None, prior_artifacts=()):
+             length_repair_predictor=None, prior_artifacts=(), variant_policy_version=4,
+             repair_mode=None, live_prior_manifest=None):
     os.environ["PYTHON_DOTENV_DISABLED"] = "1"
     family_stem_threshold = family_threshold(family_stem_threshold)
     output = Path(output).absolute()
@@ -85,8 +90,15 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
     require_independent_models(model, "openrouter/google/gemini-4-argon")
     parents, bank = select_parents(artifacts, ids, bank_path)
     from shared.variant_history import load_prior_variants
-    history = load_prior_variants([Path(path).absolute() for path in prior_artifacts])
-    plan, assignments = build_plan(parents, variants_per_parent, prior=history["questions"])
+    if repair_mode is not None and (variant_policy_version != 5 or live_prior_manifest is None):
+        raise ValueError("Round-5 repair requires policy 5 and the live-prior manifest")
+    if live_prior_manifest is not None:
+        from shared.variant_live_history import load_live_priors
+        history = load_live_priors(live_prior_manifest, [Path(path).absolute() for path in prior_artifacts])
+    else:
+        history = load_prior_variants([Path(path).absolute() for path in prior_artifacts])
+    plan, assignments = build_plan(parents, variants_per_parent, prior=history["questions"],
+                                   policy_version=variant_policy_version, repair_mode=repair_mode)
     payload = {"cert_id": DEFAULT_CERT, "model": model, "judge_model": "external",
                "external_judge_version": 2, "rules_version": 5, "style_policy_version": "5.1",
                "execution_policy": "short_circuit_v1", "argon_gate": True,
@@ -94,6 +106,8 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
                "variant_mode": 1, "family_stem_threshold": family_stem_threshold, "variant_parents": {p["question_id"]: p for p in parents},
                "existing_questions": bank, "plan": plan, "candidates": [],
                "variant_attempts": [], "offline": not enable_variants, "prior_variants": history}
+    if repair_mode is not None:
+        payload["repair_mode"] = repair_mode
     if "distractor_evidence" in parents[0]["scope"]:
         payload["distractor_evidence"] = parents[0]["scope"]["distractor_evidence"]
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -140,11 +154,13 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
                                      "warnings": validation.warnings}
             from shared.variants import (option_rewrite_check, option_rewrite_errors,
                 length_repair_inputs, repair_option_lengths, OptionLengthRepairSignature)
-            rewrite = option_rewrite_check(question, parent)
+            rank_policy = {"key_length_rank": scope["key_length_rank"]} if variant_policy_version == 5 else {}
+            rewrite = option_rewrite_check(question, parent, **rank_policy)
             # One small option-only retry, never a new scenario or a general repair loop.
             length_only = all(error.startswith("Choice ") and " word count (" in error
                               for error in validation.errors)
-            if ((validation.is_valid or length_only) and rewrite["key_uniquely_shortest"]
+            if ((validation.is_valid or length_only) and (rewrite["key_uniquely_shortest"]
+                    or (variant_policy_version == 5 and not rewrite["key_length_rank_passed"]))
                     and raw["industry"] == scope["industry"]
                     and all(v < rewrite["threshold"] for v in rewrite["option_jaccard"].values())):
                 entry["option_rewrite_check"] = rewrite
@@ -161,7 +177,7 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
                 entry.update(candidate_id=candidate_id(index, scope, question), stem=question["stem"])
                 store_options(entry, question, parent["evidence"])
                 validation = validate_question(question, industry_only=True)
-                rewrite = option_rewrite_check(question, parent)
+                rewrite = option_rewrite_check(question, parent, **rank_policy)
                 entry["length_repair"].update(status="completed", after=deepcopy(rewrite))
                 entry["schema_check"] = {"passed": validation.is_valid, "errors": validation.errors,
                                          "warnings": validation.warnings}
@@ -231,6 +247,11 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
             export_requests(output, force=True)
             payload = _read_json(output)
         validate_candidate_records(payload)
+    if variant_policy_version == 5:
+        from shared.variant_plan import key_length_batch_report
+        payload["variant_key_length_batch_report"] = key_length_batch_report(payload,
+            [entry for entry in payload["candidates"] if entry.get("external_judge_request") and not entry.get("failure_stage")])
+        write_artifact(output, payload)
     return payload
 
 
@@ -248,7 +269,7 @@ def generate(artifacts, ids, bank_path, output, *, variants_per_parent=3, enable
 @click.option("--effort", default="low", type=click.Choice(["low", "medium", "high"]))
 def main(**kwargs):
     try:
-        payload = generate(**kwargs)
+        payload = generate(**kwargs, variant_policy_version=5)
     except (ValueError, KeyError, OSError, TypeError) as error:
         raise click.ClickException("Variant preflight failed (" + type(error).__name__ + "); inspect local inputs") from None
     summary = {"candidates": len(payload["candidates"]), "offline": payload["offline"]}

@@ -150,17 +150,87 @@ ProductStyleCriticSignature.instructions = StyleCriticSignature.instructions + "
 GATE_SIGNATURES = {**V4_GATE_SIGNATURES, "style": ProductStyleCriticSignature}
 
 
-def gate_signatures(version=GATE_VERSION, *, distractor_evidence=None, cert_id=None):
+class VariantPolicy5StyleCriticSignature(ProductStyleCriticSignature):
+    """Variant policy 5: independently check moment, want and wording symmetry.
+
+    The moment must explain HOW the issue was noticed, not merely decorate the
+    scenario. Cost/latency must be the discovery trigger and fit the desired
+    outcome; scale growth must causally explain the observed problem (more berths
+    alone does not explain longer recordings). The moment and want must agree:
+    migrating a running workflow to a new platform clashes with minimizing changes
+    to that same workflow. Do not treat every migration as a conflict; check what
+    changes and what the want actually preserves.
+    Review all shuffled choices symmetrically, without identifying or receiving a
+    marked key. Fail if wording unique to one choice echoes the want and signals
+    the likely answer without product knowledge, such as only one choice saying
+    "Use SQL to create" when the want preserves an SQL workflow. Shared necessary
+    technical terms are not automatically a defect. Do not infer a key by position.
+    Every added boolean is independently required; scores cannot waive a defect.
+    """
+    moment_explains_discovery: bool = dspy.OutputField(desc="The moment causally explains discovery, including cost/latency and scale-growth scenarios; not an unrelated wrapper.")
+    moment_fits_want: bool = dspy.OutputField(desc="The moment agrees with the want; no migration-to-a-new-platform versus minimizing changes to the same running workflow clash.")
+    no_unique_want_echo: bool = dspy.OutputField(desc="Symmetric check: no single choice uniquely restates the want as an answer-wording cue; no marked key is supplied or inferred from position.")
+
+
+VariantPolicy5StyleCriticSignature.instructions = ProductStyleCriticSignature.instructions + "\n\n" + VariantPolicy5StyleCriticSignature.instructions
+
+VARIANT_POLICY5_EVIDENCE_INSTRUCTIONS = """Variant policy 5: verify industry realism and each losing premise.
+Re-derive each distractor's losing reason in this industry, not just product-doc
+quote membership. Plausible side data can predict the target: wash count and fabric
+type predict linen damage; transit history and temperature predict produce quality.
+Reject explanations claiming such data cannot predict the label, even when the
+marked key literally mentions labeled photos. A credible partial alternative must
+be ruled out for a sound, explicit scenario-specific reason, not dismissed using a
+false industry premise. Reject implausible task duration or data granularity:
+ordinary vessel coordination calls taking hours to transcribe is not credible;
+shift-long channel recordings can be credible if actually specified. A scale or
+cost/latency wrapper does not excuse implausibility. Missing support or uncertainty
+must not become a True check. Every added boolean is independently required.
+"""
+
+
+class VariantPolicy5EvidenceReviewerSignature(EvidenceReviewerSignature):
+    """Strict evidence review with variant policy 5 industry checks."""
+    industry_realism: bool = dspy.OutputField(desc="The task, data, scale and duration are plausible for the stated industry; no implausible vessel-call transcription duration.")
+    distractor_industry_losing_premises: bool = dspy.OutputField(desc="Every distractor loses for a sound industry-specific premise; do not deny linen wash-count or produce transit/temperature predictive value.")
+
+
+VariantPolicy5EvidenceReviewerSignature.instructions = EvidenceReviewerSignature.instructions + "\n\n" + VARIANT_POLICY5_EVIDENCE_INSTRUCTIONS
+
+
+class VariantPolicy5ConsistentEvidenceReviewerSignature(VariantPolicy5EvidenceReviewerSignature):
+    """Consistent evidence review with variant policy 5 industry checks."""
+
+
+VariantPolicy5ConsistentEvidenceReviewerSignature.instructions = ConsistentEvidenceReviewerSignature.instructions + "\n\n" + VARIANT_POLICY5_EVIDENCE_INSTRUCTIONS
+
+
+def validate_variant_policy_version(variant_policy_version):
+    """Absent and historical policies retain their exact rubrics; only 5 opts in."""
+    if variant_policy_version is not None and (
+            type(variant_policy_version) is not int or variant_policy_version not in (3, 4, 5)):
+        raise ValueError("Unsupported variant policy version")
+    return variant_policy_version
+
+
+def gate_signatures(version=GATE_VERSION, *, distractor_evidence=None, cert_id=None, variant_policy_version=None):
     if version not in (4, 5):
         raise ValueError("Unsupported rules gate version")
     from shared.distractor_evidence import mode_for
     from shared.question_style import practitioner_signature
-    signatures = {name: practitioner_signature(signature, cert_id) for name, signature in
-                  (V4_GATE_SIGNATURES if version == 4 else GATE_SIGNATURES).items()}
+    validate_variant_policy_version(variant_policy_version)
+    if variant_policy_version == 5 and version != 5:
+        raise ValueError("Variant policy 5 requires rules-v5 independent gates")
+    selected = V4_GATE_SIGNATURES if version == 4 else GATE_SIGNATURES
+    if variant_policy_version == 5:
+        selected = {**selected, "style": VariantPolicy5StyleCriticSignature,
+                    "evidence": VariantPolicy5EvidenceReviewerSignature}
+    signatures = {name: practitioner_signature(signature, cert_id) for name, signature in selected.items()}
     if mode_for(distractor_evidence) == "consistent":
         if version != 5:
             raise ValueError("Consistent distractor evidence requires rules v5")
-        return {**signatures, "evidence": ConsistentEvidenceReviewerSignature}
+        return {**signatures, "evidence": (VariantPolicy5ConsistentEvidenceReviewerSignature
+                if variant_policy_version == 5 else ConsistentEvidenceReviewerSignature)}
     return signatures
 STYLE_CHECKS = tuple(name for name, field in ProductStyleCriticSignature.output_fields.items()
                      if field.annotation is bool and name != "generic_validation_key")
@@ -190,12 +260,31 @@ def blind_choice_map(question):
     return dict(zip("ABCD", labels))
 
 
-def build_gate_inputs(question, domain_context, documentation_context, option_evidence, *, style_reference=None, style_policy=None):
+def build_gate_inputs(question, domain_context, documentation_context, option_evidence, *, style_reference=None, style_policy=None, variant_policy_version=None):
     """Explicit allowlists prevent answer/evidence leakage to learner-only gates."""
     from shared.quality_gate import QUESTION_FIELDS
     from shared.question_style import practitioner_text
     cert_id = (style_policy or {}).get("objective_id", "machine-learning-engineer:").split(":", 1)[0]
     reference = practitioner_text(default_style_reference() if style_reference is None else style_reference, cert_id)
+    validate_variant_policy_version(variant_policy_version)
+    if variant_policy_version == 5:
+        # Legacy O4/O7 forbid unique-longest keys. Only policy 5 permits and
+        # requires them for competition rank 4; keep historical references exact.
+        # The style judge is blind: never identify the ranked option as label A.
+        reference = reference.replace(
+            "The key must never be uniquely\nlongest.",
+            "A uniquely longest choice is allowed within the mechanical length limits.")
+        reference = reference.replace(
+            "O7 Follow key_length_rank hints: 1 shortest, 2 second-shortest, 3 second-longest, 4 longest.\n"
+            "Ranks rotate evenly across a batch, so only about 25% of keys are longest (including ties).\n"
+            "Rank 4 should tie one other option for longest, never create a uniquely longest key. Keep\n"
+            "O4's mechanical length balance and two-word key lead limit; do not pad or clone choices.",
+            "O7 Follow assigned key_length_rank hints using competition rank: 1 plus the number\n"
+            "of options strictly shorter than the ranked option. Rank 1 must tie for shortest,\n"
+            "never uniquely shortest. Rank 4 must be uniquely longest. At most 25% of a batch\n"
+            "may have shortest or tied-shortest keys, and some keys must be uniquely longest.\n"
+            "Keep O4's mechanical length balance and two-word key lead limit; no filler or padding.\n"
+            "Review all shuffled choices symmetrically; do not infer a key from position or length.")
     mapping = blind_choice_map(question)
     original = dict(zip("ABCD", (question[name] for name in OPTION_FIELDS)))
     options = {label: original[origin] for label, origin in mapping.items()}
@@ -208,10 +297,11 @@ def build_gate_inputs(question, domain_context, documentation_context, option_ev
                          "option_evidence": option_evidence}}
 
 
-def parse_gate_output(name, raw, *, version=GATE_VERSION):
+def parse_gate_output(name, raw, *, version=GATE_VERSION, variant_policy_version=None):
     """Require exact fields/types and bounded numbers/reasons for one gate."""
     from shared.cli_models import parse_output, CLISchemaError
-    data = parse_output(json.dumps(raw, allow_nan=False), gate_signatures(version)[name])
+    signature = gate_signatures(version, variant_policy_version=variant_policy_version)[name]
+    data = parse_output(json.dumps(raw, allow_nan=False), signature)
     numeric = data["confidence" if name == "blind_solver" else "score"]
     if (type(numeric) not in (int, float) or not math.isfinite(numeric) or not 0 <= numeric <= 1
             or not 0 < len(data["reason"].strip()) <= 300):
@@ -219,9 +309,9 @@ def parse_gate_output(name, raw, *, version=GATE_VERSION):
     return data
 
 
-def evaluate_gate(name, raw, question, *, version=GATE_VERSION, style_policy=None, variant=False):
+def evaluate_gate(name, raw, question, *, version=GATE_VERSION, style_policy=None, variant=False, variant_policy_version=None):
     """Return (passed, concrete reason); no score can compensate for a failure."""
-    data = parse_gate_output(name, raw, version=version)
+    data = parse_gate_output(name, raw, version=version, variant_policy_version=variant_policy_version)
     if name == "blind_solver":
         passed = (data["verdict"] == "PASS" and data["confidence"] >= PASS_THRESHOLD
                   and data["ambiguous_answers"] is False
@@ -230,9 +320,9 @@ def evaluate_gate(name, raw, question, *, version=GATE_VERSION, style_policy=Non
         if blind_choice_map(question)[data["choice"]] != "A": failures.append("wrong key")
         if data["ambiguous_answers"]: failures.append("ambiguous answers")
     else:
-        checks = (tuple(k for k, field in gate_signatures(version)["style"].output_fields.items()
-                        if field.annotation is bool and k != "generic_validation_key")
-                  if name == "style" else EVIDENCE_CHECKS)
+        checks = tuple(k for k, field in gate_signatures(
+            version, variant_policy_version=variant_policy_version)[name].output_fields.items()
+            if field.annotation is bool and k != "generic_validation_key")
         relaxed = name == "style" and version == 5 and allows_ml_practice(style_policy)
         failures = [check for check in checks if data[check] is not True
                     and not (relaxed and check in RELAXED_STYLE_CHECKS)]
@@ -250,10 +340,12 @@ def evaluate_gate(name, raw, question, *, version=GATE_VERSION, style_policy=Non
     return passed, prefix + data["reason"]
 
 
-def aggregate_gate_verdict(question, raw, *, model="claude", version=GATE_VERSION, style_policy=None, distractor_evidence=None, variant=False):
+def aggregate_gate_verdict(question, raw, *, model="claude", version=GATE_VERSION, style_policy=None, distractor_evidence=None, variant=False, variant_policy_version=None):
     """All three independent gates must strictly PASS; never average scores."""
     from shared.quality_gate import JudgeVerdict
     from shared.distractor_evidence import verdict_gates
+    gate_signatures(version, distractor_evidence=distractor_evidence,
+                    variant_policy_version=variant_policy_version)
     frozen_raw = raw
     raw = verdict_gates(raw, distractor_evidence)
     if not isinstance(raw, dict) or set(raw) != set(GATE_SIGNATURES):
@@ -269,14 +361,19 @@ def aggregate_gate_verdict(question, raw, *, model="claude", version=GATE_VERSIO
             else:
                 if failed_at is not None:
                     raise ValueError("Unexpected gate after short circuit")
-                passed, _ = evaluate_gate(name, raw[name], question, version=version, style_policy=style_policy, variant=variant)
+                passed, _ = evaluate_gate(name, raw[name], question, version=version,
+                                          style_policy=style_policy, variant=variant,
+                                          variant_policy_version=variant_policy_version)
                 if not passed:
                     failed_at = name
         if failed_at is None:
             raise ValueError("Skipped gates cannot approve content")
         return JudgeVerdict(False, 0.0, "Short circuit: " + failed_at, model,
                             gate_results=json.loads(json.dumps(frozen_raw, allow_nan=False)))
-    results = {name: evaluate_gate(name, raw[name], question, version=version, style_policy=style_policy, variant=variant) for name in GATE_SIGNATURES}
+    results = {name: evaluate_gate(name, raw[name], question, version=version,
+                                   style_policy=style_policy, variant=variant,
+                                   variant_policy_version=variant_policy_version)
+               for name in GATE_SIGNATURES}
     scores = [raw[name]["confidence" if name == "blind_solver" else "score"]
               for name in GATE_SIGNATURES
               if not (name == "style" and version == 5 and allows_ml_practice(style_policy)

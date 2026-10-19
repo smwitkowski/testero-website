@@ -42,7 +42,8 @@ class ArgonCallError(RuntimeError):
 
 
 def build_argon_request(question, scope, context, evidence, *, review_only=False):
-    inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence)
+    inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence,
+                               variant_policy_version=scope.get("variant_policy_version"))
     full = {**inputs["evidence"], "style_reference": inputs["style"]["style_reference"]}
     return {"model": MODEL, "version": 2 if review_only else 1,
             "calls": {name: {"judge_prompt": signature_prompt(signature, data),
