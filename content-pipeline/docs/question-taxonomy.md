@@ -77,6 +77,33 @@ Gold/audit fixtures contain UUIDs and short analyst reasons, not the private ban
 ## Recorded local evidence (2026-10-19)
 
 - App `npm test`:1183 passed across74 files; lint/typecheck clean.
-- Full pipeline latest completed gate:2127 passed,3 skipped,48 subtests passed (25 existing dependency deprecation warnings); final review tests additionally234 passed including repaired tag inheritance/persistence and RPC failure journal.
+- Full pipeline final gate:2129 passed,3 skipped,48 subtests passed (25 existing dependency deprecation warnings); final review tests additionally234 passed including repaired tag inheritance/persistence and RPC failure journal.
 - Local `supabase db reset --local` succeeded on retry after an initial container-initialization failure; taxonomy permission/replacement/replay/validation/source/rollback verifier and entire existing DB suite passed. QA lease released.
 - Docker build succeeded; existing Dockerfile warning about service-role placeholder remains. No live Stripe/model/cloud quality validation is implied.
+
+
+## Manual primary coverage (not classifier output)
+
+| Decision | All450 | ACTIVE PMLE165 | DRAFT PMLE261 | DRAFT ACE24 |
+|---|---:|---:|---:|---:|
+| `select_solution` | 60 | 9 | 50 | 1 |
+| `adapt_model` | 26 | 4 | 22 | 0 |
+| `prepare_data` | 24 | 15 | 8 | 1 |
+| `manage_features` | 20 | 7 | 13 | 0 |
+| `preserve_preprocessing` | 16 | 12 | 4 | 0 |
+| `validate_quality` | 25 | 22 | 3 | 0 |
+| `optimize_training` | 9 | 8 | 1 | 0 |
+| `provision_compute` | 30 | 8 | 18 | 4 |
+| `package_inference` | 37 | 12 | 23 | 2 |
+| `scale_capacity` | 12 | 6 | 5 | 1 |
+| `release_safely` | 20 | 3 | 15 | 2 |
+| `orchestrate_workflow` | 32 | 7 | 24 | 1 |
+| `trigger_automation` | 13 | 9 | 3 | 1 |
+| `track_provenance` | 19 | 8 | 11 | 0 |
+| `monitor_behavior` | 35 | 15 | 19 | 1 |
+| `explain_predictions` | 17 | 5 | 12 | 0 |
+| `protect_information` | 26 | 10 | 16 | 0 |
+| `manage_access` | 19 | 3 | 6 | 10 |
+| `configure_environment` | 10 | 2 | 8 | 0 |
+
+One analyst manually coded stems/correct actions; targeted rationales resolved ambiguity. Parent adjudicated one gold overlap toward measurement validity.72 low-confidence/compound cases remain. These are semantic audit counts, not observed learner weakness, correctness review, unique kinds, or model agreement.
