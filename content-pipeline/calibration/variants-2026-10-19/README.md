@@ -412,3 +412,94 @@ production is untouched. Final clean-env pipeline pytest passed: **2,299 passed,
 3 skipped, 25 warnings** in 371.27 seconds, including all 17 new exporter tests.
 App PR #289 passed lint, typecheck and the final Docker build. It separately records
 four final test timeouts and the local DB runner setup blocker; those remain open.
+
+
+## Round 5: targeted repair candidates, no live-row edits
+
+The coordinator confirms PR289 is merged and the approved 13 variants are live.
+That deployment state is coordinator context, not a new database observation by
+this offline worker. This round changes only candidate generation and review on
+PR286. It does not edit published questions or run production SQL.
+
+New generation uses explicit **variant presentation policy 5**. Historical3/4
+scopes, writer/repair signatures, style/evidence rubrics and bound requests remain
+replayable unchanged. The normal lower-level generation function keeps its legacy
+default for historical integrations; both public generation CLIs choose policy5.
+
+- The planner varies actual key-length competition ranks (1 + count of strictly
+  shorter options). Eight slots use `2,3,4,1,2,3,4,1`. Rank1 requires a shortest tie,
+  not a uniquely shortest key; rank4 is uniquely longest, with the existing maximum
+  two-word lead. A cheap per-item check enforces its frozen target. One bounded,
+  option-only low-effort repair can fix it; schema, evidence bindings and independent
+  judges then revalidate the result. There is no second repair loop or filler rule.
+- The actual all-gate-pass population must have at most25% shortest/tied-shortest
+  keys and at least one uniquely longest key. Report withholds accepted IDs if the
+  subset fails. Direct ingest checks before DB setup, using validated pending and
+  revalidated complete entries, not saved PASS flags. Generation's request-ready
+  distribution is a separate diagnostic, never final acceptance.
+- Cost/latency is restored as a discovery trigger, not an unrelated extra goal.
+  Scale growth must explain how the issue was noticed. Style review requires
+  `moment_explains_discovery` and `moment_fits_want`, including migration versus
+  minimal-change conflicts, and symmetric `no_unique_want_echo` without a marked key.
+- Evidence review (strict and consistent) requires `industry_realism` and
+  `distractor_industry_losing_premises`. Wash count/fabric can predict linen damage;
+  transit/temperature can predict produce quality. An explanation cannot dismiss
+  those signals with a false premise. Ordinary vessel calls taking hours are not
+  credible unless the stem really describes shift-long recordings.
+- Policy5-only writer/style/Argon references replace the old longest-tie rules;
+  original3/4 references remain exact. These are semantic reviewer checks, not
+  a claim of deterministic industry-realism classification or measured live quality.
+
+The new `prepare-repair` (offline) and `repair --allow-live` modes select exactly:
+
+| Original parent | Slot | Replacement target | New candidates |
+| --- | --- | --- | ---: |
+|9a174e39|migration|95c6|2|
+|a31d11b8|scale growth|c2bd|2|
+|57b9d0c7|migration|6fc9 /84d6|2|
+|9a174e39|cost/latency reduction|a612|2|
+
+The required `--live-prior-manifest` binds the committed publication receipt to
+its approval, SQL, all three source artifact hashes and the exact13 IDs, parents,
+industries and artifacts. The loader replays34 full historical passes offline,
+then exposes exactly the approved13 as dedupe priors. Its nested original snapshot
+is retained unchanged. Replay cannot strip or replace this live-family snapshot.
+This is comparison-only history, not independent database LIVE verification or
+new serving approval. Industry allocation and family/non-family dedupe use those
+13 rows; the family stem threshold remains strictly below0.45. Targeted candidates
+are fresh variants, not edits to the old failed or live entries.
+
+Coordinator-only live repair command (**NOT executed by this worker**):
+
+```sh
+cd /Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline && \
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/variants_ab.py repair --allow-live \
+  --parent-dir /Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline/.cache/generation \
+  --artifact .cache/variants/repair-r5-live.json \
+  --live-prior-manifest calibration/variants-2026-10-19/practice-ingest-13.json \
+  --prior-artifact .cache/variants/ab-six-industry-live.json \
+  --prior-artifact .cache/variants/ab-six-r3-live.json \
+  --prior-artifact .cache/variants/ab-six-r4-live.json \
+  --family-stem-threshold 0.45 --review-pairs 8
+```
+
+Use a fresh basename; interrupted attempts are not automatically replayed. To
+render the same8 prompts without model calls, replace `repair --allow-live` with
+`prepare-repair` and use a fresh offline artifact. Live mode runs independent
+style/evidence/blind/Argon review for every eligible candidate (`full_gate_sample=1`),
+then reports decisions/usage and up to8 complete review pairs so both alternatives
+per slot can be inspected. Gate passes are not publication. Human selection,
+measured live yield/realism and production authorization remain coordinator work.
+
+Offline receipt: `round5-repair-preflight.json` records **8 prompts**, planned ranks
+`2,3,4,1,2,3,4,1`, **13 selected live priors** (34 full historical records retained),
+maximum1 use per assigned industry, and **158,470 estimated writer input tokens**.
+The estimate is characters/4, not provider usage. No candidates or model calls
+were produced by preflight. Combined focused validation passed316 tests; the
+required full-suite result is recorded below once it completes. Independent
+source review found no remaining blocker after the replay/population fixes.
+
+Final required round5 gate: `cd content-pipeline && env -i PATH="$PATH" HOME="$HOME" uv run pytest -q`
+→ **2517 passed, 3 skipped, 25 warnings, 48 subtests passed in 92.56s (0:01:32)**. Exact tested Python source hashes match the final tree;
+all106 protected historical inputs/approved SQL/receipt files are unchanged.
+No live model calls, production writes or merges were made.

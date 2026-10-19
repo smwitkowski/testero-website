@@ -1,0 +1,112 @@
+{
+  "mode": "prepare-repair",
+  "offline": true,
+  "writer_calls_planned": 8,
+  "model_calls_executed": 0,
+  "candidate_count": 0,
+  "estimated_writer_input_tokens": 158470,
+  "token_estimation": "ceil(prompt characters /4); not measured provider tokens",
+  "repair_slots": [
+    {
+      "slot": "automl_migration",
+      "parent_question_id": "9a174e39-5c98-524a-abec-952a689185d0",
+      "scenario_moment": "migration",
+      "replaces": [
+        "95c6"
+      ],
+      "new_candidates": 2
+    },
+    {
+      "slot": "cloud_run_scale",
+      "parent_question_id": "a31d11b8-8dd5-55ed-9ba4-a4b4e8400bcf",
+      "scenario_moment": "scale growth",
+      "replaces": [
+        "c2bd"
+      ],
+      "new_candidates": 2
+    },
+    {
+      "slot": "group_split_migration",
+      "parent_question_id": "57b9d0c7-8d93-5858-a699-4fc0afeae507",
+      "scenario_moment": "migration",
+      "replaces": [
+        "6fc9",
+        "84d6"
+      ],
+      "new_candidates": 2
+    },
+    {
+      "slot": "automl_cost",
+      "parent_question_id": "9a174e39-5c98-524a-abec-952a689185d0",
+      "scenario_moment": "cost/latency reduction",
+      "replaces": [
+        "a612"
+      ],
+      "new_candidates": 2
+    }
+  ],
+  "planned_key_length_ranks": [
+    2,
+    3,
+    4,
+    1,
+    2,
+    3,
+    4,
+    1
+  ],
+  "moments": {
+    "migration": 4,
+    "scale growth": 2,
+    "cost/latency reduction": 2
+  },
+  "maximum_industry_uses": 1,
+  "live_prior_count": 13,
+  "live_prior_snapshot_sha256": "8e1cdb20cd5fdd185fc76952551283477902103031cfb8622e48e75e80a9794a",
+  "full_historical_prior_count": 34,
+  "full_historical_prior_snapshot_sha256": "f49ebf775ed2dae1efbe417fdf70728db381ba633acdc0ed229a959fdd25da91",
+  "prompt_sha256": [
+    "717249825544f9aa27507280e78121456f3296f299094c0902665d52e5a5acaf",
+    "b61a3f0b635ad8e12e21236158c510197d2fc4ac5b7ee5ec38d66632ed71988b",
+    "e4d11e56c064b837bd6182f3868062d4dd0c11da9614bc910738feaf588c9b2b",
+    "55330d504b4d623da74e563713df2e7680eda571cd90f11625485f36779b6baf",
+    "beebfd92316b3abefef44878d56d4a01b72685bc43030e28e8700f0586797b9c",
+    "4c7679a3582c9bf0543d75e0f811b3132cc153437bd032a52d494419ed788a76",
+    "cc6edf64cdb81fa1042e8d6d30b04ac717ccf37957e1c7c197fdb760ce495715",
+    "b0c2eae5cbb3ef4b009d6705081302b9739a56e121fdc876ab86a9c7329ca97a"
+  ],
+  "coordinator_live_command": "cd /Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline && \\\nPYTHON_DOTENV_DISABLED=1 uv run python scripts/variants_ab.py repair --allow-live \\\n  --parent-dir /Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline/.cache/generation \\\n  --artifact .cache/variants/repair-r5-live.json \\\n  --live-prior-manifest calibration/variants-2026-10-19/practice-ingest-13.json \\\n  --prior-artifact .cache/variants/ab-six-industry-live.json \\\n  --prior-artifact .cache/variants/ab-six-r3-live.json \\\n  --prior-artifact .cache/variants/ab-six-r4-live.json \\\n  --family-stem-threshold 0.45 --review-pairs 8",
+  "quality_claim": "No live yield, semantic realism or token savings measured.",
+  "source_sha256": {
+    "content-pipeline/shared/variants.py": "e923c65b1737dd6a0817f108e99240215d371a919d4da005dae9a3f99755a801",
+    "content-pipeline/shared/variant_plan.py": "fb9618e01fa23a7ad9c74a414c5c0691cc2467865d105926a8713fdd88dd1b0b",
+    "content-pipeline/shared/variant_live_history.py": "3d8f85d7a5388bf38d9bcc67290266ae6060184f853f8d3500b718f98d8ea90b",
+    "content-pipeline/shared/gates.py": "96b45d43fb426139a902caf3873d3ea7d3bd05befde8c71d9d36eed3b6c92664",
+    "content-pipeline/shared/external_judge.py": "b54b4eb310107e59177687865cfc0a1a789f10b971839c42ddaaa97d202b5e30",
+    "content-pipeline/shared/variant_history.py": "b083ba0f1c0c202e1e4e7b39bfa2dea3d142952cd513ed8a2806759866d5a580",
+    "content-pipeline/shared/variant_diagnostics.py": "65fb732b627c422b4f7c9afa65a708325feb341b8e30caeaa67ac8ee63c058df",
+    "content-pipeline/shared/argon_gate.py": "5bf01ad31c69f036803afc31806465d8542ecc833f048c30e3eb2219bac8d2d9",
+    "content-pipeline/scripts/generate_variants.py": "8e514f620182e66236387f23f3785631464e9591ee861d5f7b2e9cb461c59bc8",
+    "content-pipeline/scripts/variants_ab.py": "91ffa2ceb14d08b2bbf9fe567ccc6c29323075684fd99db363a53e2230a07682",
+    "content-pipeline/scripts/ingest_external_verdicts.py": "9b809f7cfd758d2f5b7fcd422336595e9752c43bdd9ae1097599ec633b18ea38",
+    "content-pipeline/scripts/judge_requests.py": "ba5d940342fc2063eb84dc225013dca4c946b5be21b0bb48d767a9ea24cab47a",
+    "content-pipeline/tests/test_variant_round5_writer.py": "b417c765edfe2c9175d015682b3fa0180059cfa55b773ba608fe76220e462560",
+    "content-pipeline/tests/test_variant_round5_gates.py": "bccf71e32035d38970cb8a0564a6ec6916517febc5ec6221aa6771c0beb28be9",
+    "content-pipeline/tests/test_variant_live_history.py": "930f0ad7dbce807a258af525c563ade2c5d1ddd7e2a043a94b73977eca12f67e",
+    "content-pipeline/tests/test_variant_round5_integration.py": "b183d18aca6825da8212c5d2ffcd3a1b3915cff7fb218d40cdc39187effeb151"
+  },
+  "final_validation": {
+    "command": "cd content-pipeline && env -i PATH=\"$PATH\" HOME=\"$HOME\" uv run pytest -q",
+    "exit_code": 0,
+    "summary": "2517 passed, 3 skipped, 25 warnings, 48 subtests passed in 92.56s (0:01:32)",
+    "passed": 2517,
+    "skipped": 3,
+    "warnings": 25,
+    "duration_seconds": 92.56,
+    "subtests_passed": 48,
+    "tested_source_unchanged": true,
+    "protected_inputs_unchanged": true,
+    "protected_input_files": 106,
+    "independent_source_review": "No remaining blocker found; source-only review"
+  }
+}
