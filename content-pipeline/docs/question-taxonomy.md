@@ -19,13 +19,15 @@ uv run python scripts/backfill_question_tags.py --bank-export ../../hq/drafts/ta
 uv run python scripts/backfill_question_tags.py --bank-export ../../hq/drafts/taxonomy/bank-export-2026-10-19.json --artifact-dir ../../frontend.prime-testero-pipeline/content-pipeline/.cache/generation --status DRAFT --model claude --output .cache/taxonomy/gold-draft.json --question-id 003d2229-5d48-5daf-8a60-7985f55edbb5 --question-id 0168b5cc-7806-5dd2-ad26-465ebd8a51a1 --question-id 333ae8b1-02d1-4ecd-a00f-e70201e1d1c8 --question-id 40c0e4f4-e944-4cd4-9804-2ad3bfa0eefe --question-id 33bd5313-dc6f-4599-9d3d-d13e31219754 --question-id 4f7ee124-a4e1-5a17-b0cd-c2ecb57f622b --question-id 098b917b-bc84-4fe9-8695-497689643229 --question-id 0709fe16-2e3a-5fbf-a3cf-26e80c94de53 --question-id 0ff10f7d-b5e4-59b6-9c8a-a0cce8abddd2 --question-id 1dc5c5f0-c9c6-5a26-a687-03530e2986bd --question-id 27cf498c-5d92-5298-be30-ac61e1144790 --question-id 471afd8e-8d9c-5be7-828c-4d8832722843
 ```
 
-Review predicted tags against full questions. Set only each file’s top-level `reviewed` to `true` after inspection; preserve metadata/hashes. Then:
+Review predicted tags against full questions. Set only each file’s top-level `reviewed` to `true` after inspection; preserve metadata/hashes. Then (or use `--unreviewed-ok` for an evaluation-only agreement check before human review; this never changes prediction files or permits writes):
 
 ```bash
 uv run python scripts/evaluate_question_tags.py --predictions .cache/taxonomy/gold-active.json .cache/taxonomy/gold-draft.json --output .cache/taxonomy/gold-agreement.json
 ```
 
-Evaluator checks reviewed predictions, matching vocabulary/cert/bank hashes, missing/duplicate gold IDs and valid tags. Reports primary exact agreement, per-axis exact sets, micro precision/recall/F1 and disagreement IDs. Empty-set F1 is null, not perfect. Extra non-gold predictions counted/ignored. Gold is purpose-selected single-analyst judgment, not independently founder-adjudicated or proof of pedagogical validity. Inspect all primary disagreements; suggested90% primary/80% constraint exact-set thresholds are review aids only, not proven reliability.
+Classifier policy emits at most3 decisive products, preferring a specific subservice over redundant parent platforms. The frozen vocabulary/storage cardinality remains0–6 for existing records. After changing classifier rules, use fresh output filenames: existing dry-run files resume cached predictions and do not bind the prompt revision.
+
+Evaluator checks reviewed predictions by default (evaluation-only `--unreviewed-ok` skips that assertion), matching vocabulary/cert/bank hashes, missing/duplicate gold IDs and valid tags. Reports primary exact agreement, per-axis exact sets, micro precision/recall/F1 and disagreement IDs. Empty-set F1 is null, not perfect. Extra non-gold predictions counted/ignored. Gold is purpose-selected single-analyst judgment, not independently founder-adjudicated or proof of pedagogical validity. Inspect all primary disagreements; suggested90% primary/80% constraint exact-set thresholds are review aids only, not proven reliability.
 
 ## Full dry run — no DB writes
 

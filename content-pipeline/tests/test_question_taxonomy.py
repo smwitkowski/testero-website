@@ -171,3 +171,68 @@ def test_frozen_gold_has_expected_population_and_valid_labels():
     for row in gold["questions"]:
         assert len(row["bank_hash"]) == 64
         validate_tags([{**t, "confidence": 1.0} for t in row["tags"]], vocabulary, row["cert_id"])
+
+
+@pytest.mark.parametrize("count", [3, 4])
+def test_classifier_limits_products_without_changing_vocabulary(vocab, tags, count):
+    vocab["dimensions"]["product"]["values"] = [
+        {"value_key": str(i), "label": "Product", "definition": "Capability", "cert_scope": ["pmle"]}
+        for i in range(count)]
+    predictions = tags + [{"dimension": "product", "value_key": str(i), "confidence": 0.8}
+                          for i in range(count)]
+    assert len(validate_tags(predictions, vocab, "pmle")) == count + 1
+    predictor = Mock(return_value={"tags": predictions})
+    if count == 3:
+        assert len(classify_question({}, vocab, "pmle", predictor=predictor)) == 4
+    else:
+        with pytest.raises(TaxonomyError, match="at most 3"):
+            classify_question({}, vocab, "pmle", predictor=predictor)
+
+
+@pytest.mark.parametrize("reviewed", [None, False])
+def test_evaluation_unreviewed_opt_in_preserves_evidence_checks(vocab, tags, reviewed):
+    from scripts.evaluate_question_tags import evaluate
+    from shared.question_taxonomy import digest
+    row = {"question_id": ID, "cert_id": "pmle", "bank_hash": "frozen", "tags": tags}
+    gold = {"vocabulary_hash": digest(vocab), "questions": [{**row,
+            "tags": [{"dimension": "decision_type", "value_key": "one"}]}]}
+    predictions = {"metadata": {"vocabulary_hash": digest(vocab)}, "questions": [row]}
+    if reviewed is not None:
+        predictions["reviewed"] = reviewed
+    with pytest.raises(TaxonomyError, match="require review"):
+        evaluate(gold, predictions, vocab)
+    assert evaluate(gold, predictions, vocab, unreviewed_ok=True)["questions"] == 1
+    for mutation in (lambda p: p["metadata"].update(vocabulary_hash="stale"),
+                     lambda p: p["questions"][0].update(bank_hash="stale"),
+                     lambda p: p["questions"][0].update(cert_id="other")):
+        bad = copy.deepcopy(predictions)
+        mutation(bad)
+        with pytest.raises(TaxonomyError):
+            evaluate(gold, bad, vocab, unreviewed_ok=True)
+
+
+def test_evaluation_cli_unreviewed_flag_is_evaluation_only(tmp_path, monkeypatch, vocab, tags):
+    import json
+    import scripts.evaluate_question_tags as cli
+    from shared.question_taxonomy import digest
+    row = {"question_id": ID, "cert_id": "pmle", "bank_hash": "frozen", "tags": tags}
+    gold = {"vocabulary_hash": digest(vocab), "questions": [{**row,
+            "tags": [{"dimension": "decision_type", "value_key": "one"}]}]}
+    predictions = {"reviewed": False, "metadata": {"vocabulary_hash": digest(vocab)}, "questions": [row]}
+    gold_path, predictions_path, output = (tmp_path / n for n in ["gold.json", "predictions.json", "agreement.json"])
+    gold_path.write_text(json.dumps(gold))
+    predictions_path.write_text(json.dumps(predictions))
+    original = predictions_path.read_bytes()
+    monkeypatch.setattr(cli, "load_vocabulary", lambda: vocab)
+    args = ["--gold", str(gold_path), "--predictions", str(predictions_path), "--output", str(output)]
+    with pytest.raises(TaxonomyError, match="require review"):
+        cli.main(args)
+    cli.main([*args, "--unreviewed-ok"])
+    assert json.loads(output.read_text())["dimensions"]["decision_type"]["exact_match"] == 1
+    assert predictions_path.read_bytes() == original
+    # Evaluation never grants the complete-reviewed assertion required by writes.
+    rows = [{"id": ID, "status": "ACTIVE", "exam": "pmle"}]
+    metadata, inputs = frozen_inputs(rows, vocab, "claude", {}, "ACTIVE", None)
+    document = {"metadata": metadata, "reviewed": False, "questions": [{**inputs[0][1], "tags": tags}]}
+    with pytest.raises(TaxonomyError, match="complete reviewed"):
+        validate_document(document, metadata, inputs, vocab, complete=True)
