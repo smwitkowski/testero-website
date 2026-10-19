@@ -142,7 +142,7 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
                 </fieldset>
                 {feedback && <div ref={reveal} role="status" className={`rounded-md p-4 ${feedback.isCorrect ? "bg-solid-background text-solid" : "bg-focus-area-background text-focus-area"}`}>
                   <p className="font-semibold">{feedback.isCorrect ? "Correct" : "Not quite"}. You chose {feedback.selectedLabel}; the correct answer is {feedback.correctLabel}.</p>
-                  <p className="mt-1 text-sm">Your full report, with your strongest and weakest domains, comes at the end.</p>
+                  <p className="mt-1 text-sm">{data.totalQuestions < 10 ? "Your overall readiness score comes at the end." : "Your full report, with your strongest and weakest domains, comes at the end."}</p>
                 </div>}
                 {pending && <p role="status" className="text-sm text-muted-foreground">Saving your answer…</p>}
               </form>
