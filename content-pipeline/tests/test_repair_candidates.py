@@ -765,3 +765,28 @@ def test_malformed_journal_effort_fails_closed_without_more_calls(repairs, field
     assert result.exit_code == 1
     assert repairs[0][0].read_bytes() == before
     assert repairs[1].call_count == repairs[2].call_count == 1
+
+
+
+def test_repair_retains_plan_tags_and_ingest_persists_them(repairs):
+    from shared.question_taxonomy import generation_receipt
+    case = repairs[0]
+    payload = case[2]
+    plan = {"engineering_decision": "synthetic frozen decision"}
+    payload["plan"][0]["decision_plan"] = plan
+    payload["candidates"][0]["decision_plan"] = plan
+    receipt = generation_receipt({"cert_id": "cloud-engineer", "objective_id": "synthetic", "decision_plan": plan},
+        predictor=lambda *args: {"tags": [{"dimension": "decision_type", "value_key": "manage_access", "confidence": 0.9}]})
+    payload["taxonomy_enabled"] = True
+    payload["candidates"][0]["taxonomy"] = receipt
+    case[0].write_text(json.dumps(payload))
+    result = invoke(repairs)
+    assert result.exit_code == 0, result.output
+    payload = saved(repairs)
+    child = payload["candidates"][1]
+    assert child["taxonomy"] == receipt
+    good = {**case[5], "verdict": "PASS", "distractors_need_knowledge": True}
+    (case[1] / (child["candidate_id"] + ".json")).write_text(json.dumps(good))
+    result = CliRunner().invoke(ingest.main, ["--artifact", str(case[0]), "--verdicts", str(case[1])])
+    assert result.exit_code == 0, result.output
+    assert case[3].client.rpc.call_args.args[1]["p_tags"] == receipt["tags"]

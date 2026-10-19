@@ -1,0 +1,855 @@
+{
+  "version": 1,
+  "vocabulary_hash": "bb38a4aeb3e803e8ee21ef5837d0e49fc284c5c07dbc77799e7cd7d8490aeee3",
+  "labeling_method": "single analyst manual; not founder adjudicated",
+  "questions": [
+    {
+      "question_id": "003d2229-5d48-5daf-8a60-7985f55edbb5",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "configure_environment"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "operational_effort"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "compatibility"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_capability"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "unsupported_assumption"
+        },
+        {
+          "dimension": "product",
+          "value_key": "workbench"
+        },
+        {
+          "dimension": "product",
+          "value_key": "model_garden"
+        }
+      ],
+      "reason": "Interactive editable notebook tuning is required; pipeline launch and playground sampling do not provide that workflow, and organization parenting rules out Spaces.",
+      "bank_hash": "ad266fd71715a98c70f9f3b52e018b7405f65fefce6830f5b4a7d2b3f24dca22"
+    },
+    {
+      "question_id": "00649ff6-c21b-5aa2-99f1-6312b906bfe9",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "scale_capacity"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "capacity"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "operational_effort"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "insufficient_capacity"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wasted_resources"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "unnecessary_operations"
+        },
+        {
+          "dimension": "product",
+          "value_key": "inference"
+        }
+      ],
+      "reason": "GPU saturation, not CPU load, identifies the autoscaling signal; the current endpoint avoids a migration and fixed idle capacity.",
+      "bank_hash": "a1e8ad52bf660d9ab999d74e57bb67b348120f2dd54b3b9ce42786f1c266f0fa"
+    },
+    {
+      "question_id": "0168b5cc-7806-5dd2-ad26-465ebd8a51a1",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "manage_features"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "security_privacy"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "freshness"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "operational_effort"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_boundary"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "excess_privilege"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "state_mismatch"
+        },
+        {
+          "dimension": "product",
+          "value_key": "feature_store"
+        },
+        {
+          "dimension": "product",
+          "value_key": "bigquery"
+        },
+        {
+          "dimension": "product",
+          "value_key": "iam"
+        }
+      ],
+      "reason": "Registered histories are required for training, scheduled synchronization must include corrections, and dedicated identities must cover both group and view access.",
+      "bank_hash": "a36ffdd88dcf020d3ad208bc0c0f159902d242f11529610ee4cd99421ff75ecb"
+    },
+    {
+      "question_id": "0992cf85-6f92-5674-b233-ff00fb97c122",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "orchestrate_workflow"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "operational_effort"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "unnecessary_operations"
+        },
+        {
+          "dimension": "product",
+          "value_key": "pipelines"
+        },
+        {
+          "dimension": "product",
+          "value_key": "artifact_registry"
+        }
+      ],
+      "reason": "One parameterized template separates plant inputs from the shared component graph without maintaining a cluster or Airflow environment.",
+      "bank_hash": "43dca4f4213d8a9b2f55e165137b85da76e29866edf983dbb114ecd1acf0ba03"
+    },
+    {
+      "question_id": "0ee006ac-b8f2-5ce1-8b6c-8c0c27756cc8",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "adapt_model"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "freshness"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "cost"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "latency"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_boundary"
+        },
+        {
+          "dimension": "product",
+          "value_key": "gemini"
+        },
+        {
+          "dimension": "product",
+          "value_key": "bigquery"
+        }
+      ],
+      "reason": "Request-time grounding supplies changing internal dispatch facts in a small context; tuned weights cannot track updates between runs.",
+      "bank_hash": "9b9ee312b4dd4ab4da8f32acc7357e5a9ee3cdbfdf16edd5df2ed5a2b94b8252"
+    },
+    {
+      "question_id": "16199e25-a779-546d-9b7f-90474f226f4f",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "manage_features"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "cost"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_capability"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wasted_resources"
+        },
+        {
+          "dimension": "product",
+          "value_key": "feature_store"
+        },
+        {
+          "dimension": "product",
+          "value_key": "bigquery"
+        }
+      ],
+      "reason": "The central registry must expose reusable columns in existing tables; direct online views do not populate registrations and copies duplicate data.",
+      "bank_hash": "383ed4c2616b772f7d7df6deb81cd7784b65ce741b09cf4004172e52f152ae10"
+    },
+    {
+      "question_id": "19fd7339-8eca-5703-8cf8-9c84628a663b",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "optimize_training"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "cost"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "operational_effort"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_capability"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_measurement"
+        },
+        {
+          "dimension": "product",
+          "value_key": "bigquery_ml"
+        }
+      ],
+      "reason": "L1 sparsity selects original purchased inputs; PCA reduces dimensions but still needs original inputs, and variance does not measure relevance.",
+      "bank_hash": "1aac31ca0ee6f1d363ab5f779bd00d338f292e18fb70a2bb301743700af9eaad"
+    },
+    {
+      "question_id": "248c6667-2cdf-5b44-9ed4-9c2fcfea04e5",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "protect_information"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "security_privacy"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "data_integrity"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "cost"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_boundary"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "state_mismatch"
+        },
+        {
+          "dimension": "product",
+          "value_key": "sensitive_data_protection"
+        },
+        {
+          "dimension": "product",
+          "value_key": "cloud_kms"
+        },
+        {
+          "dimension": "product",
+          "value_key": "bigquery"
+        }
+      ],
+      "reason": "Persisted same-key tokens preserve customer joins without exposing recoverable emails to analysts; at-rest encryption does not hide query results.",
+      "bank_hash": "97bb5c31a4f242f9ba4da3c40d234a6e007f5a0d25be21f20f2939176a852ffb"
+    },
+    {
+      "question_id": "2552fa69-5a20-5744-90a3-2c76eba518d2",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "prepare_data"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "traceability"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "cost"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "state_mismatch"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wasted_resources"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "unsupported_assumption"
+        },
+        {
+          "dimension": "product",
+          "value_key": "bigquery"
+        }
+      ],
+      "reason": "Snapshots preserve exact cohorts months later with changed-byte storage rather than full copies, refreshed views, or short-window time travel.",
+      "bank_hash": "49a2acc62786c7317fbeda24a9454cfc316e6763eb41be75a9b8b51bb969f31c"
+    },
+    {
+      "question_id": "2cd24636-8488-5a41-8d48-d0098bf90046",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "manage_features"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "data_integrity"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "freshness"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "operational_effort"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "state_mismatch"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_boundary"
+        },
+        {
+          "dimension": "product",
+          "value_key": "bigquery"
+        }
+      ],
+      "reason": "Historical joins must recover backlog at order arrival; merely sharing latest lookups or changing split dates leaves temporal leakage.",
+      "bank_hash": "6163378cb46bf85712ccecfb7e6af324dc05d23a79d22515bb154245ee18620b"
+    },
+    {
+      "question_id": "2e3684ad-0dce-5944-9551-0c4be92471fc",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "validate_quality"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "latency"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "measurement_validity"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_measurement"
+        },
+        {
+          "dimension": "product",
+          "value_key": "pipelines"
+        }
+      ],
+      "reason": "Candidate selection must minimize error subject to representative tail serving latency; batch throughput and training duration are wrong measurements.",
+      "bank_hash": "2b05c60c5376d345300cc2053c31ccb0eb650165aacde735119dde72c03cf8d6"
+    },
+    {
+      "question_id": "333ae8b1-02d1-4ecd-a00f-e70201e1d1c8",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "preserve_preprocessing"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "data_integrity"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "capacity"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "operational_effort"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "state_mismatch"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "unnecessary_operations"
+        },
+        {
+          "dimension": "product",
+          "value_key": "pipelines"
+        },
+        {
+          "dimension": "product",
+          "value_key": "dataflow"
+        },
+        {
+          "dimension": "product",
+          "value_key": "inference"
+        }
+      ],
+      "reason": "Exporting the fitted Transform graph with the model preserves training-serving transformations instead of independently reimplementing preprocessing.",
+      "bank_hash": "07307f9c89b97cb04d424c54ac435795257d59eec67364d69ab7875039d7bd01"
+    },
+    {
+      "question_id": "40c0e4f4-e944-4cd4-9804-2ad3bfa0eefe",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "protect_information"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "security_privacy"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "reliability"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_boundary"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "unsupported_assumption"
+        },
+        {
+          "dimension": "product",
+          "value_key": "model_armor"
+        },
+        {
+          "dimension": "product",
+          "value_key": "cloud_logging"
+        }
+      ],
+      "reason": "Inspect-only input/output templates log live detections without blocking; single-message sanitization and safety-filter incompatibility discriminate configurations.",
+      "bank_hash": "34bef00dbc64543b988a42722e7c9f4f4a5ce284ee082faa54a7e43a965cf0a9"
+    },
+    {
+      "question_id": "44aa6df6-72d0-548e-a635-4f204425bc7c",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "prepare_data"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "cost"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "operational_effort"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_boundary"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "unnecessary_operations"
+        },
+        {
+          "dimension": "product",
+          "value_key": "bigquery"
+        }
+      ],
+      "reason": "Departure-date partition pruning matches existing filters even for backfills; ingestion-time partitions do not, and native depot clustering avoids export work.",
+      "bank_hash": "965b917d2b80cf2cbfd8475d3f391fd4a116ee498cbb787550d8ac6dfd758783"
+    },
+    {
+      "question_id": "605059a3-044b-586c-a7e3-97f50c804fca",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "monitor_behavior"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "measurement_validity"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "operational_effort"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_measurement"
+        },
+        {
+          "dimension": "product",
+          "value_key": "bigquery"
+        },
+        {
+          "dimension": "product",
+          "value_key": "cloud_monitoring"
+        }
+      ],
+      "reason": "Recurring subgroup false-negative rates directly measure missed urgent claims; selection rates, drift, and attribution do not condition on reviewed urgency.",
+      "bank_hash": "04a345c112f066914da9935a46b8fe07cade58f18ec4195b0d53f9ad12594402"
+    },
+    {
+      "question_id": "685450c7-4bed-5375-9db8-378d58afd712",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "optimize_training"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "cost"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wasted_resources"
+        },
+        {
+          "dimension": "product",
+          "value_key": "custom_training"
+        }
+      ],
+      "reason": "Logarithmic learning-rate sampling corrects disproportionate spending in the unproductive high-rate region without freezing one sparsely observed value.",
+      "bank_hash": "85e0b27b0ea34d1e382ddcef5dc00aa395278aab9bb2e43ca171a8ce1ee23424"
+    },
+    {
+      "question_id": "33bd5313-dc6f-4599-9d3d-d13e31219754",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "release_safely"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "reliability"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "cost"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "unsafe_lifecycle"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wasted_resources"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "unnecessary_operations"
+        },
+        {
+          "dimension": "product",
+          "value_key": "inference"
+        }
+      ],
+      "reason": "Rolling deployment reuses backing resources and shifts traffic with ready replicas; independent deployment or undeploy-first violates reuse or availability.",
+      "bank_hash": "172ee12e7ade933a2008199e87c64c582cdfc80457048e85ed09cda982a0ea54"
+    },
+    {
+      "question_id": "4f7ee124-a4e1-5a17-b0cd-c2ecb57f622b",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "explain_predictions"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "measurement_validity"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_measurement"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_capability"
+        },
+        {
+          "dimension": "product",
+          "value_key": "bigquery_ml"
+        }
+      ],
+      "reason": "Exact local baseline-relative feature effects require Tree SHAP with EXPLAIN_PREDICT, not global aggregates or approximate contributions.",
+      "bank_hash": "b4008c9d1b22e146c0cc56e5855947cb8276c20c5eae99a0b29ee051a423454f"
+    },
+    {
+      "question_id": "1eaba98c-3398-5611-b792-250571905518",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "track_provenance"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "traceability"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "operational_effort"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "state_mismatch"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "unnecessary_operations"
+        },
+        {
+          "dimension": "product",
+          "value_key": "ml_metadata"
+        }
+      ],
+      "reason": "Artifact-execution-event relationships reveal which preprocessing run produced data; labels or logged locations omit those upstream relationships.",
+      "bank_hash": "836b4f0fed7671e6c1af5a532d2bacdfe6c083286eb52a30a32384355f9d972e"
+    },
+    {
+      "question_id": "098b917b-bc84-4fe9-8695-497689643229",
+      "cert_id": "machine-learning-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "select_solution"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "operational_effort"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "compatibility"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_capability"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "unnecessary_operations"
+        },
+        {
+          "dimension": "product",
+          "value_key": "bigquery_ml"
+        }
+      ],
+      "reason": "SQL-native ARIMA_PLUS fits weekly forecasting and the low-code team; generic regression and exported custom infrastructure miss the task or operating constraints.",
+      "bank_hash": "7e307ac85b3bca47a94f415402d8999b6845003daf6c49b2c8b1a90bc615ed85"
+    },
+    {
+      "question_id": "0709fe16-2e3a-5fbf-a3cf-26e80c94de53",
+      "cert_id": "cloud-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "package_inference"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "latency"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "cost"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_boundary"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wasted_resources"
+        },
+        {
+          "dimension": "product",
+          "value_key": "cloud_run"
+        },
+        {
+          "dimension": "product",
+          "value_key": "pubsub"
+        }
+      ],
+      "reason": "Push invokes request-scoped work from zero within the stated startup budget; polling cannot meet the deadline or wake a scaled-to-zero pull loop.",
+      "bank_hash": "f0e2ae343548b3b37229861f0c478ef449a769f47f4d3ef2b3dba2591be4bb34"
+    },
+    {
+      "question_id": "0ff10f7d-b5e4-59b6-9c8a-a0cce8abddd2",
+      "cert_id": "cloud-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "manage_access"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "security_privacy"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "operational_effort"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "excess_privilege"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "unnecessary_operations"
+        },
+        {
+          "dimension": "product",
+          "value_key": "iam"
+        }
+      ],
+      "reason": "An organization custom-role definition can be granted narrowly in sibling projects; project roles cannot cross that boundary and admin is too broad.",
+      "bank_hash": "bbf6510494aff4ba6329d17a5df3ad1a5753fa3bc71a25c7daf138d1fa159fdb"
+    },
+    {
+      "question_id": "1dc5c5f0-c9c6-5a26-a687-03530e2986bd",
+      "cert_id": "cloud-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "select_solution"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "compatibility"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "operational_effort"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_capability"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "unnecessary_operations"
+        },
+        {
+          "dimension": "product",
+          "value_key": "netapp_volumes"
+        }
+      ],
+      "reason": "Managed SMB with AD and Windows ACLs retains the required interface without owning a file server; NFS or object adapters do not substitute.",
+      "bank_hash": "bc74c604d02bd4f56daa46f3459135422b15f785a90dde641d7ba893187f8f59"
+    },
+    {
+      "question_id": "27cf498c-5d92-5298-be30-ac61e1144790",
+      "cert_id": "cloud-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "provision_compute"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "reliability"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "compatibility"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "unsafe_lifecycle"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_capability"
+        },
+        {
+          "dimension": "product",
+          "value_key": "gke"
+        }
+      ],
+      "reason": "Regional Standard combines replicated control-plane availability with privileged node maintenance; multi-zone workers do not replicate a zonal control plane.",
+      "bank_hash": "704c70cf503dbefb6605d6ff8e45bc702592821e22893699152888bda919305c"
+    },
+    {
+      "question_id": "471afd8e-8d9c-5be7-828c-4d8832722843",
+      "cert_id": "cloud-engineer",
+      "tags": [
+        {
+          "dimension": "decision_type",
+          "value_key": "release_safely"
+        },
+        {
+          "dimension": "constraint",
+          "value_key": "data_integrity"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "unsafe_lifecycle"
+        },
+        {
+          "dimension": "failure_mode",
+          "value_key": "wrong_capability"
+        },
+        {
+          "dimension": "product",
+          "value_key": "cloud_run"
+        }
+      ],
+      "reason": "Explicit revision-name percentages pin the tested allocation; latest follows experimental revisions, while tags and minimum instances do not change the split.",
+      "bank_hash": "c2aec78a11466d499c662f88dbd40b957796b4dc0fb34214602389dbd58946ae"
+    }
+  ]
+}

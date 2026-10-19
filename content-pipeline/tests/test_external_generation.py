@@ -403,3 +403,25 @@ def test_opening_and_question_line_hints_are_recorded_in_candidate_and_request(e
         prompt=read_request(env,entry)["gates"]["evidence"]["judge_prompt"]
         assert "Opening style: " + scope["opening_style"] in prompt
         assert "Question line hint: " + scope["question_line"] in prompt
+
+
+def test_taxonomy_flag_is_plan_time_only_and_default_off(external_generation, monkeypatch):
+    from shared import question_taxonomy
+    env = external_generation
+    tagger = Mock(return_value={"version": 1, "tags": []})
+    monkeypatch.setattr(question_taxonomy, "generation_receipt", tagger)
+    result = invoke(env)
+    assert result.exit_code == 0, result.output
+    tagger.assert_not_called()
+    assert "taxonomy_enabled" not in read_artifact(env)
+    assert all("taxonomy" not in row for row in read_artifact(env)["candidates"])
+    env["path"] = env["path"] / "tagged"
+    result = invoke(env, "--emit-taxonomy")
+    assert result.exit_code == 0, result.output
+    assert tagger.call_count == 3
+    assert all(call.args[0]["decision_plan"] for call in tagger.call_args_list)
+    artifact = read_artifact(env)
+    assert artifact["taxonomy_enabled"] is True
+    assert all(row["taxonomy"] == tagger.return_value for row in artifact["candidates"])
+    env["database"].assert_not_called()
+    env["judge"].assert_not_called()

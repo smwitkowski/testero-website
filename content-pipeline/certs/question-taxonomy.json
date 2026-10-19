@@ -1,0 +1,803 @@
+{
+  "version": 1,
+  "dimensions": {
+    "decision_type": {
+      "min": 1,
+      "max": 1,
+      "values": [
+        {
+          "value_key": "select_solution",
+          "label": "Select a solution",
+          "definition": "Choose the task, model family, managed API, or platform approach that fits the required outcome; exclude tuning an already-selected model or configuring its runtime.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "adapt_model",
+          "label": "Adapt a foundation model",
+          "definition": "Choose prompting, grounding, supervised or parameter-efficient tuning, or tuning data representation to change a selected foundation model’s task behavior.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "prepare_data",
+          "label": "Prepare and move data",
+          "definition": "Choose ingestion, transfer, batch/stream transformation, query/storage layout or dataset preservation; exclude online feature registry semantics and fitted training-serving state.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "manage_features",
+          "label": "Manage shared features",
+          "definition": "Choose feature registration, discoverability, entity/event-time semantics, online views, synchronization or reuse across training and serving.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "preserve_preprocessing",
+          "label": "Preserve preprocessing state",
+          "definition": "Keep fitted encoders, normalization, tokenizers and transformations consistent across training and inference; merely sharing code is not enough.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "validate_quality",
+          "label": "Validate quality",
+          "definition": "Choose held-out populations, splits, comparison metrics, fairness slices or offline evaluation that make a quality claim or release gate meaningful; not ongoing telemetry setup.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "optimize_training",
+          "label": "Optimize training",
+          "definition": "Choose a training objective/loss, search method, search space, regularization or trial strategy; exclude hardware sizing and foundation-model adaptation method.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "provision_compute",
+          "label": "Provision workload compute",
+          "definition": "Choose hardware, parallelism, job packaging, checkpointing or resource shape for execution; exclude serving replica scaling and interactive notebook setup.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "package_inference",
+          "label": "Package inference",
+          "definition": "Choose batch versus online execution, serving containers, request/response handlers, model loading or runtime routes; exclude traffic rollout and replica policy.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "scale_capacity",
+          "label": "Scale serving capacity",
+          "definition": "Choose serving scaling signal, replicas, warm capacity, concurrency or capacity reservation to match demand.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "release_safely",
+          "label": "Release safely",
+          "definition": "Choose rollout, rollback, traffic allocation or stable experiment cohorts across versions; not merely recording a version or gating a build.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "orchestrate_workflow",
+          "label": "Orchestrate a workflow",
+          "definition": "Choose a workflow runner, component graph, dependency passing, reusable template or execution cache for a multi-step process.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "trigger_automation",
+          "label": "Trigger lifecycle automation",
+          "definition": "Choose when to run retraining/builds/jobs or how approvals and event triggers start lifecycle actions; exclude component graph design and traffic rollout.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "track_provenance",
+          "label": "Track versions and provenance",
+          "definition": "Choose model version grouping, mutable aliases, experiment records or artifact/execution lineage to reproduce, compare or trace results.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "monitor_behavior",
+          "label": "Monitor behavior",
+          "definition": "Choose operational telemetry, drift/skew/output baselines, recurring quality/fairness checks, sampling or alerting for a running system; not one-time candidate validation.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "explain_predictions",
+          "label": "Explain predictions",
+          "definition": "Choose local/global feature attribution, explanation baseline or interpretation method matching the requested explanatory scope.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "protect_information",
+          "label": "Protect information",
+          "definition": "Choose de-identification, encryption, prompt/output screening or security-threat controls at the right data-flow boundary; access identities and private network setup belong to manage_access.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "manage_access",
+          "label": "Manage access and boundaries",
+          "definition": "Choose identity, permission scope, hierarchy/policy placement or private network connectivity. Includes resource organization only when it determines control or ownership.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "configure_environment",
+          "label": "Configure a development environment",
+          "definition": "Choose interactive workspace, notebook sharing, language/dependency isolation or development-tool integration; exclude production training jobs.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        }
+      ]
+    },
+    "constraint": {
+      "min": 0,
+      "max": 3,
+      "values": [
+        {
+          "value_key": "cost",
+          "label": "Cost or work budget",
+          "definition": "Money, token/compute spend, repeated processing or bounded trials constrain the choice.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "operational_effort",
+          "label": "Operational effort",
+          "definition": "Minimize owned code, servers, maintenance, manual coordination or required specialist skills. Do not infer this solely from the word managed.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "latency",
+          "label": "Latency or deadline",
+          "definition": "An end-to-end response-time, cold-start or completion-time requirement discriminates alternatives.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "capacity",
+          "label": "Capacity or scale",
+          "definition": "Demand, data volume, memory, throughput or concurrency changes feasibility; volume alone is not enough unless it affects the decision.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "reliability",
+          "label": "Reliability or availability",
+          "definition": "Keep operations available, recover from interruption, avoid duplicate/lost work or support safe fallback.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "security_privacy",
+          "label": "Security, privacy or residency",
+          "definition": "Protect confidentiality, least privilege, regulated data, location or an explicit trust boundary.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "compatibility",
+          "label": "Compatibility or retained control",
+          "definition": "Preserve an existing framework, language, protocol, dependency, interface or required customization; existing alone is not sufficient.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "freshness",
+          "label": "Freshness or event timing",
+          "definition": "Use sufficiently current data, event-time meaning, timely updates or correct label-maturity windows.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "data_integrity",
+          "label": "Data or state consistency",
+          "definition": "Preserve schemas, entity joins, fitted representations or equivalent behavior across runs and environments.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "measurement_validity",
+          "label": "Measurement validity",
+          "definition": "Use appropriate metric, reference population, holdout, causal cohort or subgroup evidence for the actual business question.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "traceability",
+          "label": "Traceability or reproducibility",
+          "definition": "Recover exact cohorts, versions, artifacts or provenance to reproduce or audit a past result.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        }
+      ]
+    },
+    "failure_mode": {
+      "min": 0,
+      "max": 3,
+      "values": [
+        {
+          "value_key": "wrong_capability",
+          "label": "Wrong capability or abstraction",
+          "definition": "Alternative cannot perform the required task or chooses the wrong task/model/service interface.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "wrong_measurement",
+          "label": "Wrong metric, scope or reference",
+          "definition": "Measures a proxy or wrong population/baseline instead of the requested quality, fairness or explanation.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "state_mismatch",
+          "label": "State or representation mismatch",
+          "definition": "Breaks fitted transformations, schemas, versions, entity/time alignment or reproducible inputs.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "wrong_boundary",
+          "label": "Wrong boundary or timing",
+          "definition": "Applies protection/control after exposure, at the wrong layer, or uses stale/immature data at the wrong moment.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "unnecessary_operations",
+          "label": "Avoidable operational work",
+          "definition": "Adds custom infrastructure, manual coordination or migration without a scenario benefit.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "wasted_resources",
+          "label": "Wasted resources",
+          "definition": "Consumes unnecessary compute, storage, tokens, trials or idle capacity while a feasible lower-work choice exists.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "insufficient_capacity",
+          "label": "Insufficient capacity or scaling signal",
+          "definition": "Uses a poor scaling metric, replica/memory allocation, warm-up strategy or parallelism for demand.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "excess_privilege",
+          "label": "Excessive or wrong access scope",
+          "definition": "Uses incorrect identity, broad grant, group/hierarchy scope or location policy.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "unsafe_lifecycle",
+          "label": "Unsafe lifecycle or delivery",
+          "definition": "Loses work, disrupts availability, mixes experiment cohorts, bypasses approval or lacks safe rollout/recovery.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "unsupported_assumption",
+          "label": "Unsupported assumption or configuration",
+          "definition": "Relies on unsupported compatibility/settings or assumes guarantees not supplied by the scenario; use only when the rationale explicitly supports this, never as a miscellaneous label.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        }
+      ]
+    },
+    "product": {
+      "min": 0,
+      "max": 6,
+      "values": [
+        {
+          "value_key": "agent_platform",
+          "label": "Gemini Enterprise Agent Platform",
+          "definition": "Managed AI platform family; normalize historical Vertex AI and short Agent Platform names. Use a specific subservice instead when that is the decision hinge.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "automl",
+          "label": "Agent Platform AutoML",
+          "definition": "Managed AutoML training; includes historical AutoML Tables/Vision naming without endorsing lifecycle validity.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "workbench",
+          "label": "Agent Platform Workbench",
+          "definition": "Managed interactive notebook environment.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "pipelines",
+          "label": "Agent Platform Pipelines",
+          "definition": "Managed ML pipeline execution, including TFX/KFP integration.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "feature_store",
+          "label": "Agent Platform Feature Store",
+          "definition": "Feature registry, feature groups, views, synchronization and online serving.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "model_registry",
+          "label": "Agent Platform Model Registry",
+          "definition": "Model registration, versions and aliases.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "ml_metadata",
+          "label": "Agent Platform ML Metadata",
+          "definition": "Artifact/execution/event lineage.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "experiments",
+          "label": "Agent Platform Experiments and TensorBoard",
+          "definition": "Experiment parameters, metrics and training visualizations.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "custom_training",
+          "label": "Agent Platform custom training",
+          "definition": "Managed custom training and tuning jobs.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "inference",
+          "label": "Agent Platform Inference",
+          "definition": "Managed prediction endpoints, batch prediction and custom inference routines.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "model_monitoring",
+          "label": "Agent Platform Model Monitoring",
+          "definition": "Feature, prediction and attribution distribution monitoring.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "genai_evaluation",
+          "label": "Agent Platform Gen AI evaluation",
+          "definition": "Offline/online generative response, trajectory and session evaluation.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "explainable_ai",
+          "label": "Explainable AI",
+          "definition": "Model feature attributions and explanation baselines.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "model_garden",
+          "label": "Model Garden",
+          "definition": "Foundation model discovery, model cards, managed APIs and deployment/tuning entrypoints.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "gemini",
+          "label": "Gemini",
+          "definition": "Gemini foundation models/APIs; do not infer it merely from platform branding.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "bigquery",
+          "label": "BigQuery",
+          "definition": "Analytics storage, SQL, snapshots, layout, and Storage Read API.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "bigquery_ml",
+          "label": "BigQuery ML",
+          "definition": "SQL model training, inference and AI functions.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "cloud_storage",
+          "label": "Cloud Storage",
+          "definition": "Object storage, versioned objects and bucket-based data/artifacts.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "dataflow",
+          "label": "Dataflow",
+          "definition": "Managed Apache Beam batch and streaming processing.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "dataproc",
+          "label": "Dataproc",
+          "definition": "Managed Spark/Hadoop processing.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "cloud_composer",
+          "label": "Cloud Composer",
+          "definition": "Managed Airflow workflow orchestration.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "cloud_run",
+          "label": "Cloud Run",
+          "definition": "Managed request-serving containers and jobs, including Cloud Run functions.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "gke",
+          "label": "Google Kubernetes Engine",
+          "definition": "Managed Kubernetes, Standard and Autopilot.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "compute_engine",
+          "label": "Compute Engine",
+          "definition": "VMs, instance groups, images, disks and VM Manager.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "cloud_tpu",
+          "label": "Cloud TPU",
+          "definition": "TPU training/inference hardware.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "cloud_build",
+          "label": "Cloud Build",
+          "definition": "Build triggers and CI execution/approvals.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "cloud_deploy",
+          "label": "Cloud Deploy",
+          "definition": "Delivery pipelines and progressive rollout automation.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "artifact_registry",
+          "label": "Artifact Registry",
+          "definition": "Container artifacts and reusable pipeline templates.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "pubsub",
+          "label": "Pub/Sub",
+          "definition": "Publish/subscribe topics and independent consumers.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "cloud_tasks",
+          "label": "Cloud Tasks",
+          "definition": "Durable task delivery and retry control.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "cloud_monitoring",
+          "label": "Cloud Monitoring",
+          "definition": "Metrics, dashboards, scopes and alert policies.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "cloud_logging",
+          "label": "Cloud Logging",
+          "definition": "Application, platform and audit logs.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "cloud_trace",
+          "label": "Cloud Trace",
+          "definition": "Distributed and agent trace collection.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "cloud_profiler",
+          "label": "Cloud Profiler",
+          "definition": "Application execution and resource profiling.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "iam",
+          "label": "IAM and Cloud Identity",
+          "definition": "Identities, groups, role grants, federation and resource access scope.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "vpc",
+          "label": "VPC and private connectivity",
+          "definition": "VPC networks, subnets, Private Google Access, Private Service Connect and network perimeters.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "cloud_kms",
+          "label": "Cloud KMS",
+          "definition": "Encryption keys including CMEK and tokenization key wrapping.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "sensitive_data_protection",
+          "label": "Sensitive Data Protection",
+          "definition": "DLP inspection, de-identification, deterministic encryption and risk analysis.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "model_armor",
+          "label": "Model Armor",
+          "definition": "Prompt/response threat screening and data sanitization.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "security_command_center",
+          "label": "Security Command Center",
+          "definition": "AI Protection and threat findings.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "translation",
+          "label": "Cloud Translation",
+          "definition": "Text/document translation, glossary and batch/online APIs.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "document_ai",
+          "label": "Document AI",
+          "definition": "Document OCR, extraction and processors.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "retail",
+          "label": "Retail Search and Recommendations",
+          "definition": "Managed retail search and recommendations, including historical Retail API naming.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "storage_transfer",
+          "label": "Storage Transfer Service",
+          "definition": "Managed object/file transfer to Cloud Storage.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "netapp_volumes",
+          "label": "Google Cloud NetApp Volumes",
+          "definition": "Managed file shares including SMB/Active Directory integration.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        },
+        {
+          "value_key": "cloud_billing",
+          "label": "Cloud Billing",
+          "definition": "Billing accounts, project links, budgets and billing roles.",
+          "cert_scope": [
+            "machine-learning-engineer",
+            "cloud-engineer"
+          ]
+        }
+      ]
+    }
+  }
+}

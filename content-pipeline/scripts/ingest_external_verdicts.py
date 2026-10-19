@@ -146,6 +146,18 @@ class CandidateValidationError(ValueError):
         super().__init__(_safe_completion(str(error))[:1000])
 
 
+def _taxonomy_tags(payload, entry, scope):
+    enabled = payload.get("taxonomy_enabled", False)
+    if type(enabled) is not bool:
+        raise ValueError("Invalid taxonomy mode")
+    if enabled:
+        from shared.question_taxonomy import validate_generation_receipt
+        return validate_generation_receipt(entry.get("taxonomy"), scope)
+    if "taxonomy" in entry:
+        raise ValueError("Tags require an explicitly enabled taxonomy artifact")
+    return None
+
+
 def _validate_candidate(path, payload, entry):
     stage = "scope"
     try:
@@ -191,6 +203,7 @@ def _validate_candidate(path, payload, entry):
                     entry["candidate_id"], scope, question, entry["sources"], checked["options"],
                     signature=LEGACY_ROUND4_QUALITY_SIGNATURE)):
                 raise ValueError("External request differs from frozen content or supported rubric")
+        _taxonomy_tags(payload, entry, scope)
         return scope, question, checked
 
     except (ValueError, KeyError, TypeError, OSError, UnicodeError, StopIteration) as error:
@@ -649,7 +662,8 @@ def ingest(path, verdicts, *, dry_run=False):
                 stored = persist_candidate(client, scope, question, judge, grounding, persistence_exam,
                     domains[scope["domain_code"]], runs[scope["domain_code"]], payload["difficulty"],
                     before_insert=before_insert, on_question_inserted=on_question_inserted,
-                    question_id=storage_id)
+                    question_id=storage_id,
+                    **({"taxonomy_tags": _taxonomy_tags(payload, entry, scope)} if payload.get("taxonomy_enabled") else {}))
                 if not stored or not entry.get("inserted_question_id"):
                     raise ValueError("Incomplete persistence")
                 entry["persistence_status"] = "complete"

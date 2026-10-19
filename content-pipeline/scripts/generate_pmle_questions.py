@@ -91,7 +91,7 @@ def reject_candidate(entry, stage, reason):
 
 
 def persist_candidate(client, scope, question, judge, grounding, exam, domain_id, run_id, difficulty,
-                      *, before_insert=None, on_question_inserted=None, question_id=None):
+                      *, before_insert=None, on_question_inserted=None, question_id=None, taxonomy_tags=None):
     notes = json.loads(judge.to_review_notes())
     notes["grounding"] = grounding
     review_notes = json.dumps(notes, allow_nan=False, separators=(",", ":"))
@@ -125,6 +125,9 @@ def persist_candidate(client, scope, question, judge, grounding, exam, domain_id
     })
     if not explanation:
         return False
+    if taxonomy_tags is not None:
+        from shared.question_taxonomy import persist_tags
+        persist_tags(client, saved["id"], "generation", taxonomy_tags)
     return bool(client.update_question_review(saved["id"], run_id, final_review, review_notes))
 
 
@@ -151,6 +154,7 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--model", default=DEFAULT_GENERATOR_MODEL, show_default=True)
 @click.option("--judge-model", default=DEFAULT_JUDGE_MODEL, show_default=True, help="Use external to export judge requests and never write the DB.")
 @click.option("--difficulty", type=click.Choice(["EASY", "MEDIUM", "HARD"]), default="MEDIUM", show_default=True)
+@click.option("--emit-taxonomy", is_flag=True, help="Opt in to one additional plan-tagging call; freeze tags for ingestion. No quality prompt or threshold changes.")
 @click.option("--plan-only", is_flag=True, help="Write the frozen cert plan offline; no model, docs or DB calls.")
 @click.option("--dry-run", is_flag=True, help="Generate and judge locally; never access/write the DB.")
 @click.option("--artifact", type=click.Path(path_type=Path), help="JSON review artifact. Defaults to .cache/generation/<cert>-<UTC>.json.")
@@ -161,7 +165,7 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--cite-effort", type=click.Choice(["low", "medium", "high"]), default="medium", show_default=True)
 def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge_model, difficulty, dry_run, artifact, exam, seed,
          parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None, existing_questions=None, argon_gate=False,
-         target_accepted=None, expected_yield=0.29, distractor_evidence="strict", plan_only=False):
+         target_accepted=None, expected_yield=0.29, distractor_evidence="strict", plan_only=False, emit_taxonomy=False):
     try:
         from shared.distractor_evidence import evidence_policy
         frozen_evidence = evidence_policy(distractor_evidence)
@@ -188,6 +192,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     if not artifact.resolve().is_relative_to(ARTIFACT_ROOT.resolve()) or artifact.suffix != ".json":
         raise click.ClickException("Artifacts must be JSON files under .cache/generation/")
     external = judge_model == "external"
+    if emit_taxonomy and not external:
+        raise click.ClickException("Taxonomy emission currently requires external verdict ingestion")
     codex = model == "codex" or model.startswith("codex/")
     effective_parallel = parallel if external and codex else 1
     if external and (artifact.exists() or request_directory(artifact).exists()):
@@ -201,6 +207,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                "rules_version": 5, "style_policy_version": "5.1", "section_allocation": allocation, "decision_first": True,
                "distractor_evidence": frozen_evidence,
                "existing_questions": bank, "argon_gate": argon_gate, "execution_policy": "short_circuit_v1"}
+    if emit_taxonomy:
+        payload["taxonomy_enabled"] = True
     exam = exam or ("GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert)
     payload.update({"difficulty": difficulty, "exam": exam})
     if plan_only:
@@ -337,6 +345,12 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             scope["decision_objective"] = entry["decision_objective"] = decision_objective
             scope["decision_plan"], scope["decision_proof"] = decision, proof
             entry["decision_plan"], entry["decision_proof"] = decision, proof
+            if emit_taxonomy:
+                stage = "taxonomy"
+                from shared.question_taxonomy import generation_receipt
+                with call_context(stage="taxonomy", candidate_id=entry.get("candidate_id"), index=index,
+                                  attempt=1, calls_path=str(artifact) + ".calls.jsonl"):
+                    entry["taxonomy"] = generation_receipt(scope)
             stage = "generation"
             writer_context = writer_documentation_context(sources, proof)
             with call_context(stage="write", candidate_id=entry.get("candidate_id"), index=index,

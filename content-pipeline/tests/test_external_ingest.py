@@ -545,3 +545,45 @@ def test_malformed_records_fail_cleanly_before_client(case, change):
     result = invoke(case)
     assert result.exit_code == 1 and "Invalid candidate record or options" in result.output
     case[4].assert_not_called()
+
+
+
+def test_enabled_taxonomy_persists_server_tags_before_review_completion(case):
+    from shared.question_taxonomy import generation_receipt
+    path, _, payload, client, *_ = case
+    plan = {"engineering_decision": "synthetic plan"}
+    payload["plan"][0]["decision_plan"] = plan
+    payload["candidates"][0]["decision_plan"] = plan
+    receipt = generation_receipt({"cert_id": "cloud-engineer", "objective_id": "synthetic", "decision_plan": plan},
+        predictor=lambda *args: {"tags": [{"dimension": "decision_type", "value_key": "manage_access", "confidence": 0.9}]})
+    payload["taxonomy_enabled"] = True
+    payload["candidates"][0]["taxonomy"] = receipt
+    save_input(case)
+    result = invoke(case)
+    assert result.exit_code == 0, result.output
+    call = client.client.rpc.call_args
+    assert call.args[0] == "replace_question_tags"
+    assert call.args[1]["p_source"] == "generation"
+    assert call.args[1]["p_tags"] == receipt["tags"]
+    assert saved(case)["candidates"][0]["persistence_status"] == "complete"
+
+
+
+def test_taxonomy_rpc_failure_leaves_partial_journal_not_accepted(case):
+    from shared.question_taxonomy import generation_receipt
+    payload, client = case[2], case[3]
+    plan = {"engineering_decision": "synthetic plan"}
+    payload["plan"][0]["decision_plan"] = plan
+    payload["candidates"][0]["decision_plan"] = plan
+    payload["taxonomy_enabled"] = True
+    payload["candidates"][0]["taxonomy"] = generation_receipt(
+        {"cert_id": "cloud-engineer", "objective_id": "synthetic", "decision_plan": plan},
+        predictor=lambda *args: {"tags": [{"dimension": "decision_type", "value_key": "manage_access", "confidence": 0.9}]})
+    client.client.rpc.return_value.execute.side_effect = RuntimeError("synthetic RPC failure")
+    save_input(case)
+    result = invoke(case)
+    assert result.exit_code != 0
+    entry = saved(case)["candidates"][0]
+    assert entry["persistence_status"] == "failed_partial"
+    assert not entry["accepted"]
+    client.update_question_review.assert_not_called()
