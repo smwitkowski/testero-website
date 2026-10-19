@@ -1,0 +1,26 @@
+{
+  "method": "ceil(prompt characters / 4); not measured provider tokens",
+  "writer_input_total": 135864,
+  "variant_count": 9,
+  "by_parent": {
+    "a23ed85e-042b-5eaf-ba0d-ccf52b149bd8": [
+      17023,
+      17013,
+      17026
+    ],
+    "2552fa69-5a20-5744-90a3-2c76eba518d2": [
+      13465,
+      13455,
+      13466
+    ],
+    "532fb45c-7f86-542a-a470-39ad0df5d199": [
+      14808,
+      14797,
+      14811
+    ]
+  },
+  "all_six_parents_18_prompts_writer_input_total": 313905,
+  "live_calls": 0,
+  "output_and_judge_tokens": "unknown",
+  "quality_and_5x_target": "not measured"
+}

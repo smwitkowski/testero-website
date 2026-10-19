@@ -98,6 +98,14 @@ def _scope(payload, entry):
         raise ValueError("Certification does not match the artifact")
     current = plan_questions(payload["cert_id"], index, objective_ids=[scope["objective_id"]])
     expected = current[index - 1]
+    if "variant_origin" in scope:
+        from shared.variants import variant_scope
+        origin = scope["variant_origin"]
+        if payload.get("variant_mode") != 1 or not isinstance(origin, dict) or set(origin) != {"parent_question_id", "ordinal"}:
+            raise ValueError("Invalid variant scope origin")
+        expected = variant_scope(expected, payload["variant_parents"][origin["parent_question_id"]], origin["ordinal"])
+    elif payload.get("variant_mode") is not None:
+        raise ValueError("Variant mode requires frozen variant scope origins")
     # Deterministic registry scope stays exact; LLM decision/proof data is frozen separately.
     provenance_fields = {"objective_offset", "decision_plan", "decision_proof", "decision_objective", "style_policy", "distractor_evidence"}
     from shared.distractor_evidence import validate_policy
@@ -168,6 +176,10 @@ def _validate_candidate(path, payload, entry):
         if payload.get("external_judge_version") == 2:
             stage = "decision_veto"
             validate_decision_provenance(scope, entry)
+        if "variant_origin" in scope or "variant" in entry or "parent_question_id" in entry:
+            stage = "variant_lineage"
+            from shared.variants import validate_variant
+            validate_variant(payload, entry)
         stage = "schema"
         if not validate_question(question).is_valid:
             raise ValueError("Question schema validation failed")
@@ -195,7 +207,10 @@ def _validate_candidate(path, payload, entry):
         frozen = _read_json(request_path)
         v4 = payload.get("external_judge_version") == 2
         rebuilt = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"],
-                                **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False), "execution_policy": payload.get("execution_policy")} if v4 else {"signature": QuestionQualitySignature}))
+                                **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False), "execution_policy": payload.get("execution_policy"),
+                                    "variant_context": ({"metadata": entry["variant"],
+                                        "parent": payload["variant_parents"][entry["parent_question_id"]]}
+                                        if "variant" in entry else None)} if v4 else {"signature": QuestionQualitySignature}))
         if canonical_sha256(frozen) != canonical_sha256(rebuilt):
             # Only unchanged originals may retain the exact known preceding 14-field rubric.
             # No arbitrary old schema or historical 13-field request is accepted.
@@ -495,8 +510,13 @@ def ingest(path, verdicts, *, dry_run=False):
         try:
             scope, question, checked = _validate_candidate(path, payload, entry)
             if payload.get("rules_version") == 5:
-                duplicate = check_near_duplicate(entry, near_seen,
-                    exclude=(ident, entry.get("repair", {}).get("parent_candidate_id")))
+                if "variant" in entry:
+                    from shared.variants import variant_duplicates
+                    duplicate = variant_duplicates(entry, near_seen,
+                        payload["variant_parents"][entry["parent_question_id"]])
+                else:
+                    duplicate = check_near_duplicate(entry, near_seen,
+                        exclude=(ident, entry.get("repair", {}).get("parent_candidate_id")))
                 entry["near_duplicate_check"] = duplicate
                 if not duplicate["passed"]:
                     _reject(entry, "near_duplicate", duplicate["reason"])
@@ -555,6 +575,8 @@ def ingest(path, verdicts, *, dry_run=False):
             grounding.update(gate_version=payload.get("rules_version", 4), rules_version=payload.get("rules_version", 4), gate_verdicts=raw,
                              **{name: scope[name] for name in
                                 ("decision_objective", "decision_plan", "decision_proof", "key_length_rank")})
+        if "variant" in entry:
+            grounding.update(parent_question_id=entry["parent_question_id"], variant=entry["variant"])
         if scope.get("style_policy") is not None:
             grounding["style_policy"] = scope["style_policy"]
         if "distractor_evidence" in scope:
