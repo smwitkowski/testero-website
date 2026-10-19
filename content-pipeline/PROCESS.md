@@ -4,10 +4,13 @@
 
 `--doc-cache`, `--verify-retrieval`, `--verify-stable-prefix` are opt-in;
 `--decision-attempts` defaults to the existing three total plans. Full evidence
-and independent judges stay unchanged. **Do not enable by default:** b28 offline
-replay recovers50/60 quotes (83.3%) at ~15k estimated doc tokens, below95%.
-See `calibration/retrieval-2026-10-19/README.md` for replay, veto analysis,
-constants, coordinator A/B command and its explicit failed-recall override.
+and independent judges stay unchanged. **Do not enable by default:** the selected
+130k-character cap (~32.5k estimated doc tokens), top-3 product queries and
+adjacent spans recover57/60 b28 and50/52 ACE-b2 receipts. The original ~15k target
+failed. These are calibration recall, not semantic quality or live efficiency.
+See `calibration/retrieval-2026-10-19/README.md` for the two-set frontier,
+constants, miss diagnosis and coordinator A/B command. Normal execution requires
+two passing, current exact-config/budget reports from those frozen artifacts.
 No live savings, cache-hit or quality-preservation claim is made.
 
 

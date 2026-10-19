@@ -1,0 +1,354 @@
+[
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 4,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 60000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 4,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 4,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 4,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 180000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 4,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 60000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 4,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 4,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 4,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 180000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 8,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 60000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 8,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 8,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 8,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 180000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 8,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 60000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 8,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 8,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 8,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 180000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 20,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 60000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 20,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 20,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 20,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 180000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 20,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 60000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 20,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 20,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 20,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 180000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 0,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 60000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 0,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 0,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 0,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 180000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 0,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 60000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 0,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 0,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 0,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 180000
+  }
+]

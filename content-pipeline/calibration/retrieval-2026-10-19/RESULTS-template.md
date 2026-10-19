@@ -11,7 +11,7 @@ Status: **not run**. Retrieval remains default-off. Offline quote recall is not 
 - Baseline: all retrieval-experiment flags off. Treatment: disk cache + BM25 passages + stable prefix on.
 - Cache cold/warm at start (do not silently prewarm treatment):
 - Arm order / repeated paired run IDs:
-- Replay report hash / quote recall / explicit exploratory override if gate failed:
+- Both b28/ACE-b2 replay hashes / recall / stable-prefix mode / selected config and cap / explicit exploratory override if gate failed:
 
 ## Primary outcomes
 | Metric | Baseline | Treatment | Change / denominator |
@@ -40,7 +40,7 @@ Status: **not run**. Retrieval remains default-off. Offline quote recall is not 
 
 ## Safety / acceptance decision
 - Target >=3x lower tokens per accepted (aspiration 5x), without lower quality.
-- Require >=95% held-out recorded receipt recall before normal live A/B. Current b28 is calibration, not held-out.
+- Normal A/B tooling requires >=95% on both frozen calibration sets with current exact config/cap/code. Selected b28=57/60,ACE-b2=50/52. Neither is held-out after tuning; get fresh held-out receipts before rollout.
 - Stop on unsupported key/changed gate policy/credible Argon-quality regression. Small N cannot establish noninferiority or a ±5-point quality change.
 - Inspect matched objective cohorts and all-gate quality; retain all four mandatory gates, no publication or DB write in this script.
 - State unknown token fields, schema normalization, zero-acceptance ratios and any incomplete stage explicitly.

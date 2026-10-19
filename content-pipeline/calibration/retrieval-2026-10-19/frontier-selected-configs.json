@@ -1,0 +1,57 @@
+[
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 3,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 60000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 3,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 3,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 130000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 3,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 2200,
+      "overlap": 350,
+      "top_k": 3,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 180000
+  }
+]

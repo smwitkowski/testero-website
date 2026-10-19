@@ -1,0 +1,178 @@
+[
+  {
+    "config": {
+      "chunk_chars": 800,
+      "overlap": 300,
+      "top_k": 12,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 800,
+      "overlap": 300,
+      "top_k": 12,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 800,
+      "overlap": 300,
+      "top_k": 12,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 800,
+      "overlap": 300,
+      "top_k": 12,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 800,
+      "overlap": 500,
+      "top_k": 12,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 800,
+      "overlap": 500,
+      "top_k": 12,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 800,
+      "overlap": 500,
+      "top_k": 12,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 800,
+      "overlap": 500,
+      "top_k": 12,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 1200,
+      "overlap": 300,
+      "top_k": 12,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 1200,
+      "overlap": 300,
+      "top_k": 12,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 1200,
+      "overlap": 300,
+      "top_k": 12,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 1200,
+      "overlap": 300,
+      "top_k": 12,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 1200,
+      "overlap": 500,
+      "top_k": 12,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 1200,
+      "overlap": 500,
+      "top_k": 12,
+      "query_mode": "plan",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  },
+  {
+    "config": {
+      "chunk_chars": 1200,
+      "overlap": 500,
+      "top_k": 12,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 100000
+  },
+  {
+    "config": {
+      "chunk_chars": 1200,
+      "overlap": 500,
+      "top_k": 12,
+      "query_mode": "products",
+      "neighbors": 1,
+      "sections": false
+    },
+    "budget": 140000
+  }
+]
