@@ -219,7 +219,7 @@ def parse_gate_output(name, raw, *, version=GATE_VERSION):
     return data
 
 
-def evaluate_gate(name, raw, question, *, version=GATE_VERSION, style_policy=None):
+def evaluate_gate(name, raw, question, *, version=GATE_VERSION, style_policy=None, variant=False):
     """Return (passed, concrete reason); no score can compensate for a failure."""
     data = parse_gate_output(name, raw, version=version)
     if name == "blind_solver":
@@ -238,17 +238,19 @@ def evaluate_gate(name, raw, question, *, version=GATE_VERSION, style_policy=Non
                     and not (relaxed and check in RELAXED_STYLE_CHECKS)]
         passed = data["verdict"] == "PASS" and data["score"] >= PASS_THRESHOLD and not failures
         # Recorded v5 aggregate FAIL/score can be caused solely by the waived checks.
-        # Keep raw verdicts and scores intact; never waive UNCERTAIN or a required check.
+        # Preserve that replay behavior for originals, but a variant's style FAIL
+        # remains a veto. Never waive UNCERTAIN or a required check; retain raw data.
         waived_failure = relaxed and (data["product_knowledge_hinge"] is False
                                      or data["cloud_specific_alternative"] is False
                                      or data["generic_validation_key"] is True)
-        if waived_failure and not failures and data["verdict"] != "UNCERTAIN":
+        if (waived_failure and not failures and data["verdict"] != "UNCERTAIN"
+                and not (variant and data["verdict"] == "FAIL")):
             passed = True
     prefix = (", ".join(failures) + ": ") if failures else ""
     return passed, prefix + data["reason"]
 
 
-def aggregate_gate_verdict(question, raw, *, model="claude", version=GATE_VERSION, style_policy=None, distractor_evidence=None):
+def aggregate_gate_verdict(question, raw, *, model="claude", version=GATE_VERSION, style_policy=None, distractor_evidence=None, variant=False):
     """All three independent gates must strictly PASS; never average scores."""
     from shared.quality_gate import JudgeVerdict
     from shared.distractor_evidence import verdict_gates
@@ -267,14 +269,14 @@ def aggregate_gate_verdict(question, raw, *, model="claude", version=GATE_VERSIO
             else:
                 if failed_at is not None:
                     raise ValueError("Unexpected gate after short circuit")
-                passed, _ = evaluate_gate(name, raw[name], question, version=version, style_policy=style_policy)
+                passed, _ = evaluate_gate(name, raw[name], question, version=version, style_policy=style_policy, variant=variant)
                 if not passed:
                     failed_at = name
         if failed_at is None:
             raise ValueError("Skipped gates cannot approve content")
         return JudgeVerdict(False, 0.0, "Short circuit: " + failed_at, model,
                             gate_results=json.loads(json.dumps(frozen_raw, allow_nan=False)))
-    results = {name: evaluate_gate(name, raw[name], question, version=version, style_policy=style_policy) for name in GATE_SIGNATURES}
+    results = {name: evaluate_gate(name, raw[name], question, version=version, style_policy=style_policy, variant=variant) for name in GATE_SIGNATURES}
     scores = [raw[name]["confidence" if name == "blind_solver" else "score"]
               for name in GATE_SIGNATURES
               if not (name == "style" and version == 5 and allows_ml_practice(style_policy)
