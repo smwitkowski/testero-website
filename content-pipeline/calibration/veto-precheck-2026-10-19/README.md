@@ -101,4 +101,6 @@ Focused offline schema, source, control-flow and evaluation tests:41 passed.
 Root clean-env tests:1,183 passed; lint/typecheck/Docker all exit0. Docker retains
 the existing ENV secret-name warning; npm install reported20 audit findings
 (2 low,3 moderate,14 high,1 critical). No dependencies were changed. Clean full
-pipeline gate run before PR. No fixture test is represented as a live quality win.
+pipeline gate:2,144 passed,3 skipped,48 subtests (81.20s). The visible-heading
+instruction alignment additionally passed24 focused tests. No fixture test is
+represented as a live quality win.
