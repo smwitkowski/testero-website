@@ -1,8 +1,0 @@
-{
-  "chunk_chars": 2200,
-  "overlap": 350,
-  "top_k": 3,
-  "query_mode": "products",
-  "neighbors": 1,
-  "sections": false
-}

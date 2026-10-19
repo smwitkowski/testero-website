@@ -29,7 +29,8 @@ The locally maintained `../hq/tools/run-domain-batch.sh` wrapper now defaults to
 PR and was patched in place, not added to either repository.
 Default decision attempts remain3. No live semantic-quality or token-per-accepted
 improvement is claimed. Retrieval evidence/history is retained under
-`calibration/retrieval-2026-10-19/`; fresh approval is required to unpark it.
+`../hq/drafts/retrieval-calibration-2026-10-19/` (outside this repository);
+fresh approval is required to unpark it.
 
 ## Pipeline efficiency (2026-10-17)
 

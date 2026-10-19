@@ -1,125 +1,22 @@
-# Documentation efficiency — 2026-10-19
+# Documentation efficiency calibration — 2026-10-19
 
-## Founder decision: passage retrieval parked
+Experiment outputs and detailed reports are archived outside this repository at:
+`../hq/drafts/retrieval-calibration-2026-10-19/` (relative to the frontend worktree).
+The archive preserves the original directory layout and file bytes, including
+`live-ab-failure/` and the 467-line `veto-analysis.md`.
 
-The local public-document cache and **content-identical** plan/verifier field
-ordering are ON by default (`--no-doc-cache` / `--no-verify-stable-prefix` opt out).
-Per-claim retrieval and its bounded escalation remain OFF; no default batch uses
-them. Full-document verification and all independent gates remain unchanged.
-See `PROCESS.md` and `tests/test_safe_prefix_defaults.py` for the exact ordering
-and field/value/schema/adapter-content equivalence tests. The earlier added
-stable-objective fields were removed rather than enabled by default.
+## Findings
 
-The remaining reports are historical calibration and failed live A/B diagnosis,
-not rollout authorization or measured3–5× savings. Only explicit experimental
-`--verify-retrieval` can invoke the parked retrieval/escalation path.
+- Only local document caching and content-identical plan/verifier field ordering
+  are enabled by default. Passage retrieval and escalation remain off; decision
+  attempts remain three. Full-document verification and independent gates remain.
+- Historical receipt-only replay recovered 57/60 b28 and 50/52 ACE receipts with
+  a pooled estimated 64.19% prompt reduction. This was not held-out quality proof.
+- The failed live A/B retained 63 plans: 27 baseline and 36 treatment. The all-plan
+  analyst calibration recovered 67/67 supported documentation claims at a
+  180,000-character context cap. This does not establish semantic noninferiority.
+- The fresh live quality result and 3–5× fewer tokens per accepted question remain
+  unproven. Neither historical replay nor analyst calibration authorizes rollout.
 
-## Historical receipt-only configuration (superseded by live failure)
-
-Use the cheapest **measured** paired-pass point as the retrieval flag's default
-configuration, while leaving the flag **off**. Selected: **2,200-character chunks,
-350 overlap, top3 hits per query, product-enriched plan queries, one neighboring
-chunk each side, no local-section windows;130,000-character total doc cap**
-(~32.5k chars/4-estimated doc tokens, including up to8k-character frozen objective
-prefix). Source introduction/title anchors and original-span merging remain.
-Compared with the initial flag configuration: cap60k→130k, top-k all→3,
-objective queries→product-enriched queries, neighbors0→1; chunk/overlap unchanged.
-The class-level RetrievalConfig defaults remain a neutral baseline for sweeps;
-DEFAULT_CONFIG explicitly selects this measured policy for live opt-in use.
-
-Standalone replay with **no sweep memoization** confirms:
-
-| Set | Calls | Quote recall | Est. baseline prompt tokens | Est. selected prompt tokens | Est. reduction |
-|---|---:|---:|---:|---:|---:|
-| b28 |69|**57/60=95.00%**|6,354,518|2,171,591|**65.83% (2.93×)**|
-| ACE-b2 |22|**50/52=96.15%**|1,493,274|638,750|**57.22% (2.34×)**|
-| Pooled |91|107/112 (each-set gate applies)|7,847,792|2,810,341|**64.19% (2.79×)**|
-
-Pooled mean total verifier prompt size is **30,883 estimated tokens/call**. The
-130k cap bounds documentation, not the entire verifier prompt. Counts are
-reconstructed prompt characters/4 rounded up, not provider usage, cache hits,
-cost, accepted-question savings or semantic noninferiority. Tuning used both
-sets, so **neither is held-out validation**. Default attempts remain3.
-The original8–15k doc-token target remains unmet; coordinator explicitly asked
-for the lowest-cost paired-pass frontier, permitting a larger budget.
-
-## Evidence and sweep protocol
-
-`frontier.md` contains the concise configuration table and budget frontier.
-`frontier-*.jsonl` contains completed configurations only; config JSON files
-reproduce explicit waves. `frontier-notes.md` explains query/neighbor/window
-variants and the interrupted expensive800/500/all-positive grid. Some early
-exploration rows predate sweep provenance and the alias/time cache-key fix; they
-are not A/B authorization. Current `frontier-selected.jsonl` has code, sweep and
-artifact fingerprints. Authoritative `replay-b28-selected.json` and
-`replay-ace-b2-selected.json` independently rerun the live default without caching.
-The two-set selected point must match both those standalone totals exactly.
-No quote text is used for ranking, query formation or span injection.
-
-`miss-diagnosis.md` locates all10 misses in the original60k b28 replay: all pages
-were fetched and all quotes fit complete raw chunks. **Zero wrong-page acquisition
-or chunk-boundary failures**; ranking/budget allocation loses even rank4 material.
-Long scenario queries dilute product capabilities; pumps/users and tutorial
-pipeline definitions show the strongest terminology mismatch. Neighbors help
-retain table/paragraph context; overlap alone and shorter chunks did not solve
-both sets. Fixed6k local source windows were tested as an explicitly labeled
-surrogate, **not recovered HTML heading sections**. The selected config does not
-use those windows. Full semantic verification remains mandatory.
-
-PMLE SHA256: `2c50b82e9d1c10493d949a24bdb9d58d2a2955e8bc634d888aa794ca83b7699c`.
-ACE SHA256: `85d81dce77d6b4a1fe6f1575f11087d7ead99ca58bc07321c1ecfac5c50a1ab1`.
-Replay uses recorded candidate indices and rejects objective rotation drift.
-b28 has15 nonempty proofs/60 mechanically valid receipts plus54 empty vetoes;
-ACE has13 nonempty proofs/52 valid receipts plus9 empty vetoes. Empty vetoes
-supply no quote denominator. General replay scores all recorded proposed reasons,
-including invalid ones if present; neither frozen set has mechanically invalid
-nonempty proofs. Quote receipt recall is not veto or accepted-question quality.
-Initial b28 reports `replay-b28.json` (50/60 at60k) and `replay-b28-45k.json`
-(59/60 at180k) are **historical configurations**, not current A/B authorization.
-
-## Implemented switches and safety
-
-- `--doc-cache`: official-document snapshots in `.cache/documentation/`, requested
-  URL key, original timestamp/hash, **7-day TTL**, bounded **32MiB** read, atomic
-  replace. Stale/corrupt/malformed snapshots miss; disk-write failure does not
-  discard fresh fetched evidence. Existing single-flight behavior remains.
-- `--verify-retrieval`: selected config above. Selected exact-span receipts must
-  also pass original full-source URL/hash/quote checks. Immutable full sources
-  remain for writer windows and independent judges. No fabricated text, silent
-  full-context fallback, automatic approval or gate relaxation.
-- `--verify-stable-prefix`: same typed CLI/DSPy verifier signature order:
-  instructions/output contract, frozen objective docs, stable objective, candidate
-  passages, variable scope and plan. Provider-cache benefit remains unknown.
-  First successful objective preparation freezes prefix per run; A/B uses
-  parallel1 to avoid concurrent prefix-admission differences.
-- `--decision-attempts 1|2|3`: total cap default3 unchanged. No speculative cheap
-  semantic precheck. Static cap2 loses2 of b28's8 accepted candidates; adaptive
-  scheduling means those static counts are not alternate-run predictions.
-
-`veto-analysis.md` reviews97 failed attempts(PMLE54+ACE43):65 evidence-dominant,
-15 prerequisites/transitions,13 alternatives/unstated constraints,4 conflicts.
-These are analyst classifications of free text, not gold labels. All97 structured
-reasons were empty. Preserve verifier and independent review.
-
-Generation-only b28 telemetry:8,371,892 inclusive input,183,237 output,883,840
-cached input(10.56% of generation input). OpenAI cached input is a subset of input;
-Anthropic uncached/cache-read/cache-write are additive separate native fields.
-Do not mix those raw ratios, and do not treat missing usage as zero.
-
-## Current coordinator A/B
-
-The historical receipt-only commands/reports above are retained as calibration
-history, not authorization. Use the **current exact command** in
-[live-ab-failure/README.md](live-ab-failure/README.md), with a fresh cohort tag and
-`--claim-report`. Appending`--execute` is coordinator-only. Neither this worker
-nor offline fixtures established live quality or repair savings.
-
-## Verification
-
-Final clean-env pipeline suite: **2,134 passed,3 skipped,48 subtests**.
-Standalone parity and verification details are in `frontier.md`.
-Earlier full follow-up gate:2,133 passed,3 skipped,48 subtests;
-focused final config/paired-gate suite:31 passed. Root npm test(1,183),lint,
-typecheck and Docker passed on the initial PR; this follow-up changes pipeline
-Python/reports only. Existing dependency deprecation warnings remain.
-Independent bounded source review and fixes are in `frontier-review.md`.
+See `../../PROCESS.md` for current defaults and the archived README/runbooks for
+historical commands and evidence. Tests use synthetic data, not these outputs.
