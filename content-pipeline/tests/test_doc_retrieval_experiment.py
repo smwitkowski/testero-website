@@ -112,7 +112,7 @@ def test_prefix_order_in_cli_and_native_adapter_preserves_typed_policy(mode):
     selected_scope = {**scope(), "distractor_evidence": {"version": 1, "mode": mode}}
     pages = [source()]
     signature, inputs = verification_prompt(selected_scope, decision(), pages, stable_prefix=True)
-    assert list(signature.input_fields) == ["objective_documentation", "stable_objective", "fetched_documentation", "objective_scope", "proposed_plan"]
+    assert list(signature.input_fields) == ["fetched_documentation", "objective_scope", "proposed_plan"]
     assert set(signature.output_fields) == {"supported", "uniquely_best", "scenario_reasons_supported", "no_feature_gotchas", "reason", "reasons"}
     prompt = signature_prompt(signature, inputs)
     assert prompt.index("Official fetched Google Cloud") < prompt.index(json.dumps(decision(), ensure_ascii=False))
@@ -158,7 +158,7 @@ def test_generator_attempt_cap_is_explicit_bounded_and_frozen(pipeline, monkeypa
     assert len(count) == cap
     assert artifact["retrieval_experiment"]["decision_attempts"] == cap
     assert artifact["retrieval_experiment"]["per_option_retrieval"] is False
-    assert artifact["retrieval_experiment"]["disk_cache"] is False
+    assert artifact["retrieval_experiment"]["disk_cache"] is True
 
 
 def test_chunk_small_parameters_progress_and_budget_reuse():

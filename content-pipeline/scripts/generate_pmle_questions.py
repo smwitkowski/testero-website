@@ -148,9 +148,9 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--subsection", default=None, help="Optional guide subsection filter.")
 @click.option("--objective", "objective_ids", multiple=True, help="Repeatable registry objective ID; overrides weights with round-robin targets in flag order.")
 @click.option("--distractor-evidence", type=click.Choice(["strict", "consistent"]), default="strict", show_default=True, help="Freeze decision/evidence review policy for this batch.")
-@click.option("--doc-cache", is_flag=True, help="Opt in to 7-day on-disk public official-document snapshots.")
+@click.option("--doc-cache/--no-doc-cache", default=True, show_default=True, help="Reuse 7-day on-disk public official-document snapshots (IO only).")
 @click.option("--verify-retrieval", is_flag=True, help="Opt in to per-claim BM25 queries with adjacent spans and one evidence-missing full-doc escalation (cheap context at most about 45k estimated doc tokens; escalation uses full pages).")
-@click.option("--verify-stable-prefix", is_flag=True, help="Opt in to documentation-first verifier field ordering; provider cache hits must be measured.")
+@click.option("--verify-stable-prefix/--no-verify-stable-prefix", default=True, show_default=True, help="Reorder existing plan and verifier fields only; provider cache hits must be measured.")
 @click.option("--decision-attempts", type=click.IntRange(min=1, max=3), default=3, show_default=True, help="Total decision plans including initial attempt; lower caps are experimental.")
 @click.option("--argon-gate", is_flag=True, help="Freeze mandatory independent Gemini 4 Argon blind/full review requests.")
 @click.option("--existing-questions", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Local ACTIVE/DRAFT question export for near-duplicate veto; no DB access.")
@@ -170,7 +170,7 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge_model, difficulty, dry_run, artifact, exam, seed,
          parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None, existing_questions=None, argon_gate=False,
          target_accepted=None, expected_yield=0.29, distractor_evidence="strict", plan_only=False, emit_taxonomy=False,
-         doc_cache=False, verify_retrieval=False, verify_stable_prefix=False, decision_attempts=3):
+         doc_cache=True, verify_retrieval=False, verify_stable_prefix=True, decision_attempts=3):
     try:
         from shared.distractor_evidence import evidence_policy
         frozen_evidence = evidence_policy(distractor_evidence)
@@ -315,7 +315,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 with call_context(stage="plan", candidate_id=entry.get("candidate_id"), index=index,
                                   attempt=decision_attempt + 1, calls_path=str(artifact) + ".calls.jsonl"):
                     decision = plan_decision(scope, model=model, difficulty=difficulty,
-                        replacement_feedback=feedback, existing_scenarios=summaries, reasoning_effort=gen_effort)
+                        replacement_feedback=feedback, existing_scenarios=summaries, reasoning_effort=gen_effort,
+                        **({"stable_prefix": True} if verify_stable_prefix else {}))
                 attempt = {"attempt": decision_attempt + 1, "replacement_feedback": feedback,
                            "existing_scenarios": summaries, "plan": decision}
                 with write_lock:

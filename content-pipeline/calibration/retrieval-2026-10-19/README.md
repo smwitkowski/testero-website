@@ -1,27 +1,18 @@
-# Documentation retrieval experiment — 2026-10-19
+# Documentation efficiency — 2026-10-19
 
-**Draft / default-off.** This worker made no live calls or production writes.
-The coordinator's live A/B failed quality; historical quote recall was biased
-by successful full-document plans. It does not authorize rollout.
-The original3–5× tokens-per-accepted target is **not demonstrated**.
+## Founder decision: passage retrieval parked
 
-## Live-failure repair (current)
+The local public-document cache and **content-identical** plan/verifier field
+ordering are ON by default (`--no-doc-cache` / `--no-verify-stable-prefix` opt out).
+Per-claim retrieval and its bounded escalation remain OFF; no default batch uses
+them. Full-document verification and all independent gates remain unchanged.
+See `PROCESS.md` and `tests/test_safe_prefix_defaults.py` for the exact ordering
+and field/value/schema/adapter-content equivalence tests. The earlier added
+stable-objective fields were removed rather than enabled by default.
 
-See [live diagnosis and repair](live-ab-failure/README.md). Current opt-in policy:
-clause queries from every best action, constraint, distractor action and reason;
-adjacent technical-word ranking; chunk2,200/overlap350/top3/neighbors1; **180,000
-characters**, increased from130,000. Claim-to-chunk navigation is lexical, not
-proof of support. Unsupported/partial/contradicted claims remain visible.
-
-A cheap evidence-missing veto may receive **one full-document escalation per
-candidate**, never per replacement. It uses the unchanged baseline verifier
-signature and gates; cheap and final proofs plus call metadata are retained.
-All flags remain off and default attempts remain3. Original full documents
-remain available to receipt checks, writer and independent judges.
-
-The new A/B gate requires a current all-plan claim-support report, not the old
-successful-receipt reports. Analyst calibration is not held-out quality proof.
-
+The remaining reports are historical calibration and failed live A/B diagnosis,
+not rollout authorization or measured3–5× savings. Only explicit experimental
+`--verify-retrieval` can invoke the parked retrieval/escalation path.
 
 ## Historical receipt-only configuration (superseded by live failure)
 

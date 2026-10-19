@@ -1,26 +1,35 @@
 # Docs-grounded question process
 
-## Default-off retrieval experiment (2026-10-19)
+## Safe documentation efficiency defaults (2026-10-19)
 
-`--doc-cache`, `--verify-retrieval`, `--verify-stable-prefix` remain opt-in;
-`--decision-attempts` defaults to three total plans. The live A/B failed quality,
-so successful-proof quote recall no longer authorizes a comparison. Current
-clause-based policy uses2,200/350 chunks, top3, neighbors1 and a180k-character cap
-(~45k estimated doc tokens). It includes every option action/reason and constraint,
-with lexical claim-to-chunk navigation (not asserted entailment).
-One evidence-missing cheap veto per candidate may escalate to the baseline
-full-document verifier, with identical gates and explicit proof/call records.
-Full original sources remain available to writer, receipt checks and judges.
-Current all-plan analyst calibration covers63 retained attempts (27 baseline,
-36 treatment), including vetoes; all necessary supporting spans recovered for
-34/34 baseline and33/33 treatment supported documentation claims. Scenario,
-partial, contradiction and not-found rows are separate, not credited as support.
-This is not held-out semantic quality or measured new provider efficiency.
-See `calibration/retrieval-2026-10-19/live-ab-failure/README.md` for diagnosis,
-constants, token model and coordinator A/B command. Execution requires a current
-claim report, exact frozen inputs/config/code and>=95% per arm; old receipt-only
-reports cannot authorize it. All flags remain off. No rollout recommendation.
+Founder decision: **passage retrieval is parked**. Per-claim ranking and bounded
+full-document escalation stay implemented but `--verify-retrieval` remains OFF.
+No batch runner enables it. Prior all-plan recall remains calibration only.
 
+`--doc-cache` and `--verify-stable-prefix` are now ON by default. Opt out with
+`--no-doc-cache --no-verify-stable-prefix`. Cache only avoids public-document IO;
+it preserves original URL, requested URL, retrieval timestamp, full text/hash,
+7-day TTL, bounded reads and atomic writes. It does not cache verifier decisions.
+The verifier still sees full fetched pages and all existing independent gates.
+
+Stable ordering is **content-identical**, not a prompt rewrite. It moves the
+existing verifier fields to `fetched_documentation, objective_scope, proposed_plan`
+and planner fields to `objective_scope, difficulty, existing_scenarios,
+replacement_feedback`. Field names, types, descriptions, instructions, output
+schema and every input value stay identical. Earlier experimental extra
+`stable_objective` and `objective_documentation` fields were removed; no objective
+text is added or lost. Restoring input order produces byte-identical JSON/Chat
+adapter messages and CLI prompt text (see `test_safe_prefix_defaults.py`).
+Planner scope already contains presentation hints, so this is a cache opportunity,
+not a promised stable prefix length or measured provider cache hit improvement.
+
+The coordinator runner explicitly passes cache/prefix flags and never retrieval.
+The locally maintained `../hq/tools/run-domain-batch.sh` wrapper now defaults to
+`frontend.prime-testero-retrieval-1019`; this untracked HQ script is outside this
+PR and was patched in place, not added to either repository.
+Default decision attempts remain3. No live semantic-quality or token-per-accepted
+improvement is claimed. Retrieval evidence/history is retained under
+`calibration/retrieval-2026-10-19/`; fresh approval is required to unpark it.
 
 ## Pipeline efficiency (2026-10-17)
 

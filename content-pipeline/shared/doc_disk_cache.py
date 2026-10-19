@@ -1,4 +1,4 @@
-"""Opt-in disk snapshots of public official docs; no stale-on-error fallback."""
+"""Local IO-only snapshots of public official docs; no stale-on-error fallback."""
 from __future__ import annotations
 
 import hashlib
