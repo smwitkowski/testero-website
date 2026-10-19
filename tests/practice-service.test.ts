@@ -232,6 +232,15 @@ describe("paid practice uses fresh access, never charges the free counter", () =
     expect(selected.some(question => question.parent_question_id !== null)).toBe(true);
     expect(new Set(selected.map(question => question.parent_question_id ?? question.id)).size).toBe(5);
   });
+  it("fails closed when a variant itself has a variant in the paid pool", async () => {
+    vi.mocked(getPaidAccess).mockResolvedValue(paid);
+    const root = bank()[0];
+    const parent = { ...root, id: "nested-parent", parent_question_id: root.id };
+    const nested = { ...root, id: "nested-child", parent_question_id: parent.id };
+    const database = db({ bank: [...bank(), parent, nested] });
+    await expect(createPractice(database.client, userId, domain, now)).rejects.toMatchObject({ status: 503 });
+    expect(database.rpc).not.toHaveBeenCalled();
+  });
   it("fails closed without charging quota when paid inventory has too few distinct families", async () => {
     vi.mocked(getPaidAccess).mockResolvedValue(paid);
     const database = db({ bank: bank().map(question => ({ ...question, parent_question_id: "one-parent" })) });

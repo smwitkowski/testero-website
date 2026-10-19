@@ -53,7 +53,11 @@ export async function createPractice(client: SupabaseClient, userId: string, dom
   if (!paidAccess.hasPaidAccess) query = query.is("parent_question_id", null);
   const { data, error } = await query;
   if (error || !Array.isArray(data)) throw unavailable();
-  const valid = (data as unknown as Question[]).filter(question => question.exam_domains?.code === domainCode && typeof question.stem === "string" && question.stem.trim() && hasValidAnswers(question.answers));
+  const bank = data as unknown as Question[];
+  const byId = new Map(bank.map(question => [question.id, question]));
+  // A family has an original parent. Never mix levels of a malformed nested family.
+  if (bank.some(question => question.parent_question_id && byId.get(question.parent_question_id)?.parent_question_id)) throw unavailable();
+  const valid = bank.filter(question => question.exam_domains?.code === domainCode && typeof question.stem === "string" && question.stem.trim() && hasValidAnswers(question.answers));
   const families = new Set<string>();
   const questions = shuffleArray(valid).filter(question => {
     if (!paidAccess.hasPaidAccess && question.parent_question_id !== null) return false;
