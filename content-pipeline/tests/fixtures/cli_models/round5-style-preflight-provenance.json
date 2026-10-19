@@ -1,0 +1,18 @@
+{
+  "capture_kind": "Actual frozen request from coordinator saved Round5 run; not a model response",
+  "candidate_id": "8e054d09-7f62-5f19-aea4-48065fd94e15",
+  "source_request": ".cache/variants/repair-r5-live.judge-requests/8e054d09-7f62-5f19-aea4-48065fd94e15.json",
+  "request_sha256": "19338bb946f4b24396a62d6dbeb96bd3fba6a15a05dedf8468d40ea1281225eb",
+  "failure_receipt": {
+    "candidate_id": "8e054d09-7f62-5f19-aea4-48065fd94e15",
+    "error_class": "CLISchemaError",
+    "message": "claude.style: Claude CLI structured output does not match the current schema",
+    "sub_call": "claude.style",
+    "request_sha256": "19338bb946f4b24396a62d6dbeb96bd3fba6a15a05dedf8468d40ea1281225eb",
+    "judge_model": "claude",
+    "ts": "2026-10-19T20:31:09.675207+00:00"
+  },
+  "diagnosis": "Policy5 style and evidence schemas rejected by transport allowlist before Claude launch. No raw output exists for these attempts.",
+  "real_response_replay": "judge-exported-output.json is an existing unmodified historical real Claude envelope. It must still fail current policy5 output validation because required checks are missing.",
+  "positive_policy5_outputs": "Explicitly synthetic schema-shaped transport doubles; no live capture claimed."
+}
