@@ -236,6 +236,17 @@ describe("ownership-first answer RPC", () => {
   ].map((rpcData) => ({ rpcData })))("rejects malformed RPC progress %#", async ({ rpcData }) => {
     await expect(answerDiagnostic(database({ rpcData }).client, sessionId, credentials, itemId, "A", now)).rejects.toMatchObject({ status: 503 });
   });
+  it("reveals right/wrong and the correct label for the answered item only, without explanations", async () => {
+    const rows = items().map((item, index) => index === 0 ? { ...item, answered_at: "done", is_correct: false, selected_label: "B" } : item);
+    const answer = await answerDiagnostic(database({ items: rows, rpcData: { answeredCount: 1, totalQuestions: 20, completed: false } }).client, sessionId, credentials, itemId, "B", now);
+    expect(answer.feedback).toEqual({ itemId, selectedLabel: "B", correctLabel: "A", isCorrect: false });
+    expect(JSON.stringify(answer.progress)).not.toMatch(/correct|explanation/i);
+    expect(JSON.stringify(answer)).not.toMatch(/explanation|secret/);
+  });
+  it("fails closed when the answered item has no usable answer key", async () => {
+    const rows = items().map((item, index) => index === 0 ? { ...item, answered_at: "done", is_correct: true, correct_label: "Z" } : item);
+    await expect(answerDiagnostic(database({ items: rows, rpcData: { answeredCount: 1, totalQuestions: 20, completed: false } }).client, sessionId, credentials, itemId, "A", now)).rejects.toMatchObject({ status: 503 });
+  });
   it("accepts a consistent completion response", async () => {
     expect(await answerDiagnostic(database({ rpcData: { answeredCount: 20, totalQuestions: 20, completed: true } }).client, sessionId, credentials, itemId, "A", now))
       .toMatchObject({ answeredCount: 20, totalQuestions: 20, completed: true, progress: { answeredCount: 20, currentQuestion: null } });

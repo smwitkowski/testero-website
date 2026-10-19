@@ -130,9 +130,11 @@ test("ui-audit-p2 diagnostic history saving report and results", async ({ page }
     await page.route(`**${api}/answer`, async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }); }, { times: 1 });
     const action = page.locator("[data-diagnostic-actions]").getByRole("button").last();
     const nextWidth = (await action.boundingBox())!.width;
-    await page.getByRole("button", { name: "Next question", exact: true }).click();
+    await page.getByRole("button", { name: "Check answer", exact: true }).click();
     expect((await action.boundingBox())!.width).toBe(nextWidth);
     await expect.poll(() => held).toBe(true); await shot(page, "diagnostic-saving-fixture", width); release();
+    await expect(page.getByRole("status")).toContainText("the correct answer is"); await shot(page, "diagnostic-reveal", width);
+    await page.getByRole("button", { name: "Next question", exact: true }).click();
     await expect(page.getByText("Question 2 of 10", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Previous", exact: true }).click();
     expect((await action.boundingBox())!.width).toBe(nextWidth); await shot(page, "diagnostic-history", width);

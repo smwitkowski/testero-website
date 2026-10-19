@@ -22,7 +22,7 @@ describe("private analytics event wiring", () => {
     analytics.initializeAnalytics(); analytics.trackSignupCompleted(); analytics.trackPractice("session");
     analytics.trackDiagnostic("diagnostic_started", "session");
     analytics.identifyAnalytics("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"); analytics.resetAnalytics();
-    analytics.trackDiagnosticAnswer("session", 1, "D1");
+    analytics.trackDiagnosticAnswer("session", 1, "D1", true);
     expect(analytics.analyticsHeaders()).toEqual({});
     expect(sdk.identify).not.toHaveBeenCalled(); expect(sdk.reset).not.toHaveBeenCalled();
     expect(sdk.init).not.toHaveBeenCalled(); expect(sdk.capture).not.toHaveBeenCalled();
@@ -95,9 +95,9 @@ describe("private analytics event wiring", () => {
   });
   it("captures exactly the allowed answer metadata", async () => {
     const analytics = await import("@/lib/analytics/client");
-    analytics.initializeAnalytics(); analytics.trackDiagnosticAnswer("session", 3, "D2");
+    analytics.initializeAnalytics(); analytics.trackDiagnosticAnswer("session", 3, "D2", false);
     expect(sdk.capture.mock.calls).toEqual([["diagnostic_question_answered", {
-      session_id: "session", ordinal: 3, domain_code: "D2",
+      session_id: "session", ordinal: 3, domain_code: "D2", is_correct: false,
     }]]);
   });
 

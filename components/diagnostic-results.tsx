@@ -42,7 +42,7 @@ export function DiagnosticResults({ sessionId, aboveFoldCta, emailCard }: { sess
         <CardFooter className="flex flex-col items-start gap-3"><Button asChild><Link href={practiceHref}>Start practice</Link></Button>{!data.review && <p className="text-sm text-muted-foreground">Create a free account to continue.</p>}{data.review ? <SignedInDiagnosticUnlock result={data} compact /> : <DiagnosticPassOption result={data} />}</CardFooter>
       </Card>}
     </div>
-    {data.totalQuestions < 20 && <p className="text-sm leading-relaxed text-muted-foreground">Based on {data.totalQuestions} questions. For a broader signal, <Link href="/diagnostic" className="text-primary underline">take the 20-question diagnostic →</Link></p>}
+    {data.totalQuestions < 20 && <p className="text-sm leading-relaxed text-muted-foreground">Based on {data.totalQuestions} questions. For a broader signal, <Link href="/diagnostic?length=20" className="text-primary underline">take the 20-question diagnostic →</Link></p>}
     {aboveFoldCta}
     <section aria-labelledby="domains-heading" className="space-y-5 rounded-lg border border-border bg-card p-5 sm:p-7">
       <h2 id="domains-heading" className="text-xl font-semibold">Score by domain</h2>

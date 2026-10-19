@@ -4,7 +4,7 @@ import type { DiagnosticProgress } from "../lib/diagnostic/types";
 for (const count of [5, 10]) {
   test(`${count}-question diagnostic preserves ownership, completion and full-length follow-up`, async ({ page, browser }) => {
     await page.goto("/diagnostic");
-    await expect(page.getByRole("radio", { name: "Full readiness (20)" })).toBeChecked();
+    await expect(page.getByRole("radio", { name: "Quick check (5)" })).toBeChecked();
     await page.getByRole("radio", { name: count === 5 ? "Quick check (5)" : "Short (10)" }).check();
     const response = page.waitForResponse(response => response.url().endsWith("/api/diagnostic") && response.request().method() === "POST");
     await page.getByRole("button", { name: "Begin diagnostic" }).click();
