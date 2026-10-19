@@ -38,7 +38,7 @@ export function DiagnosticResults({ sessionId, aboveFoldCta, emailCard }: { sess
       <ScoreReport score={data.score} correctAnswers={data.correctAnswers} totalQuestions={data.totalQuestions} />
       {weakest && <Card aria-labelledby="next-step" className="flex flex-col">
         <CardHeader><p className="text-sm font-medium text-muted-foreground">Recommended next step</p><CardTitle id="next-step">{weakest.domainName}</CardTitle></CardHeader>
-        <CardContent className="flex-1"><p className="text-sm leading-relaxed text-muted-foreground">{data.review ? "Choose this domain on your dashboard for a focused 5-question session." : "Create a free account to review your answers, save this report and start 5 free practice questions a week."}</p></CardContent>
+        <CardContent className="flex-1"><p className="text-sm leading-relaxed text-muted-foreground">{data.review ? "Choose this domain on your dashboard for a focused 5-question session." : "Create a free account to review your answers, save this report and get 60 free practice questions per month."}</p></CardContent>
         <CardFooter className="flex flex-col items-start gap-3"><Button asChild><Link href={practiceHref}>Start practice</Link></Button>{!data.review && <p className="text-sm text-muted-foreground">Create a free account to continue.</p>}{data.review ? <SignedInDiagnosticUnlock result={data} compact /> : <DiagnosticPassOption result={data} />}</CardFooter>
       </Card>}
     </div>

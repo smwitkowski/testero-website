@@ -9,22 +9,17 @@ import { trackPractice } from "@/lib/analytics/client";
 import { Button } from "@/components/ui/button";
 import { practiceRequest, practiceError, type PracticeRequestError } from "@/components/practice-resource";
 
-/** The free allowance resets 7 days after the UTC week start (Monday 00:00 UTC). */
-export function quotaResetDate(weekStart?: string): string | null {
-  const start = weekStart && /^\d{4}-\d{2}-\d{2}$/.test(weekStart) ? Date.parse(`${weekStart}T00:00:00Z`) : NaN;
-  if (!Number.isFinite(start)) return null;
-  return new Date(start + 7 * 86_400_000).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
+/** The free allowance resets at 00:00 UTC on the first of the next month. */
+export function quotaResetDate(monthStart?: string): string | null {
+  if (!monthStart || !/^\d{4}-\d{2}-01$/.test(monthStart)) return null;
+  const start = new Date(`${monthStart}T00:00:00Z`);
+  if (!Number.isFinite(start.getTime())) return null;
+  return new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1)).toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
 }
 
-export function PracticeStart({ domains, weakestDomains, remaining, hasPaidAccess = false, requestedDomain, quotaWeekStart }: Pick<DashboardData, "domains" | "weakestDomains"> & { remaining: number; hasPaidAccess?: boolean; requestedDomain?: string; quotaWeekStart?: string }) {
-  const resetsOn = quotaResetDate(quotaWeekStart);
-  const [exhausted, setExhausted] = useState(false);
-  const resetLabel = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    if (!quotaWeekStart || !/^\d{4}-\d{2}-\d{2}$/.test(quotaWeekStart)) return;
-    const reset = Date.parse(`${quotaWeekStart}T00:00:00Z`) + 7 * 86_400_000;
-    if (Number.isFinite(reset) && resetLabel.current) resetLabel.current.textContent = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(reset);
-  }, [quotaWeekStart, remaining, exhausted]);
+export function PracticeStart({ domains, weakestDomains, remaining, hasPaidAccess = false, requestedDomain, quotaMonthStart }: Pick<DashboardData, "domains" | "weakestDomains"> & { remaining: number; hasPaidAccess?: boolean; requestedDomain?: string; quotaMonthStart?: string }) {
+  const resetsOn = quotaResetDate(quotaMonthStart);
+  const [quotaChanged, setQuotaChanged] = useState(false);
   const router = useRouter();
   const [domainCode, setDomainCode] = useState(domains.find(domain => domain.domainCode === requestedDomain)?.domainCode ?? domains.find(domain => domain.domainCode === weakestDomains[0]?.domainCode)?.domainCode ?? domains[0]?.domainCode ?? "");
   const [pending, setPending] = useState(false);
@@ -35,7 +30,7 @@ export function PracticeStart({ domains, weakestDomains, remaining, hasPaidAcces
 
   async function start(code: string) {
     const signal = controller.current?.signal;
-    if (!code || submitting.current || !signal || error || exhausted || (!hasPaidAccess && remaining < 5)) return;
+    if (!code || submitting.current || !signal || error || quotaChanged || (!hasPaidAccess && remaining < 1)) return;
     submitting.current = true;
     setPending(true);
     try {
@@ -43,12 +38,12 @@ export function PracticeStart({ domains, weakestDomains, remaining, hasPaidAcces
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ domainCode: code }), signal,
       });
       if (signal.aborted) return;
-      trackPractice(result.sessionId);
+      trackPractice(result.sessionId, hasPaidAccess ? null : remaining);
       router.push(`/practice/${encodeURIComponent(result.sessionId)}`);
     } catch (reason) {
       if (signal.aborted) return;
       const failure = practiceError(reason);
-      if (failure.status === 429 && !hasPaidAccess) setExhausted(true);
+      if (failure.status === 429 && !hasPaidAccess) setQuotaChanged(true);
       else setError(failure);
       submitting.current = false;
       setPending(false);
@@ -58,10 +53,10 @@ export function PracticeStart({ domains, weakestDomains, remaining, hasPaidAcces
 
   return <section aria-labelledby="practice-start-heading" className="space-y-5 rounded-lg border border-border bg-card p-5 sm:p-7">
     <h2 id="practice-start-heading" className="text-xl font-semibold">Targeted practice</h2>
-    <p className="leading-relaxed text-muted-foreground">{hasPaidAccess ? "Your paid access includes unlimited practice sessions. Each session has 5 questions and focuses on one domain." : "Free accounts get 5 practice questions each week. Each session focuses on one domain."}</p>
-    {!hasPaidAccess && !exhausted && remaining >= 5 && <p className="text-sm text-muted-foreground">{remaining} free practice questions remaining this week</p>}
-    {exhausted || (!hasPaidAccess && remaining < 5) ? <div className="space-y-3">
-      <p role="status">You have used your 5 free practice questions for this week. {resetsOn ? <>Your free allowance resets on <span ref={resetLabel} title={`${resetsOn} at 00:00 UTC`}>{`${resetsOn} at 00:00 UTC`}</span>.</> : "Your free allowance resets next week."}</p>
+    <p className="leading-relaxed text-muted-foreground">{hasPaidAccess ? "Your paid access includes unlimited practice sessions. Each session has 5 questions and focuses on one domain." : "Free accounts get 60 practice questions each calendar month. Sessions use up to 5 questions, capped at your remaining allowance, and focus on one domain. Questions count when you start, even if you do not finish."}</p>
+    {!hasPaidAccess && !quotaChanged && <p role="status" className="text-sm text-muted-foreground">{remaining} of 60 free practice questions left this month · resets {resetsOn ? `${resetsOn} at 00:00 UTC` : "on the 1st at 00:00 UTC"}</p>}
+    {quotaChanged ? <div className="space-y-3"><p role="status">Your free allowance changed. Reload to see how many questions remain and start a session that fits.</p><Button onClick={() => window.location.reload()}>Reload allowance</Button></div> : !hasPaidAccess && remaining < 1 ? <div className="space-y-3">
+      <p>You have used your free practice allowance for this month.</p>
       <Button asChild><Link href="/pricing">Upgrade to PMLE Pass</Link></Button>
     </div> : error ? <div className="space-y-3">
       <p role="alert" className="text-destructive">{error.message} Reload your dashboard before starting another session.</p>

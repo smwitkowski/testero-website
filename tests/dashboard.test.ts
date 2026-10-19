@@ -40,11 +40,11 @@ function db(options: Options = {}) {
 describe("owned dashboard aggregates", () => {
   it("supports an empty account without reading question rows", async () => {
     const database = db(); const result = await loadDashboard(database.client, userId, now);
-    expect(result).toEqual({ diagnostic: null, weakestDomains: [], domains: PMLE_BLUEPRINT.map(domain => ({ domainCode: domain.domainCode, domainName: domain.displayName })), openPractice: null, paidAccess: freeAccess, quota: { remaining: 5, weekStart: "2026-09-28" } });
+    expect(result).toEqual({ diagnostic: null, weakestDomains: [], domains: PMLE_BLUEPRINT.map(domain => ({ domainCode: domain.domainCode, domainName: domain.displayName })), openPractice: null, paidAccess: freeAccess, quota: { remaining: 60, monthStart: "2026-10-01" } });
     expect(database.from.mock.calls.map(([table]) => table)).not.toContain("session_items");
   });
   it("queries only the verified user's latest completed diagnostic and valid open practice", async () => {
-    const database = db({ latest: { id: sessionId, question_count: 6 }, pending: { id: "practice-id", domain_codes: [PMLE_BLUEPRINT[0].domainCode] }, used: 5 });
+    const database = db({ latest: { id: sessionId, question_count: 6 }, pending: { id: "practice-id", domain_codes: [PMLE_BLUEPRINT[0].domainCode] }, used: 60 });
     const result = await loadDashboard(database.client, userId, now);
     expect(result.diagnostic).toMatchObject({ sessionId, score: 67, correctAnswers: 4, totalQuestions: 6 });
     expect(result.weakestDomains.map(domain => domain.domainCode)).toEqual(["C", "B"]); // Ties keep scoring order: exam-guide order, unknown codes as stored.
@@ -82,7 +82,7 @@ describe("dashboard access and real quota", () => {
   it("reads access fresh and retains actual consumed free quota for paid accounts", async () => {
     const paid = { ...freeAccess, hasPaidAccess: true };
     vi.mocked(getPaidAccess).mockResolvedValueOnce(paid).mockResolvedValueOnce({ ...freeAccess, unavailable: true });
-    const database = db({ used: 5 });
+    const database = db({ used: 60 });
     const first = await loadDashboard(database.client, userId, now);
     expect(first.paidAccess).toEqual(paid); expect(first.quota.remaining).toBe(0);
     const next = await loadDashboard(database.client, userId, now);

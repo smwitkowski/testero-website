@@ -21,7 +21,7 @@ it("preserves paid signup intent without hiding free-account benefits", () => {
   expect(html).toContain("$39 one-time · 90 days");
   expect(html).toContain("confirm your email → checkout");
   expect(html).toContain("No payment is taken when you create an account.");
-  expect(html).toContain("5 free practice questions a week");
+  expect(html).toContain("60 free practice questions per month");
   const free = renderToStaticMarkup(createElement(AuthScreen, { mode: "signup", next: "/dashboard", confirmationFailed: false }));
   expect(free).not.toContain("$39");
 });

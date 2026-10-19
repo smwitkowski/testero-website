@@ -78,7 +78,7 @@ shows processing; it does not grant access from a redirect alone.
   in founder-operated test mode. Success says processing until the webhook grant
   exists. Then account shows **Access until <date>**, 90 × 24 hours from payment.
 - Confirm explanations and unlimited five-question practice sessions. Free users
-  retain five questions per week and explanation-free review. Anonymous diagnostic
+  retain 60 questions per UTC calendar month and explanation-free review; practice tracking is paid. Anonymous diagnostic
   results remain aggregate-only. No correctness appears during a diagnostic.
 - Replay completion: exactly one pass row, no expiry extension. Concurrent grant
   and refund, refund-first, and refund-after-grant all remain revoked on replay.

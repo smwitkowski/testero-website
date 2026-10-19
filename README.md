@@ -2,8 +2,8 @@
 
 Independent PMLE readiness and practice. Not affiliated with Google.
 Start with a free, anonymous 20-question diagnostic. A confirmed account saves
-results and includes 5 practice questions per week (Monday 00:00 UTC reset).
-PMLE Pass is $39 USD once for 90 days: explanations and unlimited 5-question
+results and includes 60 practice questions per calendar month (1st at 00:00 UTC reset).
+PMLE Pass is $39 USD once for 90 days: explanations, progress tracking and unlimited 5-question
 sessions, no auto-renew, 7-day refund window. A refund ends paid access.
 
 ## Run locally

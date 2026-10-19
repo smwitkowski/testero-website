@@ -14,5 +14,8 @@ export interface PracticeAnswerResponse {
     optionExplanations?: { label: string; text: string; explanation: string }[];
   };
 }
-export interface PracticeSummary extends DiagnosticResult { review: PaidQuestionReview[] }
+export type PracticeSummary = { review: PaidQuestionReview[] } & (
+  | (DiagnosticResult & { hasPaidTracking: true })
+  | { sessionId: string; totalQuestions: number; hasPaidTracking: false }
+);
 export interface PracticeStartResponse { sessionId: string; href: string }

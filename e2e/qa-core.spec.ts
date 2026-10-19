@@ -6,6 +6,7 @@ import type { PracticeAnswerResponse } from "../lib/practice/types";
 // Reuse the established full confirmation/claim/quota and signed fake-Stripe flows.
 if (process.env.TESTERO_QA === "1") {
   await import("./ui-audit-p2-summary.spec");
+  await import("./free-tier-monthly.spec");
   await import("./accounts-practice.spec");
   await import("./billing.spec");
   await import("./ui-audit-p1.spec");

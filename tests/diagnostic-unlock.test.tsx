@@ -11,7 +11,7 @@ it("offers account creation anonymously and the existing checkout button for a v
   const anonymous = renderToStaticMarkup(createElement(DiagnosticUnlockCard, { result }));
   expect(anonymous).toContain('href="/signup?next=%2Fpricing"');
   expect(anonymous).toContain("Unlock PMLE Pass: $39");
-  expect(anonymous).toContain("Explanations for every question + unlimited practice");
+  expect(anonymous).toContain("Explanations for every question + progress tracking + unlimited practice");
   expect(anonymous).toContain("no auto-renew");
   mocks.resource.mockReturnValue({ data: { signedIn: true, owned: false }, error: null });
   const signedIn = renderToStaticMarkup(createElement(SignedInDiagnosticUnlock, { result }));
