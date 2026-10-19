@@ -92,3 +92,30 @@ it("fails closed on malformed multipart payload without contacting the provider"
  await expect(sendResultsEmail(client, "a@example.com", result as never)).rejects.toThrow("We couldn't send your email");
  expect(fetch).not.toHaveBeenCalled();
 });
+
+it.each([resultsEmailText, resultsEmailHtml])("omits quick-check domain scores and weak-domain advice from email", render => {
+ const quick = { ...result, correctAnswers: 2, totalQuestions: 5, score: 40, readiness: getExamReadinessTier(40), domainBreakdown: [{ ...result.domainBreakdown[0], domainName: "Weakest sampled sentinel", total: 1, correct: 0, percentage: 0 }] };
+ const body = render(quick as never);
+ expect(body).toContain("2/5 correct (40%)");
+ expect(body).toContain("Study guidance: Building");
+ expect(body).not.toContain("Scores by domain");
+ expect(body).not.toContain("Weakest sampled");
+ expect(body).not.toContain("sampled error rate");
+ expect(body).toContain("https://testero.ai/diagnostic?length=20");
+ expect(body).toContain("per-domain breakdown");
+ expect(body).toContain("official section weight");
+});
+it.each([10, 20])("retains domain scores and weak-domain advice in %s-question emails", totalQuestions => {
+ for (const render of [resultsEmailText, resultsEmailHtml]) {
+  const body = render({ ...result, totalQuestions } as never);
+  expect(body).toContain("Scores by domain");
+  expect(body).toContain("Weakest sampled domains");
+  expect(body).toContain("Monitoring AI solutions");
+  expect(body).toContain("33%");
+ }
+});
+it("does not bias the quick-check study plan toward a one-question domain score", () => {
+ const quick = { ...result, totalQuestions: 5 };
+ const make = (correct: number) => resultsEmailPlan({ ...quick, domainBreakdown: [{ ...result.domainBreakdown[0], correct, total: 1, percentage: correct * 100 }] } as never, Date.parse("2026-10-17T12:00:00Z"));
+ expect(make(0)).toEqual(make(1));
+});
