@@ -1,5 +1,7 @@
 import type { DiagnosticProgress, DiagnosticResult, PaidQuestionReview } from "@/lib/diagnostic/types";
-export type PracticeProgress = Omit<DiagnosticProgress, "answeredQuestions">;
+export type PracticeProgress = Omit<DiagnosticProgress, "answeredQuestions" | "currentQuestion"> & {
+  currentQuestion: (NonNullable<DiagnosticProgress["currentQuestion"]> & { isVariant?: boolean }) | null;
+};
 export interface PracticeAnswerResponse {
   progress: PracticeProgress;
   answeredCount: number;
