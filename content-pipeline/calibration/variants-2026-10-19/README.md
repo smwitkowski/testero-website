@@ -469,7 +469,7 @@ new serving approval. Industry allocation and family/non-family dedupe use those
 13 rows; the family stem threshold remains strictly below0.45. Targeted candidates
 are fresh variants, not edits to the old failed or live entries.
 
-Coordinator-only live repair command (**NOT executed by this worker**):
+First-generation command only (**already run by the coordinator; do not rerun for the saved eight candidates**):
 
 ```sh
 cd /Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline && \
@@ -483,8 +483,9 @@ PYTHON_DOTENV_DISABLED=1 uv run python scripts/variants_ab.py repair --allow-liv
   --family-stem-threshold 0.45 --review-pairs 8
 ```
 
-Use a fresh basename; interrupted attempts are not automatically replayed. To
-render the same8 prompts without model calls, replace `repair --allow-live` with
+Fresh generation requires a new basename. Use the saved-run resume workflow below
+for an interrupted request export or judge batch. To render the same8 prompts
+without model calls, replace `repair --allow-live` with
 `prepare-repair` and use a fresh offline artifact. Live mode runs independent
 style/evidence/blind/Argon review for every eligible candidate (`full_gate_sample=1`),
 then reports decisions/usage and up to8 complete review pairs so both alternatives
@@ -503,3 +504,62 @@ Final required round5 gate: `cd content-pipeline && env -i PATH="$PATH" HOME="$H
 → **2517 passed, 3 skipped, 25 warnings, 48 subtests passed in 92.56s (0:01:32)**. Exact tested Python source hashes match the final tree;
 all106 protected historical inputs/approved SQL/receipt files are unchanged.
 No live model calls, production writes or merges were made.
+
+
+## Resume the saved round-5 paid generation (no regeneration)
+
+The coordinator's `repair-r5-live.json` contains eight saved candidates and nine
+paid generation calls: eight writes and one bounded length repair. All eight pass
+frozen content, ID, schema, lineage and evidence checks. Request export failed
+because the old 4,000-character quote margins produced bundles of
+152,524–154,929 characters, above the unchanged 150,000-character limit. The generic
+export error did not identify that request-size cause.
+
+Policy5 now tries 3,000/2,000/1,000-character quote margins after the existing
+attempts. It retains every cited quote, original source hash, retrieval timestamp,
+requested URL, excerpt hash and window offset. It does not shorten rubrics or drop
+gates. Historical policies3/4 retain their original request bindings. The manifest
+CLI boundary also accepts relative paths without resolving away symlink checks;
+frozen manifest provenance remains absolute.
+
+From this worktree's `content-pipeline/`, inspect and prepare the saved requests
+without model calls:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/variants_ab.py prepare-resume   --artifact .cache/variants/repair-r5-live.json
+```
+
+Coordinator-only judge resume (**not run by this worker**):
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python scripts/variants_ab.py resume --allow-live   --artifact .cache/variants/repair-r5-live.json --review-pairs 8
+```
+
+These modes use the artifact's frozen history. They do not need `--parent-dir`,
+`--live-prior-manifest` or the original generation command. They never call the
+writer or length-repair model. Recovery rechecks static/family eligibility before
+clearing request-export failure metadata. Completed verdict caches are retained;
+resume does not force archive/rejudge. Non-default request roots and inconsistent
+or partially exported states with existing verdicts require human reconciliation
+rather than automatic relocation or replay. Existing request and call-log files
+must be regular, readable files; invalid call-log text blocks preparation before
+any request is published.
+No database persistence, publication or live-row edit is part of resume.
+
+Actual saved-run proof was run on an ignored-cache **copy**, not the paid original.
+It preserves all eight candidate bodies, all generation attempts and the nine-call
+log. Deterministic generation-order replay prepares **six** candidates (indices
+1,3,4,5,6,7). It withholds indices2 and8 as later sibling duplicates under the
+unchanged0.45 family threshold (Jaccard0.5556 and0.48). The old request failures
+had prevented earlier siblings from joining the writer's comparison population.
+The six ready bundles measure139,340–141,353 characters and retain all24 A–D quote
+receipts. A second preparation changes no bytes or mtimes and creates no requests.
+These are request/eligibility checks, not live judge passes or publication approval.
+The original paid artifact/call log and all106 older protected inputs remain
+byte-identical. See `round5-resume-validation.json` for hashes and proof details.
+
+Final resume gate: `cd content-pipeline && env -i PATH="$PATH" HOME="$HOME" uv run pytest -q`
+→ **2575 passed, 3 skipped, 25 warnings, 48 subtests passed in 109.14s (0:01:49)**. All seven changed Python source hashes match the
+final tested tree. All108 protected historical/paid-generation inputs remain
+unchanged. Independent final source review is clear. Live judging remains
+coordinator-only; this worker made no live model calls or database writes.

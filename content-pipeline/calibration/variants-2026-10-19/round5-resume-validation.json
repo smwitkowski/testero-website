@@ -1,0 +1,134 @@
+{
+  "scope": "Offline saved Round5 generation recovery; no new generation or live model calls",
+  "original_artifact": "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.json",
+  "original_call_log": "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.json.calls.jsonl",
+  "original_sha256": {
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.json": "b1b0f6b802265dbaae82a752a2fc0905d04408d6f708fddaa9e94051b04b73f3",
+    "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline/.cache/variants/repair-r5-live.json.calls.jsonl": "bf14925941afae4bd7d1c4b0d4e2bbb7f1c8819222b26bd83b2e54de605c243c"
+  },
+  "saved_generation_call_stages": {
+    "variant_write": 8,
+    "variant_length_repair": 1
+  },
+  "root_cause": "All eight candidates pass frozen content, ID, lineage, schema and evidence checks; old quote excerpts exceeded the unchanged 150000-character request limit.",
+  "old_request_characters": {
+    "min": 152524,
+    "max": 154929,
+    "quote_margin": 4000
+  },
+  "new_quote_margins_policy5_only": [
+    3000,
+    2000,
+    1000
+  ],
+  "all_eight_read_only_request_sizes": [
+    140753,
+    140763,
+    139731,
+    139565,
+    139428,
+    139340,
+    141353,
+    141749
+  ],
+  "offline_copy_recovery": {
+    "blocked_count": 2,
+    "blocked_indices": [
+      2,
+      8
+    ],
+    "call_rows": 9,
+    "generation_attempts_unchanged": true,
+    "no_model_calls": true,
+    "paid_content_unchanged": true,
+    "quote_receipts_preserved": 24,
+    "ready_count": 6,
+    "ready_indices": [
+      1,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "repeat_byte_and_mtime_idempotent": true,
+    "requests_characters": [
+      140753,
+      139731,
+      139565,
+      139428,
+      139340,
+      141353
+    ],
+    "saved_candidates": 8
+  },
+  "blocked_details": [
+    {
+      "index": 2,
+      "candidate_id": "51305991-36cf-5a8b-9db5-ff0ca707c8ff",
+      "earlier_index": 1,
+      "family_stem_jaccard": 0.5555555555555556
+    },
+    {
+      "index": 8,
+      "candidate_id": "1619c261-b851-50a4-aa6d-a4eb9019ab92",
+      "earlier_index": 7,
+      "family_stem_jaccard": 0.48
+    }
+  ],
+  "eligibility_policy": "Restore original frozen-index generation ordering against bank, approved priors and earlier eligible siblings. Keep all saved content; withhold later near-duplicate siblings without new generation.",
+  "repeat_prepare_resume": "Byte and mtime identical; no new requests or calls",
+  "protected_historical_inputs_unchanged": 106,
+  "coordinator_resume_command": "PYTHON_DOTENV_DISABLED=1 uv run python scripts/variants_ab.py resume --allow-live --artifact .cache/variants/repair-r5-live.json --review-pairs 8",
+  "cwd": "/Users/switkowski/Projects/Testero/frontend.prime-testero-variants-1019/content-pipeline",
+  "live_judging": "Not run by worker; coordinator only",
+  "validation_status": "Passed final independent review, exact full suite, actual relative-manifest equality proof and final saved-copy recovery/idempotence proof. No live models or database calls by worker.",
+  "focused_validation": {
+    "resume": {
+      "passed": 43,
+      "warnings": 25,
+      "seconds": 11.31
+    },
+    "request_bounds": {
+      "passed": 12
+    },
+    "relative_manifest": {
+      "passed": 57
+    }
+  },
+  "review_fixes": [
+    "Reject non-default request roots before staging; never relocate/archive on resume.",
+    "Preflight existing call logs as readable regular UTF-8 files before export.",
+    "Reject nonregular metadata-linked requests before frozen validation reads."
+  ],
+  "tested_changed_python_sha256": {
+    "content-pipeline/scripts/export_judge_requests.py": "12468b65223943b2039029174191f0a18d92e5811ca8412afad280c314bd8f18",
+    "content-pipeline/scripts/variants_ab.py": "894992ec95f07e149b8d11778165963a58a4129fa8140c613e39e2c0a98d42b9",
+    "content-pipeline/shared/external_judge.py": "bee956360e3197042a7efa8d12a8008dd331c87b932c74f4c62825b207d8a0b7",
+    "content-pipeline/shared/variant_live_history.py": "f781f3bfadb1f94edc1638299d8411acc3582886c66efa9b401bac313ce296d5",
+    "content-pipeline/tests/test_variant_resume.py": "be13245d86b06e4991e5e739de06e8c2d950fac61233ebe2806a756e926f2c80",
+    "content-pipeline/tests/test_variant_request_bounds.py": "52ed0d207092520ab3e0ff7baafd86c52bc3a9e1a60cc4844f69e1b7796023a2",
+    "content-pipeline/tests/test_variant_live_history.py": "d486f5f423aaa51e6de1f62a15b517079a5ecccf91534e6fd1cc456896434b16"
+  },
+  "actual_relative_manifest_proof": {
+    "frozen_manifest_absolute": true,
+    "full_historical_records": 34,
+    "no_model_calls": true,
+    "relative_and_absolute_equal": true,
+    "selected_priors": 13
+  },
+  "independent_review": "Clear after final request-root, call-log preflight and regular-request guards; no remaining concrete blocker in requested scope",
+  "final_copy_proof_seconds": 23.529107250040397,
+  "full_suite": {
+    "passed": 2575,
+    "skipped": 3,
+    "warnings": 25,
+    "subtests_passed": 48,
+    "pytest_seconds": 109.14,
+    "exit_code": 0,
+    "command": "cd content-pipeline && env -i PATH=\"$PATH\" HOME=\"$HOME\" uv run pytest -q",
+    "summary": "2575 passed, 3 skipped, 25 warnings, 48 subtests passed in 109.14s (0:01:49)"
+  },
+  "protected_historical_and_paid_inputs_unchanged": 108,
+  "tested_changed_python_sources_unchanged": true
+}
