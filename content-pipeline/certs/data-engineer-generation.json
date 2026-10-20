@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "version": "pde-v1",
+  "cert_id": "data-engineer",
+  "required_topics": [
+    {
+      "id": "dataflow-streaming",
+      "label": "Dataflow streaming windows, triggers and late data",
+      "objective_ids": [
+        "data-engineer:standard:2.2:3:2"
+      ],
+      "guidance": "Test a streaming window, trigger or late-data decision in Dataflow. Keep the streaming transformation objective central."
+    },
+    {
+      "id": "storage-choice",
+      "label": "Bigtable vs Spanner vs BigQuery storage choice",
+      "objective_ids": [
+        "data-engineer:standard:3.1:2"
+      ],
+      "guidance": "Choose storage from Bigtable, Spanner and BigQuery using access patterns and managed-service tradeoffs."
+    },
+    {
+      "id": "dataplex-governance",
+      "label": "Dataplex governance",
+      "objective_ids": [
+        "data-engineer:standard:3.4:1"
+      ],
+      "guidance": "Test a Dataplex data-platform governance decision within the selected guide objective."
+    },
+    {
+      "id": "datastream-replication",
+      "label": "Datastream replication",
+      "objective_ids": [
+        "data-engineer:standard:1.4:2"
+      ],
+      "guidance": "Test Datastream replication as a migration and validation decision, not unrelated database administration."
+    },
+    {
+      "id": "sensitive-data-masking",
+      "label": "Sensitive Data Protection / masking",
+      "objective_ids": [
+        "data-engineer:standard:4.1:5"
+      ],
+      "guidance": "Test sensitive-data protection or data masking. Use the guide name Cloud Data Loss Prevention (Cloud DLP) where naming that service."
+    },
+    {
+      "id": "analytics-hub-sharing",
+      "label": "Analytics Hub sharing",
+      "objective_ids": [
+        "data-engineer:standard:4.3:4"
+      ],
+      "guidance": "Test a dataset-sharing decision using BigQuery sharing (Analytics Hub)."
+    },
+    {
+      "id": "dataproc-vs-dataflow",
+      "label": "Dataproc vs Dataflow",
+      "objective_ids": [
+        "data-engineer:standard:2.2:2"
+      ],
+      "guidance": "Choose Dataproc or Dataflow using the pipeline workload and processing model."
+    },
+    {
+      "id": "composer-orchestration",
+      "label": "Composer orchestration",
+      "objective_ids": [
+        "data-engineer:standard:5.2:1"
+      ],
+      "guidance": "Test DAG orchestration in Cloud Composer within the selected automation objective."
+    },
+    {
+      "id": "ml-embedding-prep",
+      "label": "ML / embedding data preparation",
+      "objective_ids": [
+        "data-engineer:standard:4.2:1",
+        "data-engineer:standard:4.2:2"
+      ],
+      "guidance": "Test data preparation for ML features or embeddings. Keep the selected objective central; do not introduce model-training decisions outside it."
+    }
+  ],
+  "product_share": {
+    "max_fraction": 0.4,
+    "rounding": "floor_min_one",
+    "products": [
+      {
+        "name": "BigQuery",
+        "guide_names": [
+          "BigQuery",
+          "BigQueryML"
+        ]
+      },
+      {
+        "name": "Dataflow",
+        "guide_names": [
+          "Dataflow"
+        ]
+      },
+      {
+        "name": "Dataproc",
+        "guide_names": [
+          "Dataproc"
+        ]
+      },
+      {
+        "name": "Cloud Storage",
+        "guide_names": [
+          "Cloud Storage"
+        ]
+      },
+      {
+        "name": "Bigtable",
+        "guide_names": [
+          "Bigtable"
+        ]
+      },
+      {
+        "name": "Spanner",
+        "guide_names": [
+          "Spanner"
+        ]
+      },
+      {
+        "name": "Dataplex",
+        "guide_names": [
+          "Dataplex"
+        ]
+      },
+      {
+        "name": "Datastream",
+        "guide_names": [
+          "Datastream"
+        ]
+      },
+      {
+        "name": "Cloud Composer",
+        "guide_names": [
+          "Cloud Composer"
+        ]
+      },
+      {
+        "name": "Analytics Hub",
+        "guide_names": [
+          "Analytics Hub"
+        ]
+      },
+      {
+        "name": "Cloud DLP",
+        "guide_names": [
+          "Cloud DLP",
+          "Cloud Data Loss Prevention"
+        ]
+      },
+      {
+        "name": "Cloud SQL",
+        "guide_names": [
+          "Cloud SQL"
+        ]
+      },
+      {
+        "name": "AlloyDB",
+        "guide_names": [
+          "AlloyDB"
+        ]
+      },
+      {
+        "name": "BigLake",
+        "guide_names": [
+          "BigLake"
+        ]
+      },
+      {
+        "name": "Firestore",
+        "guide_names": [
+          "Firestore"
+        ]
+      },
+      {
+        "name": "Memorystore",
+        "guide_names": [
+          "Memorystore"
+        ]
+      },
+      {
+        "name": "Pub/Sub",
+        "guide_names": [
+          "Pub/Sub"
+        ]
+      },
+      {
+        "name": "Cloud Data Fusion",
+        "guide_names": [
+          "Cloud Data Fusion"
+        ]
+      },
+      {
+        "name": "Dataform",
+        "guide_names": [
+          "Dataform"
+        ]
+      },
+      {
+        "name": "Cloud Monitoring",
+        "guide_names": [
+          "Cloud Monitoring"
+        ]
+      },
+      {
+        "name": "Cloud Logging",
+        "guide_names": [
+          "Cloud Logging"
+        ]
+      },
+      {
+        "name": "BigQuery Data Transfer Service",
+        "guide_names": [
+          "BigQuery Data Transfer Service"
+        ]
+      },
+      {
+        "name": "Database Migration Service",
+        "guide_names": [
+          "Database Migration Service"
+        ]
+      },
+      {
+        "name": "Transfer Appliance",
+        "guide_names": [
+          "Transfer Appliance"
+        ]
+      },
+      {
+        "name": "Workflows",
+        "guide_names": [
+          "Workflows"
+        ]
+      },
+      {
+        "name": "Apache Beam",
+        "guide_names": [
+          "Apache Beam"
+        ]
+      },
+      {
+        "name": "Apache Spark",
+        "guide_names": [
+          "Apache Spark"
+        ]
+      },
+      {
+        "name": "Apache Kafka",
+        "guide_names": [
+          "Apache Kafka"
+        ]
+      },
+      {
+        "name": "Hadoop",
+        "guide_names": [
+          "Hadoop"
+        ]
+      },
+      {
+        "name": "Redis",
+        "guide_names": [
+          "Redis"
+        ]
+      }
+    ]
+  },
+  "question_lines": [
+    "What should you do?",
+    "What should you do?",
+    "What should you do?",
+    "What should you do?",
+    "What should you do?",
+    "Which approach should you use?",
+    "What should you do?",
+    "What should you do?",
+    "What should you do?",
+    "What should you do?",
+    "What should you do?",
+    "What should you do?",
+    "Which service should you use?",
+    "What should you do?",
+    "What should you do?",
+    "What should you do?",
+    "What should you do?",
+    "What should you do?",
+    "How should you address this issue?",
+    "What should you do?"
+  ],
+  "stem_words": {
+    "short_every": 5,
+    "short": {
+      "min": 30,
+      "max": 50,
+      "target": 40
+    },
+    "standard": {
+      "min": 30,
+      "max": 85,
+      "target": 60
+    }
+  }
+}

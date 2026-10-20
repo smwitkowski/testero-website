@@ -177,12 +177,12 @@ def option_length_metrics(question_data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
+def validate_question(question_data: Dict[str, Any], *, style_policy=None) -> ValidationResult:
     """Validate LLM-generated question data against quality rubric.
     
     Validates:
     - Required fields present & non-empty
-    - Stem structure (40–130 words, final question mark, narrow checklist/doc phrase rejection)
+    - Stem structure (40–130 words; frozen PDE 5.2: 30–85; final question mark and narrow checklist/doc phrase rejection)
     - Semantic business context and decision style are judged independently
     - Option quality (non-empty, balanced word counts, no near duplicates or banned patterns)
     - Explanation quality (length, no URLs/citations, why-wrong reasoning)
@@ -259,8 +259,10 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
         if stem_length < 20:
             errors.append(f"Stem too short (minimum 20 characters, got {stem_length})")
             structural_score -= 0.5
-        if not 40 <= word_count <= 130:
-            errors.append(f"Stem word count ({word_count}) must be between 40 and 130 words")
+        from shared.objective_style import uses_pde_style
+        stem_min, stem_max = (30, 85) if uses_pde_style(style_policy) else (40, 130)
+        if not stem_min <= word_count <= stem_max:
+            errors.append(f"Stem word count ({word_count}) must be between {stem_min} and {stem_max} words")
             style_score -= 0.2
         style_errors = _stem_style_errors(stem)
         errors.extend(style_errors)
@@ -403,6 +405,12 @@ def validate_question(question_data: Dict[str, Any]) -> ValidationResult:
                     )
                     explanation_score -= 0.15
     
+    if style_policy is not None:
+        from shared.cert_style import check_cert_style
+        cert_check = check_cert_style(question_data, style_policy=style_policy)
+        errors.extend(error for error in cert_check["errors"] if error not in errors)
+        stem_metrics["cert_style"] = cert_check["metrics"]
+
     # Normalize scores to [0.0, 1.0]
     structural_score = max(0.0, min(1.0, structural_score))
     style_score = max(0.0, min(1.0, style_score))

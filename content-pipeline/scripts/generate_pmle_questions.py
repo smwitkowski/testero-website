@@ -12,7 +12,10 @@ import click
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from shared.cert_context import DEFAULT_CERT, plan_questions, load_cert_context
-from shared.objective_style import style_policy
+from shared.objective_style import style_policy, uses_pde_style
+from shared.cert_style import normalize_learner_prose, check_cert_style
+from shared.cert_generation_policy import generation_policy, topic_distribution, check_product_share, product_share_report, TUNING_SCOPE_FIELDS
+from shared.answer_patterns import check_answer_pattern
 from shared.batch_report import ml_practice_report
 from shared.yield_planning import existing_scenarios, ObjectiveRotation
 from shared.dedupe import normalize_stem, strip_markdown
@@ -57,6 +60,15 @@ def clean_question(raw):
     for key in RATIONALE_FIELDS:
         question[key] = strip_references(question[key])
     return question
+
+
+def product_share_row(entry):
+    """Use only the marked action, with the stem as fallback attribution context."""
+    if "correct_answer" in entry:
+        action = entry["correct_answer"]
+    else:
+        action = next(option["text"] for option in entry["options"] if option["label"] == entry["key"])
+    return {"best_action": action, "product_context": entry["stem"]}
 
 
 def database_client():
@@ -212,7 +224,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                "planned_count": n_questions, "target_accepted": target_accepted, "expected_yield": expected_yield,
                "plan": plan, "candidates": [],
                "parallel": effective_parallel, "gen_effort": gen_effort, "cite_effort": cite_effort,
-               "rules_version": 5, "style_policy_version": "5.1", "section_allocation": allocation, "decision_first": True,
+               "rules_version": 5, "style_policy_version": plan[0]["style_policy"]["version"], "section_allocation": allocation, "decision_first": True,
                "distractor_evidence": frozen_evidence,
                "documentation_context_policy": {"version": 1, "max_chars": doc_context_chars},
                "existing_questions": bank, "argon_gate": argon_gate, "execution_policy": "short_circuit_v1",
@@ -220,6 +232,11 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                                          "per_option_retrieval": verify_retrieval,
                                          "stable_prefix": verify_stable_prefix,
                                          "decision_attempts": decision_attempts}}
+    tuned = uses_pde_style(plan[0]["style_policy"])
+    if tuned:
+        payload["generation_policy"] = generation_policy(cert)
+        payload["topic_plan_report"] = topic_distribution(plan)
+        payload["product_share_report"] = product_share_report([], cert_id=cert)
     if emit_taxonomy:
         payload["taxonomy_enabled"] = True
     exam = exam or ("GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert)
@@ -281,9 +298,17 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         for index, original in enumerate(plan, 1):
             with write_lock:
                 selected, fair_share = rotation.select(original, payload["candidates"])
+                # Required-topic reservations stay bound to their reviewed objective.
+                if original.get("required_topic_id") is not None:
+                    selected = original["objective_id"]
                 scope = original
                 if selected != original["objective_id"]:
                     scope = plan_questions(cert, index, objective_ids=[selected])[-1]
+                    if tuned:
+                        from shared.cert_context import tune_generation_scope
+                        base = plan_questions(cert, index, objective_ids=[selected], generation_tuning=False)[-1]
+                        scope = tune_generation_scope(base, index - 1, coverage_scope=original["topic_coverage_scope"],
+                                                      policy=payload["generation_policy"])
                     scope["distractor_evidence"] = dict(frozen_evidence)
                     objective_rotations[index] = {"from": original["objective_id"], "to": selected,
                                                   "fair_share": fair_share}
@@ -300,6 +325,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                  "evidence": [], "citation_attempts": [], "mechanical_check": {"passed": False, "errors": ["No fetched evidence"]},
                  "judge_verdict": {"passed": False, "score": 0.0, "reason": "Not judged", "model": judge_model},
                  "accepted": False}
+        if tuned:
+            entry.update({key: scope[key] for key in TUNING_SCOPE_FIELDS})
         if index in objective_rotations:
             entry["objective_rotation"] = objective_rotations[index]
         if external:
@@ -337,6 +364,22 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     entry["near_duplicate_plan_check"] = plan_check
                     reject_candidate(entry, stage, "near_duplicate_plan")
                     return
+                if tuned:
+                    with write_lock:
+                        earlier_plans = [prior for earlier, prior in sorted(planning_history.items()) if earlier < index]
+                        written = [row for row in payload["candidates"]
+                                   if row.get("awaiting_external_judge") or row.get("accepted")
+                                   or (not external and row.get("near_duplicate_check", {}).get("passed"))]
+                        pattern = check_answer_pattern(decision, bank["questions"] + written + earlier_plans, cert_id=cert)
+                        attempt["answer_pattern_check"] = entry["answer_pattern_plan_check"] = pattern
+                        if not pattern["passed"]:
+                            reject_candidate(entry, "answer_pattern", pattern["reason"])
+                            return
+                        products = check_product_share(decision, [row["decision_plan"] for row in written] + earlier_plans, n_questions)
+                        attempt["product_share_check"] = entry["product_share_plan_check"] = products
+                        if not products["passed"]:
+                            reject_candidate(entry, "product_share", "Correct-answer product exceeds the frozen batch cap")
+                            return
                 stage = "documentation"
                 sources = search_objective_docs(scope["objective_text"], scope["services"],
                     cache=docs_cache, objective_id=scope["objective_id"], decision_plan=decision)
@@ -409,12 +452,14 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                                          doc_context_chars=doc_context_chars,
                                         **({"reasoning_effort": gen_effort} if codex else {}))
             stage = "schema"
-            question = clean_question(raw)
+            question = normalize_learner_prose(clean_question(raw), style_policy=scope["style_policy"])
+            if tuned:
+                entry["cert_style_check"] = check_cert_style(question, style_policy=scope["style_policy"])
             entry["candidate_id"] = candidate_id(index, scope, question)
             entry.update({"stem": question["stem"], "options": [
                 {"label": label, "text": question[field]} for label, field in zip("ABCD", OPTION_FIELDS)],
                 "rationales": {label: question[field] for label, field in zip("ABCD", RATIONALE_FIELDS)}})
-            validation = validate_question(question)
+            validation = validate_question(question, **({"style_policy": scope["style_policy"]} if tuned else {}))
             entry["schema_check"] = {"passed": validation.is_valid, "errors": validation.errors}
             if not validation.is_valid:
                 reject_candidate(entry, stage, "Schema validation failed: " + "; ".join(validation.errors))
@@ -454,6 +499,17 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 reject_candidate(entry, "mechanical", "Mechanical evidence check failed: " + "; ".join(checked["errors"]))
                 return
             store_options(entry, question, checked["options"])
+            if tuned and not external:
+                prior = [row for row in payload["candidates"] if row.get("near_duplicate_check", {}).get("passed")]
+                entry["answer_pattern_check"] = check_answer_pattern(entry, bank["questions"] + prior, cert_id=cert)
+                entry["product_share_check"] = check_product_share(product_share_row(question),
+                    [product_share_row(row) for row in prior], n_questions)
+                if not entry["answer_pattern_check"]["passed"]:
+                    reject_candidate(entry, "answer_pattern", entry["answer_pattern_check"]["reason"])
+                    return
+                if not entry["product_share_check"]["passed"]:
+                    reject_candidate(entry, "product_share", "Correct-answer product exceeds the frozen batch cap")
+                    return
             if not external:
                 entry["near_duplicate_check"] = check_near_duplicate(entry, bank["questions"] +
                     [comparison_row(row) for row in payload["candidates"] if row.get("near_duplicate_check", {}).get("passed")])
@@ -502,6 +558,10 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                               "decision_veto_reasons": [attempt["proof"]["reason"] for attempt in entry["decision_attempts"]
                                                         if not attempt.get("proof", {}).get("passed", True)],
                               "key_length_rank": scope["key_length_rank"]})
+            if tuned:
+                grounding.update({key: scope[key] for key in TUNING_SCOPE_FIELDS})
+                grounding["cert_style_check"] = entry["cert_style_check"]
+                grounding["answer_pattern_check"] = entry["answer_pattern_check"]
             if getattr(judge, "gate_results", None) is not None:
                 grounding["gate_verdicts"] = judge.gate_results
             entry["grounding"] = grounding
@@ -545,7 +605,19 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                             entry["near_duplicate_check"] = check_near_duplicate(entry, bank["questions"] +
                                 [comparison_row(row) for row in payload["candidates"] if row.get("near_duplicate_check", {}).get("passed")])
                             normalized = normalize_stem(entry["stem"])
-                            if not entry["near_duplicate_check"]["passed"]:
+                            pattern_ok = product_ok = True
+                            if tuned:
+                                prior = [row for row in payload["candidates"] if row.get("awaiting_external_judge")]
+                                entry["answer_pattern_check"] = check_answer_pattern(entry, bank["questions"] + prior, cert_id=cert)
+                                entry["product_share_check"] = check_product_share(product_share_row(question),
+                                    [product_share_row(row) for row in prior], n_questions)
+                                pattern_ok = entry["answer_pattern_check"]["passed"]
+                                product_ok = entry["product_share_check"]["passed"]
+                            if not pattern_ok:
+                                reject_candidate(entry, "answer_pattern", entry["answer_pattern_check"]["reason"])
+                            elif not product_ok:
+                                reject_candidate(entry, "product_share", "Correct-answer product exceeds the frozen batch cap")
+                            elif not entry["near_duplicate_check"]["passed"]:
                                 entry["duplicate"] = True
                                 reject_candidate(entry, "near_duplicate", entry["near_duplicate_check"]["reason"])
                             elif normalized in seen:
@@ -592,7 +664,19 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         payload["template_diversity_report"] = template_diversity_report(payload["candidates"])
         # Inline mode retains failed DRAFTs for review; gate that write population too.
         payload["write_key_position_report"] = key_position_report([entry for entry, *_ in pending_inline]) if pending_inline else payload["key_position_report"]
-    reports_pass = payload["key_position_report"]["passed"] and (external or
+    if tuned:
+        eligible = [row for row in payload["candidates"] if row.get("awaiting_external_judge")
+                    or row.get("judge_verdict", {}).get("passed") is True]
+        payload["product_share_report"] = product_share_report([
+            product_share_row(row) for row in eligible], cert_id=cert)
+        payload["topic_plan_report"] = topic_distribution(plan)
+        if external:
+            write_artifact(artifact, payload)
+        if not external:
+            payload["write_product_share_report"] = product_share_report([
+                product_share_row(question) for _, _, question, *_ in pending_inline], cert_id=cert)
+    reports_pass = (not tuned or (payload["product_share_report"]["passed"] is not False and
+                    (external or payload["write_product_share_report"]["passed"] is not False))) and payload["key_position_report"]["passed"] and (external or
         (payload["write_key_position_report"]["passed"] and (not payload["template_diversity_report"]["count"] or payload["template_diversity_report"]["passed"])))
     for entry, scope, question, judge, grounding in pending_inline:
         try:
@@ -631,6 +715,11 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         raise click.ClickException("Key-position batch report failed; invalid keys or a position above 40% at N>=10 blocks the batch")
     if not external and payload["template_diversity_report"]["count"] and not payload["template_diversity_report"]["passed"]:
         raise click.ClickException("Template-diversity batch report failed; generic validation keys exceed 20%")
+    if tuned:
+        click.echo("PDE topic plan (hints only): " + json.dumps(payload["topic_plan_report"]))
+        click.echo("PDE correct-answer products: " + json.dumps(payload["product_share_report"]))
+        if payload["product_share_report"]["passed"] is False or (not external and payload["write_product_share_report"]["passed"] is False):
+            raise click.ClickException("Correct-answer product-share batch report failed; no new question writes")
     if external:
         click.echo(f"Awaiting external judge {awaiting}/{n_questions}; requests: {request_directory(artifact)}; no DB writes")
         if awaiting != n_questions:

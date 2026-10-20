@@ -129,7 +129,7 @@ def _read_request(path, ident, canonical, *, with_digest=False):
                 or not re.fullmatch(r"[0-9a-f]{64}", request["decision_provenance_sha256"])
                 or not isinstance(request["gates"], dict) or set(request["gates"]) != set(GATE_SIGNATURES)):
             raise RequestValidationError("Request must contain all current independent gates")
-        for name, signature in gate_signatures(request["gate_version"], distractor_evidence=request.get("distractor_evidence"), cert_id=request["objective_id"].split(":", 1)[0]).items():
+        for name, signature in gate_signatures(request["gate_version"], distractor_evidence=request.get("distractor_evidence"), cert_id=request["objective_id"].split(":", 1)[0], style_policy=request.get("style_policy")).items():
             gate = request["gates"][name]
             if (not isinstance(gate, dict) or set(gate) != {"judge_prompt", "verdict_schema"}
                     or not isinstance(gate["judge_prompt"], str) or not gate["judge_prompt"].strip()
@@ -319,7 +319,7 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
                                       candidate_id=ident,
                                       attempt=1, calls_path=calls_path):
                         raw[name] = cli_models.run_claude_request(judge_model, gate["judge_prompt"], gate["verdict_schema"])
-                    parse_gate_output(name, raw[name], version=request["gate_version"])
+                    parse_gate_output(name, raw[name], version=request["gate_version"], style_policy=request.get("style_policy"))
                     if short and not evaluate_gate(name, raw[name], question, version=request["gate_version"],
                                                    style_policy=request.get("style_policy"))[0]:
                         failed_at = failed_at or name

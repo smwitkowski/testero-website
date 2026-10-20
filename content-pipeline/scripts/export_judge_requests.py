@@ -115,7 +115,9 @@ def _build_outputs(artifact, out, payload, *, force):
             candidate_storage_id(entry, scope, question)
             if payload["external_judge_version"] == 2:
                 validate_decision_provenance(scope, entry)
-            if not validate_question(question).is_valid:
+            from shared.objective_style import uses_pde_style
+            if not validate_question(question, **({"style_policy": scope["style_policy"]}
+                                                if uses_pde_style(scope.get("style_policy")) else {})).is_valid:
                 raise ValueError()
             checked = check_evidence(canonical_evidence(entry), entry.get("sources"))
             if not checked["passed"] or checked["options"] != canonical_evidence(entry):

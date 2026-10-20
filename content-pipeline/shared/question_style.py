@@ -277,3 +277,42 @@ def practitioner_signature(signature, cert_id=None):
     selected = signature.with_instructions(text)
     selected.__name__ = signature.__name__
     return selected
+
+
+# Aggregate authoring guidance only. No external sample or dump text is included.
+PDE_STYLE_RULES = """Rules v5.2 — Professional Data Engineer learner style:
+Keep every existing decision, knowledge-dependent distractor, option-balance,
+distinct-approach, evidence and independent solver guard. The rules below override
+only conflicting ML-specific wording and S4/S5/S6/S11 presentation defaults.
+Test a data engineering decision in a concrete business setting, with a natural
+human-subject opening. Use plain narrative with at most two wants or policies.
+Stem: aim for about 60 words. About 20% of a batch may be shorter, 30–50 words.
+The inclusive mechanical stem range is 30–85 words; never exceed 85 words.
+Options: aim for 15–22 words each, with comparable detail in distinct actions.
+Do not pad options to reach that target or restate the business goal in options.
+The existing balance and shared-prefix guards still apply; the option target is
+not a new hard per-option word limit. Use exactly four single-answer choices;
+never request choose-two or other multi-select answers.
+Use What should you do? for about 85% of a batch; other natural decision lines
+are allowed. This percentage is a batch authoring target, not an item gate.
+Use the product names in the selected current data-engineer exam guide, including
+Dataproc and Cloud Composer rather than renamed Managed Service brand aliases.
+Name the service in product-specific actions, including SQL actions. A service may
+be inferred for the product cap only from an unambiguous single-product context;
+missing or ambiguous attribution blocks the cap rather than guessing a service.
+Guide naming overrides the ML-specific Agent Platform naming instructions.
+Keep official evidence quotes and URLs byte-exact; normalize learner prose only.
+Describe observable symptoms, existing infrastructure and constraints, not the
+root-cause diagnosis or the mechanism the best action uses. Reject a stem that
+supplies that diagnosis or remediation mechanism, even if the action still sounds
+technical. Solving must require data/product knowledge to infer the cause or
+suitable action. Naming an existing product or infrastructure is not itself a
+failure. Options must not repeat the goal as a substitute for a concrete action.
+"""
+
+PDE_STYLE_INSTRUCTIONS = (
+    "Testero data engineering writing style. Aggregate guidance only; no examples.\n"
+    + PDE_STYLE_RULES
+    + "\n" + STYLE_RULES
+    + "\nThe PDE v5.2 overrides above take precedence where presentation rules conflict."
+)

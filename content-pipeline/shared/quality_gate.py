@@ -358,7 +358,7 @@ def judge_three_gates(
         inputs = build_gate_inputs(question_data, domain_context, documentation_context,
                                    option_evidence, style_reference=style_reference, style_policy=style_policy)
         raw = {}
-        for name, signature in gate_signatures(distractor_evidence=distractor_evidence, cert_id=(style_policy or {}).get("objective_id", "machine-learning-engineer:").split(":", 1)[0]).items():
+        for name, signature in gate_signatures(style_policy=style_policy, distractor_evidence=distractor_evidence, cert_id=(style_policy or {}).get("objective_id", "machine-learning-engineer:").split(":", 1)[0]).items():
             from shared.call_logging import call_context
             with call_context(stage="judge_blind" if name == "blind_solver" else "judge_" + name):
                 if predictors is not None:

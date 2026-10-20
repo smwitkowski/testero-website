@@ -70,7 +70,7 @@ def question_sha256(question):
     return canonical_sha256({name: question[name] for name in QUESTION_FIELDS})
 
 
-def eligible_repair_verdict(raw, *, gate_version=None, distractor_evidence=None):
+def eligible_repair_verdict(raw, *, gate_version=None, distractor_evidence=None, style_policy=None):
     """Require a strict FAIL with intact factual checks and a repairable defect.
 
     Raises:
@@ -84,7 +84,7 @@ def eligible_repair_verdict(raw, *, gate_version=None, distractor_evidence=None)
     if gate_version not in (None, 1, 2):
         raise ValueError("Unsupported repair gate version")
     if gate_version == 2 or (gate_version is None and isinstance(raw, dict) and set(raw) == set(GATE_SIGNATURES)):
-        eligible_gate_repair(raw)
+        eligible_gate_repair(raw, style_policy=style_policy)
         return
     try:
         parsed = parse_output(json.dumps(raw, allow_nan=False), QuestionQualitySignature)
@@ -125,7 +125,8 @@ def candidate_storage_id(entry, scope, question):
             raise ValueError("Invalid parent UUID")
     except (ValueError, AttributeError):
         raise ValueError("Invalid repair parent UUID") from None
-    eligible_repair_verdict(repair["original_verdict"], distractor_evidence=scope.get("distractor_evidence"))
+    eligible_repair_verdict(repair["original_verdict"], distractor_evidence=scope.get("distractor_evidence"),
+                            style_policy=scope.get("style_policy"))
     return expected
 
 
@@ -199,9 +200,9 @@ def _validate_candidate_records(payload):
         if "repair" not in entry:
             continue
         question, repair = candidate_question(entry), entry["repair"]
-        eligible_repair_verdict(repair.get("original_verdict"), gate_version=payload.get("external_judge_version"),
-                                distractor_evidence=entry.get("distractor_evidence"))
         scope = plan[entry["index"] - 1]
+        eligible_repair_verdict(repair.get("original_verdict"), gate_version=payload.get("external_judge_version"),
+                                distractor_evidence=entry.get("distractor_evidence"), style_policy=scope.get("style_policy"))
         candidate_storage_id(entry, scope, question)
         parent_id = repair["parent_candidate_id"]
         parent, record = by_id.get(parent_id), attempts.get(parent_id)
@@ -228,7 +229,8 @@ def _validate_candidate_records(payload):
         if (parent.get("external_verdict") is not None
                 and canonical_sha256(parent["external_verdict"]) != repair["original_verdict_sha256"]):
             raise ValueError("Stored parent verdict does not match repair snapshot")
-        eligible_repair_verdict(repair["original_verdict"], distractor_evidence=scope.get("distractor_evidence"))
+        eligible_repair_verdict(repair["original_verdict"], distractor_evidence=scope.get("distractor_evidence"),
+                                style_policy=scope.get("style_policy"))
     for group in by_index.values():
         originals = [entry for entry in group if "repair" not in entry]
         repairs = [entry for entry in group if "repair" in entry]
@@ -325,19 +327,20 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
     cited_urls = {item["url"] for item in evidence}
     cited = [source for source in sources if source["url"] in cited_urls]
     from shared.gates import gate_signatures, build_gate_inputs
-    from shared.objective_style import validate_style_policy
+    from shared.objective_style import validate_style_policy, uses_pde_style
+    from shared.cert_generation_policy import TUNING_SCOPE_FIELDS
     policy = scope.get("style_policy")
     if "style_policy" in scope:
         validate_style_policy(policy, scope["objective_id"])
         if signature is not None or gate_version != 5:
-            raise ValueError("Rules v5.1 policy requires v5 independent gates")
+            raise ValueError("Frozen style policy requires v5 independent gates")
     from shared.distractor_evidence import validate_policy
     frozen_evidence = scope.get("distractor_evidence")
     if "distractor_evidence" in scope:
         validate_policy(frozen_evidence)
         if signature is not None or gate_version != 5:
             raise ValueError("Distractor-evidence policy requires rules-v5 gates")
-    signatures = gate_signatures(gate_version, distractor_evidence=frozen_evidence, cert_id=scope.get("cert_id"))
+    signatures = gate_signatures(gate_version, distractor_evidence=frozen_evidence, cert_id=scope.get("cert_id"), style_policy=policy)
     schema = output_model(signature).model_json_schema() if signature is not None else None
     trimmed_urls = set()
     largest_first = sorted(cited, key=lambda source: len(source["text"]), reverse=True)
@@ -373,7 +376,8 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
             request = {"candidate_id": candidate_id, "objective_id": scope["objective_id"],
                        "gate_version": gate_version,
                        "decision_provenance_sha256": canonical_sha256({name: scope.get(name) for name in
-                           ("decision_objective", "decision_plan", "decision_proof", "key_length_rank")}),
+                           (("decision_objective", "decision_plan", "decision_proof", "key_length_rank")
+                            + (TUNING_SCOPE_FIELDS if uses_pde_style(policy) else ()))}),
                        "gates": {name: {"judge_prompt": signature_prompt(gate_signature, inputs[name]),
                                         "verdict_schema": output_model(gate_signature).model_json_schema()}
                                  for name, gate_signature in signatures.items()},
