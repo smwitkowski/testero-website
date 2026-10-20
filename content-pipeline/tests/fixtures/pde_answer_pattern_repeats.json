@@ -1,0 +1,1787 @@
+{
+  "description": "Exact authored comparison projections. Historical authored pilot includes rejected candidates and does not assert persistence. Export statuses alone identify saved ACTIVE/DRAFT bank rows.",
+  "sources": {
+    "data-engineer-v5-pde-b1-1020.json": "4cc17e0c226a942eb85e97c5673f7e70245312912bab034d2d097e8c84c9f4de",
+    "data-engineer-v5-pde-b1dbg-1020.json": "f8088855d5583e3e876f9b9567c0232feee337f10d763ff72c91b114c597fb00",
+    "data-engineer-v5-pde-b1r-1020.json": "4cc17e0c226a942eb85e97c5673f7e70245312912bab034d2d097e8c84c9f4de",
+    "data-engineer-v5-pde-b2-1020.json": "ab484cb4a07f31073be69ad49dc7497ca89659801718867b94c92a29695d6f4b",
+    "data-engineer-v5-pde-b3-1020.json": "3ee1aacf58e64d03a229fd189682e9558c654cae74986acefd2ef6a82747762c",
+    "data-engineer-v5-pde-b4-1020.json": "7c7e139392748c79577c8a1e6fab3db44c1a54f74f137a55a0317bcbef567f08",
+    "data-engineer-v5-pde-b5-1020.json": "8f57ee8266b38780cf22cbd6dc744524ab50e3adc3e69cc78a055db1a758b8c6",
+    "data-engineer-v5-pde2-s3-1020.json": "97f2655623f7b9bb8de3710d3e7719a9f91e37b1aca6a6b8b604029524f39c9c",
+    "data-engineer-v5-pde2-s4-1020.json": "98f762f9e90e0cef0d28659f25522bcddcef9822f645605a82f7d2a67213afa4",
+    "data-engineer-v5-pde2-s5-1020.json": "e8712996c1ae5be8e11c4352c05ebaa3cb21056808eb2292822b978e79cef1de",
+    "data-engineer-v5-pde2-s1-1020.json": "4b0a8568deaaf70b4313c2d2073b9f5c13d8f9a992914eda96e9ae8cb15b9ccd",
+    "data-engineer-v5-pde2-s3-1020.existing.json": "f0e9028583357f538e5f095b3a90dc7d5d5ec730ea27eb34066e96a43f240b3d"
+  },
+  "pilot_authored": [
+    {
+      "source": "data-engineer-v5-pde-b2-1020.json",
+      "candidate_index": 0,
+      "question": {
+        "candidate_id": "51803dd7-fe39-5231-ad88-1832a4948784",
+        "stem": "You are operating an online retailer's order-confirmation and revenue-reporting pipelines after a recent deployment. Checkout publishes orders to one Pub/Sub topic. Both pipelines pull from the same subscription and acknowledge processed messages. Confirmations notify customers, and reporting writes orders to BigQuery. Some orders now reach only one pipeline, leaving missing confirmations or incomplete revenue records. You want each pipeline to process every new order independently, even when reporting is paused, while minimizing changes to the existing publisher and topic. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Change the confirmation pipeline to poll the reporting pipeline's BigQuery table for newly recorded orders, and let reporting continue consuming the existing Pub/Sub subscription."
+          },
+          {
+            "label": "B",
+            "text": "Take periodic Pub/Sub snapshots of the shared subscription, and configure both pipelines to seek that subscription to a snapshot before reading their next batch."
+          },
+          {
+            "label": "C",
+            "text": "Create two pull subscriptions on the existing Pub/Sub topic, and configure each pipeline to consume and acknowledge messages from its own subscription."
+          },
+          {
+            "label": "D",
+            "text": "Increase the number of subscriber workers in both pipelines, and keep all workers pulling and acknowledging order messages from the existing shared Pub/Sub subscription."
+          }
+        ],
+        "key": "C",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:2.1:1",
+          "engineering_decision": "You are operating an online retailer's order-confirmation and revenue-reporting pipelines after a recent deployment. Some orders reach only one pipeline because both consume the same Pub/Sub subscription. What should you do to give both pipelines a complete, independent source of new orders?",
+          "business_consequence": "Missing events leave customers without order confirmations or cause finance to undercount revenue.",
+          "existing_system": "The checkout service publishes each order to one Pub/Sub topic. Two running pipelines pull from the same subscription and acknowledge the messages they process. The confirmation pipeline sends customer notifications; the reporting pipeline writes order records to BigQuery.",
+          "decisive_constraints": [
+            "Both pipelines need every new order and independent processing progress, including when revenue reporting is paused.",
+            "Operations wants to retain the existing publisher and topic while keeping source changes small."
+          ],
+          "best_action": "Create separate subscriptions on the existing topic, one for each pipeline.",
+          "mistakes": [
+            {
+              "action": "Keep the shared subscription and increase the number of subscriber workers in both pipelines to improve message delivery.",
+              "scenario_reason": "Subscribers sharing a subscription divide its messages. Additional workers increase processing capacity but do not give each pipeline its own copy of every order."
+            },
+            {
+              "action": "Use the reporting pipeline's BigQuery output as the confirmation pipeline's source, polling the table for newly recorded orders.",
+              "scenario_reason": "Confirmations would depend on the reporting pipeline writing each order to BigQuery. Pausing reporting would also stop confirmations, defeating independent processing."
+            },
+            {
+              "action": "Keep the shared subscription and have each pipeline seek to periodic Pub/Sub snapshots before reading its next batch.",
+              "scenario_reason": "Seeking changes the acknowledgment state of the shared subscription. Snapshots support replay, but they do not create independent consumption state for the two pipelines."
+            }
+          ]
+        },
+        "accepted": true,
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b2-1020.json",
+      "candidate_index": 2,
+      "question": {
+        "candidate_id": "929edac6-020b-51ca-8306-9fc761f4977f",
+        "stem": "You work for a payment processor whose on-premises settlement jobs upload transaction files to Cloud Storage for reconciliation. During a phased network migration, the jobs remain on-premises. An existing HA VPN connection and Cloud Router provide access to private VPC subnets, but the uploads currently use public internet egress. You want the uploads to use a private network path while minimizing application changes and additional network infrastructure. Which approach should you use?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Replace HA VPN with Dedicated Interconnect for the settlement uploads. Keep the existing public Cloud Storage DNS records and advertise only VPC subnet routes through Cloud Router, relying on the dedicated connection to provide private API access."
+          },
+          {
+            "label": "B",
+            "text": "Configure Private Google Access for on-premises hosts. Map Cloud Storage API names to private.googleapis.com in on-premises DNS, advertise its IP range through Cloud Router, and route that traffic over the existing HA VPN connection."
+          },
+          {
+            "label": "C",
+            "text": "Create a Public NAT gateway in the connected VPC. Route the settlement jobs' Cloud Storage traffic through the existing HA VPN connection and use the gateway to reach the existing public API endpoints."
+          },
+          {
+            "label": "D",
+            "text": "Enable Private Google Access on the connected VPC subnet. Keep the existing Cloud Storage DNS records and API endpoints, and rely on the current HA VPN connection for the settlement uploads."
+          }
+        ],
+        "key": "B",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:2.1:3",
+          "engineering_decision": "Choose how existing on-premises settlement uploads should reach Cloud Storage privately through the hybrid network during migration.",
+          "business_consequence": "Settlement reconciliation must continue on schedule while transaction-file transfers move to a private network path with minimal application changes.",
+          "existing_system": "You work for a payment processor whose running on-premises settlement jobs upload transaction files to Cloud Storage for reconciliation. During a phased network migration, the jobs remain on-premises. An existing HA VPN connection and Cloud Router already provide connectivity to private VPC subnets, but the uploads currently use public internet egress.",
+          "decisive_constraints": [
+            "Provide private connectivity to Cloud Storage while the settlement jobs continue running on-premises.",
+            "Reuse established hybrid connectivity and minimize application changes and additional network infrastructure."
+          ],
+          "best_action": "Configure Private Google Access for on-premises hosts. Map the Cloud Storage API names to private.googleapis.com in on-premises DNS, advertise the private Google API VIP range through Cloud Router, and route that traffic over the existing HA VPN connection.",
+          "mistakes": [
+            {
+              "action": "Enable Private Google Access on the VPC subnet connected through HA VPN, retain the existing Cloud Storage DNS configuration, and let the on-premises settlement jobs continue using their current API endpoints.",
+              "scenario_reason": "The subnet setting serves eligible resources in that subnet; it does not establish Private Google Access for on-premises hosts. The jobs still need the appropriate API DNS resolution and hybrid routes."
+            },
+            {
+              "action": "Create a Public NAT gateway with Cloud NAT in the connected VPC, route the on-premises settlement jobs' Cloud Storage traffic through HA VPN, and use the gateway for access to the existing public API endpoints.",
+              "scenario_reason": "Public NAT does not provide transit internet NAT for on-premises hosts arriving through Cloud VPN. It also does not configure the private Google API path the migration needs."
+            },
+            {
+              "action": "Replace the existing HA VPN connection with Dedicated Interconnect, preserve the current public Cloud Storage API DNS records, and advertise only the VPC subnet routes over the new connection, expecting the dedicated physical connection to make the settlement uploads private without further API networking configuration.",
+              "scenario_reason": "Dedicated Interconnect alone does not establish private access to Google API endpoints. The hosts still need appropriate API DNS and routing configuration, so replacing the working VPN adds infrastructure without resolving the missing network path."
+            }
+          ]
+        },
+        "accepted": true,
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b2-1020.json",
+      "candidate_index": 3,
+      "question": {
+        "candidate_id": "7c9b14fb-85f0-59d4-94d1-c85470585ef4",
+        "stem": "You manage a utility's pipeline that archives meter readings in Cloud Storage for billing disputes. The bucket uses a symmetric Cloud KMS customer-managed encryption key. Every 30 days, a scheduled job rotates the key and rewrites all archived objects, driving increasing processing costs. Historical readings can retain their original key versions. You want recurring rotation work to stop growing with the archive while keeping all readings accessible through customer-managed encryption. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Keep the 30-day rotation job and re-encrypt the entire archive using Storage batch operations after each rotation. Retain the bucket's default CMEK and leave historical key versions enabled for subsequent decryption."
+          },
+          {
+            "label": "B",
+            "text": "Enable automatic 30-day rotation on the existing Cloud KMS key and stop archive rewrites. Preserve the bucket's default CMEK, but disable each previous key version when its replacement becomes primary."
+          },
+          {
+            "label": "C",
+            "text": "Configure automatic 30-day rotation on the existing Cloud KMS key and remove archive rewrites. Keep the bucket's default CMEK and retain enabled historical key versions so existing readings can still be decrypted."
+          },
+          {
+            "label": "D",
+            "text": "Switch the bucket's default encryption to Google-managed encryption and remove both scheduled jobs. Keep the existing Cloud KMS key permissions to control decryption of new readings while leaving historical key versions enabled."
+          }
+        ],
+        "key": "C",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:2.1:4",
+          "engineering_decision": "You manage a utility's running pipeline that archives meter readings in Cloud Storage for billing disputes. Rewriting the growing archive after every encryption-key rotation now drives processing and storage-operation costs. What should you do to reduce these costs while maintaining the required encryption controls?",
+          "business_consequence": "Reduce recurring archive-processing costs while preserving access to historical billing evidence and customer control over encryption keys.",
+          "existing_system": "The pipeline writes objects to a Cloud Storage bucket configured with a symmetric Cloud KMS customer-managed encryption key. Every 30 days, a scheduled job creates a new primary key version and rewrites all archived objects to encrypt them with that version.",
+          "decisive_constraints": [
+            "Use newly rotated key material for new archive writes every 30 days while keeping historical readings readable under their existing key versions.",
+            "Retain customer-managed encryption and key-access control while reducing work proportional to the archive's accumulated size."
+          ],
+          "best_action": "Configure automatic rotation on the existing Cloud KMS key every 30 days and remove the archive-rewrite step. Keep the bucket's default CMEK configuration and retain the enabled key versions protecting historical objects. New writes use the primary version, while existing objects remain readable through their original versions.",
+          "mistakes": [
+            {
+              "action": "Retain the scheduled rotation and full archive rewrite, but move the rewrite workload to a larger Dataflow job that processes more objects concurrently. Continue replacing each archived object's encryption with the newest key version after every rotation, and retain the existing bucket CMEK configuration and historical key versions.",
+              "scenario_reason": "Greater parallelism may shorten completion time, but it preserves archive-wide reads, rewrites, and processing costs. The stated policy permits historical objects to retain their original key versions, so this recurring work is unnecessary."
+            },
+            {
+              "action": "Configure automatic Cloud KMS rotation, remove the archive-rewrite step, and disable each previous key version immediately after its replacement becomes primary.",
+              "scenario_reason": "Rotating a Cloud KMS key does not re-encrypt existing Cloud Storage objects. Historical objects still depend on their original key versions, and disabling those versions prevents access to the affected readings."
+            },
+            {
+              "action": "Change the bucket's default encryption to Google-managed encryption and remove the rotation and rewrite jobs, relying on the project's existing Cloud KMS key permissions to continue controlling decryption of future archive writes.",
+              "scenario_reason": "Google-managed encryption provides encryption at rest, but future objects encrypted through that configuration are not governed by the customer's Cloud KMS key. Existing CMEK permissions therefore do not preserve the required customer control over those writes."
+            }
+          ]
+        },
+        "accepted": false,
+        "failure_stage": "judge",
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b2-1020.json",
+      "candidate_index": 5,
+      "question": {
+        "candidate_id": "4ea10ec1-4d47-57a1-979e-218c3f95f81a",
+        "stem": "Your company produces daily store-sales reports for merchandising teams. A nightly Python job on a Compute Engine VM downloads transaction and product tables from BigQuery, performs joins, filters, and aggregations in memory, and uploads reporting tables to BigQuery. Store expansion has increased download times and caused memory failures, delaying reports. All transformations can be expressed in standard SQL. You want to reduce data transfers between BigQuery and external processing while minimizing worker administration as sales volume grows. Which approach should you use?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Rewrite the transformations as an Apache Beam batch pipeline on Dataflow, using the BigQuery connector to read the source tables, process their data, and write the reporting tables each night."
+          },
+          {
+            "label": "B",
+            "text": "Implement the transformations as a Spark application on a Managed Service for Apache Spark cluster, using the BigQuery connector to read source tables and write the resulting reporting tables each night."
+          },
+          {
+            "label": "C",
+            "text": "Resize the Compute Engine VM to provide more memory, and retain the Python job that downloads BigQuery tables, transforms the data in memory, and uploads the reporting tables."
+          },
+          {
+            "label": "D",
+            "text": "Replace the Python job with BigQuery scheduled SQL queries that perform the joins, filters, and aggregations on the existing source tables and write results directly to the reporting tables."
+          }
+        ],
+        "key": "D",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:2.2:2",
+          "engineering_decision": "Which processing service should run the growing daily sales-reporting transformations?",
+          "business_consequence": "Delayed reporting leaves merchandising teams making inventory and promotion decisions using the previous day's sales figures.",
+          "existing_system": "Your company produces daily store-sales reports for merchandising teams. A nightly Python job on a Compute Engine VM downloads transaction and product tables from BigQuery, performs joins, filters, and aggregations in memory, and uploads reporting tables to BigQuery. Store expansion has increased download times and caused memory failures. The transformations can be expressed in standard SQL.",
+          "decisive_constraints": [
+            "The team wants daily batch processing that accommodates growing sales volume with little worker administration.",
+            "The team wants to reduce data movement between the warehouse and external processing because all source and reporting tables already reside in BigQuery."
+          ],
+          "best_action": "Use BigQuery scheduled SQL queries to perform the joins and aggregations directly on the existing tables and write the daily reporting tables.",
+          "mistakes": [
+            {
+              "action": "Resize the Compute Engine VM and retain the Python job's nightly downloads, in-memory joins, aggregations, and uploads to BigQuery.",
+              "scenario_reason": "A larger VM can temporarily relieve memory pressure, but it preserves full-table transfers and ties processing capacity to one machine. Continued growth requires further sizing and administration."
+            },
+            {
+              "action": "Use Dataflow to replace the Python job with an Apache Beam batch pipeline that reads the BigQuery source tables, performs the transformations, and writes reporting tables.",
+              "scenario_reason": "Dataflow can distribute batch processing, but this approach requires implementing the transformations in Beam and moving warehouse data through an additional processing service. BigQuery can execute these relational transformations where the data already resides."
+            },
+            {
+              "action": "Use Managed Service for Apache Spark with a cluster deployment to implement the joins and aggregations as a distributed Spark application that reads and writes the BigQuery tables.",
+              "scenario_reason": "Spark can distribute these transformations, but the team has no Spark application to preserve. Introducing a Spark application and cluster execution adds another processing environment and transfers data out of BigQuery for operations its SQL engine already supports."
+            }
+          ]
+        },
+        "accepted": true,
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b2-1020.json",
+      "candidate_index": 7,
+      "question": {
+        "candidate_id": "64415637-0592-5fdf-9eed-f8540a7199d6",
+        "stem": "You recently deployed a monthly usage-billing batch in BigQuery for a software suite. It sums distinct member counts calculated for each tenant, application, and day, and customers using several applications on multiple days are being overbilled. Retained activity records contain tenant, member, application, session, and date information. Member identifiers represent the same person across applications within a tenant, and each member can generate multiple sessions. You want exact monthly totals that charge each active member once per tenant while keeping the existing monthly batch schedule. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Update the BigQuery batch to query retained activity for the billing month, group by tenant and billing month, and calculate COUNT(DISTINCT member_id) across all applications and days. Replace the affected monthly billing totals with these results."
+          },
+          {
+            "label": "B",
+            "text": "Adjust the BigQuery batch to query retained activity for the billing month and calculate COUNT(DISTINCT session_id) by tenant and billing month. Use these deduplicated session counts to replace the affected monthly billing totals."
+          },
+          {
+            "label": "C",
+            "text": "Revise the BigQuery batch to create daily HLL_COUNT.INIT sketches of member_id per tenant and application. Merge them by tenant and billing month using HLL_COUNT.MERGE, and replace the affected monthly billing totals with the merged sketch counts."
+          },
+          {
+            "label": "D",
+            "text": "Change the BigQuery batch to calculate COUNT(DISTINCT member_id) for each tenant and application across the billing month. Sum those application counts by tenant and billing month to replace the affected monthly billing totals."
+          }
+        ],
+        "key": "A",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:2.2:3:1",
+          "engineering_decision": "You recently deployed a monthly usage-billing batch for a software suite. Customers who use several applications on multiple days are being overbilled. What should you do to calculate the correct monthly billable-member totals?",
+          "business_consequence": "Inflated member counts produce incorrect invoices, customer disputes, and manual billing adjustments.",
+          "existing_system": "A running BigQuery batch calculates distinct members for each tenant, application, and day, then sums those counts for monthly billing. The underlying activity table retains tenant_id, member_id, application_id, session_id, and event_date. Each member_id identifies the same person across applications within a tenant, and members can generate many sessions.",
+          "decisive_constraints": [
+            "Produce exact monthly counts that charge each active member once per tenant, regardless of applications used, sessions generated, or days active.",
+            "Keep the existing monthly batch schedule and use the retained BigQuery activity records to correct the billing transformation."
+          ],
+          "best_action": "A. Query the retained activity records for the billing month in BigQuery, group by tenant and billing month, and calculate COUNT(DISTINCT member_id) across all applications and days. Replace the affected monthly billing totals with these results so each member contributes once to each tenant's monthly invoice.",
+          "mistakes": [
+            {
+              "action": "B. Recalculate COUNT(DISTINCT member_id) separately for each tenant and application across the entire billing month, then sum the application totals to produce each tenant's monthly billable-member count.",
+              "scenario_reason": "Removing the daily grouping fixes duplication across days, but members who use multiple applications still contribute to several application totals. Distinct counts cannot generally be added when their underlying member sets overlap."
+            },
+            {
+              "action": "C. Generate daily HLL_COUNT.INIT sketches of member_id for each tenant and application in BigQuery, merge the sketches by tenant and billing month with HLL_COUNT.MERGE, and replace the monthly billing totals with the resulting counts. Retain the sketches to support efficient recalculation of later monthly reports.",
+              "scenario_reason": "BigQuery's HyperLogLog++ sketches efficiently combine overlapping sets, but their distinct counts are estimates. Merging sketches addresses repeated membership across groups without providing the exact counts required for invoicing."
+            },
+            {
+              "action": "D. Query the retained activity records for the billing month, group by tenant and billing month, and calculate COUNT(DISTINCT session_id) to remove repeated activity records before replacing the monthly billing totals.",
+              "scenario_reason": "Distinct session IDs measure sessions rather than members. A member can generate multiple sessions, so deduplicating sessions still inflates the number of billable members."
+            }
+          ]
+        },
+        "accepted": false,
+        "failure_stage": "judge",
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b3-1020.json",
+      "candidate_index": 2,
+      "question": {
+        "candidate_id": "654ec3f6-a081-5a9a-a3f9-c54f36432823",
+        "stem": "You work for a logistics company migrating its shipment-cost reporting workload to a revised BigQuery storage layout. The current unpartitioned table uses logical storage billing and holds five years of shipments. Daily loads append shipments and correct records from the latest 30 days; older records remain unchanged. Contract-negotiation reports frequently filter by shipment date and include older years. You want to reduce recurring storage charges for unchanged history while keeping all five years available for interactive reporting with performance comparable to the current native table. Which approach should you use?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Partition the destination BigQuery table by shipment date, retain all five years there, and direct daily loads and corrections to the recent partitions."
+          },
+          {
+            "label": "B",
+            "text": "Cluster the destination BigQuery table by shipment date, keep it unpartitioned, and continue the existing daily loading and correction process."
+          },
+          {
+            "label": "C",
+            "text": "Move historical shipments to Cloud Storage, expose them through a BigLake external table, and combine them with recent shipments in native BigQuery storage for reports."
+          },
+          {
+            "label": "D",
+            "text": "Keep the destination BigQuery table unpartitioned, continue daily loads and corrections, and purchase BigQuery slot reservations for the shipment reporting workload."
+          }
+        ],
+        "key": "A",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:3.1:3",
+          "engineering_decision": "Choose the destination table layout during a BigQuery storage migration to reduce recurring storage costs while preserving historical analytics performance.",
+          "business_consequence": "Lower the cost of retaining five years of shipment costs without slowing the reports used to negotiate carrier contracts.",
+          "existing_system": "You work for a logistics company migrating its running shipment-cost analytics workload to a revised BigQuery storage layout. Its current unpartitioned table uses logical storage billing and contains five years of records. Daily loads append shipments and correct records from the latest 30 days. Older records remain unchanged, but daily writes keep the table from qualifying for long-term storage pricing. Reports frequently filter by shipment date and also analyze older years.",
+          "decisive_constraints": [
+            "Reduce recurring storage charges for historical records that remain unchanged for more than 90 days.",
+            "Keep all five years available for interactive BigQuery reporting with performance comparable to the current native table."
+          ],
+          "best_action": "Partition the destination table by shipment date and limit daily modifications to recent partitions. Historical partitions can qualify independently for long-term storage pricing after 90 unchanged days, while retaining native BigQuery query performance.",
+          "mistakes": [
+            {
+              "action": "Cluster the destination table by shipment date while keeping it unpartitioned, allowing reports to prune storage blocks without changing the existing daily loading and correction process.",
+              "scenario_reason": "Clustering can reduce query scanning, but it does not give historical blocks independent eligibility for long-term storage pricing. Daily writes still reset the unpartitioned table's storage age."
+            },
+            {
+              "action": "Move historical records into Parquet files in Cloud Storage Nearline and expose them through a BigLake external table, retaining recent shipments in native BigQuery storage and combining both sources for reports.",
+              "scenario_reason": "Nearline retrieval charges and external-table query performance create trade-offs for frequently queried history. Lower object storage prices alone do not establish savings while preserving the current interactive reporting performance."
+            },
+            {
+              "action": "Keep the destination table unpartitioned and purchase BigQuery slot reservations to reduce the recurring cost of storing and reporting on the five-year shipment history.",
+              "scenario_reason": "Slot reservations address query compute capacity and pricing. They do not reduce logical storage charges or let unchanged historical records qualify separately for long-term storage pricing."
+            }
+          ]
+        },
+        "accepted": true,
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b3-1020.json",
+      "candidate_index": 3,
+      "question": {
+        "candidate_id": "363350ef-b319-59f4-8a23-d1efcaeb53b4",
+        "stem": "You manage an online retailer's shopping-cart service on Firestore. Each cart stores its creation time and an expiration timestamp set to 30 days after the shopper's latest activity. The application extends that timestamp when activity resumes and excludes expired carts from queries, but expired documents accumulate and storage costs are rising. You want to preserve carts for 30 days after their latest activity, including carts created months earlier, and automatically remove expired documents with minimal operational maintenance. Background deletion after expiration is acceptable. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Apply Firestore TTL to the cart collection group's creation timestamp field. Retain the application's expiration timestamp updates and query checks to continue handling resumed shopping activity and excluding expired carts."
+          },
+          {
+            "label": "B",
+            "text": "Exempt the cart collection group's expiration timestamp field from Firestore indexing. Keep the application's existing expiration checks and timestamp updates, and use the exemption to remove indexes for that field."
+          },
+          {
+            "label": "C",
+            "text": "Shorten the retention period for scheduled Firestore backups of the shopping-cart database. Keep the application's existing expiration checks and timestamp updates, and let backup expiration remove older stored copies of historical cart data."
+          },
+          {
+            "label": "D",
+            "text": "Enable Firestore TTL on the cart collection group's expiration timestamp field. Keep the application's existing timestamp updates and expiration checks so cart activity continues to determine when each document becomes eligible for deletion."
+          }
+        ],
+        "key": "D",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:3.1:4",
+          "engineering_decision": "Select a lifecycle policy that automatically removes abandoned shopping carts from the existing Firestore database. What should you do?",
+          "business_consequence": "Expired carts are increasing storage costs even though shoppers can no longer retrieve them. Deleting carts that remain active would disrupt purchases.",
+          "existing_system": "You manage an online retailer's shopping-cart service running on Firestore. Each cart document contains an expiresAt timestamp set to 30 days after its latest shopping activity. The application updates this timestamp whenever the shopper resumes using the cart and excludes expired carts from application queries. Expired documents currently remain stored indefinitely.",
+          "decisive_constraints": [
+            "Shoppers want carts preserved for 30 days after their latest activity, including carts originally created months earlier.",
+            "The retailer wants automatic cleanup with minimal operational maintenance; asynchronous deletion after expiration is acceptable."
+          ],
+          "best_action": "Configure Firestore TTL on the cart collection group's expiresAt field, allowing managed background deletion to reclaim expired documents while retaining the application's existing expiration checks and timestamp updates that extend the lifetime of active carts.",
+          "mistakes": [
+            {
+              "action": "Configure Firestore TTL on the cart collection group's createdAt field, allowing managed background deletion to reclaim older documents while retaining the application's existing expiration checks and timestamp updates that extend the lifetime of active carts.",
+              "scenario_reason": "TTL evaluates the selected timestamp as the expiration time. A creation timestamp neither adds the required inactivity interval nor reflects renewed activity, so this policy can delete carts shoppers are still using."
+            },
+            {
+              "action": "Exempt the expiresAt field from Firestore indexing, retaining the application's existing expiration checks and activity updates so expired carts remain excluded while the database stores fewer index entries.",
+              "scenario_reason": "An indexing exemption changes index storage and query capabilities; it does not delete cart documents. Expired documents would continue accumulating, and queries requiring that index could stop working."
+            },
+            {
+              "action": "Reduce the retention period for scheduled Firestore backups, retaining the application's existing expiration checks and activity updates so fewer historical cart records remain stored after shoppers abandon them.",
+              "scenario_reason": "Backup retention governs recovery copies rather than documents in the live database. Shortening it would not remove expired carts from the collection."
+            }
+          ]
+        },
+        "accepted": true,
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b3-1020.json",
+      "candidate_index": 4,
+      "question": {
+        "candidate_id": "1d68939c-1da3-5c5f-bf79-8979e9b36389",
+        "stem": "You are scaling maintenance-cost reporting for a fleet-management application in BigQuery. Completed work orders and consumed parts occupy separate tables, with 1–40 parts per work order. Reports usually retrieve each work order with all its parts. As more fleets join, query plans show substantial shuffle in these joins, delaying maintenance decisions. Completed records rarely change. You want faster complete work-order reports as history grows while preserving SQL filtering and aggregation of individual part IDs, quantities, and costs linked to their work order. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Keep one row per work order, serialize its parts into a JSON-formatted STRING column, and extract individual part fields when producing work-order reports."
+          },
+          {
+            "label": "B",
+            "text": "Create one row per consumed part, repeat the work-order attributes on each row, and group rows by work-order ID when producing complete work-order reports."
+          },
+          {
+            "label": "C",
+            "text": "Store one row per completed work order, with an ARRAY<STRUCT> of parts containing separate fields for part ID, quantity, and cost."
+          },
+          {
+            "label": "D",
+            "text": "Retain separate work-order and parts tables, cluster each table by work-order ID, and join the clustered tables when producing complete work-order reports."
+          }
+        ],
+        "key": "C",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:3.2:1",
+          "engineering_decision": "Choose a BigQuery schema for completed work orders and their associated parts as reporting volume grows. What should you do?",
+          "business_consequence": "Slow work-order cost reports delay fleet managers' decisions about vehicle maintenance and replacement.",
+          "existing_system": "You are scaling maintenance-cost reporting for a fleet-management application using BigQuery. The running warehouse stores completed work orders and consumed parts in separate tables. Each work order contains 1–40 parts records, and reports usually retrieve work-order details together with those parts. As more fleets join the application, query plans show substantial shuffle when joining the two tables. Completed records rarely change.",
+          "decisive_constraints": [
+            "Fleet managers want faster reports for individual work orders and their parts as historical volume grows.",
+            "Analysts want to filter and aggregate individual part IDs, quantities, and costs using ordinary SQL while retaining each part's relationship to its work order."
+          ],
+          "best_action": "Store each work order with its parts in an ARRAY<STRUCT>.",
+          "mistakes": [
+            {
+              "action": "Keep separate tables and cluster both by work_order_id to guarantee that their joins require no shuffle.",
+              "scenario_reason": "BigQuery clustering organizes storage blocks within each table; matching clustering keys do not guarantee that rows from separate tables are colocated for joins. This leaves the recurring parent-child join in the dominant access pattern."
+            },
+            {
+              "action": "Flatten the warehouse to one row per consumed part, repeating all work-order attributes on every row.",
+              "scenario_reason": "This changes the table grain to a part record and duplicates work-order attributes. Reports that return complete work orders must regroup those rows, while nested repeated records preserve the bounded hierarchy directly."
+            },
+            {
+              "action": "Store each work order's parts as a JSON-formatted STRING alongside its existing work-order columns.",
+              "scenario_reason": "A serialized string requires extracting and converting part fields during queries and does not provide the typed child-field storage and selective field access available with repeated STRUCT records."
+            }
+          ]
+        },
+        "accepted": true,
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b3-1020.json",
+      "candidate_index": 5,
+      "question": {
+        "candidate_id": "46387985-7bc0-51fa-a5a5-9dc5e88f5bd9",
+        "stem": "Your company runs an advertising analytics service that reports impressions and campaign performance from BigQuery. Its warehouse uses an impression fact table joined to small campaign, advertiser, and geography dimensions. As traffic and dashboard usage grow, query profiles show that scanning impression facts dominates processing; dimension joins contribute little. Analysts query individual impressions across campaigns within date ranges, and campaigns can accumulate millions of impressions. You want to preserve efficient impression-level reporting as volume grows while limiting historical rewrites to schema changes that address the observed bottleneck. Which data modeling approach should you use?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Normalize the dimensions further into separate campaign settings, advertiser details, and geography hierarchy tables joined to the impression fact table for every dashboard query."
+          },
+          {
+            "label": "B",
+            "text": "Replace the existing impression fact table with one row per campaign, storing all campaign impressions together in a nested repeated field."
+          },
+          {
+            "label": "C",
+            "text": "Retain the existing star schema, keeping one fact row per impression and shared campaign, advertiser, and geography attributes in dimension tables."
+          },
+          {
+            "label": "D",
+            "text": "Flatten campaign, advertiser, and geography attributes into every impression row, and rewrite historical impressions into a denormalized reporting table."
+          }
+        ],
+        "key": "C",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:3.2:2",
+          "engineering_decision": "As advertising traffic grows, what degree of normalization should the team retain in its existing BigQuery reporting warehouse?",
+          "business_consequence": "Maintain responsive campaign reporting while avoiding a costly historical-data rewrite that does not address the workload's main source of processing work.",
+          "existing_system": "Your company operates an advertising analytics service that reports impressions and campaign performance. Its running BigQuery warehouse uses an impression fact table joined to small campaign, advertiser, and geography dimensions in a star schema. Traffic and dashboard usage are growing. Query profiles show that scanning impression facts dominates processing; dimension joins contribute little. Analysts query impressions across campaigns within date ranges, and individual campaigns can accumulate millions of impressions.",
+          "decisive_constraints": [
+            "The team wants schema changes to address the observed processing bottleneck and justify the cost of rewriting historical data.",
+            "Reporting should preserve efficient impression-grain analysis across campaigns and dates as impression volume grows."
+          ],
+          "best_action": "Retain the existing BigQuery star schema, keeping impressions in the fact table and shared attributes in dimension tables.",
+          "mistakes": [
+            {
+              "action": "Flatten campaign, advertiser, and geography attributes into every impression row to eliminate all dimension joins.",
+              "scenario_reason": "BigQuery already handles analytical star schemas efficiently, so further denormalization may provide little benefit. This rewrite targets inexpensive joins while retaining the dominant fact-scanning work and repeating dimension attributes throughout historical data."
+            },
+            {
+              "action": "Replace the impression fact table with one row per campaign, storing all campaign impressions in a nested repeated field.",
+              "scenario_reason": "Nested repeated fields suit bounded hierarchical relationships accessed together. Campaigns containing millions of impressions create high-cardinality collections, while this workload analyzes individual impressions across campaigns rather than retrieving each campaign's complete collection."
+            },
+            {
+              "action": "Normalize the dimensions further into separate campaign settings, advertiser details, and geography hierarchy tables, joining these tables for each dashboard query.",
+              "scenario_reason": "Further normalization reduces dimension redundancy but adds joins to analytical queries. The small dimensions are not driving processing cost, so splitting them does not address growth in impression scanning and makes the reporting model more complex."
+            }
+          ]
+        },
+        "accepted": false,
+        "failure_stage": "judge",
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b3-1020.json",
+      "candidate_index": 6,
+      "question": {
+        "candidate_id": "6c51193f-eb12-564a-8bc2-da1cf1e55cf5",
+        "stem": "You need to build a BigQuery warehouse for a food-assistance charity's monthly service-reach reports. Source records will contain one row per distribution, with a distribution identifier, a stable household identifier shared across sites, a site identifier, and a reporting month. Households can receive several distributions and visit multiple sites. Program managers want each household counted once per month across the charity. Grant reviewers want exact monthly counts that reconcile with the distribution records. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Apply APPROX_COUNT_DISTINCT(household_id) in BigQuery to distribution records across all sites, grouping by reporting month to calculate the charity's monthly household reach."
+          },
+          {
+            "label": "B",
+            "text": "Calculate monthly reach in BigQuery using COUNT(DISTINCT household_id) across all sites, grouping the distribution records only by reporting month to produce each month's charity-wide household count."
+          },
+          {
+            "label": "C",
+            "text": "Deduplicate distribution records in BigQuery using distribution identifiers, then count the remaining records for each reporting month to calculate the charity's monthly reach."
+          },
+          {
+            "label": "D",
+            "text": "Calculate distinct household counts in BigQuery for each site and reporting month. Sum the counts from all sites for each month to produce the charity-wide monthly reach."
+          }
+        ],
+        "key": "B",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:3.2:3",
+          "engineering_decision": "What should you do to translate a food-assistance charity's definition of monthly household reach into its BigQuery reporting calculation?",
+          "business_consequence": "Overstating household reach would misrepresent the charity's impact in grant reports and distort decisions about which communities need additional assistance.",
+          "existing_system": "You need to build a BigQuery warehouse for a food-assistance charity's monthly service-reach reports. Planned source records contain one row per food distribution, a stable household identifier shared across sites, a site identifier, and a reporting month. Households can receive multiple distributions and visit several sites.",
+          "decisive_constraints": [
+            "Program managers want each household counted once per reporting month across the entire charity, regardless of visits or sites.",
+            "Grant reviewers want exact monthly household counts that can be reconciled with distribution records."
+          ],
+          "best_action": "Calculate monthly reach using COUNT(DISTINCT household_id) across all sites in BigQuery, grouping the distribution records by reporting month.",
+          "mistakes": [
+            {
+              "action": "Calculate distinct households for each site and reporting month, then sum those site totals to produce the charity's monthly reach.",
+              "scenario_reason": "Site-level distinct counts overlap when households visit multiple sites. Summing them counts those households repeatedly in the charity-wide metric."
+            },
+            {
+              "action": "Calculate monthly reach using APPROX_COUNT_DISTINCT(household_id) across all sites in BigQuery, grouping records by reporting month.",
+              "scenario_reason": "BigQuery's approximate distinct aggregation estimates cardinality. It supports large-scale exploratory reporting, but does not provide the exact count requested for reconciliation."
+            },
+            {
+              "action": "Calculate monthly reach by counting all distribution records in BigQuery for each reporting month, using the source's unique distribution identifiers to remove duplicate records.",
+              "scenario_reason": "Removing duplicate distribution records preserves separate legitimate visits by the same household. The result measures distributions rather than distinct households reached."
+            }
+          ]
+        },
+        "accepted": false,
+        "failure_stage": "judge",
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b3-1020.json",
+      "candidate_index": 7,
+      "question": {
+        "candidate_id": "6193ee5c-ca70-5070-a0f8-1ab527b4aa72",
+        "stem": "You recently deployed a parcel-tracking reporting application using an unpartitioned BigQuery table with 18 months of scan events for thousands of customers. Support investigations retrieve individual events for one customer and facility over an event-date range, usually seven days. Operations compares facility delivery performance across customers for a selected event date. Events sometimes arrive two weeks late, and support queries scan excessive data. You want selective reads for both workflows while keeping cross-customer reporting straightforward. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Recreate the shared BigQuery table with daily ingestion-time partitioning and clustering by customer ID, then facility ID. Migrate existing events and direct all subsequent writes there, retaining event-date filters alone in the queries used for both reporting workflows."
+          },
+          {
+            "label": "B",
+            "text": "Create a shared BigQuery table partitioned daily by event date and clustered by customer ID, then facility ID. Migrate existing events, direct subsequent writes to the new table, and retain event-date filters in queries for both reporting workflows."
+          },
+          {
+            "label": "C",
+            "text": "Create a separate BigQuery table for each customer, partitioned daily by event date and clustered by facility ID. Migrate events into those tables, route support queries by customer, and combine customer tables for facility comparisons."
+          },
+          {
+            "label": "D",
+            "text": "Create a BigQuery materialized view grouped by event date, customer ID, and facility ID, calculating scan counts and average delivery times. Use the view as the reporting source for support investigations and cross-customer facility comparisons."
+          }
+        ],
+        "key": "B",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:3.2:4",
+          "engineering_decision": "Choose the BigQuery table layout that supports parcel-history investigations and daily facility comparisons with selective reads. What should you do?",
+          "business_consequence": "Customer-support investigations scan excessive data, increasing query costs, while operations teams need timely comparisons of delivery performance across customers.",
+          "existing_system": "You recently deployed a parcel-tracking reporting application backed by an unpartitioned BigQuery table containing 18 months of scan events for thousands of customers. Support queries retrieve individual events for one customer and facility within an event-date range, usually the previous seven days. Operations queries compare facilities across customers for a selected event date. Events can arrive up to two weeks after they occurred.",
+          "decisive_constraints": [
+            "Both query patterns should prune data by event date, with additional pruning for support queries that filter by customer and facility.",
+            "The architecture should preserve individual scan events, include late arrivals according to when events occurred, and provide straightforward cross-customer reporting."
+          ],
+          "best_action": "Recreate the shared events table with daily partitioning on event date and clustering by customer ID, then facility ID. Migrate existing events and direct subsequent writes to this table, retaining event-date predicates in reporting queries.",
+          "mistakes": [
+            {
+              "action": "Recreate the shared events table with daily ingestion-time partitioning and clustering by customer ID, then facility ID. Migrate existing events and direct subsequent writes to this table, retaining only event-date predicates in reporting queries.",
+              "scenario_reason": "Event-date predicates do not directly prune ingestion-time partitions. Adding a matching ingestion-date restriction would also require accounting for late arrivals to avoid excluding relevant events."
+            },
+            {
+              "action": "Create a separate date-partitioned events table for each customer, cluster each table by facility ID, and route application queries to the corresponding customer table.",
+              "scenario_reason": "Customer isolation makes support queries selective, but thousands of tables complicate customer onboarding and cross-customer facility comparisons. A shared partitioned and clustered table supports both access patterns without customer-table fan-out."
+            },
+            {
+              "action": "Replace the reporting table with a BigQuery materialized view that groups events by event date, customer, and facility and stores scan counts and average delivery times.",
+              "scenario_reason": "The aggregate can accelerate facility comparisons, but it discards the individual events needed for support investigations. It could complement the event table, but cannot replace its detailed access path."
+            }
+          ]
+        },
+        "accepted": true,
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b4-1020.json",
+      "candidate_index": 1,
+      "question": {
+        "candidate_id": "2caec1c1-ff36-5efa-b6ae-60ea534585fd",
+        "stem": "Your company uses a BigQuery shipment-delay dashboard for carrier-performance reviews. Monitoring shows that repeated regular-expression extraction and string normalization of shipment references dominate query computation. Completed shipments arrive nightly, and their derived depot and service codes remain stable. Users frequently change carrier, region, and date filters and also filter by depot and service codes. Nightly data availability meets reporting needs. You want responsive filtering across these shipment-level dimensions. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Define persistent BigQuery SQL UDFs for depot extraction and service normalization. Update dashboard queries to invoke these functions against each shipment's original reference string."
+          },
+          {
+            "label": "B",
+            "text": "Keep BigQuery query-result caching enabled for the dashboard and retain the extraction and normalization expressions. Rely on cached results for filtering interactions between nightly reporting-table loads."
+          },
+          {
+            "label": "C",
+            "text": "Partition the reporting table by shipment date and cluster it by carrier and region. Continue extracting depot codes and normalizing service codes within each dashboard query."
+          },
+          {
+            "label": "D",
+            "text": "Extend the nightly reporting-table load to store extracted depot codes and normalized service codes for each shipment. Update dashboard queries to read these precalculated columns."
+          }
+        ],
+        "key": "D",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:4.1:2",
+          "engineering_decision": "Where should expensive, stable string-derived fields be calculated for an existing shipment-delay dashboard? What should you do?",
+          "business_consequence": "Slow dashboard filtering delays carrier-performance reviews and identification of recurring delivery problems.",
+          "existing_system": "Your company operates a shipment-delay dashboard backed by BigQuery. Monitoring shows that repeated REGEXP_EXTRACT and string-normalization expressions used to derive depot and service codes dominate query computation. The dashboard reads completed shipments loaded nightly, and users frequently change carrier, region, and date filters.",
+          "decisive_constraints": [
+            "Depot and service codes remain stable after shipment completion, and nightly availability meets reporting needs.",
+            "Users need responsive filtering across shipment-level dimensions, including depot and service codes."
+          ],
+          "best_action": "Extend the nightly reporting-table load to store extracted depot codes and normalized service codes for each shipment, and update dashboard queries to use those precalculated columns.",
+          "mistakes": [
+            {
+              "action": "Move the extraction and normalization expressions into persistent BigQuery SQL UDFs, and update dashboard queries to invoke those functions against each shipment's original reference string.",
+              "scenario_reason": "SQL UDFs provide reusable calculation definitions but do not themselves persist the calculated field values. Dashboard queries would still request the expensive transformations instead of reading precalculated columns."
+            },
+            {
+              "action": "Enable BigQuery cached query results for the dashboard and retain the extraction expressions, allowing the nightly source load to invalidate cached results before the next reporting day.",
+              "scenario_reason": "Query-result caching reuses eligible matching query results. Users' changing filters produce different queries or parameter values, so this does not provide reusable field calculations across those interactions."
+            },
+            {
+              "action": "Partition the reporting table by shipment date and cluster it by carrier and region, while continuing to extract depot and service codes within every dashboard query.",
+              "scenario_reason": "Partitioning and clustering can reduce scanned data for suitable filters, but they do not store the derived codes. They leave the observed string-transformation bottleneck in place for shipments that each query processes."
+            }
+          ]
+        },
+        "accepted": false,
+        "failure_stage": "judge",
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b4-1020.json",
+      "candidate_index": 2,
+      "question": {
+        "candidate_id": "b0c99eec-b0d2-58e3-ac90-870458afc9bf",
+        "stem": "You work for a hospital network whose bed-capacity dashboards slowed after query execution moved from the central warehouse project to a dedicated reporting project for departmental billing. The dashboards still query the same regional warehouse tables with unchanged SQL. BI Engine previously accelerated these queries, but its capacity remains in the warehouse project. You want to restore the dashboards' BI Engine acceleration with query billing in the reporting project while minimizing additional data copies and synchronization. Which approach should you use?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Increase the reporting project's BigQuery slot allocation to handle the dashboard workload. Retain BI Engine capacity in the warehouse project and continue querying its existing shared tables."
+          },
+          {
+            "label": "B",
+            "text": "Create a BI Engine reservation in the reporting project in the warehouse dataset's region, sized for the established dashboard working set. Keep submitting queries against the existing shared warehouse tables."
+          },
+          {
+            "label": "C",
+            "text": "Increase the BI Engine reservation in the warehouse project to fit the migrated dashboard workload. Keep submitting queries through the reporting project against the existing warehouse tables."
+          },
+          {
+            "label": "D",
+            "text": "Copy the dashboard tables into the reporting project and schedule regular synchronization from the warehouse. Query those copies through the reporting project while retaining BI Engine capacity in the original warehouse project."
+          }
+        ],
+        "key": "B",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:4.1:3",
+          "engineering_decision": "Choose where to provision BI Engine capacity when migrating an existing dashboard's query execution to a separate billing project. Which approach should you use?",
+          "business_consequence": "Hospital capacity dashboards become slower after the migration, delaying bed-allocation decisions despite unchanged data and dashboard queries.",
+          "existing_system": "You work for a hospital network migrating its bed-capacity dashboards to a dedicated BigQuery query project for departmental cost attribution. Previously, the dashboards submitted queries through the central warehouse project, where BI Engine accelerated them. They now submit queries through the new reporting project while reading the same regional tables in the warehouse project. Both projects have Enterprise edition query capacity assigned. BI Engine capacity remains provisioned only in the warehouse project, and the migrated queries no longer receive BI Engine acceleration.",
+          "decisive_constraints": [
+            "Restore the dashboards' established BI Engine acceleration while keeping query billing in the dedicated reporting project.",
+            "Continue using the shared warehouse tables and minimize additional copies and synchronization."
+          ],
+          "best_action": "Provision BI Engine capacity in the reporting project in the shared dataset's region, size it for the established dashboard working set, and continue querying the existing warehouse tables.",
+          "mistakes": [
+            {
+              "action": "Increase the existing BI Engine memory reservation in the warehouse project to accommodate the dashboard workload now submitted through the separate reporting project.",
+              "scenario_reason": "BI Engine capacity serves queries executed through its project. More memory in the data-owning project does not provide that capacity to queries submitted through the reporting project."
+            },
+            {
+              "action": "Increase the reporting project's Enterprise edition slot allocation to restore the former acceleration, while retaining the existing BI Engine memory reservation exclusively in the central warehouse project.",
+              "scenario_reason": "BigQuery slots supply query compute, while BI Engine uses separately provisioned memory capacity. Adding slots does not restore access to the warehouse project's BI Engine reservation."
+            },
+            {
+              "action": "Copy the dashboard source tables into the reporting project, update the dashboard references to those copies, and schedule recurring synchronization while leaving all BI Engine memory capacity provisioned in the original warehouse project.",
+              "scenario_reason": "Moving tables does not supply BI Engine capacity to the project executing the queries. This introduces duplicate data and synchronization work while leaving the acceleration-capacity placement unresolved."
+            }
+          ]
+        },
+        "accepted": true,
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b4-1020.json",
+      "candidate_index": 3,
+      "question": {
+        "candidate_id": "56e07b92-384b-53c5-a0a1-87b64fc69283",
+        "stem": "You manage an advertising performance dashboard used to adjust campaign budgets. Its BigQuery query left-joins impression events to conversion events by campaign and date, then calculates distinct event counts across all campaigns. Date filters already prune partitions effectively. Campaign-date rows with impressions but no conversions show zero conversions. Refreshes are slow, and the execution graph shows join output far exceeding either input, with shuffle dominating execution time. You want faster refreshes while reducing slot time per refresh. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Reserve BI Engine capacity and designate both event tables as preferred tables for dashboard acceleration. Retain the raw-event join and calculate distinct counts from its output for each campaign-date."
+          },
+          {
+            "label": "B",
+            "text": "Cluster both event tables by campaign ID within their existing date partitions. Retain the raw-event join and final distinct-count aggregation, using clustered storage for the dashboard queries."
+          },
+          {
+            "label": "C",
+            "text": "Raise the BigQuery reservation's autoscaling ceiling to provide more slots during dashboard refreshes. Retain the raw-event join and calculate distinct counts from the expanded intermediate results."
+          },
+          {
+            "label": "D",
+            "text": "Apply the existing filters and calculate distinct event counts separately by campaign and date in each table. Left-join the summaries, retaining impression-side rows and returning zero for missing conversions."
+          }
+        ],
+        "key": "D",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:4.1:4",
+          "engineering_decision": "Choose how to fix a BigQuery dashboard query whose execution graph shows excessive intermediate rows and shuffle at a join between two event tables. What should you do?",
+          "business_consequence": "Slow dashboard refreshes delay advertising budget adjustments, while the expanding join consumes substantial BigQuery slot time.",
+          "existing_system": "You manage an advertising performance dashboard that reports daily impression and conversion counts by campaign. Its BigQuery query LEFT JOINs impression events to conversion events on campaign ID and event date, then calculates distinct event counts. Both inputs apply date filters with effective partition pruning. The execution graph shows join output far exceeding either input, with shuffle dominating execution time.",
+          "decisive_constraints": [
+            "Preserve the existing distinct counts and the campaign-date rows represented by the impression table.",
+            "Improve dashboard refresh latency while reducing the slot time consumed by each refresh."
+          ],
+          "best_action": "Preaggregate facts: Apply the existing filters and calculate distinct event counts separately in each table at campaign-date grain. LEFT JOIN those smaller results on campaign and date, preserving impression-side rows and returning zero for missing conversions to retain the dashboard's existing reporting semantics.",
+          "mistakes": [
+            {
+              "action": "Enable acceleration: Configure BI Engine capacity for the dashboard's BigQuery workload and prioritize both event tables for acceleration. Keep the existing raw-event join and distinct-count calculations so the dashboard continues to produce the same campaign-date metrics through its current query structure and reporting connection.",
+              "scenario_reason": "BI Engine can accelerate eligible BI queries, but adding acceleration leaves the many-to-many intermediate expansion intact. The execution graph identifies the join's cardinality as the problem; reducing each input to the reporting grain directly removes that unnecessary work."
+            },
+            {
+              "action": "Increase capacity: Raise the reservation's autoscaling ceiling so dashboard queries can use more slots during refreshes. Preserve the existing joins and aggregations, and use the additional execution capacity to process the large intermediate result before returning the campaign-date metrics.",
+              "scenario_reason": "More slots can help workloads constrained by available compute, but they do not remove unnecessary join rows. This approach retains excessive shuffle and does not directly achieve the requested reduction in slot consumption per refresh."
+            },
+            {
+              "action": "Cluster inputs: Cluster both event tables by campaign ID within their existing date partitions. Preserve the raw-event join and final distinct-count aggregation, using the revised storage layout to improve campaign-based data access during each dashboard refresh.",
+              "scenario_reason": "Clustering can reduce scanned blocks when filters select clustering values, but this dashboard reports across campaigns and already prunes date partitions effectively. It does not eliminate the many-to-many expansion caused by joining raw events at campaign-date grain."
+            }
+          ]
+        },
+        "accepted": true,
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b4-1020.json",
+      "candidate_index": 4,
+      "question": {
+        "candidate_id": "fc7bfa82-acff-5c12-87f0-59f586b9c12a",
+        "stem": "You are securing an insurer's claims-aging dashboards after adjusters retrieved other regions' confidential claims through direct SQL. The dashboards query one shared BigQuery claims table using each adjuster's Google identity. Each adjuster belongs to one centrally managed regional Google group with dataset-reading and query-job permissions. Dashboard filters currently select claims by region. You want adjusters to retrieve complete claim details only for their assigned region through both dashboards and direct SQL, while preserving the current dashboard access workflow. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Create BigQuery row access policies on the shared claims table, granting each regional Google group access to rows matching its region code. Retain existing read and query-job permissions."
+          },
+          {
+            "label": "B",
+            "text": "Replace dataset-level read grants with table-level BigQuery Data Viewer grants on the shared claims table for each regional Google group. Retain the existing dashboard region filters and query-job permissions."
+          },
+          {
+            "label": "C",
+            "text": "Create regional row access policies on the shared BigQuery claims table, and add a policy granting all adjusters access with a TRUE filter. Retain the existing dashboard configuration and query permissions."
+          },
+          {
+            "label": "D",
+            "text": "Apply policy tags to confidential claim columns in the shared BigQuery table, and grant every regional Google group Fine-Grained Reader access to those columns. Retain dashboard region filters and existing permissions."
+          }
+        ],
+        "key": "A",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:4.1:5",
+          "engineering_decision": "You are securing regional insurance claims-aging dashboards after a cross-region disclosure. What should you do?",
+          "business_consequence": "Adjusters have accessed other regions’ confidential claims. Remediation must restrict further disclosure while preserving regional claims processing.",
+          "existing_system": "The running dashboards query one BigQuery claims table using each adjuster’s Google identity. Adjusters also run direct SQL. Each adjuster belongs to one regional Google group, and those groups have table-reading and query-job permissions. An incident reveals that dashboard region filters leave other regions’ claims accessible through direct SQL.",
+          "decisive_constraints": [
+            "Adjusters need complete claim details for their assigned region, with the same regional boundary enforced through dashboards and direct SQL.",
+            "The existing dashboards should continue querying the shared table through individual identities, with access managed centrally."
+          ],
+          "best_action": "Create BigQuery row access policies granting each regional group access to rows matching its region code.",
+          "mistakes": [
+            {
+              "action": "Replace the regional groups’ dataset-level read grants with table-level BigQuery Data Viewer grants on the claims table, retaining the dashboards’ region filters.",
+              "scenario_reason": "Table-level IAM narrows which tables a group can read, but does not restrict rows within the shared claims table. Direct SQL would still expose other regions."
+            },
+            {
+              "action": "Apply policy tags to confidential claim columns and grant every regional group Fine-Grained Reader access to those columns while retaining the dashboard filters.",
+              "scenario_reason": "Column-level access controls determine which columns users can read. They do not associate a group with particular regional rows, so adjusters could still retrieve other regions’ confidential claim details."
+            },
+            {
+              "action": "Create regional row access policies and add another policy granting all adjusters access with a TRUE filter to preserve compatibility with the existing dashboards.",
+              "scenario_reason": "Applicable BigQuery row access policies combine their allowed rows. The TRUE policy would give every adjuster access to all claims, defeating the regional policies."
+            }
+          ]
+        },
+        "accepted": true,
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b5-1020.json",
+      "candidate_index": 0,
+      "question": {
+        "candidate_id": "be68b26f-b366-5b54-a4d5-724af99f9526",
+        "stem": "You are operating a cinema distributor's recently deployed royalty-settlement pipeline on a persistent Managed Service for Apache Spark cluster with one master and six standard primary workers. Nightly Spark jobs take 55 minutes, and the cluster stays idle afterward. Inputs, application artifacts, and reports reside in Cloud Storage; subsequent runs reuse no cluster-local data. Deployment runs including cluster creation and job execution finished within 75 minutes. You want to minimize daily cluster costs, including idle charges, while meeting the three-hour overnight reporting deadline. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Retain a persistent cluster with standard primary workers and move most processing capacity to a fixed pool of Spot secondary workers provisioned between nightly runs."
+          },
+          {
+            "label": "B",
+            "text": "Run each nightly batch through a workflow template that creates a managed cluster with the existing configuration and deletes it after completion."
+          },
+          {
+            "label": "C",
+            "text": "Keep the persistent cluster and purchase one-year Compute Engine resource-based commitments covering its existing standard worker capacity to reduce the price of the nightly workload."
+          },
+          {
+            "label": "D",
+            "text": "Keep the persistent cluster and apply an autoscaling policy that reduces worker capacity to the minimum between nightly batches and scales up for processing."
+          }
+        ],
+        "key": "B",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:5.1:1",
+          "engineering_decision": "What should you do to minimize the cost of an already-running nightly Dataproc batch workload while meeting its reporting deadline?",
+          "business_consequence": "Lower the infrastructure cost of calculating cinema royalty payments while delivering settlement reports before the finance team starts work.",
+          "existing_system": "You are operating a cinema distributor's royalty-settlement pipeline after its recent deployment. A persistent Dataproc cluster with one master and six standard primary workers runs Spark batch jobs for about 55 minutes each night and remains idle afterward. Inputs, application artifacts, and completed reports reside in Cloud Storage; subsequent runs do not reuse cluster-local data. Deployment runs that included cluster creation and job execution finished within 75 minutes, against a three-hour overnight processing window.",
+          "decisive_constraints": [
+            "Finance wants to minimize daily cluster costs, including charges incurred between nightly runs.",
+            "The pipeline must finish within its three-hour window and preserve settlement inputs and outputs across runs."
+          ],
+          "best_action": "Use a Dataproc workflow template with a managed cluster created and deleted for each nightly run.",
+          "mistakes": [
+            {
+              "action": "Keep the persistent cluster and configure Dataproc autoscaling to reduce its worker count during the idle period between nightly runs.",
+              "scenario_reason": "Autoscaling can reduce worker capacity, but the persistent cluster retains its master and minimum primary-worker capacity. Those resources remain billable through the long idle interval, which managed cluster deletion eliminates."
+            },
+            {
+              "action": "Keep the persistent cluster and purchase Compute Engine commitments covering its existing standard worker capacity throughout the next year.",
+              "scenario_reason": "Commitments discount eligible capacity in exchange for an ongoing spending commitment. Covering a cluster sized for a short nightly batch locks in payment for capacity that the business needs for only a small portion of each day."
+            },
+            {
+              "action": "Keep a persistent cluster with standard primary workers and move most processing capacity to a fixed pool of Spot secondary workers.",
+              "scenario_reason": "Spot secondary workers reduce compute rates but introduce interruption and task-recovery trade-offs. Keeping that pool provisioned between runs still incurs idle charges and retains the standard cluster baseline; the available processing window already supports creating and deleting the entire cluster."
+            }
+          ]
+        },
+        "accepted": true,
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b5-1020.json",
+      "candidate_index": 2,
+      "question": {
+        "candidate_id": "7d5429b9-722e-56ac-943d-a1fddadeceef",
+        "stem": "You work for a wholesale distributor whose nightly inventory-allocation pipeline produces warehouse pick lists. Its four dependent Spark jobs run on a persistent on-premises cluster that sits idle afterward. You are migrating the pipeline to Dataproc. Rehearsals show 85 minutes of processing at the required capacity, plus approximately 10 minutes to create and initialize each cluster. All inputs, intermediate results, and restart data reside in Cloud Storage; no cluster-local state is needed between runs. You want to finish within the 110-minute nightly window before morning picking while minimizing charges during idle hours. Which approach should you use?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Maintain a persistent Dataproc cluster with fixed primary workers and autoscaled secondary workers. Run the four jobs in dependency order, reducing secondary workers during the idle hours."
+          },
+          {
+            "label": "B",
+            "text": "Reuse a persistent Dataproc cluster by starting it before each nightly pipeline and stopping it afterward. Run all four jobs in dependency order and retain the cluster's attached disks."
+          },
+          {
+            "label": "C",
+            "text": "Assign each Spark job its own workflow-managed Dataproc cluster. After each job finishes and saves intermediate results to Cloud Storage, delete its cluster, then provision and initialize the next dependent job's cluster."
+          },
+          {
+            "label": "D",
+            "text": "Configure a Dataproc workflow template with one managed cluster for the nightly pipeline. Set dependencies for all four jobs, and let the workflow delete the cluster when the run finishes."
+          }
+        ],
+        "key": "D",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:5.1:3",
+          "engineering_decision": "When migrating the existing inventory-allocation pipeline to Dataproc, should the four dependent Spark jobs use a persistent cluster or a job-based cluster? Which approach should you use?",
+          "business_consequence": "Warehouse teams need completed allocation results before morning picking begins. Missing the processing window delays shipments; retaining unused cluster resources increases operating costs.",
+          "existing_system": "You work for a wholesale distributor whose nightly inventory-allocation pipeline produces warehouse pick lists. Four dependent Spark jobs currently run on a persistent on-premises cluster that remains idle afterward. During migration to Dataproc, rehearsals show that the four jobs require 85 minutes altogether at the required capacity, and cluster creation plus initialization takes approximately 10 minutes. Inputs, outputs, and restart data reside in Cloud Storage, with no cluster-local state needed between nightly runs.",
+          "decisive_constraints": [
+            "Complete all four dependent jobs within a 110-minute nightly window, including cluster initialization.",
+            "Minimize charges during the remaining idle hours; retaining cluster VMs or disks between runs provides no business benefit."
+          ],
+          "best_action": "Use a Dataproc workflow template with one managed cluster for the entire nightly run. Execute all four jobs in dependency order, then let the workflow delete the cluster after execution finishes.",
+          "mistakes": [
+            {
+              "action": "Keep a persistent Dataproc cluster and autoscale its secondary workers around nightly demand, retaining the primary workers and master between runs.",
+              "scenario_reason": "Scaling secondary workers down leaves the persistent cluster's baseline resources running through the idle period. The pipeline has no between-run state or availability need that justifies those charges."
+            },
+            {
+              "action": "Keep a persistent Dataproc cluster, start it before the nightly workflow, and stop it afterward. Preserve its attached disks between runs so that the same cluster can resume execution the following night.",
+              "scenario_reason": "Stopping reduces VM compute charges but retains billable disks. Since durable pipeline data already resides in Cloud Storage and cluster creation fits the window, preserving the cluster adds unnecessary idle storage cost."
+            },
+            {
+              "action": "Give each Spark job its own workflow-managed Dataproc cluster. After a job writes its intermediate results to Cloud Storage, delete that cluster and provision another cluster for the next dependent job.",
+              "scenario_reason": "The dependent jobs cannot overlap, so four approximately 10-minute initialization periods increase total processing time to about 125 minutes. Sharing one temporary cluster across the workflow takes approximately 95 minutes."
+            }
+          ]
+        },
+        "accepted": true,
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b5-1020.json",
+      "candidate_index": 4,
+      "question": {
+        "candidate_id": "535cb449-0543-5201-8966-29744da29d05",
+        "stem": "You are managing a distributor's daily inventory reconciliation in Cloud Composer. Its DAG runs dependent BigQuery jobs to load inventory movements and calculate discrepancies, with each task selecting yesterday's data using the current date. As warehouse coverage grows, operations needs to replay the previous month's daily reconciliations alongside regular scheduled runs. You want each run and retry to process its intended day's source data and destination partitions while minimizing changes to existing dependencies and retry behavior. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Enable catchup for the previous month's daily runs, retaining each task's calculation of yesterday from the current date to select source data and destination partitions."
+          },
+          {
+            "label": "B",
+            "text": "Replace the DAG with a Workflows workflow that iterates over historical processing dates, recreates dependencies and retries, and uses Cloud Scheduler for daily executions."
+          },
+          {
+            "label": "C",
+            "text": "Parameterize source-data selection and destination partitions using each DAG run's data interval, then backfill the previous month's daily intervals in the existing DAG."
+          },
+          {
+            "label": "D",
+            "text": "Create Cloud Scheduler jobs for each BigQuery step, pass the historical processing dates, and stagger their schedules to run inventory loads before discrepancy calculations."
+          }
+        ],
+        "key": "C",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:5.2:2",
+          "engineering_decision": "Choose how to repeat historical daily reconciliation workflows as warehouse coverage grows. What should you do?",
+          "business_consequence": "Incorrect or incomplete historical reconciliations distort inventory balances and delay replenishment decisions for newly added warehouses.",
+          "existing_system": "You are managing a distributor's daily warehouse inventory reconciliation in Cloud Composer. An existing daily DAG runs dependent BigQuery jobs that load inventory movements and calculate discrepancies. Each task currently selects yesterday's data using the wall-clock date. As warehouse coverage expands, operations needs to replay the previous month's daily reconciliations while normal scheduled processing continues.",
+          "decisive_constraints": [
+            "Each historical run and its retries should consistently process the intended day's source data and destination partitions.",
+            "The team wants to reuse the existing task dependencies and retry behavior with minimal orchestration changes."
+          ],
+          "best_action": "Parameterize tasks with the DAG run's data interval and backfill the required daily intervals.",
+          "mistakes": [
+            {
+              "action": "Enable catchup for the historical dates and retain the existing wall-clock calculation in each task to select yesterday's data.",
+              "scenario_reason": "Catchup creates historical scheduled runs, but it does not rewrite task logic. Those runs would repeatedly select yesterday relative to execution time instead of their historical intervals."
+            },
+            {
+              "action": "Create Cloud Scheduler jobs for the individual BigQuery steps, passing historical dates and staggering their schedules to preserve the processing sequence.",
+              "scenario_reason": "Staggered schedules do not enforce successful completion of upstream jobs. Increased runtimes or retries could let discrepancy calculations start before the corresponding inventory load finishes."
+            },
+            {
+              "action": "Replace the Composer DAG with a Workflows workflow that iterates over explicit historical dates, and schedule daily executions through Cloud Scheduler.",
+              "scenario_reason": "This can implement historical processing, but it requires rebuilding existing dependency and retry behavior. Composer already supports interval-based historical runs, making the migration unnecessary for this requirement."
+            }
+          ]
+        },
+        "accepted": true,
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b5-1020.json",
+      "candidate_index": 5,
+      "question": {
+        "candidate_id": "2d41c9fa-dadd-5596-b567-ad8a6a0c346d",
+        "stem": "Your company calculates daily merchant payouts in BigQuery. Settlement queries and merchant-growth analysis execute in separate projects against a central data project, using one Enterprise edition reservation in the same region. Growing analyst usage now causes settlement queries to queue during overlapping peaks. Settlement demand is stable, and you know the slot baseline that previously handled it. You want dependable baseline capacity for settlements during analyst spikes. You also want analyst capacity to expand for temporary peaks with a predictable maximum allocation. What should you do first?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Increase the shared reservation's autoscaling maximum to accommodate overlapping settlement and analyst peaks, and set a maximum total capacity. Keep both execution projects assigned to that reservation so their queries draw from the expanded common slot pool."
+          },
+          {
+            "label": "B",
+            "text": "Split the workloads into separate reservations, retaining the established settlement baseline and enabling analyst autoscaling with a maximum total capacity. Assign the settlement execution project to the settlement reservation and the analyst execution project to the analyst reservation."
+          },
+          {
+            "label": "C",
+            "text": "Create a settlement reservation with the established baseline and assign the central data project to it. Leave both query execution projects assigned to the existing reservation, enabling autoscaling there with a maximum total capacity for overlapping settlement and analyst demand."
+          },
+          {
+            "label": "D",
+            "text": "Purchase an additional Enterprise edition slot commitment sized for temporary analyst peaks, and retain the existing shared reservation. Keep both execution projects assigned to that reservation so the purchased capacity remains available to settlement and analyst queries within the same pool."
+          }
+        ],
+        "key": "B",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:5.3:1",
+          "engineering_decision": "What should you do first to organize BigQuery capacity so growing analyst workloads stop delaying merchant settlements?",
+          "business_consequence": "Delayed settlement calculations postpone merchant payouts; permanently expanding shared capacity would increase costs even when analyst demand subsides.",
+          "existing_system": "Your company calculates daily merchant payouts in BigQuery. Settlement queries and merchant-growth analysis run from separate execution projects against a central data project. Both execution projects use one Enterprise edition reservation in the same region. As analyst usage grows, settlement queries queue during overlapping peaks. Settlement demand remains stable, and its previously sufficient slot baseline is known.",
+          "decisive_constraints": [
+            "Settlement processing needs dependable baseline capacity during analyst demand spikes.",
+            "Analyst capacity should expand for temporary peaks while keeping maximum allocated capacity predictable."
+          ],
+          "best_action": "Split capacity into separate settlement and analyst reservations, preserving the established settlement baseline and configuring bounded analyst autoscaling. Assign each query execution project to its corresponding reservation.",
+          "mistakes": [
+            {
+              "action": "Increase the existing shared reservation's autoscaling maximum so settlement and analyst queries can draw from a larger common pool.",
+              "scenario_reason": "This adds aggregate capacity but retains contention between workloads. Growing analyst demand can consume the additional shared capacity without establishing a dependable settlement allocation."
+            },
+            {
+              "action": "Purchase an additional Enterprise edition slot commitment sized for analyst peaks, and retain the existing shared reservation and both execution-project assignments to simplify capacity administration.",
+              "scenario_reason": "A capacity commitment addresses purchasing and pricing; it does not create workload isolation. Retaining the shared reservation preserves contention, while committing for temporary peaks creates ongoing capacity costs."
+            },
+            {
+              "action": "Create a settlement reservation with the established baseline and assign the central data project to it, while leaving both query execution projects assigned to the existing reservation with bounded autoscaling.",
+              "scenario_reason": "Query reservation assignments follow the project executing the jobs, rather than the project storing the queried tables. Settlement jobs would continue using the shared reservation, leaving the new baseline unused by those jobs."
+            }
+          ]
+        },
+        "accepted": false,
+        "failure_stage": "judge",
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b5-1020.json",
+      "candidate_index": 6,
+      "question": {
+        "candidate_id": "128b5b86-a0d6-5eb0-bc5f-03a34c64c53d",
+        "stem": "You need to build a donor-payment investigation view for a charity's support console. Staff will request reports while speaking with donors, using donation and refund records already in BigQuery. The charity uses on-demand query pricing, and existing workloads have no observed capacity pressure. The new view is expected to receive a few requests per hour. You want investigations to start as soon as BigQuery can schedule them while minimizing capacity spending for this lightly used feature. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Submit batch BigQuery queries asynchronously against the existing tables under on-demand pricing, and have the console poll frequently for completion to make reports start promptly during donor support calls."
+          },
+          {
+            "label": "B",
+            "text": "Run each investigation as a batch BigQuery query against the existing tables, retaining on-demand pricing and using batch priority to reduce the charge for each report."
+          },
+          {
+            "label": "C",
+            "text": "Submit each investigation as an interactive BigQuery query against the existing tables, retain on-demand pricing, and return the results to the support console when the query completes."
+          },
+          {
+            "label": "D",
+            "text": "Purchase a dedicated BigQuery reservation, assign the support console's execution project to it, and submit interactive queries against the existing tables using the reserved capacity."
+          }
+        ],
+        "key": "C",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:5.3:2",
+          "engineering_decision": "You need to build a donor-payment investigation view for a charity's support console. Staff will request BigQuery reports while speaking with donors. Choose the query priority and execution approach for these requests. What should you do?",
+          "business_consequence": "Deferring investigations prolongs donor support calls, while unnecessary dedicated capacity increases the operating cost of a lightly used feature.",
+          "existing_system": "Donation and refund records already reside in BigQuery. The charity uses on-demand query pricing, and existing workloads have no observed capacity pressure. The investigation view is a new workload expected to receive a few requests per hour.",
+          "decisive_constraints": [
+            "Staff-requested investigations should be eligible to start as soon as BigQuery can schedule them; staff wait for the results during calls.",
+            "The charity wants usage-based query spending appropriate to the small workload and its existing available capacity."
+          ],
+          "best_action": "Submit INTERACTIVE query jobs from the support console against the existing BigQuery tables, retaining on-demand pricing and selecting the query priority intended to start execution as soon as possible.",
+          "mistakes": [
+            {
+              "action": "Submit BATCH query jobs against the existing tables, retaining on-demand pricing and relying on batch priority to reduce the charge for each investigation.",
+              "scenario_reason": "Batch priority permits deferred execution and does not provide a lower on-demand price for the same query. It introduces an unsuitable scheduling tradeoff without the expected billing benefit."
+            },
+            {
+              "action": "Submit BATCH query jobs asynchronously and poll frequently for completion, expecting asynchronous submission and frequent status checks to provide the scheduling behavior needed during donor calls.",
+              "scenario_reason": "Asynchronous submission and polling control how the application waits for results. They do not change the job's batch priority or accelerate its scheduling."
+            },
+            {
+              "action": "Purchase a dedicated BigQuery reservation for the support console, assign its execution project to that reservation, and submit INTERACTIVE query jobs there to provide capacity for the occasional donor-payment investigations.",
+              "scenario_reason": "Dedicated capacity can support interactive queries, but purchasing it adds capacity spending and administration without an established capacity problem. Interactive priority under the existing on-demand arrangement fits this small workload."
+            }
+          ]
+        },
+        "accepted": false,
+        "failure_stage": "judge",
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "source": "data-engineer-v5-pde-b5-1020.json",
+      "candidate_index": 7,
+      "question": {
+        "candidate_id": "a7a23d38-3210-5aeb-beb1-7c5235eecae6",
+        "stem": "You recently deployed revised SQL for an existing BigQuery workflow that refreshes airport staffing dashboards used to assign gate staff. Refreshes now finish late, leaving supervisors with outdated passenger-demand estimates. Each step submits a separate query job labeled with its workflow and step names, and other applications query the same project. You want to identify which step became slower by comparing behavior before and after deployment, while distinguishing time waiting to start from execution time. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Inspect BigQuery slot-utilization charts in Cloud Monitoring for the shared project. Compare utilization before and after deployment across refresh periods, correlate utilization peaks with delayed refreshes, and use the largest change to identify the affected step and classify its additional processing delay."
+          },
+          {
+            "label": "B",
+            "text": "Search BigQuery audit logs in Cloud Logging for failed operations during dashboard refreshes. Compare error-status frequencies before and after deployment, associate the recurring errors with workflow steps, and use the step with the largest increase in errors to explain the additional dashboard refresh delay."
+          },
+          {
+            "label": "C",
+            "text": "Analyze the regional BigQuery INFORMATION_SCHEMA.JOBS_BY_PROJECT view, filtering by workflow labels and grouping by step and deployment period. Treat total_slot_ms as elapsed execution time, compare its increase against each step's baseline, and attribute the delay to the step with the largest increase after deployment."
+          },
+          {
+            "label": "D",
+            "text": "Query the regional BigQuery INFORMATION_SCHEMA.JOBS_BY_PROJECT view and filter by workflow labels. Compare each step before and after deployment, calculating waiting time from creation_time to start_time and execution time from start_time to end_time. Identify the step whose waiting or execution interval increased against its baseline."
+          }
+        ],
+        "key": "D",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:5.4:1",
+          "engineering_decision": "What should you do to identify which BigQuery workflow step became slower after deployment and distinguish time waiting to start from execution time?",
+          "business_consequence": "Delayed airport staffing dashboards leave supervisors using outdated passenger-demand estimates when assigning gate staff.",
+          "existing_system": "You recently deployed revised SQL for an existing workflow that refreshes airport staffing dashboards in BigQuery. Refreshes now finish late, although every query job succeeds. Each workflow step submits a separate query job labeled with its workflow and step names. Other applications submit queries in the same project.",
+          "decisive_constraints": [
+            "Operators want to identify the affected workflow step by comparing job behavior before and after deployment.",
+            "The investigation should distinguish increased waiting time from increased execution time."
+          ],
+          "best_action": "Query the regional INFORMATION_SCHEMA.JOBS_BY_PROJECT view, filter by workflow labels, and group comparisons by step and deployment period. Calculate waiting duration from creation_time to start_time and execution duration from start_time to end_time, then identify which step and duration increased relative to its own baseline before deployment.",
+          "mistakes": [
+            {
+              "action": "Query the regional INFORMATION_SCHEMA.JOBS_BY_PROJECT view, filter by workflow labels, and group comparisons by step and deployment period. Treat total_slot_ms as each job's elapsed execution duration, rank steps by its increase after deployment, and attribute the dashboard delay to the step with the largest observed increase.",
+              "scenario_reason": "total_slot_ms measures accumulated slot consumption across parallel work, rather than elapsed execution time. Its increase does not establish which step delayed completion or distinguish waiting from execution."
+            },
+            {
+              "action": "Inspect project-level BigQuery slot-utilization charts in Cloud Monitoring and compare utilization before and after deployment to identify the delayed workflow step.",
+              "scenario_reason": "Project-level utilization combines this workflow with unrelated applications. It can reveal resource pressure but cannot attribute the regression to a labeled step or separate that step's waiting and execution durations."
+            },
+            {
+              "action": "Filter BigQuery audit logs in Cloud Logging for failed jobs and error statuses during delayed refreshes, then use the most frequent error to identify the regressed step.",
+              "scenario_reason": "All query jobs succeed in this scenario. Error-focused logs will miss a latency regression that appears in successful jobs' lifecycle timestamps."
+            }
+          ]
+        },
+        "accepted": false,
+        "failure_stage": "judge",
+        "cert_id": "data-engineer"
+      }
+    }
+  ],
+  "bank": {
+    "source": "data-engineer-v5-pde2-s3-1020.existing.json",
+    "questions": [
+      {
+        "id": "1d68939c-1da3-5c5f-bf79-8979e9b36389",
+        "exam": "data-engineer",
+        "status": "DRAFT",
+        "stem": "You are scaling maintenance-cost reporting for a fleet-management application in BigQuery. Completed work orders and consumed parts occupy separate tables, with 1–40 parts per work order. Reports usually retrieve each work order with all its parts. As more fleets join, query plans show substantial shuffle in these joins, delaying maintenance decisions. Completed records rarely change. You want faster complete work-order reports as history grows while preserving SQL filtering and aggregation of individual part IDs, quantities, and costs linked to their work order. What should you do?",
+        "answers": [
+          {
+            "is_correct": false,
+            "choice_text": "Keep one row per work order, serialize its parts into a JSON-formatted STRING column, and extract individual part fields when producing work-order reports."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Create one row per consumed part, repeat the work-order attributes on each row, and group rows by work-order ID when producing complete work-order reports."
+          },
+          {
+            "is_correct": true,
+            "choice_text": "Store one row per completed work order, with an ARRAY<STRUCT> of parts containing separate fields for part ID, quantity, and cost."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Retain separate work-order and parts tables, cluster each table by work-order ID, and join the clustered tables when producing complete work-order reports."
+          }
+        ]
+      },
+      {
+        "id": "363350ef-b319-59f4-8a23-d1efcaeb53b4",
+        "exam": "data-engineer",
+        "status": "DRAFT",
+        "stem": "You manage an online retailer's shopping-cart service on Firestore. Each cart stores its creation time and an expiration timestamp set to 30 days after the shopper's latest activity. The application extends that timestamp when activity resumes and excludes expired carts from queries, but expired documents accumulate and storage costs are rising. You want to preserve carts for 30 days after their latest activity, including carts created months earlier, and automatically remove expired documents with minimal operational maintenance. Background deletion after expiration is acceptable. What should you do?",
+        "answers": [
+          {
+            "is_correct": false,
+            "choice_text": "Apply Firestore TTL to the cart collection group's creation timestamp field. Retain the application's expiration timestamp updates and query checks to continue handling resumed shopping activity and excluding expired carts."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Exempt the cart collection group's expiration timestamp field from Firestore indexing. Keep the application's existing expiration checks and timestamp updates, and use the exemption to remove indexes for that field."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Shorten the retention period for scheduled Firestore backups of the shopping-cart database. Keep the application's existing expiration checks and timestamp updates, and let backup expiration remove older stored copies of historical cart data."
+          },
+          {
+            "is_correct": true,
+            "choice_text": "Enable Firestore TTL on the cart collection group's expiration timestamp field. Keep the application's existing timestamp updates and expiration checks so cart activity continues to determine when each document becomes eligible for deletion."
+          }
+        ]
+      },
+      {
+        "id": "41a02e78-d45b-5696-987b-895f1e2dfa5b",
+        "exam": "data-engineer",
+        "status": "DRAFT",
+        "stem": "You work for a retailer whose Dataflow pipeline combines Cloud Storage inventory files with a supplier's public HTTPS API to update replenishment recommendations. After migration to a subnet where workers have only internal IP addresses, supplier requests time out, but Cloud Storage reads still succeed. You want to restore access to the supplier's public endpoint while keeping worker VMs on internal IP addresses only. What should you do?",
+        "answers": [
+          {
+            "is_correct": false,
+            "choice_text": "Attach a Serverless VPC Access connector to Dataflow, and route the workers' supplier API requests through that connector."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Enable Private Google Access on the Dataflow worker subnet, and route outbound supplier API requests through that access path."
+          },
+          {
+            "is_correct": true,
+            "choice_text": "Configure Cloud NAT for the Dataflow worker subnet, and retain Private Google Access for outbound connections to Google Cloud APIs."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Create a Private Service Connect endpoint for Google APIs, and direct the Dataflow workers' supplier requests through that endpoint."
+          }
+        ]
+      },
+      {
+        "id": "4ea10ec1-4d47-57a1-979e-218c3f95f81a",
+        "exam": "data-engineer",
+        "status": "DRAFT",
+        "stem": "Your company produces daily store-sales reports for merchandising teams. A nightly Python job on a Compute Engine VM downloads transaction and product tables from BigQuery, performs joins, filters, and aggregations in memory, and uploads reporting tables to BigQuery. Store expansion has increased download times and caused memory failures, delaying reports. All transformations can be expressed in standard SQL. You want to reduce data transfers between BigQuery and external processing while minimizing worker administration as sales volume grows. Which approach should you use?",
+        "answers": [
+          {
+            "is_correct": false,
+            "choice_text": "Rewrite the transformations as an Apache Beam batch pipeline on Dataflow, using the BigQuery connector to read the source tables, process their data, and write the reporting tables each night."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Implement the transformations as a Spark application on a Managed Service for Apache Spark cluster, using the BigQuery connector to read source tables and write the resulting reporting tables each night."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Resize the Compute Engine VM to provide more memory, and retain the Python job that downloads BigQuery tables, transforms the data in memory, and uploads the reporting tables."
+          },
+          {
+            "is_correct": true,
+            "choice_text": "Replace the Python job with BigQuery scheduled SQL queries that perform the joins, filters, and aggregations on the existing source tables and write results directly to the reporting tables."
+          }
+        ]
+      },
+      {
+        "id": "51803dd7-fe39-5231-ad88-1832a4948784",
+        "exam": "data-engineer",
+        "status": "DRAFT",
+        "stem": "You are operating an online retailer's order-confirmation and revenue-reporting pipelines after a recent deployment. Checkout publishes orders to one Pub/Sub topic. Both pipelines pull from the same subscription and acknowledge processed messages. Confirmations notify customers, and reporting writes orders to BigQuery. Some orders now reach only one pipeline, leaving missing confirmations or incomplete revenue records. You want each pipeline to process every new order independently, even when reporting is paused, while minimizing changes to the existing publisher and topic. What should you do?",
+        "answers": [
+          {
+            "is_correct": false,
+            "choice_text": "Change the confirmation pipeline to poll the reporting pipeline's BigQuery table for newly recorded orders, and let reporting continue consuming the existing Pub/Sub subscription."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Take periodic Pub/Sub snapshots of the shared subscription, and configure both pipelines to seek that subscription to a snapshot before reading their next batch."
+          },
+          {
+            "is_correct": true,
+            "choice_text": "Create two pull subscriptions on the existing Pub/Sub topic, and configure each pipeline to consume and acknowledge messages from its own subscription."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Increase the number of subscriber workers in both pipelines, and keep all workers pulling and acknowledging order messages from the existing shared Pub/Sub subscription."
+          }
+        ]
+      },
+      {
+        "id": "535cb449-0543-5201-8966-29744da29d05",
+        "exam": "data-engineer",
+        "status": "DRAFT",
+        "stem": "You are managing a distributor's daily inventory reconciliation in Cloud Composer. Its DAG runs dependent BigQuery jobs to load inventory movements and calculate discrepancies, with each task selecting yesterday's data using the current date. As warehouse coverage grows, operations needs to replay the previous month's daily reconciliations alongside regular scheduled runs. You want each run and retry to process its intended day's source data and destination partitions while minimizing changes to existing dependencies and retry behavior. What should you do?",
+        "answers": [
+          {
+            "is_correct": false,
+            "choice_text": "Enable catchup for the previous month's daily runs, retaining each task's calculation of yesterday from the current date to select source data and destination partitions."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Replace the DAG with a Workflows workflow that iterates over historical processing dates, recreates dependencies and retries, and uses Cloud Scheduler for daily executions."
+          },
+          {
+            "is_correct": true,
+            "choice_text": "Parameterize source-data selection and destination partitions using each DAG run's data interval, then backfill the previous month's daily intervals in the existing DAG."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Create Cloud Scheduler jobs for each BigQuery step, pass the historical processing dates, and stagger their schedules to run inventory loads before discrepancy calculations."
+          }
+        ]
+      },
+      {
+        "id": "56e07b92-384b-53c5-a0a1-87b64fc69283",
+        "exam": "data-engineer",
+        "status": "DRAFT",
+        "stem": "You manage an advertising performance dashboard used to adjust campaign budgets. Its BigQuery query left-joins impression events to conversion events by campaign and date, then calculates distinct event counts across all campaigns. Date filters already prune partitions effectively. Campaign-date rows with impressions but no conversions show zero conversions. Refreshes are slow, and the execution graph shows join output far exceeding either input, with shuffle dominating execution time. You want faster refreshes while reducing slot time per refresh. What should you do?",
+        "answers": [
+          {
+            "is_correct": false,
+            "choice_text": "Reserve BI Engine capacity and designate both event tables as preferred tables for dashboard acceleration. Retain the raw-event join and calculate distinct counts from its output for each campaign-date."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Cluster both event tables by campaign ID within their existing date partitions. Retain the raw-event join and final distinct-count aggregation, using clustered storage for the dashboard queries."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Raise the BigQuery reservation's autoscaling ceiling to provide more slots during dashboard refreshes. Retain the raw-event join and calculate distinct counts from the expanded intermediate results."
+          },
+          {
+            "is_correct": true,
+            "choice_text": "Apply the existing filters and calculate distinct event counts separately by campaign and date in each table. Left-join the summaries, retaining impression-side rows and returning zero for missing conversions."
+          }
+        ]
+      },
+      {
+        "id": "6193ee5c-ca70-5070-a0f8-1ab527b4aa72",
+        "exam": "data-engineer",
+        "status": "DRAFT",
+        "stem": "You recently deployed a parcel-tracking reporting application using an unpartitioned BigQuery table with 18 months of scan events for thousands of customers. Support investigations retrieve individual events for one customer and facility over an event-date range, usually seven days. Operations compares facility delivery performance across customers for a selected event date. Events sometimes arrive two weeks late, and support queries scan excessive data. You want selective reads for both workflows while keeping cross-customer reporting straightforward. What should you do?",
+        "answers": [
+          {
+            "is_correct": false,
+            "choice_text": "Recreate the shared BigQuery table with daily ingestion-time partitioning and clustering by customer ID, then facility ID. Migrate existing events and direct all subsequent writes there, retaining event-date filters alone in the queries used for both reporting workflows."
+          },
+          {
+            "is_correct": true,
+            "choice_text": "Create a shared BigQuery table partitioned daily by event date and clustered by customer ID, then facility ID. Migrate existing events, direct subsequent writes to the new table, and retain event-date filters in queries for both reporting workflows."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Create a separate BigQuery table for each customer, partitioned daily by event date and clustered by facility ID. Migrate events into those tables, route support queries by customer, and combine customer tables for facility comparisons."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Create a BigQuery materialized view grouped by event date, customer ID, and facility ID, calculating scan counts and average delivery times. Use the view as the reporting source for support investigations and cross-customer facility comparisons."
+          }
+        ]
+      },
+      {
+        "id": "654ec3f6-a081-5a9a-a3f9-c54f36432823",
+        "exam": "data-engineer",
+        "status": "DRAFT",
+        "stem": "You work for a logistics company migrating its shipment-cost reporting workload to a revised BigQuery storage layout. The current unpartitioned table uses logical storage billing and holds five years of shipments. Daily loads append shipments and correct records from the latest 30 days; older records remain unchanged. Contract-negotiation reports frequently filter by shipment date and include older years. You want to reduce recurring storage charges for unchanged history while keeping all five years available for interactive reporting with performance comparable to the current native table. Which approach should you use?",
+        "answers": [
+          {
+            "is_correct": true,
+            "choice_text": "Partition the destination BigQuery table by shipment date, retain all five years there, and direct daily loads and corrections to the recent partitions."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Cluster the destination BigQuery table by shipment date, keep it unpartitioned, and continue the existing daily loading and correction process."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Move historical shipments to Cloud Storage, expose them through a BigLake external table, and combine them with recent shipments in native BigQuery storage for reports."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Keep the destination BigQuery table unpartitioned, continue daily loads and corrections, and purchase BigQuery slot reservations for the shipment reporting workload."
+          }
+        ]
+      },
+      {
+        "id": "7d5429b9-722e-56ac-943d-a1fddadeceef",
+        "exam": "data-engineer",
+        "status": "DRAFT",
+        "stem": "You work for a wholesale distributor whose nightly inventory-allocation pipeline produces warehouse pick lists. Its four dependent Spark jobs run on a persistent on-premises cluster that sits idle afterward. You are migrating the pipeline to Dataproc. Rehearsals show 85 minutes of processing at the required capacity, plus approximately 10 minutes to create and initialize each cluster. All inputs, intermediate results, and restart data reside in Cloud Storage; no cluster-local state is needed between runs. You want to finish within the 110-minute nightly window before morning picking while minimizing charges during idle hours. Which approach should you use?",
+        "answers": [
+          {
+            "is_correct": false,
+            "choice_text": "Maintain a persistent Dataproc cluster with fixed primary workers and autoscaled secondary workers. Run the four jobs in dependency order, reducing secondary workers during the idle hours."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Reuse a persistent Dataproc cluster by starting it before each nightly pipeline and stopping it afterward. Run all four jobs in dependency order and retain the cluster's attached disks."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Assign each Spark job its own workflow-managed Dataproc cluster. After each job finishes and saves intermediate results to Cloud Storage, delete its cluster, then provision and initialize the next dependent job's cluster."
+          },
+          {
+            "is_correct": true,
+            "choice_text": "Configure a Dataproc workflow template with one managed cluster for the nightly pipeline. Set dependencies for all four jobs, and let the workflow delete the cluster when the run finishes."
+          }
+        ]
+      },
+      {
+        "id": "929edac6-020b-51ca-8306-9fc761f4977f",
+        "exam": "data-engineer",
+        "status": "DRAFT",
+        "stem": "You work for a payment processor whose on-premises settlement jobs upload transaction files to Cloud Storage for reconciliation. During a phased network migration, the jobs remain on-premises. An existing HA VPN connection and Cloud Router provide access to private VPC subnets, but the uploads currently use public internet egress. You want the uploads to use a private network path while minimizing application changes and additional network infrastructure. Which approach should you use?",
+        "answers": [
+          {
+            "is_correct": false,
+            "choice_text": "Replace HA VPN with Dedicated Interconnect for the settlement uploads. Keep the existing public Cloud Storage DNS records and advertise only VPC subnet routes through Cloud Router, relying on the dedicated connection to provide private API access."
+          },
+          {
+            "is_correct": true,
+            "choice_text": "Configure Private Google Access for on-premises hosts. Map Cloud Storage API names to private.googleapis.com in on-premises DNS, advertise its IP range through Cloud Router, and route that traffic over the existing HA VPN connection."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Create a Public NAT gateway in the connected VPC. Route the settlement jobs' Cloud Storage traffic through the existing HA VPN connection and use the gateway to reach the existing public API endpoints."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Enable Private Google Access on the connected VPC subnet. Keep the existing Cloud Storage DNS records and API endpoints, and rely on the current HA VPN connection for the settlement uploads."
+          }
+        ]
+      },
+      {
+        "id": "b0c99eec-b0d2-58e3-ac90-870458afc9bf",
+        "exam": "data-engineer",
+        "status": "DRAFT",
+        "stem": "You work for a hospital network whose bed-capacity dashboards slowed after query execution moved from the central warehouse project to a dedicated reporting project for departmental billing. The dashboards still query the same regional warehouse tables with unchanged SQL. BI Engine previously accelerated these queries, but its capacity remains in the warehouse project. You want to restore the dashboards' BI Engine acceleration with query billing in the reporting project while minimizing additional data copies and synchronization. Which approach should you use?",
+        "answers": [
+          {
+            "is_correct": false,
+            "choice_text": "Increase the reporting project's BigQuery slot allocation to handle the dashboard workload. Retain BI Engine capacity in the warehouse project and continue querying its existing shared tables."
+          },
+          {
+            "is_correct": true,
+            "choice_text": "Create a BI Engine reservation in the reporting project in the warehouse dataset's region, sized for the established dashboard working set. Keep submitting queries against the existing shared warehouse tables."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Increase the BI Engine reservation in the warehouse project to fit the migrated dashboard workload. Keep submitting queries through the reporting project against the existing warehouse tables."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Copy the dashboard tables into the reporting project and schedule regular synchronization from the warehouse. Query those copies through the reporting project while retaining BI Engine capacity in the original warehouse project."
+          }
+        ]
+      },
+      {
+        "id": "be68b26f-b366-5b54-a4d5-724af99f9526",
+        "exam": "data-engineer",
+        "status": "DRAFT",
+        "stem": "You are operating a cinema distributor's recently deployed royalty-settlement pipeline on a persistent Managed Service for Apache Spark cluster with one master and six standard primary workers. Nightly Spark jobs take 55 minutes, and the cluster stays idle afterward. Inputs, application artifacts, and reports reside in Cloud Storage; subsequent runs reuse no cluster-local data. Deployment runs including cluster creation and job execution finished within 75 minutes. You want to minimize daily cluster costs, including idle charges, while meeting the three-hour overnight reporting deadline. What should you do?",
+        "answers": [
+          {
+            "is_correct": false,
+            "choice_text": "Retain a persistent cluster with standard primary workers and move most processing capacity to a fixed pool of Spot secondary workers provisioned between nightly runs."
+          },
+          {
+            "is_correct": true,
+            "choice_text": "Run each nightly batch through a workflow template that creates a managed cluster with the existing configuration and deletes it after completion."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Keep the persistent cluster and purchase one-year Compute Engine resource-based commitments covering its existing standard worker capacity to reduce the price of the nightly workload."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Keep the persistent cluster and apply an autoscaling policy that reduces worker capacity to the minimum between nightly batches and scales up for processing."
+          }
+        ]
+      },
+      {
+        "id": "fc7bfa82-acff-5c12-87f0-59f586b9c12a",
+        "exam": "data-engineer",
+        "status": "DRAFT",
+        "stem": "You are securing an insurer's claims-aging dashboards after adjusters retrieved other regions' confidential claims through direct SQL. The dashboards query one shared BigQuery claims table using each adjuster's Google identity. Each adjuster belongs to one centrally managed regional Google group with dataset-reading and query-job permissions. Dashboard filters currently select claims by region. You want adjusters to retrieve complete claim details only for their assigned region through both dashboards and direct SQL, while preserving the current dashboard access workflow. What should you do?",
+        "answers": [
+          {
+            "is_correct": true,
+            "choice_text": "Create BigQuery row access policies on the shared claims table, granting each regional Google group access to rows matching its region code. Retain existing read and query-job permissions."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Replace dataset-level read grants with table-level BigQuery Data Viewer grants on the shared claims table for each regional Google group. Retain the existing dashboard region filters and query-job permissions."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Create regional row access policies on the shared BigQuery claims table, and add a policy granting all adjusters access with a TRUE filter. Retain the existing dashboard configuration and query permissions."
+          },
+          {
+            "is_correct": false,
+            "choice_text": "Apply policy tags to confidential claim columns in the shared BigQuery table, and grant every regional Google group Fine-Grained Reader access to those columns. Retain dashboard region filters and existing permissions."
+          }
+        ]
+      }
+    ]
+  },
+  "repeats": [
+    {
+      "name": "nested_repeated_child_storage",
+      "source": "data-engineer-v5-pde2-s3-1020.json",
+      "candidate_index": 5,
+      "question": {
+        "candidate_id": "73764a75-4761-57ae-b6fa-a8d9836225b1",
+        "stem": "Your company reconciles insurance reimbursements with BigQuery reports. Claim volume has tripled, and reports that join claim-header and service-line tables now miss the morning reporting window. Analysts usually read each claim with its 3–20 service lines and compare approved claim amounts with line charges. You want faster reports while keeping claim-level financial totals straightforward to calculate. Which approach should you use?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Move the separate claim-header and service-line tables to Cloud SQL, and use BigQuery federated queries to join them for reporting."
+          },
+          {
+            "label": "B",
+            "text": "Retain separate BigQuery claim-header and service-line tables, and expose their existing join through a logical reporting view."
+          },
+          {
+            "label": "C",
+            "text": "Flatten claims into a BigQuery table with one row per service line, repeating claim attributes and approved claim amounts."
+          },
+          {
+            "label": "D",
+            "text": "Store one row per claim in BigQuery, keeping claim attributes alongside service lines in an ARRAY of STRUCTs."
+          }
+        ],
+        "key": "D",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:3.2:2",
+          "engineering_decision": "What degree of normalization should an existing BigQuery insurance-claims warehouse use as claim volume grows?",
+          "business_consequence": "Delayed reimbursement reports slow settlement reconciliation; an unsuitable reporting grain also makes claim-level financial totals harder to calculate correctly.",
+          "existing_system": "Your company reconciles insurance reimbursements using BigQuery reports. Claim volume has tripled, and reports joining separate claim-header and service-line tables now miss the morning reporting window. Analysts usually retrieve claims with their service lines and compare approved claim amounts with line charges. Each claim typically contains 3–20 service lines. What should you do?",
+          "decisive_constraints": [
+            "Support the dominant access pattern of reading claim attributes together with their bounded collection of service lines.",
+            "Keep claim-level financial measures straightforward to aggregate while supporting service-line breakdowns."
+          ],
+          "best_action": "In BigQuery, store one row per claim with claim attributes and its service lines in an ARRAY<STRUCT> column.",
+          "mistakes": [
+            {
+              "action": "Keep separate BigQuery claim and service-line tables, exposing their existing join through a logical view for reporting.",
+              "scenario_reason": "A logical view simplifies query authoring but still executes the join when queried. It preserves the same normalization and read-time work for the dominant parent-child access pattern."
+            },
+            {
+              "action": "Flatten BigQuery claims and service lines into one table with a row per service line and duplicated claim attributes.",
+              "scenario_reason": "This removes the join but repeats approved claim amounts across service lines. Claim-level totals then require grain-aware aggregation, whereas nested lines preserve one stored row per claim."
+            },
+            {
+              "action": "Move normalized claim and service-line tables to Cloud SQL, and query their joins from BigQuery through federated queries.",
+              "scenario_reason": "Cloud SQL's relational model is plausible for transactional claim processing, but migrating this growing analytical workload retains the joins and adds a federated database dependency without improving the warehouse's reporting model."
+            }
+          ]
+        },
+        "accepted": false,
+        "cert_id": "data-engineer"
+      },
+      "expected_pilot_id": "1d68939c-1da3-5c5f-bf79-8979e9b36389",
+      "family": "nested_repeated_child_storage"
+    },
+    {
+      "name": "rewrite_row_multiplying_join",
+      "source": "data-engineer-v5-pde2-s4-1020.json",
+      "candidate_index": 3,
+      "question": {
+        "candidate_id": "9e13712f-ddca-5bfd-a195-959a8024d90d",
+        "stem": "You manage a factory dashboard that detects sensor drops by comparing consecutive readings within the previous day. Its BigQuery query references the readings table twice; sensor IDs and timestamps uniquely identify readings. Execution details show intermediate row counts far above input counts, with most time spent there; source scans finish quickly. You want faster refreshes with lower compute consumption while preserving every sensor's exact consecutive-reading comparisons. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Rewrite the BigQuery predecessor lookup with LAG, partitioned by sensor ID and ordered by timestamp, before calculating differences between consecutive individual readings."
+          },
+          {
+            "label": "B",
+            "text": "Cluster the BigQuery readings table by sensor ID and timestamp, then continue using the current query to compare consecutive readings."
+          },
+          {
+            "label": "C",
+            "text": "Increase the BigQuery slot reservation for scheduled dashboard refreshes, providing additional processing capacity while retaining the query's existing method for locating predecessors."
+          },
+          {
+            "label": "D",
+            "text": "Apply a final LIMIT to the BigQuery query so each dashboard refresh returns fewer detected drops after calculating the reading differences."
+          }
+        ],
+        "key": "A",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:4.1:4",
+          "engineering_decision": "Choose how to optimize an existing BigQuery predecessor lookup that dominates an equipment-monitoring dashboard's query runtime.",
+          "business_consequence": "Slow, expensive dashboard refreshes delay factory operators' detection of sudden equipment sensor drops.",
+          "existing_system": "You manage a factory's equipment-monitoring dashboard, which compares consecutive readings for each sensor within the previous day's data. Its BigQuery query references the readings table twice to locate each reading's predecessor. Sensor ID and timestamp uniquely identify each reading. Execution details show intermediate row counts far above the source reading count, with most elapsed time in those stages; source scans finish quickly.",
+          "decisive_constraints": [
+            "Preserve exact comparisons between consecutive individual readings for every sensor in the reporting day.",
+            "Reduce dashboard query latency and compute consumption."
+          ],
+          "best_action": "Rewrite the BigQuery query using LAG over sensor ID partitions ordered by timestamp, replacing the existing predecessor lookup before calculating reading differences.",
+          "mistakes": [
+            {
+              "action": "Assign the dashboard's BigQuery queries to a larger slot reservation, retaining the existing predecessor lookup and allocating additional capacity during scheduled dashboard refreshes.",
+              "scenario_reason": "Additional slots may accelerate some execution, but they retain the excessive intermediate work and add capacity cost. The observed row expansion favors changing the query algorithm."
+            },
+            {
+              "action": "Cluster the BigQuery readings table by sensor ID and timestamp, retaining the current predecessor lookup for dashboard queries.",
+              "scenario_reason": "Clustering can improve pruning for selective filters, but this query processes every sensor's daily readings. It does not eliminate the predecessor lookup's intermediate row expansion."
+            },
+            {
+              "action": "Add a LIMIT clause to the final BigQuery dashboard query so each refresh returns fewer detected sensor drops.",
+              "scenario_reason": "A final LIMIT generally does not eliminate the upstream comparisons needed to calculate the results. Returning fewer rows leaves the expensive intermediate processing unresolved."
+            }
+          ]
+        },
+        "accepted": false,
+        "cert_id": "data-engineer"
+      },
+      "expected_pilot_id": "56e07b92-384b-53c5-a0a1-87b64fc69283",
+      "family": "rewrite_row_multiplying_join"
+    },
+    {
+      "name": "workload_baseline_reservation_isolation",
+      "source": "data-engineer-v5-pde2-s5-1020.json",
+      "candidate_index": 1,
+      "question": {
+        "candidate_id": "6371db79-a5b7-5d53-aa0e-15d464511137",
+        "stem": "Your company uses BigQuery to refresh turbine-fault dashboards for wind-farm operators every five minutes. Operations and analyst projects share a reservation. Monitoring shows refreshes exceeding five minutes during analyst activity peaks, although telemetry volume is steady; refreshes finish comfortably on time otherwise. You want sufficient capacity for refreshes to finish within five minutes during peaks while keeping historical telemetry available to analysts throughout the day. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Change dashboard refresh queries to BigQuery batch priority, retaining the shared reservation, its existing baseline slot capacity, and both project assignments."
+          },
+          {
+            "label": "B",
+            "text": "Increase the BigQuery reservation's target job concurrency, retaining its current baseline slot capacity and the existing assignments for both projects."
+          },
+          {
+            "label": "C",
+            "text": "Create a separate BigQuery reservation with sufficient baseline slots for dashboard refreshes, and assign the operations project to it."
+          },
+          {
+            "label": "D",
+            "text": "Move the operations project to BigQuery on-demand billing so dashboard queries execute using the shared on-demand capacity pool."
+          }
+        ],
+        "key": "C",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:5.1:2",
+          "engineering_decision": "How should you allocate BigQuery capacity to keep turbine-fault dashboard refreshes timely during peaks in analyst activity?",
+          "business_consequence": "Delayed dashboard refreshes prevent wind-farm operators from promptly identifying faulty turbines and limiting lost generation.",
+          "existing_system": "Your company refreshes turbine-fault dashboards every five minutes using BigQuery queries in an operations project. Analysts query historical telemetry from a separate project; both projects use one reservation. Monitoring shows dashboard query durations increasing during analyst activity peaks, while telemetry volume remains steady. Dashboard queries finish comfortably within five minutes when analyst activity is low.",
+          "decisive_constraints": [
+            "Operations needs sufficient execution capacity to complete each dashboard refresh within five minutes despite varying analyst demand.",
+            "Analysts should retain access to historical telemetry throughout the day."
+          ],
+          "best_action": "Create a separate BigQuery reservation with sufficient baseline slots for dashboard refreshes, and assign the operations project to it.",
+          "mistakes": [
+            {
+              "action": "Move the operations project to BigQuery on-demand billing, allowing dashboard queries to use the shared on-demand slot pool.",
+              "scenario_reason": "On-demand execution removes competition within the existing reservation but does not establish dedicated baseline capacity for the operational workload."
+            },
+            {
+              "action": "Increase the shared BigQuery reservation's target job concurrency while retaining its current baseline slot capacity and both existing project assignments.",
+              "scenario_reason": "Higher concurrency allows more queries to execute simultaneously without adding slots or protecting dashboard capacity; concurrent queries can compete for the same resources."
+            },
+            {
+              "action": "Change dashboard refresh queries to BigQuery batch priority while keeping both projects assigned to the existing shared reservation and slot capacity.",
+              "scenario_reason": "Batch priority can defer execution and supplies no additional or dedicated capacity, putting the five-minute refresh deadline at greater risk."
+            }
+          ]
+        },
+        "accepted": false,
+        "cert_id": "data-engineer"
+      },
+      "expected_pilot_id": "2d41c9fa-dadd-5596-b567-ad8a6a0c346d",
+      "family": "workload_baseline_reservation_isolation"
+    }
+  ],
+  "distinct_controls": [
+    {
+      "name": "opposite_cmek_goal",
+      "source": "data-engineer-v5-pde2-s1-1020.json",
+      "candidate_index": 1,
+      "question": {
+        "candidate_id": "86430b5b-74f5-5b55-a787-82024ad7009a",
+        "stem": "Your company archives signed loan agreements in Cloud Storage using a customer-managed Cloud KMS key. After scheduled rotation, monitoring detects failed retrieval tests for older agreements during a key retirement rehearsal; newer agreements remain accessible. Retrievals recover after the rehearsal. You want to retire the previous key version while keeping all agreements accessible and protected with customer-managed encryption. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Rotate the Cloud KMS key again, verify retrievals for newly archived agreements, and disable the previous key version."
+          },
+          {
+            "label": "B",
+            "text": "Copy agreements to a Cloud Storage bucket using Google-managed encryption, verify retrievals, delete the originals, and disable the previous key version."
+          },
+          {
+            "label": "C",
+            "text": "Rewrite affected Cloud Storage objects using the key's current primary version, verify retrievals, and then disable the previous version."
+          },
+          {
+            "label": "D",
+            "text": "Configure a replacement Cloud KMS key as the Cloud Storage bucket default, verify uploads, and disable the previous key version."
+          }
+        ],
+        "key": "C",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:1.1:2",
+          "engineering_decision": "How should you retire a previous Cloud KMS key version while preserving access to existing Cloud Storage objects after key rotation?",
+          "business_consequence": "Incorrect retirement could make signed loan agreements unavailable during borrower disputes and regulatory examinations.",
+          "existing_system": "Your company archives signed loan agreements in Cloud Storage using a customer-managed Cloud KMS key. Following scheduled key rotation, monitoring detects failed retrieval tests for older agreements during a retirement rehearsal; newly archived agreements remain accessible. Reenabling the previous key version restores retrievals. Your compliance team wants that version retired while preserving access and customer-managed encryption. What should you do?",
+          "decisive_constraints": [
+            "Retained agreements should remain accessible throughout retirement of the previous key version.",
+            "All agreements should retain customer-managed encryption."
+          ],
+          "best_action": "Rewrite existing Cloud Storage objects using the key's current primary version, verify retrievals, then disable the previous version.",
+          "mistakes": [
+            {
+              "action": "Rotate the Cloud KMS key again, verify that new agreements remain accessible, and then disable the previous version.",
+              "scenario_reason": "Rotation establishes a new primary version for subsequent encryption operations; it does not reencrypt previously stored objects. Successful new-object tests do not establish that older agreements remain accessible."
+            },
+            {
+              "action": "Configure a replacement Cloud KMS key as the Cloud Storage bucket's default, then disable the previous key version after testing uploads.",
+              "scenario_reason": "Changing the bucket's default encryption key affects subsequent object writes. Existing agreements retain their encryption dependency, so successful uploads do not establish safe retirement."
+            },
+            {
+              "action": "Copy retained agreements into a Cloud Storage bucket using Google-managed encryption, verify retrievals, delete the originals, and disable the previous version.",
+              "scenario_reason": "Reencrypting copies with Google-managed keys could remove the old dependency, but the resulting agreements would lose the required customer control over encryption keys."
+            }
+          ]
+        },
+        "accepted": false,
+        "cert_id": "data-engineer"
+      }
+    },
+    {
+      "name": "different_on_demand_cost_control",
+      "source": "data-engineer-v5-pde2-s5-1020.json",
+      "candidate_index": 0,
+      "question": {
+        "candidate_id": "242371e7-d929-5f04-a950-bfe33da6dc7c",
+        "stem": "You are operating an insurer's recently deployed claims-investigation application, which submits BigQuery queries using on-demand pricing. One query recently cost more than a typical day's investigations. You want to reject queries whose estimated processing charges exceed a per-investigation allowance before charges accrue, while accommodating daily investigation volumes that vary substantially. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Set maximum bytes billed on each BigQuery query job submitted by the application's backend, using the investigation allowance."
+          },
+          {
+            "label": "B",
+            "text": "Configure Cloud Billing budget alerts for the application's project, setting notification thresholds to match the spending allowance for one investigation."
+          },
+          {
+            "label": "C",
+            "text": "Configure a project-level daily query usage quota in BigQuery based on the investigation allowance, retaining the application's existing query submissions."
+          },
+          {
+            "label": "D",
+            "text": "Append a LIMIT clause to each BigQuery investigation query, choosing a returned-row limit based on the spending allowance per investigation."
+          }
+        ],
+        "key": "A",
+        "decision_plan": {
+          "objective_id": "data-engineer:standard:5.1:1",
+          "engineering_decision": "Choose how to prevent unexpectedly expensive individual BigQuery investigation queries while preserving normal application usage. What should you do?",
+          "business_consequence": "Control unpredictable investigation costs without interrupting legitimate claims investigations during busy periods.",
+          "existing_system": "You are operating an insurer's recently deployed claims-investigation application. Its backend submits queries to BigQuery using on-demand pricing. Most investigations cost less than a dollar, but one query recently cost more than a typical day's investigations. Investigators need individual queries kept within a small spending allowance while supporting a daily investigation volume that varies substantially.",
+          "decisive_constraints": [
+            "Reject individual queries whose estimated processing charges exceed the investigation allowance before incurring those charges.",
+            "Accommodate legitimate fluctuations in the number of investigations completed each day."
+          ],
+          "best_action": "Set maximum bytes billed on every BigQuery query job submitted by the investigation application's backend.",
+          "mistakes": [
+            {
+              "action": "Configure Cloud Billing budget alerts for the investigation project, with notifications whenever spending reaches the individual investigation allowance.",
+              "scenario_reason": "Budget alerts notify about accumulated spending; they do not reject an expensive query before it incurs processing charges."
+            },
+            {
+              "action": "Append a LIMIT clause to every BigQuery investigation query, choosing a row limit that fits the investigation spending allowance.",
+              "scenario_reason": "Limiting returned rows does not generally limit bytes scanned. A query returning few rows can still incur substantial on-demand processing charges."
+            },
+            {
+              "action": "Configure a project-level BigQuery daily query usage quota based on the investigation allowance, and retain the existing query submissions.",
+              "scenario_reason": "A daily quota controls aggregate usage rather than each investigation. It can allow one disproportionately expensive query or block legitimate investigations after ordinary queries exhaust the daily allowance."
+            }
+          ]
+        },
+        "accepted": false,
+        "cert_id": "data-engineer"
+      }
+    }
+  ]
+}

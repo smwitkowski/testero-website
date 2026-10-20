@@ -47,18 +47,33 @@ def stored_order(entry):
     return mapping
 
 
-def balance_options(entries):
-    """Balance eligible candidates, preserving canonical judged content and receipts."""
+def balance_options(entries, *, population_ids=None):
+    """Balance stored keys across one admitted run, including separate retry waves.
+
+    An optional complete run population fixes each wave's global ordinal. Without
+    it, preserve the historical per-artifact cohort and its exact digest.
+    """
     import json
     from shared.external_judge import candidate_question
 
     ordered = sorted(entries, key=lambda entry: entry["candidate_id"])
-    ids = [entry["candidate_id"] for entry in ordered]
-    if len(set(ids)) != len(ids):
+    local_ids = [entry["candidate_id"] for entry in ordered]
+    if len(set(local_ids)) != len(local_ids):
         raise ValueError("Duplicate eligible candidate IDs")
+    if population_ids is None:
+        ids = local_ids
+    else:
+        if (not isinstance(population_ids, list)
+                or any(not isinstance(ident, str) or not ident.strip() for ident in population_ids)
+                or len(set(population_ids)) != len(population_ids)
+                or not set(local_ids).issubset(population_ids)):
+            raise ValueError("Invalid full-run option balance population")
+        ids = sorted(population_ids)
     digest = hashlib.sha256(json.dumps(ids, separators=(",", ":")).encode()).hexdigest()
+    ordinals = {ident: index for index, ident in enumerate(ids)}
     layouts = []
-    for index, entry in enumerate(ordered):
+    for entry in ordered:
+        index = ordinals[entry["candidate_id"]]
         question, evidence = candidate_question(entry), canonical_evidence(entry)
         balance = {"version": 1, "population_sha256": digest, "index": index}
         mapping = balanced_order(entry["candidate_id"], balance)

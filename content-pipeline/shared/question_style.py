@@ -316,3 +316,24 @@ PDE_STYLE_INSTRUCTIONS = (
     + "\n" + STYLE_RULES
     + "\nThe PDE v5.2 overrides above take precedence where presentation rules conflict."
 )
+
+
+# Additive policy only: the 5.2 constants above remain frozen for old requests.
+PDE_FILLER_STYLE_ADDITIONS = """Rules v5.3 — no generic non-solution distractors:
+Keep every v5.2 guard. Each choice must address the scenario's actual engineering
+problem through a plausible mechanism, even when it loses on a documented trade-off.
+Reject stock actions that do not address that problem; a real command or service
+name alone does not make an option a useful alternative. Do not pad with generic
+restarts, retries, more resources or unrelated query changes without a credible
+scenario-specific mechanism. Evaluate the action in context, not by keyword.
+For example, adding LIMIT to reduce returned rows is filler when the problem is
+bytes scanned by a non-clustered BigQuery query or a join multiplying intermediate
+rows: limiting final results does not repair those mechanisms. Do not blacklist
+LIMIT: it can be a legitimate alternative for returned-row volume, top-N output,
+or a documented access pattern where early termination can reduce work. Keep all
+evidence and independent gates; plausibility never makes an incorrect key valid.
+"""
+PDE_FILLER_STYLE_RULES = PDE_STYLE_RULES + "\n" + PDE_FILLER_STYLE_ADDITIONS
+PDE_FILLER_STYLE_INSTRUCTIONS = (
+    PDE_STYLE_INSTRUCTIONS + "\n" + PDE_FILLER_STYLE_ADDITIONS
+)

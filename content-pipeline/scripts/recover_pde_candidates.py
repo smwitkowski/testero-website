@@ -15,6 +15,7 @@ from scripts import ingest_external_verdicts as ingestion
 from scripts.run_domain_batch import export_questions
 from shared.external_judge import candidate_question, candidate_storage_id
 from shared.near_duplicates import comparison_row, load_export
+from shared.objective_style import uses_pde_style
 
 PIPELINE = Path(__file__).resolve().parents[1]
 
@@ -53,9 +54,15 @@ def _inventory(artifacts):
     for index, artifact in enumerate(artifacts, 1):
         source = _regular(artifact)
         payload = ingestion._read_json(source)
-        if (payload.get("cert_id") != "data-engineer" or payload.get("style_policy_version") != "5.2"
+        if (payload.get("cert_id") != "data-engineer" or payload.get("style_policy_version") not in ("5.2", "5.3")
                 or payload.get("rules_version") != 5 or payload.get("judge_model") != "external"):
-            raise ValueError("Recovery requires frozen PDE rules-v5.2 external artifacts")
+            raise ValueError("Recovery requires frozen PDE rules-v5.2/v5.3 external artifacts")
+        # Validate complete frozen policies, never reconstruct or upgrade requests.
+        for scope in payload["plan"]:
+            policy = scope.get("style_policy")
+            if (not uses_pde_style(policy) or policy["version"] != payload["style_policy_version"]
+                    or policy["objective_id"] != scope.get("objective_id")):
+                raise ValueError("Recovery style policy differs from its frozen plan")
         destination = Path(str(index)) / source.name
         records.append({"source": str(source), "sha256": _digest(source), "artifact": str(destination)})
         payloads.append(payload)

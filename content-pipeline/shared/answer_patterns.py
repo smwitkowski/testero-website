@@ -1,8 +1,8 @@
 """Offline PDE answer-pattern veto, additional to scenario/key Jaccard checks.
 
-Only the explicitly recognized lifecycle and exact-distinct families have
-canonical semantics. Other actions use conservative lexical thresholds. This is
-not a semantic guarantee for unseen paraphrases. Missing comparison provenance
+Only explicitly recognized families have canonical semantics. Join-rewrite
+families also require row-expansion evidence in the saved scenario. Other actions
+use conservative lexical thresholds. This is not a semantic guarantee for unseen paraphrases. Missing comparison provenance
 blocks instead of assigning a guessed category. No model or service is called.
 """
 import hashlib
@@ -65,10 +65,34 @@ def _has_contrast(text):
         r"prevent(?:s|ed|ing)?|rather\s+than|instead\s+of|[a-z]+n['’]t)\b", text))
 
 
-def _mechanism(text):
+def _mechanism(text, *, context=""):
     text = _normalized(text)
+    scenario = _normalized(context) if context else ""
     if _has_contrast(text):
         return None
+    # Require the typed nested representation, not ARRAY storage in general.
+    if (re.search(r"\barray\s*(?:<\s*struct\b|of\s+structs?\b)", text)
+            and re.search(r"\b(?:store|keep|keeping)\b", text)):
+        return "nested_repeated_child_storage"
+    if ("bigquery" in text + " " + scenario and re.search(r"\b(?:separate|dedicated)\b", text)
+            and "reservation" in text and "baseline" in text
+            and re.search(r"\bassign\b.{0,120}\bproject\b", text)):
+        # Assigning the storage/data project is a different (usually losing)
+        # decision. Do not collapse it into execution-project isolation.
+        if re.search(r"\bassign\b.{0,70}\b(?:data|storage) project\b", text):
+            return "reservation_storage_project_assignment"
+        return "workload_baseline_reservation_isolation"
+    # Neither LAG alone nor aggregation alone establishes the repeated decision.
+    # The scenario must identify the excess intermediate rows at a join/lookup.
+    expansion = bool(re.search(
+        r"(?:join output|intermediate row count|intermediate row).{0,65}"
+        r"(?:exceed|far above|expan|multip)|(?:row.{0,20}(?:expan|multip))", scenario))
+    join_context = bool(re.search(r"\bjoin|\breferences.{0,40}twice|predecessor lookup", scenario))
+    rewrite = (bool(re.search(r"\blag\b", text)) and bool(re.search(r"rewrite|replac", text))
+               or bool(re.search(r"\bjoin\b", text))
+               and bool(re.search(r"summar|smaller result|preaggregat", text)))
+    if "bigquery" in scenario and expansion and join_context and rewrite:
+        return "rewrite_row_multiplying_join"
     cluster = "cluster" in text
     workflow = bool(re.search(r"workflow|managed cluster|execution|workload|task", text))
     lifecycle = "ephemeral" in text or ("delete" in text and bool(re.search(r"complete|after|end|termination", text)))
@@ -82,10 +106,41 @@ def _mechanism(text):
     return None
 
 
+def _distractor_has_contrast(text, mechanism):
+    # A false guarantee of "no shuffle" is an effect claimed by a positive
+    # keep-the-join alternative, not a negated storage action. Restrict this
+    # exception to that exact new family and claim; all old families keep the
+    # original broad negation/contrast guard unchanged.
+    if (mechanism == "nested_repeated_child_storage"
+            and re.search(r"\bkeep separate tables and cluster\b", text)
+            and re.search(r"\bguarantee that their joins require no shuffle\b", text)):
+        text = text.replace("no shuffle", "zero shuffle")
+    return _has_contrast(text)
+
+
 def _archetype(text, mechanism):
     text = _normalized(text)
-    if _has_contrast(text):
+    if _distractor_has_contrast(text, mechanism):
         return None
+    if mechanism == "nested_repeated_child_storage":
+        if re.search(r"\bflatten|\bone row per|\ba row per", text) and re.search(r"repeat|duplicat", text):
+            return "flatten_repeating_parent_attributes"
+        if re.search(r"\b(?:retain|keep|separate)\b", text) and re.search(r"\bjoins?\b", text):
+            return "retain_normalized_child_join"
+        if "json" in text and "string" in text:
+            return "serialize_children_as_string"
+    if mechanism == "workload_baseline_reservation_isolation":
+        # These alternatives all retain competition in the same slot pool.
+        # Require explicit shared/existing assignments; merely mentioning slots
+        # or a reservation is not enough to classify an alternative.
+        if (re.search(r"shared reservation|common (?:slot )?pool|both.{0,45}(?:assigned|assignment)|assignments?.{0,25}both projects", text)
+                and re.search(r"increas|autoscal|concurrency|commitment|batch priority", text)):
+            return "tune_shared_pool_without_isolation"
+    if mechanism == "rewrite_row_multiplying_join":
+        if re.search(r"\bcluster\b", text) and re.search(r"\btables?\b", text):
+            return "cluster_join_inputs"
+        if re.search(r"\b(?:raise|increase|larger|additional|more)\b", text) and re.search(r"\bslots?\b", text):
+            return "add_slots_to_existing_join"
     if mechanism == "exact_distinct_at_target_grain":
         if re.search(r"approx|sketch", text):
             return "approximate_distinct"
@@ -158,10 +213,12 @@ def _pattern(entry):
     _text(action)
     if not isinstance(distractors, list) or len(distractors) != 3:
         raise ValueError("Answer-pattern comparison needs three distractor actions")
-    mechanism = _mechanism(action)
+    plan = _mapping(entry.get("decision_plan", entry))
+    context = entry.get("stem") or plan.get("existing_system", "")
+    mechanism = _mechanism(action, context=context)
     # Keep lexical content even for canonical actions, for inspectable provenance.
     alternatives = [{"archetype": _archetype(text, mechanism), "tokens": _tokens(text),
-                     "has_contrast": _has_contrast(_normalized(text))} for text in distractors]
+                     "has_contrast": _distractor_has_contrast(_normalized(text), mechanism)} for text in distractors]
     key_tokens = _tokens(action)
     if not key_tokens or any(not alt["tokens"] for alt in alternatives):
         raise ValueError("Answer-pattern action has no normalized comparison tokens")

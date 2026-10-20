@@ -81,7 +81,8 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False):
     export = Path(str(base) + ".existing.json")
     if any(path.exists() for path in (artifact, export, Path(str(base) + ".judge-requests"),
                                       Path(str(base) + ".verdicts"), Path(str(base) + ".accepted-ids"),
-                                      Path(str(artifact) + ".calls.jsonl"))):
+                                      Path(str(artifact) + ".calls.jsonl"),
+                                      base.with_suffix(".retry-report.json"))) or list(base.parent.glob(base.name + "-retry*")):
         raise ValueError("Batch artifact or sidecar exists; use a new tag")
     generate = [sys.executable, "scripts/generate_all_domains.py", "--cert", cert,
                 "--n-questions", str(count), "--model", "codex", "--judge-model", "external",
@@ -108,8 +109,10 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False):
 @click.option("--count", type=click.IntRange(min=1), default=None, envvar="N",
               help="Total candidates: 40 for all sections, 30 for a single section (overridden by N).")
 @click.option("--parallel", type=click.IntRange(1, 4), default=3, envvar="PARALLEL", show_default=True)
+@click.option("--retry-attempts", type=click.IntRange(min=0, max=10), default=2, show_default=True,
+              help="Extra same-slot attempts for full-plan PDE; gates never change.")
 @click.option("--plan-only", is_flag=True, help="Offline only: no export, credentials, models or database.")
-def main(section, tag, cert, count, parallel, plan_only):
+def main(section, tag, cert, count, parallel, retry_attempts, plan_only):
     """Run SECTION (e.g. 1. or all) as one artifact; all uses the weighted cert plan."""
     try:
         artifact, export, commands = batch_commands(section, tag, cert, count, parallel, plan_only=plan_only)
@@ -120,12 +123,37 @@ def main(section, tag, cert, count, parallel, plan_only):
                 raise ValueError("Coordinator must inject SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY; no env files are read")
             exam = "GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert
             click.echo(f"Exported {export_questions(url, key, exam, export)} existing {cert} questions")
-        for command in commands:
+        def execute(command):
             subprocess.run(command, cwd=PIPELINE, check=True, stdin=subprocess.DEVNULL,
                            env={**os.environ, "PYTHON_DOTENV_DISABLED": "1"})
+        if not plan_only and section == "all" and cert == "data-engineer":
+            from scripts.pde_retry import run_retry_batch
+            from scripts import ingest_external_verdicts as ingestion
+            from shared.external_judge import candidate_question, candidate_storage_id
+            from shared.near_duplicates import comparison_row
+
+            def storage_id(payload, entry):
+                return candidate_storage_id(entry, ingestion._scope(payload, entry), candidate_question(entry))
+
+            def admit(path, verdicts, **kwargs):
+                with ingestion.artifact_lock(path):
+                    return ingestion.ingest(path, verdicts, **kwargs)
+
+            report = run_retry_batch(artifact, export, commands, retry_attempts=retry_attempts,
+                                     execute=execute, admit=admit,
+                                     load_bank=lambda path: load_export(path, cert_id=cert)["questions"],
+                                     comparison=comparison_row, storage_id=storage_id)
+            ids = [ident for wave in report["waves"] for ident in wave["selected_ids"]]
+            click.echo("PDE accepted topic coverage: " + json.dumps(report["topics"]))
+            click.echo("PDE planned vs accepted sections: " + json.dumps(report["sections"]))
+        else:
+            for command in commands:
+                execute(command)
+            ids = []
+            if not plan_only:
+                payload = json.loads(artifact.read_text())
+                ids = [row["inserted_question_id"] for row in payload["candidates"] if row.get("accepted") and row.get("inserted_question_id")]
         if not plan_only:
-            payload = json.loads(artifact.read_text())
-            ids = [row["inserted_question_id"] for row in payload["candidates"] if row.get("accepted") and row.get("inserted_question_id")]
             Path(str(artifact.with_suffix("")) + ".accepted-ids").write_text("\n".join(ids))
             click.echo(f"Stored {len(ids)} DRAFT questions; publication is not authorized")
     except (ValueError, OSError, subprocess.CalledProcessError):

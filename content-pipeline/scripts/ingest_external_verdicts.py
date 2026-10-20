@@ -27,7 +27,7 @@ from shared.cli_models import parse_output
 from shared.completion_diagnostics import _safe_completion
 from shared.dedupe import normalize_stem
 from shared.doc_search import documentation_context
-from shared.option_order import canonical_evidence, balance_options
+from shared.option_order import canonical_evidence, balance_options, balanced_order
 from shared.near_duplicates import check_near_duplicate, comparison_row, tokens
 from shared.batch_report import key_position_report, format_key_position_report, template_diversity_report
 from shared.evidence import check_evidence
@@ -101,16 +101,32 @@ def _scope(payload, entry):
     if scope["cert_id"] != payload["cert_id"]:
         raise ValueError("Certification does not match the artifact")
     historical_pde = payload["cert_id"] == "data-engineer"
-    current = plan_questions(payload["cert_id"], index, objective_ids=[scope["objective_id"]],
+    source_index = index
+    if "retry_slots" in payload:
+        slots, full_count = payload["retry_slots"], payload.get("full_plan_count")
+        if (not historical_pde or not isinstance(slots, list) or len(slots) != len(payload["plan"])
+                or type(full_count) is not int or full_count < len(payload["plan"])):
+            raise ValueError("Invalid frozen retry slot provenance")
+        original_indices = []
+        for slot in slots:
+            if (not isinstance(slot, dict) or set(slot) != {"plan_slot", "attempt"}
+                    or type(slot["plan_slot"]) is not int or not 1 <= slot["plan_slot"] <= full_count
+                    or type(slot["attempt"]) is not int or slot["attempt"] < 2):
+                raise ValueError("Invalid frozen retry slot provenance")
+            original_indices.append(slot["plan_slot"])
+        if len(set(original_indices)) != len(original_indices):
+            raise ValueError("Duplicate frozen retry plan slots")
+        source_index = original_indices[index - 1]
+    current = plan_questions(payload["cert_id"], source_index, objective_ids=[scope["objective_id"]],
                              **({"generation_tuning": False} if historical_pde else {}))
-    expected = current[index - 1]
-    tuned = payload.get("style_policy_version") == "5.2"
+    expected = current[source_index - 1]
+    tuned = uses_pde_style(scope.get("style_policy"))
     if tuned:
         if payload["cert_id"] != "data-engineer" or payload.get("rules_version") != 5:
             raise ValueError("PDE tuning requires the frozen rules-v5 PDE batch")
         if payload.get("generation_policy") != generation_policy(payload["cert_id"]):
             raise ValueError("Frozen generation policy differs from reviewed configuration")
-        expected = tune_generation_scope(expected, index - 1, topic_id=scope.get("required_topic_id"),
+        expected = tune_generation_scope(expected, source_index - 1, topic_id=scope.get("required_topic_id"),
                                          coverage_scope=scope.get("topic_coverage_scope"),
                                          policy=payload["generation_policy"])
         if any(entry.get(key) != scope.get(key) for key in TUNING_SCOPE_FIELDS):
@@ -128,7 +144,7 @@ def _scope(payload, entry):
     elif "distractor_evidence" in scope or "distractor_evidence" in entry:
         raise ValueError("Distractor-evidence mode requires frozen batch provenance")
     policy = scope.get("style_policy")
-    if payload.get("style_policy_version") in ("5.1", "5.2"):
+    if payload.get("style_policy_version") == "5.1" or tuned:
         validate_style_policy(policy, scope["objective_id"])
         if policy["version"] != payload["style_policy_version"]:
             raise ValueError("Style policy version differs from frozen batch")
@@ -350,21 +366,141 @@ def validate_completed_journals(payload, path):
         raise ValueError("Persistence journals require human reconciliation") from None
 
 
-def ingest(path, verdicts, *, dry_run=False, publication_bank=None):
+def _generation_quality_stage(entry):
+    """Recognize affirmative frozen quality failures, never arbitrary exceptions."""
+    stage = entry.get("failure_stage")
+    error = entry.get("error_class")
+    if error == "DecisionVetoError":
+        attempts = entry.get("decision_attempts")
+        if (stage == "decision_veto" and isinstance(attempts, list) and attempts
+                and isinstance(attempts[-1], dict)
+                and isinstance(attempts[-1].get("proof"), dict)
+                and attempts[-1]["proof"].get("passed") is False
+                and isinstance(attempts[-1]["proof"].get("reason"), str)
+                and attempts[-1]["proof"]["reason"].strip()):
+            return stage
+        return None
+    if error not in (None, "CandidateRejected"):
+        return None
+    if stage == "documentation" and error == "CandidateRejected":
+        attempts = entry.get("decision_attempts")
+        if isinstance(attempts, list) and attempts and isinstance(attempts[-1], dict):
+            last = attempts[-1]
+            check = last.get("documentation_check")
+            if last.get("sources") == [] and isinstance(check, dict) and check.get("passed") is False:
+                return stage
+    checks = {
+        "near_duplicate": ("near_duplicate_check",),
+        "near_duplicate_plan": ("near_duplicate_plan_check",),
+        "answer_pattern": ("answer_pattern_check", "answer_pattern_plan_check"),
+        "product_share": ("product_share_check",),
+        "schema": ("schema_check",),
+        "mechanical": ("mechanical_check",),
+    }
+    for name in checks.get(stage, ()):
+        check = entry.get(name)
+        if isinstance(check, dict) and check.get("passed") is False:
+            if stage == "answer_pattern" and check.get("errors"):
+                return None  # Missing comparison provenance is not a duplicate.
+            # A placeholder "No fetched evidence" is not an evaluated quality gate.
+            if stage == "mechanical" and not entry.get("citation_attempts"):
+                continue
+            return stage
+    if stage == "duplicate" and entry.get("duplicate") is True:
+        return stage
+    return None
+
+
+def _strict_preflight(path, verdicts, payload):
+    """Validate every request/verdict, even for a later duplicate-vetoed row."""
+    try:
+        if path.is_symlink() or verdicts.is_symlink():
+            raise ValueError("Unsafe artifact or verdict directory")
+        if payload.get("batch_stop"):
+            raise ValueError("Generation stopped on a system failure")
+        validate_completed_journals(payload, path)
+        for entry in payload["candidates"]:
+            if _is_complete(entry):
+                continue
+            if not entry.get("external_judge_request") and not entry.get("awaiting_external_judge"):
+                if _generation_quality_stage(entry) is None:
+                    raise ValueError("Unverified or system generation rejection")
+                continue
+            scope, question, checked = _validate_candidate(path, payload, entry)
+            verdict_path = verdicts / (entry["candidate_id"] + ".json")
+            if verdict_path.is_symlink():
+                raise ValueError("Unsafe external verdict path")
+            raw = _read_json(verdict_path)
+            if not isinstance(raw, dict):
+                raise ValueError("Malformed external verdict")
+            _external_decision(question, scope, entry["sources"], checked["options"], raw, payload["model"],
+                gate_version=payload["external_judge_version"], rules_version=payload.get("rules_version", 4),
+                argon_request=_argon_request(path, entry, payload))
+    except Exception as error:
+        raise click.ClickException("Strict ingestion preflight failed; no new DB writes ("
+                                   + type(error).__name__ + ")") from None
+
+
+def _quality_summary(payload, superseded):
+    candidates = [{"candidate_id": entry["candidate_id"], "stage": entry["failure_stage"],
+                   "reason": entry.get("reason", "Candidate rejected")}
+                  for entry in payload["candidates"]
+                  if entry["candidate_id"] not in superseded and entry.get("failure_stage")
+                  and not _is_complete(entry)]
+    stages = {}
+    for row in candidates:
+        stages[row["stage"]] = stages.get(row["stage"], 0) + 1
+    return {"count": len(candidates), "by_stage": stages, "candidates": candidates}
+
+
+def ingest(path, verdicts, *, dry_run=False, publication_bank=None,
+           continue_quality_rejections=False, full_plan_count=None,
+           expected_selected_ids=None, balance_population_ids=None):
     """Persist passing candidates; an optional PDE comparison bank adds fresh gates.
 
     publication_bank is a list of normalized load_export question rows. It never
     replaces or mutates the frozen duplicate snapshot, requests or journals.
-    Returns selected_candidates comparison rows with stable storage IDs, for
-    rolling dry-run admission across artifacts. Ordinary quality errors still
-    raise after flushing decisions; product-cap vetoes alone do not raise.
+    Returns selected_candidates comparison rows with stable storage IDs and a
+    quality_rejections summary. By default historical rejection behavior stays
+    unchanged. continue_quality_rejections enables strict whole-artifact preflight
+    and tolerates only verified content-quality failures, including an empty
+    selection. Missing/malformed verdicts, system errors and integrity failures
+    block before any database client or run is created. expected_selected_ids
+    requires exact selected storage-ID equality before database access.
+    full_plan_count preserves the original product-cap budget across retry waves.
+    balance_population_ids binds option layouts to the full selected cohort.
     """
+    if type(continue_quality_rejections) is not bool:
+        raise click.ClickException("Invalid quality-rejection continuation policy")
+    if full_plan_count is not None and (type(full_plan_count) is not int or full_plan_count < 1):
+        raise click.ClickException("full_plan_count must be a positive integer")
+    if expected_selected_ids is not None:
+        if (not isinstance(expected_selected_ids, (list, tuple, set, frozenset))
+                or any(not isinstance(ident, str) or not ident.strip() for ident in expected_selected_ids)
+                or len(set(expected_selected_ids)) != len(expected_selected_ids)):
+            raise click.ClickException("Expected selection requires unique stable storage IDs")
+        expected_selected_ids = set(expected_selected_ids)
+    if balance_population_ids is not None and (
+            not isinstance(balance_population_ids, list)
+            or any(not isinstance(ident, str) or not ident.strip() for ident in balance_population_ids)
+            or len(set(balance_population_ids)) != len(balance_population_ids)):
+        raise click.ClickException("Invalid full-run option balance population")
+    strict_preflight = continue_quality_rejections or expected_selected_ids is not None
     payload = _read_json(path)
     if (not isinstance(payload, dict) or not isinstance(payload.get("candidates"), list)
             or not payload["candidates"]
             or not isinstance(payload.get("plan"), list) or not payload["plan"]
             or not isinstance(payload.get("generation_runs"), dict)):
         raise click.ClickException("Invalid external judge artifact")
+    frozen_count = payload.get("full_plan_count")
+    if frozen_count is not None:
+        if type(frozen_count) is not int or frozen_count < len(payload["plan"]):
+            raise click.ClickException("Invalid frozen full_plan_count")
+        if full_plan_count is not None and full_plan_count != frozen_count:
+            raise click.ClickException("full_plan_count differs from frozen artifact")
+        full_plan_count = frozen_count
+    if full_plan_count is not None and full_plan_count < len(payload["plan"]):
+        raise click.ClickException("full_plan_count is smaller than the frozen plan")
     if (payload.get("judge_model") != "external" or type(payload.get("external_judge_version")) is not int
             or payload["external_judge_version"] not in (1, 2)):
         raise click.ClickException("Artifact does not use a supported external judge version")
@@ -448,19 +584,19 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None):
         for row in bank["questions"]:
             if (not isinstance(row, dict) or not {"id", "stem", "key"} <= set(row)
                     or set(row) - ({"id", "stem", "key", "cert_id", "objective_id"}
-                                   | ({"distractors", "answer_pattern_source"} if payload.get("style_policy_version") == "5.2" else set()))
+                                   | ({"distractors", "answer_pattern_source"} if uses_pde_style(payload["plan"][0].get("style_policy")) else set()))
                     or not isinstance(row["id"], str) or not row["id"].strip()
                     or ("objective_id" in row and (not isinstance(row["objective_id"], str) or not row["objective_id"].strip()))
                     or row.get("cert_id", payload["cert_id"]) != payload["cert_id"]
                     or (payload["cert_id"] != "machine-learning-engineer" and row.get("cert_id") != payload["cert_id"])):
                 raise click.ClickException("Malformed local export snapshot")
             tokens(row["stem"]); tokens(row["key"])
-            if payload.get("style_policy_version") == "5.2" and not check_answer_pattern(row, [], cert_id=payload["cert_id"])["passed"]:
+            if uses_pde_style(payload["plan"][0].get("style_policy")) and not check_answer_pattern(row, [], cert_id=payload["cert_id"])["passed"]:
                 raise click.ClickException("Malformed PDE answer-pattern snapshot")
         near_seen = list(bank["questions"])
     cap_bank = list(near_seen)
     if publication_bank is not None:
-        if payload.get("cert_id") != "data-engineer" or payload.get("style_policy_version") != "5.2":
+        if payload.get("cert_id") != "data-engineer" or not uses_pde_style(payload["plan"][0].get("style_policy")):
             raise click.ClickException("Publication bank override requires tuned PDE")
         if not isinstance(publication_bank, list):
             raise click.ClickException("Publication bank must be a normalized question list")
@@ -495,11 +631,14 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None):
         # Keep both historical and fresh comparison content even if a stable ID
         # appears in both: a fresh edit must not erase a frozen duplicate veto.
         near_seen.extend(publication_bank)
-    if payload.get("style_policy_version") == "5.2":
+    if strict_preflight:
+        _strict_preflight(path, verdicts, payload)
+    if uses_pde_style(payload["plan"][0].get("style_policy")):
         for entry in payload["candidates"]:
             if not _is_complete(entry):
                 entry["publication_selected"] = False
     pending, seen = [], set()
+    fatal_rejections = []
     # Include completed content before pending validation, regardless of list order.
     if payload.get("rules_version") == 5:
         near_seen.extend(comparison_row(entry) for entry in payload["candidates"] if _is_complete(entry))
@@ -582,6 +721,8 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None):
                     entry["answer_pattern_check"] = check_answer_pattern(entry, near_seen, cert_id=payload["cert_id"],
                         exclude=(ident, entry.get("repair", {}).get("parent_candidate_id")))
                     if not entry["answer_pattern_check"]["passed"]:
+                        if strict_preflight and entry["answer_pattern_check"].get("errors"):
+                            fatal_rejections.append(ident)
                         _reject(entry, "answer_pattern", entry["answer_pattern_check"]["reason"])
                         rejected += 1
                         click.echo(f"{ident}: rejected; {entry['answer_pattern_check']['reason']}")
@@ -593,6 +734,10 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None):
             seen.add(normalized)
         except (ValueError, KeyError, TypeError, OSError, UnicodeError, StopIteration) as exc:
             entry["error_class"] = getattr(exc, "error_class", type(exc).__name__)
+            if strict_preflight:
+                # Only the deliberate normalized-stem veto is a content rejection.
+                if type(exc) is not ValueError or str(exc) != "Duplicate normalized stem":
+                    fatal_rejections.append(ident)
             _reject(entry, getattr(exc, "stage", "near_duplicate"), str(exc))
             rejected += 1
             click.echo(f"{ident}: rejected; {entry['reason']}")
@@ -619,6 +764,8 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None):
             entry["awaiting_external_judge"] = False
             entry["status"] = "external_judge_passed" if judge.passed else "external_judge_rejected"
         except Exception as exc:
+            if strict_preflight:
+                fatal_rejections.append(ident)
             entry["error_class"] = type(exc).__name__
             _reject(entry, "external_verdict", str(exc))
             rejected += 1
@@ -654,7 +801,7 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None):
         pending.append((entry, scope, question, judge, grounding))
         click.echo(f"{ident}: passing external verdict; {judge.reason}")
     cap_vetoed = 0
-    if payload.get("style_policy_version") == "5.2":
+    if uses_pde_style(payload["plan"][0].get("style_policy")):
         # Existing completed rows reserve capacity even when the export is older.
         completed = []
         for entry in payload["candidates"]:
@@ -667,7 +814,8 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None):
             bank_by_id.setdefault(row["id"], row)
         admissions = [{**product_share_row(question), "id": candidate_storage_id(entry, scope, question),
                        "score": judge.score} for entry, scope, question, judge, _ in pending]
-        selection = select_publication_products(admissions, list(bank_by_id.values()), cert_id=payload["cert_id"])
+        selection = select_publication_products(admissions, list(bank_by_id.values()), cert_id=payload["cert_id"],
+                                                full_plan_count=full_plan_count)
         payload["product_share_report"] = selection["report"]
         keep = set(selection["selected_indices"])
         for index, (entry, *_) in enumerate(pending):
@@ -678,6 +826,13 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None):
                 _reject(entry, "product_share", selection["vetoes"].get(index, "Already represented in the publication bank"))
                 cap_vetoed += 1
         pending = [row for index, row in enumerate(pending) if index in keep]
+    selected_ids = {candidate_storage_id(entry, scope, question)
+                    for entry, scope, question, _, _ in pending}
+    if expected_selected_ids is not None and selected_ids != expected_selected_ids:
+        raise click.ClickException("Selected storage IDs changed since dry-run; no new DB writes")
+    if strict_preflight and (fatal_rejections or missing or blocked):
+        raise click.ClickException("Ingestion integrity or persistence failure; no new DB writes")
+    quality_rejections = _quality_summary(payload, superseded)
     if payload.get("rules_version") == 5:
         quality_eligible = [entry for entry in payload["candidates"]
                             if entry["candidate_id"] not in superseded
@@ -686,7 +841,9 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None):
         eligible = [entry for entry in quality_eligible if entry.get("publication_selected") is not False]
         if not blocked:
             try:
-                if payload.get("style_policy_version") == "5.2":
+                if balance_population_ids is not None:
+                    balance_options(eligible, population_ids=balance_population_ids)
+                elif uses_pde_style(payload["plan"][0].get("style_policy")):
                     # Completed layouts freeze their original balancing cohort,
                     # which can include a now cap-vetoed, still judge-passed row.
                     # Replaying a newer cap-selected cohort must also keep that
@@ -713,13 +870,25 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None):
             if entry["candidate_id"] not in superseded and entry.get("judge_verdict", {}).get("passed") is True
             and not entry.get("persistence_validation_failed")
             and entry.get("publication_selected") is not False])
+        if balance_population_ids is not None:
+            population = sorted(balance_population_ids)
+            digest = hashlib.sha256(json.dumps(population, separators=(",", ":")).encode()).hexdigest()
+            planned_keys = []
+            for index, ident in enumerate(population):
+                mapping = balanced_order(ident, {"version": 1, "population_sha256": digest, "index": index})
+                planned_keys.append({"options": [True],
+                                     "key": next(label for label, origin in mapping.items() if origin == "A")})
+            payload["key_position_report"]["aggregate_blocker"] = False
+            payload["run_key_position_report"] = {
+                **key_position_report(planned_keys), "basis": "dry_admitted_full_run_population",
+                "persisted": False, "population_sha256": digest}
         payload["template_diversity_report"] = template_diversity_report([entry for entry in payload["candidates"]
             if entry["candidate_id"] not in superseded])
         click.echo(format_key_position_report(payload["key_position_report"]))
         payload["ml_practice_report"] = ml_practice_report(payload["candidates"])
         click.echo("ML practice allowance: " + json.dumps(payload["ml_practice_report"]))
         click.echo("Template diversity: " + json.dumps(payload["template_diversity_report"]))
-        if payload.get("style_policy_version") == "5.2":
+        if uses_pde_style(payload["plan"][0].get("style_policy")):
             payload["section_product_share_report"] = product_share_report([
                 product_share_row(entry) for entry in eligible], cert_id=payload["cert_id"])
             payload["section_product_share_report"]["aggregate_blocker"] = False
@@ -728,10 +897,13 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None):
         _flush(path, payload)
         if blocked:
             raise click.ClickException("Persistence journal requires reconciliation; no new DB writes")
-        if not payload["key_position_report"]["count"] and not cap_vetoed:
+        empty_quality_selection = (continue_quality_rejections and not quality_eligible
+                                   and quality_rejections["count"] > 0)
+        if not payload["key_position_report"]["count"] and not cap_vetoed and not empty_quality_selection:
             raise click.ClickException("No passing candidates; no new DB writes")
-        if ((payload["key_position_report"]["count"] and payload["key_position_report"]["passed"] is False)
-                or not payload["template_diversity_report"]["passed"]):
+        enforced_keys = payload.get("run_key_position_report") if balance_population_ids is not None else payload["key_position_report"]
+        if ((enforced_keys["count"] and enforced_keys["passed"] is False)
+                or (not payload["template_diversity_report"]["passed"] and not empty_quality_selection)):
             raise click.ClickException("V5 batch report failed; no new DB writes")
     _flush(path, payload)
     if not dry_run and (pending or payload["generation_runs"]):
@@ -828,12 +1000,12 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None):
     click.echo(format_option_length_report(payload["option_length_report"]))
     click.echo(format_option_prefix_report(payload["option_prefix_report"]))
     click.echo(f"Passing verdicts {len(pending)}; accepted/complete {complete}; rejected {rejected}; missing {missing}; blocked {blocked}")
-    if rejected or missing or blocked:
+    if missing or blocked or (rejected and not continue_quality_rejections):
         raise click.ClickException("Some candidates were not persisted; inspect the artifact")
     return {"selected_candidates": [{**comparison_row(entry), "id": candidate_storage_id(entry, scope, question)}
                                      for entry, scope, question, _, _ in pending],
             "product_share_report": payload.get("product_share_report"), "complete": complete,
-            "cap_vetoed": cap_vetoed}
+            "cap_vetoed": cap_vetoed, "quality_rejections": quality_rejections}
 
 
 @click.command()

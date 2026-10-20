@@ -103,6 +103,18 @@ def reject_candidate(entry, stage, reason):
     entry["error_message"] = entry["reason"]
 
 
+QUALITY_REJECTION_STAGES = frozenset({"near_duplicate_plan", "answer_pattern", "schema", "mechanical",
+                                      "near_duplicate", "duplicate", "documentation"})
+
+
+def is_quality_rejection(entry):
+    """Recognize explicit candidate vetoes, never arbitrary errors at a quality stage."""
+    return ((entry.get("error_class") == "CandidateRejected"
+             and entry.get("failure_stage") in QUALITY_REJECTION_STAGES)
+            or (entry.get("error_class") == "DecisionVetoError"
+                and entry.get("failure_stage") == "decision_veto"))
+
+
 def persist_candidate(client, scope, question, judge, grounding, exam, domain_id, run_id, difficulty,
                       *, before_insert=None, on_question_inserted=None, question_id=None, taxonomy_tags=None):
     notes = json.loads(judge.to_review_notes())
@@ -173,6 +185,8 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--judge-model", default=DEFAULT_JUDGE_MODEL, show_default=True, help="Use external to export judge requests and never write the DB.")
 @click.option("--difficulty", type=click.Choice(["EASY", "MEDIUM", "HARD"]), default="MEDIUM", show_default=True)
 @click.option("--emit-taxonomy", is_flag=True, help="Opt in to one additional plan-tagging call; freeze tags for ingestion. No quality prompt or threshold changes.")
+@click.option("--frozen-plan", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Replacement scopes derived from a SHA256-bound original full-plan artifact.")
+@click.option("--continue-quality-rejections", is_flag=True, help="External PDE orchestration only: finish all requests despite ordinary candidate quality vetoes; system errors still stop.")
 @click.option("--plan-only", is_flag=True, help="Write the frozen cert plan offline; no model, docs or DB calls.")
 @click.option("--dry-run", is_flag=True, help="Generate and judge locally; never access/write the DB.")
 @click.option("--artifact", type=click.Path(path_type=Path), help="JSON review artifact. Defaults to .cache/generation/<cert>-<UTC>.json.")
@@ -185,7 +199,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
          parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None, existing_questions=None, argon_gate=False,
          target_accepted=None, expected_yield=0.29, distractor_evidence="strict", plan_only=False, emit_taxonomy=False,
          doc_cache=True, verify_retrieval=False, verify_stable_prefix=True, decision_attempts=3,
-         doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS):
+         doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS, frozen_plan=None, continue_quality_rejections=False):
+    retry_manifest = None
     try:
         from shared.distractor_evidence import evidence_policy
         frozen_evidence = evidence_policy(distractor_evidence)
@@ -201,8 +216,19 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 raise ValueError("Section allocation must be comma-separated nonnegative integers")
             allocation = [int(value) for value in section_allocation.split(",")]
         generator_family, judge_family = require_independent_models(model, judge_model)
-        plan = plan_questions(cert, n_questions, domain_code=domain_code, subsection=subsection, seed=seed,
-                              objective_ids=objective_ids, section_allocation=allocation)
+        if frozen_plan is not None:
+            if (cert != "data-engineer" or judge_model != "external" or domain_code or subsection
+                    or objective_ids or allocation is not None or target_accepted is not None):
+                raise ValueError("Frozen retries require unfiltered external PDE generation")
+            from shared.retry_plan import load_frozen_retry_plan
+            plan, retry_manifest = load_frozen_retry_plan(frozen_plan, cert_id=cert)
+            if n_questions != len(plan):
+                raise ValueError("Retry candidate count differs from the frozen source slots")
+        else:
+            plan = plan_questions(cert, n_questions, domain_code=domain_code, subsection=subsection, seed=seed,
+                                  objective_ids=objective_ids, section_allocation=allocation)
+        if continue_quality_rejections and (cert != "data-engineer" or judge_model != "external"):
+            raise ValueError("Quality-only continuation requires external PDE generation")
     except ValueError as exc:
         raise click.ClickException(str(exc)) from None
     for scope in plan:
@@ -235,7 +261,13 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     tuned = uses_pde_style(plan[0]["style_policy"])
     bank_actions = [{"id": row["id"], "best_action": row["key"], "product_context": row["stem"]}
                     for row in bank["questions"]] if tuned else []
-    product_budget = max(40, len(bank_actions) + n_questions)
+    full_plan_count = retry_manifest["full_plan_count"] if retry_manifest else n_questions
+    product_budget = max(40, len(bank_actions) + n_questions, full_plan_count)
+    if retry_manifest is not None:
+        payload.update(full_plan_count=full_plan_count, retry_slots=retry_manifest["slots"],
+                       retry_source={key: retry_manifest[key] for key in ("source_artifact", "source_sha256")})
+    if continue_quality_rejections:
+        payload["continue_quality_rejections"] = True
     if tuned:
         payload["generation_policy"] = generation_policy(cert)
         payload["topic_plan_report"] = topic_distribution(plan)
@@ -302,7 +334,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             with write_lock:
                 selected, fair_share = rotation.select(original, payload["candidates"])
                 # Required-topic reservations stay bound to their reviewed objective.
-                if original.get("required_topic_id") is not None:
+                if frozen_plan is not None or original.get("required_topic_id") is not None:
                     selected = original["objective_id"]
                 scope = original
                 if selected != original["objective_id"]:
@@ -386,7 +418,10 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 sources = search_objective_docs(scope["objective_text"], scope["services"],
                     cache=docs_cache, objective_id=scope["objective_id"], decision_plan=decision)
                 if not sources:
-                    raise ValueError("No fetched documentation")
+                    attempt["sources"] = []
+                    attempt["documentation_check"] = {"passed": False, "reason": "No fetched official documentation"}
+                    reject_candidate(entry, "documentation", "No fetched official documentation; evidence remains unsupported")
+                    return
                 full_sources = sources
                 retrieval = None
                 if retrieval_session is not None:
@@ -675,7 +710,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             {**product_share_row(row), "id": str(row["index"]),
              "score": (row.get("judge_verdict", {}).get("score", 0)
                        if external or row.get("judge_verdict", {}).get("passed") is True else -1)}
-            for row in publication_rows], bank_actions, cert_id=cert)
+            for row in publication_rows], bank_actions, cert_id=cert,
+            **({"full_plan_count": full_plan_count} if retry_manifest is not None else {}))
         payload["product_share_report"] = selection["report"]
         payload["product_share_report"]["publication_status"] = "awaiting_external_verdicts" if external else "selected"
         payload["topic_plan_report"] = topic_distribution(plan)
@@ -739,7 +775,11 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     if external:
         click.echo(f"Awaiting external judge {awaiting}/{n_questions}; requests: {request_directory(artifact)}; no DB writes")
         if awaiting != n_questions:
-            raise click.ClickException("Some candidates failed before external judgment; inspect the artifact")
+            failures = [entry for entry in payload["candidates"] if not entry.get("awaiting_external_judge")]
+            if (not continue_quality_rejections or len(payload["candidates"]) != n_questions
+                    or not all(is_quality_rejection(entry) for entry in failures)):
+                raise click.ClickException("Some candidates failed before external judgment; inspect the artifact")
+            click.echo(f"Quality-only vetoes: {len(failures)}; remaining requests still require every gate")
     elif accepted != n_questions:
         raise click.ClickException("Some candidates failed; inspect the artifact before retrying")
 

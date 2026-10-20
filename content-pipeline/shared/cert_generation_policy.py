@@ -194,17 +194,19 @@ def product_share_report(rows: list[str | dict], *, cert_id: str = "data-enginee
 
 
 def select_publication_products(candidates: list[dict], bank: list[dict], *,
-                                cert_id: str = "data-engineer") -> dict[str, Any]:
+                                cert_id: str = "data-engineer", full_plan_count: int | None = None) -> dict[str, Any]:
     """Select bank-safe additions, removing lowest-scored excess actions first.
 
     Rows have unique ``id``, ``best_action``, optional ``product_context`` and
     candidate ``score`` (higher is better). The denominator is the resulting
-    unique bank plus additions, with a full-plan bootstrap minimum of 40. It is
-    recalculated after every veto. Existing bank rows cannot be vetoed, and an
-    existing overage never blocks unrelated additions. Unknown bank actions
+    unique bank plus additions, with a bootstrap minimum of 40 or the supplied
+    original full_plan_count, whichever is larger. Recalculate after every veto.
+    Existing bank rows cannot be vetoed, and an overage never blocks unrelated additions. Unknown bank actions
     reserve capacity against every product. Ties retain earlier rows.
     This policy does not replace any candidate quality or duplicate checks.
     """
+    if full_plan_count is not None and (type(full_plan_count) is not int or full_plan_count < 1):
+        raise ValueError("full_plan_count must be a positive integer")
     policy = generation_policy(cert_id)
     if policy is None:
         return {"selected_indices": list(range(len(candidates))), "vetoes": {},
@@ -233,7 +235,7 @@ def select_publication_products(candidates: list[dict], bank: list[dict], *,
             vetoes[i] = attributions[i]["error"]
     while True:
         rows = [*existing.values(), *(candidates[i] for i in selected)]
-        denominator = max(40, len(rows))
+        denominator = max(40, full_plan_count or 0, len(rows))
         fraction = policy["product_share"]["max_fraction"]
         cap = int((Decimal(str(fraction)) * denominator).to_integral_value(rounding=ROUND_FLOOR))
         counts = Counter(product for row in rows for product in product_attribution(row, cert_id)["products"])

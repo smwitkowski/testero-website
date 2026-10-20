@@ -1,4 +1,4 @@
-"""Offline PDE 5.2 policy, learner formatting and frozen-schema regression tests.
+"""Offline PDE 5.3 policy, learner formatting and frozen-schema regression tests.
 
 All scenarios and verdicts here are synthetic; no model quality is claimed.
 """
@@ -37,7 +37,8 @@ def question(words=60):
 def pde_bundle(q=None):
     q = question() if q is None else q
     return {**bundle(q), "style": {**bundle(q)["style"], "inference_required": True,
-                                  "options_no_goal_restatement": True}}
+                                  "options_no_goal_restatement": True,
+                                  "distractors_no_generic_filler": True}}
 
 
 def request(q=None, *, policy=PDE, ident="candidate-1"):
@@ -52,13 +53,13 @@ def request(q=None, *, policy=PDE, ident="candidate-1"):
     return build_request(ident, scope, q, sources, evidence)
 
 
-def test_only_frozen_pde52_activates_tuning():
-    assert PDE == {"version": "5.2", "objective_id": "data-engineer:standard:2.1:1", "allowance": None}
+def test_only_frozen_pde52_or_pde53_activates_tuning():
+    assert PDE == {"version": "5.3", "objective_id": "data-engineer:standard:2.1:1", "allowance": None}
     assert PMLE["version"] == "5.1"
     assert uses_pde_style(PDE)
     assert not uses_pde_style(LEGACY) and not uses_pde_style(None) and not uses_pde_style(PMLE)
     assert validate_style_policy(LEGACY, PDE["objective_id"]) == LEGACY
-    for broken in ({**PDE, "version": "5.3"}, {**PMLE, "version": "5.2"},
+    for broken in ({**PDE, "version": "5.4"}, {**PMLE, "version": "5.2"},
                    {**PDE, "extra": True}, {**PDE, "allowance": "general_ml_mlops"}):
         with pytest.raises(ValueError): uses_pde_style(broken)
     with pytest.raises(ValueError): validate_style_policy(PDE, "another:objective")

@@ -168,15 +168,36 @@ class PDEStyleCriticSignature(ProductStyleCriticSignature):
 PDEStyleCriticSignature.instructions = ProductStyleCriticSignature.instructions + "\n\n" + PDEStyleCriticSignature.instructions
 
 
+class PDEFillerStyleCriticSignature(PDEStyleCriticSignature):
+    """PDE 5.3 additionally rejects generic non-solutions as filler alternatives.
+
+    Reject distractors_no_generic_filler if any choice is a stock action with no
+    credible mechanism for the actual problem. A valid command or real service
+    name does not make it a plausible scenario-specific engineering mistake.
+    LIMIT is filler for bytes-scanned cost on non-clustered BigQuery tables or
+    for a row-multiplying join's intermediate work: limiting final rows does not
+    address those problems. Do not blacklist LIMIT or other commands. LIMIT can
+    be relevant for returned-row volume, top-N output or a documented access
+    pattern where early termination reduces work. Similarly, restarts, retries
+    or adding resources need a credible mechanism for this scenario, not merely
+    a generic hope of improvement. Check all choices without knowing their key.
+    Keep every existing guard; high scores cannot waive this check.
+    """
+    distractors_no_generic_filler: bool = dspy.OutputField(desc="True only if every choice addresses the actual engineering problem through a plausible scenario-specific mechanism. False for any generic non-solution, such as LIMIT for non-clustered BigQuery scanned-byte cost. Judge context, not keywords; legitimate returned-row/top-N or scan-affecting uses of LIMIT remain allowed.")
+
+
+PDEFillerStyleCriticSignature.instructions = PDEStyleCriticSignature.instructions + "\n\n" + PDEFillerStyleCriticSignature.instructions
+
+
 def gate_signatures(version=GATE_VERSION, *, distractor_evidence=None, cert_id=None, style_policy=None):
     if version not in (4, 5):
         raise ValueError("Unsupported rules gate version")
     from shared.distractor_evidence import mode_for
     from shared.question_style import practitioner_signature
-    from shared.objective_style import uses_pde_style
+    from shared.objective_style import uses_pde_style, uses_filler_style
     pde = uses_pde_style(style_policy)
     if pde and version != 5:
-        raise ValueError("PDE 5.2 style requires rules v5 gates")
+        raise ValueError("PDE style requires rules v5 gates")
     if pde:
         frozen_cert = style_policy["objective_id"].split(":", 1)[0]
         if cert_id is not None and cert_id != frozen_cert:
@@ -184,7 +205,8 @@ def gate_signatures(version=GATE_VERSION, *, distractor_evidence=None, cert_id=N
         cert_id = frozen_cert
     selected = V4_GATE_SIGNATURES if version == 4 else GATE_SIGNATURES
     if pde:
-        selected = {**selected, "style": PDEStyleCriticSignature}
+        selected = {**selected, "style": (PDEFillerStyleCriticSignature
+                                         if uses_filler_style(style_policy) else PDEStyleCriticSignature)}
     signatures = {name: practitioner_signature(signature, cert_id) for name, signature in selected.items()}
     if mode_for(distractor_evidence) == "consistent":
         if version != 5:
@@ -224,10 +246,11 @@ def build_gate_inputs(question, domain_context, documentation_context, option_ev
     from shared.quality_gate import QUESTION_FIELDS
     from shared.question_style import practitioner_text
     cert_id = (style_policy or {}).get("objective_id", "machine-learning-engineer:").split(":", 1)[0]
-    from shared.objective_style import uses_pde_style
+    from shared.objective_style import uses_pde_style, uses_filler_style
     if uses_pde_style(style_policy) and style_reference is None:
-        from shared.question_style import PDE_STYLE_INSTRUCTIONS
-        style_reference = PDE_STYLE_INSTRUCTIONS
+        from shared.question_style import PDE_STYLE_INSTRUCTIONS, PDE_FILLER_STYLE_INSTRUCTIONS
+        style_reference = (PDE_FILLER_STYLE_INSTRUCTIONS if uses_filler_style(style_policy)
+                           else PDE_STYLE_INSTRUCTIONS)
     reference = practitioner_text(default_style_reference() if style_reference is None else style_reference, cert_id)
     mapping = blind_choice_map(question)
     original = dict(zip("ABCD", (question[name] for name in OPTION_FIELDS)))
