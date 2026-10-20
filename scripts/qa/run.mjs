@@ -12,6 +12,7 @@ function run(command, args, env = process.env) {
   });
 }
 const started = new Date().toISOString();
+const mcpSmoke = process.argv.includes("--mcp-smoke");
 let passed = false;
 for (const width of [1280, 375]) await rm(`.qa/timings-qa-${width}.json`, { force: true });
 try {
@@ -21,7 +22,7 @@ try {
   console.log("Local migrations current (no reset).");
   await mirrorBank(process.argv.includes("--refresh"));
   await seedAccounts();
-  await run("node", ["scripts/local.mjs", "e2e"], { ...process.env, TESTERO_QA: "1" });
+  await run("node", ["scripts/local.mjs", "e2e"], { ...process.env, TESTERO_QA: "1", TESTERO_QA_MCP: mcpSmoke ? "1" : "" });
   passed = true;
 } catch { console.error("Local QA failed; inspect the failing gate above. Cloud credential errors are suppressed."); process.exitCode = 1; }
 await mkdir(".qa", { recursive: true, mode: 0o700 });

@@ -21,6 +21,7 @@
     "test:taxonomy:db:local": "node scripts/local.mjs verify-taxonomy-db"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
     "@radix-ui/react-slot": "1.2.3",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.117.2",
