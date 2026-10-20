@@ -1,0 +1,2493 @@
+{
+  "offline_only": true,
+  "claim": "Deterministic saved-artifact replay, not live bank coverage or model-quality evidence",
+  "comparison_sets": {
+    "saved_active_draft_bank": 14,
+    "all_saved_authored_pilot": 21,
+    "combined_unique_questions": 22,
+    "authored_only_pilot_ids": [
+      "128b5b86-a0d6-5eb0-bc5f-03a34c64c53d",
+      "2caec1c1-ff36-5efa-b6ae-60ea534585fd",
+      "2d41c9fa-dadd-5596-b567-ad8a6a0c346d",
+      "46387985-7bc0-51fa-a5a5-9dc5e88f5bd9",
+      "64415637-0592-5fdf-9eed-f8540a7199d6",
+      "6c51193f-eb12-564a-8bc2-da1cf1e55cf5",
+      "7c9b14fb-85f0-59d4-94d1-c85470585ef4",
+      "a7a23d38-3210-5aeb-beb1-7c5235eecae6"
+    ]
+  },
+  "sources": {
+    "data-engineer-v5-pde-b1-1020.json": "4cc17e0c226a942eb85e97c5673f7e70245312912bab034d2d097e8c84c9f4de",
+    "data-engineer-v5-pde-b1dbg-1020.json": "f8088855d5583e3e876f9b9567c0232feee337f10d763ff72c91b114c597fb00",
+    "data-engineer-v5-pde-b1r-1020.json": "4cc17e0c226a942eb85e97c5673f7e70245312912bab034d2d097e8c84c9f4de",
+    "data-engineer-v5-pde-b2-1020.json": "ab484cb4a07f31073be69ad49dc7497ca89659801718867b94c92a29695d6f4b",
+    "data-engineer-v5-pde-b3-1020.json": "3ee1aacf58e64d03a229fd189682e9558c654cae74986acefd2ef6a82747762c",
+    "data-engineer-v5-pde-b4-1020.json": "7c7e139392748c79577c8a1e6fab3db44c1a54f74f137a55a0317bcbef567f08",
+    "data-engineer-v5-pde-b5-1020.json": "8f57ee8266b38780cf22cbd6dc744524ab50e3adc3e69cc78a055db1a758b8c6",
+    "data-engineer-v5-pde2-s3-1020.json": "97f2655623f7b9bb8de3710d3e7719a9f91e37b1aca6a6b8b604029524f39c9c",
+    "data-engineer-v5-pde2-s4-1020.json": "98f762f9e90e0cef0d28659f25522bcddcef9822f645605a82f7d2a67213afa4",
+    "data-engineer-v5-pde2-s5-1020.json": "e8712996c1ae5be8e11c4352c05ebaa3cb21056808eb2292822b978e79cef1de",
+    "data-engineer-v5-pde2-s1-1020.json": "4b0a8568deaaf70b4313c2d2073b9f5c13d8f9a992914eda96e9ae8cb15b9ccd",
+    "data-engineer-v5-pde2-s3-1020.existing.json": "f0e9028583357f538e5f095b3a90dc7d5d5ec730ea27eb34066e96a43f240b3d"
+  },
+  "passed": true,
+  "results": [
+    {
+      "case": "nested_repeated_child_storage",
+      "candidate_id": "73764a75-4761-57ae-b6fa-a8d9836225b1",
+      "expected_pilot_id": "1d68939c-1da3-5c5f-bf79-8979e9b36389",
+      "expected_pilot_in_saved_bank": true,
+      "verified": true,
+      "combined_comparison": {
+        "passed": false,
+        "signature": {
+          "version": 1,
+          "mechanism": "nested_repeated_child_storage",
+          "key_tokens": [
+            "alongside",
+            "array",
+            "attributes",
+            "bigquery",
+            "claim",
+            "keeping",
+            "lines",
+            "one",
+            "row",
+            "service",
+            "store",
+            "structs"
+          ],
+          "distractors": [
+            {
+              "archetype": "flatten_repeating_parent_attributes",
+              "tokens": [
+                "amounts",
+                "approved",
+                "attributes",
+                "bigquery",
+                "claim",
+                "claims",
+                "flatten",
+                "line",
+                "one",
+                "repeating",
+                "row",
+                "service",
+                "table"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": "retain_normalized_child_join",
+              "tokens": [
+                "bigquery",
+                "claim",
+                "cloud",
+                "federated",
+                "header",
+                "join",
+                "line",
+                "move",
+                "queries",
+                "reporting",
+                "separate",
+                "service",
+                "sql",
+                "tables",
+                "them"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": "retain_normalized_child_join",
+              "tokens": [
+                "bigquery",
+                "claim",
+                "existing",
+                "expose",
+                "header",
+                "join",
+                "line",
+                "logical",
+                "reporting",
+                "retain",
+                "separate",
+                "service",
+                "tables",
+                "through",
+                "view"
+              ],
+              "has_contrast": false
+            }
+          ],
+          "has_contrast": false,
+          "sha256": "f82e310554f91b1f763a33c77e122f33c5dc438b82f2abf11cbd41479f30236e",
+          "source": "options"
+        },
+        "method": "answer-pattern-v1: canonical families + order-independent lexical skeleton",
+        "matches": [
+          {
+            "matched_id": "1d68939c-1da3-5c5f-bf79-8979e9b36389",
+            "signature": {
+              "version": 1,
+              "mechanism": "nested_repeated_child_storage",
+              "key_tokens": [
+                "array",
+                "complete",
+                "containing",
+                "cost",
+                "fields",
+                "id",
+                "one",
+                "order",
+                "part",
+                "parts",
+                "quantity",
+                "row",
+                "separate",
+                "store",
+                "struct",
+                "work"
+              ],
+              "distractors": [
+                {
+                  "archetype": "flatten_repeating_parent_attributes",
+                  "tokens": [
+                    "attributes",
+                    "complete",
+                    "consumed",
+                    "create",
+                    "group",
+                    "id",
+                    "one",
+                    "order",
+                    "part",
+                    "producing",
+                    "repeat",
+                    "reports",
+                    "row",
+                    "work"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": "retain_normalized_child_join",
+                  "tokens": [
+                    "cluster",
+                    "clustered",
+                    "complete",
+                    "id",
+                    "join",
+                    "order",
+                    "parts",
+                    "producing",
+                    "reports",
+                    "retain",
+                    "separate",
+                    "table",
+                    "tables",
+                    "work"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": "serialize_children_as_string",
+                  "tokens": [
+                    "column",
+                    "extract",
+                    "fields",
+                    "formatted",
+                    "individual",
+                    "json",
+                    "keep",
+                    "one",
+                    "order",
+                    "part",
+                    "parts",
+                    "producing",
+                    "reports",
+                    "row",
+                    "serialize",
+                    "string",
+                    "work"
+                  ],
+                  "has_contrast": false
+                }
+              ],
+              "has_contrast": false,
+              "sha256": "68d3c76c0b4adc6f45f271e39aa62b03fc6c6cc6b649f75d81b4108faf0699c2",
+              "source": "answers"
+            },
+            "key_score": 1.0,
+            "distractor_scores": [
+              0.0,
+              1.0,
+              1.0
+            ],
+            "method": "canonical"
+          }
+        ],
+        "errors": [],
+        "thresholds": {
+          "key_jaccard": 0.65,
+          "distractor_jaccard": 0.55
+        },
+        "reason": "Repeated correct-answer mechanism and distractor skeleton"
+      },
+      "saved_bank_only": {
+        "passed": false,
+        "signature": {
+          "version": 1,
+          "mechanism": "nested_repeated_child_storage",
+          "key_tokens": [
+            "alongside",
+            "array",
+            "attributes",
+            "bigquery",
+            "claim",
+            "keeping",
+            "lines",
+            "one",
+            "row",
+            "service",
+            "store",
+            "structs"
+          ],
+          "distractors": [
+            {
+              "archetype": "flatten_repeating_parent_attributes",
+              "tokens": [
+                "amounts",
+                "approved",
+                "attributes",
+                "bigquery",
+                "claim",
+                "claims",
+                "flatten",
+                "line",
+                "one",
+                "repeating",
+                "row",
+                "service",
+                "table"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": "retain_normalized_child_join",
+              "tokens": [
+                "bigquery",
+                "claim",
+                "cloud",
+                "federated",
+                "header",
+                "join",
+                "line",
+                "move",
+                "queries",
+                "reporting",
+                "separate",
+                "service",
+                "sql",
+                "tables",
+                "them"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": "retain_normalized_child_join",
+              "tokens": [
+                "bigquery",
+                "claim",
+                "existing",
+                "expose",
+                "header",
+                "join",
+                "line",
+                "logical",
+                "reporting",
+                "retain",
+                "separate",
+                "service",
+                "tables",
+                "through",
+                "view"
+              ],
+              "has_contrast": false
+            }
+          ],
+          "has_contrast": false,
+          "sha256": "f82e310554f91b1f763a33c77e122f33c5dc438b82f2abf11cbd41479f30236e",
+          "source": "options"
+        },
+        "method": "answer-pattern-v1: canonical families + order-independent lexical skeleton",
+        "matches": [
+          {
+            "matched_id": "1d68939c-1da3-5c5f-bf79-8979e9b36389",
+            "signature": {
+              "version": 1,
+              "mechanism": "nested_repeated_child_storage",
+              "key_tokens": [
+                "array",
+                "complete",
+                "containing",
+                "cost",
+                "fields",
+                "id",
+                "one",
+                "order",
+                "part",
+                "parts",
+                "quantity",
+                "row",
+                "separate",
+                "store",
+                "struct",
+                "work"
+              ],
+              "distractors": [
+                {
+                  "archetype": "flatten_repeating_parent_attributes",
+                  "tokens": [
+                    "attributes",
+                    "complete",
+                    "consumed",
+                    "create",
+                    "group",
+                    "id",
+                    "one",
+                    "order",
+                    "part",
+                    "producing",
+                    "repeat",
+                    "reports",
+                    "row",
+                    "work"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": "retain_normalized_child_join",
+                  "tokens": [
+                    "cluster",
+                    "clustered",
+                    "complete",
+                    "id",
+                    "join",
+                    "order",
+                    "parts",
+                    "producing",
+                    "reports",
+                    "retain",
+                    "separate",
+                    "table",
+                    "tables",
+                    "work"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": "serialize_children_as_string",
+                  "tokens": [
+                    "column",
+                    "extract",
+                    "fields",
+                    "formatted",
+                    "individual",
+                    "json",
+                    "keep",
+                    "one",
+                    "order",
+                    "part",
+                    "parts",
+                    "producing",
+                    "reports",
+                    "row",
+                    "serialize",
+                    "string",
+                    "work"
+                  ],
+                  "has_contrast": false
+                }
+              ],
+              "has_contrast": false,
+              "sha256": "68d3c76c0b4adc6f45f271e39aa62b03fc6c6cc6b649f75d81b4108faf0699c2",
+              "source": "answers"
+            },
+            "key_score": 1.0,
+            "distractor_scores": [
+              0.0,
+              1.0,
+              1.0
+            ],
+            "method": "canonical"
+          }
+        ],
+        "errors": [],
+        "thresholds": {
+          "key_jaccard": 0.65,
+          "distractor_jaccard": 0.55
+        },
+        "reason": "Repeated correct-answer mechanism and distractor skeleton"
+      },
+      "decision_plan_comparison": {
+        "passed": false,
+        "signature": {
+          "version": 1,
+          "mechanism": "nested_repeated_child_storage",
+          "key_tokens": [
+            "array",
+            "attributes",
+            "bigquery",
+            "claim",
+            "column",
+            "lines",
+            "one",
+            "row",
+            "service",
+            "store",
+            "struct"
+          ],
+          "distractors": [
+            {
+              "archetype": "flatten_repeating_parent_attributes",
+              "tokens": [
+                "attributes",
+                "bigquery",
+                "claim",
+                "claims",
+                "duplicated",
+                "flatten",
+                "line",
+                "lines",
+                "one",
+                "row",
+                "service",
+                "table"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": "retain_normalized_child_join",
+              "tokens": [
+                "bigquery",
+                "claim",
+                "existing",
+                "exposing",
+                "join",
+                "keep",
+                "line",
+                "logical",
+                "reporting",
+                "separate",
+                "service",
+                "tables",
+                "through",
+                "view"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "bigquery",
+                "claim",
+                "cloud",
+                "federated",
+                "joins",
+                "line",
+                "move",
+                "normalized",
+                "queries",
+                "query",
+                "service",
+                "sql",
+                "tables",
+                "through"
+              ],
+              "has_contrast": false
+            }
+          ],
+          "has_contrast": false,
+          "sha256": "ce42df5e2c0eb6cf7c431cbe973d4273bb6e3c08495018b4a8fa532f966a278b",
+          "source": "decision_plan"
+        },
+        "method": "answer-pattern-v1: canonical families + order-independent lexical skeleton",
+        "matches": [
+          {
+            "matched_id": "1d68939c-1da3-5c5f-bf79-8979e9b36389",
+            "signature": {
+              "version": 1,
+              "mechanism": "nested_repeated_child_storage",
+              "key_tokens": [
+                "array",
+                "complete",
+                "containing",
+                "cost",
+                "fields",
+                "id",
+                "one",
+                "order",
+                "part",
+                "parts",
+                "quantity",
+                "row",
+                "separate",
+                "store",
+                "struct",
+                "work"
+              ],
+              "distractors": [
+                {
+                  "archetype": "flatten_repeating_parent_attributes",
+                  "tokens": [
+                    "attributes",
+                    "complete",
+                    "consumed",
+                    "create",
+                    "group",
+                    "id",
+                    "one",
+                    "order",
+                    "part",
+                    "producing",
+                    "repeat",
+                    "reports",
+                    "row",
+                    "work"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": "retain_normalized_child_join",
+                  "tokens": [
+                    "cluster",
+                    "clustered",
+                    "complete",
+                    "id",
+                    "join",
+                    "order",
+                    "parts",
+                    "producing",
+                    "reports",
+                    "retain",
+                    "separate",
+                    "table",
+                    "tables",
+                    "work"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": "serialize_children_as_string",
+                  "tokens": [
+                    "column",
+                    "extract",
+                    "fields",
+                    "formatted",
+                    "individual",
+                    "json",
+                    "keep",
+                    "one",
+                    "order",
+                    "part",
+                    "parts",
+                    "producing",
+                    "reports",
+                    "row",
+                    "serialize",
+                    "string",
+                    "work"
+                  ],
+                  "has_contrast": false
+                }
+              ],
+              "has_contrast": false,
+              "sha256": "68d3c76c0b4adc6f45f271e39aa62b03fc6c6cc6b649f75d81b4108faf0699c2",
+              "source": "answers"
+            },
+            "key_score": 1.0,
+            "distractor_scores": [
+              0.0,
+              1.0,
+              1.0
+            ],
+            "method": "canonical"
+          }
+        ],
+        "errors": [],
+        "thresholds": {
+          "key_jaccard": 0.65,
+          "distractor_jaccard": 0.55
+        },
+        "reason": "Repeated correct-answer mechanism and distractor skeleton"
+      }
+    },
+    {
+      "case": "rewrite_row_multiplying_join",
+      "candidate_id": "9e13712f-ddca-5bfd-a195-959a8024d90d",
+      "expected_pilot_id": "56e07b92-384b-53c5-a0a1-87b64fc69283",
+      "expected_pilot_in_saved_bank": true,
+      "verified": true,
+      "combined_comparison": {
+        "passed": false,
+        "signature": {
+          "version": 1,
+          "mechanism": "rewrite_row_multiplying_join",
+          "key_tokens": [
+            "before",
+            "between",
+            "bigquery",
+            "calculating",
+            "consecutive",
+            "differences",
+            "id",
+            "individual",
+            "lag",
+            "lookup",
+            "ordered",
+            "partitioned",
+            "predecessor",
+            "readings",
+            "rewrite",
+            "sensor",
+            "timestamp"
+          ],
+          "distractors": [
+            {
+              "archetype": "add_slots_to_existing_join",
+              "tokens": [
+                "additional",
+                "bigquery",
+                "capacity",
+                "dashboard",
+                "existing",
+                "increase",
+                "locating",
+                "method",
+                "predecessors",
+                "processing",
+                "providing",
+                "query",
+                "refreshes",
+                "reservation",
+                "retaining",
+                "s",
+                "scheduled",
+                "slot",
+                "while"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": "cluster_join_inputs",
+              "tokens": [
+                "bigquery",
+                "cluster",
+                "compare",
+                "consecutive",
+                "continue",
+                "current",
+                "id",
+                "query",
+                "readings",
+                "sensor",
+                "table",
+                "timestamp"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "apply",
+                "bigquery",
+                "calculating",
+                "dashboard",
+                "detected",
+                "differences",
+                "drops",
+                "fewer",
+                "final",
+                "limit",
+                "query",
+                "reading",
+                "refresh",
+                "returns"
+              ],
+              "has_contrast": false
+            }
+          ],
+          "has_contrast": false,
+          "sha256": "d8f9f19277a81d76bbceba5394f0e3ebd3f802c68321661fad88269bd414d07c",
+          "source": "options"
+        },
+        "method": "answer-pattern-v1: canonical families + order-independent lexical skeleton",
+        "matches": [
+          {
+            "matched_id": "56e07b92-384b-53c5-a0a1-87b64fc69283",
+            "signature": {
+              "version": 1,
+              "mechanism": "rewrite_row_multiplying_join",
+              "key_tokens": [
+                "apply",
+                "calculate",
+                "campaign",
+                "conversions",
+                "count",
+                "date",
+                "distinct",
+                "event",
+                "existing",
+                "filters",
+                "impression",
+                "join",
+                "left",
+                "missing",
+                "retaining",
+                "returning",
+                "row",
+                "separately",
+                "side",
+                "summaries",
+                "table",
+                "zero"
+              ],
+              "distractors": [
+                {
+                  "archetype": "add_slots_to_existing_join",
+                  "tokens": [
+                    "autoscaling",
+                    "bigquery",
+                    "calculate",
+                    "ceiling",
+                    "count",
+                    "dashboard",
+                    "distinct",
+                    "during",
+                    "event",
+                    "expanded",
+                    "intermediate",
+                    "join",
+                    "more",
+                    "provide",
+                    "raise",
+                    "raw",
+                    "refreshes",
+                    "reservation",
+                    "results",
+                    "retain",
+                    "s",
+                    "slots"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": "cluster_join_inputs",
+                  "tokens": [
+                    "aggregation",
+                    "both",
+                    "campaign",
+                    "cluster",
+                    "clustered",
+                    "count",
+                    "dashboard",
+                    "date",
+                    "distinct",
+                    "event",
+                    "existing",
+                    "final",
+                    "id",
+                    "join",
+                    "partitions",
+                    "queries",
+                    "raw",
+                    "retain",
+                    "storage",
+                    "tables",
+                    "within"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": null,
+                  "tokens": [
+                    "acceleration",
+                    "bi",
+                    "both",
+                    "calculate",
+                    "campaign",
+                    "capacity",
+                    "count",
+                    "dashboard",
+                    "date",
+                    "designate",
+                    "distinct",
+                    "engine",
+                    "event",
+                    "join",
+                    "output",
+                    "preferred",
+                    "raw",
+                    "reserve",
+                    "retain",
+                    "tables"
+                  ],
+                  "has_contrast": false
+                }
+              ],
+              "has_contrast": false,
+              "sha256": "f2ec46f000303bfd48a26abd82d0ea28fcd8c9c72bac2320a03c0981475ba41d",
+              "source": "answers"
+            },
+            "key_score": 1.0,
+            "distractor_scores": [
+              0.0,
+              1.0,
+              1.0
+            ],
+            "method": "canonical"
+          }
+        ],
+        "errors": [],
+        "thresholds": {
+          "key_jaccard": 0.65,
+          "distractor_jaccard": 0.55
+        },
+        "reason": "Repeated correct-answer mechanism and distractor skeleton"
+      },
+      "saved_bank_only": {
+        "passed": false,
+        "signature": {
+          "version": 1,
+          "mechanism": "rewrite_row_multiplying_join",
+          "key_tokens": [
+            "before",
+            "between",
+            "bigquery",
+            "calculating",
+            "consecutive",
+            "differences",
+            "id",
+            "individual",
+            "lag",
+            "lookup",
+            "ordered",
+            "partitioned",
+            "predecessor",
+            "readings",
+            "rewrite",
+            "sensor",
+            "timestamp"
+          ],
+          "distractors": [
+            {
+              "archetype": "add_slots_to_existing_join",
+              "tokens": [
+                "additional",
+                "bigquery",
+                "capacity",
+                "dashboard",
+                "existing",
+                "increase",
+                "locating",
+                "method",
+                "predecessors",
+                "processing",
+                "providing",
+                "query",
+                "refreshes",
+                "reservation",
+                "retaining",
+                "s",
+                "scheduled",
+                "slot",
+                "while"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": "cluster_join_inputs",
+              "tokens": [
+                "bigquery",
+                "cluster",
+                "compare",
+                "consecutive",
+                "continue",
+                "current",
+                "id",
+                "query",
+                "readings",
+                "sensor",
+                "table",
+                "timestamp"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "apply",
+                "bigquery",
+                "calculating",
+                "dashboard",
+                "detected",
+                "differences",
+                "drops",
+                "fewer",
+                "final",
+                "limit",
+                "query",
+                "reading",
+                "refresh",
+                "returns"
+              ],
+              "has_contrast": false
+            }
+          ],
+          "has_contrast": false,
+          "sha256": "d8f9f19277a81d76bbceba5394f0e3ebd3f802c68321661fad88269bd414d07c",
+          "source": "options"
+        },
+        "method": "answer-pattern-v1: canonical families + order-independent lexical skeleton",
+        "matches": [
+          {
+            "matched_id": "56e07b92-384b-53c5-a0a1-87b64fc69283",
+            "signature": {
+              "version": 1,
+              "mechanism": "rewrite_row_multiplying_join",
+              "key_tokens": [
+                "apply",
+                "calculate",
+                "campaign",
+                "conversions",
+                "count",
+                "date",
+                "distinct",
+                "event",
+                "existing",
+                "filters",
+                "impression",
+                "join",
+                "left",
+                "missing",
+                "retaining",
+                "returning",
+                "row",
+                "separately",
+                "side",
+                "summaries",
+                "table",
+                "zero"
+              ],
+              "distractors": [
+                {
+                  "archetype": "add_slots_to_existing_join",
+                  "tokens": [
+                    "autoscaling",
+                    "bigquery",
+                    "calculate",
+                    "ceiling",
+                    "count",
+                    "dashboard",
+                    "distinct",
+                    "during",
+                    "event",
+                    "expanded",
+                    "intermediate",
+                    "join",
+                    "more",
+                    "provide",
+                    "raise",
+                    "raw",
+                    "refreshes",
+                    "reservation",
+                    "results",
+                    "retain",
+                    "s",
+                    "slots"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": "cluster_join_inputs",
+                  "tokens": [
+                    "aggregation",
+                    "both",
+                    "campaign",
+                    "cluster",
+                    "clustered",
+                    "count",
+                    "dashboard",
+                    "date",
+                    "distinct",
+                    "event",
+                    "existing",
+                    "final",
+                    "id",
+                    "join",
+                    "partitions",
+                    "queries",
+                    "raw",
+                    "retain",
+                    "storage",
+                    "tables",
+                    "within"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": null,
+                  "tokens": [
+                    "acceleration",
+                    "bi",
+                    "both",
+                    "calculate",
+                    "campaign",
+                    "capacity",
+                    "count",
+                    "dashboard",
+                    "date",
+                    "designate",
+                    "distinct",
+                    "engine",
+                    "event",
+                    "join",
+                    "output",
+                    "preferred",
+                    "raw",
+                    "reserve",
+                    "retain",
+                    "tables"
+                  ],
+                  "has_contrast": false
+                }
+              ],
+              "has_contrast": false,
+              "sha256": "f2ec46f000303bfd48a26abd82d0ea28fcd8c9c72bac2320a03c0981475ba41d",
+              "source": "answers"
+            },
+            "key_score": 1.0,
+            "distractor_scores": [
+              0.0,
+              1.0,
+              1.0
+            ],
+            "method": "canonical"
+          }
+        ],
+        "errors": [],
+        "thresholds": {
+          "key_jaccard": 0.65,
+          "distractor_jaccard": 0.55
+        },
+        "reason": "Repeated correct-answer mechanism and distractor skeleton"
+      },
+      "decision_plan_comparison": {
+        "passed": false,
+        "signature": {
+          "version": 1,
+          "mechanism": "rewrite_row_multiplying_join",
+          "key_tokens": [
+            "before",
+            "bigquery",
+            "calculating",
+            "differences",
+            "existing",
+            "id",
+            "lag",
+            "lookup",
+            "ordered",
+            "over",
+            "partitions",
+            "predecessor",
+            "query",
+            "reading",
+            "replacing",
+            "rewrite",
+            "sensor",
+            "timestamp"
+          ],
+          "distractors": [
+            {
+              "archetype": "add_slots_to_existing_join",
+              "tokens": [
+                "additional",
+                "allocating",
+                "assign",
+                "bigquery",
+                "capacity",
+                "dashboard",
+                "during",
+                "existing",
+                "larger",
+                "lookup",
+                "predecessor",
+                "queries",
+                "refreshes",
+                "reservation",
+                "retaining",
+                "s",
+                "scheduled",
+                "slot"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": "cluster_join_inputs",
+              "tokens": [
+                "bigquery",
+                "cluster",
+                "current",
+                "dashboard",
+                "id",
+                "lookup",
+                "predecessor",
+                "queries",
+                "readings",
+                "retaining",
+                "sensor",
+                "table",
+                "timestamp"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "bigquery",
+                "clause",
+                "dashboard",
+                "detected",
+                "drops",
+                "fewer",
+                "final",
+                "limit",
+                "query",
+                "refresh",
+                "returns",
+                "sensor",
+                "sum"
+              ],
+              "has_contrast": false
+            }
+          ],
+          "has_contrast": false,
+          "sha256": "51660c753c57b43263b644dc8baa47f93257ef8720c1933753af61baf6ed003d",
+          "source": "decision_plan"
+        },
+        "method": "answer-pattern-v1: canonical families + order-independent lexical skeleton",
+        "matches": [
+          {
+            "matched_id": "56e07b92-384b-53c5-a0a1-87b64fc69283",
+            "signature": {
+              "version": 1,
+              "mechanism": "rewrite_row_multiplying_join",
+              "key_tokens": [
+                "apply",
+                "calculate",
+                "campaign",
+                "conversions",
+                "count",
+                "date",
+                "distinct",
+                "event",
+                "existing",
+                "filters",
+                "impression",
+                "join",
+                "left",
+                "missing",
+                "retaining",
+                "returning",
+                "row",
+                "separately",
+                "side",
+                "summaries",
+                "table",
+                "zero"
+              ],
+              "distractors": [
+                {
+                  "archetype": "add_slots_to_existing_join",
+                  "tokens": [
+                    "autoscaling",
+                    "bigquery",
+                    "calculate",
+                    "ceiling",
+                    "count",
+                    "dashboard",
+                    "distinct",
+                    "during",
+                    "event",
+                    "expanded",
+                    "intermediate",
+                    "join",
+                    "more",
+                    "provide",
+                    "raise",
+                    "raw",
+                    "refreshes",
+                    "reservation",
+                    "results",
+                    "retain",
+                    "s",
+                    "slots"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": "cluster_join_inputs",
+                  "tokens": [
+                    "aggregation",
+                    "both",
+                    "campaign",
+                    "cluster",
+                    "clustered",
+                    "count",
+                    "dashboard",
+                    "date",
+                    "distinct",
+                    "event",
+                    "existing",
+                    "final",
+                    "id",
+                    "join",
+                    "partitions",
+                    "queries",
+                    "raw",
+                    "retain",
+                    "storage",
+                    "tables",
+                    "within"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": null,
+                  "tokens": [
+                    "acceleration",
+                    "bi",
+                    "both",
+                    "calculate",
+                    "campaign",
+                    "capacity",
+                    "count",
+                    "dashboard",
+                    "date",
+                    "designate",
+                    "distinct",
+                    "engine",
+                    "event",
+                    "join",
+                    "output",
+                    "preferred",
+                    "raw",
+                    "reserve",
+                    "retain",
+                    "tables"
+                  ],
+                  "has_contrast": false
+                }
+              ],
+              "has_contrast": false,
+              "sha256": "f2ec46f000303bfd48a26abd82d0ea28fcd8c9c72bac2320a03c0981475ba41d",
+              "source": "answers"
+            },
+            "key_score": 1.0,
+            "distractor_scores": [
+              0.0,
+              1.0,
+              1.0
+            ],
+            "method": "canonical"
+          }
+        ],
+        "errors": [],
+        "thresholds": {
+          "key_jaccard": 0.65,
+          "distractor_jaccard": 0.55
+        },
+        "reason": "Repeated correct-answer mechanism and distractor skeleton"
+      }
+    },
+    {
+      "case": "workload_baseline_reservation_isolation",
+      "candidate_id": "6371db79-a5b7-5d53-aa0e-15d464511137",
+      "expected_pilot_id": "2d41c9fa-dadd-5596-b567-ad8a6a0c346d",
+      "expected_pilot_in_saved_bank": false,
+      "verified": true,
+      "combined_comparison": {
+        "passed": false,
+        "signature": {
+          "version": 1,
+          "mechanism": "workload_baseline_reservation_isolation",
+          "key_tokens": [
+            "assign",
+            "baseline",
+            "bigquery",
+            "create",
+            "dashboard",
+            "operations",
+            "project",
+            "refreshes",
+            "reservation",
+            "separate",
+            "slots",
+            "sufficient"
+          ],
+          "distractors": [
+            {
+              "archetype": "tune_shared_pool_without_isolation",
+              "tokens": [
+                "assignments",
+                "baseline",
+                "batch",
+                "bigquery",
+                "both",
+                "capacity",
+                "change",
+                "dashboard",
+                "existing",
+                "priority",
+                "project",
+                "queries",
+                "refresh",
+                "reservation",
+                "retaining",
+                "shared",
+                "slot"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": "tune_shared_pool_without_isolation",
+              "tokens": [
+                "assignments",
+                "baseline",
+                "bigquery",
+                "both",
+                "capacity",
+                "concurrency",
+                "current",
+                "existing",
+                "increase",
+                "job",
+                "projects",
+                "reservation",
+                "retaining",
+                "s",
+                "slot",
+                "target"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "bigquery",
+                "billing",
+                "capacity",
+                "dashboard",
+                "demand",
+                "execute",
+                "move",
+                "operations",
+                "pool",
+                "project",
+                "queries",
+                "shared"
+              ],
+              "has_contrast": false
+            }
+          ],
+          "has_contrast": false,
+          "sha256": "233df19ca802866df5e96b6e0480cdc33ebbbbf96a1b67676045286f3f5bb39e",
+          "source": "options"
+        },
+        "method": "answer-pattern-v1: canonical families + order-independent lexical skeleton",
+        "matches": [
+          {
+            "matched_id": "2d41c9fa-dadd-5596-b567-ad8a6a0c346d",
+            "signature": {
+              "version": 1,
+              "mechanism": "workload_baseline_reservation_isolation",
+              "key_tokens": [
+                "analyst",
+                "assign",
+                "autoscaling",
+                "baseline",
+                "capacity",
+                "enabling",
+                "established",
+                "execution",
+                "maximum",
+                "project",
+                "reservation",
+                "reservations",
+                "retaining",
+                "separate",
+                "settlement",
+                "split",
+                "total",
+                "workloads"
+              ],
+              "distractors": [
+                {
+                  "archetype": "tune_shared_pool_without_isolation",
+                  "tokens": [
+                    "accommodate",
+                    "analyst",
+                    "assigned",
+                    "autoscaling",
+                    "both",
+                    "capacity",
+                    "common",
+                    "draw",
+                    "execution",
+                    "expanded",
+                    "increase",
+                    "keep",
+                    "maximum",
+                    "overlapping",
+                    "peaks",
+                    "pool",
+                    "projects",
+                    "queries",
+                    "reservation",
+                    "s",
+                    "set",
+                    "settlement",
+                    "shared",
+                    "slot",
+                    "total"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": "tune_shared_pool_without_isolation",
+                  "tokens": [
+                    "additional",
+                    "analyst",
+                    "assigned",
+                    "available",
+                    "both",
+                    "capacity",
+                    "commitment",
+                    "edition",
+                    "enterprise",
+                    "ephemeral",
+                    "execution",
+                    "existing",
+                    "keep",
+                    "peaks",
+                    "pool",
+                    "projects",
+                    "purchase",
+                    "purchased",
+                    "queries",
+                    "remains",
+                    "reservation",
+                    "retain",
+                    "same",
+                    "settlement",
+                    "shared",
+                    "sized",
+                    "slot",
+                    "within"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": "tune_shared_pool_without_isolation",
+                  "tokens": [
+                    "analyst",
+                    "assign",
+                    "assigned",
+                    "autoscaling",
+                    "baseline",
+                    "both",
+                    "capacity",
+                    "central",
+                    "create",
+                    "data",
+                    "demand",
+                    "enabling",
+                    "established",
+                    "execution",
+                    "existing",
+                    "leave",
+                    "maximum",
+                    "overlapping",
+                    "project",
+                    "projects",
+                    "query",
+                    "reservation",
+                    "settlement",
+                    "there",
+                    "total"
+                  ],
+                  "has_contrast": false
+                }
+              ],
+              "has_contrast": false,
+              "sha256": "291359bfa7c45b73b36cc7a0203a2f56d4ffa87d323544c69fefd5c6e0b4faad",
+              "source": "options"
+            },
+            "key_score": 1.0,
+            "distractor_scores": [
+              0.12121212121212122,
+              1.0,
+              1.0
+            ],
+            "method": "canonical"
+          }
+        ],
+        "errors": [],
+        "thresholds": {
+          "key_jaccard": 0.65,
+          "distractor_jaccard": 0.55
+        },
+        "reason": "Repeated correct-answer mechanism and distractor skeleton"
+      },
+      "saved_bank_only": {
+        "passed": true,
+        "signature": {
+          "version": 1,
+          "mechanism": "workload_baseline_reservation_isolation",
+          "key_tokens": [
+            "assign",
+            "baseline",
+            "bigquery",
+            "create",
+            "dashboard",
+            "operations",
+            "project",
+            "refreshes",
+            "reservation",
+            "separate",
+            "slots",
+            "sufficient"
+          ],
+          "distractors": [
+            {
+              "archetype": "tune_shared_pool_without_isolation",
+              "tokens": [
+                "assignments",
+                "baseline",
+                "batch",
+                "bigquery",
+                "both",
+                "capacity",
+                "change",
+                "dashboard",
+                "existing",
+                "priority",
+                "project",
+                "queries",
+                "refresh",
+                "reservation",
+                "retaining",
+                "shared",
+                "slot"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": "tune_shared_pool_without_isolation",
+              "tokens": [
+                "assignments",
+                "baseline",
+                "bigquery",
+                "both",
+                "capacity",
+                "concurrency",
+                "current",
+                "existing",
+                "increase",
+                "job",
+                "projects",
+                "reservation",
+                "retaining",
+                "s",
+                "slot",
+                "target"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "bigquery",
+                "billing",
+                "capacity",
+                "dashboard",
+                "demand",
+                "execute",
+                "move",
+                "operations",
+                "pool",
+                "project",
+                "queries",
+                "shared"
+              ],
+              "has_contrast": false
+            }
+          ],
+          "has_contrast": false,
+          "sha256": "233df19ca802866df5e96b6e0480cdc33ebbbbf96a1b67676045286f3f5bb39e",
+          "source": "options"
+        },
+        "method": "answer-pattern-v1: canonical families + order-independent lexical skeleton",
+        "matches": [],
+        "errors": [],
+        "thresholds": {
+          "key_jaccard": 0.65,
+          "distractor_jaccard": 0.55
+        },
+        "reason": "No repeated answer pattern found by deterministic rules"
+      },
+      "decision_plan_comparison": {
+        "passed": false,
+        "signature": {
+          "version": 1,
+          "mechanism": "workload_baseline_reservation_isolation",
+          "key_tokens": [
+            "assign",
+            "baseline",
+            "bigquery",
+            "create",
+            "dashboard",
+            "operations",
+            "project",
+            "refreshes",
+            "reservation",
+            "separate",
+            "slots",
+            "sufficient"
+          ],
+          "distractors": [
+            {
+              "archetype": "tune_shared_pool_without_isolation",
+              "tokens": [
+                "assigned",
+                "batch",
+                "bigquery",
+                "both",
+                "capacity",
+                "change",
+                "dashboard",
+                "existing",
+                "keeping",
+                "priority",
+                "projects",
+                "queries",
+                "refresh",
+                "reservation",
+                "shared",
+                "slot",
+                "while"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": "tune_shared_pool_without_isolation",
+              "tokens": [
+                "assignments",
+                "baseline",
+                "bigquery",
+                "both",
+                "capacity",
+                "concurrency",
+                "current",
+                "existing",
+                "increase",
+                "job",
+                "project",
+                "reservation",
+                "retaining",
+                "s",
+                "shared",
+                "slot",
+                "target",
+                "while"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "allowing",
+                "bigquery",
+                "billing",
+                "dashboard",
+                "demand",
+                "move",
+                "operations",
+                "pool",
+                "project",
+                "queries",
+                "shared",
+                "slot"
+              ],
+              "has_contrast": false
+            }
+          ],
+          "has_contrast": false,
+          "sha256": "db7146eed2b981f729373bc7b3a876030c33e4fd9d158613cda6ed298f770061",
+          "source": "decision_plan"
+        },
+        "method": "answer-pattern-v1: canonical families + order-independent lexical skeleton",
+        "matches": [
+          {
+            "matched_id": "2d41c9fa-dadd-5596-b567-ad8a6a0c346d",
+            "signature": {
+              "version": 1,
+              "mechanism": "workload_baseline_reservation_isolation",
+              "key_tokens": [
+                "analyst",
+                "assign",
+                "autoscaling",
+                "baseline",
+                "capacity",
+                "enabling",
+                "established",
+                "execution",
+                "maximum",
+                "project",
+                "reservation",
+                "reservations",
+                "retaining",
+                "separate",
+                "settlement",
+                "split",
+                "total",
+                "workloads"
+              ],
+              "distractors": [
+                {
+                  "archetype": "tune_shared_pool_without_isolation",
+                  "tokens": [
+                    "accommodate",
+                    "analyst",
+                    "assigned",
+                    "autoscaling",
+                    "both",
+                    "capacity",
+                    "common",
+                    "draw",
+                    "execution",
+                    "expanded",
+                    "increase",
+                    "keep",
+                    "maximum",
+                    "overlapping",
+                    "peaks",
+                    "pool",
+                    "projects",
+                    "queries",
+                    "reservation",
+                    "s",
+                    "set",
+                    "settlement",
+                    "shared",
+                    "slot",
+                    "total"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": "tune_shared_pool_without_isolation",
+                  "tokens": [
+                    "additional",
+                    "analyst",
+                    "assigned",
+                    "available",
+                    "both",
+                    "capacity",
+                    "commitment",
+                    "edition",
+                    "enterprise",
+                    "ephemeral",
+                    "execution",
+                    "existing",
+                    "keep",
+                    "peaks",
+                    "pool",
+                    "projects",
+                    "purchase",
+                    "purchased",
+                    "queries",
+                    "remains",
+                    "reservation",
+                    "retain",
+                    "same",
+                    "settlement",
+                    "shared",
+                    "sized",
+                    "slot",
+                    "within"
+                  ],
+                  "has_contrast": false
+                },
+                {
+                  "archetype": "tune_shared_pool_without_isolation",
+                  "tokens": [
+                    "analyst",
+                    "assign",
+                    "assigned",
+                    "autoscaling",
+                    "baseline",
+                    "both",
+                    "capacity",
+                    "central",
+                    "create",
+                    "data",
+                    "demand",
+                    "enabling",
+                    "established",
+                    "execution",
+                    "existing",
+                    "leave",
+                    "maximum",
+                    "overlapping",
+                    "project",
+                    "projects",
+                    "query",
+                    "reservation",
+                    "settlement",
+                    "there",
+                    "total"
+                  ],
+                  "has_contrast": false
+                }
+              ],
+              "has_contrast": false,
+              "sha256": "291359bfa7c45b73b36cc7a0203a2f56d4ffa87d323544c69fefd5c6e0b4faad",
+              "source": "options"
+            },
+            "key_score": 1.0,
+            "distractor_scores": [
+              0.12121212121212122,
+              1.0,
+              1.0
+            ],
+            "method": "canonical"
+          }
+        ],
+        "errors": [],
+        "thresholds": {
+          "key_jaccard": 0.65,
+          "distractor_jaccard": 0.55
+        },
+        "reason": "Repeated correct-answer mechanism and distractor skeleton"
+      }
+    },
+    {
+      "case": "opposite_cmek_goal",
+      "candidate_id": "86430b5b-74f5-5b55-a787-82024ad7009a",
+      "expected_pilot_id": null,
+      "expected_pilot_in_saved_bank": null,
+      "verified": true,
+      "combined_comparison": {
+        "passed": true,
+        "signature": {
+          "version": 1,
+          "mechanism": null,
+          "key_tokens": [
+            "affected",
+            "cloud",
+            "current",
+            "disable",
+            "key",
+            "objects",
+            "previous",
+            "primary",
+            "retrievals",
+            "rewrite",
+            "s",
+            "storage",
+            "verify",
+            "version"
+          ],
+          "distractors": [
+            {
+              "archetype": null,
+              "tokens": [
+                "again",
+                "agreements",
+                "archived",
+                "cloud",
+                "disable",
+                "key",
+                "kms",
+                "newly",
+                "previous",
+                "retrievals",
+                "rotate",
+                "verify",
+                "version"
+              ],
+              "has_contrast": true
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "agreements",
+                "bucket",
+                "cloud",
+                "copy",
+                "delete",
+                "disable",
+                "encryption",
+                "google",
+                "key",
+                "managed",
+                "originals",
+                "previous",
+                "retrievals",
+                "storage",
+                "verify",
+                "version"
+              ],
+              "has_contrast": true
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "bucket",
+                "cloud",
+                "configure",
+                "default",
+                "disable",
+                "key",
+                "kms",
+                "previous",
+                "replacement",
+                "storage",
+                "uploads",
+                "verify",
+                "version"
+              ],
+              "has_contrast": true
+            }
+          ],
+          "has_contrast": true,
+          "sha256": "e26a3dc3cf5babae2bc7f5e7cc43172f926b3e996b13a1969a356163469973ad",
+          "source": "options"
+        },
+        "method": "answer-pattern-v1: canonical families + order-independent lexical skeleton",
+        "matches": [],
+        "errors": [],
+        "thresholds": {
+          "key_jaccard": 0.65,
+          "distractor_jaccard": 0.55
+        },
+        "reason": "No repeated answer pattern found by deterministic rules"
+      },
+      "saved_bank_only": {
+        "passed": true,
+        "signature": {
+          "version": 1,
+          "mechanism": null,
+          "key_tokens": [
+            "affected",
+            "cloud",
+            "current",
+            "disable",
+            "key",
+            "objects",
+            "previous",
+            "primary",
+            "retrievals",
+            "rewrite",
+            "s",
+            "storage",
+            "verify",
+            "version"
+          ],
+          "distractors": [
+            {
+              "archetype": null,
+              "tokens": [
+                "again",
+                "agreements",
+                "archived",
+                "cloud",
+                "disable",
+                "key",
+                "kms",
+                "newly",
+                "previous",
+                "retrievals",
+                "rotate",
+                "verify",
+                "version"
+              ],
+              "has_contrast": true
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "agreements",
+                "bucket",
+                "cloud",
+                "copy",
+                "delete",
+                "disable",
+                "encryption",
+                "google",
+                "key",
+                "managed",
+                "originals",
+                "previous",
+                "retrievals",
+                "storage",
+                "verify",
+                "version"
+              ],
+              "has_contrast": true
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "bucket",
+                "cloud",
+                "configure",
+                "default",
+                "disable",
+                "key",
+                "kms",
+                "previous",
+                "replacement",
+                "storage",
+                "uploads",
+                "verify",
+                "version"
+              ],
+              "has_contrast": true
+            }
+          ],
+          "has_contrast": true,
+          "sha256": "e26a3dc3cf5babae2bc7f5e7cc43172f926b3e996b13a1969a356163469973ad",
+          "source": "options"
+        },
+        "method": "answer-pattern-v1: canonical families + order-independent lexical skeleton",
+        "matches": [],
+        "errors": [],
+        "thresholds": {
+          "key_jaccard": 0.65,
+          "distractor_jaccard": 0.55
+        },
+        "reason": "No repeated answer pattern found by deterministic rules"
+      },
+      "decision_plan_comparison": {
+        "passed": true,
+        "signature": {
+          "version": 1,
+          "mechanism": null,
+          "key_tokens": [
+            "cloud",
+            "current",
+            "disable",
+            "existing",
+            "key",
+            "objects",
+            "previous",
+            "primary",
+            "retrievals",
+            "rewrite",
+            "s",
+            "storage",
+            "verify",
+            "version"
+          ],
+          "distractors": [
+            {
+              "archetype": null,
+              "tokens": [
+                "accessible",
+                "again",
+                "agreements",
+                "cloud",
+                "disable",
+                "key",
+                "kms",
+                "new",
+                "previous",
+                "remain",
+                "rotate",
+                "verify",
+                "version"
+              ],
+              "has_contrast": true
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "agreements",
+                "bucket",
+                "cloud",
+                "copy",
+                "delete",
+                "disable",
+                "encryption",
+                "google",
+                "managed",
+                "originals",
+                "previous",
+                "retained",
+                "retrievals",
+                "storage",
+                "verify",
+                "version"
+              ],
+              "has_contrast": true
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "bucket",
+                "cloud",
+                "configure",
+                "default",
+                "disable",
+                "key",
+                "kms",
+                "previous",
+                "replacement",
+                "s",
+                "storage",
+                "testing",
+                "uploads",
+                "version"
+              ],
+              "has_contrast": true
+            }
+          ],
+          "has_contrast": true,
+          "sha256": "2774c6b0e81ca815a3b464b35417990ad631c421d9936b23acf752e30932d738",
+          "source": "decision_plan"
+        },
+        "method": "answer-pattern-v1: canonical families + order-independent lexical skeleton",
+        "matches": [],
+        "errors": [],
+        "thresholds": {
+          "key_jaccard": 0.65,
+          "distractor_jaccard": 0.55
+        },
+        "reason": "No repeated answer pattern found by deterministic rules"
+      }
+    },
+    {
+      "case": "different_on_demand_cost_control",
+      "candidate_id": "242371e7-d929-5f04-a950-bfe33da6dc7c",
+      "expected_pilot_id": null,
+      "expected_pilot_in_saved_bank": null,
+      "verified": true,
+      "combined_comparison": {
+        "passed": true,
+        "signature": {
+          "version": 1,
+          "mechanism": null,
+          "key_tokens": [
+            "allowance",
+            "application",
+            "backend",
+            "bigquery",
+            "billed",
+            "bytes",
+            "investigation",
+            "job",
+            "maximum",
+            "query",
+            "s",
+            "set",
+            "submitted"
+          ],
+          "distractors": [
+            {
+              "archetype": null,
+              "tokens": [
+                "alerts",
+                "allowance",
+                "application",
+                "billing",
+                "budget",
+                "cloud",
+                "configure",
+                "investigation",
+                "match",
+                "notification",
+                "one",
+                "project",
+                "s",
+                "setting",
+                "spending",
+                "thresholds"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "allowance",
+                "append",
+                "based",
+                "bigquery",
+                "choosing",
+                "clause",
+                "investigation",
+                "limit",
+                "query",
+                "returned",
+                "row",
+                "spending"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "allowance",
+                "application",
+                "based",
+                "bigquery",
+                "configure",
+                "daily",
+                "existing",
+                "investigation",
+                "level",
+                "project",
+                "query",
+                "quota",
+                "retaining",
+                "s",
+                "submissions",
+                "usage"
+              ],
+              "has_contrast": false
+            }
+          ],
+          "has_contrast": false,
+          "sha256": "92f986d200db4511fc53627baa0af50a1dc3bf69cd0113528d97a063d6caf714",
+          "source": "options"
+        },
+        "method": "answer-pattern-v1: canonical families + order-independent lexical skeleton",
+        "matches": [],
+        "errors": [],
+        "thresholds": {
+          "key_jaccard": 0.65,
+          "distractor_jaccard": 0.55
+        },
+        "reason": "No repeated answer pattern found by deterministic rules"
+      },
+      "saved_bank_only": {
+        "passed": true,
+        "signature": {
+          "version": 1,
+          "mechanism": null,
+          "key_tokens": [
+            "allowance",
+            "application",
+            "backend",
+            "bigquery",
+            "billed",
+            "bytes",
+            "investigation",
+            "job",
+            "maximum",
+            "query",
+            "s",
+            "set",
+            "submitted"
+          ],
+          "distractors": [
+            {
+              "archetype": null,
+              "tokens": [
+                "alerts",
+                "allowance",
+                "application",
+                "billing",
+                "budget",
+                "cloud",
+                "configure",
+                "investigation",
+                "match",
+                "notification",
+                "one",
+                "project",
+                "s",
+                "setting",
+                "spending",
+                "thresholds"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "allowance",
+                "append",
+                "based",
+                "bigquery",
+                "choosing",
+                "clause",
+                "investigation",
+                "limit",
+                "query",
+                "returned",
+                "row",
+                "spending"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "allowance",
+                "application",
+                "based",
+                "bigquery",
+                "configure",
+                "daily",
+                "existing",
+                "investigation",
+                "level",
+                "project",
+                "query",
+                "quota",
+                "retaining",
+                "s",
+                "submissions",
+                "usage"
+              ],
+              "has_contrast": false
+            }
+          ],
+          "has_contrast": false,
+          "sha256": "92f986d200db4511fc53627baa0af50a1dc3bf69cd0113528d97a063d6caf714",
+          "source": "options"
+        },
+        "method": "answer-pattern-v1: canonical families + order-independent lexical skeleton",
+        "matches": [],
+        "errors": [],
+        "thresholds": {
+          "key_jaccard": 0.65,
+          "distractor_jaccard": 0.55
+        },
+        "reason": "No repeated answer pattern found by deterministic rules"
+      },
+      "decision_plan_comparison": {
+        "passed": true,
+        "signature": {
+          "version": 1,
+          "mechanism": null,
+          "key_tokens": [
+            "application",
+            "backend",
+            "bigquery",
+            "billed",
+            "bytes",
+            "every",
+            "investigation",
+            "job",
+            "maximum",
+            "query",
+            "s",
+            "set",
+            "submitted"
+          ],
+          "distractors": [
+            {
+              "archetype": null,
+              "tokens": [
+                "alerts",
+                "allowance",
+                "billing",
+                "budget",
+                "cloud",
+                "configure",
+                "individual",
+                "investigation",
+                "notifications",
+                "project",
+                "reaches",
+                "spending",
+                "whenever"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "allowance",
+                "append",
+                "bigquery",
+                "choosing",
+                "clause",
+                "every",
+                "fits",
+                "investigation",
+                "limit",
+                "query",
+                "row",
+                "spending"
+              ],
+              "has_contrast": false
+            },
+            {
+              "archetype": null,
+              "tokens": [
+                "allowance",
+                "based",
+                "bigquery",
+                "configure",
+                "daily",
+                "existing",
+                "investigation",
+                "level",
+                "project",
+                "query",
+                "quota",
+                "retain",
+                "submissions",
+                "usage"
+              ],
+              "has_contrast": false
+            }
+          ],
+          "has_contrast": false,
+          "sha256": "23e03197c724b0e624cd4d1c68e55db515fa1b0438f3f52010cec410685ef4c1",
+          "source": "decision_plan"
+        },
+        "method": "answer-pattern-v1: canonical families + order-independent lexical skeleton",
+        "matches": [],
+        "errors": [],
+        "thresholds": {
+          "key_jaccard": 0.65,
+          "distractor_jaccard": 0.55
+        },
+        "reason": "No repeated answer pattern found by deterministic rules"
+      }
+    }
+  ],
+  "fixture_sha256": "5248a9625a353cd35761ea6553f4118e94a01a4017031b39f9d649b08a8ad7fc",
+  "verified_original_sources": [
+    "data-engineer-v5-pde-b1-1020.json",
+    "data-engineer-v5-pde-b1dbg-1020.json",
+    "data-engineer-v5-pde-b1r-1020.json",
+    "data-engineer-v5-pde-b2-1020.json",
+    "data-engineer-v5-pde-b3-1020.json",
+    "data-engineer-v5-pde-b4-1020.json",
+    "data-engineer-v5-pde-b5-1020.json",
+    "data-engineer-v5-pde2-s1-1020.json",
+    "data-engineer-v5-pde2-s3-1020.existing.json",
+    "data-engineer-v5-pde2-s3-1020.json",
+    "data-engineer-v5-pde2-s4-1020.json",
+    "data-engineer-v5-pde2-s5-1020.json"
+  ],
+  "rule_module_sha256": "6630990b36c397f6bb5f4a3c8c1a5aad49f915ff31471a7d54f1e16763a091d2",
+  "replay_script_sha256": "2a1285e122db249af852c60bfd918c2ccf6f5ca777a8c27e277359b167c11501"
+}

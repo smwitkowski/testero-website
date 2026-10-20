@@ -60,7 +60,7 @@ def _prose_parts(text):
 
 
 def normalize_learner_prose(question, *, style_policy=None):
-    """Return a new dict; rewrite only known learner fields under exact PDE 5.2.
+    """Return a new dict; rewrite only known learner fields under frozen PDE 5.2/5.3.
 
     Other keys (including nested evidence, quotes, URLs and source documents)
     retain their original values. URLs embedded in learner fields are protected.

@@ -15,26 +15,35 @@ def _legacy_policy(objective_id):
 
 def style_policy(objective_id):
     if isinstance(objective_id, str) and objective_id.startswith("data-engineer:"):
-        return {"version": "5.2", "objective_id": objective_id, "allowance": None}
+        return {"version": "5.3", "objective_id": objective_id, "allowance": None}
     return _legacy_policy(objective_id)
 
 
 def validate_style_policy(policy, objective_id):
-    if (not isinstance(objective_id, str) or not objective_id
-            or not isinstance(policy, dict)
-            or policy not in (style_policy(objective_id), _legacy_policy(objective_id))):
+    if not isinstance(objective_id, str) or not objective_id or not isinstance(policy, dict):
+        raise ValueError("Style policy differs from reviewed objective allowance")
+    accepted = [style_policy(objective_id), _legacy_policy(objective_id)]
+    if objective_id.startswith("data-engineer:"):
+        # A frozen 5.2 request retains its exact original rubric and schema.
+        accepted.append({"version": "5.2", "objective_id": objective_id, "allowance": None})
+    if policy not in accepted:
         raise ValueError("Style policy differs from reviewed objective allowance")
     return policy
 
 
 def uses_pde_style(policy):
-    """Validate any supplied policy; only exact frozen PDE 5.2 activates tuning."""
+    """Validate supplied policies; frozen PDE 5.2 and 5.3 activate tuning."""
     if policy is None:
         return False
     if not isinstance(policy, dict):
         raise ValueError("Style policy must be an object")
     validate_style_policy(policy, policy.get("objective_id"))
-    return policy["version"] == "5.2"
+    return policy["version"] in ("5.2", "5.3")
+
+
+def uses_filler_style(policy):
+    """Require the additive distractor check only for exact frozen PDE 5.3."""
+    return uses_pde_style(policy) and policy["version"] == "5.3"
 
 
 def allows_ml_practice(policy):
@@ -48,8 +57,8 @@ def allows_ml_practice(policy):
 
 def policy_instructions(policy):
     if uses_pde_style(policy):
-        from shared.question_style import PDE_STYLE_RULES
-        return "\n" + PDE_STYLE_RULES
+        from shared.question_style import PDE_STYLE_RULES, PDE_FILLER_STYLE_RULES
+        return "\n" + (PDE_FILLER_STYLE_RULES if uses_filler_style(policy) else PDE_STYLE_RULES)
     if not allows_ml_practice(policy):
         return ""
     return ("\nRules v5.1 objective allowance (overrides only S13/O8 and the generic-key cap): "

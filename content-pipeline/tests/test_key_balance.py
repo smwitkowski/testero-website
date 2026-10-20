@@ -151,3 +151,33 @@ def test_changed_cohort_does_not_relabel_completed_rows(replay):
     factory.assert_not_called()
     client.insert_question.assert_not_called()
     assert json.loads(path.read_text())["candidates"][:-1] == completed
+
+
+@pytest.mark.parametrize("sizes", [(1, 1, 1), (5, 3, 5), (10, 2, 1), (4, 4, 4, 1)])
+def test_full_run_key_balance_across_retry_waves(replay, sizes):
+    entries = deepcopy(replay[2]["candidates"][:sum(sizes)])
+    original = {entry["candidate_id"]: (candidate_question(entry), canonical_evidence(entry)) for entry in entries}
+    population = [entry["candidate_id"] for entry in entries]
+    start = 0
+    for size in sizes:
+        wave = entries[start:start + size]
+        balance_options(wave, population_ids=list(reversed(population)))
+        start += size
+    counts = Counter(entry["key"] for entry in entries)
+    assert max(counts.values()) <= ceil(len(entries) / 4)
+    assert len({entry["option_balance"]["population_sha256"] for entry in entries}) == 1
+    for entry in entries:
+        assert (candidate_question(entry), canonical_evidence(entry)) == original[entry["candidate_id"]]
+    balanced = deepcopy(entries)
+    for entry in entries:
+        balance_options([entry], population_ids=population)
+    assert entries == balanced
+
+
+@pytest.mark.parametrize("population", ["not-a-list", [], ["other"], ["a", "a"], [True], [" "]])
+def test_invalid_full_run_balance_population_fails_without_mutation(replay, population):
+    entries = deepcopy(replay[2]["candidates"][:2])
+    before = deepcopy(entries)
+    with pytest.raises(ValueError, match="population"):
+        balance_options(entries, population_ids=population)
+    assert entries == before

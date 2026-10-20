@@ -4,6 +4,24 @@
 
 This document measures the official public sample forms linked by all 15 certifications on the [Google Cloud certification index](https://cloud.google.com/learn/certification). The measurements guide original, docs-grounded authoring. Rules v4 and the retained S1–S10/O1–O5 structure below are founder authoring policy, not measured sample frequencies. Generation still creates DRAFT candidates only; it never publishes or replaces human approval.
 
+## PDE additive filler gate (2026-10-20)
+
+New PDE scopes freeze style policy `5.3`. The independent DSPy style critic must
+return exact boolean `distractors_no_generic_filler: true`, in addition to every
+existing check. A false, missing or mistyped value fails closed, regardless of
+score. Each choice needs a credible mechanism for the actual engineering problem,
+not merely a real command or service name. Generic retries, restarts, extra
+resources or unrelated query changes are not useful alternatives on their own.
+
+For example, final-result `LIMIT` is filler for non-clustered BigQuery scanned-byte
+cost or intermediate work from a row-multiplying join. This is contextual guidance,
+not a keyword ban: returned-row volume, top-N output and documented scan-affecting
+access patterns can make `LIMIT` relevant. Evidence still decides correctness.
+
+Frozen PDE `5.2`, `5.1`, absent-policy requests and PMLE retain their original
+schemas and prompts. Never rewrite old requests to add this field. Offline tests
+use canned critic verdicts; they prove contracts, not live semantic quality.
+
 ## Evidence boundary
 
 - **Samples are style evidence, not a live-exam blueprint or answer authority.** Sample counts, lengths, and rates below describe the published samples only. Small samples, especially the eight ML and six Security Operations items, cannot establish live-exam frequencies.

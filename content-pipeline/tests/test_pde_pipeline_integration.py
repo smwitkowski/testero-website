@@ -122,7 +122,7 @@ def harness(monkeypatch, tmp_path):
             if race: both_planned.wait(timeout=5)
             return value
         def writer(context, *args, **kw):
-            marker = next(marker for marker in markers if marker in context)
+            marker = next(marker for marker in sorted(markers, key=len, reverse=True) if marker in context)
             _, q = markers[marker]
             if race:
                 if marker.endswith("-1"): assert second_written.wait(timeout=5)
@@ -175,7 +175,7 @@ def test_short_stem_name_normalization_generator_request_scope_rebuild_and_expor
     verdicts = save_verdicts(path, json.loads(path.read_text()))
     ingest.ingest(path, verdicts, dry_run=True)
     reviewed = json.loads(path.read_text())["candidates"][0]
-    assert reviewed["judge_verdict"]["passed"] and reviewed["grounding"]["style_policy"]["version"] == "5.2"
+    assert reviewed["judge_verdict"]["passed"] and reviewed["grounding"]["style_policy"]["version"] == "5.3"
     assert reviewed["accepted"] is False
     db.assert_not_called()
 

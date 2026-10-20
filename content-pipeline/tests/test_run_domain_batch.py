@@ -155,3 +155,35 @@ def test_full_plan_keeps_existing_artifact_and_sidecar_protection(monkeypatch, t
     existing.touch()
     with pytest.raises(ValueError, match="new tag"):
         batch.batch_commands("all", "reused", "data-engineer", 40, 2, plan_only=True)
+
+
+def test_full_pde_runner_routes_through_bounded_retry_admission(monkeypatch, tmp_path):
+    from click.testing import CliRunner
+    from scripts import pde_retry
+    from scripts import ingest_external_verdicts as ingestion
+
+    monkeypatch.setattr(batch, "PIPELINE", tmp_path)
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "fixture-only")
+    monkeypatch.delenv("N", raising=False)
+    exported = []
+    def export(*args):
+        exported.append(args)
+        return 0
+    monkeypatch.setattr(batch, "export_questions", export)
+    received = []
+    def retry(artifact, export, commands, **kwargs):
+        received.append((artifact, export, commands, kwargs))
+        assert kwargs["retry_attempts"] == 4
+        assert callable(kwargs["admit"]) and callable(kwargs["execute"])
+        return {"waves": [{"selected_ids": ["draft-1", "draft-2"]}], "topics": [], "sections": []}
+    monkeypatch.setattr(pde_retry, "run_retry_batch", retry)
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Fixture runner must not access DB")
+    monkeypatch.setattr(ingestion, "database_client", forbidden)
+    result = CliRunner().invoke(batch.main, ["all", "bounded", "data-engineer", "--count", "40", "--retry-attempts", "4"])
+    assert result.exit_code == 0, result.output
+    assert len(exported) == 1 and len(received) == 1
+    assert "Stored 2 DRAFT questions" in result.output
+    accepted = tmp_path / ".cache/generation/data-engineer-v5-bounded.accepted-ids"
+    assert accepted.read_text() == "draft-1\ndraft-2"

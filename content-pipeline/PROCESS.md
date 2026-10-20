@@ -1,5 +1,88 @@
 # Docs-grounded question process
 
+## PDE bounded accepted-output coverage (2026-10-20)
+
+The full-plan runner now reviews **all initial candidates before generating any
+replacement wave**. For `all ... data-engineer`, each rejected plan slot gets up
+to **two extra candidate attempts**, configurable with `--retry-attempts 0..10`.
+This is separate from the unchanged three decision attempts inside each candidate.
+A replacement keeps the original objective, section, required-topic hint and
+presentation scope. It gets a fresh decision, proof, question and independent
+reviews. Failed non-pinned slots are also refilled, so section quotas apply to
+accepted output, not just the initial plan. A slot stops at its first all-gate,
+bank-safe admission. No section can exceed its planned slot count.
+
+Each wave uses a new artifact/request/verdict cohort. Ordinary decision, schema,
+evidence, style, blind, Argon, duplicate and product-cap rejections remain
+rejections; they do not stop review of the other candidates. Missing or malformed
+verdicts, changed requests, provider/auth/transport failures, invalid provenance,
+failed batch reports and uncertain persistence journals stop the run. They are
+**not** reclassified as quality vetoes or silently retried. Gates, thresholds,
+Argon selection and short-circuit sampling stay unchanged.
+
+The runner first exports **every ACTIVE/DRAFT question** for this certification,
+with complete pagination, including persisted pilot DRAFTs. Plan and written
+answer-pattern vetoes use that whole bank. Retry comparison exports also retain
+all earlier complete authored options, even judge-failed candidates. Uncomparable
+schema-rejected text is recorded as an omission and still retried; it cannot
+block other slots or become a fabricated comparison. The product-cap bank
+contains only real existing rows and admitted additions. These are deliberately
+different populations. Product selection preserves the original full-plan budget
+(including plans larger than 40) and rolling bank across waves. New canonical
+answer-pattern families cover nested/repeated parent-child storage, execution-
+project reservation isolation and row-multiplying join rewrites. They still need
+matching distractor skeletons; opposite decisions remain distinct. This is a
+bounded deterministic check, not semantic completeness for unseen paraphrases.
+
+All waves finish dry admission before any DRAFT write. A second complete dry
+replay binds stored option order to **one full-run admitted cohort**: A–D counts
+differ by at most one. Key, rationales and receipt labels move together; canonical
+judge content and frozen requests stay unchanged. Per-wave key shares are
+informational when global ordinals interleave waves; the full-run cap and each
+row's exact label mapping remain enforced. Expected selected storage IDs and
+frozen artifact/request/verdict hashes are checked again before writes. Changed
+selection or partial/unknown journals require reconciliation, never relabeling
+stored rows. Coordinator serialization against other PDE publishers is still
+required; there is no new publication authorization or concurrent-bank lock.
+
+The initial basename's `.retry-report.json` records each topic as `covered` or
+`attempts_exhausted`, attempts, and section `planned`, `accepted`, `shortfall`.
+Coverage is based on admitted original topic slots, not just initial plan hints;
+the report labels dry admissions separately from persisted DRAFTs. Exhaustion
+can leave partial output. Do not describe that output as complete topic/section
+coverage. The runner's `.accepted-ids` includes accepted DRAFTs from every wave.
+
+New PDE scopes freeze style policy **5.3**, adding the mandatory exact boolean
+`distractors_no_generic_filler`. It rejects generic non-solutions without a
+credible mechanism for the scenario's goal, such as stock final `LIMIT` for
+non-clustered scanned-byte costs or join multiplication. `LIMIT` is not banned:
+returned-row limits, top-N goals and documented scan-affecting access patterns
+are different. Existing plausibility, inference, goal-restatement and every other
+gate remain required. Frozen PDE 5.2/5.1/absent requests and PMLE policies retain
+their old schemas and prompt bytes. Offline canned critic tests establish the
+new check's contract, not live semantic judgment quality.
+
+```sh
+# From the repository root. Offline preview: no credentials, services or DB.
+env -i PATH="$PATH" HOME="$HOME" content-pipeline/scripts/run-domain-batch.sh \
+  all pde-pinned-retry-preview data-engineer --count 40 --plan-only
+# Coordinator-only future run (credentials injected; this PR did NOT run it):
+content-pipeline/scripts/run-domain-batch.sh \
+  all <fresh-tag> data-engineer --count 40 --retry-attempts 2
+# Offline source-hashed regression replay:
+cd content-pipeline
+env -i PATH="$PATH" HOME="$HOME" uv run python -m scripts.replay_pde_answer_patterns
+```
+
+The replay's saved pilot comparison set includes a reviewed **judge-failed**
+authored reservation question that was absent from the saved ACTIVE/DRAFT export.
+That artifact is explicitly labeled authored-only, not invented persisted bank
+provenance. The complete saved bank catches the nested-storage and join repeats;
+the union with all saved authored pilot items catches all three. See
+`calibration/pde-answer-pattern-replay.json` for exact source hashes, comparison
+counts, matches and distinct controls. No live model calls or database writes
+were used to develop or verify this change.
+
 ## Bounded fetched-document context (2026-10-20)
 
 Verification and other fresh doc-inlining stages default to **400,000 Unicode
