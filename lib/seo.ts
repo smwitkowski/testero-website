@@ -9,7 +9,7 @@ export const DEFAULT_DESCRIPTION = "Take a free 20-question PMLE diagnostic and 
 export const SOCIAL_IMAGE = `${SITE_ORIGIN}/og-v2.png`;
 
 export const publicPaths: readonly string[] = [
-  "/", "/diagnostic", "/pricing", "/blog", "/faq", "/terms", "/privacy", "/certifications",
+  "/", "/diagnostic", "/pricing", "/blog", "/faq", "/terms", "/privacy", "/support", "/certifications",
   ...toolPaths,
   "/pmle/sample-questions",
   "/pmle/vertex-ai-agent-platform-cheat-sheet",

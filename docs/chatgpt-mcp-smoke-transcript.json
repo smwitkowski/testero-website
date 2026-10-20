@@ -1,0 +1,1431 @@
+{
+  "recorded_at": "2026-10-20T13:36:57.456Z",
+  "command": "npm run qa:local -- --mcp-smoke",
+  "endpoint": "http://127.0.0.1:3107/api/mcp",
+  "client": "@modelcontextprotocol/sdk",
+  "protocol_version": "2025-11-25",
+  "authenticated": false,
+  "production_writes": false,
+  "challenge_unset_status": 404,
+  "exchanges": [
+    {
+      "method": "POST",
+      "request": {
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2025-11-25",
+          "capabilities": {},
+          "clientInfo": {
+            "name": "testero-local-mcp-smoke",
+            "version": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 0
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "protocolVersion": "2025-11-25",
+          "capabilities": {
+            "tools": {
+              "listChanged": true
+            }
+          },
+          "serverInfo": {
+            "name": "testero-pmle-practice",
+            "version": "[redacted string]"
+          },
+          "instructions": "[redacted string]"
+        },
+        "jsonrpc": "2.0",
+        "id": 0
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "notifications/initialized",
+        "jsonrpc": "2.0"
+      },
+      "status": 202,
+      "response": null
+    },
+    {
+      "method": "GET",
+      "request": null,
+      "status": 405,
+      "response": null
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/list",
+        "jsonrpc": "2.0",
+        "id": 1
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "tools": [
+            {
+              "name": "pmle_exam_overview",
+              "title": "[redacted string]",
+              "description": "[redacted string]",
+              "inputSchema": {
+                "$schema": "[redacted string]",
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              },
+              "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false,
+                "idempotentHint": true,
+                "openWorldHint": false
+              },
+              "execution": {
+                "taskSupport": "[redacted string]"
+              },
+              "_meta": {
+                "securitySchemes": [
+                  {
+                    "type": "[redacted string]"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "list_practice_domains",
+              "title": "[redacted string]",
+              "description": "[redacted string]",
+              "inputSchema": {
+                "$schema": "[redacted string]",
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              },
+              "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false,
+                "idempotentHint": true,
+                "openWorldHint": false
+              },
+              "execution": {
+                "taskSupport": "[redacted string]"
+              },
+              "_meta": {
+                "securitySchemes": [
+                  {
+                    "type": "[redacted string]"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "get_practice_question",
+              "title": "[redacted string]",
+              "description": "[redacted string]",
+              "inputSchema": {
+                "$schema": "[redacted string]",
+                "type": "object",
+                "properties": {
+                  "domain": {
+                    "description": "[redacted string]",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "additionalProperties": false
+              },
+              "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false,
+                "idempotentHint": false,
+                "openWorldHint": false
+              },
+              "execution": {
+                "taskSupport": "[redacted string]"
+              },
+              "_meta": {
+                "securitySchemes": [
+                  {
+                    "type": "[redacted string]"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "check_answer",
+              "title": "[redacted string]",
+              "description": "[redacted string]",
+              "inputSchema": {
+                "$schema": "[redacted string]",
+                "type": "object",
+                "properties": {
+                  "question_id": {
+                    "type": "string",
+                    "format": "[redacted string]",
+                    "pattern": "[redacted string]",
+                    "description": "[redacted string]"
+                  },
+                  "selected_label": {
+                    "type": "string",
+                    "enum": [
+                      "[redacted string]",
+                      "[redacted string]",
+                      "[redacted string]",
+                      "[redacted string]"
+                    ],
+                    "description": "[redacted string]"
+                  }
+                },
+                "required": [
+                  "[redacted string]",
+                  "[redacted string]"
+                ],
+                "additionalProperties": false
+              },
+              "annotations": {
+                "readOnlyHint": true,
+                "destructiveHint": false,
+                "idempotentHint": true,
+                "openWorldHint": false
+              },
+              "execution": {
+                "taskSupport": "[redacted string]"
+              },
+              "_meta": {
+                "securitySchemes": [
+                  {
+                    "type": "[redacted string]"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "jsonrpc": "2.0",
+        "id": 1
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "pmle_exam_overview",
+          "arguments": {}
+        },
+        "jsonrpc": "2.0",
+        "id": 2
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"exam\":\"[redacted string]\",\"duration_minutes\":120,\"question_count\":{\"min\":50,\"max\":60,\"approximate\":false},\"question_types\":[\"[redacted string]\",\"[redacted string]\"],\"languages\":[\"[redacted string]\",\"[redacted string]\"],\"recommended_experience\":\"[redacted string]\",\"guide_as_of\":\"[redacted string]\",\"domains\":[{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.12871287128712872,\"question_count\":5},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.15841584158415842,\"question_count\":7},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.2079207920792079,\"question_count\":8},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.19801980198019803,\"question_count\":8},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.1782178217821782,\"question_count\":7},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.12871287128712872,\"question_count\":5}],\"available_questions\":40,\"practice_selection_size\":40,\"weight_note\":\"[redacted string]\",\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "exam": "[redacted string]",
+            "duration_minutes": 120,
+            "question_count": {
+              "min": 50,
+              "max": 60,
+              "approximate": false
+            },
+            "question_types": [
+              "[redacted string]",
+              "[redacted string]"
+            ],
+            "languages": [
+              "[redacted string]",
+              "[redacted string]"
+            ],
+            "recommended_experience": "[redacted string]",
+            "guide_as_of": "[redacted string]",
+            "domains": [
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.12871287128712872,
+                "question_count": 5
+              },
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.15841584158415842,
+                "question_count": 7
+              },
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.2079207920792079,
+                "question_count": 8
+              },
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.19801980198019803,
+                "question_count": 8
+              },
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.1782178217821782,
+                "question_count": 7
+              },
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.12871287128712872,
+                "question_count": 5
+              }
+            ],
+            "available_questions": 40,
+            "practice_selection_size": 40,
+            "weight_note": "[redacted string]",
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 2
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "list_practice_domains",
+          "arguments": {}
+        },
+        "jsonrpc": "2.0",
+        "id": 3
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"domains\":[{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.12871287128712872,\"question_count\":5},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.15841584158415842,\"question_count\":7},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.2079207920792079,\"question_count\":8},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.19801980198019803,\"question_count\":8},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.1782178217821782,\"question_count\":7},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.12871287128712872,\"question_count\":5}],\"total_questions\":40,\"available_questions\":40,\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "domains": [
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.12871287128712872,
+                "question_count": 5
+              },
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.15841584158415842,
+                "question_count": 7
+              },
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.2079207920792079,
+                "question_count": 8
+              },
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.19801980198019803,
+                "question_count": 8
+              },
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.1782178217821782,
+                "question_count": 7
+              },
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.12871287128712872,
+                "question_count": 5
+              }
+            ],
+            "total_questions": 40,
+            "available_questions": 40,
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 3
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "get_practice_question",
+          "arguments": {
+            "domain": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 4
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "stem": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              }
+            ],
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 4
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 5
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 5
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 6
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 6
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "get_practice_question",
+          "arguments": {
+            "domain": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 7
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "stem": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              }
+            ],
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 7
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 8
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 8
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 9
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 9
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "get_practice_question",
+          "arguments": {
+            "domain": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 10
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "stem": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              }
+            ],
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 10
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 11
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":true,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": true,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 11
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 12
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 12
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "get_practice_question",
+          "arguments": {
+            "domain": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 13
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "stem": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              }
+            ],
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 13
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 14
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":true,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": true,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 14
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 15
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 15
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "get_practice_question",
+          "arguments": {
+            "domain": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 16
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "stem": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              }
+            ],
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 16
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 17
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 17
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 18
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 18
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "get_practice_question",
+          "arguments": {
+            "domain": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 19
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "stem": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              }
+            ],
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 19
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 20
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 20
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 21
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 21
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 22
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"error\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "error": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          },
+          "isError": true
+        },
+        "jsonrpc": "2.0",
+        "id": 22
+      }
+    }
+  ],
+  "redaction": {
+    "scope": "Structure only. Question content, IDs, answer labels and explanations are redacted, including serialized MCP text content."
+  }
+}
