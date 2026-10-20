@@ -64,7 +64,7 @@ def export_questions(url, key, exam, path, *, fetch=None):
     return len(rows)
 
 
-def batch_commands(section, tag, cert, count, parallel, *, plan_only=False):
+def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resume=None):
     """Build one gated batch; ``all`` keeps the full weighted cert plan unfiltered."""
     if (section != "all" and not re.fullmatch(r"[0-9]+\.", section)
             or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", tag)):
@@ -75,15 +75,37 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False):
         domain = next((d for d in context["domains"].values() if d["section_number"] + "." == section), None)
         if domain is None:
             raise ValueError("Section is not in the selected certification")
+    if resume is not None:
+        if plan_only or section != "all" or cert != "data-engineer":
+            raise ValueError("Resume requires an existing full-plan PDE run, not --plan-only")
+        artifact = Path(resume).absolute()
+        if (artifact.name != cert + "-v5-" + tag + ".json"
+                or any(path.is_symlink() for path in (artifact, *artifact.parents))):
+            raise ValueError("Resume artifact must match the certification and tag and cannot use symlinks")
+        if not artifact.is_file():
+            raise ValueError("Resume artifact does not exist")
+        if artifact.parent.resolve() != (PIPELINE / ".cache/generation").resolve():
+            raise ValueError("Resume must run from the artifact-owning pipeline checkout")
+        saved = json.loads(artifact.read_text())
+        if (saved.get("cert_id") != cert or saved.get("plan_only") or saved.get("requested_objective_ids")
+                or not isinstance(saved.get("plan"), list) or not saved["plan"]
+                or saved.get("planned_count") != len(saved["plan"])
+                or (count is not None and count != len(saved["plan"]))):
+            raise ValueError("Resume count or scope differs from the saved full plan")
+        count = len(saved["plan"])
+        base = artifact.with_suffix("")
+    else:
+        base = PIPELINE / ".cache/generation" / (cert + "-v5-" + tag)
+        artifact = base.with_suffix(".json")
+        if any(path.exists() for path in (artifact, Path(str(base) + ".existing.json"),
+                                          Path(str(base) + ".judge-requests"), Path(str(base) + ".verdicts"),
+                                          Path(str(base) + ".accepted-ids"), Path(str(artifact) + ".calls.jsonl"),
+                                          base.with_suffix(".retry-report.json"))) or list(base.parent.glob(base.name + "-retry*")):
+            raise ValueError("Batch artifact or sidecar exists; use a new tag")
     count = count if count is not None else (40 if section == "all" else 30)
-    base = PIPELINE / ".cache/generation" / (cert + "-v5-" + tag)
-    artifact = base.with_suffix(".json")
     export = Path(str(base) + ".existing.json")
-    if any(path.exists() for path in (artifact, export, Path(str(base) + ".judge-requests"),
-                                      Path(str(base) + ".verdicts"), Path(str(base) + ".accepted-ids"),
-                                      Path(str(artifact) + ".calls.jsonl"),
-                                      base.with_suffix(".retry-report.json"))) or list(base.parent.glob(base.name + "-retry*")):
-        raise ValueError("Batch artifact or sidecar exists; use a new tag")
+    if resume is not None and (export.is_symlink() or not export.is_file()):
+        raise ValueError("Resume requires the unchanged non-symlink saved bank export")
     generate = [sys.executable, "scripts/generate_all_domains.py", "--cert", cert,
                 "--n-questions", str(count), "--model", "codex", "--judge-model", "external",
                 "--parallel", str(parallel), "--gen-effort", "high", "--cite-effort", "medium",
@@ -112,17 +134,30 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False):
 @click.option("--retry-attempts", type=click.IntRange(min=0, max=10), default=2, show_default=True,
               help="Extra same-slot attempts for full-plan PDE; gates never change.")
 @click.option("--plan-only", is_flag=True, help="Offline only: no export, credentials, models or database.")
-def main(section, tag, cert, count, parallel, retry_attempts, plan_only):
+@click.option("--resume", type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="Resume this saved full-plan PDE artifact without regenerating saved waves.")
+@click.option("--acknowledge-saved-system-failures", is_flag=True,
+              help="Resume only: explicitly retain saved pre-judge system failures as failed attempts; never auto-retry them.")
+@click.option("--write", is_flag=True,
+              help="Coordinator authorization for resume DRAFT writes; resume is dry admission without this flag.")
+def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
+         acknowledge_saved_system_failures, write):
     """Run SECTION (e.g. 1. or all) as one artifact; all uses the weighted cert plan."""
     try:
-        artifact, export, commands = batch_commands(section, tag, cert, count, parallel, plan_only=plan_only)
+        if acknowledge_saved_system_failures and resume is None:
+            raise ValueError("Saved system-failure acknowledgment requires --resume")
+        if write and (plan_only or section != "all" or cert != "data-engineer"):
+            raise ValueError("--write requires a full-plan PDE run")
+        artifact, export, commands = batch_commands(section, tag, cert, count, parallel,
+                                                   plan_only=plan_only, resume=resume)
         artifact.parent.mkdir(parents=True, exist_ok=True)
-        if not plan_only:
+        if not plan_only and (resume is None or write):
             url, key = os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
             if not url or not key:
                 raise ValueError("Coordinator must inject SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY; no env files are read")
-            exam = "GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert
-            click.echo(f"Exported {export_questions(url, key, exam, export)} existing {cert} questions")
+            if resume is None:
+                exam = "GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert
+                click.echo(f"Exported {export_questions(url, key, exam, export)} existing {cert} questions")
         def execute(command):
             subprocess.run(command, cwd=PIPELINE, check=True, stdin=subprocess.DEVNULL,
                            env={**os.environ, "PYTHON_DOTENV_DISABLED": "1"})
@@ -142,7 +177,10 @@ def main(section, tag, cert, count, parallel, retry_attempts, plan_only):
             report = run_retry_batch(artifact, export, commands, retry_attempts=retry_attempts,
                                      execute=execute, admit=admit,
                                      load_bank=lambda path: load_export(path, cert_id=cert)["questions"],
-                                     comparison=comparison_row, storage_id=storage_id)
+                                     comparison=comparison_row, storage_id=storage_id,
+                                     **({"resume": True, "write": write,
+                                         "acknowledge_saved_system_failures": acknowledge_saved_system_failures}
+                                        if resume is not None else {}))
             ids = [ident for wave in report["waves"] for ident in wave["selected_ids"]]
             click.echo("PDE accepted topic coverage: " + json.dumps(report["topics"]))
             click.echo("PDE planned vs accepted sections: " + json.dumps(report["sections"]))
@@ -154,8 +192,11 @@ def main(section, tag, cert, count, parallel, retry_attempts, plan_only):
                 payload = json.loads(artifact.read_text())
                 ids = [row["inserted_question_id"] for row in payload["candidates"] if row.get("accepted") and row.get("inserted_question_id")]
         if not plan_only:
-            Path(str(artifact.with_suffix("")) + ".accepted-ids").write_text("\n".join(ids))
-            click.echo(f"Stored {len(ids)} DRAFT questions; publication is not authorized")
+            if resume is not None and not write:
+                click.echo(f"Dry admission selected {len(ids)} questions; no DRAFT writes; coordinator --write required")
+            else:
+                Path(str(artifact.with_suffix("")) + ".accepted-ids").write_text("\n".join(ids))
+                click.echo(f"Stored {len(ids)} DRAFT questions; publication is not authorized")
     except (ValueError, OSError, subprocess.CalledProcessError):
         # Do not print exceptions from HTTP/transport clients or credential-bearing environments.
         raise click.ClickException("Batch stopped; check registry inputs, injected credentials and private batch artifacts. No later stage was run.") from None

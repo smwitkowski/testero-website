@@ -15,7 +15,10 @@ import uuid
 import click
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from scripts.generate_pmle_questions import database_client as _database_client, persist_candidate, write_artifact, product_share_row
+from scripts.generate_pmle_questions import (
+    database_client as _database_client, persist_candidate, write_artifact, product_share_row,
+    is_acknowledgeable_system_failure,
+)
 from shared.cert_context import plan_questions
 from shared.objective_style import validate_style_policy, uses_pde_style
 from shared.cert_context import tune_generation_scope
@@ -411,7 +414,136 @@ def _generation_quality_stage(entry):
     return None
 
 
-def _strict_preflight(path, verdicts, payload):
+def saved_system_failure_ids(payload):
+    """Discover narrowly supported saved failures; this never acknowledges them."""
+    if (not isinstance(payload, dict) or payload.get("cert_id") != "data-engineer"
+            or payload.get("judge_model") != "external" or payload.get("external_judge_version") != 2
+            or payload.get("rules_version") != 5 or payload.get("batch_stop") is not None):
+        return frozenset()
+    candidates = payload.get("candidates")
+    if not isinstance(candidates, list):
+        return frozenset()
+    return frozenset(entry["candidate_id"] for entry in candidates
+                     if is_acknowledgeable_system_failure(entry)
+                     and isinstance(entry.get("candidate_id"), str) and entry["candidate_id"].strip())
+
+
+def saved_generation_system_failures(payload):
+    """Return safe categorical diagnostics for supported saved resume failures."""
+    eligible = saved_system_failure_ids(payload)
+    return [{"candidate_id": entry["candidate_id"], "failure_stage": "documentation", "error_class": "ReadTimeout"}
+            for entry in payload.get("candidates", []) if entry.get("candidate_id") in eligible]
+
+
+def validate_saved_generation_failures(payload, acknowledged_system_failure_ids=()):
+    """Validate all pre-judge failures without model calls or candidate changes.
+
+    Raises:
+        ValueError: A generation failure is unacknowledged or not a quality veto.
+    """
+    acknowledged = validate_acknowledged_system_failures(payload, acknowledged_system_failure_ids)
+    if not isinstance(payload, dict) or payload.get("batch_stop") is not None:
+        raise ValueError("Saved generation has a fatal batch stop")
+    candidates = payload.get("candidates")
+    if not isinstance(candidates, list):
+        raise ValueError("Invalid saved generation candidates")
+    for entry in candidates:
+        if not isinstance(entry, dict):
+            raise ValueError("Invalid saved generation candidate")
+        if _is_complete(entry) or entry.get("external_judge_request") or entry.get("awaiting_external_judge"):
+            continue
+        if entry.get("candidate_id") not in acknowledged and _generation_quality_stage(entry) is None:
+            raise ValueError("Unverified or system generation rejection requires reconciliation")
+
+
+def validate_saved_judge_requests(path, payload):
+    """Validate a saved cohort's immutable request set, without verdict files.
+
+    Supported saved timeouts are recognized, not authorized here. The resume
+    coordinator must require explicit acknowledgment before any live calls.
+
+    Raises:
+        ValueError: Saved requests, scope, provenance or completed journals are invalid.
+    """
+    path = Path(path)
+    try:
+        if path.is_symlink():
+            raise ValueError("Unsafe artifact path")
+        validate_completed_journals(payload, path)
+        validate_saved_generation_failures(payload, saved_system_failure_ids(payload))
+        expected = set()
+        directory = request_directory(path)
+        if directory.is_symlink():
+            raise ValueError("Unsafe request directory")
+        for entry in payload["candidates"]:
+            _scope(payload, entry)
+            if entry.get("external_judge_request") or entry.get("awaiting_external_judge"):
+                _validate_candidate(path, payload, entry)
+                request = path.parent / entry["external_judge_request"]["path"]
+                if request != directory / (entry["candidate_id"] + ".json"):
+                    raise ValueError("Request is outside the frozen cohort directory")
+                expected.add(request.name)
+        actual = set()
+        for child in directory.iterdir() if directory.exists() else ():
+            if child.is_symlink() or not child.is_file():
+                raise ValueError("Saved request files must be regular files")
+            if child.name == ".judge-requests.lock":
+                continue  # Stable runner/exporter lock, not candidate content.
+            if child.name == ".verdict-directories.json":
+                registry = _read_json(child)
+                if (not isinstance(registry, dict) or set(registry) != {"version", "directories"}
+                        or type(registry["version"]) is not int or registry["version"] != 1
+                        or not isinstance(registry["directories"], list)
+                        or any(not isinstance(item, str) or not Path(item).is_absolute()
+                               for item in registry["directories"])
+                        or len(set(registry["directories"])) != len(registry["directories"])):
+                    raise ValueError("Invalid saved verdict-directory registry")
+                for item in registry["directories"]:
+                    target = Path(item)
+                    if (any(part.is_symlink() for part in (target, *target.parents))
+                            or not target.resolve().is_relative_to(path.parent.resolve())
+                            or target.resolve() in (path.parent.resolve(), directory.resolve())
+                            or (target.exists() and not target.is_dir())):
+                        raise ValueError("Unsafe saved verdict-directory registry")
+                continue
+            actual.add(child.name)
+        if actual != expected:
+            raise ValueError("Saved request set differs from the frozen cohort")
+    except (ValueError, KeyError, TypeError, OSError, UnicodeError, StopIteration):
+        raise ValueError("Saved judge requests failed immutable preflight") from None
+
+
+def validate_acknowledged_system_failures(payload, ids=()):
+    """Validate explicit saved-failure IDs without changing any candidate state.
+
+    Raises:
+        ValueError: IDs are malformed or do not name eligible saved failures.
+    """
+    if (not isinstance(ids, (list, tuple, set, frozenset))
+            or any(not isinstance(ident, str) or not ident.strip() for ident in ids)
+            or len(set(ids)) != len(ids)):
+        raise ValueError("Acknowledged failures require unique saved candidate IDs")
+    requested = frozenset(ids)
+    if not requested:
+        return requested
+    candidates = payload.get("candidates") if isinstance(payload, dict) else None
+    if not isinstance(candidates, list):
+        raise ValueError("Acknowledged failures require saved candidate records")
+    all_ids = [entry.get("candidate_id") for entry in candidates if isinstance(entry, dict)]
+    if (len(all_ids) != len(candidates) or any(all_ids.count(ident) != 1 for ident in requested)
+            or not requested <= saved_system_failure_ids(payload)):
+        raise ValueError("Acknowledged IDs must name pre-judge documentation ReadTimeout failures")
+    try:
+        validate_candidate_records(payload)
+        for entry in candidates:
+            if entry["candidate_id"] in requested:
+                _scope(payload, entry)
+    except (ValueError, KeyError, TypeError, StopIteration):
+        raise ValueError("Acknowledged failure scope or candidate identity is invalid") from None
+    return requested
+
+
+def _strict_preflight(path, verdicts, payload, acknowledged_system_failure_ids=()):
     """Validate every request/verdict, even for a later duplicate-vetoed row."""
     try:
         if path.is_symlink() or verdicts.is_symlink():
@@ -423,6 +555,8 @@ def _strict_preflight(path, verdicts, payload):
             if _is_complete(entry):
                 continue
             if not entry.get("external_judge_request") and not entry.get("awaiting_external_judge"):
+                if entry["candidate_id"] in acknowledged_system_failure_ids:
+                    continue  # Validated explicitly; keep rejected, never judge or persist.
                 if _generation_quality_stage(entry) is None:
                     raise ValueError("Unverified or system generation rejection")
                 continue
@@ -441,11 +575,12 @@ def _strict_preflight(path, verdicts, payload):
                                    + type(error).__name__ + ")") from None
 
 
-def _quality_summary(payload, superseded):
+def _quality_summary(payload, superseded, acknowledged_system_failure_ids=()):
     candidates = [{"candidate_id": entry["candidate_id"], "stage": entry["failure_stage"],
                    "reason": entry.get("reason", "Candidate rejected")}
                   for entry in payload["candidates"]
                   if entry["candidate_id"] not in superseded and entry.get("failure_stage")
+                  and entry["candidate_id"] not in acknowledged_system_failure_ids
                   and not _is_complete(entry)]
     stages = {}
     for row in candidates:
@@ -455,7 +590,8 @@ def _quality_summary(payload, superseded):
 
 def ingest(path, verdicts, *, dry_run=False, publication_bank=None,
            continue_quality_rejections=False, full_plan_count=None,
-           expected_selected_ids=None, balance_population_ids=None):
+           expected_selected_ids=None, balance_population_ids=None,
+           acknowledged_system_failure_ids=()):
     """Persist passing candidates; an optional PDE comparison bank adds fresh gates.
 
     publication_bank is a list of normalized load_export question rows. It never
@@ -469,6 +605,10 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None,
     requires exact selected storage-ID equality before database access.
     full_plan_count preserves the original product-cap budget across retry waves.
     balance_population_ids binds option layouts to the full selected cohort.
+    acknowledged_system_failure_ids is an explicit coordinator-resume policy for
+    saved pre-judge documentation ReadTimeout failures only. It requires strict
+    quality continuation, leaves these candidates rejected, and never bypasses
+    request/verdict, provenance, journal, quality or batch-report validation.
     """
     if type(continue_quality_rejections) is not bool:
         raise click.ClickException("Invalid quality-rejection continuation policy")
@@ -492,6 +632,13 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None,
             or not isinstance(payload.get("plan"), list) or not payload["plan"]
             or not isinstance(payload.get("generation_runs"), dict)):
         raise click.ClickException("Invalid external judge artifact")
+    try:
+        acknowledged_system_failure_ids = validate_acknowledged_system_failures(
+            payload, acknowledged_system_failure_ids)
+    except ValueError as error:
+        raise click.ClickException(str(error)) from None
+    if acknowledged_system_failure_ids and not continue_quality_rejections:
+        raise click.ClickException("Saved system failure acknowledgment requires strict quality continuation")
     frozen_count = payload.get("full_plan_count")
     if frozen_count is not None:
         if type(frozen_count) is not int or frozen_count < len(payload["plan"]):
@@ -632,10 +779,10 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None,
         # appears in both: a fresh edit must not erase a frozen duplicate veto.
         near_seen.extend(publication_bank)
     if strict_preflight:
-        _strict_preflight(path, verdicts, payload)
+        _strict_preflight(path, verdicts, payload, acknowledged_system_failure_ids)
     if uses_pde_style(payload["plan"][0].get("style_policy")):
         for entry in payload["candidates"]:
-            if not _is_complete(entry):
+            if not _is_complete(entry) and entry["candidate_id"] not in acknowledged_system_failure_ids:
                 entry["publication_selected"] = False
     pending, seen = [], set()
     fatal_rejections = []
@@ -684,6 +831,11 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None,
                 click.echo(f"{ident}: persistence blocked; human reconciliation required")
             else:
                 click.echo(f"{ident}: already complete; no new insert")
+            continue
+        if ident in acknowledged_system_failure_ids:
+            # Preserve the saved diagnostic; never expose provider error bodies.
+            rejected += 1
+            click.echo(f"{ident}: acknowledged saved system failure; documentation/ReadTimeout; remains rejected")
             continue
         # Generation rejects have no published request and must not be relabelled
         # as invalid requests. Recover stages overwritten by older ingestion too.
@@ -832,7 +984,10 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None,
         raise click.ClickException("Selected storage IDs changed since dry-run; no new DB writes")
     if strict_preflight and (fatal_rejections or missing or blocked):
         raise click.ClickException("Ingestion integrity or persistence failure; no new DB writes")
-    quality_rejections = _quality_summary(payload, superseded)
+    quality_rejections = _quality_summary(payload, superseded, acknowledged_system_failure_ids)
+    system_rejections = {"count": len(acknowledged_system_failure_ids), "candidates": [
+        {"candidate_id": entry["candidate_id"], "stage": entry["failure_stage"], "error_class": entry["error_class"]}
+        for entry in payload["candidates"] if entry["candidate_id"] in acknowledged_system_failure_ids]}
     if payload.get("rules_version") == 5:
         quality_eligible = [entry for entry in payload["candidates"]
                             if entry["candidate_id"] not in superseded
@@ -898,7 +1053,7 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None,
         if blocked:
             raise click.ClickException("Persistence journal requires reconciliation; no new DB writes")
         empty_quality_selection = (continue_quality_rejections and not quality_eligible
-                                   and quality_rejections["count"] > 0)
+                                   and (quality_rejections["count"] > 0 or system_rejections["count"] > 0))
         if not payload["key_position_report"]["count"] and not cap_vetoed and not empty_quality_selection:
             raise click.ClickException("No passing candidates; no new DB writes")
         enforced_keys = payload.get("run_key_position_report") if balance_population_ids is not None else payload["key_position_report"]
@@ -1005,7 +1160,8 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None,
     return {"selected_candidates": [{**comparison_row(entry), "id": candidate_storage_id(entry, scope, question)}
                                      for entry, scope, question, _, _ in pending],
             "product_share_report": payload.get("product_share_report"), "complete": complete,
-            "cap_vetoed": cap_vetoed, "quality_rejections": quality_rejections}
+            "cap_vetoed": cap_vetoed, "quality_rejections": quality_rejections,
+            "acknowledged_system_failures": system_rejections}
 
 
 @click.command()

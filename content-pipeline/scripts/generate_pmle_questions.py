@@ -115,6 +115,73 @@ def is_quality_rejection(entry):
                 and entry.get("failure_stage") == "decision_veto"))
 
 
+def is_acknowledgeable_system_failure(entry):
+    """Identify the saved pre-judge documentation timeout, not a quality veto.
+
+    This deliberately narrow resume classifier does not change generation's
+    default fatal-error policy. Local schema, request, report and persistence
+    failures are never eligible for acknowledgment.
+    """
+    if (not isinstance(entry, dict) or entry.get("failure_stage") != "documentation"
+            or entry.get("error_class") != "ReadTimeout" or entry.get("accepted") is not False
+            or (entry.get("awaiting_external_judge") is not None
+                and entry.get("awaiting_external_judge") is not False)
+            or entry.get("status") is not None):
+        return False
+    if any(key in entry for key in (
+            "external_judge_request", "external_verdict", "external_judge_provenance",
+            "grounding", "repair", "persistence_status", "inserted_question_id",
+            "persistence_validation_failed", "option_order", "option_balance")):
+        return False
+    judge = entry.get("judge_verdict")
+    if (not isinstance(judge, dict) or set(judge) != {"passed", "score", "reason", "model"}
+            or judge["passed"] is not False or type(judge["score"]) not in (int, float)
+            or judge["score"] != 0 or judge["reason"] != "Not judged" or judge["model"] != "external"):
+        return False
+    # The final search failed before its source set, proof or question existed.
+    if (entry.get("stem") is not None or entry.get("options") != []
+            or entry.get("evidence") != [] or entry.get("citation_attempts") != []
+            or entry.get("rationales") != {}):
+        return False
+    mechanical = entry.get("mechanical_check")
+    if not isinstance(mechanical, dict) or mechanical.get("passed") is not False:
+        return False
+    attempts = entry.get("decision_attempts")
+    if not isinstance(attempts, list) or not attempts or not isinstance(attempts[-1], dict):
+        return False
+    last = attempts[-1]
+    if (not isinstance(last.get("plan"), dict) or not last["plan"]
+            or any(key in last for key in ("sources", "proof", "documentation_check"))):
+        return False
+    if "sources" in entry:
+        # A later decision search can fail after an earlier attempt fetched docs.
+        # Retain those frozen receipts; they are not proof of the failed attempt.
+        return (isinstance(entry["sources"], list) and bool(entry["sources"])
+                and any(isinstance(prior, dict) and prior.get("sources") == entry["sources"]
+                        for prior in attempts[:-1]))
+    return True
+
+
+def generation_failure_summary(entries):
+    """Count vetoes and system failures without printing provider messages."""
+    quality = sum(is_quality_rejection(entry) for entry in entries)
+    stages = {"decision_plan", "decision_veto", "near_duplicate_plan", "documentation", "taxonomy",
+              "generation", "schema", "citation", "mechanical", "near_duplicate", "duplicate",
+              "answer_pattern", "product_share", "external_request", "external_request_publication",
+              "judge", "persistence"}
+    diagnostics = []
+    for entry in entries[:20]:
+        ident, error = entry.get("candidate_id"), entry.get("error_class")
+        diagnostics.append({
+            "candidate_id": ident if isinstance(ident, str) and re.fullmatch(
+                r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", ident) else "unknown",
+            "failure_stage": entry.get("failure_stage") if entry.get("failure_stage") in stages else "unknown",
+            "error_class": error if isinstance(error, str) and re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", error) else "unknown",
+        })
+    return {"quality_vetoes": quality, "system_errors": len(entries) - quality,
+            "candidates": diagnostics, "omitted": max(0, len(entries) - len(diagnostics))}
+
+
 def persist_candidate(client, scope, question, judge, grounding, exam, domain_id, run_id, difficulty,
                       *, before_insert=None, on_question_inserted=None, question_id=None, taxonomy_tags=None):
     notes = json.loads(judge.to_review_notes())
@@ -776,9 +843,13 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         click.echo(f"Awaiting external judge {awaiting}/{n_questions}; requests: {request_directory(artifact)}; no DB writes")
         if awaiting != n_questions:
             failures = [entry for entry in payload["candidates"] if not entry.get("awaiting_external_judge")]
+            summary = generation_failure_summary(failures)
+            click.echo("Pre-judge failures: " + json.dumps(summary))
             if (not continue_quality_rejections or len(payload["candidates"]) != n_questions
                     or not all(is_quality_rejection(entry) for entry in failures)):
-                raise click.ClickException("Some candidates failed before external judgment; inspect the artifact")
+                raise click.ClickException(
+                    f"Some candidates failed before external judgment: quality vetoes={summary['quality_vetoes']}; "
+                    f"system errors={summary['system_errors']}; inspect categorical diagnostics and the artifact")
             click.echo(f"Quality-only vetoes: {len(failures)}; remaining requests still require every gate")
     elif accepted != n_questions:
         raise click.ClickException("Some candidates failed; inspect the artifact before retrying")

@@ -7,6 +7,14 @@ import pytest
 from scripts import pde_retry as retry
 
 
+@pytest.fixture(autouse=True)
+def fixture_native_request_validation(monkeypatch):
+    # These are orchestration unit fixtures, not full frozen receipt/request
+    # artifacts. The native validator has separate ingestion contract tests.
+    from scripts import ingest_external_verdicts as ingestion
+    monkeypatch.setattr(ingestion, "validate_saved_judge_requests", lambda path, payload: None)
+
+
 def scope(section, topic=None):
     return {"domain_code": section, "objective_id": section + ":objective",
             "required_topic_id": topic, "required_topic_guidance": "Keep topic" if topic else None}
@@ -48,7 +56,13 @@ class Fixture:
                      "options": [{"label": letter, "text": letter + str(slot) + str(attempt)}
                                  for letter in "ABCD"]}
                     for index, slot in enumerate(slots, 1)]
-            retry.write_json(target, {"plan": [self.plan[slot - 1] for slot in slots], "candidates": rows})
+            payload = {"plan": [self.plan[slot - 1] for slot in slots], "candidates": rows}
+            if "--frozen-plan" in command:
+                payload.update(retry_slots=frozen["slots"], full_plan_count=len(self.plan),
+                               retry_source={key: frozen[key] for key in ("source_artifact", "source_sha256")},
+                               existing_questions={"sha256": retry.digest(command[command.index("--existing-questions") + 1])})
+            retry.write_json(target, payload)
+            target.with_suffix(".judge-requests").mkdir(exist_ok=True)
         else:
             requests = Path(command[command.index("--requests") + 1])
             verdicts = Path(command[command.index("--verdicts") + 1])
@@ -77,7 +91,8 @@ class Fixture:
                 result.append({**self.comparison(row), "id": self.storage(payload, row)})
         if "expected_selected_ids" in kwargs:
             assert kwargs["expected_selected_ids"] == [row["id"] for row in result]
-            assert kwargs["balance_population_ids"] == sorted(kwargs["balance_population_ids"])
+            if "balance_population_ids" in kwargs:
+                assert kwargs["balance_population_ids"] == sorted(kwargs["balance_population_ids"])
         retry.write_json(path, payload)
         return {"selected_candidates": result}
 
@@ -299,3 +314,282 @@ def test_malformed_reviewed_content_remains_integrity_failure(tmp_path):
     with pytest.raises(ValueError, match="without a schema"):
         fixture.run()
     assert not any(event[0] == "write" for event in fixture.events)
+
+
+def interrupted_after_retry_generation(fixture):
+    """Save one reviewed wave and a complete but unjudged retry cohort."""
+    original = fixture.execute
+    def stop(command):
+        original(command)
+        if command[1] == "generate" and "--frozen-plan" in command:
+            raise RuntimeError("Stopped after saved generation")
+    fixture.execute = stop
+    with pytest.raises(RuntimeError, match="Stopped after"):
+        fixture.run(write=False)
+    fixture.execute = original
+    fixture.events.clear()
+    fixture.calls.clear()
+    return fixture.artifact.with_name("full-retry1.json")
+
+
+def test_resume_judges_saved_retry_without_regeneration_and_uses_remaining_attempt(tmp_path):
+    fixture = Fixture(tmp_path, {1: 2, 2: 3, 3: 1})
+    target = interrupted_after_retry_generation(fixture)
+    before = {str(path): path.read_bytes() for path in tmp_path.rglob("*")
+              if path.is_file() and (".plan." in path.name or ".existing." in path.name)}
+    report = fixture.run(resume=True)
+    assert [event for event in fixture.events if event[0] == "generate"] == [("generate", 3, [2])]
+    assert [event[1] for event in fixture.events if event[0] == "review"] == [target.stem, "full-retry2"]
+    assert [wave["slots"] for wave in report["waves"]] == [[1, 2, 3], [1, 2], [2]]
+    assert report["status"] == "persisted"
+    assert report["topics"][0]["attempts"] == 2
+    assert report["balance_population_ids"] == ["slot1-a2", "slot2-a3", "slot3-a1"]
+    assert all(Path(name).read_bytes() == value for name, value in before.items())
+    first_write = next(index for index, event in enumerate(fixture.events) if event[0] == "write")
+    assert all(event[0] == "write" for event in fixture.events[first_write:])
+
+
+def test_resume_legacy_report_without_hash_manifest(tmp_path):
+    fixture = Fixture(tmp_path, {1: 2, 2: 1, 3: 1})
+    interrupted_after_retry_generation(fixture)
+    path = fixture.artifact.with_suffix(".retry-report.json")
+    report = retry.read_json(path)
+    report.pop("frozen_files")
+    retry.write_json(path, report)
+    report = fixture.run(resume=True, write=False)
+    assert report["status"] == "admitted"
+    assert not any(event[0] == "generate" for event in fixture.events)
+    assert not any(event[0] == "write" for event in fixture.events)
+
+
+def test_resume_admitted_cohort_revalidates_without_judge_or_generation(tmp_path):
+    fixture = Fixture(tmp_path, {1: 2, 2: 3, 3: 1})
+    fixture.run(write=False)
+    fixture.events.clear()
+    fixture.calls.clear()
+    report = fixture.run(resume=True, write=False)
+    assert report["status"] == "admitted"
+    assert all(event[0] == "dry" for event in fixture.events)
+    assert all("expected_selected_ids" in kwargs for _, kwargs in fixture.calls)
+    assert all("balance_population_ids" in kwargs for _, kwargs in fixture.calls)
+
+
+@pytest.mark.parametrize("change", ["cap", "status", "missing_wave", "orphan", "scope", "source", "snapshot", "report_slots", "report_ids", "journals", "indices", "missing_requests"])
+def test_resume_rejects_changed_or_incomplete_saved_inputs_before_any_call(tmp_path, change):
+    fixture = Fixture(tmp_path, {1: 2, 2: 3, 3: 1})
+    target = interrupted_after_retry_generation(fixture)
+    path = fixture.artifact.with_suffix(".retry-report.json")
+    report = retry.read_json(path)
+    payload = retry.read_json(target)
+    if change == "cap":
+        report["retry_attempts"] = 1
+    elif change == "status":
+        report["status"] = "write_interrupted"
+    elif change == "missing_wave":
+        fixture.artifact.unlink()
+    elif change == "orphan":
+        target.with_name("full-retry3.json").write_text("{}")
+    elif change == "scope":
+        payload["plan"][0]["required_topic_id"] = "different-topic"
+    elif change == "source":
+        payload["retry_source"]["source_sha256"] = "0" * 64
+    elif change == "snapshot":
+        target.with_suffix(".existing.json").write_text("[]")
+    elif change == "report_slots":
+        report["waves"][0]["slots"] = [1, 2]
+    elif change == "report_ids":
+        report["waves"][0]["candidate_ids"] = ["other-candidate"]
+    elif change == "journals":
+        payload["candidates"][0]["persistence_status"] = "unknown"
+    elif change == "indices":
+        payload["candidates"][0]["index"] = 2
+    elif change == "missing_requests":
+        target.with_suffix(".judge-requests").rmdir()
+    retry.write_json(path, report)
+    retry.write_json(target, payload)
+    with pytest.raises(ValueError):
+        fixture.run(resume=True)
+    assert fixture.events == []
+    assert fixture.calls == []
+
+
+def test_resume_rejects_saved_selection_change_before_judging_next_wave(tmp_path):
+    fixture = Fixture(tmp_path, {1: 2, 2: 3, 3: 1})
+    interrupted_after_retry_generation(fixture)
+    fixture.outcomes[1] = 1
+    with pytest.raises(AssertionError):  # Admission's expected-ID invariant.
+        fixture.run(resume=True)
+    assert not any(event[0] in {"generate", "review", "write"} for event in fixture.events)
+
+
+def test_resume_global_replay_error_prevents_every_write(tmp_path):
+    fixture = Fixture(tmp_path, {1: 2, 2: 1, 3: 1})
+    interrupted_after_retry_generation(fixture)
+    original = fixture.admit
+    def fail(path, verdicts, **kwargs):
+        if "balance_population_ids" in kwargs:
+            raise ValueError("Changed global report")
+        return original(path, verdicts, **kwargs)
+    fixture.admit = fail
+    with pytest.raises(ValueError, match="Changed global"):
+        fixture.run(resume=True)
+    assert not any(event[0] == "write" for event in fixture.events)
+
+
+def test_report_explains_each_nonselected_judge_pass_and_preserves_diagnostics(tmp_path):
+    fixture = Fixture(tmp_path, {1: 99, 2: 1, 3: 1})
+    original = fixture.admit
+    def admission(path, verdicts, **kwargs):
+        result = original(path, verdicts, **kwargs)
+        payload = retry.read_json(path)
+        for row in payload["candidates"]:
+            row["judge_verdict"] = {"passed": True, "score": 0.9}
+            if not row["publication_selected"]:
+                row.update(failure_stage="product_share", reason="Rolling product cap exceeded",
+                           product_share_check={"passed": False, "denominator": 40, "max_per_product": 16})
+        payload["product_share_report"] = {"unknown_bank_count": 3, "selected_count": len(result["selected_candidates"])}
+        payload["option_prefix_report"] = {"passed": True}
+        retry.write_json(path, payload)
+        result["quality_rejections"] = {"by_stage": {"product_share": 1}}
+        return result
+    fixture.admit = admission
+    report = fixture.run(write=False)
+    diagnostics = report["waves"][0]["selection_diagnostics"]
+    assert diagnostics["external_judge_passed"] == 3
+    assert diagnostics["selected_count"] == 2
+    assert diagnostics["non_selected_judge_passes"][0]["candidate_id"] == "slot1-a1"
+    assert diagnostics["non_selected_judge_passes"][0]["failure_stage"] == "product_share"
+    assert diagnostics["non_selected_judge_passes"][0]["product_share_check"]["max_per_product"] == 16
+    assert diagnostics["product_share_report"]["unknown_bank_count"] == 3
+    assert diagnostics["batch_reports"]["option_prefix_report"] == {"passed": True}
+    assert diagnostics["quality_rejections"]["by_stage"] == {"product_share": 1}
+
+
+def test_ordinary_prejudge_rejects_in_both_retry_waves_do_not_block_other_slots(tmp_path):
+    fixture = Fixture(tmp_path, {1: 99, 2: 3, 3: 1})
+    original = fixture.execute
+    def ordinary_rejection(command):
+        original(command)
+        if command[1] == "generate":
+            target = Path(command[command.index("--artifact") + 1])
+            payload = retry.read_json(target)
+            for row in payload["candidates"]:
+                if row["slot"] == 1:
+                    row.update(failure_stage="schema", error_class="CandidateRejected",
+                               schema_check={"passed": False}, reason="Ordinary schema veto")
+            retry.write_json(target, payload)
+    fixture.execute = ordinary_rejection
+    fixture.failure_stage = "schema"
+    report = fixture.run()
+    assert [event[1] for event in fixture.events if event[0] == "review"] == ["full", "full-retry1", "full-retry2"]
+    assert len([event for event in fixture.events if event[0] == "write"]) == 3
+    assert report["sections"][0]["shortfall"] == 1
+    assert report["topics"][0]["attempts"] == 3
+    assert report["status"] == "persisted"
+
+
+def test_new_generation_transport_stop_during_resume_still_prevents_all_writes(tmp_path):
+    fixture = Fixture(tmp_path, {1: 2, 2: 3, 3: 1})
+    interrupted_after_retry_generation(fixture)
+    original = fixture.execute
+    def transport(command):
+        if command[1] == "generate":
+            raise RuntimeError("New transport failure")
+        original(command)
+    fixture.execute = transport
+    with pytest.raises(RuntimeError, match="New transport"):
+        fixture.run(resume=True, acknowledge_saved_system_failures=True)
+    assert not any(event[0] == "write" for event in fixture.events)
+
+
+def test_resume_saved_system_failure_acknowledgement_is_explicit_and_wave_local(tmp_path, monkeypatch):
+    from scripts import ingest_external_verdicts as ingestion
+    fixture = Fixture(tmp_path, {1: 2, 2: 3, 3: 1})
+    target = interrupted_after_retry_generation(fixture)
+    payload = retry.read_json(target)
+    payload["candidates"][0].update(error_class="ReadTimeout", failure_stage="documentation",
+                                     error_message="Provider body must never enter retry report")
+    retry.write_json(target, payload)
+    # The native helper has independent frozen-artifact shape tests. This fixture
+    # supplies only its narrow result, not production request/proof documents.
+    def discovered(payload):
+        return frozenset(row["candidate_id"] for row in payload["candidates"] if row.get("error_class") == "ReadTimeout")
+    monkeypatch.setattr(ingestion, "saved_system_failure_ids", discovered)
+    with pytest.raises(ValueError, match="explicit acknowledgement"):
+        fixture.run(resume=True)
+    assert fixture.events == []
+    report = fixture.run(resume=True, acknowledge_saved_system_failures=True, write=False)
+    ack = report["acknowledged_saved_system_failures"]
+    assert ack == [{"artifact": str(target), "candidate_id": "slot1-a2",
+                    "error_class": "ReadTimeout", "failure_stage": "documentation"}]
+    assert "Provider body" not in json.dumps(report)
+    for path, kwargs in fixture.calls:
+        assert kwargs.get("acknowledged_system_failure_ids", []) == (["slot1-a2"] if path == target else [])
+
+
+def test_acknowledgement_without_resume_is_invalid(tmp_path):
+    fixture = Fixture(tmp_path, {1: 1, 2: 1, 3: 1})
+    with pytest.raises(ValueError, match="only be acknowledged with resume"):
+        fixture.run(acknowledge_saved_system_failures=True)
+    assert fixture.events == []
+
+
+def test_all_saved_request_cohorts_are_validated_before_any_execution(tmp_path, monkeypatch):
+    from scripts import ingest_external_verdicts as ingestion
+    fixture = Fixture(tmp_path, {1: 2, 2: 3, 3: 1})
+    target = interrupted_after_retry_generation(fixture)
+    seen = []
+    def invalid(path, payload):
+        seen.append(path)
+        if path == target:
+            raise ValueError("Frozen request hash mismatch")
+    monkeypatch.setattr(ingestion, "validate_saved_judge_requests", invalid)
+    with pytest.raises(ValueError, match="request hash"):
+        fixture.run(resume=True)
+    assert seen == [fixture.artifact, target]
+    assert fixture.events == []
+    assert fixture.calls == []
+
+
+def test_saved_comparison_export_cannot_omit_rejected_authored_content(tmp_path):
+    fixture = Fixture(tmp_path, {1: 2, 2: 3, 3: 1})
+    target = interrupted_after_retry_generation(fixture)
+    snapshot = target.with_suffix(".existing.json")
+    snapshot.write_text("[]")
+    payload = retry.read_json(target)
+    payload["existing_questions"]["sha256"] = retry.digest(snapshot)
+    retry.write_json(target, payload)
+    with pytest.raises(ValueError, match="earlier authored"):
+        fixture.run(resume=True)
+    assert not any(event[0] in {"review", "generate", "write"} for event in fixture.events)
+
+
+def test_resume_cannot_clear_a_saved_persisted_flag(tmp_path):
+    fixture = Fixture(tmp_path, {1: 2, 2: 3, 3: 1})
+    target = interrupted_after_retry_generation(fixture)
+    payload = retry.read_json(target)
+    payload["candidates"][0]["persisted"] = True
+    retry.write_json(target, payload)
+    with pytest.raises(ValueError, match="Persistence journals"):
+        fixture.run(resume=True)
+    assert fixture.events == []
+
+
+@pytest.mark.parametrize("saved_file", ["pending_artifact", "retry_report"])
+@pytest.mark.parametrize("malformation", ["duplicate_key", "NaN", "Infinity", "-Infinity", "1e999"])
+def test_resume_rejects_ambiguous_saved_json_before_any_call(tmp_path, saved_file, malformation):
+    fixture = Fixture(tmp_path, {1: 2, 2: 3, 3: 1})
+    target = interrupted_after_retry_generation(fixture)
+    path = target if saved_file == "pending_artifact" else fixture.artifact.with_suffix(".retry-report.json")
+    value = path.read_text()
+    if malformation == "duplicate_key":
+        key = "candidates" if saved_file == "pending_artifact" else "version"
+        path.write_text("{" + json.dumps(key) + ": null," + value[1:])
+        expected = "Duplicate JSON"
+    else:
+        path.write_text('{"ignored_nonfinite": ' + malformation + ',' + value[1:])
+        expected = "Nonfinite JSON"
+    with pytest.raises(ValueError, match=expected):
+        fixture.run(resume=True)
+    assert fixture.events == []
+    assert fixture.calls == []
