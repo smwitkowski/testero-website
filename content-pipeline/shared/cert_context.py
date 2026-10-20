@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from shared.objective_style import style_policy
+from shared.cert_generation_policy import generation_policy
 
 DEFAULT_CERT = "machine-learning-engineer"
 CERTS_DIR = Path(__file__).resolve().parents[1] / "certs"
@@ -253,10 +254,99 @@ def _security_incident_allowed(cert_id: str, objective: dict) -> bool:
     ))
 
 
+def tune_generation_scope(scope: dict, index: int, *, topic_id: str | None = None,
+                          coverage_scope: dict | None = None, policy: dict | None = None) -> dict:
+    """Tune an untuned scope; reconstruct frozen hints without selecting objectives.
+
+    Index is zero-based. Callers rebuilding historical scopes must first use
+    generation_tuning=False. This helper never retargets the selected objective.
+    Compare the rebuilt scope with the frozen one to validate all hint fields.
+    """
+    if isinstance(index, bool) or not isinstance(index, int) or index < 0:
+        raise ValueError("Scope index must be a nonnegative integer")
+    configured = generation_policy(scope["cert_id"])
+    if configured is None:
+        if policy is not None or topic_id is not None or coverage_scope is not None:
+            raise ValueError("Certification has no generation policy")
+        return dict(scope)
+    if policy is None:
+        policy = configured
+    elif policy != configured:
+        raise ValueError("Generation policy does not match the reviewed configuration")
+    if "generation_policy" in scope:
+        raise ValueError("Scope is already tuned; rebuild its untuned base first")
+    topics = {topic["id"]: topic for topic in policy["required_topics"]}
+    topic = topics.get(topic_id) if topic_id is not None else None
+    if topic_id is not None and (topic is None or scope["objective_id"] not in topic["objective_ids"]):
+        raise ValueError("Required topic is outside the selected objective")
+    if coverage_scope is None:
+        coverage_scope = {"mode": "filtered", "eligible_topic_ids": [
+            ident for ident, value in topics.items() if scope["objective_id"] in value["objective_ids"]]}
+    if (not isinstance(coverage_scope, dict) or set(coverage_scope) != {"mode", "eligible_topic_ids"}
+            or coverage_scope["mode"] not in {"filtered", "unfiltered"}
+            or not isinstance(coverage_scope["eligible_topic_ids"], list)
+            or any(not isinstance(ident, str) or ident not in topics for ident in coverage_scope["eligible_topic_ids"])
+            or len(set(coverage_scope["eligible_topic_ids"])) != len(coverage_scope["eligible_topic_ids"])
+            or (topic_id is not None and topic_id not in coverage_scope["eligible_topic_ids"])):
+        raise ValueError("Invalid topic coverage scope")
+    question_lines = policy["question_lines"]
+    question_line = question_lines[index % len(question_lines)]
+    word_policy = policy["stem_words"]
+    words = dict(word_policy["short" if index % word_policy["short_every"] == 0 else "standard"])
+    prompt = scope["domain_prompt"].replace(
+        f"\nQuestion line hint: {scope['question_line']}", f"\nQuestion line hint: {question_line}", 1)
+    if topic:
+        prompt += (f"\nRequired topic hint: {topic['label']}. {topic['guidance']}"
+                   " Keep this topic within the selected objective; never expand guide scope.")
+    prompt += (f"\nStem length hint: {words['min']}–{words['max']} words,"
+               f" target about {words['target']}; hard maximum 85 words.")
+    return {**scope, "question_line": question_line, "domain_prompt": prompt,
+            "generation_policy": {"version": policy["version"], "sha256": policy["sha256"]},
+            "required_topic_id": topic_id, "required_topic_label": topic["label"] if topic else None,
+            "required_topic_guidance": topic["guidance"] if topic else None,
+            "topic_coverage_scope": {"mode": coverage_scope["mode"],
+                                     "eligible_topic_ids": list(coverage_scope["eligible_topic_ids"])},
+            "stem_word_range": words}
+
+
+def _topic_slots(targets: list[tuple], scoped: dict, domains: dict,
+                 policy: dict, explicit: bool) -> tuple[dict[int, dict], list[str]]:
+    """Reserve deterministic, in-scope topic slots without changing section counts."""
+    available = {obj["objective_id"]: (code, domains[code], obj)
+                 for code, objectives in scoped.items() for obj in objectives}
+    if explicit:
+        selected = {target[2]["objective_id"] for target in targets}
+        available = {ident: value for ident, value in available.items() if ident in selected}
+    slots = {}
+    eligible = []
+    for topic in policy["required_topics"]:
+        choices = [available[ident] for ident in topic["objective_ids"] if ident in available]
+        if not choices:
+            continue
+        eligible.append(topic["id"])
+        # Prefer an already-selected objective before replacing another target.
+        matching = [(index, target) for index, target in enumerate(targets)
+                    if index not in slots and target[2]["objective_id"] in topic["objective_ids"]]
+        if matching:
+            index = matching[0][0]
+        elif not explicit:
+            candidates = [(index, choice) for choice in choices for index, target in enumerate(targets)
+                          if index not in slots and target[0] == choice[0]]
+            if not candidates:
+                continue  # Small or explicitly zero-allocated sections stay untouched.
+            index, (code, domain, objective) = candidates[0]
+            targets[index] = (code, domain, objective, targets[index][3])
+        else:
+            continue
+        slots[index] = topic
+    return slots, eligible
+
+
 def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = None,
                    subsection: str | None = None, seed: int | None = None,
                    objective_ids: list[str] | tuple[str, ...] | None = None,
-                   section_allocation: list[int] | tuple[int, ...] | None = None) -> list[dict[str, Any]]:
+                   section_allocation: list[int] | tuple[int, ...] | None = None,
+                   *, generation_tuning: bool = True) -> list[dict[str, Any]]:
     """Plan weighted domains, or round-robin explicit objective IDs in input order.
 
     Explicit targets override domain weights and random offsets; duplicate IDs
@@ -273,6 +363,9 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
     rotate evenly 1..4, with rank 4 tied longest rather than uniquely longest.
     Opening prefix families and question-line hints rotate globally without
     changing objective order, weights or scope. Hints are not wording quotas.
+    Configured certifications reserve required topics within their eligible
+    sections. Explicit objective IDs retain their exact order. All filters and
+    explicit section counts remain binding; small plans can have partial coverage.
     """
     context = load_cert_context(cert_id)
     domains = context["domains"]
@@ -319,6 +412,10 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
             objectives = scoped[code]
             offset = rng.randrange(len(objectives))
             targets.extend((code, domain, objectives[(offset + i) % len(objectives)], offset) for i in range(count))
+    policy = generation_policy(cert_id) if generation_tuning else None
+    topic_slots, eligible_topics = ({}, []) if policy is None else _topic_slots(
+        targets, scoped, domains, policy, explicit=bool(objective_ids))
+    filtered = domain_code is not None or subsection is not None or bool(objective_ids)
     plan = []
     for index, (code, domain, objective, offset) in enumerate(targets):
         moment = SCENARIO_MOMENTS[index % len(SCENARIO_MOMENTS)]
@@ -384,4 +481,9 @@ def plan_questions(cert_id: str, n_questions: int, domain_code: str | None = Non
             "services": list(objective["services"]), "subsection": objective["subsection"],
             "domain_prompt": prompt,
         })
+        if policy is not None:
+            plan[-1] = tune_generation_scope(
+                plan[-1], index, topic_id=topic_slots.get(index, {}).get("id"),
+                coverage_scope={"mode": "filtered" if filtered else "unfiltered",
+                                "eligible_topic_ids": list(eligible_topics)}, policy=policy)
     return plan

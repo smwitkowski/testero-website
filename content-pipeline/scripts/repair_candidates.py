@@ -34,6 +34,10 @@ from shared.model_policy import require_independent_models
 from shared.quality_gate import QUESTION_FIELDS
 from shared.question_style import STYLE_INSTRUCTIONS
 from shared.validator import validate_question
+from shared.objective_style import uses_pde_style
+from shared.cert_style import normalize_learner_prose
+from shared.answer_patterns import check_answer_pattern
+from shared.cert_generation_policy import TUNING_SCOPE_FIELDS
 
 REPAIR_MODEL = "codex"
 
@@ -135,7 +139,7 @@ def _inventory(path, verdicts, payload):
                 if payload["external_judge_version"] == 2:
                     from shared.gates import eligible_gate_repair
                     from shared.distractor_evidence import verdict_gates
-                    eligible_gate_repair(verdict_gates(raw, entry.get("distractor_evidence")))
+                    eligible_gate_repair(verdict_gates(raw, entry.get("distractor_evidence")), style_policy=entry.get("style_policy"))
                 else:
                     eligible_repair_verdict(raw, gate_version=1)
                 scope, question, checked = ingestion._validate_candidate(path, payload, entry)
@@ -193,10 +197,11 @@ def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed
         cli_models.parse_output(json.dumps(revised, allow_nan=False), RepairQuestionSignature)
         if revised["correct_answer"] != question["correct_answer"]:
             raise ValueError("Frozen answer changed")
-        revised = clean_question(revised)
+        revised = normalize_learner_prose(clean_question(revised), style_policy=scope.get("style_policy"))
         if revised["correct_answer"] != question["correct_answer"]:
             raise ValueError("Cleaning changed frozen answer")
-        validation = validate_question(revised)
+        validation = validate_question(revised, **({"style_policy": scope["style_policy"]}
+                                                if uses_pde_style(scope.get("style_policy")) else {}))
         if not validation.is_valid:
             with lock:
                 journal.update(status="failed", error_class="RepairValidationError",
@@ -238,6 +243,8 @@ def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed
         for name in ("decision_plan", "decision_proof", "decision_objective", "key_length_rank", "style_policy", "distractor_evidence", "taxonomy"):
             if name in entry:
                 child[name] = deepcopy(entry[name])
+        if uses_pde_style(scope.get("style_policy")):
+            child.update({key: deepcopy(entry[key]) for key in TUNING_SCOPE_FIELDS})
         child.update(candidate_id=ident + "-r1", key="A", stem=revised["stem"],
             options=[{"label": label, "text": revised[field]} for label, field in zip("ABCD", OPTION_FIELDS)],
             rationales={label: revised[field] for label, field in zip("ABCD", RATIONALE_FIELDS)},
@@ -262,7 +269,9 @@ def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed
         from shared.quality_gate import QuestionQualitySignature
         request = build_request(child["candidate_id"], scope, revised, child["sources"], checked["options"],
                                 doc_context_chars=doc_context_chars,
-                                **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False)} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
+                                **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False),
+                                    **({"execution_policy": payload.get("execution_policy")} if uses_pde_style(scope.get("style_policy")) else {})}
+                                   if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
         with lock:
             completed[ident] = (child, request)
     except Exception as error:
@@ -292,6 +301,16 @@ def _publish_repair(path, payload, entry, result, destination, summary):
         if any(other["candidate_id"] != ident and normalize_stem(other["stem"]) == normalized
                for other in payload["candidates"]):
             raise ValueError("Duplicate question")
+        if uses_pde_style(child.get("style_policy")):
+            superseded = {row["repair"]["parent_candidate_id"] for row in payload["candidates"] if "repair" in row}
+            prior = payload.get("existing_questions", {}).get("questions", []) + [
+                row for row in payload["candidates"]
+                if row["candidate_id"] not in superseded
+                and (row.get("external_judge_request") or row.get("persistence_status") == "complete")]
+            child["answer_pattern_check"] = check_answer_pattern(child, prior, cert_id=payload["cert_id"],
+                                                                 exclude=(ident, child["candidate_id"]))
+            if not child["answer_pattern_check"]["passed"]:
+                raise ValueError(child["answer_pattern_check"]["reason"])
         raw_request = exporter._encode(request)
         child["external_judge_request"] = {"path": str(destination.relative_to(path.parent)),
                                           "sha256": hashlib.sha256(raw_request).hexdigest()}

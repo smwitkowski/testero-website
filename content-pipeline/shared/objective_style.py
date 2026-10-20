@@ -1,4 +1,4 @@
-"""Reviewed objective-scoped rules v5.1 style policy; absent policy keeps v5."""
+"""Reviewed objective-scoped style policies; absent policy keeps frozen v5."""
 import json
 from pathlib import Path
 
@@ -7,16 +7,34 @@ RELAXED_STYLE_CHECKS = frozenset({"product_knowledge_hinge", "cloud_specific_alt
 ALLOWANCE = "general_ml_mlops"
 
 
-def style_policy(objective_id):
+def _legacy_policy(objective_id):
     reviewed = json.loads(CONFIG.read_text())
     return {"version": "5.1", "objective_id": objective_id,
             "allowance": ALLOWANCE if objective_id in reviewed["objectives"] else None}
 
 
+def style_policy(objective_id):
+    if isinstance(objective_id, str) and objective_id.startswith("data-engineer:"):
+        return {"version": "5.2", "objective_id": objective_id, "allowance": None}
+    return _legacy_policy(objective_id)
+
+
 def validate_style_policy(policy, objective_id):
-    if not isinstance(objective_id, str) or not objective_id or policy != style_policy(objective_id):
+    if (not isinstance(objective_id, str) or not objective_id
+            or not isinstance(policy, dict)
+            or policy not in (style_policy(objective_id), _legacy_policy(objective_id))):
         raise ValueError("Style policy differs from reviewed objective allowance")
     return policy
+
+
+def uses_pde_style(policy):
+    """Validate any supplied policy; only exact frozen PDE 5.2 activates tuning."""
+    if policy is None:
+        return False
+    if not isinstance(policy, dict):
+        raise ValueError("Style policy must be an object")
+    validate_style_policy(policy, policy.get("objective_id"))
+    return policy["version"] == "5.2"
 
 
 def allows_ml_practice(policy):
@@ -29,6 +47,9 @@ def allows_ml_practice(policy):
 
 
 def policy_instructions(policy):
+    if uses_pde_style(policy):
+        from shared.question_style import PDE_STYLE_RULES
+        return "\n" + PDE_STYLE_RULES
     if not allows_ml_practice(policy):
         return ""
     return ("\nRules v5.1 objective allowance (overrides only S13/O8 and the generic-key cap): "

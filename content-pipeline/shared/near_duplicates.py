@@ -24,7 +24,7 @@ def similarity(stem, key, other_stem, other_key):
     return {"stem_score": scores[0], "key_score": scores[1], "score": min(scores)}
 
 
-def comparison_row(entry):
+def comparison_row(entry, *, cert_id=None):
     options = entry.get("options", entry.get("answers"))
     if not isinstance(options, list):
         raise ValueError("Export row needs options or answers")
@@ -36,8 +36,16 @@ def comparison_row(entry):
     if not isinstance(ident, str) or not ident.strip():
         raise ValueError("Export row needs a question ID")
     tokens(entry.get("stem")); tokens(keys[0])
-    return {"id": ident, "stem": entry["stem"], "key": keys[0],
-            **({"cert_id": entry["cert_id"]} if "cert_id" in entry else {})}
+    result = {"id": ident, "stem": entry["stem"], "key": keys[0],
+              **({"cert_id": entry["cert_id"]} if "cert_id" in entry else {})}
+    # PDE answer-pattern checks need all three alternatives. Do not change
+    # historical PMLE (or other cert) comparison snapshots.
+    selected_cert = cert_id or entry.get("cert_id") or entry.get("exam")
+    if selected_cert == "data-engineer":
+        result["distractors"] = [row.get("text", row.get("choice_text")) for row in options
+            if not (row.get("label") == entry.get("key") if "key" in entry else row.get("is_correct") is True)]
+        result["answer_pattern_source"] = "options" if "options" in entry else "answers"
+    return result
 
 
 def _pairs(pairs):
@@ -74,7 +82,7 @@ def load_export(path, *, cert_id=None):
                 provenance = cert_id  # Historical PMLE-only exports predate exam metadata.
             if provenance != cert_id:
                 raise ValueError("Export must contain only the selected certification with exam provenance")
-        selected.append({**comparison_row(row),
+        selected.append({**comparison_row(row, cert_id=provenance),
                          **({"cert_id": provenance} if provenance is not None else {}),
                          **({"objective_id": row["objective_id"]} if isinstance(row.get("objective_id"), str) and row["objective_id"].strip() else {})})
     if len({row["id"] for row in selected}) != len(selected):

@@ -483,7 +483,7 @@ def test_scope_replay_uses_actual_index_when_question_cycle_differs():
 @pytest.mark.parametrize("cert_id", ["cloud-engineer", "cloud-architect", "data-engineer"])
 def test_non_pmle_ingest_resolves_exam_and_domain_and_stays_draft(case, cert_id):
     if cert_id != "cloud-engineer":
-        scope = plan_questions(cert_id, 1, seed=3)[0]
+        scope = plan_questions(cert_id, 1, seed=3, generation_tuning=False)[0]
         scope.pop("style_policy")
         payload, entry = case[2], case[2]["candidates"][0]
         payload.update(cert_id=cert_id, exam=cert_id, plan=[scope])

@@ -15,9 +15,13 @@ import uuid
 import click
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from scripts.generate_pmle_questions import database_client as _database_client, persist_candidate, write_artifact
+from scripts.generate_pmle_questions import database_client as _database_client, persist_candidate, write_artifact, product_share_row
 from shared.cert_context import plan_questions
-from shared.objective_style import validate_style_policy
+from shared.objective_style import validate_style_policy, uses_pde_style
+from shared.cert_context import tune_generation_scope
+from shared.cert_generation_policy import generation_policy, product_share_report, topic_distribution
+from shared.answer_patterns import check_answer_pattern
+from shared.cert_generation_policy import TUNING_SCOPE_FIELDS
 from shared.batch_report import ml_practice_report
 from shared.cli_models import parse_output
 from shared.completion_diagnostics import _safe_completion
@@ -96,8 +100,23 @@ def _scope(payload, entry):
             raise ValueError("Candidate does not match its frozen plan")
     if scope["cert_id"] != payload["cert_id"]:
         raise ValueError("Certification does not match the artifact")
-    current = plan_questions(payload["cert_id"], index, objective_ids=[scope["objective_id"]])
+    historical_pde = payload["cert_id"] == "data-engineer"
+    current = plan_questions(payload["cert_id"], index, objective_ids=[scope["objective_id"]],
+                             **({"generation_tuning": False} if historical_pde else {}))
     expected = current[index - 1]
+    tuned = payload.get("style_policy_version") == "5.2"
+    if tuned:
+        if payload["cert_id"] != "data-engineer" or payload.get("rules_version") != 5:
+            raise ValueError("PDE tuning requires the frozen rules-v5 PDE batch")
+        if payload.get("generation_policy") != generation_policy(payload["cert_id"]):
+            raise ValueError("Frozen generation policy differs from reviewed configuration")
+        expected = tune_generation_scope(expected, index - 1, topic_id=scope.get("required_topic_id"),
+                                         coverage_scope=scope.get("topic_coverage_scope"),
+                                         policy=payload["generation_policy"])
+        if any(entry.get(key) != scope.get(key) for key in TUNING_SCOPE_FIELDS):
+            raise ValueError("Candidate differs from frozen PDE generation hints")
+    elif "generation_policy" in payload or any(key in scope or key in entry for key in TUNING_SCOPE_FIELDS):
+        raise ValueError("PDE generation hints require frozen rules-v5.2 provenance")
     # Deterministic registry scope stays exact; LLM decision/proof data is frozen separately.
     provenance_fields = {"objective_offset", "decision_plan", "decision_proof", "decision_objective", "style_policy", "distractor_evidence"}
     from shared.distractor_evidence import validate_policy
@@ -109,10 +128,12 @@ def _scope(payload, entry):
     elif "distractor_evidence" in scope or "distractor_evidence" in entry:
         raise ValueError("Distractor-evidence mode requires frozen batch provenance")
     policy = scope.get("style_policy")
-    if payload.get("style_policy_version") == "5.1":
+    if payload.get("style_policy_version") in ("5.1", "5.2"):
         validate_style_policy(policy, scope["objective_id"])
+        if policy["version"] != payload["style_policy_version"]:
+            raise ValueError("Style policy version differs from frozen batch")
     elif policy is not None or entry.get("style_policy") is not None:
-        raise ValueError("Style policy requires frozen rules v5.1 batch provenance")
+        raise ValueError("Style policy requires frozen rules v5.1/v5.2 batch provenance")
     if entry.get("style_policy") != policy:
         raise ValueError("Candidate differs from its frozen style policy")
     for key in ("decision_plan", "decision_proof", "decision_objective", "key_length_rank"):
@@ -169,7 +190,8 @@ def _validate_candidate(path, payload, entry):
             stage = "decision_veto"
             validate_decision_provenance(scope, entry)
         stage = "schema"
-        if not validate_question(question).is_valid:
+        if not validate_question(question, **({"style_policy": scope["style_policy"]}
+                                            if uses_pde_style(scope.get("style_policy")) else {})).is_valid:
             raise ValueError("Question schema validation failed")
         stage = "mechanical"
         checked = check_evidence(canonical_evidence(entry), entry.get("sources"))
@@ -391,7 +413,8 @@ def ingest(path, verdicts, *, dry_run=False):
             if verdict_path.is_symlink():
                 raise ValueError("Unsafe parent verdict path")
             raw = _read_json(verdict_path)
-            eligible_repair_verdict(raw, gate_version=payload["external_judge_version"], distractor_evidence=parent.get("distractor_evidence"))
+            eligible_repair_verdict(raw, gate_version=payload["external_judge_version"], distractor_evidence=parent.get("distractor_evidence"),
+                                    style_policy=parent.get("style_policy"))
             if canonical_sha256(raw) != child["repair"]["original_verdict_sha256"]:
                 raise ValueError("Parent verdict changed after repair")
     except (ValueError, KeyError, TypeError, OSError, UnicodeError, StopIteration):
@@ -417,13 +440,16 @@ def ingest(path, verdicts, *, dry_run=False):
             raise click.ClickException("Missing or malformed local export snapshot for near-duplicate checks")
         for row in bank["questions"]:
             if (not isinstance(row, dict) or not {"id", "stem", "key"} <= set(row)
-                    or set(row) - {"id", "stem", "key", "cert_id", "objective_id"}
+                    or set(row) - ({"id", "stem", "key", "cert_id", "objective_id"}
+                                   | ({"distractors", "answer_pattern_source"} if payload.get("style_policy_version") == "5.2" else set()))
                     or not isinstance(row["id"], str) or not row["id"].strip()
                     or ("objective_id" in row and (not isinstance(row["objective_id"], str) or not row["objective_id"].strip()))
                     or row.get("cert_id", payload["cert_id"]) != payload["cert_id"]
                     or (payload["cert_id"] != "machine-learning-engineer" and row.get("cert_id") != payload["cert_id"])):
                 raise click.ClickException("Malformed local export snapshot")
             tokens(row["stem"]); tokens(row["key"])
+            if payload.get("style_policy_version") == "5.2" and not check_answer_pattern(row, [], cert_id=payload["cert_id"])["passed"]:
+                raise click.ClickException("Malformed PDE answer-pattern snapshot")
         near_seen = list(bank["questions"])
     pending, seen = [], set()
     # Include completed content before pending validation, regardless of list order.
@@ -504,6 +530,14 @@ def ingest(path, verdicts, *, dry_run=False):
                     rejected += 1
                     click.echo(f"{ident}: rejected; {duplicate['reason']}")
                     continue
+                if uses_pde_style(scope.get("style_policy")):
+                    entry["answer_pattern_check"] = check_answer_pattern(entry, near_seen, cert_id=payload["cert_id"],
+                        exclude=(ident, entry.get("repair", {}).get("parent_candidate_id")))
+                    if not entry["answer_pattern_check"]["passed"]:
+                        _reject(entry, "answer_pattern", entry["answer_pattern_check"]["reason"])
+                        rejected += 1
+                        click.echo(f"{ident}: rejected; {entry['answer_pattern_check']['reason']}")
+                        continue
                 near_seen.append(comparison_row(entry))
             normalized = normalize_stem(question["stem"])
             if normalized in seen or ident in repair_duplicate_ids:
@@ -556,6 +590,9 @@ def ingest(path, verdicts, *, dry_run=False):
             grounding.update(gate_version=payload.get("rules_version", 4), rules_version=payload.get("rules_version", 4), gate_verdicts=raw,
                              **{name: scope[name] for name in
                                 ("decision_objective", "decision_plan", "decision_proof", "key_length_rank")})
+        if uses_pde_style(scope.get("style_policy")):
+            grounding.update({key: scope[key] for key in TUNING_SCOPE_FIELDS})
+            grounding["answer_pattern_check"] = entry["answer_pattern_check"]
         if scope.get("style_policy") is not None:
             grounding["style_policy"] = scope["style_policy"]
         if "distractor_evidence" in scope:
@@ -568,15 +605,16 @@ def ingest(path, verdicts, *, dry_run=False):
         entry["accepted"] = False
         pending.append((entry, scope, question, judge, grounding))
         click.echo(f"{ident}: passing external verdict; {judge.reason}")
-    if payload.get("rules_version") == 5 and not blocked:
+    if payload.get("rules_version") == 5:
         eligible = [entry for entry in payload["candidates"]
                     if entry["candidate_id"] not in superseded
                     and entry.get("judge_verdict", {}).get("passed") is True
                     and not entry.get("persistence_validation_failed")]
-        try:
-            balance_options(eligible)
-        except ValueError:
-            raise click.ClickException("Persisted option layout requires reconciliation; no new DB writes") from None
+        if not blocked:
+            try:
+                balance_options(eligible)
+            except ValueError:
+                raise click.ClickException("Persisted option layout requires reconciliation; no new DB writes") from None
     payload["option_length_report"] = option_length_report(payload["candidates"])
     payload["key_length_rank_report"] = key_length_rank_report(payload["candidates"])
     payload["option_prefix_report"] = option_prefix_report(payload["candidates"])
@@ -591,12 +629,18 @@ def ingest(path, verdicts, *, dry_run=False):
         payload["ml_practice_report"] = ml_practice_report(payload["candidates"])
         click.echo("ML practice allowance: " + json.dumps(payload["ml_practice_report"]))
         click.echo("Template diversity: " + json.dumps(payload["template_diversity_report"]))
+        if payload.get("style_policy_version") == "5.2":
+            payload["product_share_report"] = product_share_report([
+                product_share_row(entry) for entry in eligible], cert_id=payload["cert_id"])
+            payload["topic_plan_report"] = topic_distribution(payload["plan"])
+            click.echo("PDE correct-answer products: " + json.dumps(payload["product_share_report"]))
         _flush(path, payload)
         if blocked:
             raise click.ClickException("Persistence journal requires reconciliation; no new DB writes")
         if not payload["key_position_report"]["count"]:
             raise click.ClickException("No passing candidates; no new DB writes")
-        if payload["key_position_report"]["passed"] is False or not payload["template_diversity_report"]["passed"]:
+        if (payload["key_position_report"]["passed"] is False or not payload["template_diversity_report"]["passed"]
+                or (payload.get("style_policy_version") == "5.2" and payload["product_share_report"]["passed"] is False)):
             raise click.ClickException("V5 batch report failed; no new DB writes")
     _flush(path, payload)
     if not dry_run and (pending or payload["generation_runs"]):

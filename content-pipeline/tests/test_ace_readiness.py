@@ -53,7 +53,10 @@ def test_every_new_cert_objective_keeps_product_style_gates(cert):
         for objective in domain["objectives"]:
             policy = style_policy(objective["objective_id"])
             assert policy["allowance"] is None and not allows_ml_practice(policy)
-            assert policy_instructions(policy) == ""
+            if cert == "data-engineer":
+                assert policy["version"] == "5.2" and "Professional Data Engineer" in policy_instructions(policy)
+            else:
+                assert policy_instructions(policy) == ""
             with pytest.raises(ValueError):
                 validate_style_policy({**policy, "allowance": "general_ml_mlops"}, objective["objective_id"])
 
@@ -147,7 +150,9 @@ def test_real_style_gate_does_not_waive_product_knowledge_for_new_certs(cert):
     fixture = json.loads((Path(__file__).parent / "fixtures/ml-practice-b18.json").read_text())["candidates"][0]
     raw = deepcopy(fixture["style"])
     objective = next(iter(load_cert_context(cert)["domains"].values()))["objectives"][0]["objective_id"]
-    assert not evaluate_gate("style", raw, {}, style_policy=style_policy(objective))[0]
+    # Synthetic PDE-only checks do not rewrite the historical recorded fixture.
+    selected = {**raw, "inference_required": True, "options_no_goal_restatement": True} if cert == "data-engineer" else raw
+    assert not evaluate_gate("style", selected, {}, style_policy=style_policy(objective))[0]
     assert evaluate_gate("style", raw, {}, style_policy=style_policy("machine-learning-engineer:standard:5.1:1"))[0]
 
 

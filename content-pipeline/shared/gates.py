@@ -150,13 +150,42 @@ ProductStyleCriticSignature.instructions = StyleCriticSignature.instructions + "
 GATE_SIGNATURES = {**V4_GATE_SIGNATURES, "style": ProductStyleCriticSignature}
 
 
-def gate_signatures(version=GATE_VERSION, *, distractor_evidence=None, cert_id=None):
+class PDEStyleCriticSignature(ProductStyleCriticSignature):
+    """PDE 5.2 requires an inferred diagnosis/action, not a supplied solution.
+
+    Reject inference_required when the stem names the root cause or the mechanism
+    the best action uses instead of observable symptoms and constraints. The
+    reader must use data/product knowledge to infer a cause or suitable action.
+    Naming existing infrastructure, such as BigQuery or Dataproc, is valid and
+    does not itself reveal the cause or remedy. Judge every choice symmetrically.
+    Reject options_no_goal_restatement when options repeat the requested outcome
+    rather than state concrete actions. Concise action detail is not padding.
+    """
+    inference_required: bool = dspy.OutputField(desc="True only if symptoms/constraints require knowledge to infer the cause or action; false if the stem supplies the root-cause diagnosis or the best action's mechanism. Existing infrastructure names alone are allowed.")
+    options_no_goal_restatement: bool = dspy.OutputField(desc="All options state concrete actions without restating the stem's business goal or padding their length with the desired outcome.")
+
+
+PDEStyleCriticSignature.instructions = ProductStyleCriticSignature.instructions + "\n\n" + PDEStyleCriticSignature.instructions
+
+
+def gate_signatures(version=GATE_VERSION, *, distractor_evidence=None, cert_id=None, style_policy=None):
     if version not in (4, 5):
         raise ValueError("Unsupported rules gate version")
     from shared.distractor_evidence import mode_for
     from shared.question_style import practitioner_signature
-    signatures = {name: practitioner_signature(signature, cert_id) for name, signature in
-                  (V4_GATE_SIGNATURES if version == 4 else GATE_SIGNATURES).items()}
+    from shared.objective_style import uses_pde_style
+    pde = uses_pde_style(style_policy)
+    if pde and version != 5:
+        raise ValueError("PDE 5.2 style requires rules v5 gates")
+    if pde:
+        frozen_cert = style_policy["objective_id"].split(":", 1)[0]
+        if cert_id is not None and cert_id != frozen_cert:
+            raise ValueError("Certificate differs from frozen style policy")
+        cert_id = frozen_cert
+    selected = V4_GATE_SIGNATURES if version == 4 else GATE_SIGNATURES
+    if pde:
+        selected = {**selected, "style": PDEStyleCriticSignature}
+    signatures = {name: practitioner_signature(signature, cert_id) for name, signature in selected.items()}
     if mode_for(distractor_evidence) == "consistent":
         if version != 5:
             raise ValueError("Consistent distractor evidence requires rules v5")
@@ -195,6 +224,10 @@ def build_gate_inputs(question, domain_context, documentation_context, option_ev
     from shared.quality_gate import QUESTION_FIELDS
     from shared.question_style import practitioner_text
     cert_id = (style_policy or {}).get("objective_id", "machine-learning-engineer:").split(":", 1)[0]
+    from shared.objective_style import uses_pde_style
+    if uses_pde_style(style_policy) and style_reference is None:
+        from shared.question_style import PDE_STYLE_INSTRUCTIONS
+        style_reference = PDE_STYLE_INSTRUCTIONS
     reference = practitioner_text(default_style_reference() if style_reference is None else style_reference, cert_id)
     mapping = blind_choice_map(question)
     original = dict(zip("ABCD", (question[name] for name in OPTION_FIELDS)))
@@ -208,10 +241,10 @@ def build_gate_inputs(question, domain_context, documentation_context, option_ev
                          "option_evidence": option_evidence}}
 
 
-def parse_gate_output(name, raw, *, version=GATE_VERSION):
+def parse_gate_output(name, raw, *, version=GATE_VERSION, style_policy=None):
     """Require exact fields/types and bounded numbers/reasons for one gate."""
     from shared.cli_models import parse_output, CLISchemaError
-    data = parse_output(json.dumps(raw, allow_nan=False), gate_signatures(version)[name])
+    data = parse_output(json.dumps(raw, allow_nan=False), gate_signatures(version, style_policy=style_policy)[name])
     numeric = data["confidence" if name == "blind_solver" else "score"]
     if (type(numeric) not in (int, float) or not math.isfinite(numeric) or not 0 <= numeric <= 1
             or not 0 < len(data["reason"].strip()) <= 300):
@@ -221,7 +254,7 @@ def parse_gate_output(name, raw, *, version=GATE_VERSION):
 
 def evaluate_gate(name, raw, question, *, version=GATE_VERSION, style_policy=None):
     """Return (passed, concrete reason); no score can compensate for a failure."""
-    data = parse_gate_output(name, raw, version=version)
+    data = parse_gate_output(name, raw, version=version, style_policy=style_policy)
     if name == "blind_solver":
         passed = (data["verdict"] == "PASS" and data["confidence"] >= PASS_THRESHOLD
                   and data["ambiguous_answers"] is False
@@ -230,7 +263,7 @@ def evaluate_gate(name, raw, question, *, version=GATE_VERSION, style_policy=Non
         if blind_choice_map(question)[data["choice"]] != "A": failures.append("wrong key")
         if data["ambiguous_answers"]: failures.append("ambiguous answers")
     else:
-        checks = (tuple(k for k, field in gate_signatures(version)["style"].output_fields.items()
+        checks = (tuple(k for k, field in gate_signatures(version, style_policy=style_policy)["style"].output_fields.items()
                         if field.annotation is bool and k != "generic_validation_key")
                   if name == "style" else EVIDENCE_CHECKS)
         relaxed = name == "style" and version == 5 and allows_ml_practice(style_policy)
@@ -285,12 +318,12 @@ def aggregate_gate_verdict(question, raw, *, model="claude", version=GATE_VERSIO
                         gate_results=json.loads(json.dumps(frozen_raw, allow_nan=False)))
 
 
-def eligible_gate_repair(raw):
+def eligible_gate_repair(raw, *, style_policy=None):
     """Allow one style/blind repair only when the strict evidence gate passes."""
     if not isinstance(raw, dict) or set(raw) != set(GATE_SIGNATURES):
         raise ValueError("All three gate outputs required for repair")
     version = 5 if "generic_validation_key" in raw["style"] else 4
-    data = {name: parse_gate_output(name, raw[name], version=version) for name in GATE_SIGNATURES}
+    data = {name: parse_gate_output(name, raw[name], version=version, style_policy=style_policy) for name in GATE_SIGNATURES}
     evidence = data["evidence"]
     if (evidence["verdict"] != "PASS" or evidence["score"] < PASS_THRESHOLD
             or any(evidence[name] is not True for name in EVIDENCE_CHECKS)

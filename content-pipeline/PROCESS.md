@@ -83,6 +83,54 @@ no fixture-provider request; the budgeted request arrives intact at **user** rol
 with the same schema/model/reasoning and canned strict output. This is transport
 and provenance evidence, **not a live model-quality judgment**.
 
+## PDE generation tuning (2026-10-20)
+
+New `data-engineer` scopes freeze style policy `5.2` and the separate reviewed
+`certs/data-engineer-generation.json` policy (`pde-v1`, full content plus SHA256).
+PMLE stays on `5.1`. Historical absent/5.1 PDE requests keep their old prompts,
+schemas and scope reconstruction; tuning is never activated by runtime cert alone.
+
+- Plan sections by the guide weights 22/25/20/15/18. A 40-candidate plan has
+  9/10/8/6/7 slots. Reserve nine guide-bound topics: Dataflow streaming; storage
+  choice; Dataplex; Datastream; sensitive-data masking; Analytics Hub; Dataproc vs
+  Dataflow; Composer; ML/embedding data preparation. Pinned slots do not rotate
+  away after vetoes. Explicit objectives and filters never expand scope. Small or
+  filtered runs report partial coverage, not an invented complete run.
+- Enforce an additional answer-pattern veto before retrieval and on actual written
+  choices at ordered publication, repair and ingest. Compare the correct mechanism
+  and order-independent distractors against the frozen ACTIVE/DRAFT export and
+  same-batch questions, including inline judge-failed DRAFTs. Known cluster-lifecycle
+  and exact-distinct families use explicit canonical rules; other actions use
+  conservative lexical thresholds. This is not semantic completeness for unseen
+  paraphrases. The existing scenario/key Jaccard veto remains mandatory.
+- Cap each named product at `max(1, floor(0.4 * N))` correct actions. Reserve against
+  the planned budget under the shared lock, then gate the **actual** eligible set
+  at ingest and the separate inline write population. Count each product once per
+  correct action, not in distractors. A key without a service name may use a sole
+  product in its stem/existing system; missing or ambiguous attribution blocks.
+  This conservative named-product attribution is inspectable, not an LLM label.
+- Target stems near 60 words, with 20% short 30–50-word hints; enforce 30–85 words
+  only for frozen PDE 5.2. Target options at 15–22 words without weakening balance,
+  distinctness or prefix guards. Use 85% default question-line hints. Multi-select
+  remains unsupported and is rejected; no schema extension for choose-two.
+- Require two additive style booleans: `inference_required` and
+  `options_no_goal_restatement`. Naming the root cause or key mechanism in the
+  stem fails, even with a high score; existing infrastructure names alone do not.
+  Missing/mistyped checks fail. Every evidence, verifier, blind-solver and selected
+  Argon gate remains required; thresholds and short-circuit rules stay unchanged.
+- Normalize documented brand aliases only in learner prose using names present in
+  the current standard PDE guide (for example Dataproc, Cloud Composer, Cloud DLP).
+  Preserve embedded URLs and fetched evidence/quotes. Validate again at repair,
+  export and ingest. Freeze the six topic/format hint fields on entries/grounding
+  and bind them in the new PDE request's decision-provenance digest.
+
+[Offline 40-plan preview](calibration/pde-tuning-plan40.md) includes the full slot
+list and reproducible plan-only command. It proves planning, not accepted-question
+coverage, product distribution, model quality, yield or token savings. No live or
+paid calls or production writes were performed. PDE tuning is rebased onto the
+merged document-budget/English-first baseline; both documentation and PDE policies
+remain in effect.
+
 ## Safe documentation efficiency defaults (2026-10-19)
 
 Founder decision: **passage retrieval is parked**. Per-claim ranking and bounded
