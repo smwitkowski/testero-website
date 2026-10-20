@@ -129,4 +129,7 @@ def test_merged_generation_allows_only_one_cite_repair(monkeypatch, tmp_path, fi
     assert [attempt["stage"] for attempt in entry["citation_attempts"]] == ["write", "cite"]
     assert cite.call_count == 1
     assert cite.call_args.kwargs["check_errors"]
-    assert "Source excerpt" in cite.call_args.kwargs["fetched_context"]
+    from shared.doc_search import documentation_context
+    assert cite.call_args.kwargs["fetched_context"] == documentation_context([source()])
+    assert len(cite.call_args.kwargs["fetched_context"]) <= cite.call_args.kwargs["doc_context_chars"] == 400000
+    assert entry["documentation_contexts"]["citation"]["after_chars"] == len(cite.call_args.kwargs["fetched_context"])

@@ -19,7 +19,8 @@ from shared.dedupe import normalize_stem, strip_markdown
 from shared.option_order import store_options
 from shared.near_duplicates import load_export, check_near_duplicate, check_plan_near_duplicate, comparison_row
 from shared.batch_report import key_position_report, format_key_position_report, template_diversity_report
-from shared.doc_search import search_objective_docs, documentation_context, DocumentationCache
+from shared.doc_search import search_objective_docs, DocumentationCache
+from shared.doc_context_budget import DEFAULT_DOC_CONTEXT_CHARS, build_documentation_context, quote_in_context
 from shared.parallel import run_bounded
 from shared.evidence import check_evidence
 from shared.call_logging import call_context
@@ -148,8 +149,9 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--subsection", default=None, help="Optional guide subsection filter.")
 @click.option("--objective", "objective_ids", multiple=True, help="Repeatable registry objective ID; overrides weights with round-robin targets in flag order.")
 @click.option("--distractor-evidence", type=click.Choice(["strict", "consistent"]), default="strict", show_default=True, help="Freeze decision/evidence review policy for this batch.")
+@click.option("--doc-context-chars", type=click.IntRange(min=1), default=DEFAULT_DOC_CONTEXT_CHARS, show_default=True, help="Maximum fetched-document context characters per stage; required receipts must fit or the stage fails closed.")
 @click.option("--doc-cache/--no-doc-cache", default=True, show_default=True, help="Reuse 7-day on-disk public official-document snapshots (IO only).")
-@click.option("--verify-retrieval", is_flag=True, help="Opt in to per-claim BM25 queries with adjacent spans and one evidence-missing full-doc escalation (cheap context at most about 45k estimated doc tokens; escalation uses full pages).")
+@click.option("--verify-retrieval", is_flag=True, help="Opt in to per-claim BM25 queries with adjacent spans and one evidence-missing full-doc escalation (cheap context at most about 45k estimated doc tokens; escalation uses the configured full-source budget).")
 @click.option("--verify-stable-prefix/--no-verify-stable-prefix", default=True, show_default=True, help="Reorder existing plan and verifier fields only; provider cache hits must be measured.")
 @click.option("--decision-attempts", type=click.IntRange(min=1, max=3), default=3, show_default=True, help="Total decision plans including initial attempt; lower caps are experimental.")
 @click.option("--argon-gate", is_flag=True, help="Freeze mandatory independent Gemini 4 Argon blind/full review requests.")
@@ -170,7 +172,8 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge_model, difficulty, dry_run, artifact, exam, seed,
          parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None, existing_questions=None, argon_gate=False,
          target_accepted=None, expected_yield=0.29, distractor_evidence="strict", plan_only=False, emit_taxonomy=False,
-         doc_cache=True, verify_retrieval=False, verify_stable_prefix=True, decision_attempts=3):
+         doc_cache=True, verify_retrieval=False, verify_stable_prefix=True, decision_attempts=3,
+         doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS):
     try:
         from shared.distractor_evidence import evidence_policy
         frozen_evidence = evidence_policy(distractor_evidence)
@@ -211,6 +214,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                "parallel": effective_parallel, "gen_effort": gen_effort, "cite_effort": cite_effort,
                "rules_version": 5, "style_policy_version": "5.1", "section_allocation": allocation, "decision_first": True,
                "distractor_evidence": frozen_evidence,
+               "documentation_context_policy": {"version": 1, "max_chars": doc_context_chars},
                "existing_questions": bank, "argon_gate": argon_gate, "execution_policy": "short_circuit_v1",
                "retrieval_experiment": {"version": 1, "disk_cache": doc_cache,
                                          "per_option_retrieval": verify_retrieval,
@@ -306,7 +310,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             feedback = ""
             vetoed_decisions = []
             veto_feedback = []
-            escalated = False  # At most one full-doc verify per candidate, not per replacement.
+            escalated = False  # At most one full-source budgeted verify per candidate.
             for decision_attempt in range(decision_attempts):
                 stage = "decision_plan"
                 with write_lock:
@@ -341,17 +345,18 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 full_sources = sources
                 retrieval = None
                 if retrieval_session is not None:
-                    retrieval = retrieval_session.prepare(scope, decision, sources)
+                    retrieval = retrieval_session.prepare(scope, decision, sources, budget=min(180000, doc_context_chars))
                     sources = retrieval["sources"]
                     attempt["retrieval"] = retrieval["metadata"]
                 attempt["sources"] = sources
                 entry["sources"] = sources  # Frozen full sources for final receipts and independent judges.
-                context = documentation_context(sources)
+                attempt["documentation_contexts"] = {"verify": {}}
                 stage = "decision_veto"
                 with call_context(stage="verify", candidate_id=entry.get("candidate_id"), index=index,
                                   attempt=decision_attempt + 1, calls_path=str(artifact) + ".calls.jsonl",
                                   escalation=False, verify_context="retrieved" if retrieval is not None else "full"):
-                    verify_options = {}
+                    verify_options = {"doc_context_chars": doc_context_chars,
+                                      "budget_metadata": attempt["documentation_contexts"]["verify"]}
                     if retrieval is not None:
                         verify_options["retrieval"] = retrieval
                     if verify_stable_prefix:
@@ -361,12 +366,15 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     escalated = True
                     attempt["cheap_proof"] = proof
                     attempt["escalation"] = {"count": 1, "reason": "evidence_missing", "context": "full"}
-                    # Baseline signature and original full fetched pages, no narrowed context
-                    # or stable-prefix variant; the same semantic/mechanical gates remain.
+                    # Baseline signature and original full sources under the doc cap;
+                    # no retrieval/stable-prefix variant; semantic/mechanical gates stay.
                     with call_context(stage="verify", candidate_id=entry.get("candidate_id"), index=index,
                                       attempt=decision_attempt + 1, calls_path=str(artifact) + ".calls.jsonl",
                                       escalation=True, verify_context="full"):
-                        proof = verify_decision(scope, decision, full_sources, model=model, reasoning_effort=cite_effort)
+                        attempt["documentation_contexts"]["escalation"] = {}
+                        proof = verify_decision(scope, decision, full_sources, model=model, reasoning_effort=cite_effort,
+                            doc_context_chars=doc_context_chars,
+                            budget_metadata=attempt["documentation_contexts"]["escalation"])
                     sources = full_sources
                     attempt["sources"] = entry["sources"] = sources
                 attempt["proof"] = proof
@@ -391,11 +399,14 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                                   attempt=1, calls_path=str(artifact) + ".calls.jsonl"):
                     entry["taxonomy"] = generation_receipt(scope)
             stage = "generation"
-            writer_context = writer_documentation_context(sources, proof)
+            entry["documentation_contexts"] = {"writer": {}}
+            writer_context = writer_documentation_context(sources, proof, doc_context_chars=doc_context_chars,
+                budget_metadata=entry["documentation_contexts"]["writer"])
             with call_context(stage="write", candidate_id=entry.get("candidate_id"), index=index,
                               attempt=1, calls_path=str(artifact) + ".calls.jsonl"):
                 raw = generate_question(writer_decision_context(scope, decision, proof), writer_context, model=model,
                                         difficulty=difficulty, exam_subsection=scope["subsection"], include_evidence=True, cert_id=cert,
+                                         doc_context_chars=doc_context_chars,
                                         **({"reasoning_effort": gen_effort} if codex else {}))
             stage = "schema"
             question = clean_question(raw)
@@ -414,16 +425,24 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 if cite_attempt == 0:
                     citation = {"evidence": raw.get("evidence")}
                 else:
+                    citation_bundle = build_documentation_context(sources, max_chars=doc_context_chars,
+                        plan=decision, receipts=proof["reasons"])
+                    entry["documentation_contexts"]["citation"] = citation_bundle["metadata"]
                     with call_context(stage="cite", candidate_id=entry["candidate_id"], index=index,
                                       attempt=1, calls_path=str(artifact) + ".calls.jsonl"):
                         citation = cite_question(question, sources, model=model,
-                            check_errors=checked["errors"], fetched_context=writer_context,
+                            check_errors=checked["errors"], fetched_context=citation_bundle["context"], doc_context_chars=doc_context_chars,
                             **({"reasoning_effort": cite_effort} if codex else {}))
                 checked = check_evidence(citation.get("evidence"), sources)
+                for receipt in checked.get("options", []):
+                    supplied_view = entry["documentation_contexts"]["writer" if cite_attempt == 0 else "citation"]
+                    if not quote_in_context(receipt, sources, supplied_view):
+                        checked["errors"].append(f"Option {receipt['option_label']}: quote absent from supplied documentation context")
+                checked["passed"] = not checked["errors"]
                 attempt = {"stage": "write" if cite_attempt == 0 else "cite", "evidence": citation.get("evidence"),
                            "mechanical_check": {"passed": checked["passed"], "errors": checked["errors"]}}
                 # The citation helper returns only bounded, sanitized completion diagnostics.
-                for key in ("parse_failure", "raw_response", "diagnostics"):
+                for key in ("parse_failure", "raw_response", "diagnostics", "documentation_context_budget"):
                     if key in citation:
                         attempt[key] = citation[key]
                 entry["citation_attempts"].append(attempt)
@@ -450,9 +469,15 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             if external:
                 stage = "external_request"
                 entry["candidate_id"] = candidate_id(index, scope, question)
-                request = build_request(entry["candidate_id"], scope, question, sources, checked["options"], argon_gate=argon_gate, execution_policy="short_circuit_v1")
+                request = build_request(entry["candidate_id"], scope, question, sources, checked["options"], argon_gate=argon_gate,
+                    execution_policy="short_circuit_v1", doc_context_chars=doc_context_chars)
+                entry["documentation_contexts"]["external_judge"] = request["trimming"]["documentation_context_budget"]
                 return  # Publish in plan order under the shared write lock.
             stage = "judge"
+            judge_bundle = build_documentation_context(sources, max_chars=doc_context_chars, plan=decision,
+                                                       receipts=checked["options"])
+            context = judge_bundle["context"]
+            entry["documentation_contexts"]["judge"] = judge_bundle["metadata"]
             with call_context(candidate_id=entry["candidate_id"], index=index, attempt=1,
                               calls_path=str(artifact) + ".calls.jsonl"):
                 judge = judge_three_gates(question, scope["domain_prompt"], documentation_context=context,

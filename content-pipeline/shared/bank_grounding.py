@@ -9,7 +9,8 @@ from dataclasses import asdict
 import re
 
 from shared.cert_context import DEFAULT_CERT, load_cert_context, services_in_text
-from shared.doc_search import documentation_context, search_objective_docs
+from shared.doc_search import search_objective_docs
+from shared.doc_context_budget import DEFAULT_DOC_CONTEXT_CHARS, build_documentation_context, quote_in_context
 from shared.evidence import check_evidence
 from shared.llm_generator import QUESTION_FIELDS, _safe_completion, cite_question
 from shared.model_policy import (
@@ -62,6 +63,7 @@ def check_existing_question(
     *,
     model: str = DEFAULT_GENERATOR_MODEL,
     judge_model: str = DEFAULT_JUDGE_MODEL,
+    doc_context_chars: int = DEFAULT_DOC_CONTEXT_CHARS,
 ) -> dict:
     """Check exact native question fields without changing or persisting them.
 
@@ -120,7 +122,9 @@ def check_existing_question(
         sources = search_objective_docs(retrieval["query"], deepcopy(retrieval["key_services"]))
         result["sources"] = deepcopy(sources)
         stage = "Documentation validation"
-        context = documentation_context(sources)
+        budgeted = build_documentation_context(sources, max_chars=doc_context_chars)
+        context = budgeted["context"]
+        result["documentation_context_budget"] = deepcopy(budgeted["metadata"])
         checked = None
         for _ in range(2):
             stage = "Citation request"
@@ -128,9 +132,15 @@ def check_existing_question(
                 deepcopy(question), deepcopy(sources), model=model,
                 check_errors=deepcopy(checked["errors"]) if checked else None,
                 max_tokens=AUDIT_CITATION_MAX_TOKENS,
+                fetched_context=context, doc_context_chars=doc_context_chars,
             )
             stage = "Mechanical evidence check"
             checked = check_evidence(citation.get("evidence"), sources)
+            if checked["passed"] and not all(
+                    quote_in_context(receipt, sources, budgeted["metadata"])
+                    for receipt in checked["options"]):
+                checked["passed"] = False
+                checked["errors"].append("Citation quote is outside the supplied documentation context")
             if citation.get("error_class"):
                 result["error_class"] = citation["error_class"]
                 checked["passed"] = False
@@ -142,6 +152,8 @@ def check_existing_question(
             for key in ("parse_failure", "raw_response", "error_class"):
                 if isinstance(citation.get(key), str):
                     attempt[key] = _safe_completion(citation[key])
+            if citation.get("documentation_context_budget"):
+                attempt["documentation_context_budget"] = deepcopy(citation["documentation_context_budget"])
             if citation.get("diagnostics"):
                 attempt["diagnostics"] = deepcopy(citation["diagnostics"])
             result["citation_attempts"].append(attempt)

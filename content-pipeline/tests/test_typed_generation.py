@@ -11,6 +11,7 @@ from dspy.utils import DummyLM
 from pydantic import ValidationError
 
 from shared import llm_generator as generator
+from shared.doc_context_budget import build_documentation_context
 from shared.evidence import OptionEvidence, check_evidence
 
 
@@ -149,7 +150,7 @@ def test_real_dspy_parses_strict_typed_citations(monkeypatch):
     values = {"evidence": evidence()}
     lm = install_lm(monkeypatch, [values])
     result = generator.cite_question(vars(output()), [source()], "offline/model")
-    assert result == values
+    assert result == {**values, "documentation_context_budget": build_documentation_context([source()])["metadata"]}
     assert check_evidence(result["evidence"], [source()])["passed"]
     assert len(lm.history) == 1
     prompt = lm.history[0]["messages"][-1]["content"]
@@ -172,7 +173,8 @@ def test_real_dspy_preserves_invalid_receipts_for_mechanical_rejection(monkeypat
         records[0] = None
     lm = install_lm(monkeypatch, [{"evidence": records}])
     result = generator.cite_question(vars(output()), [source()], "offline/model")
-    assert result == {"evidence": records}
+    assert result == {"evidence": records,
+                      "documentation_context_budget": build_documentation_context([source()])["metadata"]}
     mechanical = check_evidence(result["evidence"], [source()])
     assert not mechanical["passed"] and mechanical["errors"]
     assert len(lm.history) == 1
@@ -241,7 +243,8 @@ def test_transport_failures_never_dump_provider_exception_or_retry(monkeypatch):
     lm = FailingLM()
     monkeypatch.setattr(generator.dspy, "LM", lambda **kwargs: lm)
     result = generator.cite_question(vars(output()), [source()], "offline/model")
-    assert result == {"evidence": None, "parse_failure": "Citation request failed"}
+    assert result == {"evidence": None, "parse_failure": "Citation request failed",
+                      "documentation_context_budget": build_documentation_context([source()])["metadata"]}
     assert "fake-provider-secret" not in str(result)
     assert lm.call_count == 1
     with pytest.raises(RuntimeError, match="Question generation request failed") as captured:

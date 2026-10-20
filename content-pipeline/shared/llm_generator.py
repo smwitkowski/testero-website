@@ -8,11 +8,13 @@ import os
 import time
 import logging
 import json
+import hashlib
 from typing import Dict, Any, Optional, Callable, Tuple
 import dspy
 from shared.call_logging import log_lm_calls
 from shared.completion_diagnostics import CompletionCaptureAdapter, MAX_RAW_RESPONSE, _safe_completion
 from shared.evidence import OptionEvidence
+from shared.doc_context_budget import DEFAULT_DOC_CONTEXT_CHARS, build_documentation_context
 from shared.question_style import STYLE_INSTRUCTIONS
 from shared.llm_limits import MaxTokensTruncation, TRUNCATION_REASON, reject_token_limit
 
@@ -815,6 +817,14 @@ def _generation_lm(model: str, max_tokens: int = 8000):
         raise RuntimeError("Generation model initialization failed") from None
 
 
+def _validate_documentation_context(context: str, max_chars: int) -> None:
+    """Refuse oversized raw context; source-aware selection belongs to the caller."""
+    if type(max_chars) is not int or max_chars <= 0:
+        raise ValueError("Documentation context budget must be a positive integer")
+    if not isinstance(context, str) or len(context) > max_chars:
+        raise ValueError("Documentation context exceeds the configured character budget")
+
+
 def generate_question(
     domain_context: str,
     documentation_context: str,
@@ -823,12 +833,15 @@ def generate_question(
     exam_subsection: str = "",
     prompt_version: Optional[str] = None,
     *, reasoning_effort: str = "high", include_evidence: bool = False, cert_id: str | None = None,
+    doc_context_chars: int = DEFAULT_DOC_CONTEXT_CHARS,
 ) -> Dict[str, Any]:
     """Generate a question, optionally including receipts in the writer call."""
+    _validate_documentation_context(documentation_context, doc_context_chars)
     if include_evidence:
         return generate_question_with_evidence(
             domain_context, documentation_context, model, difficulty, exam_subsection,
-            prompt_version, reasoning_effort=reasoning_effort, cert_id=cert_id)
+            prompt_version, reasoning_effort=reasoning_effort, cert_id=cert_id,
+            doc_context_chars=doc_context_chars)
     from dspy.utils.exceptions import AdapterParseError
     if (not isinstance(domain_context, str) or not domain_context.strip()
             or not isinstance(documentation_context, str) or not documentation_context.strip()):
@@ -875,6 +888,7 @@ def cite_question(
     max_tokens: int = 8000,
     reasoning_effort: str = "medium",
     fetched_context: str | None = None,
+    doc_context_chars: int = DEFAULT_DOC_CONTEXT_CHARS,
 ) -> dict:
     """Make one citation call. Root checks and stores every attempt, then retries."""
     from dspy.utils.exceptions import AdapterParseError
@@ -891,16 +905,29 @@ def cite_question(
             ]
         ],
     }
-    fetched = [{"url": source["url"], "requested_url": source.get("requested_url"),
-                "text": source["text"]} for source in sources]
-    fetched_text = fetched_context if fetched_context is not None else json.dumps(fetched, ensure_ascii=False)
+    if fetched_context is None:
+        budgeted = build_documentation_context(
+            sources, max_chars=doc_context_chars, receipts=question_data.get("evidence") or [])
+        fetched_text = budgeted["context"]
+        budget_metadata = budgeted["metadata"]
+    else:
+        _validate_documentation_context(fetched_context, doc_context_chars)
+        fetched_text = fetched_context
+        budget_metadata = {
+            "policy": "provided_context_v1", "max_chars": doc_context_chars,
+            "context_chars": len(fetched_text),
+            "context_sha256": hashlib.sha256(fetched_text.encode("utf-8")).hexdigest(),
+        }
+
+    def with_budget(result):
+        return {**result, "documentation_context_budget": budget_metadata}
     if model == "codex" or model.startswith("codex/"):
         from shared.cli_models import run_signature
-        return run_signature(model, CitationSignature, {
+        return with_budget(run_signature(model, CitationSignature, {
             "finished_question": json.dumps(question, ensure_ascii=False),
             "fetched_sources": fetched_text,
             "check_errors": "\n".join(check_errors or []),
-        }, reasoning_effort=reasoning_effort)
+        }, reasoning_effort=reasoning_effort))
     adapter = CompletionCaptureAdapter(preserve_receipts=True)
     try:
         lm = _generation_lm(model, max_tokens=max_tokens)
@@ -914,19 +941,19 @@ def cite_question(
             )
         receipts = result.evidence
         if not isinstance(receipts, list):
-            return {"evidence": None, "parse_failure": "Citation evidence is not a list",
-                    **_citation_diagnostics(adapter)}
-        return {"evidence": [item.model_dump() if isinstance(item, OptionEvidence) else item
-                             for item in receipts]}
+            return with_budget({"evidence": None, "parse_failure": "Citation evidence is not a list",
+                                **_citation_diagnostics(adapter)})
+        return with_budget({"evidence": [item.model_dump() if isinstance(item, OptionEvidence) else item
+                                         for item in receipts]})
     except MaxTokensTruncation:
-        return {"evidence": None, "parse_failure": TRUNCATION_REASON,
-                "error_class": "MaxTokensTruncation", **_citation_diagnostics(adapter)}
+        return with_budget({"evidence": None, "parse_failure": TRUNCATION_REASON,
+                            "error_class": "MaxTokensTruncation", **_citation_diagnostics(adapter)})
     except AdapterParseError:
-        return {"evidence": None, "parse_failure": "Citation output could not be parsed",
-                **_citation_diagnostics(adapter)}
+        return with_budget({"evidence": None, "parse_failure": "Citation output could not be parsed",
+                            **_citation_diagnostics(adapter)})
     except Exception:
         # Transport failures have no completion; never serialize the exception body.
-        return {"evidence": None, "parse_failure": "Citation request failed"}
+        return with_budget({"evidence": None, "parse_failure": "Citation request failed"})
 
 
 def _citation_diagnostics(adapter):
@@ -941,6 +968,7 @@ def generate_question_with_evidence(
     model: str = "openai/gpt-4o", difficulty: str = "MEDIUM",
     exam_subsection: str = "", prompt_version: Optional[str] = None,
     *, reasoning_effort: str = "high", predictor=None, cert_id: str | None = None,
+    doc_context_chars: int = DEFAULT_DOC_CONTEXT_CHARS,
 ) -> Dict[str, Any]:
     """Write question and receipts once; the caller checks them against full docs.
 
@@ -949,6 +977,7 @@ def generate_question_with_evidence(
     """
     from shared.cli_models import output_model, run_signature
     from dspy.utils.exceptions import AdapterParseError
+    _validate_documentation_context(documentation_context, doc_context_chars)
     if (not isinstance(domain_context, str) or not domain_context.strip()
             or not isinstance(documentation_context, str) or not documentation_context.strip()):
         raise ValueError("Registry objective scope and fetched documentation are required")

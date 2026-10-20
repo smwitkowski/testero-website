@@ -150,7 +150,9 @@ def test_grounded_cli_limit_model_defaults_fail_exit_and_strict_json(export_file
     first = (audit.ARTIFACT_ROOT / "bank.export-grounded.json").read_text()
     report = json.loads(first, parse_constant=lambda value: pytest.fail("Nonfinite JSON"))
     assert len(report["results"]) == recheck.call_count == 10
-    assert all(call.kwargs == {"model": audit.DEFAULT_GENERATOR_MODEL, "judge_model": audit.DEFAULT_JUDGE_MODEL}
+    assert report["doc_context_chars"] == audit.DEFAULT_DOC_CONTEXT_CHARS
+    assert all(call.kwargs == {"model": audit.DEFAULT_GENERATOR_MODEL, "judge_model": audit.DEFAULT_JUDGE_MODEL,
+                               "doc_context_chars": audit.DEFAULT_DOC_CONTEXT_CHARS}
                for call in recheck.call_args_list)
     assert report["results"][0]["citation_attempts"][0]["evidence"][0]["quote"] == {"__nonfinite_float__": "Infinity"}
     assert audit.main(["--input", str(export_file), "--grounded", "--limit", "10"]) == 1
@@ -223,3 +225,26 @@ def test_automl_training_survives_removed_standalone_subsection():
     assert row["flag"] == "ok"
     assert row["best_current_objective_ids"] == ["machine-learning-engineer:standard:1.1:4"]
     assert not row["historical_match"]
+
+
+def test_audit_doc_budget_config_is_grounded_only(export_file, monkeypatch):
+    from shared import bank_grounding
+    recheck = Mock(return_value={"passed": True, "reasons": []})
+    monkeypatch.setattr(bank_grounding, "check_existing_question", recheck)
+    assert audit.main(["--input", str(export_file), "--doc-context-chars", "1200"]) == 0
+    lexical = json.loads((audit.ARTIFACT_ROOT / "bank.export-audit.json").read_text())
+    assert "doc_context_chars" not in lexical
+    assert audit.main(["--input", str(export_file), "--grounded", "--limit", "1",
+                       "--doc-context-chars", "1200"]) == 0
+    grounded = json.loads((audit.ARTIFACT_ROOT / "bank.export-grounded.json").read_text())
+    assert grounded["doc_context_chars"] == recheck.call_args.kwargs["doc_context_chars"] == 1200
+
+
+@pytest.mark.parametrize("cap", ["0", "-1"])
+def test_audit_nonpositive_doc_budget_rejected_before_input(export_file, monkeypatch, cap):
+    read = Mock(side_effect=AssertionError("No input read"))
+    monkeypatch.setattr(Path, "read_text", read)
+    with pytest.raises(SystemExit) as caught:
+        audit.main(["--input", str(export_file), "--doc-context-chars", cap])
+    assert caught.value.code == 2
+    read.assert_not_called()

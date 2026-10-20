@@ -1,5 +1,88 @@
 # Docs-grounded question process
 
+## Bounded fetched-document context (2026-10-20)
+
+Verification and other fresh doc-inlining stages default to **400,000 Unicode
+characters of rendered documentation**, including source headers and omission
+markers. This is not a token count or a total-request budget. Configure generation,
+repair, and grounded bank audit with `--doc-context-chars N` (positive integer).
+Python source-aware APIs accept `doc_context_chars` or the budget builder's
+`max_chars`. No environment variable or live lookup is needed to select the cap.
+
+Before budgeting, localized copies (`hl` query, recognized locale path prefix, or
+explicit non-English language metadata) are omitted when a fetched English copy
+of that same final page exists. Prefer the unmarked English route over English
+locale variants. Keep distinct hosts, non-locale query bytes and paths separate;
+never guess language from prose or fetch a missing English page. Fresh fetches
+record valid explicit HTML `lang` tags; old snapshots without one remain valid.
+Locale-only families stay available when no English copy was fetched.
+
+Every omitted copy keeps its original hash, timestamp, full omitted offsets,
+`omission_reason: localized_duplicate`, and English representative in page
+metadata. Same-page discovery labels may transfer as navigation hints, never as
+text or evidence. A required receipt targeting an omitted locale fails closed;
+quotes and URLs are never translated or redirected. This also guards the writer's
+under-cap receipt-window path. Frozen external requests are not rewritten.
+
+The deterministic budget prioritizes documents discovered for the planned correct
+answer and each distractor, then lexical action/constraint/rejection-reason
+matches, then shared/overview pages. Discovery labels and lexical scores are
+navigation hints, **not evidence of support**. It trims lowest-priority/longest
+pages first, preferring whole sections and exact-offset context around decisive
+terms. It reserves an option's representative page and every explicitly planned
+or already verified quote. Valid quotes use case-sensitive, whitespace-normalized
+matching back to original raw spans. Required quote/page headers that cannot fit
+cause a closed failure, never a dropped quote or a weakened evidence gate.
+
+Full fetched records, retrieval timestamps, and original UTF-8 text hashes stay
+unchanged. New batch/repair artifacts freeze `documentation_context_policy`;
+decision attempts and candidate stage records save per-page original/retained
+character counts, priority, retained raw half-open offsets, omitted spans, and
+trimmed/omitted status. Top-level before/after counts include rendering overhead;
+page counts describe source text only. Writer receipt windows stay lean when
+already below the cap. Citation retries and judges use separately recorded views
+that retain known decisive receipts. A quote found only in an omitted part of the
+full source cannot pass the supplied-view membership check.
+
+The optional cheap retrieval path keeps its smaller separate bound, and its one
+missing-evidence escalation now uses the same configured doc cap rather than
+unbounded pages. Immutable external judge requests retain their independent
+**150,000-character serialized bundle limit** and fixed quote-window rules.
+New requests also obey the frozen doc cap; a too-small cap can veto them rather
+than silently narrow fixed windows. Historical artifacts without a frozen policy
+rebuild byte-identically. Frozen prompts are never re-budgeted at execution time.
+
+All Codex and Claude tasks stay on complete **user-role stdin**. There is no
+`model_instructions_file` override, base-instruction replacement, role escalation,
+model fallback, retry increase, or quality-threshold change.
+`CLIExitError` keeps prompt Unicode/UTF-8 sizes, safe errno/name, and an allowlisted
+redacted stderr tail (at most 2,048 characters). Unknown provider prose and prompt
+echoes are omitted; calls JSONL remains metadata-only.
+
+Offline reproduction (no credentials or model calls; loopback fixture only):
+
+```sh
+cd content-pipeline
+# Synthetic oversized input; proves baseline rejection and budgeted user stdin.
+env -i PATH="$PATH" HOME="$HOME" uv run python scripts/probe_cli_input_limit.py
+# Exact saved artifact, read-only; --rebuild-only skips the native CLI entirely.
+env -i PATH="$PATH" HOME="$HOME" uv run python scripts/probe_cli_input_limit.py \
+  --artifact /absolute/path/to/artifact.json --rebuild-only
+```
+
+The saved PDE section-1 English-first replay is **300,579 chars / 300,587 UTF-8
+bytes**, down from the previous budget-only 410,324 chars / 451,526 bytes and the
+original **1,058,381 chars / 1,122,852 bytes**. The documentation view is now
+**290,255 characters**, rather than the previous 400,000 (original 1,048,057).
+All three localized access-control copies (Japanese, Portuguese, Spanish) are
+omitted before budgeting. All three English pages remain complete, including the
+245,895-character primary BigQuery page; 6 fetched pages yield 3 supplied pages.
+The stored artifact and all fetched text/hashes remain unchanged. Native isolated
+Codex 0.160.0 rejects the unbudgeted request locally at 1,048,576 characters with
+no fixture-provider request; the budgeted request arrives intact at **user** role,
+with the same schema/model/reasoning and canned strict output. This is transport
+and provenance evidence, **not a live model-quality judgment**.
+
 ## Safe documentation efficiency defaults (2026-10-19)
 
 Founder decision: **passage retrieval is parked**. Per-claim ranking and bounded
@@ -10,7 +93,8 @@ No batch runner enables it. Prior all-plan recall remains calibration only.
 `--no-doc-cache --no-verify-stable-prefix`. Cache only avoids public-document IO;
 it preserves original URL, requested URL, retrieval timestamp, full text/hash,
 7-day TTL, bounded reads and atomic writes. It does not cache verifier decisions.
-The verifier still sees full fetched pages and all existing independent gates.
+As of the 2026-10-20 budget above, the verifier sees a bounded view of these
+unchanged full fetched records; all existing independent gates remain.
 
 Stable ordering is **content-identical**, not a prompt rewrite. It moves the
 existing verifier fields to `fetched_documentation, objective_scope, proposed_plan`

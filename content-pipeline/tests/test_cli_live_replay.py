@@ -72,8 +72,12 @@ def test_real_codex_astra_citation_replays_through_transport_and_evidence_gate(m
     question = cli_models.parse_output((FIXTURES / "generation-output.json").read_text(), PmleQuestionSignature)
     calls = recorded_codex(monkeypatch, tmp_path, "citation-output.json")
     citation = cite_question(question, context["sources"], model="codex/gpt-6-astra")
-    assert citation == json.loads((FIXTURES / "citation-output.json").read_text())
-    assert citation == cli_models.parse_output((FIXTURES / "citation-output.json").read_text(), CitationSignature)
+    from shared.doc_context_budget import build_documentation_context
+    expected = json.loads((FIXTURES / "citation-output.json").read_text())
+    parsed = cli_models.parse_output((FIXTURES / "citation-output.json").read_text(), CitationSignature)
+    assert parsed == expected
+    assert citation == {**expected, "documentation_context_budget":
+                        build_documentation_context(context["sources"])["metadata"]}
     checked = check_evidence(citation["evidence"], context["sources"])
     assert checked["passed"], checked["errors"]
     assert [item["option_label"] for item in checked["options"]] == list("ABCD")

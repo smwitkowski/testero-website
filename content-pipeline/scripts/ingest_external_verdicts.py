@@ -28,7 +28,7 @@ from shared.near_duplicates import check_near_duplicate, comparison_row, tokens
 from shared.batch_report import key_position_report, format_key_position_report, template_diversity_report
 from shared.evidence import check_evidence
 from shared.external_judge import (
-    EXTERNAL_JUDGE_PROVENANCE, EXTERNAL_POLICY_MODEL, build_request,
+    EXTERNAL_JUDGE_PROVENANCE, EXTERNAL_POLICY_MODEL, build_request, documentation_context_limit,
     candidate_storage_id, candidate_question, request_directory,
     validate_candidate_records, canonical_sha256, eligible_repair_verdict, validate_decision_provenance,
 )
@@ -195,11 +195,12 @@ def _validate_candidate(path, payload, entry):
         frozen = _read_json(request_path)
         v4 = payload.get("external_judge_version") == 2
         rebuilt = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"],
+                                 doc_context_chars=documentation_context_limit(payload, entry),
                                 **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False), "execution_policy": payload.get("execution_policy")} if v4 else {"signature": QuestionQualitySignature}))
         if canonical_sha256(frozen) != canonical_sha256(rebuilt):
             # Only unchanged originals may retain the exact known preceding 14-field rubric.
             # No arbitrary old schema or historical 13-field request is accepted.
-            if v4 or "repair" in entry or canonical_sha256(frozen) != canonical_sha256(build_request(
+            if v4 or "repair" in entry or documentation_context_limit(payload, entry) is not None or canonical_sha256(frozen) != canonical_sha256(build_request(
                     entry["candidate_id"], scope, question, entry["sources"], checked["options"],
                     signature=LEGACY_ROUND4_QUALITY_SIGNATURE)):
                 raise ValueError("External request differs from frozen content or supported rubric")

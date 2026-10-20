@@ -21,7 +21,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse, urlunparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-from shared.cert_registry import content_node
+from shared.cert_registry import Document, content_node
 
 logger = logging.getLogger(__name__)
 DISCOVERY_HOST = "docs.cloud.google.com"
@@ -226,6 +226,34 @@ def _transient_fetch_error(exc: OSError) -> bool:
     }
 
 
+def _html_language(html: str) -> str | None:
+    """Read one explicit, well-formed HTML language tag; never infer from text.
+
+    Accept ordinary BCP 47 language tags, including script, region, variants,
+    extensions and private-use suffixes. Missing, malformed and private-use-only
+    tags remain unknown. No registry or language lookup runs.
+    """
+    node = next((node for node in Document(html).root.walk() if node.tag == "html"), None)
+    value = node.attrs.get("lang") if node is not None else None
+    if not isinstance(value, str):
+        return None
+    value = value.strip()
+    match = re.fullmatch(
+        r"(?:[a-z]{2,3}(?:-[a-z]{3}){0,3}|[a-z]{4}|[a-z]{5,8})"
+        r"(?:-[a-z]{4})?(?:-(?:[a-z]{2}|[0-9]{3}))?"
+        r"(?P<variants>(?:-(?:[a-z0-9]{5,8}|[0-9][a-z0-9]{3}))*)"
+        r"(?P<extensions>(?:-[0-9a-wy-z](?:-[a-z0-9]{2,8})+)*)"
+        r"(?:-x(?:-[a-z0-9]{1,8})+)?", value, re.I | re.ASCII,
+    )
+    if match is None:
+        return None
+    variants = match["variants"].lower().split("-")[1:]
+    extensions = re.findall(r"-([0-9a-wy-z])(?=-)", match["extensions"], re.I)
+    if len(variants) != len(set(variants)) or len(extensions) != len(set(tag.lower() for tag in extensions)):
+        return None
+    return value
+
+
 def _fetch_documentation(url: str) -> dict:
     requested_url = approved_documentation_url(url, discovery=True)
     for attempt in range(2):
@@ -251,13 +279,17 @@ def _fetch_documentation(url: str) -> dict:
     text = content_node(html).text()
     if not text:
         raise DocumentationError("Fetched documentation has no content")
-    return {
+    source = {
         "requested_url": requested_url,
         "url": final_url,
         "text": text,
         "retrieved_at": datetime.now(timezone.utc).isoformat(),
         "text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
     }
+    language = _html_language(html)
+    if language is not None:
+        source["language"] = language
+    return source
 
 
 def _moved_documentation_urls(url: str) -> list[str]:
@@ -349,24 +381,29 @@ def search_objective_docs(objective_text: str, services: list[str], *,
     # Focus each option separately so the main product cannot crowd out alternatives.
     # A run-local cache also bounds repeated URLs across the five discovery queries.
     cache = cache if cache is not None else DocumentationCache()
-    targets = [(decision_discovery_text(objective_text, decision_plan), 5)]
+    targets = [(decision_discovery_text(objective_text, decision_plan), 5, None)]
     actions = [(decision_plan["best_action"], " ".join(decision_plan["decisive_constraints"]))]
     actions.extend((mistake["action"], mistake["scenario_reason"]) for mistake in decision_plan["mistakes"])
-    for action, reason in actions:
+    for label, (action, reason) in zip("ABCD", actions):
         targets.append(("Engineering decision: Verify this option's named Google Cloud products and capabilities."
                         + "\nPlanned action: " + action + "\nTradeoff to verify: " + reason
                         + "\nOfficial overview capability limitations support lifecycle documentation",
-                        OPTION_DOCUMENT_LIMIT))
+                        OPTION_DOCUMENT_LIMIT, label))
     sources = []
-    for target, limit in targets:
+    for target, limit, label in targets:
         fetched = _search_objective_docs(target, services if limit == 5 else [], limit, cache=cache,
             objective_id=objective_id, allow_empty=True)
         for source in fetched:
             previous = next((row for row in sources if row["url"] == source["url"]), None)
             if previous is None:
-                sources.append(source)
+                # Discovery labels are priority hints, never evidence of support.
+                sources.append({**source, "discovery_kind": "option" if label else "overview",
+                                "discovery_options": [label] if label else []})
             elif previous["text_sha256"] != source["text_sha256"]:
                 raise DocumentationError("Conflicting text for one final documentation URL")
+            elif label and label not in previous["discovery_options"]:
+                previous["discovery_options"].append(label)
+                previous["discovery_kind"] = "option"
     if not sources:
         raise DocumentationError("No official documentation was successfully fetched")
     return sources
@@ -393,11 +430,17 @@ def documentation_context(sources: list[dict]) -> str:
 
 
 def search_google_docs(topic: str, services: list[str], num_results: int = 5,
-                       subsection_considerations: list[str] | None = None) -> tuple[str, list[str]]:
+                       subsection_considerations: list[str] | None = None, *,
+                       doc_context_chars: int | None = None, budget_metadata: dict | None = None) -> tuple[str, list[str]]:
     """Compatibility wrapper. Never guess URLs or return unfetched snippets."""
     objective_text = " ".join([topic] + (subsection_considerations or []))
     sources = _search_objective_docs(objective_text, services, num_results)
-    return documentation_context(sources), list(dict.fromkeys(s["url"] for s in sources))
+    from shared.doc_context_budget import DEFAULT_DOC_CONTEXT_CHARS, build_documentation_context
+    bundle = build_documentation_context(sources, max_chars=(
+        DEFAULT_DOC_CONTEXT_CHARS if doc_context_chars is None else doc_context_chars))
+    if budget_metadata is not None:
+        budget_metadata.update(bundle["metadata"])
+    return bundle["context"], list(dict.fromkeys(s["url"] for s in sources))
 
 
 search_google_docs_with_exa = search_google_docs

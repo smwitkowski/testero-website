@@ -101,7 +101,8 @@ def test_missing_option_docs_do_not_invent_receipts(monkeypatch):
     monkeypatch.setattr(docs, "_discover_urls", lambda text, services, limit: [url] if limit == 5 else [])
     monkeypatch.setattr(docs, "_fetch_documentation", lambda url: source(url, "Synthetic main-topic fact."))
     fetched = docs.search_objective_docs("Objective", [], decision_plan=ATTEMPTS[0]["plan"])
-    assert fetched == [source(url, "Synthetic main-topic fact.")]
+    assert fetched == [{**source(url, "Synthetic main-topic fact."),
+                        "discovery_kind": "overview", "discovery_options": []}]
     raw = {"supported": True, "uniquely_best": True, "scenario_reasons_supported": True,
            "no_feature_gotchas": True, "reason": "Synthetic attempted unsupported PASS",
            "reasons": [{"option_label": label, "url": url, "quote": "Missing capability quote",
@@ -157,7 +158,8 @@ def test_empty_overview_can_be_rescued_but_empty_union_fails(monkeypatch, overvi
             docs.search_objective_docs("Objective", [], decision_plan=ATTEMPTS[0]["plan"])
         fetch.assert_not_called()
     else:
-        assert docs.search_objective_docs("Objective", [], decision_plan=ATTEMPTS[0]["plan"]) == [source(url, "Synthetic option fact.")]
+        assert docs.search_objective_docs("Objective", [], decision_plan=ATTEMPTS[0]["plan"]) == [
+            {**source(url, "Synthetic option fact."), "discovery_kind": "option", "discovery_options": list("ABCD")}]
         fetch.assert_called_once_with(url)
 
 

@@ -19,7 +19,7 @@ from scripts import judge_requests as runner
 from shared.option_order import canonical_evidence
 from shared.evidence import check_evidence
 from shared.external_judge import (
-    EXTERNAL_POLICY_MODEL, REQUEST_CHARACTER_LIMIT, build_request,
+    EXTERNAL_POLICY_MODEL, REQUEST_CHARACTER_LIMIT, build_request, documentation_context_limit,
     candidate_id, candidate_storage_id, candidate_question, request_directory, validate_candidate_records,
     validate_decision_provenance,
 )
@@ -122,6 +122,7 @@ def _build_outputs(artifact, out, payload, *, force):
                 raise ValueError()
             from shared.quality_gate import QuestionQualitySignature
             request = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"],
+                                    doc_context_chars=documentation_context_limit(payload, entry),
                                     **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False), "execution_policy": payload.get("execution_policy")} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
             raw = _encode(request)
             if len(raw.decode("utf-8")) > REQUEST_CHARACTER_LIMIT:

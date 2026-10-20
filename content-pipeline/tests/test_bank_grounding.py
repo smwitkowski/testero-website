@@ -107,7 +107,10 @@ def test_real_accepted_and_rejected_replay(monkeypatch, case):
     assert result["sources"] == case["sources"]
     assert result["schema_check"] == case["schema_check"]
     assert result["mechanical_check"] == case["mechanical_check"] == {"passed": True, "errors": []}
-    assert result["citation_attempts"] == case["citation_attempts"]
+    assert [{key: value for key, value in attempt.items() if key != "documentation_context_budget"}
+            for attempt in result["citation_attempts"]] == case["citation_attempts"]
+    assert all(attempt["documentation_context_budget"]["context_chars"] <= bank.DEFAULT_DOC_CONTEXT_CHARS
+               for attempt in result["citation_attempts"])
     assert result["evidence"] == case["evidence"]
     assert result["judge_verdict"] == case["judge_verdict"]
     assert result["reasons"] == ([] if case["accepted"] else [case["judge_verdict"]["reason"]])
@@ -207,7 +210,7 @@ def test_bad_input_fails_before_retrieval(monkeypatch, defect):
 
 @pytest.mark.parametrize("service,stage", [
     ("search_objective_docs", "Documentation retrieval"),
-    ("documentation_context", "Documentation validation"),
+    ("build_documentation_context", "Documentation validation"),
     ("validate_question", "Schema validation"),
     ("cite_question", "Citation request"),
     ("check_evidence", "Mechanical evidence check"),
@@ -312,4 +315,44 @@ def test_failed_citation_diagnostics_remain_complete_in_read_only_audit(monkeypa
     assert not result["passed"] and len(result["citation_attempts"]) == 2
     assert all(attempt["diagnostics"] == diagnostics for attempt in result["citation_attempts"])
     assert all(attempt["raw_response"] == diagnostics["raw_response"] for attempt in result["citation_attempts"])
+    judge.assert_not_called()
+
+
+@pytest.mark.parametrize("stage", ["citation", "judge"])
+def test_budget_metadata_survives_model_failure_with_immutable_sources(monkeypatch, synthetic_transport_case, stage):
+    case = synthetic_transport_case
+    _, search, judge = install_replay(monkeypatch, case)
+    before = deepcopy(case["sources"])
+    if stage == "citation":
+        monkeypatch.setattr(bank, "cite_question", Mock(side_effect=RuntimeError("PRIVATE model failure")))
+    else:
+        judge.side_effect = RuntimeError("PRIVATE model failure")
+    cap = 12_000
+    result = run(case, doc_context_chars=cap)
+    assert not result["passed"]
+    assert result["documentation_context_budget"]["max_chars"] == cap
+    assert result["documentation_context_budget"]["after_chars"] <= cap
+    assert result["sources"] == before == search.return_value
+    assert "PRIVATE" not in json.dumps(result)
+
+
+def test_bank_rejects_full_source_receipts_outside_supplied_view(monkeypatch, synthetic_transport_case):
+    from shared.doc_context_budget import build_documentation_context
+    case = synthetic_transport_case
+    install_replay(monkeypatch, case)
+    budgeted = build_documentation_context(case["sources"])
+    # Exact one-character supplied view cannot substantiate a full receipt.
+    page = budgeted["metadata"]["pages"][0]
+    page["retained_offsets"] = [[0, 1]]
+    page["omitted"] = False
+    budgeted["context"] = case["sources"][0]["text"][:1]
+    monkeypatch.setattr(bank, "build_documentation_context", Mock(return_value=budgeted))
+    citation = Mock(return_value={"evidence": deepcopy(case["citation_attempts"][0]["evidence"])})
+    monkeypatch.setattr(bank, "cite_question", citation)
+    judge = Mock(side_effect=AssertionError("Out-of-view evidence cannot reach judge"))
+    monkeypatch.setattr(bank, "judge_question", judge)
+    result = run(case)
+    assert not result["passed"] and not result["mechanical_check"]["passed"]
+    assert result["mechanical_check"]["errors"] == ["Citation quote is outside the supplied documentation context"]
+    assert citation.call_count == 2
     judge.assert_not_called()
