@@ -269,3 +269,80 @@ def test_unattributed_prior_rows_cannot_dilute_or_certify_a_cap():
     assert report["errors"][0]["row_index"] == 0
     assert product_share_report([], cert_id=PDE)["passed"] is None
     assert product_share_report(["Unattributed action"], cert_id=DEFAULT_CERT)["passed"] is None
+
+
+def publication_rows(products):
+    return [{"id": f"row-{index}", "best_action": f"Use {product} for this operation."}
+            for index, product in enumerate(products)]
+
+
+def test_publication_cap_bootstraps_at_full40_not_filtered_section_size():
+    from shared.cert_generation_policy import select_publication_products
+    rows = publication_rows(["BigQuery"] * 6)
+    selection = select_publication_products(rows, [])
+    assert selection["selected_indices"] == list(range(6))
+    assert selection["report"]["denominator"] == 40
+    assert selection["report"]["max_per_product"] == 16
+    assert selection["report"]["observed_population"]["passed"] is False
+    assert selection["report"]["aggregate_blocker"] is False
+
+
+def test_publication_cap_vetoes_lowest_rank_first_and_recomputes_denominator():
+    from shared.cert_generation_policy import select_publication_products
+    bank = publication_rows(["BigQuery"] * 16 + ["Dataflow"] * 12 + ["Dataproc"] * 12)
+    rows = [{"id": f"new-{i}", "best_action": f"Use {product}", "score": score}
+            for i, (product, score) in enumerate([
+                ("BigQuery", .9), ("BigQuery", .2), ("BigQuery", .8),
+                ("Cloud Storage", .1), ("Cloud Storage", .1), ("Cloud Storage", .1), ("Cloud Storage", .1)])]
+    selection = select_publication_products(rows, bank)
+    assert selection["selected_indices"] == [0, 2, 3, 4, 5, 6]
+    assert set(selection["vetoes"]) == {1}
+    assert selection["report"]["denominator"] == 46
+    assert selection["report"]["counts"]["BigQuery"] == 18
+    assert selection["report"]["max_per_product"] == 18
+    # Removing the first excess item shrinks 43 to42, dropping cap17 to16.
+    second = select_publication_products(rows[:3], bank)
+    assert second["selected_indices"] == []
+    assert second["report"]["denominator"] == 40
+    assert second["report"]["counts"]["BigQuery"] == 16
+
+
+def test_publication_cap_deduplicates_completed_ids_and_keeps_unrelated_actions():
+    from shared.cert_generation_policy import select_publication_products
+    bank = publication_rows(["BigQuery"] * 20 + ["Dataflow"] * 10 + ["Dataproc"] * 10)
+    selection = select_publication_products([
+        {"id": "addition", "best_action": "Use Cloud Storage"}], bank + [bank[0]])
+    assert selection["selected_indices"] == [0]
+    assert selection["report"]["bank_count"] == 40
+    assert selection["report"]["denominator"] == 41
+    assert selection["report"]["passed"] is False  # Historical overage is diagnostic.
+    assert selection["report"]["aggregate_blocker"] is False
+
+
+def test_publication_cap_ties_keep_earlier_rows_and_ambiguous_actions_veto_individually():
+    from shared.cert_generation_policy import select_publication_products
+    rows = publication_rows(["BigQuery"] * 17)
+    rows.append({"id": "ambiguous", "best_action": "Aggregate the identifiers",
+                 "product_context": "Dataflow reads BigQuery"})
+    selected = select_publication_products(rows, [])
+    assert selected["selected_indices"] == list(range(16))
+    assert set(selected["vetoes"]) == {16, 17}
+
+
+def test_publication_unknown_bank_reserves_capacity_without_blocking_unrelated_candidate():
+    from shared.cert_generation_policy import select_publication_products
+    bank = publication_rows(["BigQuery"] * 15 + ["Dataflow"] * 8 + ["Dataproc"] * 15)
+    bank.extend([{"id": "unknown-one", "best_action": "Aggregate identifiers"},
+                 {"id": "unknown-two", "best_action": "Transform records"}])
+    rows = [{"id": "new-bq", "best_action": "Use BigQuery", "score": .9},
+            {"id": "new-df", "best_action": "Use Dataflow", "score": .8}]
+    selection = select_publication_products(rows, bank)
+    assert selection["selected_indices"] == [1]
+    assert set(selection["vetoes"]) == {0}
+    report = selection["report"]
+    assert report["unknown_bank_count"] == 2
+    assert report["attribution_status"] == "incomplete"
+    assert report["reserved_counts"]["BigQuery"] == 17
+    assert report["counts"]["BigQuery"] == 15
+    assert report["reserved_counts"]["Dataflow"] == 11
+    assert report["passed"] is False and report["product_cap_status"] == "fail"

@@ -103,11 +103,15 @@ schemas and scope reconstruction; tuning is never activated by runtime cert alon
   and exact-distinct families use explicit canonical rules; other actions use
   conservative lexical thresholds. This is not semantic completeness for unseen
   paraphrases. The existing scenario/key Jaccard veto remains mandatory.
-- Cap each named product at `max(1, floor(0.4 * N))` correct actions. Reserve against
-  the planned budget under the shared lock, then gate the **actual** eligible set
-  at ingest and the separate inline write population. Count each product once per
-  correct action, not in distractors. A key without a service name may use a sole
-  product in its stem/existing system; missing or ambiguous attribution blocks.
+- Apply the 40% named-product limit to the full PDE plan or rolling bank, never
+  a filtered section's tiny accepted set. Bootstrap uses a minimum full-plan
+  denominator of 40 (16 per product); larger banks use unique bank questions plus
+  retained candidates. Recompute after each veto. Existing bank rows are never
+  removed. Veto excess new candidates individually, lowest judge score first,
+  rather than blocking all passing candidates. Section-only observed shares are
+  diagnostics, not batch publication gates. Count each product once per correct
+  action, not in distractors. A key without a service name may use a sole product
+  in its stem/existing system; unresolved new attribution is individually vetoed.
   This conservative named-product attribution is inspectable, not an LLM label.
 - Target stems near 60 words, with 20% short 30–50-word hints; enforce 30–85 words
   only for frozen PDE 5.2. Target options at 15–22 words without weakening balance,
@@ -130,6 +134,76 @@ coverage, product distribution, model quality, yield or token savings. No live o
 paid calls or production writes were performed. PDE tuning is rebased onto the
 merged document-budget/English-first baseline; both documentation and PDE policies
 remain in effect.
+
+## PDE full-plan runner and artifact recovery (2026-10-20)
+
+**Use one full 40-candidate run for PDE**, rather than five objective-filtered
+section runs. The `all` selector does not add `--objective` filters. It preserves
+weighted 9/10/8/6/7 section slots and reserves all nine policy topic hints. A
+section-1 objective-filtered run correctly has none of those nine applicable
+policy topics; this is not evidence that other sections cover them. Topic reports
+still measure planned hints, not generated or accepted coverage.
+
+From the repository root (coordinator injects credentials for a live run):
+
+```sh
+content-pipeline/scripts/run-domain-batch.sh all <unique-tag> data-engineer --count 40
+# Offline preview, no model, network, or database access:
+content-pipeline/scripts/run-domain-batch.sh all <unique-preview-tag> data-engineer --count 40 --plan-only
+```
+
+Explicit `--count 40` avoids an inherited `N` environment override. The tracked
+shell uses its own checkout unless the coordinator explicitly sets
+`TESTERO_PIPELINE_DIR`. One artifact contains the whole plan; generation,
+independent external style/evidence/blind/Argon reviews, duplicate vetoes, normal
+batch reports, and DRAFT-only ingestion remain required. Nothing authorizes ACTIVE
+publication. The outside-HQ wrapper is not changed by this PR.
+
+### Coordinator recovery of the five saved PDE2 section artifacts
+
+`recover_pde_candidates` performs **no model calls**. It copies each immutable
+source artifact, exact request bytes and available verdicts into a new local
+workspace. It then runs normal ingestion validation, including request hashes,
+current registry scope, frozen policy/proof/receipts, strict independent verdicts,
+option balance, duplicate/answer-pattern checks, and all non-product reports.
+The rolling publication bank is an additional check; frozen generation snapshots
+and external requests are not rewritten. Individual product-cap vetoes do not
+block retained candidates. Quality rejects and missing verdicts remain rejected.
+Unattributed legacy bank rows reserve capacity pessimistically against every
+product. They remain explicit attribution errors, not inferred product labels or
+a claim that the whole bank passed attribution. New candidates with unresolved
+attribution are vetoed individually. Bootstrap remains a full-plan
+budget, not a claim that a small observed bank already meets 40% actual share.
+
+```sh
+cd content-pipeline
+# SOURCES is the original read-only content-pipeline/.cache/generation directory.
+uv run python -m scripts.recover_pde_candidates \
+  --artifact "$SOURCES/data-engineer-v5-pde2-s1-1020.json" \
+  --artifact "$SOURCES/data-engineer-v5-pde2-s2-1020.json" \
+  --artifact "$SOURCES/data-engineer-v5-pde2-s3-1020.json" \
+  --artifact "$SOURCES/data-engineer-v5-pde2-s4-1020.json" \
+  --artifact "$SOURCES/data-engineer-v5-pde2-s5-1020.json" \
+  --workspace "$PWD/.cache/generation/pde2-recovery-1020"
+```
+
+Default is an **offline dry-run**. Without `--existing-questions <local-export>`,
+it unions the historical bank snapshots and validated completed journals. This
+is a replay, not a current-bank or production-ready acceptance claim. The report
+is `<workspace>/recovery-report.json`; source hashes are frozen in `sources.json`.
+The command can resume the same workspace with identical source files and
+sidecars. It never resets a completed or uncertain persistence journal. Changed
+sources/requests/verdicts require a new workspace, not edited metadata.
+
+Only a separately authorized coordinator may append **`--write`** to that same
+command. Write mode refreshes the current bank using injected `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` (no `.env` reads), then adds successfully saved rows
+between sources. A supplied historical export is never trusted for write mode.
+The coordinator must serialize recovery against other PDE publishers. Partial or
+unknown writes and bank IDs without matching completed journals fail closed for
+human reconciliation. Idempotent storage IDs and durable run/question journals
+remain unchanged; a completed candidate is not inserted again. Nothing in the
+fix or its offline tests runs recovery against production.
 
 ## Safe documentation efficiency defaults (2026-10-19)
 

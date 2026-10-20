@@ -19,7 +19,7 @@ from scripts.generate_pmle_questions import database_client as _database_client,
 from shared.cert_context import plan_questions
 from shared.objective_style import validate_style_policy, uses_pde_style
 from shared.cert_context import tune_generation_scope
-from shared.cert_generation_policy import generation_policy, product_share_report, topic_distribution
+from shared.cert_generation_policy import generation_policy, product_share_report, topic_distribution, select_publication_products
 from shared.answer_patterns import check_answer_pattern
 from shared.cert_generation_policy import TUNING_SCOPE_FIELDS
 from shared.batch_report import ml_practice_report
@@ -350,8 +350,15 @@ def validate_completed_journals(payload, path):
         raise ValueError("Persistence journals require human reconciliation") from None
 
 
-def ingest(path, verdicts, *, dry_run=False):
-    """Validate all inputs before creating a client; persist passing candidates only."""
+def ingest(path, verdicts, *, dry_run=False, publication_bank=None):
+    """Persist passing candidates; an optional PDE comparison bank adds fresh gates.
+
+    publication_bank is a list of normalized load_export question rows. It never
+    replaces or mutates the frozen duplicate snapshot, requests or journals.
+    Returns selected_candidates comparison rows with stable storage IDs, for
+    rolling dry-run admission across artifacts. Ordinary quality errors still
+    raise after flushing decisions; product-cap vetoes alone do not raise.
+    """
     payload = _read_json(path)
     if (not isinstance(payload, dict) or not isinstance(payload.get("candidates"), list)
             or not payload["candidates"]
@@ -451,6 +458,47 @@ def ingest(path, verdicts, *, dry_run=False):
             if payload.get("style_policy_version") == "5.2" and not check_answer_pattern(row, [], cert_id=payload["cert_id"])["passed"]:
                 raise click.ClickException("Malformed PDE answer-pattern snapshot")
         near_seen = list(bank["questions"])
+    cap_bank = list(near_seen)
+    if publication_bank is not None:
+        if payload.get("cert_id") != "data-engineer" or payload.get("style_policy_version") != "5.2":
+            raise click.ClickException("Publication bank override requires tuned PDE")
+        if not isinstance(publication_bank, list):
+            raise click.ClickException("Publication bank must be a normalized question list")
+        ids = set()
+        for row in publication_bank:
+            if (not isinstance(row, dict) or not {"id", "stem", "key", "cert_id"} <= set(row)
+                    or set(row) - {"id", "stem", "key", "cert_id", "objective_id", "distractors", "answer_pattern_source"}
+                    or row["cert_id"] != payload["cert_id"]
+                    or not isinstance(row["id"], str) or not row["id"].strip() or row["id"] in ids
+                    or ("objective_id" in row and (not isinstance(row["objective_id"], str) or not row["objective_id"].strip()))):
+                raise click.ClickException("Malformed publication bank")
+            try:
+                tokens(row["stem"]); tokens(row["key"])
+                if not check_answer_pattern(row, [], cert_id=payload["cert_id"])["passed"]:
+                    raise ValueError("Malformed answer pattern")
+            except (ValueError, KeyError, TypeError):
+                raise click.ClickException("Malformed publication bank") from None
+            ids.add(row["id"])
+        # A fresh bank ID without a completed local journal is not proof that
+        # this invocation may retry that insert. Never silently treat it as self.
+        for entry in payload["candidates"]:
+            if not entry.get("external_judge_request") or _is_complete(entry):
+                continue
+            try:
+                scope = _scope(payload, entry)
+                storage_id = candidate_storage_id(entry, scope, candidate_question(entry))
+            except (ValueError, KeyError, TypeError):
+                continue  # The ordinary immutable request validation rejects it.
+            if storage_id in ids:
+                raise click.ClickException("Publication bank contains an unjournaled candidate; human reconciliation required")
+        cap_bank = list(publication_bank)
+        # Keep both historical and fresh comparison content even if a stable ID
+        # appears in both: a fresh edit must not erase a frozen duplicate veto.
+        near_seen.extend(publication_bank)
+    if payload.get("style_policy_version") == "5.2":
+        for entry in payload["candidates"]:
+            if not _is_complete(entry):
+                entry["publication_selected"] = False
     pending, seen = [], set()
     # Include completed content before pending validation, regardless of list order.
     if payload.get("rules_version") == 5:
@@ -605,14 +653,55 @@ def ingest(path, verdicts, *, dry_run=False):
         entry["accepted"] = False
         pending.append((entry, scope, question, judge, grounding))
         click.echo(f"{ident}: passing external verdict; {judge.reason}")
+    cap_vetoed = 0
+    if payload.get("style_policy_version") == "5.2":
+        # Existing completed rows reserve capacity even when the export is older.
+        completed = []
+        for entry in payload["candidates"]:
+            if _is_complete(entry):
+                completed.append({**product_share_row(entry), "id": entry["inserted_question_id"]})
+        bank_actions = [{"id": row["id"], "best_action": row["key"], "product_context": row["stem"]}
+                        for row in cap_bank]
+        bank_by_id = {row["id"]: row for row in bank_actions}
+        for row in completed:
+            bank_by_id.setdefault(row["id"], row)
+        admissions = [{**product_share_row(question), "id": candidate_storage_id(entry, scope, question),
+                       "score": judge.score} for entry, scope, question, judge, _ in pending]
+        selection = select_publication_products(admissions, list(bank_by_id.values()), cert_id=payload["cert_id"])
+        payload["product_share_report"] = selection["report"]
+        keep = set(selection["selected_indices"])
+        for index, (entry, *_) in enumerate(pending):
+            entry["publication_selected"] = index in keep
+            entry["product_share_check"] = {"passed": index in keep, "denominator": selection["report"]["denominator"],
+                                            "max_per_product": selection["report"]["max_per_product"]}
+            if index not in keep:
+                _reject(entry, "product_share", selection["vetoes"].get(index, "Already represented in the publication bank"))
+                cap_vetoed += 1
+        pending = [row for index, row in enumerate(pending) if index in keep]
     if payload.get("rules_version") == 5:
-        eligible = [entry for entry in payload["candidates"]
-                    if entry["candidate_id"] not in superseded
-                    and entry.get("judge_verdict", {}).get("passed") is True
-                    and not entry.get("persistence_validation_failed")]
+        quality_eligible = [entry for entry in payload["candidates"]
+                            if entry["candidate_id"] not in superseded
+                            and entry.get("judge_verdict", {}).get("passed") is True
+                            and not entry.get("persistence_validation_failed")]
+        eligible = [entry for entry in quality_eligible if entry.get("publication_selected") is not False]
         if not blocked:
             try:
-                balance_options(eligible)
+                if payload.get("style_policy_version") == "5.2":
+                    # Completed layouts freeze their original balancing cohort,
+                    # which can include a now cap-vetoed, still judge-passed row.
+                    # Replaying a newer cap-selected cohort must also keep that
+                    # subset, rather than resurrecting every historical passer.
+                    frozen_digests = {entry.get("option_balance", {}).get("population_sha256")
+                                      for entry in quality_eligible if _is_complete(entry)}
+                    frozen_ids = set()
+                    for digest in frozen_digests:
+                        cohort = [entry for entry in quality_eligible
+                                  if entry.get("option_balance", {}).get("population_sha256") == digest]
+                        balance_options(cohort)
+                        frozen_ids.update(entry["candidate_id"] for entry in cohort)
+                    balance_options([entry for entry in eligible if entry["candidate_id"] not in frozen_ids])
+                else:
+                    balance_options(eligible)
             except ValueError:
                 raise click.ClickException("Persisted option layout requires reconciliation; no new DB writes") from None
     payload["option_length_report"] = option_length_report(payload["candidates"])
@@ -622,7 +711,8 @@ def ingest(path, verdicts, *, dry_run=False):
         payload["all_candidate_key_position_report"] = key_position_report(payload["candidates"])
         payload["key_position_report"] = key_position_report([entry for entry in payload["candidates"]
             if entry["candidate_id"] not in superseded and entry.get("judge_verdict", {}).get("passed") is True
-            and not entry.get("persistence_validation_failed")])
+            and not entry.get("persistence_validation_failed")
+            and entry.get("publication_selected") is not False])
         payload["template_diversity_report"] = template_diversity_report([entry for entry in payload["candidates"]
             if entry["candidate_id"] not in superseded])
         click.echo(format_key_position_report(payload["key_position_report"]))
@@ -630,17 +720,18 @@ def ingest(path, verdicts, *, dry_run=False):
         click.echo("ML practice allowance: " + json.dumps(payload["ml_practice_report"]))
         click.echo("Template diversity: " + json.dumps(payload["template_diversity_report"]))
         if payload.get("style_policy_version") == "5.2":
-            payload["product_share_report"] = product_share_report([
+            payload["section_product_share_report"] = product_share_report([
                 product_share_row(entry) for entry in eligible], cert_id=payload["cert_id"])
+            payload["section_product_share_report"]["aggregate_blocker"] = False
             payload["topic_plan_report"] = topic_distribution(payload["plan"])
             click.echo("PDE correct-answer products: " + json.dumps(payload["product_share_report"]))
         _flush(path, payload)
         if blocked:
             raise click.ClickException("Persistence journal requires reconciliation; no new DB writes")
-        if not payload["key_position_report"]["count"]:
+        if not payload["key_position_report"]["count"] and not cap_vetoed:
             raise click.ClickException("No passing candidates; no new DB writes")
-        if (payload["key_position_report"]["passed"] is False or not payload["template_diversity_report"]["passed"]
-                or (payload.get("style_policy_version") == "5.2" and payload["product_share_report"]["passed"] is False)):
+        if ((payload["key_position_report"]["count"] and payload["key_position_report"]["passed"] is False)
+                or not payload["template_diversity_report"]["passed"]):
             raise click.ClickException("V5 batch report failed; no new DB writes")
     _flush(path, payload)
     if not dry_run and (pending or payload["generation_runs"]):
@@ -739,6 +830,10 @@ def ingest(path, verdicts, *, dry_run=False):
     click.echo(f"Passing verdicts {len(pending)}; accepted/complete {complete}; rejected {rejected}; missing {missing}; blocked {blocked}")
     if rejected or missing or blocked:
         raise click.ClickException("Some candidates were not persisted; inspect the artifact")
+    return {"selected_candidates": [{**comparison_row(entry), "id": candidate_storage_id(entry, scope, question)}
+                                     for entry, scope, question, _, _ in pending],
+            "product_share_report": payload.get("product_share_report"), "complete": complete,
+            "cap_vetoed": cap_vetoed}
 
 
 @click.command()

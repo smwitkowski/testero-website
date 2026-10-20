@@ -191,3 +191,75 @@ def product_share_report(rows: list[str | dict], *, cert_id: str = "data-enginee
     return {**result, "denominator": len(rows),
             "max_share": max(result["counts"].values(), default=0) / len(rows),
             "coverage_basis": "explicit_best_action_or_single_product_context"}
+
+
+def select_publication_products(candidates: list[dict], bank: list[dict], *,
+                                cert_id: str = "data-engineer") -> dict[str, Any]:
+    """Select bank-safe additions, removing lowest-scored excess actions first.
+
+    Rows have unique ``id``, ``best_action``, optional ``product_context`` and
+    candidate ``score`` (higher is better). The denominator is the resulting
+    unique bank plus additions, with a full-plan bootstrap minimum of 40. It is
+    recalculated after every veto. Existing bank rows cannot be vetoed, and an
+    existing overage never blocks unrelated additions. Unknown bank actions
+    reserve capacity against every product. Ties retain earlier rows.
+    This policy does not replace any candidate quality or duplicate checks.
+    """
+    policy = generation_policy(cert_id)
+    if policy is None:
+        return {"selected_indices": list(range(len(candidates))), "vetoes": {},
+                "report": {"status": "not_applicable", "passed": None, "cert_id": cert_id}}
+    existing = {}
+    for row in bank:
+        if row.get("cert_id", cert_id) != cert_id:
+            raise ValueError("Publication bank certification mismatch")
+        ident = row.get("id")
+        if not isinstance(ident, str) or not ident.strip():
+            raise ValueError("Publication bank requires a stable ID")
+        if ident in existing and existing[ident] != row:
+            raise ValueError("Conflicting publication bank IDs")
+        _best_action(row)
+        existing[ident] = row
+    ids = [row.get("id") for row in candidates]
+    if any(not isinstance(ident, str) or not ident.strip() for ident in ids) or len(set(ids)) != len(ids):
+        raise ValueError("Publication candidates require unique stable IDs")
+    unknown_bank_count = sum(bool(product_attribution(row, cert_id)["error"]) for row in existing.values())
+    attributions = [product_attribution(row, cert_id) for row in candidates]
+    selected = [i for i, row in enumerate(candidates) if row["id"] not in existing]
+    vetoes = {}
+    for i in list(selected):
+        if attributions[i]["error"]:
+            selected.remove(i)
+            vetoes[i] = attributions[i]["error"]
+    while True:
+        rows = [*existing.values(), *(candidates[i] for i in selected)]
+        denominator = max(40, len(rows))
+        fraction = policy["product_share"]["max_fraction"]
+        cap = int((Decimal(str(fraction)) * denominator).to_integral_value(rounding=ROUND_FLOOR))
+        counts = Counter(product for row in rows for product in product_attribution(row, cert_id)["products"])
+        # An unattributed historical action could use any guide product. Reserve
+        # that capacity conservatively, without rejecting unrelated safe actions.
+        reserved_counts = {product["name"]: counts[product["name"]] + unknown_bank_count
+                           for product in policy["product_share"]["products"]}
+        exceeded = {product for product, count in reserved_counts.items() if count > cap}
+        removable = [i for i in selected if exceeded.intersection(attributions[i]["products"])]
+        if not removable:
+            break
+        lowest = min(removable, key=lambda i: (candidates[i].get("score", 0), -i))
+        selected.remove(lowest)
+        vetoes[lowest] = "Correct-answer product exceeds the rolling bank/full-plan cap"
+    if rows:
+        last = {**rows[-1], "cert_id": cert_id}
+        report = check_product_share(last, rows[:-1], denominator)
+    else:
+        report = product_share_report([], cert_id=cert_id)
+    report.update(denominator=denominator, checked_count=len(rows),
+                  max_per_product=cap, max_fraction=fraction,
+                  coverage_basis="rolling_bank_with_full_plan_bootstrap", bootstrap_minimum=40,
+                  bank_count=len(existing), selected_count=len(selected), vetoed_count=len(vetoes),
+                  aggregate_blocker=False, unknown_bank_count=unknown_bank_count,
+                  attribution_status="incomplete" if unknown_bank_count else "complete",
+                  product_cap_status="fail" if exceeded else "pass",
+                  reserved_counts=reserved_counts,
+                  observed_population=product_share_report(rows, cert_id=cert_id))
+    return {"selected_indices": selected, "vetoes": vetoes, "report": report}

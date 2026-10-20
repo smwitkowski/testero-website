@@ -238,20 +238,22 @@ def distinct_specs():
     return [(row, question(row, STEM.replace("supplier", noun))) for row, noun in zip(actions, ("supplier", "retailer", "factory"))]
 
 
-def test_ingest_actual_product_cap_blocks_before_database_factory(harness):
+def test_ingest_small_section_reports_concentration_without_blocking(harness):
     run, db, _, _ = harness
-    path, payload, result, _, _ = run(distinct_specs(), n=40, stop_after=3)
-    assert result.exit_code == 1  # Synthetic subscription stop and real final cap.
+    path, payload, result, _, _ = run(distinct_specs())
+    assert result.exit_code == 0, result.output
     waiting = [e for e in payload["candidates"] if e.get("awaiting_external_judge")]
-    assert len(waiting) == 3, [(e.get("failure_stage"), e.get("reason")) for e in payload["candidates"]]
+    assert len(waiting) == 3
     directory = save_verdicts(path, payload)
-    with pytest.raises(click.ClickException, match="V5 batch report failed"):
-        ingest.ingest(path, directory, dry_run=False)
+    summary = ingest.ingest(path, directory, dry_run=True)
     saved = json.loads(path.read_text())
-    assert saved["product_share_report"]["denominator"] == 3
+    assert saved["section_product_share_report"]["denominator"] == 3
+    assert saved["section_product_share_report"]["passed"] is False
+    assert saved["product_share_report"]["denominator"] == 40
     assert saved["product_share_report"]["counts"]["BigQuery"] == 2
-    assert saved["product_share_report"]["passed"] is False
-    assert sum(e.get("judge_verdict", {}).get("passed") is True for e in saved["candidates"]) == 3
+    assert saved["product_share_report"]["passed"] is True
+    assert len(summary["selected_candidates"]) == 3
+    assert all(e["publication_selected"] for e in saved["candidates"])
     db.assert_not_called()
 
 
@@ -422,4 +424,172 @@ def test_inline_judge_failed_draft_still_blocks_later_same_pattern_before_docs(h
     assert second["failure_stage"] == "answer_pattern" and second["answer_pattern_plan_check"]["matches"]
     assert first["accepted"] is False and second["accepted"] is False
     assert search.call_count == writer.call_count == judge.call_count == 1
+    db.assert_not_called()
+
+
+def normalized_bank():
+    products = ["BigQuery"] * 16 + ["Dataflow"] * 8 + ["Cloud Storage"] * 8 + ["Dataproc"] * 8
+    return [{"id": f"bank-{i}", "cert_id": "data-engineer", "stem": f"Archived legacy workflow number {i}",
+             "key": f"Perform archived operation {i} with {product}",
+             "distractors": [f"Alternative archived operation {i} variant {label}" for label in "xyz"],
+             "answer_pattern_source": "options"} for i, product in enumerate(products)]
+
+
+def test_ingest_bank_cap_vetoes_only_excess_and_persists_passer(harness, monkeypatch):
+    run, db, _, _ = harness
+    path, payload, result, _, _ = run(distinct_specs())
+    assert result.exit_code == 0, result.output
+    frozen_bank = deepcopy(payload["existing_questions"])
+    requests = {p: p.read_bytes() for p in path.with_suffix(".judge-requests").glob("*.json")}
+    directory = save_verdicts(path, payload)
+    client = Mock()
+    client.get_domain_by_code.return_value = {"id": "domain"}
+    client.create_generation_run.side_effect = lambda row: {"id": row["id"]}
+    client.update_generation_run.return_value = True
+    monkeypatch.setattr(ingest, "database_client", Mock(return_value=client))
+    persisted = []
+    def persist(client, scope, question, judge, grounding, *args, **kw):
+        kw["before_insert"](); kw["on_question_inserted"](kw["question_id"])
+        persisted.append(question["correct_answer"])
+        return True
+    monkeypatch.setattr(ingest, "persist_candidate", persist)
+    summary = ingest.ingest(path, directory, publication_bank=normalized_bank())
+    saved = json.loads(path.read_text())
+    assert summary["cap_vetoed"] == 2 and summary["complete"] == 1
+    assert len(persisted) == 1 and "Dataproc" in persisted[0]
+    assert [e["publication_selected"] for e in saved["candidates"]] == [False, False, True]
+    assert [e.get("failure_stage") for e in saved["candidates"]] == ["product_share", "product_share", None]
+    assert all(e["judge_verdict"]["passed"] for e in saved["candidates"])
+    assert saved["product_share_report"]["denominator"] == 41
+    assert saved["product_share_report"]["counts"]["BigQuery"] == 16
+    assert saved["existing_questions"] == frozen_bank
+    assert all(p.read_bytes() == original for p, original in requests.items())
+    assert summary["selected_candidates"][0]["id"] == saved["candidates"][2]["inserted_question_id"]
+    db.assert_not_called()
+
+
+def test_ingest_product_cap_all_vetoes_is_not_an_aggregate_exception(harness):
+    run, db, _, _ = harness
+    path, payload, _, _, _ = run(distinct_specs()[:1])
+    directory = save_verdicts(path, payload)
+    summary = ingest.ingest(path, directory, dry_run=True, publication_bank=normalized_bank())
+    assert summary["selected_candidates"] == [] and summary["cap_vetoed"] == 1
+    saved = json.loads(path.read_text())
+    assert saved["candidates"][0]["failure_stage"] == "product_share"
+    db.assert_not_called()
+
+
+def test_ingest_publication_overlay_adds_duplicate_gate_without_mutating_snapshot(harness, monkeypatch):
+    from shared.near_duplicates import check_near_duplicate
+    run, db, _, _ = harness
+    path, payload, _, _, _ = run()
+    directory = save_verdicts(path, payload)
+    overlay = ingest.comparison_row(payload["candidates"][0]); overlay["id"] = "previous-artifact-storage-id"
+    monkeypatch.setattr(ingest, "check_near_duplicate", check_near_duplicate)
+    frozen = deepcopy(payload["existing_questions"])
+    request_path = path.parent / payload["candidates"][0]["external_judge_request"]["path"]
+    request_before = request_path.read_bytes()
+    with pytest.raises(click.ClickException, match="No passing candidates"):
+        ingest.ingest(path, directory, dry_run=True, publication_bank=[overlay])
+    saved = json.loads(path.read_text())
+    assert saved["existing_questions"] == frozen
+    assert request_path.read_bytes() == request_before
+    assert saved["candidates"][0]["failure_stage"] == "near_duplicate"
+    assert saved["candidates"][0]["publication_selected"] is False
+    db.assert_not_called()
+
+
+def test_ingest_overlay_blocks_unjournaled_storage_id_before_client(harness):
+    from shared.external_judge import candidate_storage_id
+    run, db, _, _ = harness
+    path, payload, _, _, _ = run()
+    entry = payload["candidates"][0]
+    overlay = ingest.comparison_row(entry)
+    overlay["id"] = candidate_storage_id(entry, ingest._scope(payload, entry), candidate_question(entry))
+    directory = save_verdicts(path, payload)
+    before = path.read_bytes()
+    with pytest.raises(click.ClickException, match="unjournaled candidate"):
+        ingest.ingest(path, directory, publication_bank=[overlay])
+    assert path.read_bytes() == before
+    db.assert_not_called()
+
+
+@pytest.mark.parametrize("mutation", ["duplicate_id", "wrong_cert", "missing_distractors"])
+def test_ingest_overlay_rejects_malformed_rows_before_client(harness, mutation):
+    run, db, _, _ = harness
+    path, payload, _, _, _ = run()
+    directory = save_verdicts(path, payload)
+    rows = normalized_bank()
+    if mutation == "duplicate_id": rows.append(deepcopy(rows[0]))
+    if mutation == "wrong_cert": rows[0]["cert_id"] = "machine-learning-engineer"
+    if mutation == "missing_distractors": rows[0].pop("distractors")
+    with pytest.raises(click.ClickException, match="Malformed publication bank"):
+        ingest.ingest(path, directory, dry_run=True, publication_bank=rows)
+    db.assert_not_called()
+
+
+def mark_complete(path, index):
+    payload = json.loads(path.read_text())
+    entry = payload["candidates"][index]
+    entry.update(persistence_status="complete", inserted_question_id=entry["candidate_id"],
+                 accepted=True, status="persisted")
+    code = entry["domain_code"]; run_id = ingest._run_id(payload, code)
+    payload["generation_runs"][code] = run_id
+    payload["external_run_journal"] = {code: {"status": "created", "run_id": run_id}}
+    path.write_text(json.dumps(payload))
+    return deepcopy(entry["option_balance"])
+
+
+def test_ingest_cap_preserves_legacy_completed_balance_cohort_across_replays(harness):
+    run, db, _, _ = harness
+    path, payload, _, _, _ = run(distinct_specs())
+    directory = save_verdicts(path, payload)
+    ingest.ingest(path, directory, dry_run=True)
+    original = mark_complete(path, 0)
+    for _ in range(2):
+        summary = ingest.ingest(path, directory, dry_run=True, publication_bank=normalized_bank())
+        saved = json.loads(path.read_text())
+        assert summary["cap_vetoed"] == 1 and len(summary["selected_candidates"]) == 1
+        assert saved["candidates"][0]["option_balance"] == original
+        assert saved["candidates"][1]["failure_stage"] == "product_share"
+        assert saved["candidates"][2]["publication_selected"] is True
+        ingest.validate_completed_journals(saved, path)
+    db.assert_not_called()
+
+
+def test_ingest_cap_preserves_new_selected_completed_balance_cohort_across_replays(harness):
+    run, db, _, _ = harness
+    path, payload, _, _, _ = run(distinct_specs())
+    directory = save_verdicts(path, payload)
+    summary = ingest.ingest(path, directory, dry_run=True, publication_bank=normalized_bank())
+    assert summary["cap_vetoed"] == 2
+    original = mark_complete(path, 2)
+    for _ in range(2):
+        summary = ingest.ingest(path, directory, dry_run=True, publication_bank=normalized_bank())
+        saved = json.loads(path.read_text())
+        assert summary["cap_vetoed"] == 2 and summary["selected_candidates"] == []
+        assert saved["candidates"][2]["option_balance"] == original
+        ingest.validate_completed_journals(saved, path)
+    db.assert_not_called()
+
+
+def test_inline_product_cap_ranks_passed_above_higher_score_failed_draft(harness, monkeypatch):
+    from shared.quality_gate import JudgeVerdict
+    run, db, _, tmp_path = harness
+    rows = normalized_bank()
+    rows[15]["key"] = "Perform archived operation15 with Dataflow"
+    exported = [{"id": row["id"], "cert_id": row["cert_id"], "status": "ACTIVE", "stem": row["stem"], "key": "A",
+                 "options": [{"label": label, "text": text}
+                             for label, text in zip("ABCD", [row["key"], *row["distractors"]])]} for row in rows]
+    bank = tmp_path / "inline-bank.json"; bank.write_text(json.dumps(exported))
+    judges = [JudgeVerdict(True, .8, "Synthetic passing quality review", "claude", gate_results=verdict(question())),
+              JudgeVerdict(False, .95, "Synthetic failed style despite high score", "claude", gate_results=verdict(question(), failed=True))]
+    monkeypatch.setattr(generate, "judge_three_gates", Mock(side_effect=judges))
+    _, payload, result, _, _ = run(distinct_specs()[:2], flags=("--judge-model", "claude", "--dry-run", "--existing-questions", str(bank)))
+    assert result.exit_code == 1  # The failed judge is still a failure, never promoted.
+    first, second = payload["candidates"]
+    assert first["judge_verdict"]["passed"] and first["publication_selected"]
+    assert not second["judge_verdict"]["passed"] and not second["publication_selected"]
+    assert second["failure_stage"] == "product_share"
+    assert payload["product_share_report"]["denominator"] == 41
     db.assert_not_called()

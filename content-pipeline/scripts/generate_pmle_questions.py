@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from shared.cert_context import DEFAULT_CERT, plan_questions, load_cert_context
 from shared.objective_style import style_policy, uses_pde_style
 from shared.cert_style import normalize_learner_prose, check_cert_style
-from shared.cert_generation_policy import generation_policy, topic_distribution, check_product_share, product_share_report, TUNING_SCOPE_FIELDS
+from shared.cert_generation_policy import generation_policy, topic_distribution, check_product_share, product_share_report, select_publication_products, TUNING_SCOPE_FIELDS
 from shared.answer_patterns import check_answer_pattern
 from shared.batch_report import ml_practice_report
 from shared.yield_planning import existing_scenarios, ObjectiveRotation
@@ -233,6 +233,9 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                                          "stable_prefix": verify_stable_prefix,
                                          "decision_attempts": decision_attempts}}
     tuned = uses_pde_style(plan[0]["style_policy"])
+    bank_actions = [{"id": row["id"], "best_action": row["key"], "product_context": row["stem"]}
+                    for row in bank["questions"]] if tuned else []
+    product_budget = max(40, len(bank_actions) + n_questions)
     if tuned:
         payload["generation_policy"] = generation_policy(cert)
         payload["topic_plan_report"] = topic_distribution(plan)
@@ -375,11 +378,10 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                         if not pattern["passed"]:
                             reject_candidate(entry, "answer_pattern", pattern["reason"])
                             return
-                        products = check_product_share(decision, [row["decision_plan"] for row in written] + earlier_plans, n_questions)
+                        # Planning is diagnostic only. Rank actual judged actions at
+                        # publication, rather than reject a whole filtered section.
+                        products = check_product_share(decision, bank_actions + earlier_plans, product_budget)
                         attempt["product_share_check"] = entry["product_share_plan_check"] = products
-                        if not products["passed"]:
-                            reject_candidate(entry, "product_share", "Correct-answer product exceeds the frozen batch cap")
-                            return
                 stage = "documentation"
                 sources = search_objective_docs(scope["objective_text"], scope["services"],
                     cache=docs_cache, objective_id=scope["objective_id"], decision_plan=decision)
@@ -503,12 +505,9 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 prior = [row for row in payload["candidates"] if row.get("near_duplicate_check", {}).get("passed")]
                 entry["answer_pattern_check"] = check_answer_pattern(entry, bank["questions"] + prior, cert_id=cert)
                 entry["product_share_check"] = check_product_share(product_share_row(question),
-                    [product_share_row(row) for row in prior], n_questions)
+                    bank_actions + [product_share_row(row) for row in prior], product_budget)
                 if not entry["answer_pattern_check"]["passed"]:
                     reject_candidate(entry, "answer_pattern", entry["answer_pattern_check"]["reason"])
-                    return
-                if not entry["product_share_check"]["passed"]:
-                    reject_candidate(entry, "product_share", "Correct-answer product exceeds the frozen batch cap")
                     return
             if not external:
                 entry["near_duplicate_check"] = check_near_duplicate(entry, bank["questions"] +
@@ -605,18 +604,15 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                             entry["near_duplicate_check"] = check_near_duplicate(entry, bank["questions"] +
                                 [comparison_row(row) for row in payload["candidates"] if row.get("near_duplicate_check", {}).get("passed")])
                             normalized = normalize_stem(entry["stem"])
-                            pattern_ok = product_ok = True
+                            pattern_ok = True
                             if tuned:
                                 prior = [row for row in payload["candidates"] if row.get("awaiting_external_judge")]
                                 entry["answer_pattern_check"] = check_answer_pattern(entry, bank["questions"] + prior, cert_id=cert)
                                 entry["product_share_check"] = check_product_share(product_share_row(question),
-                                    [product_share_row(row) for row in prior], n_questions)
+                                    bank_actions + [product_share_row(row) for row in prior], product_budget)
                                 pattern_ok = entry["answer_pattern_check"]["passed"]
-                                product_ok = entry["product_share_check"]["passed"]
                             if not pattern_ok:
                                 reject_candidate(entry, "answer_pattern", entry["answer_pattern_check"]["reason"])
-                            elif not product_ok:
-                                reject_candidate(entry, "product_share", "Correct-answer product exceeds the frozen batch cap")
                             elif not entry["near_duplicate_check"]["passed"]:
                                 entry["duplicate"] = True
                                 reject_candidate(entry, "near_duplicate", entry["near_duplicate_check"]["reason"])
@@ -667,16 +663,38 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     if tuned:
         eligible = [row for row in payload["candidates"] if row.get("awaiting_external_judge")
                     or row.get("judge_verdict", {}).get("passed") is True]
-        payload["product_share_report"] = product_share_report([
+        payload["section_product_share_report"] = product_share_report([
             product_share_row(row) for row in eligible], cert_id=cert)
+        payload["section_product_share_report"]["aggregate_blocker"] = False
+        # External requests remain immutable and all still need independent
+        # judging. Only ingestion can rank their passing publication population.
+        publication_rows = eligible if external else [row for row in payload["candidates"]
+                                                      if row.get("near_duplicate_check", {}).get("passed")
+                                                      and "grounding" in row]
+        selection = select_publication_products([
+            {**product_share_row(row), "id": str(row["index"]),
+             "score": (row.get("judge_verdict", {}).get("score", 0)
+                       if external or row.get("judge_verdict", {}).get("passed") is True else -1)}
+            for row in publication_rows], bank_actions, cert_id=cert)
+        payload["product_share_report"] = selection["report"]
+        payload["product_share_report"]["publication_status"] = "awaiting_external_verdicts" if external else "selected"
         payload["topic_plan_report"] = topic_distribution(plan)
         if external:
             write_artifact(artifact, payload)
-        if not external:
-            payload["write_product_share_report"] = product_share_report([
-                product_share_row(question) for _, _, question, *_ in pending_inline], cert_id=cert)
-    reports_pass = (not tuned or (payload["product_share_report"]["passed"] is not False and
-                    (external or payload["write_product_share_report"]["passed"] is not False))) and payload["key_position_report"]["passed"] and (external or
+        else:
+            keep = set(selection["selected_indices"])
+            for index, row in enumerate(publication_rows):
+                row["publication_selected"] = index in keep
+                if index not in keep:
+                    row["accepted"] = False
+                    reject_candidate(row, "product_share", selection["vetoes"][index])
+            pending_inline = [item for item in pending_inline if item[0].get("publication_selected") is not False]
+            accepted = sum(row.get("accepted") is True for row in payload["candidates"])
+            payload["key_position_report"] = key_position_report([row for row in eligible if row.get("publication_selected") is not False])
+            payload["write_key_position_report"] = key_position_report([
+                row for row in publication_rows if row.get("publication_selected") is not False])
+            payload["write_product_share_report"] = selection["report"]
+    reports_pass = payload["key_position_report"]["passed"] and (external or
         (payload["write_key_position_report"]["passed"] and (not payload["template_diversity_report"]["count"] or payload["template_diversity_report"]["passed"])))
     for entry, scope, question, judge, grounding in pending_inline:
         try:
@@ -718,8 +736,6 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     if tuned:
         click.echo("PDE topic plan (hints only): " + json.dumps(payload["topic_plan_report"]))
         click.echo("PDE correct-answer products: " + json.dumps(payload["product_share_report"]))
-        if payload["product_share_report"]["passed"] is False or (not external and payload["write_product_share_report"]["passed"] is False):
-            raise click.ClickException("Correct-answer product-share batch report failed; no new question writes")
     if external:
         click.echo(f"Awaiting external judge {awaiting}/{n_questions}; requests: {request_directory(artifact)}; no DB writes")
         if awaiting != n_questions:
