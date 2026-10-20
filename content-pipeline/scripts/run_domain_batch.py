@@ -65,12 +65,17 @@ def export_questions(url, key, exam, path, *, fetch=None):
 
 
 def batch_commands(section, tag, cert, count, parallel, *, plan_only=False):
-    if not re.fullmatch(r"[0-9]+\.", section) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", tag):
-        raise ValueError("Section must be like 1.; tag must contain only letters, digits, _ or -")
+    """Build one gated batch; ``all`` keeps the full weighted cert plan unfiltered."""
+    if (section != "all" and not re.fullmatch(r"[0-9]+\.", section)
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", tag)):
+        raise ValueError("Section must be all or like 1.; tag must contain only letters, digits, _ or -")
     context = load_cert_context(cert)
-    domain = next((d for d in context["domains"].values() if d["section_number"] + "." == section), None)
-    if domain is None:
-        raise ValueError("Section is not in the selected certification")
+    domain = None
+    if section != "all":
+        domain = next((d for d in context["domains"].values() if d["section_number"] + "." == section), None)
+        if domain is None:
+            raise ValueError("Section is not in the selected certification")
+    count = count if count is not None else (40 if section == "all" else 30)
     base = PIPELINE / ".cache/generation" / (cert + "-v5-" + tag)
     artifact = base.with_suffix(".json")
     export = Path(str(base) + ".existing.json")
@@ -83,8 +88,9 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False):
                 "--parallel", str(parallel), "--gen-effort", "high", "--cite-effort", "medium",
                 "--argon-gate", "--distractor-evidence", "consistent",
                 "--doc-cache", "--verify-stable-prefix", "--artifact", str(artifact)]
-    for objective in domain["objectives"]:
-        generate += ["--objective", objective["objective_id"]]
+    if domain is not None:
+        for objective in domain["objectives"]:
+            generate += ["--objective", objective["objective_id"]]
     if plan_only:
         return artifact, export, [generate + ["--plan-only"]]
     generate += ["--existing-questions", str(export)]
@@ -99,10 +105,12 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False):
 @click.argument("section")
 @click.argument("tag")
 @click.argument("cert", default=DEFAULT_CERT)
-@click.option("--count", type=click.IntRange(min=1), default=30, envvar="N", show_default=True)
+@click.option("--count", type=click.IntRange(min=1), default=None, envvar="N",
+              help="Total candidates: 40 for all sections, 30 for a single section (overridden by N).")
 @click.option("--parallel", type=click.IntRange(1, 4), default=3, envvar="PARALLEL", show_default=True)
 @click.option("--plan-only", is_flag=True, help="Offline only: no export, credentials, models or database.")
 def main(section, tag, cert, count, parallel, plan_only):
+    """Run SECTION (e.g. 1. or all) as one artifact; all uses the weighted cert plan."""
     try:
         artifact, export, commands = batch_commands(section, tag, cert, count, parallel, plan_only=plan_only)
         artifact.parent.mkdir(parents=True, exist_ok=True)
