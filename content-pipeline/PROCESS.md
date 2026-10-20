@@ -1,5 +1,55 @@
 # Docs-grounded question process
 
+## Oversized subscription CLI tasks (2026-10-20)
+
+Codex 0.160.0 rejects user-input text above **1,048,576 characters**, even
+when that text arrives on stdin. The saved PDE section-1 verify task rebuilds
+to **1,058,381 characters / 1,122,852 UTF-8 bytes**. An offline native replay
+against an isolated loopback fixture reproduces `input_too_large` before any
+fixture-provider request. This is not an OS argv limit: the original shared
+transport already used stdin.
+
+The shared transport now selects a separate **instruction-file mode** only for
+Codex tasks above that character limit. It writes the complete, unchanged UTF-8
+task to a mode-0600 per-request temporary file and passes Codex's
+`model_instructions_file` config plus a fixed short stdin task. The file is
+outside the empty child working directory and is removed on success or failure.
+Every Codex stage uses this shared path; normal-sized Codex tasks and Claude
+requests still use stdin. No docs are shortened, no model is substituted, and
+no retry, tool permission, output schema, or quality gate is added or relaxed.
+
+**Material trade-off:** this is not message/semantic parity. Codex replaces its
+base model instructions with the task; the native fixture observes the complete
+task at the **developer** role instead of user role. This includes fetched docs,
+which remain untrusted data under the task's instructions. Tool-disable and
+independent quality gates remain in force. Review this instruction-hierarchy
+change before approving the PR or authorizing a live run. This bypasses only
+the local user-input cap; upstream context/token limits can still reject a task.
+No live model-quality, prompt-injection-equivalence, cache, or cost claim is made.
+
+Generic `CLIExitError` messages now retain prompt character/byte counts and a
+redacted stderr tail (at most 2,048 characters). Only allowlisted diagnostics
+such as size limits, OS errno, and argument errors survive; arbitrary lines,
+provider bodies, prompt echoes and credentials are omitted. Startup failures
+record the numeric errno and symbolic name without raw environment text.
+Metadata-only `.calls.jsonl` records remain unchanged.
+
+Reproduce with the installed Codex CLI **without calling a model**:
+
+```sh
+cd content-pipeline
+env -i PATH="$PATH" HOME="$HOME" uv run python scripts/probe_cli_input_limit.py
+# Optional read-only replay of a saved artifact:
+# ... scripts/probe_cli_input_limit.py --artifact /absolute/path/to/artifact.json
+```
+
+The probe uses an isolated empty HOME/CODEX_HOME, no inherited credentials, and
+a loopback-only fake provider. It checks a small control, the old oversized
+stdin failure, and the new path. It verifies exact full-prompt text/hash,
+request role, schema, and a canned schema-valid response. Fixture success proves
+local transport/output handling, not an actual supported decision or model call.
+The normal pytest gate never launches subscription CLIs.
+
 ## Safe documentation efficiency defaults (2026-10-19)
 
 Founder decision: **passage retrieval is parked**. Per-claim ranking and bounded

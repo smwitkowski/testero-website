@@ -1,6 +1,7 @@
 """Subscription CLI transports for DSPy signatures; strict JSON, no marker parser."""
 from __future__ import annotations
 
+import errno as errno_codes
 import json
 import os
 from pathlib import Path
@@ -16,9 +17,15 @@ from shared.evidence import OptionEvidence
 from shared.model_policy import DEFAULT_CLAUDE_MODEL
 
 CLI_TIMEOUT_SECONDS = 300
+# Codex 0.160.0 rejects turn/start user text above this character count,
+# independently of stdin/argv byte limits. Larger tasks use its instruction file.
+CODEX_MAX_PROMPT_CHARS = 1_048_576
+CODEX_FILE_TASK = ("Complete the structured-output task in the supplied instructions. "
+                   "Use only the supplied data. Do not use tools.")
+CLI_STDERR_TAIL_CHARS = 2048
 DEFAULT_CODEX_MODEL = "gpt-6.1-sol"
 # CLI 0.160.0: read-only alone still permits file reads. Disable tool backends
-# and ambient context; the model receives only the DSPy prompt on stdin.
+# and ambient context; the model receives only the supplied DSPy task data.
 CODEX_DISABLED_FEATURES = (
     "shell_tool", "unified_exec", "shell_snapshot", "code_mode", "code_mode_host",
     "multi_agent", "multi_agent_v2", "apps", "plugins", "hooks", "memories",
@@ -28,11 +35,19 @@ CLI_TEMP_ROOT = Path(__file__).resolve().parents[1] / ".cache/cli-models"
 
 
 class CLIModelError(RuntimeError):
-    """Safe interface error; never includes CLI logs or credentials."""
+    """Safe interface error; never includes raw CLI logs or credentials."""
 
 
 class CLIExitError(CLIModelError):
-    """CLI failed or could not start."""
+    """CLI failed or could not start; optional diagnostics are redacted."""
+
+    def __init__(self, message, *, stderr_tail="", returncode=None, errno=None):
+        self.stderr_tail = stderr_tail
+        self.returncode = returncode
+        self.errno = errno
+        if stderr_tail:
+            message += "; stderr tail: " + stderr_tail
+        super().__init__(message)
 
 
 class CLIAuthError(CLIExitError):
@@ -234,6 +249,44 @@ def parse_claude_output(text, signature):
     return parse_output(json.dumps(envelope["structured_output"], allow_nan=False), signature)
 
 
+def _redacted_stderr_tail(stderr, prompt):
+    """Keep bounded, allowlisted diagnostics, never arbitrary transport prose.
+
+    stderr may contain credentials, provider bodies, or partial prompt echoes.
+    Unknown lines are replaced entirely, rather than trusting secret regexes.
+    Recognized diagnostics are rebuilt from fixed text and bounded integers.
+    """
+    text = (stderr or "").replace(prompt, "[redacted prompt]") if prompt else (stderr or "")
+    text = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", text)
+    lines = []
+    for line in text.splitlines():
+        clean = "[redacted]"
+        size = re.search(r"Input exceeds the maximum length of ([0-9]{1,12}) characters\.", line)
+        counts = re.search(r'"max_chars":\s*([0-9]{1,12}),\s*"actual_chars":\s*([0-9]{1,12})', line)
+        os_error = re.search(r"\(os error ([0-9]{1,5})\)", line)
+        if size:
+            clean = f"Input exceeds the maximum length of {size[1]} characters."
+            if counts:
+                clean += f" max_chars={counts[1]} actual_chars={counts[2]}"
+        elif os_error:
+            number = int(os_error[1])
+            clean = f"OS error {number} ({errno_codes.errorcode.get(number, 'UNKNOWN')})"
+        elif re.search(r"\b(?:context_length_exceeded|input_too_large)\b", line):
+            clean = "Input/context size limit exceeded [details redacted]"
+        elif re.match(r"(?i)error: unexpected argument\b", line):
+            clean = "Unexpected CLI argument [details redacted]"
+        elif re.match(r"(?i)error: invalid value\b", line):
+            clean = "Invalid CLI argument value [details redacted]"
+        elif line.strip() == "Reading prompt from stdin...":
+            clean = "Reading prompt from stdin..."
+        if line.strip() and (not lines or lines[-1] != clean):
+            lines.append(clean)
+    tail = "\n".join(lines)
+    if len(tail) > CLI_STDERR_TAIL_CHARS:
+        tail = "[truncated]\n" + tail[-(CLI_STDERR_TAIL_CHARS - len("[truncated]\n")):]
+    return tail
+
+
 def _cli_env():
     env = dict(os.environ)
     # Use the CLI login/subscription, not inherited pay-per-token API keys.
@@ -322,12 +375,25 @@ def _run_cli_transport(model, prompt, schema, signature, *, timeout, reasoning_e
                        "--tools", "", "--no-session-persistence", "--safe-mode",
                        "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}']
         try:
-            result = subprocess.run(command, input=prompt, text=True, capture_output=True,
+            stdin_prompt = prompt
+            if codex and len(prompt) > CODEX_MAX_PROMPT_CHARS:
+                # stdin avoids E2BIG but not Codex's turn/start text limit. Load
+                # the complete task as base instructions instead, with no model
+                # file/tool access. Only oversized calls change message role.
+                prompt_path = base / "instructions.txt"
+                prompt_path.write_text(prompt, encoding="utf-8")
+                prompt_path.chmod(0o600)
+                command += ["-c", "model_instructions_file=" + json.dumps(str(prompt_path))]
+                stdin_prompt = CODEX_FILE_TASK
+            result = subprocess.run(command, input=stdin_prompt, text=True, encoding="utf-8", capture_output=True,
                                     cwd=cwd, env=_cli_env(), timeout=timeout, check=False)
         except subprocess.TimeoutExpired:
             raise CLITimeoutError("CLI model request timed out") from None
-        except OSError:
-            raise CLIExitError("CLI model command could not start") from None
+        except OSError as error:
+            number = error.errno
+            name = errno_codes.errorcode.get(number, "UNKNOWN")
+            raise CLIExitError(f"CLI model request could not be prepared or started (errno {number}: {name})",
+                               errno=number) from None
         from shared.call_logging import cli_usage
         usage.update(cli_usage(result.stdout, provider="codex" if codex else "claude"))
         codex_errors = result.stderr.replace(prompt, "") if codex else ""
@@ -355,7 +421,11 @@ def _run_cli_transport(model, prompt, schema, signature, *, timeout, reasoning_e
                 raise CLIUsageLimitError("CLI subscription usage or rate limit reached; batch stopped")
             if _auth(result.stdout + "\n" + result.stderr):
                 raise CLIAuthError("CLI subscription authentication failed; restore CLI login")
-            raise CLIExitError(f"CLI model command exited unsuccessfully (exit {result.returncode})")
+            raise CLIExitError(
+                f"CLI model command exited unsuccessfully (exit {result.returncode}); "
+                f"prompt_chars={len(prompt)} prompt_utf8_bytes={len(prompt.encode('utf-8'))}",
+                stderr_tail=_redacted_stderr_tail(result.stderr, prompt), returncode=result.returncode)
+
         if claude:
             return parse_claude_output(result.stdout, signature)
         if not output.is_file():

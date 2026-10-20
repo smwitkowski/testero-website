@@ -306,3 +306,118 @@ def test_invalid_effort_never_launches_cli(monkeypatch, tmp_path):
     with pytest.raises(ValueError, match="Reasoning effort"):
         cli.run_signature("codex", PmleQuestionSignature, inputs(), reasoning_effort="invalid")
     forbidden.assert_not_called()
+
+
+@pytest.mark.parametrize("model", ["codex", "claude"])
+@pytest.mark.parametrize("size", [600_000, cli.CODEX_MAX_PROMPT_CHARS, cli.CODEX_MAX_PROMPT_CHARS + 1])
+def test_large_prompt_preserves_full_text_and_bounded_argv(monkeypatch, tmp_path, model, size):
+    """No processes: the opt-in native probe separately checks actual CLI loading."""
+    monkeypatch.setattr(cli, "CLI_TEMP_ROOT", tmp_path)
+    unit = "文'\";$()\\\n"
+    prompt = (unit * (size // len(unit) + 1))[:size]
+    via_file = model == "codex" and size > cli.CODEX_MAX_PROMPT_CHARS
+    seen = []
+
+    def fake(command, **kwargs):
+        assert list(Path(kwargs["cwd"]).iterdir()) == []
+        assert prompt not in command
+        assert kwargs["encoding"] == "utf-8"
+        assert sum(len(v.encode()) + 1 for v in command) < 10_000
+        files = [json.loads(v.split("=", 1)[1]) for v in command
+                 if v.startswith("model_instructions_file=")]
+        assert len(files) == int(via_file)
+        if via_file:
+            path = Path(files[0])
+            seen.append(path)
+            assert path.read_bytes() == prompt.encode("utf-8")
+            assert path.stat().st_mode & 0o777 == 0o600
+            assert path.parent == Path(kwargs["cwd"]).parent
+            assert kwargs["input"] == cli.CODEX_FILE_TASK
+        else:
+            assert kwargs["input"] == prompt
+        assert len(prompt) == size and len(prompt.encode()) > size
+        if model == "codex":
+            Path(command[command.index("-o") + 1]).write_text(json.dumps(question()))
+            return CompletedProcess(command, 0, "", "")
+        return CompletedProcess(command, 0, json.dumps({"type": "result", "subtype": "success",
+                                "is_error": False, "structured_output": question()}), "")
+
+    monkeypatch.setattr(cli.subprocess, "run", fake)
+    assert cli._run_cli(model, prompt, cli.output_model(PmleQuestionSignature).model_json_schema(),
+                        PmleQuestionSignature, timeout=10) == question()
+    assert all(not path.exists() for path in seen)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_exit_error_keeps_redacted_size_diagnostic_and_prompt_counts(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "CLI_TEMP_ROOT", tmp_path)
+    prompt = "PRIVATE PROMPT: never retain this text"
+    stderr = ("Reading prompt from stdin...\n" + prompt + "\n"
+              "Authorization: Bearer PRIVATE-CREDENTIAL\n"
+              '\x1b[31mError: turn/start: turn/start failed: Input exceeds the maximum length of 1048576 characters. '
+              '(code -32602), data: {"input_error_code":"input_too_large","max_chars":1048576,"actual_chars":1058381}'
+              '\x1b[0m\n')
+    monkeypatch.setattr(cli.subprocess, "run", lambda command, **kwargs:
+                        CompletedProcess(command, 1, "PRIVATE RESPONSE", stderr))
+    with pytest.raises(cli.CLIExitError) as caught:
+        cli._run_cli("codex", prompt, {}, PmleQuestionSignature, timeout=10)
+    error = caught.value
+    assert error.returncode == 1
+    assert "Input exceeds the maximum length of 1048576 characters" in error.stderr_tail
+    assert "max_chars=1048576 actual_chars=1058381" in error.stderr_tail
+    assert f"prompt_chars={len(prompt)}" in str(error)
+    assert f"prompt_utf8_bytes={len(prompt.encode())}" in str(error)
+    assert "PRIVATE" not in str(error)
+    assert len(error.stderr_tail) <= cli.CLI_STDERR_TAIL_CHARS
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("stderr", [
+    "SECRET transport body",
+    'ERROR: {"message":"PRIVATE provider body","api_key":"SECRET"}',
+    "Authorization: Bearer SECRET\rCookie: session=PRIVATE",
+    "OPENAI_API_KEY=" + "SECRET" * 1000,
+    "https://PRIVATE:SECRET@example.test/path?token=SECRET",
+    "PRIVATE partial prompt echo with reordered fields",
+    "\x1b[31mPRIVATE\x1b[0m\x00SECRET",
+])
+def test_stderr_tail_unknown_lines_are_omitted_not_regex_trusted(stderr):
+    tail = cli._redacted_stderr_tail(stderr, "A complete frozen prompt")
+    assert tail == "[redacted]"
+    assert "SECRET" not in tail and "PRIVATE" not in tail
+
+
+def test_stderr_tail_is_bounded_after_redaction():
+    stderr = ("Authorization: " + "SECRET" * 1000 + "\n")
+    stderr += "Input exceeds the maximum length of 1048576 characters.\nunknown SECRET\n" * 200
+    tail = cli._redacted_stderr_tail(stderr, "")
+    assert len(tail) == cli.CLI_STDERR_TAIL_CHARS
+    assert tail.startswith("[truncated]\n")
+    assert "SECRET" not in tail
+
+
+@pytest.mark.parametrize("failure", ["timeout", "errno", "exit"])
+def test_oversized_prompt_file_is_removed_on_failure(monkeypatch, tmp_path, failure):
+    import errno
+
+    monkeypatch.setattr(cli, "CLI_TEMP_ROOT", tmp_path)
+    prompt = "x" * (cli.CODEX_MAX_PROMPT_CHARS + 1)
+
+    def fail(command, **kwargs):
+        paths = [json.loads(v.split("=", 1)[1]) for v in command if v.startswith("model_instructions_file=")]
+        assert len(paths) == 1 and Path(paths[0]).read_text() == prompt
+        if failure == "timeout":
+            raise TimeoutExpired(command, 10, stderr="PRIVATE stderr")
+        if failure == "errno":
+            raise OSError(errno.E2BIG, "PRIVATE local environment")
+        return CompletedProcess(command, 1, "PRIVATE response", "PRIVATE stderr")
+
+    monkeypatch.setattr(cli.subprocess, "run", fail)
+    expected = cli.CLITimeoutError if failure == "timeout" else cli.CLIExitError
+    with pytest.raises(expected) as caught:
+        cli._run_cli("codex", prompt, {}, PmleQuestionSignature, timeout=10)
+    if failure == "errno":
+        assert caught.value.errno == errno.E2BIG
+        assert "E2BIG" in str(caught.value)
+    assert "PRIVATE" not in str(caught.value)
+    assert list(tmp_path.iterdir()) == []
