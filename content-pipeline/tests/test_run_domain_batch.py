@@ -187,3 +187,123 @@ def test_full_pde_runner_routes_through_bounded_retry_admission(monkeypatch, tmp
     assert "Stored 2 DRAFT questions" in result.output
     accepted = tmp_path / ".cache/generation/data-engineer-v5-bounded.accepted-ids"
     assert accepted.read_text() == "draft-1\ndraft-2"
+
+
+def _saved_resume(tmp_path, monkeypatch, *, count=40):
+    import json
+    monkeypatch.setattr(batch, "PIPELINE", tmp_path)
+    artifact = tmp_path / ".cache/generation/data-engineer-v5-saved.json"
+    artifact.parent.mkdir(parents=True)
+    artifact.write_text(json.dumps({"cert_id": "data-engineer", "planned_count": count,
+                                    "plan": [{"objective_id": "fixture"}] * count,
+                                    "requested_objective_ids": []}))
+    artifact.with_suffix(".existing.json").write_text("[]")
+    artifact.with_suffix(".retry-report.json").write_text("{}")
+    artifact.with_name(artifact.stem + "-retry1.json").write_text("{}")
+    return artifact
+
+
+def test_resume_builds_commands_for_saved_location_without_fresh_collision_bypass(monkeypatch, tmp_path):
+    artifact = _saved_resume(tmp_path, monkeypatch, count=42)
+    target, export, commands = batch.batch_commands("all", "saved", "data-engineer", None, 2, resume=artifact)
+    assert target == artifact
+    assert export == artifact.with_suffix(".existing.json")
+    assert commands[0][commands[0].index("--n-questions") + 1] == "42"
+    with pytest.raises(ValueError, match="new tag"):
+        batch.batch_commands("all", "saved", "data-engineer", 42, 2)
+
+
+@pytest.mark.parametrize("section,cert,tag,count,plan_only", [
+    ("1.", "data-engineer", "saved", 40, False),
+    ("all", "cloud-engineer", "saved", 40, False),
+    ("all", "data-engineer", "other", 40, False),
+    ("all", "data-engineer", "saved", 41, False),
+    ("all", "data-engineer", "saved", 40, True),
+])
+def test_resume_rejects_scope_count_and_mode_changes(monkeypatch, tmp_path, section, cert, tag, count, plan_only):
+    artifact = _saved_resume(tmp_path, monkeypatch)
+    with pytest.raises(ValueError):
+        batch.batch_commands(section, tag, cert, count, 2, plan_only=plan_only, resume=artifact)
+
+
+def test_resume_requires_saved_bank_export(monkeypatch, tmp_path):
+    artifact = _saved_resume(tmp_path, monkeypatch)
+    artifact.with_suffix(".existing.json").unlink()
+    with pytest.raises(ValueError, match="saved bank"):
+        batch.batch_commands("all", "saved", "data-engineer", 40, 2, resume=artifact)
+
+
+@pytest.mark.parametrize("write", [False, True])
+def test_resume_cli_preserves_export_and_requires_explicit_write(monkeypatch, tmp_path, write):
+    from click.testing import CliRunner
+    from scripts import pde_retry
+    artifact = _saved_resume(tmp_path, monkeypatch)
+    monkeypatch.delenv("N", raising=False)
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "fixture-only")
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Resume must not replace the original bank export")
+    monkeypatch.setattr(batch, "export_questions", forbidden)
+    seen = []
+    def retry(target, export, commands, **kwargs):
+        seen.append(kwargs)
+        assert target == artifact
+        assert kwargs["resume"] is True
+        assert kwargs["write"] is write
+        assert kwargs["acknowledge_saved_system_failures"] is True
+        return {"waves": [{"selected_ids": ["draft-fixture"]}], "topics": [], "sections": []}
+    monkeypatch.setattr(pde_retry, "run_retry_batch", retry)
+    args = ["all", "saved", "data-engineer", "--resume", str(artifact), "--acknowledge-saved-system-failures"]
+    if write:
+        args += ["--write"]
+    result = CliRunner().invoke(batch.main, args)
+    assert result.exit_code == 0, result.output
+    assert len(seen) == 1
+    accepted = artifact.with_suffix(".accepted-ids")
+    assert accepted.exists() is write
+    if write:
+        assert accepted.read_text() == "draft-fixture"
+        assert "Stored 1 DRAFT" in result.output
+    else:
+        assert "no DRAFT writes" in result.output
+
+
+def test_saved_system_failure_acknowledgment_cannot_enable_fresh_run(monkeypatch, tmp_path):
+    from click.testing import CliRunner
+    monkeypatch.setattr(batch, "PIPELINE", tmp_path)
+    monkeypatch.delenv("N", raising=False)
+    result = CliRunner().invoke(batch.main, ["all", "fresh", "data-engineer", "--acknowledge-saved-system-failures"])
+    assert result.exit_code != 0
+    assert not (tmp_path / ".cache").exists()
+
+
+def test_resume_write_requires_coordinator_credentials_before_any_job(monkeypatch, tmp_path):
+    from click.testing import CliRunner
+    from scripts import pde_retry
+    artifact = _saved_resume(tmp_path, monkeypatch)
+    monkeypatch.delenv("N", raising=False)
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Missing coordinator credentials must stop before jobs")
+    monkeypatch.setattr(pde_retry, "run_retry_batch", forbidden)
+    result = CliRunner().invoke(batch.main, ["all", "saved", "data-engineer", "--resume", str(artifact), "--write"])
+    assert result.exit_code != 0
+    assert not artifact.with_suffix(".accepted-ids").exists()
+
+
+def test_resume_rejects_symlink_bank(monkeypatch, tmp_path):
+    artifact = _saved_resume(tmp_path, monkeypatch)
+    export = artifact.with_suffix(".existing.json")
+    real = tmp_path / "bank.json"
+    export.replace(real)
+    export.symlink_to(real)
+    with pytest.raises(ValueError, match="saved bank"):
+        batch.batch_commands("all", "saved", "data-engineer", 40, 2, resume=artifact)
+
+
+def test_resume_requires_artifact_owning_pipeline_for_future_generation(monkeypatch, tmp_path):
+    artifact = _saved_resume(tmp_path, monkeypatch)
+    monkeypatch.setattr(batch, "PIPELINE", tmp_path / "other-checkout")
+    with pytest.raises(ValueError, match="artifact-owning"):
+        batch.batch_commands("all", "saved", "data-engineer", 40, 2, resume=artifact)

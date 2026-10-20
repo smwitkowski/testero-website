@@ -1,5 +1,79 @@
 # Docs-grounded question process
 
+## PDE saved-wave resume (2026-10-20)
+
+The full-plan PDE runner accepts `--resume /absolute/path/to/<cert>-v5-<tag>.json`.
+Run it from the artifact-owning checkout with this code installed; future
+replacement artifacts must stay inside that pipeline's `.cache/generation`.
+It preserves the original bank export and never regenerates a saved wave. It
+validates the saved report, full-plan scope, contiguous wave slots, attempt cap,
+frozen retry manifests, request/verdict cohorts and absence of persistence
+journals before continuing. Already reviewed waves must reproduce their exact
+selected IDs. Saved unreviewed requests still need every independent gate.
+Only missing future retry waves may generate new candidates, within the original
+`--retry-attempts` limit. No extra attempt is granted by resuming.
+
+Resume defaults to **dry admission**, not persistence. It may run missing model
+judgments and future generation, so it is **not an offline preview**. Only the
+coordinator may append `--write`, after credential injection and serialization
+against all other PDE publishers. All waves must finish dry admission and the
+global option-balance replay before any DRAFT write. Nothing authorizes ACTIVE
+publication. Resume of writing/interrupted/persisted runs or any persistence
+journal is blocked for human reconciliation; this is not partial-write recovery.
+Do not replace the frozen bank export with a fresh export under the same name.
+The coordinator must confirm that the bank has not changed since that export;
+this command adds no concurrent-publication lock or bank-freshness claim.
+
+Ordinary decision, schema, duplicate and product-cap vetoes do not stop any
+wave. Provider/auth/transport failures, malformed verdicts, report/provenance
+errors and uncertain journals still stop automatic execution. A saved pre-judge
+documentation `ReadTimeout` can be kept as a **failed attempt**, never accepted,
+only with `--acknowledge-saved-system-failures`. Other system failures remain
+blocked for reconciliation. This explicit resume-only acknowledgment
+is recorded by candidate ID, failure stage and exception class. It does not
+relax future generation, external judgments or any acceptance gate.
+
+### pde3-1020 diagnosis and coordinator command
+
+The saved retry1 wave has 34 candidates: 17 awaiting external judging, 16 ordinary
+quality vetoes, and one `ReadTimeout` at `documentation`, candidate
+`6282eaaa-ffc0-5add-8486-d978a8eeeafe` (retry index 6, original slot 7).
+That transport failure correctly failed the quality-only continuation predicate.
+It was **not** an ordinary rejection misclassified by the runner. The run stopped
+before retry1 judging and before persistence. Generic `Batch stopped` text did not
+identify this cause, and the HQ wrapper's final `done` echo did not prove success.
+
+Wave1's 13 independent judge passes yielded only 6 dry-selected candidates.
+**All seven other passes were vetoed by the rolling BigQuery product cap**, not
+answer-pattern or scenario-duplicate checks. The 24-row bank had 12 attributed
+BigQuery rows and 3 unattributed legacy rows, which reserve capacity against every
+product. The enforced full-plan denominator was 40, so BigQuery's cap was 16:
+12 + 3 reserved left room for one new BigQuery answer. The highest-scored BigQuery
+pass (0.88, candidate `0cb2fa4c-c896-589d-8047-dcc97a345071`) survived, along with
+five non-BigQuery passes. The retry report now includes `selection_diagnostics`
+per wave, each non-selected judge pass's reason/checks, and the enforced product
+report. Its raw observed shares and historical attribution errors are distinct
+from the enforced bootstrap cap; they must not be described as a cap bypass.
+
+After this change is available in the artifact-owning checkout, the separately
+authorized coordinator can resume with the following command. Credentials must
+already be injected; this example does not fetch or print them. **Do not run the
+old HQ wrapper**: it has no resume flag and checks out `origin/main` itself.
+
+```sh
+cd /Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline
+content-pipeline/scripts/run-domain-batch.sh all pde3-1020 data-engineer \
+  --count 40 --parallel 2 --retry-attempts 2 \
+  --resume /Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline/.cache/generation/data-engineer-v5-pde3-1020.json \
+  --acknowledge-saved-system-failures --write
+```
+
+This judges the 17 saved retry1 requests, generates only a missing final retry
+wave if slots remain, runs dry admission/global replay, and then writes selected
+DRAFTs. Omit `--write` to stop after dry admission. Saved failures consume their
+existing attempt. New transport/provider failures stop again. No live calls,
+production writes or merge were used to implement or verify this change.
+
 ## PDE bounded accepted-output coverage (2026-10-20)
 
 The full-plan runner now reviews **all initial candidates before generating any
