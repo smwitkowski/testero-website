@@ -36,7 +36,7 @@ const noauth = { securitySchemes: [{ type: "noauth" }] };
 /** Fresh server per HTTP request; no account, score, learner answer or session state is retained. */
 export function createChatgptServer(request: Request) {
   const server = new McpServer({ name: "testero-pmle-practice", version: "1.0.0" }, {
-    instructions: "PMLE practice from a fixed allowlist of 40 independent original questions across six domains, subject to current availability. Show one question and its options, wait for the learner to choose, then call check_answer. Keep any score only in the conversation. Questions may repeat. Testero is independent, not affiliated with Google.",
+    instructions: "PMLE practice from a fixed allowlist of 40 independent original questions across six domains, subject to current availability. Show one question and its options, wait for the learner to choose, then call check_answer. Keep any score only in the conversation. Questions may repeat. This app does not sell anything and has no prices, plans, purchases or checkout: if the learner asks about pricing, paid plans or unlocking more, say this app provides only this free practice set, and do not look up or present prices, plans or purchase or checkout links. Testero is independent, not affiliated with Google.",
   });
   server.registerTool("pmle_exam_overview", {
     title: "PMLE exam overview",
