@@ -9,6 +9,21 @@ repair, and grounded bank audit with `--doc-context-chars N` (positive integer).
 Python source-aware APIs accept `doc_context_chars` or the budget builder's
 `max_chars`. No environment variable or live lookup is needed to select the cap.
 
+Before budgeting, localized copies (`hl` query, recognized locale path prefix, or
+explicit non-English language metadata) are omitted when a fetched English copy
+of that same final page exists. Prefer the unmarked English route over English
+locale variants. Keep distinct hosts, non-locale query bytes and paths separate;
+never guess language from prose or fetch a missing English page. Fresh fetches
+record valid explicit HTML `lang` tags; old snapshots without one remain valid.
+Locale-only families stay available when no English copy was fetched.
+
+Every omitted copy keeps its original hash, timestamp, full omitted offsets,
+`omission_reason: localized_duplicate`, and English representative in page
+metadata. Same-page discovery labels may transfer as navigation hints, never as
+text or evidence. A required receipt targeting an omitted locale fails closed;
+quotes and URLs are never translated or redirected. This also guards the writer's
+under-cap receipt-window path. Frozen external requests are not rewritten.
+
 The deterministic budget prioritizes documents discovered for the planned correct
 answer and each distractor, then lexical action/constraint/rejection-reason
 matches, then shared/overview pages. Discovery labels and lexical scores are
@@ -55,10 +70,14 @@ env -i PATH="$PATH" HOME="$HOME" uv run python scripts/probe_cli_input_limit.py 
   --artifact /absolute/path/to/artifact.json --rebuild-only
 ```
 
-The saved PDE section-1 replay shrank from **1,058,381 chars / 1,122,852 UTF-8
-bytes** to **410,324 chars / 451,526 bytes** at the default doc cap. Its documentation
-view shrank from 1,048,057 to 400,000 characters. The primary English BigQuery
-access-control page remains complete (245,895 source characters). Native isolated
+The saved PDE section-1 English-first replay is **300,579 chars / 300,587 UTF-8
+bytes**, down from the previous budget-only 410,324 chars / 451,526 bytes and the
+original **1,058,381 chars / 1,122,852 bytes**. The documentation view is now
+**290,255 characters**, rather than the previous 400,000 (original 1,048,057).
+All three localized access-control copies (Japanese, Portuguese, Spanish) are
+omitted before budgeting. All three English pages remain complete, including the
+245,895-character primary BigQuery page; 6 fetched pages yield 3 supplied pages.
+The stored artifact and all fetched text/hashes remain unchanged. Native isolated
 Codex 0.160.0 rejects the unbudgeted request locally at 1,048,576 characters with
 no fixture-provider request; the budgeted request arrives intact at **user** role,
 with the same schema/model/reasoning and canned strict output. This is transport

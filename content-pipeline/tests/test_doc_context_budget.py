@@ -309,3 +309,173 @@ def test_quote_checker_rejects_source_hash_tampering():
     metadata = build_documentation_context(sources)["metadata"]
     sources[0]["text"] += " tampered"
     assert not quote_in_context({"url": sources[0]["url"], "quote": "exact quote"}, sources, metadata)
+
+
+# Localization is a view-selection policy, not a rewrite of fetched evidence.
+def localized_source(url, text, **metadata):
+    return {**source("bigquery", text), "url": url, "requested_url": url, **metadata}
+
+
+@pytest.mark.parametrize("variant", [
+    "https://docs.cloud.google.com/bigquery/docs/guide?hl=ja",
+    "https://docs.cloud.google.com/bigquery/docs/guide?hl=pt-br",
+    "https://docs.cloud.google.com/bigquery/docs/guide?hl=es-419",
+    "https://docs.cloud.google.com/bigquery/docs/guide?hl=en-US",
+    "https://docs.cloud.google.com/bigquery/docs/guide?%68l=fr",
+    "https://docs.cloud.google.com/ja/bigquery/docs/guide",
+    "https://docs.cloud.google.com/intl/pt-br/bigquery/docs/guide",
+    "https://docs.cloud.google.com/bigquery/docs/ja/guide",
+])
+def test_localized_duplicates_drop_before_budget_even_with_spare_capacity(variant):
+    english = source("bigquery", "English decisive evidence.")
+    translated = localized_source(variant, "Localized copy must never fill spare context.")
+    sources = [translated, english]  # English preference is not source-order preference.
+    original = deepcopy(sources)
+    result = build_documentation_context(sources, max_chars=100_000)
+    assert result["context"] == documentation_context([english])
+    assert "Localized copy" not in result["context"]
+    assert sources == original
+    page = result["metadata"]["pages"][0]
+    assert page["omitted"] and page["status"] == "omitted"
+    assert page["omission_reason"] == "localized_duplicate"
+    assert page["duplicate_of"] == {key: english[key] for key in ("url", "text_sha256", "retrieved_at")}
+    assert page["retained_offsets"] == []
+    assert page["trimmed_spans"] == [[0, len(translated["text"])]]
+    assert result["metadata"]["localized_duplicates_dropped"] == 1
+    assert result["metadata"]["post_deduplication_pages"] == 1
+    assert_audit(result, sources, 100_000)
+
+
+def test_locales_cannot_resurrect_as_option_representatives_or_budget_filler():
+    english = source("bigquery", "BigQuery authorized views English evidence. " * 250)
+    translated = localized_source(english["url"] + "?hl=ja", "Localized quote. " * 2000,
+                                   discovery_options=["A", "B", "C", "D"])
+    result = build_documentation_context([translated, english], max_chars=1500, plan=plan())
+    assert len(result["context"]) <= 1500
+    page = result["metadata"]["pages"][0]
+    assert page["omitted"] and not page["mandatory_options"]
+    assert "Localized quote" not in result["context"]
+    assert_audit(result, [translated, english], 1500)
+
+
+@pytest.mark.parametrize("language", ["ja", "fr-CA", "zh-Hant", "pt-BR"])
+def test_explicit_nonenglish_metadata_beats_english_url_hint(language):
+    english = source("bigquery", "English source.")
+    other = localized_source(english["url"] + "?hl=en", "Not English.", language=language)
+    result = build_documentation_context([other, english])
+    assert result["context"] == documentation_context([english])
+    assert language.casefold() in result["metadata"]["pages"][0]["locale_hints"]
+
+
+def test_metadata_only_language_and_fragment_do_not_invent_separate_http_page():
+    english = source("bigquery", "English default source.", language="en-US-u-ca-gregory")
+    translated = localized_source(english["url"] + "#localized", "Localized fragment record.", language="ja")
+    result = build_documentation_context([english, translated])
+    assert result["context"] == documentation_context([english])
+    assert result["metadata"]["pages"][1]["omission_reason"] == "localized_duplicate"
+
+
+def test_localized_english_is_kept_when_it_is_the_only_english_version():
+    en = localized_source("https://docs.cloud.google.com/bigquery/docs/guide?hl=en-US", "English regional source.")
+    ja = localized_source("https://docs.cloud.google.com/bigquery/docs/guide?hl=ja", "Japanese source.")
+    result = build_documentation_context([ja, en])
+    assert result["context"] == documentation_context([en])
+    assert result["metadata"]["pages"][1]["status"] == "full"
+
+
+@pytest.mark.parametrize("url,metadata", [
+    ("https://docs.cloud.google.com/bigquery/docs/guide?hl=ja", {}),
+    ("https://docs.cloud.google.com/intl/fr/bigquery/docs/guide", {"language": "fr"}),
+    ("https://docs.cloud.google.com/bigquery/docs/guide", {"language": "ja"}),
+])
+def test_only_locale_without_fetched_english_is_not_discarded(url, metadata):
+    sources = [localized_source(url, "Only fetched source.", **metadata)]
+    result = build_documentation_context(sources)
+    assert result["context"] == documentation_context(sources)
+    assert result["metadata"]["pages"][0]["status"] == "full"
+    assert "localized_duplicates_dropped" not in result["metadata"]
+
+
+@pytest.mark.parametrize("variant", [
+    "https://docs.cloud.google.com/bigquery/docs/other?hl=ja",
+    "https://docs.cloud.google.com/bigquery/docs/guide/?hl=ja",
+    "https://docs.cloud.google.com/BigQuery/docs/guide?hl=ja",
+    "https://docs.cloud.google.com/bigquery/docs/guide?product=other&hl=ja",
+    "https://cloud.google.com/bigquery/docs/guide?hl=ja",
+    "https://docs.cloud.google.com/project-id/bigquery/docs/guide",
+])
+def test_different_final_pages_are_not_guessed_to_be_translations(variant):
+    en = source("bigquery", "English source.")
+    other = localized_source(variant, "Distinct fetched page.")
+    # The fetcher's requested URL must remain a discovery-host URL.
+    other["requested_url"] = other["url"].replace("https://cloud.google.com/", "https://docs.cloud.google.com/")
+    result = build_documentation_context([en, other])
+    assert result["context"] == documentation_context([en, other])
+    assert all(not page["omitted"] for page in result["metadata"]["pages"])
+
+
+def test_nonlocale_query_bytes_order_and_values_stay_part_of_identity():
+    en = localized_source("https://docs.cloud.google.com/bigquery/docs/guide?a=%2F&b=2", "English exact query.")
+    ja = localized_source("https://docs.cloud.google.com/bigquery/docs/guide?hl=ja&a=%2F&b=2", "Drop translated query.")
+    different = localized_source("https://docs.cloud.google.com/bigquery/docs/guide?hl=ja&b=2&a=%2F", "Keep distinct query order.")
+    result = build_documentation_context([en, ja, different])
+    assert result["metadata"]["pages"][1]["omitted"]
+    assert not result["metadata"]["pages"][2]["omitted"]
+
+
+@pytest.mark.parametrize("receipt_alias", ["url", "requested_url"])
+def test_localized_quote_receipt_fails_closed_instead_of_rerouting_to_english(receipt_alias):
+    en = source("bigquery", "Same exact quote.")
+    ja = localized_source(en["url"] + "?hl=ja", "Same exact quote.")
+    ja["requested_url"] += "&request=1"
+    with pytest.raises(DocumentationBudgetError, match="localized duplicate"):
+        build_documentation_context([en, ja], receipts=[{"url": ja[receipt_alias], "quote": "Same exact quote."}])
+    result = build_documentation_context([en, ja])
+    assert quote_in_context({"url": en["url"], "quote": "Same exact quote."}, [en, ja], result["metadata"])
+    assert not quote_in_context({"url": ja["url"], "quote": "Same exact quote."}, [en, ja], result["metadata"])
+
+
+def test_url_less_plan_quotes_only_protect_eligible_english_text():
+    en = source("bigquery", "Shared exact quote.")
+    ja = localized_source(en["url"] + "?hl=ja", "Shared exact quote. Localized only quote.")
+    result = build_documentation_context([en, ja], plan={"decisive_quote": "Shared exact quote."})
+    assert result["metadata"]["pages"][0]["required_quote_offsets"]
+    assert not result["metadata"]["pages"][1]["required_quote_offsets"]
+    with pytest.raises(DocumentationBudgetError, match="Required quote"):
+        build_documentation_context([en, ja], plan={"decisive_quote": "Localized only quote."})
+
+
+def test_invalid_localized_hash_and_conflicting_aliases_still_block():
+    en = source("bigquery", "English source.")
+    ja = localized_source(en["url"] + "?hl=ja", "Localized source.")
+    bad = {**ja, "text_sha256": "0" * 64}
+    with pytest.raises(DocumentationError, match="inconsistent"):
+        build_documentation_context([en, bad])
+    conflicting = localized_source(ja["url"], "Conflicting localized fetch.")
+    with pytest.raises(DocumentationBudgetError, match="Conflicting fetched URL aliases"):
+        build_documentation_context([en, ja, conflicting])
+
+
+def test_known_nonenglish_language_cannot_be_an_english_representative():
+    not_english = source("bigquery", "Not an English fetch.", language="ja")
+    fr = localized_source(not_english["url"] + "?hl=fr", "French source.")
+    result = build_documentation_context([not_english, fr])
+    assert result["context"] == documentation_context([not_english, fr])
+    assert "localized_duplicates_dropped" not in result["metadata"]
+
+
+def test_localized_discovery_labels_preserve_english_navigation_not_evidence():
+    english = source("bigquery", "English source fact.", discovery_options=["A"])
+    japanese = localized_source(english["url"] + "?hl=ja", "Localized different text.", discovery_options=["B"])
+    sources = [japanese, english]
+    original = deepcopy(sources)
+    result = build_documentation_context(sources)
+    assert result["context"] == documentation_context([english])
+    assert sources == original
+    kept = result["metadata"]["pages"][1]
+    assert kept["mandatory_options"] == ["A", "B"]
+    assert kept["inherited_discovery_options"] == ["B"]
+    assert kept["required_quote_offsets"] == []
+    assert "localized_aliases" in kept["priority_basis"]
+    assert result["metadata"]["pages"][0]["duplicate_of_index"] == 1
+    assert not quote_in_context({"url": japanese["url"], "quote": "Localized different text."}, sources, result["metadata"])

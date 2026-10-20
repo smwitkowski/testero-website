@@ -10,7 +10,7 @@ import hashlib
 import re
 from bisect import bisect_right
 from collections.abc import Mapping
-from urllib.parse import unquote
+from urllib.parse import unquote, unquote_plus, urlsplit
 
 from shared.doc_search import DocumentationError, documentation_context
 
@@ -23,6 +23,87 @@ _WORD = re.compile(r"[a-zA-Z][a-zA-Z0-9_]*")
 
 class DocumentationBudgetError(DocumentationError):
     """Required documentation cannot be represented safely within the budget."""
+
+
+# Only documented locale positions are removed; product/resource path segments,
+# non-locale query bytes/order, host, path case and trailing slash stay distinct.
+_GOOGLE_LOCALES = frozenset("ar bg bn ca cs da de el en en-us en-gb es es-419 et fa fi fil fr he hi hr hu id it iw ja ko lt lv ms nl no pl pt pt-br pt-pt ro ru sk sl sr sv ta te th tr uk vi zh zh-cn zh-tw".split())
+_LANGUAGE_TAG = re.compile(r"[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*")
+
+
+def _locale_profile(source):
+    """Use final fetched identity and explicit locale hints, not language guesses."""
+    parsed = urlsplit(source["url"])
+    parts = parsed.path.split("/")
+    locales = []
+    if len(parts) > 2 and parts[1].casefold() == "intl" and parts[2].casefold() in _GOOGLE_LOCALES:
+        locales.append(parts[2].casefold())
+        parts = ["", *parts[3:]]
+    elif len(parts) > 1 and parts[1].casefold() in _GOOGLE_LOCALES:
+        locales.append(parts[1].casefold())
+        parts = ["", *parts[2:]]
+    # Google docs can place a locale immediately after the /docs/ marker.
+    for index in range(1, len(parts) - 1):
+        if parts[index] == "docs" and parts[index + 1].casefold() in _GOOGLE_LOCALES:
+            locales.append(parts.pop(index + 1).casefold())
+            break
+    remaining, has_hl = [], False
+    for item in parsed.query.split("&") if parsed.query else []:
+        key, _, value = item.partition("=")
+        if unquote_plus(key).casefold() == "hl":
+            has_hl = True
+            locales.append(unquote_plus(value).casefold().replace("_", "-"))
+        else:
+            remaining.append(item)
+    declared = []
+    for key in ("language", "lang", "html_lang", "content_language"):
+        value = source.get(key)
+        if value is None:
+            continue
+        if not isinstance(value, str) or not _LANGUAGE_TAG.fullmatch(value.replace("_", "-")):
+            raise DocumentationBudgetError("Invalid fetched source language metadata")
+        declared.append(value.casefold().replace("_", "-"))
+    hints = [*locales, *declared]
+    # Unmarked official docs use the default English route. An explicit unknown
+    # or non-English hint must never be used as the English representative.
+    english = all(tag.split("-", 1)[0] == "en" for tag in hints)
+    return {"key": (parsed.netloc, "/".join(parts), "&".join(remaining)),
+            "english": english, "variant": bool(has_hl or locales or any(tag.split("-", 1)[0] != "en" for tag in declared)),
+            "locale_hints": hints}
+
+
+def localized_documentation_duplicates(sources):
+    """Map localized variants to a fetched English representative, without mutation.
+
+    Fragments do not identify separate HTTP documents. Hosts are not folded:
+    only equivalent final fetched paths on the same host can be duplicates.
+    A locale-only family stays available when no English record was fetched.
+    """
+    documentation_context(sources)
+    alias_text = {}
+    for source in sources:
+        for alias in (source["url"], source["requested_url"]):
+            if alias in alias_text and alias_text[alias] != source["text"]:
+                raise DocumentationBudgetError("Conflicting fetched URL aliases")
+            alias_text[alias] = source["text"]
+    profiles = [_locale_profile(source) for source in sources]
+    representatives = {}
+    for index, profile in enumerate(profiles):
+        if profile["english"]:
+            rank = (profile["variant"], index)
+            prior = representatives.get(profile["key"])
+            if prior is None or rank < prior[0]:
+                representatives[profile["key"]] = (rank, index)
+    dropped = {}
+    for index, profile in enumerate(profiles):
+        representative = representatives.get(profile["key"])
+        if profile["variant"] and representative is not None and representative[1] != index:
+            kept = sources[representative[1]]
+            dropped[index] = {"omission_reason": "localized_duplicate",
+                              "duplicate_of_index": representative[1],
+                              "locale_hints": profile["locale_hints"],
+                              "duplicate_of": {key: kept[key] for key in ("url", "text_sha256", "retrieved_at")}}
+    return dropped
 
 
 def _record(value):
@@ -255,11 +336,16 @@ def build_documentation_context(sources, *, max_chars=DEFAULT_DOC_CONTEXT_CHARS,
 
     Explicit receipts require URL and quote strings. Nested plan fields named
     ``quote``, ``*_quote``, ``quotes`` or ``*_quotes`` are also protected. A plan
-    quote without a URL protects every matching fetched page. Matching is case-
+    quote without a URL protects every matching eligible page. Matching is case-
     sensitive with whitespace normalization; retained spans keep original raw
     whitespace. URL aliases use fetched provenance only.
 
-    The strongest page for every discovered/planned option is mandatory. Scores
+    Localized URL/language variants are omitted before budgeting when a fetched
+    English version of that same final page exists. Originals stay immutable and
+    omitted-page metadata records the English representative. Required localized
+    receipts fail closed; they are never rewritten as English evidence.
+
+    The strongest eligible page for every discovered/planned option is mandatory. Scores
     use discovery labels then action-token overlap (URL tokens weighted above
     body tokens); they are not semantic relevance or support judgments. On tiny
     budgets mandatory pages may contain only an anchor token and required quotes.
@@ -296,9 +382,32 @@ def build_documentation_context(sources, *, max_chars=DEFAULT_DOC_CONTEXT_CHARS,
             if any(p["source"]["text"] != text for p in prior):
                 raise DocumentationBudgetError("Conflicting fetched URL aliases")
             prior.append(page)
+    # Validate every original source/alias above before removing localized views.
+    # Drop before option scoring, quote selection and budgeting; never resurrect a
+    # localized copy to fill spare budget or silently redirect one of its receipts.
+    localized_duplicates = localized_documentation_duplicates(sources)
+    for page in pages:
+        if page["index"] in localized_duplicates:
+            page["spans"] = []
+            page["localized_duplicate"] = localized_duplicates[page["index"]]
+    active_pages = [page for page in pages if "localized_duplicate" not in page]
+    deduplicated_context = _render(pages) if localized_duplicates else full_context
+    for page in pages:
+        if "localized_duplicate" not in page:
+            continue
+        representative = pages[page["localized_duplicate"]["duplicate_of_index"]]
+        labels = page["source"].get("discovery_options", [])
+        if labels:
+            # Same-page discovery labels are navigation hints only. Preserve
+            # coverage without transferring localized text, quotes or provenance.
+            inherited = set(representative.get("inherited_discovery_options", [])) | set(labels)
+            representative["inherited_discovery_options"] = sorted(inherited)
+            for label in labels:
+                representative["scores"][label] = max(representative["scores"].get(label, 0), 10_000)
+            representative["priority"] = max(representative["priority"], 100_000)
     # Cover every option with evidence of discovery or nonzero lexical overlap.
     for label in "ABCD":
-        relevant = [p for p in pages if p["scores"].get(label, 0) > 0]
+        relevant = [p for p in active_pages if p["scores"].get(label, 0) > 0]
         if relevant:
             page = min(relevant, key=lambda p: (-p["scores"][label], -p["priority"], len(p["source"]["text"]), p["index"]))
             page["mandatory_options"].append(label)
@@ -316,7 +425,10 @@ def build_documentation_context(sources, *, max_chars=DEFAULT_DOC_CONTEXT_CHARS,
         if url is not None and (not isinstance(url, str) or url not in aliases):
             raise DocumentationBudgetError("Required quote URL was not fetched")
         pattern = _quote_pattern(quote)
-        matches = [(p, pattern.search(p["source"]["text"])) for p in (aliases[url] if url is not None else pages)]
+        candidates = aliases[url] if url is not None else active_pages
+        if url is not None and all("localized_duplicate" in page for page in candidates):
+            raise DocumentationBudgetError("Required quote refers to a localized duplicate omitted in favor of English")
+        matches = [(p, pattern.search(p["source"]["text"])) for p in candidates if "localized_duplicate" not in p]
         matches = [(page, match) for page, match in matches if match is not None]
         if not matches:
             raise DocumentationBudgetError("Required quote does not match fetched text (case-sensitive, whitespace-normalized)")
@@ -337,7 +449,7 @@ def build_documentation_context(sources, *, max_chars=DEFAULT_DOC_CONTEXT_CHARS,
         # from starving smaller distractor pages based on incidental token scores.
         if page["mandatory"]:
             page["priority"] = 1_000_000
-    context = full_context
+    context = deduplicated_context
     if len(context) > max_chars:
         minimum_pages = [{**p, "spans": p["minimum"] if p["mandatory"] else []} for p in pages]
         minimum_chars = len(_render(minimum_pages))
@@ -353,7 +465,7 @@ def build_documentation_context(sources, *, max_chars=DEFAULT_DOC_CONTEXT_CHARS,
             page["floor"] = (min(full_size, max(minimum_size, min(16_000, minimum_size + fair_extra)))
                              if page["mandatory"] else 0)
         # Trim lower priority first, longest page first on equal priority.
-        for page in sorted(pages, key=lambda p: (p["priority"], -len(p["source"]["text"]), p["index"])):
+        for page in sorted(active_pages, key=lambda p: (p["priority"], -len(p["source"]["text"]), p["index"])):
             if len(context) <= max_chars:
                 break
             old_size = len(_render_page(page, page["spans"]))
@@ -379,15 +491,23 @@ def build_documentation_context(sources, *, max_chars=DEFAULT_DOC_CONTEXT_CHARS,
             "url": source["url"], "requested_url": source["requested_url"],
             "text_sha256": source["text_sha256"], "retrieved_at": source["retrieved_at"],
             "before_chars": len(source["text"]), "after_chars": sum(end - start for start, end in spans),
-            "priority": page["priority"], "priority_basis": "discovery_options_then_lexical_action_overlap",
+            "priority": page["priority"], "priority_basis": (
+                "discovery_options_including_localized_aliases_then_lexical_action_overlap"
+                if page.get("inherited_discovery_options") else "discovery_options_then_lexical_action_overlap"),
+            **({"inherited_discovery_options": page["inherited_discovery_options"]}
+               if page.get("inherited_discovery_options") else {}),
             "option_scores": page["scores"], "mandatory_options": page["mandatory_options"],
             "required_quote_offsets": [list(span) for span in page["required"]],
             "retained_offsets": [list(span) for span in spans], "trimmed_spans": omitted,
             "status": "omitted" if not spans else "trimmed" if omitted else "full",
             "omitted": not bool(spans), "trimmed": bool(omitted),
+            **page.get("localized_duplicate", {}),
         })
     return {"context": context, "metadata": {
         "version": BUDGET_VERSION, "max_chars": max_chars, "before_chars": len(full_context),
         "after_chars": len(context), "before_pages": len(pages),
         "after_pages": sum(bool(p["spans"]) for p in pages), "pages": metadata_pages,
+        **({"localized_duplicates_dropped": len(localized_duplicates),
+            "post_deduplication_chars": len(deduplicated_context),
+            "post_deduplication_pages": len(active_pages)} if localized_duplicates else {}),
     }}

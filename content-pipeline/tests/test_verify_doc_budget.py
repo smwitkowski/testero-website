@@ -142,3 +142,35 @@ def test_custom_cap_reaches_writer_citation_and_frozen_request(pipeline, monkeyp
         assert entry["documentation_contexts"][stage]["after_chars"] <= 20000
     request = json.loads((output / entry["external_judge_request"]["path"]).read_text())
     assert request["trimming"]["documentation_context_budget"]["max_chars"] == 20000
+
+
+@pytest.mark.parametrize("with_english", [True, False])
+def test_writer_under_cap_never_uses_localized_receipts_when_english_exists(with_english):
+    english = page("English receipt anchor.", "bigquery/docs/access-control")
+    japanese = page("Japanese receipt anchor.", "bigquery/docs/access-control?hl=ja")
+    sources = [english, japanese] if with_english else [japanese]
+    receipts = [{"option_label": label, "url": japanese["url"], "quote": "Japanese receipt anchor."} for label in "ABCD"]
+    original = deepcopy(sources)
+    if with_english:
+        from shared.doc_context_budget import DocumentationBudgetError
+        with pytest.raises(DocumentationBudgetError, match="localized duplicate"):
+            planner.writer_documentation_context(sources, {"passed": True, "reasons": receipts})
+    else:
+        context = planner.writer_documentation_context(sources, {"passed": True, "reasons": receipts})
+        assert "Japanese receipt anchor." in context
+    assert sources == original
+
+
+def test_writer_under_cap_records_unused_locale_drop_without_changing_english_prompt():
+    english = page("English receipt anchor.", "bigquery/docs/access-control")
+    japanese = page("Japanese receipt anchor.", "bigquery/docs/access-control?hl=ja")
+    receipts = [{"option_label": label, "url": english["url"], "quote": "English receipt anchor."} for label in "ABCD"]
+    proof = {"passed": True, "reasons": receipts}
+    expected = planner.writer_documentation_context([english], proof)
+    metadata = {}
+    context = planner.writer_documentation_context([japanese, english], proof, budget_metadata=metadata)
+    assert context == expected
+    assert metadata["localized_duplicates_dropped"] == 1
+    assert metadata["pages"][0]["omission_reason"] == "localized_duplicate"
+    assert metadata["pages"][0]["omitted"] and metadata["pages"][0]["retained_offsets"] == []
+    assert metadata["pages"][0]["duplicate_of"]["text_sha256"] == english["text_sha256"]

@@ -21,7 +21,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse, urlunparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-from shared.cert_registry import content_node
+from shared.cert_registry import Document, content_node
 
 logger = logging.getLogger(__name__)
 DISCOVERY_HOST = "docs.cloud.google.com"
@@ -226,6 +226,34 @@ def _transient_fetch_error(exc: OSError) -> bool:
     }
 
 
+def _html_language(html: str) -> str | None:
+    """Read one explicit, well-formed HTML language tag; never infer from text.
+
+    Accept ordinary BCP 47 language tags, including script, region, variants,
+    extensions and private-use suffixes. Missing, malformed and private-use-only
+    tags remain unknown. No registry or language lookup runs.
+    """
+    node = next((node for node in Document(html).root.walk() if node.tag == "html"), None)
+    value = node.attrs.get("lang") if node is not None else None
+    if not isinstance(value, str):
+        return None
+    value = value.strip()
+    match = re.fullmatch(
+        r"(?:[a-z]{2,3}(?:-[a-z]{3}){0,3}|[a-z]{4}|[a-z]{5,8})"
+        r"(?:-[a-z]{4})?(?:-(?:[a-z]{2}|[0-9]{3}))?"
+        r"(?P<variants>(?:-(?:[a-z0-9]{5,8}|[0-9][a-z0-9]{3}))*)"
+        r"(?P<extensions>(?:-[0-9a-wy-z](?:-[a-z0-9]{2,8})+)*)"
+        r"(?:-x(?:-[a-z0-9]{1,8})+)?", value, re.I | re.ASCII,
+    )
+    if match is None:
+        return None
+    variants = match["variants"].lower().split("-")[1:]
+    extensions = re.findall(r"-([0-9a-wy-z])(?=-)", match["extensions"], re.I)
+    if len(variants) != len(set(variants)) or len(extensions) != len(set(tag.lower() for tag in extensions)):
+        return None
+    return value
+
+
 def _fetch_documentation(url: str) -> dict:
     requested_url = approved_documentation_url(url, discovery=True)
     for attempt in range(2):
@@ -251,13 +279,17 @@ def _fetch_documentation(url: str) -> dict:
     text = content_node(html).text()
     if not text:
         raise DocumentationError("Fetched documentation has no content")
-    return {
+    source = {
         "requested_url": requested_url,
         "url": final_url,
         "text": text,
         "retrieved_at": datetime.now(timezone.utc).isoformat(),
         "text_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
     }
+    language = _html_language(html)
+    if language is not None:
+        source["language"] = language
+    return source
 
 
 def _moved_documentation_urls(url: str) -> list[str]:

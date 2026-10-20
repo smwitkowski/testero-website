@@ -11,7 +11,8 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from shared.doc_search import documentation_context
 from shared.doc_context_budget import (DEFAULT_DOC_CONTEXT_CHARS, DocumentationBudgetError,
-                                       build_documentation_context, quote_in_context)
+                                       build_documentation_context, quote_in_context,
+                                       localized_documentation_duplicates)
 from shared.evidence import OptionEvidence, check_evidence
 
 Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
@@ -338,9 +339,16 @@ def writer_documentation_context(sources, proof, *, doc_context_chars=DEFAULT_DO
     checked = check_evidence(receipts, sources)
     if not checked["passed"]:
         raise DecisionVetoError("Verifier receipts failed mechanical checks")
+    localized_duplicates = localized_documentation_duplicates(sources)
+    dropped_aliases = {source[key] for index, source in enumerate(sources) if index in localized_duplicates
+                       for key in ("url", "requested_url")}
+    if any(receipt["url"] in dropped_aliases for receipt in receipts):
+        raise DocumentationBudgetError("Verifier receipt refers to a localized duplicate omitted in favor of English")
     sections = ["Official fetched Google Cloud documentation excerpts (quote only this text):"]
     offsets = {}
-    for source in sources:
+    for index, source in enumerate(sources):
+        if index in localized_duplicates:
+            continue
         relevant = [row for row in receipts
                     if row["url"] in (source["url"], source["requested_url"])]
         if not relevant:
@@ -375,6 +383,10 @@ def writer_documentation_context(sources, proof, *, doc_context_chars=DEFAULT_DO
         context, metadata = bundle["context"], bundle["metadata"]
     else:
         metadata = _view_metadata(sources, context, offsets, doc_context_chars, "writer_receipt_windows")
+        if localized_duplicates:
+            metadata["localized_duplicates_dropped"] = len(localized_duplicates)
+            for index, omission in localized_duplicates.items():
+                metadata["pages"][index].update(omission)
     if budget_metadata is not None:
         budget_metadata.update(metadata)
     return context
