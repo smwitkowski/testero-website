@@ -33,7 +33,7 @@ describe("SEO function contracts", () => {
     expect(catalog.blog).toHaveLength(17);
     expect(catalog.faq).toHaveLength(9);
     const entries = sitemap();
-    const indexable = publicPaths.filter(path => path !== "/terms" && path !== "/privacy");
+    const indexable = publicPaths; // legal pages are approved, so they are indexable
     expect(entries.map(entry => entry.url)).toEqual(indexable.map(canonicalUrl));
     expect(entries).toHaveLength(indexable.length);
     expect(entries.map(entry => entry.url)).toContain(canonicalUrl("/blog/google-cloud-certification-path"));

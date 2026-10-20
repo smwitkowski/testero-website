@@ -136,10 +136,10 @@ describe("legal approval gate", () => {
     expect(entry.approved).toBe(true);
     expect(entry.body).toBe("## Approved terms\n\nText");
   });
-  it("keeps both checked-in legal placeholders gated", () => {
+  it("publishes both checked-in legal documents without draft markers", () => {
     for (const kind of ["terms", "privacy"] as const) {
-      expect(getLegalDocument(kind).approved).toBe(false);
-      expect(getLegalDocument(kind).body).toContain("before launch");
+      expect(getLegalDocument(kind).approved).toBe(true);
+      expect(getLegalDocument(kind).body).not.toMatch(/TODO|not approved|Draft for/i);
     }
   });
 });
