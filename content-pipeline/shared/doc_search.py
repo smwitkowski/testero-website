@@ -349,24 +349,29 @@ def search_objective_docs(objective_text: str, services: list[str], *,
     # Focus each option separately so the main product cannot crowd out alternatives.
     # A run-local cache also bounds repeated URLs across the five discovery queries.
     cache = cache if cache is not None else DocumentationCache()
-    targets = [(decision_discovery_text(objective_text, decision_plan), 5)]
+    targets = [(decision_discovery_text(objective_text, decision_plan), 5, None)]
     actions = [(decision_plan["best_action"], " ".join(decision_plan["decisive_constraints"]))]
     actions.extend((mistake["action"], mistake["scenario_reason"]) for mistake in decision_plan["mistakes"])
-    for action, reason in actions:
+    for label, (action, reason) in zip("ABCD", actions):
         targets.append(("Engineering decision: Verify this option's named Google Cloud products and capabilities."
                         + "\nPlanned action: " + action + "\nTradeoff to verify: " + reason
                         + "\nOfficial overview capability limitations support lifecycle documentation",
-                        OPTION_DOCUMENT_LIMIT))
+                        OPTION_DOCUMENT_LIMIT, label))
     sources = []
-    for target, limit in targets:
+    for target, limit, label in targets:
         fetched = _search_objective_docs(target, services if limit == 5 else [], limit, cache=cache,
             objective_id=objective_id, allow_empty=True)
         for source in fetched:
             previous = next((row for row in sources if row["url"] == source["url"]), None)
             if previous is None:
-                sources.append(source)
+                # Discovery labels are priority hints, never evidence of support.
+                sources.append({**source, "discovery_kind": "option" if label else "overview",
+                                "discovery_options": [label] if label else []})
             elif previous["text_sha256"] != source["text_sha256"]:
                 raise DocumentationError("Conflicting text for one final documentation URL")
+            elif label and label not in previous["discovery_options"]:
+                previous["discovery_options"].append(label)
+                previous["discovery_kind"] = "option"
     if not sources:
         raise DocumentationError("No official documentation was successfully fetched")
     return sources
@@ -393,11 +398,17 @@ def documentation_context(sources: list[dict]) -> str:
 
 
 def search_google_docs(topic: str, services: list[str], num_results: int = 5,
-                       subsection_considerations: list[str] | None = None) -> tuple[str, list[str]]:
+                       subsection_considerations: list[str] | None = None, *,
+                       doc_context_chars: int | None = None, budget_metadata: dict | None = None) -> tuple[str, list[str]]:
     """Compatibility wrapper. Never guess URLs or return unfetched snippets."""
     objective_text = " ".join([topic] + (subsection_considerations or []))
     sources = _search_objective_docs(objective_text, services, num_results)
-    return documentation_context(sources), list(dict.fromkeys(s["url"] for s in sources))
+    from shared.doc_context_budget import DEFAULT_DOC_CONTEXT_CHARS, build_documentation_context
+    bundle = build_documentation_context(sources, max_chars=(
+        DEFAULT_DOC_CONTEXT_CHARS if doc_context_chars is None else doc_context_chars))
+    if budget_metadata is not None:
+        budget_metadata.update(bundle["metadata"])
+    return bundle["context"], list(dict.fromkeys(s["url"] for s in sources))
 
 
 search_google_docs_with_exa = search_google_docs

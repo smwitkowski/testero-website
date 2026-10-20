@@ -22,7 +22,7 @@ from shared.parallel import run_bounded
 from shared.batch_report import option_length_report, option_prefix_report
 from shared.dedupe import normalize_stem
 from shared.option_order import store_options
-from shared.doc_search import documentation_context
+from shared.doc_context_budget import DEFAULT_DOC_CONTEXT_CHARS, build_documentation_context, quote_in_context
 from shared.evidence import check_evidence
 from shared.external_judge import (
     build_request, candidate_id as content_candidate_id, candidate_question,
@@ -155,7 +155,7 @@ def _destination(path, entry):
 
 
 def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed,
-                *, gen_effort, cite_effort):
+                *, gen_effort, cite_effort, doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS):
     ident = entry["candidate_id"]
     question, scope, raw = item["question"], item["scope"], item["raw"]
     journal = {"attempt": 1, "candidate_id": ident + "-r1", "status": "started",
@@ -170,7 +170,11 @@ def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed
         _flush(path, payload)  # Consume the attempt durably before any CLI call.
         summary["attempted"] += 1
     try:
+        budgeted = build_documentation_context(
+            entry["sources"], max_chars=doc_context_chars,
+            plan=entry.get("decision_plan"), receipts=entry.get("evidence") or [])
         with lock:
+            journal["documentation_context_budget"] = deepcopy(budgeted["metadata"])
             journal["calls_started"] = 1
             _flush(path, payload)
             summary["calls_started"] += 1
@@ -182,7 +186,7 @@ def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed
             "original_question": json.dumps(question, ensure_ascii=False, allow_nan=False),
             "reason": json.dumps(raw, ensure_ascii=False, allow_nan=False),
             "domain_context": repair_context,
-            "documentation_context": documentation_context(entry["sources"]),
+            "documentation_context": budgeted["context"],
             "difficulty": payload["difficulty"],
         }, reasoning_effort=gen_effort)
         # Do not let cleaning mask omitted, extra or mistyped model fields.
@@ -209,8 +213,18 @@ def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed
             _flush(path, payload)
             summary["calls_started"] += 1
         citation = cite_question(revised, deepcopy(entry["sources"]), model=REPAIR_MODEL,
-                                 reasoning_effort=cite_effort)
+                                 reasoning_effort=cite_effort, fetched_context=budgeted["context"],
+                                 doc_context_chars=doc_context_chars)
+        if citation.get("documentation_context_budget"):
+            with lock:
+                journal["citation_documentation_context_budget"] = deepcopy(citation["documentation_context_budget"])
+                _flush(path, payload)
         checked = check_evidence(citation.get("evidence"), entry["sources"])
+        if checked["passed"] and not all(
+                quote_in_context(receipt, entry["sources"], budgeted["metadata"])
+                for receipt in checked["options"]):
+            checked["passed"] = False
+            checked["errors"].append("Citation quote is outside the supplied documentation context")
         if not checked["passed"]:
             with lock:
                 journal.update(status="failed", error_class="RepairEvidenceError",
@@ -228,11 +242,15 @@ def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed
             options=[{"label": label, "text": revised[field]} for label, field in zip("ABCD", OPTION_FIELDS)],
             rationales={label: revised[field] for label, field in zip("ABCD", RATIONALE_FIELDS)},
             gen_effort=gen_effort, cite_effort=cite_effort,
+            documentation_context_budget=deepcopy(budgeted["metadata"]),
+            documentation_context_policy={"version": 1, "max_chars": doc_context_chars},
             evidence=checked["options"], accepted=False, status="awaiting_external_judge",
             awaiting_external_judge=True,
             schema_check={"passed": True, "errors": [], "warnings": validation.warnings},
             mechanical_check={"passed": True, "errors": []},
-            citation_attempts=[{"evidence": checked["options"], "mechanical_check": {"passed": True, "errors": []}}],
+            citation_attempts=[{"evidence": checked["options"], "mechanical_check": {"passed": True, "errors": []},
+                                **({"documentation_context_budget": deepcopy(citation["documentation_context_budget"])}
+                                   if citation.get("documentation_context_budget") else {})}],
             judge_verdict={"passed": False, "score": 0.0, "model": "external", "reason": "Awaiting fresh external judge"},
             repair={"parent_candidate_id": ident, "attempt": 1,
                     "parent_question_sha256": question_sha256(question),
@@ -243,6 +261,7 @@ def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed
             store_options(child, revised, checked["options"])
         from shared.quality_gate import QuestionQualitySignature
         request = build_request(child["candidate_id"], scope, revised, child["sources"], checked["options"],
+                                doc_context_chars=doc_context_chars,
                                 **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False)} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
         with lock:
             completed[ident] = (child, request)
@@ -295,8 +314,11 @@ def _publish_repair(path, payload, entry, result, destination, summary):
 
 
 def repair_candidates(artifact, verdicts, *, candidates=(), limit=None, max_calls=None, dry_run=False,
-                      parallel=3, gen_effort="high", cite_effort="medium"):
+                      parallel=3, gen_effort="high", cite_effort="medium",
+                      doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS):
     """Inventory or repair once under the existing artifact/request/verdict locks."""
+    if type(doc_context_chars) is not int or doc_context_chars <= 0:
+        raise click.ClickException("Documentation context budget must be a positive integer")
     if type(parallel) is not int or not 1 <= parallel <= 4:
         raise click.ClickException("Parallel must be an integer between 1 and 4")
     if gen_effort not in ("low", "medium", "high") or cite_effort not in ("low", "medium", "high"):
@@ -345,6 +367,7 @@ def repair_candidates(artifact, verdicts, *, candidates=(), limit=None, max_call
             selected = selected[:budget // 2]  # Reserve both calls before admitting a parent.
             summary = {"dry_run": dry_run, "model": REPAIR_MODEL, "parallel": parallel,
                        "gen_effort": gen_effort, "cite_effort": cite_effort,
+                       "doc_context_chars": doc_context_chars,
                        "eligible": sum(item["eligible"] for item in inventory),
                        "selected": len(selected), "max_calls": budget, "attempted": 0, "calls_started": 0,
                        "repaired": 0, "failed": 0, "stopped": False,
@@ -361,7 +384,8 @@ def repair_candidates(artifact, verdicts, *, candidates=(), limit=None, max_call
                 def worker(item):
                     entry = entries[item["candidate_id"]]
                     _repair_one(artifact, payload, entry, item, summary, lock, stop_event,
-                                completed, gen_effort=gen_effort, cite_effort=cite_effort)
+                                completed, gen_effort=gen_effort, cite_effort=cite_effort,
+                                doc_context_chars=doc_context_chars)
                 run_bounded(selected, worker, parallel, stop_event)
                 # Completion order must not change the artifact's parent plan order.
                 with lock:
@@ -390,9 +414,11 @@ def repair_candidates(artifact, verdicts, *, candidates=(), limit=None, max_call
 @click.option("--parallel", type=click.IntRange(min=1, max=4), default=3, show_default=True)
 @click.option("--gen-effort", type=click.Choice(["low", "medium", "high"]), default="high", show_default=True)
 @click.option("--cite-effort", type=click.Choice(["low", "medium", "high"]), default="medium", show_default=True)
-def main(artifact, verdicts, candidates, limit, max_calls, dry_run, parallel, gen_effort, cite_effort):
+@click.option("--doc-context-chars", type=click.IntRange(min=1), default=DEFAULT_DOC_CONTEXT_CHARS, show_default=True)
+def main(artifact, verdicts, candidates, limit, max_calls, dry_run, parallel, gen_effort, cite_effort, doc_context_chars):
     summary = repair_candidates(artifact, verdicts, candidates=candidates, limit=limit, max_calls=max_calls,
-                                dry_run=dry_run, parallel=parallel, gen_effort=gen_effort, cite_effort=cite_effort)
+                                dry_run=dry_run, parallel=parallel, gen_effort=gen_effort, cite_effort=cite_effort,
+                                doc_context_chars=doc_context_chars)
     if summary["failed"] or summary["stopped"]:
         raise click.exceptions.Exit(1)
 

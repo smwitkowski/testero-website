@@ -160,7 +160,14 @@ def test_codex_helpers_skip_openrouter_credentials(monkeypatch):
     monkeypatch.setattr(cli,"run_signature",fake)
     data=generate_question("scope","docs",model="codex")
     assert data == question()
-    assert cite_question(data,[{"url":"https://docs.cloud.google.com/real","text":"Frozen text"}],model="codex") == {"evidence":[]}
+    import hashlib
+    sources = [{"url": "https://docs.cloud.google.com/real", "requested_url": "https://docs.cloud.google.com/real",
+                "text": "Frozen text", "retrieved_at": "2026-10-20T00:00:00Z",
+                "text_sha256": hashlib.sha256(b"Frozen text").hexdigest()}]
+    citation = cite_question(data, sources, model="codex")
+    assert citation["evidence"] == []
+    assert set(citation) == {"evidence", "documentation_context_budget"}
+    assert citation["documentation_context_budget"]["max_chars"] == 400_000
     assert [call[1] for call in calls] == [PmleQuestionSignature,CitationSignature]
     assert [call[3]["reasoning_effort"] for call in calls] == ["high", "medium"]
 
@@ -309,33 +316,32 @@ def test_invalid_effort_never_launches_cli(monkeypatch, tmp_path):
 
 
 @pytest.mark.parametrize("model", ["codex", "claude"])
-@pytest.mark.parametrize("size", [600_000, cli.CODEX_MAX_PROMPT_CHARS, cli.CODEX_MAX_PROMPT_CHARS + 1])
-def test_large_prompt_preserves_full_text_and_bounded_argv(monkeypatch, tmp_path, model, size):
-    """No processes: the opt-in native probe separately checks actual CLI loading."""
+@pytest.mark.parametrize("size", [600_000, 1_048_576, 1_048_577, 1_122_852])
+def test_large_unicode_prompt_stays_verbatim_user_stdin_without_role_config(monkeypatch, tmp_path, model, size):
+    """Pure mocks check transport, not native CLI acceptance of oversized input."""
     monkeypatch.setattr(cli, "CLI_TEMP_ROOT", tmp_path)
     unit = "文'\";$()\\\n"
     prompt = (unit * (size // len(unit) + 1))[:size]
-    via_file = model == "codex" and size > cli.CODEX_MAX_PROMPT_CHARS
     seen = []
 
     def fake(command, **kwargs):
-        assert list(Path(kwargs["cwd"]).iterdir()) == []
-        assert prompt not in command
+        cwd = Path(kwargs["cwd"])
+        seen.append(cwd.parent)
+        assert list(cwd.iterdir()) == []
+        assert {path.name for path in cwd.parent.iterdir()} == (
+            {"empty", "schema.json"} if model == "codex" else {"empty"}
+        )
+        assert kwargs["input"] == prompt
         assert kwargs["encoding"] == "utf-8"
-        assert sum(len(v.encode()) + 1 for v in command) < 10_000
-        files = [json.loads(v.split("=", 1)[1]) for v in command
-                 if v.startswith("model_instructions_file=")]
-        assert len(files) == int(via_file)
-        if via_file:
-            path = Path(files[0])
-            seen.append(path)
-            assert path.read_bytes() == prompt.encode("utf-8")
-            assert path.stat().st_mode & 0o777 == 0o600
-            assert path.parent == Path(kwargs["cwd"]).parent
-            assert kwargs["input"] == cli.CODEX_FILE_TASK
-        else:
-            assert kwargs["input"] == prompt
-        assert len(prompt) == size and len(prompt.encode()) > size
+        assert kwargs["text"] and kwargs["capture_output"] and not kwargs["check"]
+        assert prompt not in command
+        assert sum(len(value.encode("utf-8")) + 1 for value in command) < 10_000
+        configs = [command[i + 1] for i, flag in enumerate(command) if flag == "-c"]
+        assert configs == ([
+            'model_reasoning_effort="high"', "project_doc_max_bytes=0", 'web_search="disabled"'
+        ] if model == "codex" else [])
+        assert not any("instructions_file" in value or "system-prompt" in value for value in command)
+        assert len(prompt) == size and len(prompt.encode("utf-8")) > size
         if model == "codex":
             Path(command[command.index("-o") + 1]).write_text(json.dumps(question()))
             return CompletedProcess(command, 0, "", "")
@@ -345,7 +351,7 @@ def test_large_prompt_preserves_full_text_and_bounded_argv(monkeypatch, tmp_path
     monkeypatch.setattr(cli.subprocess, "run", fake)
     assert cli._run_cli(model, prompt, cli.output_model(PmleQuestionSignature).model_json_schema(),
                         PmleQuestionSignature, timeout=10) == question()
-    assert all(not path.exists() for path in seen)
+    assert len(seen) == 1 and not seen[0].exists()
     assert list(tmp_path.iterdir()) == []
 
 
@@ -396,16 +402,25 @@ def test_stderr_tail_is_bounded_after_redaction():
     assert "SECRET" not in tail
 
 
+@pytest.mark.parametrize("model", ["codex", "claude"])
 @pytest.mark.parametrize("failure", ["timeout", "errno", "exit"])
-def test_oversized_prompt_file_is_removed_on_failure(monkeypatch, tmp_path, failure):
+def test_oversized_unicode_stdin_failure_cleans_temp_files(monkeypatch, tmp_path, model, failure):
     import errno
 
     monkeypatch.setattr(cli, "CLI_TEMP_ROOT", tmp_path)
-    prompt = "x" * (cli.CODEX_MAX_PROMPT_CHARS + 1)
+    prompt = "文" * 1_048_577
+    seen = []
 
     def fail(command, **kwargs):
-        paths = [json.loads(v.split("=", 1)[1]) for v in command if v.startswith("model_instructions_file=")]
-        assert len(paths) == 1 and Path(paths[0]).read_text() == prompt
+        cwd = Path(kwargs["cwd"])
+        seen.append(cwd.parent)
+        assert kwargs["input"] == prompt
+        assert kwargs["encoding"] == "utf-8"
+        assert list(cwd.iterdir()) == []
+        assert {path.name for path in cwd.parent.iterdir()} == (
+            {"empty", "schema.json"} if model == "codex" else {"empty"}
+        )
+        assert not any("instructions_file" in value or "system-prompt" in value for value in command)
         if failure == "timeout":
             raise TimeoutExpired(command, 10, stderr="PRIVATE stderr")
         if failure == "errno":
@@ -415,9 +430,13 @@ def test_oversized_prompt_file_is_removed_on_failure(monkeypatch, tmp_path, fail
     monkeypatch.setattr(cli.subprocess, "run", fail)
     expected = cli.CLITimeoutError if failure == "timeout" else cli.CLIExitError
     with pytest.raises(expected) as caught:
-        cli._run_cli("codex", prompt, {}, PmleQuestionSignature, timeout=10)
+        cli._run_cli(model, prompt, {}, PmleQuestionSignature, timeout=10)
     if failure == "errno":
         assert caught.value.errno == errno.E2BIG
         assert "E2BIG" in str(caught.value)
+    if failure == "exit":
+        assert f"prompt_chars={len(prompt)}" in str(caught.value)
+        assert f"prompt_utf8_bytes={len(prompt.encode('utf-8'))}" in str(caught.value)
     assert "PRIVATE" not in str(caught.value)
+    assert len(seen) == 1 and not seen[0].exists()
     assert list(tmp_path.iterdir()) == []

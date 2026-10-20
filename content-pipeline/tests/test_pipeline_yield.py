@@ -13,6 +13,7 @@ from shared.decision_planner import plan_decision
 from shared.near_duplicates import load_export, check_near_duplicate
 from shared.yield_planning import existing_scenarios, ObjectiveRotation, MAX_SCENARIOS, SUMMARY_CHARS
 from shared.batch_report import key_position_report
+from test_external_generation import source
 
 FIXTURES = Path(__file__).parent / "fixtures/yield"
 
@@ -86,8 +87,7 @@ def test_three_recorded_veto_attempts_feed_all_prior_reasons_and_never_write(nam
     monkeypatch.setattr(generate, "ARTIFACT_ROOT", tmp_path)
     monkeypatch.setattr(generate, "plan_decision", planned)
     monkeypatch.setattr(generate, "verify_decision", lambda *a, **kw: next(proofs))
-    monkeypatch.setattr(generate, "search_objective_docs", lambda *a, **kw: [{"text": "Offline document"}])
-    monkeypatch.setattr(generate, "documentation_context", lambda *a: "Offline documentation placeholder, not support")
+    monkeypatch.setattr(generate, "search_objective_docs", lambda *a, **kw: [source()])
     monkeypatch.setattr(generate, "generate_question", lambda *a, **kw: pytest.fail("Veto must block writer"))
     monkeypatch.setattr(generate, "database_client", lambda: pytest.fail("DB forbidden"))
     artifact = tmp_path / "batch.json"
@@ -162,8 +162,7 @@ def test_generator_retargets_actual_scope_and_keeps_global_hints(monkeypatch, tm
     monkeypatch.setattr(generate, "ARTIFACT_ROOT", tmp_path)
     monkeypatch.setattr(generate, "plan_decision", planned)
     monkeypatch.setattr(generate, "verify_decision", lambda *a, **kw: recorded_veto[0]["proof"])
-    monkeypatch.setattr(generate, "search_objective_docs", lambda *a, **kw: [{"text": "Offline placeholder"}])
-    monkeypatch.setattr(generate, "documentation_context", lambda *a: "Offline placeholder")
+    monkeypatch.setattr(generate, "search_objective_docs", lambda *a, **kw: [source()])
     monkeypatch.setattr(generate, "generate_question", lambda *a, **kw: pytest.fail("Veto blocks writer"))
     artifact = tmp_path / "rotation.json"
     result = CliRunner().invoke(generate.main, ["--model", "codex", "--judge-model", "external",

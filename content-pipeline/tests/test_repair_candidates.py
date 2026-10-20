@@ -46,7 +46,6 @@ def repairs(case, monkeypatch):
                                           for label, quote in zip("ABCD", QUOTES)]})
     monkeypatch.setattr(cli_models, "run_signature", revise)
     monkeypatch.setattr(repair, "cite_question", cite)
-    monkeypatch.setattr(repair, "documentation_context", documentation_context)
     monkeypatch.setattr("shared.llm_generator.dspy.LM", Mock(side_effect=AssertionError("No live LM")))
     return case, revise, cite
 
@@ -139,7 +138,7 @@ def test_success_freezes_parent_A_plan_sources_and_publishes_current_request_onc
         assert set(signature.input_fields) == {"original_question", "reason", "domain_context", "documentation_context", "difficulty"}
         assert model == repair.REPAIR_MODEL
         return deepcopy(REVISED)
-    def citation(question, sources, model, *, reasoning_effort):
+    def citation(question, sources, model, *, reasoning_effort, fetched_context, doc_context_chars):
         assert reasoning_effort == "medium"
         assert saved(repairs)["repair_attempts"][original["candidate_id"]]["calls_started"] == 2
         assert question == REVISED and sources == original["sources"] and model == repair.REPAIR_MODEL
@@ -531,7 +530,7 @@ def test_parallel_bounds_journal_integrity_and_unlocked_calls(repairs, monkeypat
             peak = max(peak, active)
         phase.wait(timeout=5)
         return {**REVISED, "stem": REVISED["stem"].replace("A retailer's", f"A retailer number {entry['index']}'s")}
-    def citation(question, sources, *, model, reasoning_effort):
+    def citation(question, sources, *, model, reasoning_effort, fetched_context, doc_context_chars):
         nonlocal active
         assert not write_lock._is_owned()
         assert reasoning_effort == "medium"
@@ -620,7 +619,7 @@ def test_parallel_fatal_error_signals_before_journal_io_stops_admission_and_drai
         if entry["index"] != 1:
             assert event.wait(timeout=5)
         return {**REVISED, "stem": REVISED["stem"].replace("A retailer's", f"A retailer number {entry['index']}'s")}
-    def citation(question, sources, *, model, reasoning_effort):
+    def citation(question, sources, *, model, reasoning_effort, fetched_context, doc_context_chars):
         if question["stem"].startswith("A retailer number 1"):
             raise error("SECRET_TOKEN raw error")
         return {"evidence": [{"option_label": label, "url": URL, "quote": quote}
@@ -650,7 +649,10 @@ def test_cli_and_api_effort_propagation(repairs, gen, cite):
                                        gen_effort=gen, cite_effort=cite)
     assert summary["repaired"] == 1
     assert repairs[1].call_args.kwargs == {"reasoning_effort": gen}
-    assert repairs[2].call_args.kwargs == {"model": repair.REPAIR_MODEL, "reasoning_effort": cite}
+    assert repairs[2].call_args.kwargs == {
+        "model": repair.REPAIR_MODEL, "reasoning_effort": cite,
+        "fetched_context": repairs[1].call_args.args[2]["documentation_context"],
+        "doc_context_chars": repair.DEFAULT_DOC_CONTEXT_CHARS}
 
 
 @pytest.mark.parametrize("flags", [["--parallel", "0"], ["--parallel", "5"],
@@ -698,7 +700,7 @@ def test_duplicate_repairs_choose_plan_order_and_failed_prior_attempt_does_not_b
         if json.loads(inputs["original_question"])["stem"] == originals[0]["stem"]:
             assert second_done.wait(timeout=5)
         return deepcopy(REVISED)
-    def citation(question, sources, *, model, reasoning_effort):
+    def citation(question, sources, *, model, reasoning_effort, fetched_context, doc_context_chars):
         if first_failure == "citation" and second_done.is_set():
             return {"evidence": []}
         return {"evidence": [{"option_label": label, "url": URL, "quote": quote}
@@ -790,3 +792,77 @@ def test_repair_retains_plan_tags_and_ingest_persists_them(repairs):
     result = CliRunner().invoke(ingest.main, ["--artifact", str(case[0]), "--verdicts", str(case[1])])
     assert result.exit_code == 0, result.output
     assert case[3].client.rpc.call_args.args[1]["p_tags"] == receipt["tags"]
+
+
+@pytest.mark.parametrize("failure", [False, True])
+def test_configured_doc_budget_metadata_is_frozen_before_model_and_parent_unchanged(repairs, failure):
+    case, revise, cite = repairs
+    original = deepcopy(case[2]["candidates"][0])
+    if failure:
+        revise.side_effect = cli_models.CLIExitError("PRIVATE model failure")
+    result = invoke(repairs, "--doc-context-chars", "2000")
+    assert result.exit_code == int(failure), result.output
+    payload = saved(repairs)
+    journal = payload["repair_attempts"][original["candidate_id"]]
+    assert journal["documentation_context_budget"]["max_chars"] == 2000
+    assert journal["documentation_context_budget"]["after_chars"] <= 2000
+    assert payload["candidates"][0] == original
+    assert len(revise.call_args.args[2]["documentation_context"]) <= 2000
+    if not failure:
+        child = payload["candidates"][1]
+        assert child["documentation_context_budget"] == journal["documentation_context_budget"]
+        assert cite.call_args.kwargs["doc_context_chars"] == 2000
+        assert cite.call_args.kwargs["fetched_context"] == revise.call_args.args[2]["documentation_context"]
+    assert "PRIVATE" not in case[0].read_text()
+
+
+@pytest.mark.parametrize("cap", ["0", "-1"])
+def test_invalid_doc_context_chars_never_admits_repair(repairs, cap):
+    before = repairs[0][0].read_bytes()
+    assert invoke(repairs, "--doc-context-chars", cap).exit_code == 2
+    assert repairs[0][0].read_bytes() == before
+    repairs[1].assert_not_called()
+    repairs[2].assert_not_called()
+
+
+def test_repair_rejects_full_source_receipts_outside_supplied_view(repairs, monkeypatch):
+    from shared.doc_context_budget import build_documentation_context
+    original = deepcopy(repairs[0][2]["candidates"][0])
+    budgeted = build_documentation_context(original["sources"])
+    budgeted["metadata"]["pages"][0]["retained_offsets"] = [[0, 1]]
+    budgeted["metadata"]["pages"][0]["omitted"] = False
+    budgeted["context"] = original["sources"][0]["text"][:1]
+    monkeypatch.setattr(repair, "build_documentation_context", Mock(return_value=budgeted))
+    result = invoke(repairs)
+    assert result.exit_code == 1
+    payload = saved(repairs)
+    assert payload["candidates"] == [original]
+    journal = payload["repair_attempts"][original["candidate_id"]]
+    assert journal["error_class"] == "RepairEvidenceError" and journal["status"] == "failed"
+    assert repairs[1].call_count == repairs[2].call_count == 1
+    assert not child_path(repairs).exists()
+
+
+@pytest.mark.parametrize("field", ["documentation_context_budget", "citation_documentation_context_budget"])
+def test_repair_journal_budget_metadata_must_be_object(repairs, field):
+    assert invoke(repairs).exit_code == 0
+    payload = saved(repairs)
+    journal = next(iter(payload["repair_attempts"].values()))
+    journal[field] = "not an object"
+    with pytest.raises(ValueError, match="Invalid candidate records or repair lineage"):
+        validate_candidate_records(payload)
+    journal[field] = {}
+    journal["unexpected_metadata"] = {}
+    with pytest.raises(ValueError, match="Invalid candidate records or repair lineage"):
+        validate_candidate_records(payload)
+
+
+@pytest.mark.parametrize("cap", [0, -1, True, "1000", 1.5])
+def test_invalid_api_doc_budget_fails_before_calls(repairs, cap):
+    from click import ClickException
+    before = repairs[0][0].read_bytes()
+    with pytest.raises(ClickException, match="positive integer"):
+        repair.repair_candidates(repairs[0][0], repairs[0][1], doc_context_chars=cap)
+    assert repairs[0][0].read_bytes() == before
+    repairs[1].assert_not_called()
+    repairs[2].assert_not_called()

@@ -1,54 +1,68 @@
 # Docs-grounded question process
 
-## Oversized subscription CLI tasks (2026-10-20)
+## Bounded fetched-document context (2026-10-20)
 
-Codex 0.160.0 rejects user-input text above **1,048,576 characters**, even
-when that text arrives on stdin. The saved PDE section-1 verify task rebuilds
-to **1,058,381 characters / 1,122,852 UTF-8 bytes**. An offline native replay
-against an isolated loopback fixture reproduces `input_too_large` before any
-fixture-provider request. This is not an OS argv limit: the original shared
-transport already used stdin.
+Verification and other fresh doc-inlining stages default to **400,000 Unicode
+characters of rendered documentation**, including source headers and omission
+markers. This is not a token count or a total-request budget. Configure generation,
+repair, and grounded bank audit with `--doc-context-chars N` (positive integer).
+Python source-aware APIs accept `doc_context_chars` or the budget builder's
+`max_chars`. No environment variable or live lookup is needed to select the cap.
 
-The shared transport now selects a separate **instruction-file mode** only for
-Codex tasks above that character limit. It writes the complete, unchanged UTF-8
-task to a mode-0600 per-request temporary file and passes Codex's
-`model_instructions_file` config plus a fixed short stdin task. The file is
-outside the empty child working directory and is removed on success or failure.
-Every Codex stage uses this shared path; normal-sized Codex tasks and Claude
-requests still use stdin. No docs are shortened, no model is substituted, and
-no retry, tool permission, output schema, or quality gate is added or relaxed.
+The deterministic budget prioritizes documents discovered for the planned correct
+answer and each distractor, then lexical action/constraint/rejection-reason
+matches, then shared/overview pages. Discovery labels and lexical scores are
+navigation hints, **not evidence of support**. It trims lowest-priority/longest
+pages first, preferring whole sections and exact-offset context around decisive
+terms. It reserves an option's representative page and every explicitly planned
+or already verified quote. Valid quotes use case-sensitive, whitespace-normalized
+matching back to original raw spans. Required quote/page headers that cannot fit
+cause a closed failure, never a dropped quote or a weakened evidence gate.
 
-**Material trade-off:** this is not message/semantic parity. Codex replaces its
-base model instructions with the task; the native fixture observes the complete
-task at the **developer** role instead of user role. This includes fetched docs,
-which remain untrusted data under the task's instructions. Tool-disable and
-independent quality gates remain in force. Review this instruction-hierarchy
-change before approving the PR or authorizing a live run. This bypasses only
-the local user-input cap; upstream context/token limits can still reject a task.
-No live model-quality, prompt-injection-equivalence, cache, or cost claim is made.
+Full fetched records, retrieval timestamps, and original UTF-8 text hashes stay
+unchanged. New batch/repair artifacts freeze `documentation_context_policy`;
+decision attempts and candidate stage records save per-page original/retained
+character counts, priority, retained raw half-open offsets, omitted spans, and
+trimmed/omitted status. Top-level before/after counts include rendering overhead;
+page counts describe source text only. Writer receipt windows stay lean when
+already below the cap. Citation retries and judges use separately recorded views
+that retain known decisive receipts. A quote found only in an omitted part of the
+full source cannot pass the supplied-view membership check.
 
-Generic `CLIExitError` messages now retain prompt character/byte counts and a
-redacted stderr tail (at most 2,048 characters). Only allowlisted diagnostics
-such as size limits, OS errno, and argument errors survive; arbitrary lines,
-provider bodies, prompt echoes and credentials are omitted. Startup failures
-record the numeric errno and symbolic name without raw environment text.
-Metadata-only `.calls.jsonl` records remain unchanged.
+The optional cheap retrieval path keeps its smaller separate bound, and its one
+missing-evidence escalation now uses the same configured doc cap rather than
+unbounded pages. Immutable external judge requests retain their independent
+**150,000-character serialized bundle limit** and fixed quote-window rules.
+New requests also obey the frozen doc cap; a too-small cap can veto them rather
+than silently narrow fixed windows. Historical artifacts without a frozen policy
+rebuild byte-identically. Frozen prompts are never re-budgeted at execution time.
 
-Reproduce with the installed Codex CLI **without calling a model**:
+All Codex and Claude tasks stay on complete **user-role stdin**. There is no
+`model_instructions_file` override, base-instruction replacement, role escalation,
+model fallback, retry increase, or quality-threshold change.
+`CLIExitError` keeps prompt Unicode/UTF-8 sizes, safe errno/name, and an allowlisted
+redacted stderr tail (at most 2,048 characters). Unknown provider prose and prompt
+echoes are omitted; calls JSONL remains metadata-only.
+
+Offline reproduction (no credentials or model calls; loopback fixture only):
 
 ```sh
 cd content-pipeline
+# Synthetic oversized input; proves baseline rejection and budgeted user stdin.
 env -i PATH="$PATH" HOME="$HOME" uv run python scripts/probe_cli_input_limit.py
-# Optional read-only replay of a saved artifact:
-# ... scripts/probe_cli_input_limit.py --artifact /absolute/path/to/artifact.json
+# Exact saved artifact, read-only; --rebuild-only skips the native CLI entirely.
+env -i PATH="$PATH" HOME="$HOME" uv run python scripts/probe_cli_input_limit.py \
+  --artifact /absolute/path/to/artifact.json --rebuild-only
 ```
 
-The probe uses an isolated empty HOME/CODEX_HOME, no inherited credentials, and
-a loopback-only fake provider. It checks a small control, the old oversized
-stdin failure, and the new path. It verifies exact full-prompt text/hash,
-request role, schema, and a canned schema-valid response. Fixture success proves
-local transport/output handling, not an actual supported decision or model call.
-The normal pytest gate never launches subscription CLIs.
+The saved PDE section-1 replay shrank from **1,058,381 chars / 1,122,852 UTF-8
+bytes** to **410,324 chars / 451,526 bytes** at the default doc cap. Its documentation
+view shrank from 1,048,057 to 400,000 characters. The primary English BigQuery
+access-control page remains complete (245,895 source characters). Native isolated
+Codex 0.160.0 rejects the unbudgeted request locally at 1,048,576 characters with
+no fixture-provider request; the budgeted request arrives intact at **user** role,
+with the same schema/model/reasoning and canned strict output. This is transport
+and provenance evidence, **not a live model-quality judgment**.
 
 ## Safe documentation efficiency defaults (2026-10-19)
 
@@ -60,7 +74,8 @@ No batch runner enables it. Prior all-plan recall remains calibration only.
 `--no-doc-cache --no-verify-stable-prefix`. Cache only avoids public-document IO;
 it preserves original URL, requested URL, retrieval timestamp, full text/hash,
 7-day TTL, bounded reads and atomic writes. It does not cache verifier decisions.
-The verifier still sees full fetched pages and all existing independent gates.
+As of the 2026-10-20 budget above, the verifier sees a bounded view of these
+unchanged full fetched records; all existing independent gates remain.
 
 Stable ordering is **content-identical**, not a prompt rewrite. It moves the
 existing verifier fields to `fetched_documentation, objective_scope, proposed_plan`

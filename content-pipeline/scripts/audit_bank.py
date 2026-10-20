@@ -15,6 +15,7 @@ import sys
 PIPELINE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PIPELINE_ROOT))
 from shared.cert_context import DEFAULT_CERT, domain_prompt, load_cert_context
+from shared.doc_context_budget import DEFAULT_DOC_CONTEXT_CHARS
 from shared.model_policy import DEFAULT_GENERATOR_MODEL, DEFAULT_JUDGE_MODEL, require_independent_models
 
 ARTIFACT_ROOT = PIPELINE_ROOT / ".cache/bank"
@@ -252,7 +253,11 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=0, help="Reproducible grounded sample, sorted IDs then random sample")
     parser.add_argument("--model", default=DEFAULT_GENERATOR_MODEL)
     parser.add_argument("--judge-model", default=DEFAULT_JUDGE_MODEL)
+    parser.add_argument("--doc-context-chars", type=int, default=DEFAULT_DOC_CONTEXT_CHARS,
+                        help="Maximum characters of model documentation context (default 400000)")
     args = parser.parse_args(argv)
+    if args.doc_context_chars <= 0:
+        parser.error("--doc-context-chars must be at least 1")
     if args.limit < 1:
         parser.error("--limit must be at least 1")
     if args.grounded:
@@ -283,7 +288,8 @@ def main(argv=None):
                 "retrieval_policy": "marked answer + stem + question services; objective hint secondary",
                 "relevance_policy": "full current exam blueprint; lexical mapping is not a relevance gate",
                 "input_sha256": artifact["input_sha256"], "model": args.model, "judge_model": args.judge_model,
-                "seed": args.seed, "limit": args.limit, "results": []}
+                "seed": args.seed, "limit": args.limit, "doc_context_chars": args.doc_context_chars,
+                "results": []}
     write_json(outputs[2], grounded)
     for row in sampled:
         result = {"question_id": row["question_id"], "flag": row["flag"], "status": row["status"],
@@ -295,7 +301,8 @@ def main(argv=None):
         try:
             question, label_map = bank_question_data(bank_by_id[row["question_id"]])
             result["original_choice_labels"] = label_map
-            result.update(check_existing_question(question, scope, model=args.model, judge_model=args.judge_model))
+            result.update(check_existing_question(question, scope, model=args.model, judge_model=args.judge_model,
+                                                 doc_context_chars=args.doc_context_chars))
         except Exception as exc:
             result["reasons"] = ["Existing question re-check failed"]
             result["error_class"] = type(exc).__name__

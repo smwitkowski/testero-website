@@ -20,27 +20,62 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from shared import cli_models as cli
-from shared.decision_planner import DecisionProofSignature, verification_prompt
+from shared.decision_planner import verification_prompt
+from shared.doc_search import documentation_context
+from shared.doc_context_budget import DEFAULT_DOC_CONTEXT_CHARS
 
 
 def digest(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def build_replay(artifact=None, *, doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS):
+    """Rebuild old/full and new/budgeted requests without running a CLI or model."""
+    if artifact is not None:
+        candidate = artifact["candidates"][0]
+        attempt = candidate["decision_attempts"][-1]
+        sources = attempt.get("sources", candidate["sources"])
+        plan = attempt["plan"]
+        scope = next(row for row in artifact["plan"] if row["objective_id"] == plan["objective_id"])
+        stable = artifact.get("retrieval_experiment", {}).get("stable_prefix", True)
+    else:
+        text = ("BigQuery Job User submits query jobs. BigQuery Data Viewer reads tables. "
+                "BigQuery Data Editor updates tables. Runtime service accounts run the job. ") * 8000
+        url = "https://docs.cloud.google.com/bigquery/docs/access-control"
+        sources = [{"url": url, "requested_url": url, "text": text,
+                    "retrieved_at": "2026-10-20T00:00:00Z", "text_sha256": digest(text)}]
+        plan = {"best_action": "BigQuery Job User and dataset roles for runtime service account",
+                "decisive_constraints": ["Read and update only required datasets"],
+                "mistakes": [{"action": action, "scenario_reason": reason} for action, reason in (
+                    ("Project-wide BigQuery data roles", "Exposes unrelated datasets"),
+                    ("BigQuery User without dataset roles", "Missing read and write access"),
+                    ("Job User on service agent", "Wrong principal submits query jobs"))]}
+        scope, stable = {"domain_prompt": "Offline section-1-shaped least-privilege IAM task"}, True
+    metadata = {}
+    signature, inputs = verification_prompt(scope, plan, sources, stable_prefix=stable,
+        doc_context_chars=doc_context_chars, budget_metadata=metadata)
+    full_inputs = {**inputs, "fetched_documentation": documentation_context(sources)}
+    return {"signature": signature, "before_prompt": cli.signature_prompt(signature, full_inputs),
+            "after_prompt": cli.signature_prompt(signature, inputs), "metadata": metadata}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--artifact", type=Path, help="Read-only saved generation artifact")
+    parser.add_argument("--doc-context-chars", type=int, default=DEFAULT_DOC_CONTEXT_CHARS)
+    parser.add_argument("--rebuild-only", action="store_true", help="Measure requests offline without starting the native CLI")
     args = parser.parse_args()
-    if args.artifact:
-        artifact = json.loads(args.artifact.read_text(encoding="utf-8"))
-        candidate = artifact["candidates"][0]
-        signature, inputs = verification_prompt(
-            artifact["plan"][0], candidate["decision_attempts"][0]["plan"],
-            candidate["sources"], stable_prefix=True)
-        prompt = cli.signature_prompt(signature, inputs)
-    else:
-        signature = DecisionProofSignature
-        prompt = "Offline fixture task data: " + "x" * cli.CODEX_MAX_PROMPT_CHARS
+    artifact = json.loads(args.artifact.read_text(encoding="utf-8")) if args.artifact else None
+    replay = build_replay(artifact, doc_context_chars=args.doc_context_chars)
+    signature, prompt = replay["signature"], replay["after_prompt"]
+    before_prompt = replay["before_prompt"]
+    summary = {"offline_fixture_only": True, "before": {"prompt_chars": len(before_prompt),
+               "prompt_utf8_bytes": len(before_prompt.encode()), "prompt_sha256": digest(before_prompt)},
+               "after": {"prompt_chars": len(prompt), "prompt_utf8_bytes": len(prompt.encode()),
+               "prompt_sha256": digest(prompt)}, "documentation_context_budget": replay["metadata"]}
+    if args.rebuild_only:
+        print(json.dumps(summary, indent=2))
+        return
     expected = {"supported": False, "uniquely_best": False,
                 "scenario_reasons_supported": False, "no_feature_gotchas": False,
                 "reason": "Offline fixture only; not a model judgment", "reasons": []}
@@ -57,7 +92,7 @@ def main():
                      for item in body.get("input", []) if isinstance(item, dict)
                      for part in item.get("content", []) if isinstance(part, dict)]
             matches = [{"role": role, "chars": len(text), "sha256": digest(text)}
-                       for role, text in texts if text == prompt]
+                       for role, text in texts if text == task]
             calls.append({"path": self.path, "model": body.get("model"),
                           "reasoning": body.get("reasoning"), "full_prompt_matches": matches,
                           "schema_matches": body.get("text", {}).get("format", {}).get("schema")
@@ -91,14 +126,8 @@ def main():
         captured = {}
 
         def run_offline(command, **kwargs):
-            # Baseline deliberately disables ONLY our new file path, not Codex's guard.
-            if mode == "oversized_stdin":
-                command = list(command)
-                index = next((i for i, value in enumerate(command)
-                              if value.startswith("model_instructions_file=")), None)
-                if index is not None:
-                    del command[index - 1:index + 1]
-                kwargs["input"] = prompt
+            assert not any("model_instructions_file" in str(value) for value in command)
+            assert kwargs["input"] == task  # Complete user-role stdin; no role override.
             command += [
                 "-c", 'model_provider="offline"',
                 "-c", 'model_providers.offline.name="Offline fixture"',
@@ -120,10 +149,11 @@ def main():
 
         try:
             with patch.object(cli.subprocess, "run", run_offline):
-                for mode in ("small_stdin", "oversized_stdin", "oversized_auto"):
+                for mode in ("small_stdin", "unbudgeted_stdin", "budgeted_stdin"):
                     calls.clear()
                     captured.clear()
-                    task = "Offline small control" if mode == "small_stdin" else prompt
+                    task = ("Offline small control" if mode == "small_stdin" else
+                            before_prompt if mode == "unbudgeted_stdin" else prompt)
                     row = {"mode": mode, "prompt_chars": len(task),
                            "prompt_utf8_bytes": len(task.encode()), "prompt_sha256": digest(task)}
                     try:
@@ -138,16 +168,20 @@ def main():
             server.shutdown()
             server.server_close()
             worker.join()
-    print(json.dumps({"offline_fixture_only": True, "results": results}, indent=2))
+    summary["results"] = results
+    print(json.dumps(summary, indent=2))
     small, rejected, fixed = results
     assert small.get("fixture_output_valid") is True and len(small["provider_requests"]) == 1
-    assert rejected.get("error_class") == "CLIExitError" and not rejected["provider_requests"]
-    assert "maximum length" in rejected["stderr_tail"]
+    if len(before_prompt) > 1_048_576:
+        assert rejected.get("error_class") == "CLIExitError" and not rejected["provider_requests"]
+        assert "maximum length" in rejected["stderr_tail"]
+    else:
+        assert rejected.get("fixture_output_valid") is True
     assert fixed.get("fixture_output_valid") is True and len(fixed["provider_requests"]) == 1
     request = fixed["provider_requests"][0]
     assert len(request["full_prompt_matches"]) == 1
     match = request["full_prompt_matches"][0]
-    assert match["role"] in ("developer", "system")
+    assert match["role"] == "user"
     assert match["chars"] == len(prompt) and match["sha256"] == digest(prompt)
     assert request["schema_matches"] is True
     assert request["model"] == cli.DEFAULT_CODEX_MODEL

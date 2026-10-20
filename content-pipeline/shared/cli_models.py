@@ -17,11 +17,6 @@ from shared.evidence import OptionEvidence
 from shared.model_policy import DEFAULT_CLAUDE_MODEL
 
 CLI_TIMEOUT_SECONDS = 300
-# Codex 0.160.0 rejects turn/start user text above this character count,
-# independently of stdin/argv byte limits. Larger tasks use its instruction file.
-CODEX_MAX_PROMPT_CHARS = 1_048_576
-CODEX_FILE_TASK = ("Complete the structured-output task in the supplied instructions. "
-                   "Use only the supplied data. Do not use tools.")
 CLI_STDERR_TAIL_CHARS = 2048
 DEFAULT_CODEX_MODEL = "gpt-6.1-sol"
 # CLI 0.160.0: read-only alone still permits file reads. Disable tool backends
@@ -375,17 +370,7 @@ def _run_cli_transport(model, prompt, schema, signature, *, timeout, reasoning_e
                        "--tools", "", "--no-session-persistence", "--safe-mode",
                        "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}']
         try:
-            stdin_prompt = prompt
-            if codex and len(prompt) > CODEX_MAX_PROMPT_CHARS:
-                # stdin avoids E2BIG but not Codex's turn/start text limit. Load
-                # the complete task as base instructions instead, with no model
-                # file/tool access. Only oversized calls change message role.
-                prompt_path = base / "instructions.txt"
-                prompt_path.write_text(prompt, encoding="utf-8")
-                prompt_path.chmod(0o600)
-                command += ["-c", "model_instructions_file=" + json.dumps(str(prompt_path))]
-                stdin_prompt = CODEX_FILE_TASK
-            result = subprocess.run(command, input=stdin_prompt, text=True, encoding="utf-8", capture_output=True,
+            result = subprocess.run(command, input=prompt, text=True, encoding="utf-8", capture_output=True,
                                     cwd=cwd, env=_cli_env(), timeout=timeout, check=False)
         except subprocess.TimeoutExpired:
             raise CLITimeoutError("CLI model request timed out") from None

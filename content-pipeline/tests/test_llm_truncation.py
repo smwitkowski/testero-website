@@ -16,6 +16,7 @@ from openai import LengthFinishReasonError
 import pytest
 
 from shared import llm_generator as generator
+from shared.doc_context_budget import build_documentation_context
 from shared import quality_gate as gate
 from shared.model_policy import OPENROUTER_JUDGE_MODEL
 from shared.evidence import check_evidence
@@ -101,7 +102,9 @@ def test_untruncated_receipts_keep_existing_shape(monkeypatch, question, sources
     evidence = receipts(sources)
     lm, transport = native_lm(monkeypatch, {"evidence": evidence})
     monkeypatch.setattr(generator, "_generation_lm", Mock(return_value=lm))
-    assert generator.cite_question(question, sources, "openrouter/offline") == {"evidence": evidence}
+    assert generator.cite_question(question, sources, "openrouter/offline") == {
+        "evidence": evidence,
+        "documentation_context_budget": build_documentation_context(sources)["metadata"]}
     assert transport.call_count == 1
 
 
@@ -165,7 +168,8 @@ def test_typed_provider_citation_exception_is_safe(monkeypatch, question, source
     monkeypatch.setattr(generator, "_generation_lm", Mock(return_value=DummyLM([])))
     monkeypatch.setattr(generator.dspy, "Predict", Mock(return_value=Mock(side_effect=error)))
     assert generator.cite_question(question, sources, "offline") == {
-        "evidence": None, "parse_failure": TRUNCATION_REASON, "error_class": "MaxTokensTruncation"}
+        "evidence": None, "parse_failure": TRUNCATION_REASON, "error_class": "MaxTokensTruncation",
+        "documentation_context_budget": build_documentation_context(sources)["metadata"]}
 
 
 def test_guard_reads_only_finish_reasons_and_restores_hook():

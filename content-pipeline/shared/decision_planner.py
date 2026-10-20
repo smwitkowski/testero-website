@@ -10,6 +10,8 @@ from shared.call_logging import log_lm_calls
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from shared.doc_search import documentation_context
+from shared.doc_context_budget import (DEFAULT_DOC_CONTEXT_CHARS, DocumentationBudgetError,
+                                       build_documentation_context, quote_in_context)
 from shared.evidence import OptionEvidence, check_evidence
 
 Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
@@ -199,10 +201,57 @@ def plan_decision(scope, *, model, difficulty="MEDIUM", replacement_feedback="",
     return plan
 
 
-def verification_prompt(scope, plan, sources, *, retrieval=None, stable_prefix=False):
-    """Build both live and offline-replay inputs through the same seam."""
-    documentation_context(sources)
-    context = retrieval["context"] if retrieval is not None else documentation_context(sources)
+def _view_metadata(sources, context, offsets, max_chars, kind):
+    """Describe an existing exact-offset projection without changing its text."""
+    before = documentation_context(sources)
+    if type(max_chars) is not int or max_chars <= 0:
+        raise DocumentationBudgetError("Documentation budget must be a positive integer")
+    if len(context) > max_chars:
+        raise DocumentationBudgetError("Supplied documentation context exceeds budget")
+    pages = []
+    for source in sources:
+        spans = []
+        for start, end in sorted(offsets.get(source["url"], [])):
+            if not 0 <= start < end <= len(source["text"]):
+                raise DocumentationBudgetError("Invalid supplied documentation offsets")
+            if spans and start <= spans[-1][1]:
+                spans[-1][1] = max(end, spans[-1][1])
+            else:
+                spans.append([start, end])
+        omitted, cursor = [], 0
+        for start, end in spans:
+            if cursor < start:
+                omitted.append([cursor, start])
+            cursor = end
+        if cursor < len(source["text"]):
+            omitted.append([cursor, len(source["text"])])
+        pages.append({"url": source["url"], "requested_url": source["requested_url"],
+                      "text_sha256": source["text_sha256"], "retrieved_at": source["retrieved_at"],
+                      "before_chars": len(source["text"]),
+                      "after_chars": sum(end - start for start, end in spans),
+                      "retained_offsets": spans, "trimmed_spans": omitted,
+                      "omitted": not bool(spans), "trimmed": bool(omitted),
+                      "status": "omitted" if not spans else "trimmed" if omitted else "full"})
+    return {"version": 1, "max_chars": max_chars, "before_chars": len(before),
+            "after_chars": len(context), "before_pages": len(sources),
+            "after_pages": sum(not page["omitted"] for page in pages), "pages": pages,
+            "selection": kind}
+
+
+def verification_prompt(scope, plan, sources, *, retrieval=None, stable_prefix=False,
+                        doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS, budget_metadata=None):
+    """Build live/replay inputs with the same bounded, auditable source view."""
+    if retrieval is None:
+        bundle = build_documentation_context(sources, max_chars=doc_context_chars, plan=plan)
+        context, metadata = bundle["context"], bundle["metadata"]
+    else:
+        context = retrieval["context"]
+        offsets = {}
+        for chunk in retrieval["chunks"]:
+            offsets.setdefault(chunk.url, []).append((chunk.start, chunk.end))
+        metadata = _view_metadata(sources, context, offsets, doc_context_chars, "retrieval")
+    if budget_metadata is not None:
+        budget_metadata.update(metadata)
     signature = decision_proof_signature(scope.get("distractor_evidence"))
     inputs = {"objective_scope": scope["domain_prompt"], "proposed_plan": json.dumps(plan, ensure_ascii=False),
               "fetched_documentation": context}
@@ -216,15 +265,22 @@ def verification_prompt(scope, plan, sources, *, retrieval=None, stable_prefix=F
     return signature, inputs
 
 def verify_decision(scope, plan, sources, *, model, reasoning_effort="medium", predictor=None,
-                    retrieval=None, stable_prefix=False):
+                    retrieval=None, stable_prefix=False, doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS,
+                    budget_metadata=None):
     from shared.cli_models import output_model
-    signature, inputs = verification_prompt(scope, plan, sources, retrieval=retrieval, stable_prefix=stable_prefix)
+    metadata = budget_metadata if budget_metadata is not None else {}
+    signature, inputs = verification_prompt(scope, plan, sources, retrieval=retrieval,
+        stable_prefix=stable_prefix, doc_context_chars=doc_context_chars, budget_metadata=metadata)
     raw = predictor(**inputs) if predictor else _predict(signature, inputs, model, reasoning_effort)
     proof = output_model(signature).model_validate(raw).model_dump()
     if "distractor_evidence" in scope:
         proof["distractor_evidence"] = dict(scope["distractor_evidence"])
     receipts = [{k: row[k] for k in ("option_label", "url", "quote")} for row in proof["reasons"]]
     checked = check_evidence(receipts, sources)
+    for row in receipts:
+        if not quote_in_context(row, sources, metadata):
+            checked["errors"].append(f"Option {row['option_label']}: quote absent from supplied documentation context")
+    checked["passed"] = not checked["errors"]
     if retrieval is not None:
         from shared.doc_retrieval import quote_in_chunks
         for row in receipts:
@@ -246,7 +302,8 @@ def evidence_missing_veto(proof):
     import re
     if proof.get("passed") is True:
         return False
-    if any("quote absent from supplied retrieval chunks" in error
+    if any(("quote absent from supplied retrieval chunks" in error
+            or "quote absent from supplied documentation context" in error)
            for error in proof.get("mechanical_check", {}).get("errors", [])):
         return True
     reason = proof.get("reason", "").casefold()
@@ -268,7 +325,8 @@ def writer_decision_context(scope, plan, proof):
             + "\nKeep one clear task and comparable option granularity. Do not add wants, exceptions, "
               "feature gotchas or unsupported capability claims. Evidence stays outside learner prose.")
 
-def writer_documentation_context(sources, proof):
+def writer_documentation_context(sources, proof, *, doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS,
+                                 budget_metadata=None):
     """Render receipt-centered windows without changing immutable fetched records."""
     import re
     # Validate the complete fetch records before selecting text for a prompt.
@@ -281,6 +339,7 @@ def writer_documentation_context(sources, proof):
     if not checked["passed"]:
         raise DecisionVetoError("Verifier receipts failed mechanical checks")
     sections = ["Official fetched Google Cloud documentation excerpts (quote only this text):"]
+    offsets = {}
     for source in sources:
         relevant = [row for row in receipts
                     if row["url"] in (source["url"], source["requested_url"])]
@@ -302,6 +361,7 @@ def writer_documentation_context(sources, proof):
                 merged[-1] = (merged[-1][0], max(end, merged[-1][1]))
             else:
                 merged.append((start, end))
+        offsets[source["url"]] = merged
         sections.append(
             f"URL: {source['url']}\nRequested URL: {source['requested_url']}\n"
             f"Retrieved at: {source['retrieved_at']}\n"
@@ -309,4 +369,12 @@ def writer_documentation_context(sources, proof):
             + "\n\n".join(f"Source excerpt [{start}:{end}]:\n{source['text'][start:end]}"
                               for start, end in merged)
         )
-    return "\n\n".join(sections)
+    context = "\n\n".join(sections)
+    if len(context) > doc_context_chars:
+        bundle = build_documentation_context(sources, max_chars=doc_context_chars, receipts=receipts)
+        context, metadata = bundle["context"], bundle["metadata"]
+    else:
+        metadata = _view_metadata(sources, context, offsets, doc_context_chars, "writer_receipt_windows")
+    if budget_metadata is not None:
+        budget_metadata.update(metadata)
+    return context

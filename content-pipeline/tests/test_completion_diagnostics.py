@@ -202,7 +202,11 @@ def test_native_limit_completion_survives_sdk_error_before_parse(monkeypatch, qu
             assert verdict.error_class == "MaxTokensTruncation"
         else:
             monkeypatch.setattr(generator, "_generation_lm", Mock(return_value=lm))
-            result = generator.cite_question(question, [{"url": "https://docs.cloud.google.com/test", "text": "Docs"}], "offline")
+            import hashlib
+            sources = [{"url": "https://docs.cloud.google.com/test", "requested_url": "https://docs.cloud.google.com/test",
+                        "text": "Docs", "retrieved_at": "2026-10-20T00:00:00Z",
+                        "text_sha256": hashlib.sha256(b"Docs").hexdigest()}]
+            result = generator.cite_question(question, sources, "offline")
             diagnostics = result["diagnostics"]
             assert result["error_class"] == "MaxTokensTruncation"
     assert "Actual native partial completion" in diagnostics["raw_response"]

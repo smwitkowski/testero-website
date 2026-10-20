@@ -178,7 +178,11 @@ def _validate_candidate_records(payload):
     for parent_id, record in attempts.items():
         parent = by_id.get(parent_id)
         if (not isinstance(parent, dict) or "repair" in parent or not isinstance(record, dict)
-                or not required <= set(record) <= required | {"reason", "error_class", "gen_effort", "cite_effort"}
+                or not required <= set(record) <= required | {
+                    "reason", "error_class", "gen_effort", "cite_effort",
+                    "documentation_context_budget", "citation_documentation_context_budget"}
+                or any(not isinstance(record[key], dict) for key in (
+                    "documentation_context_budget", "citation_documentation_context_budget") if key in record)
                 or any(record[key] not in ("low", "medium", "high")
                        for key in ("gen_effort", "cite_effort") if key in record)
                 or type(record["attempt"]) is not int or record["attempt"] != 1
@@ -291,10 +295,28 @@ def _source_context(cited, evidence, trimmed_urls, *, margin=QUOTE_WINDOW_MARGIN
     return context, metadata
 
 
-def build_request(candidate_id, scope, question, sources, evidence, *, signature=None, gate_version=5, argon_gate=False, execution_policy=None):
+def documentation_context_limit(payload, entry=None):
+    """Read a new artifact's frozen cap; absent policy preserves legacy requests."""
+    if entry is not None and "documentation_context_policy" in entry:
+        policy = entry["documentation_context_policy"]
+    elif "documentation_context_policy" in payload:
+        policy = payload["documentation_context_policy"]
+    else:
+        return None
+    if (not isinstance(policy, dict) or set(policy) != {"version", "max_chars"}
+            or type(policy["version"]) is not int or policy["version"] != 1
+            or type(policy["max_chars"]) is not int or policy["max_chars"] <= 0):
+        raise ValueError("Invalid documentation-context policy")
+    return policy["max_chars"]
+
+
+def build_request(candidate_id, scope, question, sources, evidence, *, signature=None, gate_version=5,
+                  argon_gate=False, execution_policy=None, doc_context_chars=None):
     """Keep the rubric/schema intact; trim only fetched text around verified quotes."""
     if execution_policy not in (None, "short_circuit_v1"):
         raise ValueError("Unsupported execution policy")
+    if doc_context_chars is not None and (type(doc_context_chars) is not int or doc_context_chars <= 0):
+        raise ValueError("Documentation budget must be a positive integer")
     question = {name: question[name] for name in QUESTION_FIELDS}
     checked = check_evidence(evidence, sources)
     if not checked["passed"]:
@@ -319,6 +341,7 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
     schema = output_model(signature).model_json_schema() if signature is not None else None
     trimmed_urls = set()
     largest_first = sorted(cited, key=lambda source: len(source["text"]), reverse=True)
+    before_context_chars = len(documentation_context(cited)) if doc_context_chars is not None else None
     # The optional full Argon review repeats documentation. Only that bundle may
     # retry with smaller, still-wide windows; historical requests keep 8000.
     for count in range(len(largest_first) + 1 + int(argon_gate)):
@@ -327,6 +350,15 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
             trimmed_urls.add(largest_first[count - 1]["url"])
         context, trimming = _source_context(cited, evidence, trimmed_urls,
             margin=ARGON_QUOTE_WINDOW_MARGIN if tighter_argon else QUOTE_WINDOW_MARGIN)
+        if doc_context_chars is not None:
+            # The frozen 150k bundle bound and fixed quote windows stay intact.
+            # A smaller configured doc cap may veto, never silently narrow receipts.
+            if len(context) > doc_context_chars:
+                continue
+            trimming["documentation_context_budget"] = {
+                "version": 1, "max_chars": doc_context_chars,
+                "before_chars": before_context_chars, "after_chars": len(context),
+                "pages": trimming["sources"], "selection": "frozen_external_quote_windows"}
         if signature is not None:
             inputs = {"question_data": question, "domain_context": scope["domain_prompt"],
                       "documentation_context": context, "option_evidence": evidence}
