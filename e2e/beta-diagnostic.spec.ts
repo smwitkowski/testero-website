@@ -81,6 +81,9 @@ async function expectBetaResults(page: Page, count: number) {
 }
 
 test.describe("beta diagnostic with a real local bank and server allowlist", () => {
+  // Isolate this spec's shared waitlist/email rate-limit bucket from unrelated specs.
+  // TEST-NET metadata is local-only; the production limiter stays unchanged.
+  test.use({ extraHTTPHeaders: { "x-forwarded-for": "192.0.2.43" } });
   test.skip(!configuredCerts.includes(certId), "Dedicated beta run requires BETA_DIAGNOSTIC_CERTS on the Playwright web server.");
 
   test.beforeAll(async () => {
