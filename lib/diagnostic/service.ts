@@ -23,7 +23,8 @@ interface SessionItem {
 }
 const SESSION_FIELDS = "id,user_id,anonymous_owner_hash,question_count,expires_at,completed_at,exam";
 const PMLE_EXAM = "GCP_PM_ML_ENG";
-const sessionCertId = (session: Pick<StudySession, "exam">) => session.exam === PMLE_EXAM ? PMLE_CERT_ID : session.exam;
+// Preserve the existing PMLE wire format; analytics defaults its missing cert ID to PMLE.
+const sessionCertId = (session: Pick<StudySession, "exam">) => session.exam === PMLE_EXAM ? undefined : session.exam;
 const isPmleSession = (session: Pick<StudySession, "exam">) => session.exam === undefined || session.exam === PMLE_EXAM;
 const ITEM_FIELDS = "id,ordinal,stem,options,domain_code,domain_name,is_correct,answered_at,selected_label";
 const unavailable = () => new DiagnosticError(503, "The diagnostic is unavailable. Please try again.");

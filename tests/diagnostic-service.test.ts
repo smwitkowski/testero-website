@@ -406,7 +406,7 @@ describe("seen-question history", () => {
 it("returns committed first-item identity with an exact safe display whitelist after create", async () => {
   const db = database();
   const result = await createDiagnosticStart(db.client, token, now);
-  expect(result).toEqual({ sessionId, href: `/diagnostic/${sessionId}`, progress: { sessionId, certId: "machine-learning-engineer", status: "in_progress", totalQuestions: 20, answeredCount: 0, answeredQuestions: [], currentQuestion: { id: itemId, ordinal: 1, domainCode: items()[0].domain_code, stem: items()[0].stem, options: items()[0].options.map(({ label, text }) => ({ label, text })) } } });
+  expect(result).toEqual({ sessionId, href: `/diagnostic/${sessionId}`, progress: { sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 0, answeredQuestions: [], currentQuestion: { id: itemId, ordinal: 1, domainCode: items()[0].domain_code, stem: items()[0].stem, options: items()[0].options.map(({ label, text }) => ({ label, text })) } } });
   expect(JSON.stringify(result)).not.toMatch(/correct_label|is_correct|explanation|selected_label|anonymous_owner_hash/);
 });
 
@@ -479,7 +479,7 @@ describe("beta diagnostic isolation", () => {
   });
   it("preserves the default PMLE selection, RPC shape, and identity", async () => {
     const db = database();
-    expect((await createDiagnosticStart(db.client, token, now)).progress.certId).toBe("machine-learning-engineer");
+    expect((await createDiagnosticStart(db.client, token, now)).progress).not.toHaveProperty("certId");
     expect(betaDiagnosticEnabled).not.toHaveBeenCalled();
     expect(selectBetaQuestionsByGuide).not.toHaveBeenCalled();
     expect((db.rpc.mock.calls[0] as unknown as [string, Record<string, unknown>])[1]).not.toHaveProperty("p_exam");
@@ -530,9 +530,12 @@ describe("beta diagnostic isolation", () => {
     expect(db.from.mock.calls).toEqual([["study_sessions"]]);
     expect(loadPaidExplanations).not.toHaveBeenCalled();
   });
-  it("returns persisted PMLE exam as public PMLE slug without changing domain scores", async () => {
+  it("preserves the PMLE result/progress wire shape and domain scores for persisted PMLE sessions", async () => {
     const db = database({ session: session({ exam: "GCP_PM_ML_ENG", completed_at: "done" }), items: items().map(item => ({ ...item, answered_at: "done", is_correct: true })) });
-    expect(await diagnosticResults(db.client, sessionId, credentials, now)).toMatchObject({ certId: "machine-learning-engineer", domainBreakdown: [{ domainCode: "A", correct: 20 }] });
+    const result = await diagnosticResults(db.client, sessionId, credentials, now);
+    expect(result).toMatchObject({ domainBreakdown: [{ domainCode: "A", correct: 20 }] });
+    expect(result).not.toHaveProperty("certId");
+    expect(await readDiagnostic(db.client, sessionId, credentials, now)).not.toHaveProperty("certId");
   });
 });
 
