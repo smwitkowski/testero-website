@@ -1,3 +1,4 @@
+import { PMLE_CERT_ID } from "@/lib/certifications/catalog";
 import { ServerTiming } from "@/lib/server-timing";
 import { scheduleFunnelEvent } from "@/lib/analytics/server";
 import { NextResponse } from "next/server";
@@ -17,7 +18,7 @@ export async function POST(request: Request, context: { params: Promise<{ sessio
     const { sessionId } = await context.params;
     const credentials = await timing.measure("credentials", () => diagnosticCredentials());
     const data = await answerDiagnostic(createServiceSupabaseClient(), sessionId, credentials, parsed.data.itemId, parsed.data.selectedLabel, undefined, timing);
-    if (data.completed) scheduleFunnelEvent(request, "diagnostic_completed", sessionId, { session_id: sessionId });
+    if (data.completed) scheduleFunnelEvent(request, "diagnostic_completed", sessionId, { session_id: sessionId, cert_id: data.progress.certId ?? PMLE_CERT_ID });
     return NextResponse.json(data, { headers: { "Cache-Control": "private, no-store", "Server-Timing": timing.header() } });
   } catch (error) { const response = diagnosticErrorResponse(error); response.headers.set("Server-Timing", timing.header()); return response; }
 }

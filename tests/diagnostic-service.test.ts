@@ -2,9 +2,14 @@ import { loadPaidExplanations } from "@/lib/billing/explanations";
 import { getPaidAccess } from "@/lib/billing/paid-access";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createDiagnosticStart, createDiagnostic, readDiagnostic, answerDiagnostic, diagnosticResults, diagnosticFreeExplanation, seenDiagnosticQuestions } from "@/lib/diagnostic/service";
+import { createDiagnosticStart, createDiagnostic, readDiagnostic, answerDiagnostic, diagnosticResults, diagnosticFreeExplanation, seenDiagnosticQuestions, findOpenDiagnostic } from "@/lib/diagnostic/service";
 import { hashAnonymousToken } from "@/lib/diagnostic/ownership";
+import { betaDiagnosticEnabled } from "@/lib/diagnostic/beta";
+import { selectBetaQuestionsByGuide } from "@/lib/diagnostic/beta-selection";
 import { DIAGNOSTIC_NEW_SINCE, selectPmleQuestionsByBlueprint, type SelectionResult } from "@/lib/diagnostic/pmle-selection";
+
+vi.mock("@/lib/diagnostic/beta", async original => ({ ...await original<typeof import("@/lib/diagnostic/beta")>(), betaDiagnosticEnabled: vi.fn() }));
+vi.mock("@/lib/diagnostic/beta-selection", () => ({ selectBetaQuestionsByGuide: vi.fn() }));
 
 vi.mock("@/lib/billing/explanations", async original => ({ ...await original<typeof import("@/lib/billing/explanations")>(), loadPaidExplanations: vi.fn() }));
 vi.mock("@/lib/billing/paid-access", () => ({ getPaidAccess: vi.fn() }));
@@ -57,6 +62,8 @@ function database(options: { session?: unknown; items?: unknown; sessionError?: 
 }
 beforeEach(() => {
   vi.mocked(selectPmleQuestionsByBlueprint).mockReset().mockResolvedValue(selected());
+  vi.mocked(betaDiagnosticEnabled).mockReset().mockResolvedValue(true);
+  vi.mocked(selectBetaQuestionsByGuide).mockReset().mockResolvedValue({ ...selected(), questions: selected().questions.slice(0, 5) });
 });
 
 describe("atomic anonymous diagnostic creation", () => {
@@ -379,12 +386,13 @@ describe("seen-question history", () => {
     const db = history([{ id: "empty", session_items: [] }, { id: "s1", session_items: [{ question_id: "q1" }, { question_id: "q1" }, { question_id: "q2" }, { question_id: null }] }]);
     expect(await seenDiagnosticQuestions(db.client, null, "h".repeat(64))).toEqual(new Set(["q1", "q2"]));
     expect(db.from).toHaveBeenCalledExactlyOnceWith("study_sessions");
-    expect(db.calls).toEqual([["select", "id,session_items(question_id)"], ["kind", "diagnostic"], ["user_id", null], ["anonymous_owner_hash", "h".repeat(64)]]);
+    expect(db.calls).toEqual([["select", "id,session_items(question_id)"], ["kind", "diagnostic"], ["exam", "GCP_PM_ML_ENG"], ["user_id", null], ["anonymous_owner_hash", "h".repeat(64)]]);
     expect(db.query.order).toHaveBeenCalledWith("created_at", { ascending: false });
     expect(db.query.limit).toHaveBeenCalledWith(50);
   });
   it("uses only verified user identity for signed-in history", async () => {
     const db = history([]); await seenDiagnosticQuestions(db.client, userId, null);
+    expect(db.calls).toContainEqual(["exam", "GCP_PM_ML_ENG"]); // Beta runs cannot displace PMLE's 50-session freshness window.
     expect(db.calls).toContainEqual(["user_id", userId]); expect(db.calls.some(([field]) => field === "anonymous_owner_hash")).toBe(false);
   });
   it.each([null, [], [{ session_items: null }]])("treats empty or malformed optional history as nothing seen %#", async data => {
@@ -398,7 +406,7 @@ describe("seen-question history", () => {
 it("returns committed first-item identity with an exact safe display whitelist after create", async () => {
   const db = database();
   const result = await createDiagnosticStart(db.client, token, now);
-  expect(result).toEqual({ sessionId, href: `/diagnostic/${sessionId}`, progress: { sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 0, answeredQuestions: [], currentQuestion: { id: itemId, ordinal: 1, domainCode: items()[0].domain_code, stem: items()[0].stem, options: items()[0].options.map(({ label, text }) => ({ label, text })) } } });
+  expect(result).toEqual({ sessionId, href: `/diagnostic/${sessionId}`, progress: { sessionId, certId: "machine-learning-engineer", status: "in_progress", totalQuestions: 20, answeredCount: 0, answeredQuestions: [], currentQuestion: { id: itemId, ordinal: 1, domainCode: items()[0].domain_code, stem: items()[0].stem, options: items()[0].options.map(({ label, text }) => ({ label, text })) } } });
   expect(JSON.stringify(result)).not.toMatch(/correct_label|is_correct|explanation|selected_label|anonymous_owner_hash/);
 });
 
@@ -453,5 +461,90 @@ describe("one server-selected free explanation", () => {
     await expect(diagnosticFreeExplanation(db.client, sessionId, credentials, now)).rejects.toMatchObject({ status: 503 });
     if (mode === "missing rationale") expect(loadPaidExplanations).toHaveBeenCalledWith(db.client, [rows[15]]);
     else expect(loadPaidExplanations).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("beta diagnostic isolation", () => {
+  it.each([5, 10])("creates %i beta snapshots with explicit exam and no PMLE sampling", async count => {
+    vi.mocked(selectBetaQuestionsByGuide).mockResolvedValue({ ...selected(), questions: selected().questions.slice(0, count) });
+    const db = database({ items: items().slice(0, count) });
+    const result = await createDiagnosticStart(db.client, token, now, null, undefined, count, "data-engineer");
+    expect(betaDiagnosticEnabled).toHaveBeenCalledWith(db.client, "data-engineer");
+    expect(selectBetaQuestionsByGuide).toHaveBeenCalledWith(db.client, "data-engineer", count);
+    expect(selectPmleQuestionsByBlueprint).not.toHaveBeenCalled();
+    expect(db.rpc).toHaveBeenCalledWith("create_study_session", expect.objectContaining({ p_exam: "data-engineer" }));
+    expect(result.progress).toMatchObject({ certId: "data-engineer", totalQuestions: count, currentQuestion: { domainName: "Domain A" } });
+    expect(JSON.stringify(result)).not.toMatch(/is_correct|correct_label|explanation/);
+  });
+  it("preserves the default PMLE selection, RPC shape, and identity", async () => {
+    const db = database();
+    expect((await createDiagnosticStart(db.client, token, now)).progress.certId).toBe("machine-learning-engineer");
+    expect(betaDiagnosticEnabled).not.toHaveBeenCalled();
+    expect(selectBetaQuestionsByGuide).not.toHaveBeenCalled();
+    expect((db.rpc.mock.calls[0] as unknown as [string, Record<string, unknown>])[1]).not.toHaveProperty("p_exam");
+  });
+  it("blocks disabled beta before sampling or writes", async () => {
+    vi.mocked(betaDiagnosticEnabled).mockResolvedValue(false);
+    const db = database();
+    await expect(createDiagnostic(db.client, token, now, null, undefined, 5, "data-engineer")).rejects.toMatchObject({ status: 404 });
+    expect(selectBetaQuestionsByGuide).not.toHaveBeenCalled(); expect(db.rpc).not.toHaveBeenCalled();
+  });
+  it.each(["unknown", "cloud-developer"])("rejects out-of-scope cert %s without reads or writes", async certId => {
+    const db = database();
+    await expect(createDiagnostic(db.client, token, now, null, undefined, 5, certId)).rejects.toMatchObject({ status: 404 });
+    expect(db.from).not.toHaveBeenCalled(); expect(db.rpc).not.toHaveBeenCalled();
+  });
+  it("rejects beta 20 before gate or selection", async () => {
+    const db = database();
+    await expect(createDiagnostic(db.client, token, now, null, undefined, 20, "data-engineer")).rejects.toMatchObject({ status: 400 });
+    expect(betaDiagnosticEnabled).not.toHaveBeenCalled(); expect(db.rpc).not.toHaveBeenCalled();
+  });
+  it("sanitizes failed beta sampling without falling back to PMLE", async () => {
+    vi.mocked(selectBetaQuestionsByGuide).mockRejectedValue(new Error("secret"));
+    const db = database();
+    await expect(createDiagnostic(db.client, token, now, null, undefined, 5, "data-engineer")).rejects.toMatchObject({ status: 503 });
+    expect(selectPmleQuestionsByBlueprint).not.toHaveBeenCalled(); expect(db.rpc).not.toHaveBeenCalled();
+  });
+  it.each([null, userId])("returns tier-only beta results even to paid account owner %s", async owner => {
+    vi.mocked(getPaidAccess).mockResolvedValue({ ...freeAccess, hasPaidAccess: true });
+    const db = database({ session: session({ exam: "data-engineer", user_id: owner, anonymous_owner_hash: owner ? null : hashAnonymousToken(token), completed_at: "done" }), items: items().map(item => ({ ...item, answered_at: "done", is_correct: true })) });
+    const result = await diagnosticResults(db.client, sessionId, owner ? signedIn : credentials, now);
+    expect(result).toMatchObject({ certId: "data-engineer", score: 100, domainBreakdown: [] });
+    expect(result).not.toHaveProperty("review");
+    expect(getPaidAccess).not.toHaveBeenCalled(); expect(loadPaidExplanations).not.toHaveBeenCalled();
+    expect(db.from.mock.results[1].value.select).not.toHaveBeenCalledWith(expect.stringContaining("correct_label"));
+    expect(JSON.stringify(result)).not.toMatch(/stem|options|explanation|Domain A/);
+  });
+  it("retains persisted exam in progress and answer without exposing explanations", async () => {
+    const db = database({ session: session({ exam: "cloud-engineer" }), rpcData: { answeredCount: 1, totalQuestions: 20, completed: false } });
+    expect((await readDiagnostic(db.client, sessionId, credentials, now)).certId).toBe("cloud-engineer");
+    const answer = await answerDiagnostic(db.client, sessionId, credentials, itemId, "A", now);
+    expect(answer.progress.certId).toBe("cloud-engineer");
+    expect(answer.feedback).toEqual({ itemId, selectedLabel: "A", correctLabel: "A", isCorrect: true });
+    expect(JSON.stringify(answer)).not.toMatch(/explanation/);
+  });
+  it.each([false, true])("denies beta free explanation before all item/bank reads (completed %s)", async completed => {
+    const db = database({ session: session({ exam: "data-engineer", completed_at: completed ? "done" : null }) });
+    await expect(diagnosticFreeExplanation(db.client, sessionId, credentials, now)).rejects.toMatchObject({ status: 404 });
+    expect(db.from.mock.calls).toEqual([["study_sessions"]]);
+    expect(loadPaidExplanations).not.toHaveBeenCalled();
+  });
+  it("returns persisted PMLE exam as public PMLE slug without changing domain scores", async () => {
+    const db = database({ session: session({ exam: "GCP_PM_ML_ENG", completed_at: "done" }), items: items().map(item => ({ ...item, answered_at: "done", is_correct: true })) });
+    expect(await diagnosticResults(db.client, sessionId, credentials, now)).toMatchObject({ certId: "machine-learning-engineer", domainBreakdown: [{ domainCode: "A", correct: 20 }] });
+  });
+});
+
+
+describe("exam-scoped diagnostic resume", () => {
+  it.each([[undefined, "GCP_PM_ML_ENG"], ["data-engineer", "data-engineer"]])("filters unfinished sessions for %s", async (certId, exam) => {
+    const query = { select: vi.fn(() => query), eq: vi.fn(() => query), is: vi.fn(() => query), gt: vi.fn(() => query), order: vi.fn(() => query), limit: vi.fn(() => query), maybeSingle: vi.fn(async () => ({ data: session({ exam }), error: null })) };
+    const client = { from: vi.fn(() => query) } as unknown as SupabaseClient;
+    expect(await findOpenDiagnostic(client, credentials, now, certId)).toBe(sessionId);
+    expect(query.eq).toHaveBeenCalledWith("exam", exam);
+    expect(query.eq).toHaveBeenCalledWith("anonymous_owner_hash", hashAnonymousToken(token));
+    expect(query.is).toHaveBeenCalledWith("completed_at", null);
+    expect(query.gt).toHaveBeenCalledWith("expires_at", new Date(now).toISOString());
   });
 });
