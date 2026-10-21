@@ -9,7 +9,7 @@ test("completed diagnostic offers optional results email with consent (mocked su
   expect(["127.0.0.1", "localhost"]).toContain(url.hostname);
   expect(url.port).toBe("56541");
   const service = createClient(url.href, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
-  const created = await page.request.post("/api/diagnostic", { data: {} });
+  const created = await page.request.post("/api/diagnostic", { data: { questionCount: 5 } });
   expect(created.status()).toBe(201);
   const { sessionId } = await created.json() as { sessionId: string };
   const api = `/api/diagnostic/${sessionId}`;
@@ -30,7 +30,7 @@ test("completed diagnostic offers optional results email with consent (mocked su
     await expect(page.getByRole("heading", { name: "PMLE readiness report", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Score by domain", exact: true })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "take the 20-question diagnostic →", exact: true })).toHaveAttribute("href", "/diagnostic?length=20");
-    const section = page.getByRole("region", { name: "Email me my results + a 4-week plan", exact: true });
+    const section = page.locator('[aria-labelledby="email-results-heading"]');
     await expect(section).toContainText("Optional: one email with your results; no newsletter.");
     const consent = section.getByRole("checkbox");
     await expect(consent).not.toBeChecked();
