@@ -29,14 +29,14 @@ function formIn(node: ReactElement): ReactElement<{ onSubmit: (event: { preventD
 beforeEach(() => { vi.clearAllMocks(); mocks.viewOrdinal = null; mocks.totalQuestions = 20; mocks.answeredCount = 2; mocks.nullStateCalls = 0; });
 afterEach(() => vi.unstubAllGlobals());
 it("captures question metadata only after its answer was saved, before completion", async () => {
-  mocks.request.mockResolvedValue({ completed: true, feedback: { itemId: "item", selectedLabel: "A", correctLabel: "A", isCorrect: true } });
+  mocks.request.mockResolvedValue({ completed: true, progress: {}, feedback: { itemId: "item", selectedLabel: "A", correctLabel: "A", isCorrect: true } });
   const form = formIn(DiagnosticSession({ sessionId: "session" }))!;
   await form.props.onSubmit({ preventDefault: vi.fn() });
   expect(diagnosticRequest).toHaveBeenCalledWith("/api/diagnostic/session/answer", expect.objectContaining({ body: JSON.stringify({ itemId: "item", selectedLabel: "A" }) }));
-  expect(mocks.answer.mock.calls).toEqual([["session", 3, "D2", true]]);
+  expect(mocks.answer.mock.calls).toEqual([["session", 3, "D2", true, "machine-learning-engineer"]]);
   // The reveal shows first; results open only from its "See my results" button.
   expect(mocks.replace).not.toHaveBeenCalled();
-  expect(mocks.completed).toHaveBeenCalledWith("diagnostic_completed", "session");
+  expect(mocks.completed).toHaveBeenCalledWith("diagnostic_completed", "session", undefined, "machine-learning-engineer");
   expect(mocks.answer.mock.invocationCallOrder[0]).toBeLessThan(mocks.completed.mock.invocationCallOrder[0]);
 });
 it("does not capture question answered when saving fails", async () => {

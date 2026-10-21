@@ -9,6 +9,7 @@ import { trackDiagnostic, trackDiagnosticAnswer } from "@/lib/analytics/client";
 import { SiteLogo } from "@/components/site-logo";
 import { Button } from "@/components/ui/button";
 import { PMLE_BLUEPRINT_MAP } from "@/lib/constants/pmle-blueprint";
+import { certifications, PMLE_CERT_ID } from "@/lib/certifications/catalog";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DiagnosticError, DiagnosticLoading } from "@/components/diagnostic-state";
 import { diagnosticRequest, requestError, useDiagnosticResource } from "@/components/diagnostic-resource";
@@ -31,7 +32,10 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
   const submitting = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const reveal = useRef<HTMLDivElement>(null);
-  const resultsPath = `/diagnostic/${encodeURIComponent(sessionId)}/results`;
+  const certId = data?.certId ?? PMLE_CERT_ID;
+  const beta = certId !== PMLE_CERT_ID;
+  const certName = certifications.find(cert => cert.cert_id === certId)?.name;
+  const resultsPath = `/diagnostic/${encodeURIComponent(sessionId)}/results${beta ? `?cert=${encodeURIComponent(certId)}` : ""}`;
 
   useEffect(() => {
     const requestController = new AbortController();
@@ -69,8 +73,8 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
         body: JSON.stringify({ itemId: question.id, selectedLabel: selected }), signal,
       });
       if (signal.aborted) return;
-      trackDiagnosticAnswer(sessionId, question.ordinal, question.domainCode, result.feedback.isCorrect);
-      if (result.completed) trackDiagnostic("diagnostic_completed", sessionId);
+      trackDiagnosticAnswer(sessionId, question.ordinal, question.domainCode, result.feedback.isCorrect, result.progress.certId ?? certId);
+      if (result.completed) trackDiagnostic("diagnostic_completed", sessionId, undefined, result.progress.certId ?? certId);
       setAnswer(result);
     } catch (reason) {
       if (!signal.aborted) setAnswerError(`${requestError(reason)} Retry loads your saved progress before you answer again.`);
@@ -93,6 +97,7 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
 
   const header = <header className="mx-auto flex max-w-[720px] flex-wrap items-center justify-between gap-3 border-b border-border pb-3 sm:pb-5">
     <SiteLogo />
+    {beta && certName && <p className="text-sm text-muted-foreground">{certName} · Beta diagnostic</p>}
   </header>;
   if (error || answerError) return <div className="space-y-6">{header}<DiagnosticError message={error || answerError!} onRetry={retry} /></div>;
   if (!data || data.status === "completed") return <div className="space-y-6">{header}<DiagnosticLoading message={data ? "Opening your results…" : "Loading your saved progress…"} /></div>;
@@ -120,10 +125,10 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
               <div className="h-full bg-primary" style={{ width: `${answeredCount / data.totalQuestions * 100}%` }} />
             </div>
           </div>
-          {halfway && <p role="status" className="halfway-note rounded-md border border-border bg-muted px-4 py-3 text-sm font-medium">Halfway there. Your domain picture is taking shape.</p>}
+          {halfway && <p role="status" className="halfway-note rounded-md border border-border bg-muted px-4 py-3 text-sm font-medium">{beta ? "Halfway there. Your readiness signal is taking shape." : "Halfway there. Your domain picture is taking shape."}</p>}
           <Card className="rounded-none border-0 bg-transparent shadow-none sm:rounded-lg sm:border sm:bg-card sm:shadow-sm">
             <CardHeader className="space-y-3 px-0 pt-0 pb-4 sm:space-y-4 sm:p-8">
-              <p className="text-sm text-muted-foreground">{PMLE_BLUEPRINT_MAP[question.domainCode]?.displayName ?? question.domainCode}</p>
+              <p className="text-sm text-muted-foreground">{beta ? question.domainName ?? question.domainCode : PMLE_BLUEPRINT_MAP[question.domainCode]?.displayName ?? question.domainCode}</p>
               <h1 ref={heading} tabIndex={-1} className="whitespace-pre-line text-base font-normal leading-relaxed sm:text-xl">{question.stem}</h1>
             </CardHeader>
             <CardContent className="px-0 pb-0 sm:px-8 sm:pb-8">
@@ -142,7 +147,7 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
                 </fieldset>
                 {feedback && <div ref={reveal} role="status" className={`rounded-md p-4 ${feedback.isCorrect ? "bg-solid-background text-solid" : "bg-focus-area-background text-focus-area"}`}>
                   <p className="font-semibold">{feedback.isCorrect ? "Correct" : "Not quite"}. You chose {feedback.selectedLabel}; the correct answer is {feedback.correctLabel}.</p>
-                  <p className="mt-1 text-sm">{data.totalQuestions < 10 ? "Your overall readiness score comes at the end." : "Your full report, with your strongest and weakest domains, comes at the end."}</p>
+                  <p className="mt-1 text-sm">{beta ? "Your readiness tier comes at the end." : data.totalQuestions < 10 ? "Your overall readiness score comes at the end." : "Your full report, with your strongest and weakest domains, comes at the end."}</p>
                 </div>}
                 {pending && <p role="status" className="text-sm text-muted-foreground">Saving your answer…</p>}
               </form>

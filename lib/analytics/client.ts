@@ -1,7 +1,7 @@
 "use client";
 
 import posthog from "posthog-js";
-import { certifications } from "@/lib/certifications/catalog";
+import { certifications, PMLE_CERT_ID } from "@/lib/certifications/catalog";
 
 let initialized = false;
 let recordingEnabled = false;
@@ -45,8 +45,8 @@ export function trackPageview(path: string) {
   if (initialized) posthog.capture("$pageview", { $current_url: `${window.location.origin}${safePath}` });
 }
 
-export function trackDiagnostic(event: "diagnostic_started" | "diagnostic_completed", sessionId: string, length?: number) {
-  if (initialized) posthog.capture(event, { session_id: sessionId, ...([5, 10, 20].includes(length ?? 0) ? { length } : {}), $insert_id: `${event}:${sessionId}` });
+export function trackDiagnostic(event: "diagnostic_started" | "diagnostic_completed", sessionId: string, length?: number, certId = PMLE_CERT_ID) {
+  if (initialized) posthog.capture(event, { session_id: sessionId, cert_id: certId, ...([5, 10, 20].includes(length ?? 0) ? { length } : {}), $insert_id: `${event}:${sessionId}` });
 }
 
 export function trackSignupCompleted() {
@@ -74,9 +74,9 @@ export function analyticsHeaders(): Record<string, string> {
   return { "X-PostHog-Distinct-Id": posthog.get_distinct_id() };
 }
 
-export function trackDiagnosticAnswer(sessionId: string, ordinal: number, domainCode: string, isCorrect: boolean) {
+export function trackDiagnosticAnswer(sessionId: string, ordinal: number, domainCode: string, isCorrect: boolean, certId = PMLE_CERT_ID) {
   if (initialized) posthog.capture("diagnostic_question_answered", {
-    session_id: sessionId, ordinal, domain_code: domainCode, is_correct: isCorrect,
+    session_id: sessionId, ordinal, domain_code: domainCode, is_correct: isCorrect, cert_id: certId,
   });
 }
 
@@ -94,6 +94,7 @@ export function trackResults(event: "results_viewed" | "free_explanation_viewed"
   initializeAnalytics();
   if (initialized) posthog.capture(event, {
     session_id: result.sessionId,
+    cert_id: result.certId ?? PMLE_CERT_ID,
     question_count: result.totalQuestions,
     domain_scores: result.domainBreakdown.map(domain => ({ domain_code: domain.domainCode, correct: domain.correct, total: domain.total, percentage: domain.percentage })),
     ...(event !== "unlock_cta_clicked" ? { $insert_id: `${event}:${result.sessionId}` } : {}),
