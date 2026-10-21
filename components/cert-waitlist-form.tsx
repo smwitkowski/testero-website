@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 
-export function CertWaitlistForm({ certId, certName }: { certId: string; certName: string }) {
+export function CertWaitlistForm({ certId, certName, notificationTarget = "diagnostic" }: { certId: string; certName: string; notificationTarget?: "diagnostic" | "practice" }) {
   const emailId = `cert-email-${certId}`;
   const websiteId = `cert-website-${certId}`;
   const [status, setStatus] = useState("");
@@ -30,12 +30,12 @@ export function CertWaitlistForm({ certId, certName }: { certId: string; certNam
     finally { setPending(false); }
   }
   return <form onSubmit={submit} className="space-y-4">
-    {joined ? <p className="text-sm font-semibold">Launch notification for {certName}</p> : <label className="block text-sm font-semibold" htmlFor={emailId}>Get notified when the {certName} diagnostic is ready</label>}
+    {joined ? <p className="text-sm font-semibold">Launch notification for {certName}</p> : <label className="block text-sm font-semibold" htmlFor={emailId}>Get notified when {notificationTarget === "practice" ? `practice for ${certName} opens` : `the ${certName} diagnostic is ready`}</label>}
     {!joined && <><input id={emailId} name="email" type="email" autoComplete="email" required maxLength={254} aria-invalid={!!emailError} aria-describedby={`${emailId}-error`} onInvalid={event => setEmailError(event.currentTarget.validationMessage)} onChange={() => setEmailError("")} placeholder="you@example.com" className="min-h-12 w-full rounded-md border border-input bg-card px-3 text-base" />
     <p id={`${emailId}-error`} className="text-sm text-destructive" aria-live="polite">{emailError}</p>
     <div hidden aria-hidden="true"><label htmlFor={websiteId}>Website</label><input id={websiteId} name="website" tabIndex={-1} autoComplete="off" /></div>
     <button disabled={pending} className="min-h-12 w-full rounded-lg bg-primary px-4 py-3 font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-60">{pending ? "Saving…" : "Notify me"}</button></>}
     <p role="status" aria-live="polite" className={`text-sm ${joined ? "text-solid" : "text-destructive"}`}>{status}</p>
-    <p className="text-xs leading-relaxed text-muted-foreground">Only a launch notification for this diagnostic, not a general mailing list. No launch date is promised. <a href="/privacy" className="underline">Privacy</a></p>
+    <p className="text-xs leading-relaxed text-muted-foreground">Only a launch notification for this {notificationTarget}, not a general mailing list. No launch date is promised. <a href="/privacy" className="underline">Privacy</a></p>
   </form>;
 }

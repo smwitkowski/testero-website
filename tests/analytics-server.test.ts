@@ -39,6 +39,13 @@ describe("server purchase analytics", () => {
 });
 
 describe("server funnel analytics", () => {
+  it.each(["machine-learning-engineer", "data-engineer", "cloud-architect", "cloud-engineer", "generative-ai-leader", "agentic-architect"])("preserves cert_id on diagnostic events for %s", async certId => {
+    for (const event of ["diagnostic_started", "diagnostic_completed"] as const) {
+      await captureFunnelEvent(event, "session", { session_id: "session", cert_id: certId, length: 5 });
+    }
+    expect(fetchMock.mock.calls).toHaveLength(2);
+    for (const [, init] of fetchMock.mock.calls) expect(JSON.parse(init.body).properties).toMatchObject({ session_id: "session", cert_id: certId, length: 5 });
+  });
   it.each([5, 10, 20])("captures diagnostic length %i", async length => {
     await captureFunnelEvent("diagnostic_started", "session", { session_id: "session", length });
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).properties.length).toBe(length);

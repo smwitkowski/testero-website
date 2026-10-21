@@ -10,7 +10,7 @@ import { weakestFirst } from "@/lib/readiness";
 
 export async function loadDashboard(client: SupabaseClient, userId: string, now = Date.now()): Promise<DashboardData> {
   const unavailable = () => new DiagnosticError(503, "Your dashboard is unavailable. Please try again.");
-  const { data: latest, error } = await client.from("study_sessions").select("id,question_count").eq("user_id", userId).eq("kind", "diagnostic").not("completed_at", "is", null).order("completed_at", { ascending: false }).order("id").limit(1).maybeSingle();
+  const { data: latest, error } = await client.from("study_sessions").select("id,question_count").eq("user_id", userId).eq("kind", "diagnostic").eq("exam", "GCP_PM_ML_ENG").not("completed_at", "is", null).order("completed_at", { ascending: false }).order("id").limit(1).maybeSingle();
   if (error) throw unavailable();
   let diagnostic: DashboardData["diagnostic"] = null;
   if (latest) {

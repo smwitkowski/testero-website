@@ -8,6 +8,29 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 describe("private analytics event wiring", () => {
+  it.each(["data-engineer", "cloud-architect", "cloud-engineer", "generative-ai-leader", "agentic-architect"])("tags beta diagnostic events with %s", async certId => {
+    const analytics = await import("@/lib/analytics/client");
+    analytics.initializeAnalytics();
+    analytics.trackDiagnostic("diagnostic_started", "beta-session", 5, certId);
+    analytics.trackDiagnosticAnswer("beta-session", 1, `${certId}:standard:1`, false, certId);
+    analytics.trackDiagnostic("diagnostic_completed", "beta-session", 5, certId);
+    expect(sdk.capture.mock.calls.map(([event, properties]) => [event, properties.cert_id])).toEqual([
+      ["diagnostic_started", certId], ["diagnostic_question_answered", certId], ["diagnostic_completed", certId],
+    ]);
+    expect(sdk.capture.mock.calls[1][1]).toEqual({ session_id: "beta-session", ordinal: 1, domain_code: `${certId}:standard:1`, is_correct: false, cert_id: certId });
+  });
+  it("still excludes internal browsers from all beta diagnostic events", async () => {
+    vi.stubGlobal("document", { cookie: "testero_internal=1" });
+    try {
+      const analytics = await import("@/lib/analytics/client");
+      analytics.initializeAnalytics();
+      analytics.trackDiagnostic("diagnostic_started", "beta-session", 5, "data-engineer");
+      analytics.trackDiagnosticAnswer("beta-session", 1, "data-engineer:standard:1", true, "data-engineer");
+      analytics.trackDiagnostic("diagnostic_completed", "beta-session", 5, "data-engineer");
+      expect(sdk.init).not.toHaveBeenCalled();
+      expect(sdk.capture).not.toHaveBeenCalled();
+    } finally { vi.unstubAllGlobals(); }
+  });
   it.each([5, 10, 20, 7])("includes only supported diagnostic length %i", async length => {
     const analytics = await import("@/lib/analytics/client");
     analytics.initializeAnalytics();
@@ -68,7 +91,7 @@ describe("private analytics event wiring", () => {
   it.each(["diagnostic_started", "diagnostic_completed"] as const)("preserves %s without answers or explanations", async event => {
     const analytics = await import("@/lib/analytics/client");
     analytics.initializeAnalytics(); analytics.trackDiagnostic(event, "session");
-    expect(sdk.capture.mock.calls).toEqual([[event, { session_id: "session", $insert_id: `${event}:session` }]]);
+    expect(sdk.capture.mock.calls).toEqual([[event, { session_id: "session", cert_id: "machine-learning-engineer", $insert_id: `${event}:session` }]]);
   });
   it("identifies only opaque UUIDs and resets identity after logout", async () => {
     const analytics = await import("@/lib/analytics/client");
@@ -97,7 +120,7 @@ describe("private analytics event wiring", () => {
     const analytics = await import("@/lib/analytics/client");
     analytics.initializeAnalytics(); analytics.trackDiagnosticAnswer("session", 3, "D2", false);
     expect(sdk.capture.mock.calls).toEqual([["diagnostic_question_answered", {
-      session_id: "session", ordinal: 3, domain_code: "D2", is_correct: false,
+      session_id: "session", ordinal: 3, domain_code: "D2", is_correct: false, cert_id: "machine-learning-engineer",
     }]]);
   });
 
@@ -108,7 +131,7 @@ describe("private analytics event wiring", () => {
       email: "private@example.com", review: [{ stem: "Private question", explanation: "Private explanation" }] };
     analytics.trackResults(event, result as never);
     expect(sdk.capture.mock.calls).toEqual([[event, {
-      session_id: "session", question_count: 20,
+      session_id: "session", cert_id: "machine-learning-engineer", question_count: 20,
       domain_scores: [{ domain_code: "A", correct: 2, total: 4, percentage: 50 }],
       ...(event === "unlock_cta_clicked" ? {} : { $insert_id: `${event}:session` }),
     }]]);

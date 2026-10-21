@@ -5,12 +5,14 @@ export interface DiagnosticQuestion {
   id: string;
   ordinal: number;
   domainCode: string;
+  domainName?: string;
   stem: string;
   options: { label: string; text: string }[];
 }
 
 export interface DiagnosticProgress {
   sessionId: string;
+  certId?: string;
   status: "in_progress" | "completed";
   totalQuestions: number;
   answeredCount: number;
@@ -20,6 +22,7 @@ export interface DiagnosticProgress {
 
 export interface DiagnosticResult {
   sessionId: string;
+  certId?: string;
   score: number;
   totalQuestions: number;
   correctAnswers: number;

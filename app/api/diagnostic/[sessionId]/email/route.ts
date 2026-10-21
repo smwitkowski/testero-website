@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { diagnosticCredentials } from "@/lib/diagnostic/request";
+import { PMLE_CERT_ID } from "@/lib/certifications/catalog";
 import { diagnosticResults } from "@/lib/diagnostic/service";
 import { DiagnosticError, requireSameOrigin } from "@/lib/diagnostic/http";
 import { sendResultsEmail } from "@/lib/diagnostic/results-email";
@@ -27,6 +28,7 @@ export async function POST(request: Request, context: { params: Promise<{ sessio
       const client = createServiceSupabaseClient();
       const { sessionId } = await context.params;
       const result = await diagnosticResults(client, sessionId, await diagnosticCredentials());
+      if (result.certId && result.certId !== PMLE_CERT_ID) throw new DiagnosticError(404, "Results email is not available for this diagnostic");
       await sendResultsEmail(client, parsed.data.email, result);
     }
     return NextResponse.json({ message: "Your results email has been sent." }, { headers });

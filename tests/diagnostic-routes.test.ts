@@ -49,7 +49,7 @@ describe("strict diagnostic creation route", () => {
     const response = await start(request({ questionCount: count }));
     expect(response.status).toBe(201);
     expect(createDiagnosticStart).toHaveBeenCalledWith(mocks.client, expect.any(String), undefined, null, expect.anything(), count);
-    expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_started", sessionId, { session_id: sessionId, length: count });
+    expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_started", sessionId, { session_id: sessionId, length: count, cert_id: "machine-learning-engineer" });
   });
   it("sets an opaque protected cookie only after successful creation", async () => {
     vi.stubEnv("NODE_ENV", "production");
@@ -256,17 +256,23 @@ describe("diagnostic confirmed credentials", () => {
 
 it("tracks successful creation and completed answers only", async () => {
   await start(request());
-  expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_started", sessionId, { session_id: sessionId, length: 20 });
+  expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_started", sessionId, { session_id: sessionId, length: 20, cert_id: "machine-learning-engineer" });
   vi.mocked(scheduleFunnelEvent).mockClear();
   await answer(request({ itemId, selectedLabel: "A" }), context);
   expect(scheduleFunnelEvent).not.toHaveBeenCalled();
   vi.mocked(answerDiagnostic).mockResolvedValue({ answeredCount: 20, totalQuestions: 20, completed: true, progress: { sessionId, status: "completed", totalQuestions: 20, answeredCount: 20, answeredQuestions: [], currentQuestion: null }, feedback: { itemId, selectedLabel: "A", correctLabel: "A", isCorrect: true } });
   await answer(request({ itemId, selectedLabel: "A" }), context);
-  expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_completed", sessionId, { session_id: sessionId });
+  expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_completed", sessionId, { session_id: sessionId, cert_id: "machine-learning-engineer" });
   vi.mocked(scheduleFunnelEvent).mockClear();
   vi.mocked(createDiagnosticStart).mockRejectedValue(new DiagnosticError(503, "Unavailable"));
   await start(request());
   vi.mocked(answerDiagnostic).mockRejectedValue(new DiagnosticError(409, "Conflict"));
   await answer(request({ itemId, selectedLabel: "A" }), context);
   expect(scheduleFunnelEvent).not.toHaveBeenCalled();
+});
+
+it("tags beta completion with the persisted session cert, not caller input", async () => {
+  vi.mocked(answerDiagnostic).mockResolvedValue({ answeredCount: 5, totalQuestions: 5, completed: true, progress: { sessionId, certId: "data-engineer", status: "completed", totalQuestions: 5, answeredCount: 5, answeredQuestions: [], currentQuestion: null }, feedback: { itemId, selectedLabel: "A", correctLabel: "A", isCorrect: true } });
+  await answer(request({ itemId, selectedLabel: "A" }), context);
+  expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_completed", sessionId, { session_id: sessionId, cert_id: "data-engineer" });
 });

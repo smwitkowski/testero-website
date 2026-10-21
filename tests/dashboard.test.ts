@@ -52,6 +52,7 @@ describe("owned dashboard aggregates", () => {
     const sessions = database.calls.filter(call => call.table === "study_sessions");
     expect(sessions).toHaveLength(2);
     for (const call of sessions) expect(call.filters).toContainEqual(["user_id", userId]);
+    expect(sessions[0].filters).toContainEqual(["exam", "GCP_PM_ML_ENG"]); // Beta diagnostics never replace the PMLE dashboard's report.
     expect(sessions[0].filters).toContainEqual(["kind", "diagnostic"]); expect(sessions[0].filters).toContainEqual(["not:completed_at:is", null]);
     expect(sessions[0].order).toEqual([["completed_at", { ascending: false }], ["id", undefined]]); expect(sessions[0].limits).toEqual([1]);
     expect(sessions[1].filters).toContainEqual(["kind", "practice"]); expect(sessions[1].filters).toContainEqual(["is:completed_at", null]); expect(sessions[1].filters).toContainEqual(["gt:expires_at", "2026-10-03T12:00:00.000Z"]);

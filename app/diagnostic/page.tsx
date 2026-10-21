@@ -1,18 +1,44 @@
 import { pageMetadata } from "@/lib/seo";
+import { notFound } from "next/navigation";
+import { PMLE_CERT_ID } from "@/lib/certifications/catalog";
+import { getCertification } from "@/lib/certifications/data";
+import { betaDiagnosticEnabled, isBetaDiagnosticCertId } from "@/lib/diagnostic/beta";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
 import { DiagnosticStart } from "@/components/diagnostic-start";
 import { diagnosticCredentials } from "@/lib/diagnostic/request";
 import { findOpenDiagnostic } from "@/lib/diagnostic/service";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 
-export const metadata = pageMetadata("Start your free PMLE diagnostic", "Choose 5, 10 or 20 PMLE questions. See your readiness and study focus without an account.", "/diagnostic");
+type Props = { searchParams: Promise<{ length?: string | string[]; cert?: string | string[] }> };
+export async function generateMetadata({ searchParams }: Props) {
+  const { cert: requestedCert } = await searchParams;
+  if (requestedCert === undefined || requestedCert === PMLE_CERT_ID) {
+    return pageMetadata("Start your free PMLE diagnostic", "Choose 5, 10 or 20 PMLE questions. See your readiness and study focus without an account.", "/diagnostic");
+  }
+  const cert = typeof requestedCert === "string" && isBetaDiagnosticCertId(requestedCert) ? getCertification(requestedCert) : undefined;
+  if (cert) {
+    return pageMetadata(`Free ${cert.name} beta diagnostic`, `Choose 5 or 10 questions for ${cert.name}. Get an early readiness tier without an account.`, "/diagnostic");
+  }
+  return pageMetadata("Diagnostic", "Certification readiness diagnostics.", "/diagnostic");
+}
 export const dynamic = "force-dynamic";
-export default async function DiagnosticStartPage({ searchParams }: { searchParams: Promise<{ length?: string | string[] }> }) {
-  const length = Number((await searchParams).length);
-  const initialCount = length === 10 || length === 20 ? length : 5;
+export default async function DiagnosticStartPage({ searchParams }: Props) {
+  const query = await searchParams;
+  if (Array.isArray(query.cert)) notFound();
+  const certId = query.cert ?? PMLE_CERT_ID;
+  const beta = certId !== PMLE_CERT_ID;
+  const cert = getCertification(certId);
+  if (!cert) notFound();
+  if (beta) {
+    const enabled = await betaDiagnosticEnabled(createServiceSupabaseClient(), certId).catch(() => false);
+    if (!enabled) notFound();
+  }
+  const length = Number(query.length);
+  const initialCount = length === 10 || (!beta && length === 20) ? length : 5;
   let resumeId: string | null = null;
-  try { resumeId = await findOpenDiagnostic(createServiceSupabaseClient(), await diagnosticCredentials()); }
+  try { resumeId = await findOpenDiagnostic(createServiceSupabaseClient(), await diagnosticCredentials(), undefined, certId); }
   catch { /* Resume is a convenience; starting fresh always works. */ }
+  if (beta) return <DiagnosticStart key={certId} resumeId={resumeId} initialCount={initialCount} certId={certId} certName={cert.name} domainCount={cert.guides[0].sections.filter(section => section.included !== false).length} />;
   return <DiagnosticStart resumeId={resumeId} initialCount={initialCount}>
     <section aria-labelledby="diagnostic-coverage" className="mx-auto mt-10 max-w-[696px] space-y-4 border-t border-border pt-6">
       <h2 id="diagnostic-coverage" className="text-xl font-semibold">What the PMLE diagnostic covers</h2>

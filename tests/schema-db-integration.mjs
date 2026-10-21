@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID, createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
+import { verifyBetaDiagnostics } from "./helpers/beta-diagnostics-db.mjs";
 
 const prodSchema = process.env.TESTERO_PROD_SCHEMA === "1";
 if (process.env.TESTERO_PROD_SCHEMA && !prodSchema) throw new Error("TESTERO_PROD_SCHEMA must be 1 or unset");
@@ -57,13 +58,23 @@ const bankTables = tables.slice(0, 5);
 const bankDigestSQL = bankTables.map((table) => `SELECT '${table}', count(*), md5(coalesce(string_agg(row_to_json(t)::text, '|' ORDER BY row_to_json(t)::text), '')) FROM public.${table} t;`).join("\n");
 const bankBefore = prodSchema ? await scalar(bankDigestSQL) : null;
 const before = await scalar(digestSQL);
-await run(baseline.replace(/COMMIT;\s*$/, "ROLLBACK;"));
+// Replay the historical baseline in its original RPC namespace. The beta migration
+// replaces those signatures with defaulted p_exam arguments; leaving them present
+// makes baseline alias definitions ambiguous while both generations coexist.
+// Drop only the replacement RPCs inside this rollback-only replay transaction.
+// ROLLBACK restores the deployed beta functions and their ACLs after the check.
+const baselineReplay = baseline.replace(/^BEGIN;/m, `BEGIN;
+  DROP FUNCTION public.create_study_session(TEXT, UUID, TEXT, JSONB, TIMESTAMPTZ, TEXT);
+  DROP FUNCTION public.create_free_practice_session(UUID, JSONB, TIMESTAMPTZ);
+  DROP FUNCTION public.v2_create_study_session(TEXT, UUID, TEXT, JSONB, TIMESTAMPTZ, BOOLEAN, TEXT);
+`).replace(/COMMIT;\s*$/, "ROLLBACK;");
+await run(baselineReplay);
 assert.equal(await scalar(digestSQL), before, "second baseline apply must not change any rows");
 if (prodSchema) {
   // No seed read or execution in restored-bank mode. The approved restore stays immutable.
   assert.equal(await scalar("SELECT count(*) FROM public.questions;"), "343");
   assert.equal(await scalar("SELECT count(*) FROM public.questions WHERE status='ACTIVE';"), "145");
-  assert.equal(await scalar("SELECT count(*) FROM public.exam_domains;"), "29");
+  assert.equal(await scalar("SELECT count(*) FROM public.exam_domains;"), "38");
   assert.equal(await scalar("SELECT count(*) FROM public.answers;"), "1372");
   assert.equal(await scalar("SELECT count(*) FROM public.explanations;"), "343");
   assert.equal(await scalar("SELECT count(*) FROM public.question_generation_runs;"), "165");
@@ -93,7 +104,7 @@ for (const role of ["anon", "authenticated"]) {
   for (const table of ["questions", "answers", "explanations", "session_items", "webhook_events", "pmle_pass_refunds"]) {
     await denied(`BEGIN; SET LOCAL ROLE ${role}; SELECT * FROM public.${table}; ROLLBACK;`, `${role} must not read ${table}`);
   }
-  for (const signature of ["create_study_session(text,uuid,text,jsonb,timestamptz)", "answer_study_item(uuid,uuid,text,uuid,text)", "consume_free_practice_quota(uuid,integer)", "fulfill_pmle_pass(uuid,text,text,text,timestamptz)", "refund_pmle_pass(text,timestamptz)", "record_pmle_pass_payment(text,integer,text)", "v2_consume_free_practice_quota(uuid,integer)", "v2_create_study_session(text,uuid,text,jsonb,timestamptz,boolean)", "create_free_practice_session(uuid,jsonb,timestamptz)", "claim_anonymous_diagnostics(uuid,text)"]) {
+  for (const signature of ["create_study_session(text,uuid,text,jsonb,timestamptz,text)", "answer_study_item(uuid,uuid,text,uuid,text)", "consume_free_practice_quota(uuid,integer)", "fulfill_pmle_pass(uuid,text,text,text,timestamptz)", "refund_pmle_pass(text,timestamptz)", "record_pmle_pass_payment(text,integer,text)", "v2_consume_free_practice_quota(uuid,integer)", "v2_create_study_session(text,uuid,text,jsonb,timestamptz,boolean,text)", "create_free_practice_session(uuid,jsonb,timestamptz)", "claim_anonymous_diagnostics(uuid,text)"]) {
     assert.equal(await scalar(`SELECT has_function_privilege('${role}', 'public.${signature}', 'EXECUTE');`), "f");
   }
 }
@@ -113,7 +124,7 @@ if (await scalar("SELECT to_regprocedure('public.upsert_question_answers(uuid,js
 }
 console.log(`PASS replay, ${prodSchema ? "restored 145-ACTIVE bank inventory and blueprint supply" : "seed inventory"}, table RLS and browser privilege denial`);
 // Multi-cert foundation: transaction-only fixtures never enter the live PMLE pool.
-for (const [exam, count] of [["cloud-engineer", 4], ["cloud-architect", 6], ["data-engineer", 5]]) {
+for (const [exam, count] of [["cloud-engineer", 4], ["cloud-architect", 6], ["data-engineer", 5], ["generative-ai-leader", 4], ["agentic-architect", 5]]) {
   assert.equal(await scalar(`SELECT count(*) FROM public.exam_domains WHERE exam=${q(exam)};`), String(count));
 }
 assert.equal(await scalar("SELECT count(*) FROM public.questions WHERE exam='GCP_PM_ML_ENG' AND question_type <> 'single_select';"), "0");
@@ -135,6 +146,8 @@ await denied(`BEGIN; INSERT INTO public.questions(exam,domain_id,stem,status,que
  VALUES ('GCP_PM_ML_ENG',${q(pmleDomain)},'Unknown mode','DRAFT','unknown'); ROLLBACK;`, "unknown question type rejected");
 console.log("PASS per-exam domain uniqueness, cross-exam FK, default single-select and non-live multiple-select storage");
 
+
+await verifyBetaDiagnostics({ run, scalar, q, pmleDomain, pmleCode, digestSQL });
 
 // Variant fixtures and every successful session/quota write roll back together.
 const variantOwner = randomUUID(), variantParent = randomUUID(), variantId = randomUUID();

@@ -10,9 +10,13 @@ import { CertWaitlistForm } from "@/components/cert-waitlist-form";
 import { CertificationExplainer } from "@/components/certification-explainer";
 import { getBlogEntries, getFaqEntries } from "@/lib/content/loader";
 import { pageMetadata } from "@/lib/seo";
+import { betaDiagnosticEnabled } from "@/lib/diagnostic/beta";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
 
 type Props = { params: Promise<{ slug: string }> };
 export const dynamicParams = false;
+// Availability depends on the current approved original-question bank and deploy allowlist.
+export const dynamic = "force-dynamic";
 export function generateStaticParams() { return certifications.map(cert => ({ slug: cert.cert_id })); }
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
@@ -24,6 +28,11 @@ export default async function CertificationPage({ params }: Props) {
   const { slug } = await params;
   const cert = getCertification(slug);
   if (!cert) notFound();
+  let betaEnabled = false;
+  if (slug !== PMLE_CERT_ID) {
+    try { betaEnabled = await betaDiagnosticEnabled(createServiceSupabaseClient(), slug); }
+    catch { /* Keep the existing notify form when availability cannot be verified. */ }
+  }
   const checked = checkedDate(cert).slice(0, 10);
   const primary = cert.exam_variants.find(exam => exam.variant === "standard" || exam.variant === "ga") ?? cert.exam_variants[0];
   const related = certifications.filter(item => item.cert_id !== slug && item.level === cert.level).slice(0, 3);
@@ -34,11 +43,12 @@ export default async function CertificationPage({ params }: Props) {
   return <section className="space-y-8 sm:space-y-10">
     <StructuredData value={certificationStructuredData(cert)} />
     <nav aria-label="Breadcrumb" className="text-sm text-primary"><Link href="/certifications" className="underline">Certifications</Link><span className="mx-2 text-muted-foreground">/</span><span className="text-body">{cert.name}</span></nav>
-    <header className="max-w-3xl space-y-4"><h1 className="text-pretty text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">{cert.name}</h1><p className="text-sm font-medium text-primary">{label(cert.level)} · {slug === PMLE_CERT_ID ? "Practice available" : "Diagnostic coming"}{primary.variant === "beta" && " · Beta exam facts"}{primary.variant === "ga" && " · Upcoming GA exam facts"}</p><p className="text-lg leading-relaxed text-body">{slug === PMLE_CERT_ID ? "Find your study focus for Google’s machine learning certification with a free diagnostic and a domain-by-domain readiness report." : certificationSummaries[slug]}</p>{slug === PMLE_CERT_ID && <Link href="/diagnostic" className="inline-flex min-h-12 items-center rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground hover:bg-primary-hover">Start PMLE diagnostic</Link>}{slug === PMLE_CERT_ID && <p className="text-sm text-muted-foreground"><a className="text-primary underline" href={cert.cert_url}>Official Google PMLE certification page</a>. Facts checked <time dateTime={checked}>{checked}</time>.</p>}</header>
+    <header className="max-w-3xl space-y-4"><h1 className="text-pretty text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">{cert.name}</h1><p className="text-sm font-medium text-primary">{label(cert.level)} · {slug === PMLE_CERT_ID ? "Practice available" : betaEnabled ? "Beta diagnostic available" : "Diagnostic coming"}{primary.variant === "beta" && " · Beta exam facts"}{primary.variant === "ga" && " · Upcoming GA exam facts"}</p><p className="text-lg leading-relaxed text-body">{slug === PMLE_CERT_ID ? "Find your study focus for Google’s machine learning certification with a free diagnostic and a domain-by-domain readiness report." : certificationSummaries[slug]}</p>{slug === PMLE_CERT_ID && <Link href="/diagnostic" className="inline-flex min-h-12 items-center rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground hover:bg-primary-hover">Start PMLE diagnostic</Link>}{slug === PMLE_CERT_ID && <p className="text-sm text-muted-foreground"><a className="text-primary underline" href={cert.cert_url}>Official Google PMLE certification page</a>. Facts checked <time dateTime={checked}>{checked}</time>.</p>}</header>
     <ul aria-label="Exam summary" className={slug === PMLE_CERT_ID ? "flex flex-wrap gap-x-4 gap-y-2 border-y border-border py-4 text-sm font-medium text-body" : "grid gap-3 border-y border-border py-4 text-sm font-medium text-body sm:flex sm:flex-wrap sm:gap-x-4 sm:gap-y-2"}>{examSummary(primary).map((item, i) => <li key={item} className="flex items-center gap-4">{i > 0 && <span aria-hidden="true" className={slug === PMLE_CERT_ID ? "text-muted-foreground" : "hidden text-muted-foreground sm:inline"}>·</span>}{item}</li>)}</ul>
     <div className={slug === PMLE_CERT_ID ? "max-w-3xl" : "grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]"}>
       {slug !== PMLE_CERT_ID && <aside className="space-y-4 rounded-lg border border-border bg-card p-5 sm:p-6 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1" aria-label="Diagnostic availability">
-        <CertWaitlistForm certId={slug} certName={cert.name} /><div className="space-y-2 border-t border-border pt-4 text-sm"><Link href="/certifications" className="block py-1 text-primary underline">Compare all certifications</Link><Link href="/diagnostic" className="block py-1 text-primary underline">Try the available PMLE diagnostic</Link></div>
+        {betaEnabled && <Link href={`/diagnostic?cert=${encodeURIComponent(slug)}`} className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-primary px-4 py-3 text-center font-semibold text-primary-foreground hover:bg-primary-hover">Try the free beta diagnostic</Link>}
+        <CertWaitlistForm certId={slug} certName={cert.name} notificationTarget={betaEnabled ? "practice" : "diagnostic"} /><div className="space-y-2 border-t border-border pt-4 text-sm"><Link href="/certifications" className="block py-1 text-primary underline">Compare all certifications</Link><Link href="/diagnostic" className="block py-1 text-primary underline">Try the available PMLE diagnostic</Link></div>
       </aside>}
       <div className="min-w-0 space-y-10 lg:col-start-1 lg:row-start-1">
         <section className="space-y-4" aria-labelledby="exam-audience"><h2 id="exam-audience" className="text-2xl font-semibold">Who this exam is for</h2><p className="max-w-prose leading-7 text-body">{editorial.audience}</p>

@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import CertificationsPage from "@/app/certifications/page";
 import CertPage, { generateStaticParams } from "@/app/certifications/[slug]/page";
 import { certifications, certificationPath } from "@/lib/certifications/catalog";
@@ -10,6 +10,11 @@ import { certificationStructuredData } from "@/lib/certifications/structured-dat
 import { serializeJsonLd } from "@/lib/structured-data";
 import sitemap from "@/app/sitemap";
 import overviews from "@/lib/certifications/verified-overviews.json";
+
+const betaMocks = vi.hoisted(() => ({ enabled: vi.fn() }));
+vi.mock("@/lib/diagnostic/beta", () => ({ betaDiagnosticEnabled: betaMocks.enabled }));
+vi.mock("@/lib/supabase/service", () => ({ createServiceSupabaseClient: () => ({}) }));
+beforeEach(() => { betaMocks.enabled.mockReset().mockResolvedValue(false); });
 
 describe("sourced certification directory", () => {
   it("generates exactly the registry, groups levels and links PMLE practice", () => {
@@ -58,6 +63,28 @@ describe("sourced certification directory", () => {
     expect(schema["@graph"][0].itemListElement).toHaveLength(3);
     expect(schema["@graph"][1]).toMatchObject({ "@type": "EducationalOccupationalCredential", name: cert.name, url: cert.cert_url });
     expect(sitemap().find(item => item.url.endsWith(certificationPath(entry.cert_id)))?.lastModified).toBe(checkedDate(cert));
+  });
+  it("adds the enabled beta CTA above the existing waitlist and keeps unavailable pages unchanged", async () => {
+    betaMocks.enabled.mockResolvedValueOnce(true);
+    const enabled = renderToStaticMarkup(await CertPage({ params: Promise.resolve({ slug: "data-engineer" }) }));
+    expect(enabled).toContain('href="/diagnostic?cert=data-engineer"');
+    expect(enabled).toContain("Beta diagnostic available");
+    expect(enabled.indexOf("Try the free beta diagnostic")).toBeLessThan(enabled.indexOf("Get notified"));
+    expect(enabled).toContain("practice for Professional Data Engineer opens");
+    const disabled = renderToStaticMarkup(await CertPage({ params: Promise.resolve({ slug: "cloud-engineer" }) }));
+    expect(disabled).not.toContain("Try the free beta diagnostic");
+    expect(disabled).toContain("Diagnostic coming");
+    betaMocks.enabled.mockRejectedValueOnce(new Error("Unavailable"));
+    const unavailable = renderToStaticMarkup(await CertPage({ params: Promise.resolve({ slug: "data-engineer" }) }));
+    expect(unavailable).not.toContain("Try the free beta diagnostic");
+    expect(unavailable).toContain("Get notified");
+  });
+  it("does not check beta availability or change the PMLE CTA", async () => {
+    const html = renderToStaticMarkup(await CertPage({ params: Promise.resolve({ slug: "machine-learning-engineer" }) }));
+    expect(betaMocks.enabled).not.toHaveBeenCalled();
+    expect(html).toContain('href="/diagnostic"');
+    expect(html).toContain("Start PMLE diagnostic");
+    expect(html).not.toContain("beta diagnostic");
   });
   it("does not normalize weights, infer validity or call beta facts GA facts", async () => {
     const pmle = getCertification("machine-learning-engineer")!;

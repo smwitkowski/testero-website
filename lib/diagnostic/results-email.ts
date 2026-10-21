@@ -3,12 +3,18 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DiagnosticResult } from "@/lib/diagnostic/types";
 import { DiagnosticError } from "@/lib/diagnostic/http";
+import { PMLE_CERT_ID } from "@/lib/certifications/catalog";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
 import { weakestFirst } from "@/lib/readiness";
 import { toolCertifications } from "@/lib/tools/data";
 import { buildStudyPlan, studyPlanText, studyTime } from "@/lib/tools/study-plan";
 
+function requirePmleResult(result: DiagnosticResult) {
+  if (result.certId && result.certId !== PMLE_CERT_ID) throw new DiagnosticError(404, "Results email is not available for this diagnostic");
+}
+
 export function resultsEmailPlan(result: DiagnosticResult, now = Date.now()) {
+  requirePmleResult(result);
   const cert = toolCertifications().find(cert => cert.cert_id === "machine-learning-engineer")!;
   const today = new Date(now).toISOString().slice(0, 10);
   const end = new Date(Date.parse(`${today}T00:00:00Z`) + 28 * 86_400_000).toISOString().slice(0, 10);
@@ -105,6 +111,7 @@ function frozenParts(payload: string): { text: string; html?: string } {
 
 const unavailable = () => new DiagnosticError(503, "We couldn't send your email. Please try again.");
 export async function sendResultsEmail(client: SupabaseClient, email: string, result: DiagnosticResult) {
+  requirePmleResult(result);
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw unavailable();
   const lease = randomUUID();
