@@ -25,7 +25,7 @@ Use an email address you control, confirm it before using account features and p
 
 PMLE Pass costs **$39 USD as a one-time payment for 90 days** of paid PMLE access. It is not a subscription and does not auto-renew. Its 90-day period starts at the successful payment time, not your first practice session. Access from the pass ends at its displayed expiry time. Creating an account does not take a payment; checkout is handled by Stripe after email confirmation. Any applicable taxes or final charges are shown before you pay.
 
-PMLE Pass includes full question explanations, progress tracking and unlimited five-question practice sessions while the pass is active. It does not include registration for Google's exam. Existing legacy subscriptions, if applicable to your account, are separate from this non-renewing pass; check your account for their status.
+PMLE Pass includes full question explanations, progress tracking and unlimited practice while the pass is active. It does not include registration for Google's exam. Existing legacy subscriptions, if applicable to your account, are separate from this non-renewing pass; check your account for their status.
 
 ## Seven-day refund policy
 
