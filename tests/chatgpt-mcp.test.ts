@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import freeSet from "@/lib/chatgpt/free-set.json";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
+import { getCertification } from "@/lib/certifications/data";
 
 const analytics = vi.hoisted(() => ({ schedule: vi.fn() }));
 const rng = vi.hoisted(() => ({ randomInt: vi.fn() }));
@@ -10,7 +11,7 @@ vi.mock("@/lib/chatgpt/analytics", () => ({ scheduleChatgptEvent: analytics.sche
 // Authored synthetic fixtures only. The checked-in selection supplies IDs, never content.
 const fixtureQuestions = freeSet.question_ids.map((id, index) => {
   const domainIndex = index < 5 ? 0 : index < 11 ? 1 : index < 19 ? 2 : index < 27 ? 3 : index < 34 ? 4 : 5;
-  return { id, exam: "GCP_PM_ML_ENG", status: "ACTIVE", review_status: "GOOD", parent_question_id: null,
+  return { id, exam: "GCP_PM_ML_ENG", question_type: "single_select", status: "ACTIVE", review_status: "GOOD", parent_question_id: null,
     domain: PMLE_BLUEPRINT[domainIndex].domainCode, stem: `Synthetic practice scenario ${index}: choose the designated test response.`,
     options: (["A", "B", "C", "D"] as const).map((label, optionIndex) => ({ label,
       text: `Synthetic response ${label} for scenario ${index}.`, is_correct: optionIndex === index % 4,
@@ -22,6 +23,20 @@ const fixtureRows = fixtureQuestions.map(question => ({ ...question, exam_domain
   answers: question.options.map(option => ({ choice_label: option.label, choice_text: option.text,
     is_correct: option.is_correct, explanation_text: option.explanation })),
 }));
+const additionalExamId = "data-engineer";
+const additionalRows = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"].map((id, index) => ({
+  id, exam: additionalExamId, question_type: "single_select", status: "ACTIVE", review_status: "GOOD", parent_question_id: null,
+  stem: `Synthetic data practice scenario ${index}: select the designated response.`,
+  exam_domains: { code: `data-engineer:standard:${index + 1}` },
+  answers: (["A", "B", "C", "D"] as const).map((label, optionIndex) => ({
+    choice_label: label, choice_text: `Synthetic data response ${label} for scenario ${index}.`,
+    is_correct: optionIndex === index + 1,
+    explanation_text: `Synthetic data explanation for response ${label} in scenario ${index}.`,
+  })),
+}));
+const syntheticSource = { kind: "local-export", upstream: "read-only-database-content-export",
+  exported_at: "2026-10-22T00:00:00.000Z", export_sha256: "0".repeat(64), blueprint_sha256: "0".repeat(64), selection: "synthetic-test" };
+const additionalSets = { [additionalExamId]: { version: 1, source: syntheticSource, question_ids: additionalRows.map(row => row.id) } };
 const database = vi.hoisted(() => ({ create: vi.fn(), read: vi.fn() }));
 vi.mock("@/lib/supabase/service", () => ({ createServiceSupabaseClient: database.create }));
 
@@ -78,7 +93,22 @@ function outputPolicy(value: JsonObject) {
   }
 }
 
+function overviewSources(value: JsonObject, certId: string) {
+  const cert = getCertification(certId)!;
+  const guide = cert.guides.find(item => item.variant === "standard")!;
+  const latest = (role: string, url?: string) => cert.sources
+    .filter(source => source.role === role && (url === undefined || source.url === url))
+    .map(source => source.retrieved_at).sort().at(-1) ?? null;
+  expect(value.guide_as_of).toBe(guide.as_of_date);
+  expect(value.guide_retrieved_at).toBe(latest("exam_guide", guide.url));
+  expect(value.certification_page_retrieved_at).toBe(latest("certification"));
+  expect(value.recommended_experience_retrieved_at).toBe(latest("recommended_experience"));
+  expect(value).not.toHaveProperty("source_checked_at");
+}
+
 beforeEach(async () => {
+  vi.stubEnv("CHATGPT_EXAMS", undefined);
+  vi.doUnmock("@/lib/chatgpt/free-sets.json");
   vi.resetModules();
   analytics.schedule.mockReset();
   rng.randomInt.mockReset().mockReturnValue(0);
@@ -107,7 +137,7 @@ describe("ChatGPT MCP tools over real Streamable HTTP JSON-RPC", () => {
   it("advertises exactly four accurate read-only noauth tools with conservative annotations", async () => {
     const message = await rpc("tools/list");
     const tools = message.result!.tools as JsonObject[];
-    expect(tools.map(tool => tool.name).sort()).toEqual(["check_answer", "get_practice_question", "list_practice_domains", "pmle_exam_overview"]);
+    expect(tools.map(tool => tool.name).sort()).toEqual(["check_answer", "exam_overview", "get_practice_question", "list_practice_domains"]);
     for (const tool of tools) {
       policy(tool);
       expect(tool.description).toEqual(expect.any(String));
@@ -119,10 +149,46 @@ describe("ChatGPT MCP tools over real Streamable HTTP JSON-RPC", () => {
     }
   });
 
+  it("advertises a gated optional exam enum with the PMLE default only on the first three tools", async () => {
+    const tools = (await rpc("tools/list")).result!.tools as JsonObject[];
+    for (const tool of tools) {
+      const schema = tool.inputSchema as { properties: Record<string, JsonObject>; required?: string[]; additionalProperties?: boolean };
+      expect(schema.additionalProperties).toBe(false);
+      if (tool.name === "check_answer") {
+        expect(Object.keys(schema.properties).sort()).toEqual(["question_id", "selected_label"]);
+        expect(schema.required?.sort()).toEqual(["question_id", "selected_label"]);
+      } else {
+        expect(schema.properties.exam).toMatchObject({ type: "string", enum: ["GCP_PM_ML_ENG"], default: "GCP_PM_ML_ENG" });
+        expect(schema.required ?? []).not.toContain("exam");
+      }
+    }
+  });
+
+  it.each(["exam_overview", "list_practice_domains", "get_practice_question"])("defaults %s to PMLE and accepts its explicit enabled ID", async name => {
+    const implicit = data(await call(name));
+    const explicit = data(await call(name, { exam: "GCP_PM_ML_ENG" }));
+    expect(implicit.exam_id).toBe("GCP_PM_ML_ENG");
+    expect(explicit).toEqual(implicit);
+  });
+
+  it.each(["exam_overview", "list_practice_domains", "get_practice_question"])("rejects unknown and disabled exam values on %s with available IDs", async name => {
+    for (const exam of ["unknown-exam", additionalExamId, "", "gcp_pm_ml_eng", 1, null]) {
+      const result = await call(name, { exam });
+      expect(result.isError).toBe(true);
+      expect(JSON.stringify(result)).toMatch(/Available exams: GCP_PM_ML_ENG/);
+      expect(database.create).not.toHaveBeenCalled();
+      expect(analytics.schedule).not.toHaveBeenCalled();
+      policy(result);
+    }
+  });
+
   it("returns policy-safe overview and all six current blueprint domains", async () => {
-    const overview = data(await call("pmle_exam_overview"));
+    const overview = data(await call("exam_overview"));
     const domains = data(await call("list_practice_domains"));
     outputPolicy(overview); outputPolicy(domains);
+    expect(overview).toMatchObject({ exam_id: "GCP_PM_ML_ENG", exam: "Professional Machine Learning Engineer" });
+    overviewSources(overview, "machine-learning-engineer");
+    expect(domains.exam_id).toBe("GCP_PM_ML_ENG");
     for (const domain of PMLE_BLUEPRINT) {
       expect(JSON.stringify(domains)).toContain(domain.domainCode);
       expect(JSON.stringify(domains)).toContain(domain.displayName);
@@ -134,14 +200,14 @@ describe("ChatGPT MCP tools over real Streamable HTTP JSON-RPC", () => {
     const question = data(await call("get_practice_question"));
     const original = fixtureQuestions.find(item => item.id === question.question_id)!;
     expect(original).toBeDefined();
-    expect(question).toMatchObject({ question_id: original.id, domain: original.domain, stem: original.stem,
+    expect(question).toMatchObject({ exam_id: "GCP_PM_ML_ENG", question_id: original.id, domain: original.domain, stem: original.stem,
       options: original.options.map(({ label, text }) => ({ label, text })),
     });
     expect(JSON.stringify(question)).not.toMatch(/"(?:is_correct|correct_option|explanation|parent_question_id)"\s*:/);
     expect((question.options as JsonObject[]).map(option => Object.keys(option).sort())).toEqual(original.options.map(() => ["label", "text"]));
     outputPolicy(question);
     expect(analytics.schedule).toHaveBeenCalledOnce();
-    expect(analytics.schedule).toHaveBeenCalledWith(expect.any(Request), "chatgpt_question_served", original.domain);
+    expect(analytics.schedule).toHaveBeenCalledWith(expect.any(Request), "chatgpt_question_served", "GCP_PM_ML_ENG", original.domain);
   });
 
   it.each(PMLE_BLUEPRINT.map((domain, index) => ({ ...domain, number: String(index + 1) })))("accepts only exact code, title or number for $domainCode", async domain => {
@@ -163,7 +229,7 @@ describe("ChatGPT MCP tools over real Streamable HTTP JSON-RPC", () => {
         rng.randomInt.mockReturnValueOnce(index);
         const question = data(await call("get_practice_question", pool.domain ? { domain: pool.domain } : {}));
         expect(rng.randomInt).toHaveBeenLastCalledWith(pool.questions.length);
-        expect(question).toEqual({ question_id: original.id, domain: original.domain, stem: original.stem,
+        expect(question).toEqual({ exam_id: "GCP_PM_ML_ENG", question_id: original.id, domain: original.domain, stem: original.stem,
           options: original.options.map(({ label, text }) => ({ label, text })), disclaimer: expect.any(String),
         });
         expect(JSON.stringify(question)).not.toMatch(/"(?:is_correct|correct_option|explanation|parent_question_id)"\s*:/);
@@ -180,18 +246,19 @@ describe("ChatGPT MCP tools over real Streamable HTTP JSON-RPC", () => {
       const correctOption = question.options.find(option => option.is_correct)!;
       for (const selected of question.options) {
         const result = data(await call("check_answer", { question_id: question.id, selected_label: selected.label }));
+        expect(result.exam_id).toBe("GCP_PM_ML_ENG");
         expect(result.is_correct).toBe(selected.is_correct);
         expect(result.correct_option).toBe(correctOption.label);
         expect(result.options).toEqual(question.options.map(({ label, text, explanation }) => ({ label, text, explanation })));
         outputPolicy(result);
-        expect(analytics.schedule).toHaveBeenLastCalledWith(expect.any(Request), "chatgpt_answer_checked", question.domain, selected.is_correct);
+        expect(analytics.schedule).toHaveBeenLastCalledWith(expect.any(Request), "chatgpt_answer_checked", "GCP_PM_ML_ENG", question.domain, selected.is_correct);
       }
     }
     expect(analytics.schedule).toHaveBeenCalledTimes(160);
   });
 
   it.each([
-    ["pmle_exam_overview", { irrelevant: "private-value" }],
+    ["exam_overview", { irrelevant: "private-value" }],
     ["list_practice_domains", { irrelevant: "private-value" }],
     ["get_practice_question", { domain: PMLE_BLUEPRINT[0].domainCode, question_id: "private-value" }],
     ["get_practice_question", { domain: "7" }],
@@ -200,6 +267,8 @@ describe("ChatGPT MCP tools over real Streamable HTTP JSON-RPC", () => {
     ["get_practice_question", { domain: "" }],
     ["get_practice_question", { domain: 1 }],
     ["check_answer", {}],
+    ["check_answer", { question_id: fixtureQuestions[0].id, selected_label: "A", exam: "GCP_PM_ML_ENG" }],
+    ["check_answer", { question_id: additionalRows[0].id, selected_label: "B" }],
     ["check_answer", { question_id: "not-a-uuid", selected_label: "A" }],
     ["check_answer", { question_id: "00000000-0000-4000-8000-000000000000", selected_label: "A" }],
     ["check_answer", { question_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", selected_label: "A" }],
@@ -214,6 +283,183 @@ describe("ChatGPT MCP tools over real Streamable HTTP JSON-RPC", () => {
     policy(message);
     const serialized = JSON.stringify(message);
     for (const question of fixtureQuestions) expect(serialized).not.toContain(question.stem);
+    expect(analytics.schedule).not.toHaveBeenCalled();
+  });
+});
+
+describe("MCP enabled exam isolation with synthetic additional sets", () => {
+  async function configure(exams = "GCP_PM_ML_ENG,data-engineer", sets = additionalSets) {
+    vi.stubEnv("CHATGPT_EXAMS", exams);
+    vi.doMock("@/lib/chatgpt/free-sets.json", () => ({ default: sets }));
+    vi.resetModules();
+    database.read.mockResolvedValue({ data: structuredClone([...fixtureRows, ...additionalRows]), error: null });
+    route = await import("@/app/api/mcp/route");
+  }
+
+  it("advertises exactly the configured exams without changing check_answer inputs", async () => {
+    await configure();
+    const tools = (await rpc("tools/list")).result!.tools as JsonObject[];
+    for (const tool of tools) {
+      const schema = tool.inputSchema as { properties: Record<string, JsonObject>; required?: string[] };
+      if (tool.name === "check_answer") {
+        expect(Object.keys(schema.properties).sort()).toEqual(["question_id", "selected_label"]);
+      } else {
+        expect(schema.properties.exam).toMatchObject({ enum: ["GCP_PM_ML_ENG", additionalExamId], default: "GCP_PM_ML_ENG" });
+        expect(schema.required ?? []).not.toContain("exam");
+      }
+    }
+  });
+
+  it("returns each exam's own facts, domains and selection count with no cross-exam leakage", async () => {
+    await configure();
+    const overview = data(await call("exam_overview", { exam: additionalExamId }));
+    expect(overview).toMatchObject({ exam_id: additionalExamId, exam: "Professional Data Engineer", duration_minutes: 120,
+      question_count: { min: 40, max: 50, approximate: false }, available_questions: 2, practice_selection_size: 2,
+      guide_as_of: null });
+    overviewSources(overview, additionalExamId);
+    const listed = data(await call("list_practice_domains", { exam: additionalExamId }));
+    expect(listed).toMatchObject({ exam_id: additionalExamId, total_questions: 2, available_questions: 2 });
+    const domains = listed.domains as JsonObject[];
+    expect(domains).toHaveLength(5);
+    expect(domains[0]).toMatchObject({ domain: "data-engineer:standard:1", title: "Designing data processing systems", question_count: 1 });
+    expect(domains[1].question_count).toBe(1);
+    expect(domains.slice(2).every(domain => domain.question_count === 0)).toBe(true);
+    expect(domains.reduce((sum, domain) => sum + Number(domain.sampling_weight), 0)).toBeCloseTo(1);
+    expect(JSON.stringify(listed)).not.toContain(PMLE_BLUEPRINT[0].domainCode);
+    const pmle = data(await call("list_practice_domains"));
+    expect(pmle).toMatchObject({ exam_id: "GCP_PM_ML_ENG", total_questions: 40, available_questions: 40 });
+    expect(JSON.stringify(pmle)).not.toContain("data-engineer:standard:");
+    outputPolicy(overview); outputPolicy(listed); outputPolicy(pmle);
+    expect(analytics.schedule).not.toHaveBeenCalled();
+  });
+
+  it("serves and checks both exams by ID alone, with exam-specific answers and analytics", async () => {
+    await configure();
+    const pmle = data(await call("get_practice_question"));
+    expect(pmle).toMatchObject({ exam_id: "GCP_PM_ML_ENG", question_id: fixtureRows[0].id });
+    for (const [index, row] of additionalRows.entries()) {
+      rng.randomInt.mockReturnValueOnce(index);
+      const served = data(await call("get_practice_question", { exam: additionalExamId }));
+      expect(served).toMatchObject({ exam_id: additionalExamId, question_id: row.id, domain: row.exam_domains.code, stem: row.stem,
+        options: row.answers.map(answer => ({ label: answer.choice_label, text: answer.choice_text })) });
+      expect(JSON.stringify(served)).not.toMatch(/is_correct|explanation|correct_option/);
+      expect(analytics.schedule).toHaveBeenLastCalledWith(expect.any(Request), "chatgpt_question_served", additionalExamId, row.exam_domains.code);
+      const correct = row.answers.find(answer => answer.is_correct)!;
+      const checked = data(await call("check_answer", { question_id: row.id, selected_label: correct.choice_label }));
+      expect(checked).toMatchObject({ exam_id: additionalExamId, question_id: row.id, domain: row.exam_domains.code,
+        is_correct: true, correct_option: correct.choice_label,
+        options: row.answers.map(answer => ({ label: answer.choice_label, text: answer.choice_text, explanation: answer.explanation_text })) });
+      expect(analytics.schedule).toHaveBeenLastCalledWith(expect.any(Request), "chatgpt_answer_checked", additionalExamId, row.exam_domains.code, true);
+      outputPolicy(served); outputPolicy(checked);
+    }
+    const pmleChecked = data(await call("check_answer", { question_id: fixtureRows[0].id, selected_label: "A" }));
+    expect(pmleChecked).toMatchObject({ exam_id: "GCP_PM_ML_ENG", question_id: fixtureRows[0].id, is_correct: true });
+    expect(analytics.schedule).toHaveBeenLastCalledWith(expect.any(Request), "chatgpt_answer_checked", "GCP_PM_ML_ENG", fixtureQuestions[0].domain, true);
+    for (const result of database.create.mock.results) {
+      const query = result.value.from("questions");
+      expect(query.eq).toHaveBeenCalledWith("question_type", "single_select");
+    }
+  });
+
+  it("resolves domain codes, titles and numbers only in the selected exam", async () => {
+    await configure();
+    for (const domain of ["data-engineer:standard:1", "Designing data processing systems", "1"]) {
+      const served = data(await call("get_practice_question", { exam: additionalExamId, domain }));
+      expect(served).toMatchObject({ exam_id: additionalExamId, question_id: additionalRows[0].id, domain: "data-engineer:standard:1" });
+      outputPolicy(served);
+    }
+    analytics.schedule.mockClear();
+    for (const args of [
+      { exam: additionalExamId, domain: PMLE_BLUEPRINT[0].domainCode },
+      { exam: "GCP_PM_ML_ENG", domain: "data-engineer:standard:1" },
+      { exam: additionalExamId, domain: "6" },
+    ]) {
+      expect((await call("get_practice_question", args)).isError).toBe(true);
+    }
+    expect(analytics.schedule).not.toHaveBeenCalled();
+  });
+
+  it("rejects a disabled exam's selected ID before any database read even when its manifest exists", async () => {
+    await configure("GCP_PM_ML_ENG");
+    const answer = await call("check_answer", { question_id: additionalRows[0].id, selected_label: "B" });
+    expect(answer.isError).toBe(true);
+    expect(database.create).not.toHaveBeenCalled();
+    expect(database.read).not.toHaveBeenCalled();
+    expect(analytics.schedule).not.toHaveBeenCalled();
+    expect(JSON.stringify(answer)).not.toContain(additionalRows[0].stem);
+  });
+
+  it("does not restore the default implicitly when PMLE is disabled", async () => {
+    await configure(additionalExamId);
+    for (const name of ["exam_overview", "list_practice_domains", "get_practice_question"]) {
+      const omitted = await call(name);
+      expect(omitted.isError).toBe(true);
+      expect(JSON.stringify(omitted)).toContain(`Available exams: ${additionalExamId}`);
+      const unknown = await call(name, { exam: "unknown-exam" });
+      expect(unknown.isError).toBe(true);
+      expect(JSON.stringify(unknown)).toContain(`Available exams: ${additionalExamId}`);
+    }
+    expect((await call("check_answer", { question_id: fixtureRows[0].id, selected_label: "A" })).isError).toBe(true);
+    expect(database.create).not.toHaveBeenCalled();
+    expect(analytics.schedule).not.toHaveBeenCalled();
+    expect(data(await call("get_practice_question", { exam: additionalExamId })).exam_id).toBe(additionalExamId);
+  });
+
+  it("rejects rows forged across enabled exam ID boundaries", async () => {
+    await configure();
+    database.read.mockResolvedValue({ data: [
+      { ...fixtureRows[0], exam: additionalExamId, exam_domains: additionalRows[0].exam_domains },
+      { ...additionalRows[0], exam: "GCP_PM_ML_ENG", exam_domains: fixtureRows[0].exam_domains },
+    ], error: null });
+    for (const question_id of [fixtureRows[0].id, additionalRows[0].id]) {
+      const answer = await call("check_answer", { question_id, selected_label: "A" });
+      expect(answer.isError).toBe(true);
+      expect(JSON.stringify(answer)).not.toMatch(/Synthetic/);
+    }
+    expect(analytics.schedule).not.toHaveBeenCalled();
+  });
+
+  it("keeps tools/list usable with zero enabled exams while all study calls fail closed", async () => {
+    await configure("");
+    const listed = await rpc("tools/list");
+    expect(listed.error).toBeUndefined();
+    const tools = listed.result!.tools as JsonObject[];
+    expect(tools.map(tool => tool.name).sort()).toEqual(["check_answer", "exam_overview", "get_practice_question", "list_practice_domains"]);
+    for (const name of ["exam_overview", "list_practice_domains", "get_practice_question"]) {
+      for (const args of [{}, { exam: "GCP_PM_ML_ENG" }, { exam: additionalExamId }]) {
+        const result = await call(name, args);
+        expect(result.isError).toBe(true);
+        expect(JSON.stringify(result)).toContain("Available exams: none");
+      }
+    }
+    expect((await call("check_answer", { question_id: fixtureRows[0].id, selected_label: "A" })).isError).toBe(true);
+    expect(database.create).not.toHaveBeenCalled();
+    expect(analytics.schedule).not.toHaveBeenCalled();
+  });
+
+  it("rejects an ambiguous ID shared by two enabled selections without accessing the database", async () => {
+    await configure("GCP_PM_ML_ENG,data-engineer", { [additionalExamId]: { version: 1, source: syntheticSource, question_ids: [fixtureRows[0].id] } });
+    const listed = await rpc("tools/list");
+    expect(listed.error).toBeUndefined();
+    for (const name of ["exam_overview", "list_practice_domains", "get_practice_question"]) {
+      const result = await call(name, { exam: "GCP_PM_ML_ENG" });
+      expect(result.isError).toBe(true);
+      expect(JSON.stringify(result)).toContain("Available exams: none");
+    }
+    expect((await call("check_answer", { question_id: fixtureRows[0].id, selected_label: "A" })).isError).toBe(true);
+    expect(database.create).not.toHaveBeenCalled();
+    expect(analytics.schedule).not.toHaveBeenCalled();
+  });
+
+  it("fails closed for every tool when CHATGPT_EXAMS names a missing fixed selection", async () => {
+    await configure("GCP_PM_ML_ENG,cloud-engineer");
+    for (const name of ["exam_overview", "list_practice_domains", "get_practice_question"]) {
+      const result = await call(name, { exam: "GCP_PM_ML_ENG" });
+      expect(result.isError).toBe(true);
+      expect(JSON.stringify(result)).toContain("Available exams: none");
+    }
+    expect((await call("check_answer", { question_id: fixtureRows[0].id, selected_label: "A" })).isError).toBe(true);
+    expect(database.create).not.toHaveBeenCalled();
     expect(analytics.schedule).not.toHaveBeenCalled();
   });
 });
@@ -256,7 +502,7 @@ describe("MCP fixed-set publication invariants", () => {
     expect(database.read).not.toHaveBeenCalled();
   });
 
-  it.each(["pmle_exam_overview", "list_practice_domains", "get_practice_question", "check_answer"])("fails closed without leaking database failures for %s", async name => {
+  it.each(["exam_overview", "list_practice_domains", "get_practice_question", "check_answer"])("fails closed without leaking database failures for %s", async name => {
     database.read.mockRejectedValue(new Error("SUPABASE secret diagnostic stack node_modules"));
     const answer = await call(name, name === "check_answer" ? { question_id: fixtureQuestions[0].id, selected_label: "A" } : {});
     expect(answer.isError).toBe(true);

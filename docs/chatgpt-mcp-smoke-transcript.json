@@ -1,5 +1,5 @@
 {
-  "recorded_at": "2026-10-20T13:36:57.456Z",
+  "recorded_at": "2026-10-22T16:37:25.917Z",
   "command": "npm run qa:local -- --mcp-smoke",
   "endpoint": "http://127.0.0.1:3107/api/mcp",
   "client": "@modelcontextprotocol/sdk",
@@ -33,7 +33,7 @@
             }
           },
           "serverInfo": {
-            "name": "testero-pmle-practice",
+            "name": "testero",
             "version": "[redacted string]"
           },
           "instructions": "[redacted string]"
@@ -69,13 +69,22 @@
         "result": {
           "tools": [
             {
-              "name": "pmle_exam_overview",
+              "name": "exam_overview",
               "title": "[redacted string]",
               "description": "[redacted string]",
               "inputSchema": {
                 "$schema": "[redacted string]",
                 "type": "object",
-                "properties": {},
+                "properties": {
+                  "exam": {
+                    "description": "[redacted string]",
+                    "[redacted field 2]": "[redacted string]",
+                    "type": "string",
+                    "enum": [
+                      "[redacted string]"
+                    ]
+                  }
+                },
                 "additionalProperties": false
               },
               "annotations": {
@@ -102,7 +111,16 @@
               "inputSchema": {
                 "$schema": "[redacted string]",
                 "type": "object",
-                "properties": {},
+                "properties": {
+                  "exam": {
+                    "description": "[redacted string]",
+                    "[redacted field 2]": "[redacted string]",
+                    "type": "string",
+                    "enum": [
+                      "[redacted string]"
+                    ]
+                  }
+                },
                 "additionalProperties": false
               },
               "annotations": {
@@ -130,6 +148,14 @@
                 "$schema": "[redacted string]",
                 "type": "object",
                 "properties": {
+                  "exam": {
+                    "description": "[redacted string]",
+                    "[redacted field 2]": "[redacted string]",
+                    "type": "string",
+                    "enum": [
+                      "[redacted string]"
+                    ]
+                  },
                   "domain": {
                     "description": "[redacted string]",
                     "type": "string",
@@ -215,8 +241,10 @@
       "request": {
         "method": "tools/call",
         "params": {
-          "name": "pmle_exam_overview",
-          "arguments": {}
+          "name": "exam_overview",
+          "arguments": {
+            "exam": "[redacted string]"
+          }
         },
         "jsonrpc": "2.0",
         "id": 2
@@ -227,10 +255,93 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"exam\":\"[redacted string]\",\"duration_minutes\":120,\"question_count\":{\"min\":50,\"max\":60,\"approximate\":false},\"question_types\":[\"[redacted string]\",\"[redacted string]\"],\"languages\":[\"[redacted string]\",\"[redacted string]\"],\"recommended_experience\":\"[redacted string]\",\"guide_as_of\":\"[redacted string]\",\"domains\":[{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.12871287128712872,\"question_count\":5},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.15841584158415842,\"question_count\":7},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.2079207920792079,\"question_count\":8},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.19801980198019803,\"question_count\":8},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.1782178217821782,\"question_count\":7},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.12871287128712872,\"question_count\":5}],\"available_questions\":40,\"practice_selection_size\":40,\"weight_note\":\"[redacted string]\",\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+              "text": "[redacted string]"
+            }
+          ],
+          "isError": true
+        },
+        "jsonrpc": "2.0",
+        "id": 2
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "list_practice_domains",
+          "arguments": {
+            "exam": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 3
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "[redacted string]"
+            }
+          ],
+          "isError": true
+        },
+        "jsonrpc": "2.0",
+        "id": 3
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "get_practice_question",
+          "arguments": {
+            "exam": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 4
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "[redacted string]"
+            }
+          ],
+          "isError": true
+        },
+        "jsonrpc": "2.0",
+        "id": 4
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "exam_overview",
+          "arguments": {}
+        },
+        "jsonrpc": "2.0",
+        "id": 5
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"exam_id\":\"[redacted string]\",\"exam\":\"[redacted string]\",\"duration_minutes\":120,\"question_count\":{\"min\":50,\"max\":60,\"approximate\":false},\"question_types\":[\"[redacted string]\",\"[redacted string]\"],\"languages\":[\"[redacted string]\",\"[redacted string]\"],\"recommended_experience\":\"[redacted string]\",\"guide_as_of\":\"[redacted string]\",\"guide_retrieved_at\":\"[redacted string]\",\"certification_page_retrieved_at\":\"[redacted string]\",\"recommended_experience_retrieved_at\":\"[redacted string]\",\"domains\":[{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.12871287128712872,\"question_count\":5},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.15841584158415842,\"question_count\":7},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.2079207920792079,\"question_count\":8},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.19801980198019803,\"question_count\":8},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.1782178217821782,\"question_count\":7},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.12871287128712872,\"question_count\":5}],\"available_questions\":40,\"practice_selection_size\":40,\"weight_note\":\"[redacted string]\",\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
             }
           ],
           "structuredContent": {
+            "exam_id": "[redacted string]",
             "exam": "[redacted string]",
             "duration_minutes": 120,
             "question_count": {
@@ -248,6 +359,9 @@
             ],
             "recommended_experience": "[redacted string]",
             "guide_as_of": "[redacted string]",
+            "guide_retrieved_at": "[redacted string]",
+            "certification_page_retrieved_at": "[redacted string]",
+            "recommended_experience_retrieved_at": "[redacted string]",
             "domains": [
               {
                 "domain": "[redacted string]",
@@ -300,7 +414,156 @@
           }
         },
         "jsonrpc": "2.0",
-        "id": 2
+        "id": 5
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "get_practice_question",
+          "arguments": {}
+        },
+        "jsonrpc": "2.0",
+        "id": 6
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "exam_id": "[redacted string]",
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "stem": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              }
+            ],
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 6
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "exam_overview",
+          "arguments": {
+            "exam": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 7
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"exam_id\":\"[redacted string]\",\"exam\":\"[redacted string]\",\"duration_minutes\":120,\"question_count\":{\"min\":50,\"max\":60,\"approximate\":false},\"question_types\":[\"[redacted string]\",\"[redacted string]\"],\"languages\":[\"[redacted string]\",\"[redacted string]\"],\"recommended_experience\":\"[redacted string]\",\"guide_as_of\":\"[redacted string]\",\"guide_retrieved_at\":\"[redacted string]\",\"certification_page_retrieved_at\":\"[redacted string]\",\"recommended_experience_retrieved_at\":\"[redacted string]\",\"domains\":[{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.12871287128712872,\"question_count\":5},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.15841584158415842,\"question_count\":7},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.2079207920792079,\"question_count\":8},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.19801980198019803,\"question_count\":8},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.1782178217821782,\"question_count\":7},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.12871287128712872,\"question_count\":5}],\"available_questions\":40,\"practice_selection_size\":40,\"weight_note\":\"[redacted string]\",\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "exam_id": "[redacted string]",
+            "exam": "[redacted string]",
+            "duration_minutes": 120,
+            "question_count": {
+              "min": 50,
+              "max": 60,
+              "approximate": false
+            },
+            "question_types": [
+              "[redacted string]",
+              "[redacted string]"
+            ],
+            "languages": [
+              "[redacted string]",
+              "[redacted string]"
+            ],
+            "recommended_experience": "[redacted string]",
+            "guide_as_of": "[redacted string]",
+            "guide_retrieved_at": "[redacted string]",
+            "certification_page_retrieved_at": "[redacted string]",
+            "recommended_experience_retrieved_at": "[redacted string]",
+            "domains": [
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.12871287128712872,
+                "question_count": 5
+              },
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.15841584158415842,
+                "question_count": 7
+              },
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.2079207920792079,
+                "question_count": 8
+              },
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.19801980198019803,
+                "question_count": 8
+              },
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.1782178217821782,
+                "question_count": 7
+              },
+              {
+                "domain": "[redacted string]",
+                "number": "[redacted string]",
+                "title": "[redacted string]",
+                "sampling_weight": 0.12871287128712872,
+                "question_count": 5
+              }
+            ],
+            "available_questions": 40,
+            "practice_selection_size": 40,
+            "weight_note": "[redacted string]",
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 7
       }
     },
     {
@@ -309,10 +572,12 @@
         "method": "tools/call",
         "params": {
           "name": "list_practice_domains",
-          "arguments": {}
+          "arguments": {
+            "exam": "[redacted string]"
+          }
         },
         "jsonrpc": "2.0",
-        "id": 3
+        "id": 8
       },
       "status": 200,
       "response": {
@@ -320,10 +585,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"domains\":[{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.12871287128712872,\"question_count\":5},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.15841584158415842,\"question_count\":7},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.2079207920792079,\"question_count\":8},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.19801980198019803,\"question_count\":8},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.1782178217821782,\"question_count\":7},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.12871287128712872,\"question_count\":5}],\"total_questions\":40,\"available_questions\":40,\"disclaimer\":\"[redacted string]\"}"
+              "text": "{\"exam_id\":\"[redacted string]\",\"domains\":[{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.12871287128712872,\"question_count\":5},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.15841584158415842,\"question_count\":7},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.2079207920792079,\"question_count\":8},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.19801980198019803,\"question_count\":8},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.1782178217821782,\"question_count\":7},{\"domain\":\"[redacted string]\",\"number\":\"[redacted string]\",\"title\":\"[redacted string]\",\"sampling_weight\":0.12871287128712872,\"question_count\":5}],\"total_questions\":40,\"available_questions\":40,\"disclaimer\":\"[redacted string]\"}"
             }
           ],
           "structuredContent": {
+            "exam_id": "[redacted string]",
             "domains": [
               {
                 "domain": "[redacted string]",
@@ -374,7 +640,7 @@
           }
         },
         "jsonrpc": "2.0",
-        "id": 3
+        "id": 8
       }
     },
     {
@@ -384,11 +650,12 @@
         "params": {
           "name": "get_practice_question",
           "arguments": {
+            "exam": "[redacted string]",
             "domain": "[redacted string]"
           }
         },
         "jsonrpc": "2.0",
-        "id": 4
+        "id": 9
       },
       "status": 200,
       "response": {
@@ -396,10 +663,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
             }
           ],
           "structuredContent": {
+            "exam_id": "[redacted string]",
             "question_id": "[redacted string]",
             "domain": "[redacted string]",
             "stem": "[redacted string]",
@@ -425,293 +693,6 @@
           }
         },
         "jsonrpc": "2.0",
-        "id": 4
-      }
-    },
-    {
-      "method": "POST",
-      "request": {
-        "method": "tools/call",
-        "params": {
-          "name": "check_answer",
-          "arguments": {
-            "question_id": "[redacted string]",
-            "selected_label": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 5
-      },
-      "status": 200,
-      "response": {
-        "result": {
-          "content": [
-            {
-              "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
-            }
-          ],
-          "structuredContent": {
-            "question_id": "[redacted string]",
-            "domain": "[redacted string]",
-            "is_correct": false,
-            "selected_label": "[redacted string]",
-            "correct_option": "[redacted string]",
-            "options": [
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              }
-            ],
-            "informational_link": "[redacted string]",
-            "disclaimer": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 5
-      }
-    },
-    {
-      "method": "POST",
-      "request": {
-        "method": "tools/call",
-        "params": {
-          "name": "check_answer",
-          "arguments": {
-            "question_id": "[redacted string]",
-            "selected_label": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 6
-      },
-      "status": 200,
-      "response": {
-        "result": {
-          "content": [
-            {
-              "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
-            }
-          ],
-          "structuredContent": {
-            "question_id": "[redacted string]",
-            "domain": "[redacted string]",
-            "is_correct": false,
-            "selected_label": "[redacted string]",
-            "correct_option": "[redacted string]",
-            "options": [
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              }
-            ],
-            "informational_link": "[redacted string]",
-            "disclaimer": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 6
-      }
-    },
-    {
-      "method": "POST",
-      "request": {
-        "method": "tools/call",
-        "params": {
-          "name": "get_practice_question",
-          "arguments": {
-            "domain": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 7
-      },
-      "status": 200,
-      "response": {
-        "result": {
-          "content": [
-            {
-              "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
-            }
-          ],
-          "structuredContent": {
-            "question_id": "[redacted string]",
-            "domain": "[redacted string]",
-            "stem": "[redacted string]",
-            "options": [
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]"
-              }
-            ],
-            "disclaimer": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 7
-      }
-    },
-    {
-      "method": "POST",
-      "request": {
-        "method": "tools/call",
-        "params": {
-          "name": "check_answer",
-          "arguments": {
-            "question_id": "[redacted string]",
-            "selected_label": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 8
-      },
-      "status": 200,
-      "response": {
-        "result": {
-          "content": [
-            {
-              "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
-            }
-          ],
-          "structuredContent": {
-            "question_id": "[redacted string]",
-            "domain": "[redacted string]",
-            "is_correct": false,
-            "selected_label": "[redacted string]",
-            "correct_option": "[redacted string]",
-            "options": [
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              }
-            ],
-            "informational_link": "[redacted string]",
-            "disclaimer": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 8
-      }
-    },
-    {
-      "method": "POST",
-      "request": {
-        "method": "tools/call",
-        "params": {
-          "name": "check_answer",
-          "arguments": {
-            "question_id": "[redacted string]",
-            "selected_label": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 9
-      },
-      "status": 200,
-      "response": {
-        "result": {
-          "content": [
-            {
-              "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
-            }
-          ],
-          "structuredContent": {
-            "question_id": "[redacted string]",
-            "domain": "[redacted string]",
-            "is_correct": false,
-            "selected_label": "[redacted string]",
-            "correct_option": "[redacted string]",
-            "options": [
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              }
-            ],
-            "informational_link": "[redacted string]",
-            "disclaimer": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
         "id": 9
       }
     },
@@ -720,9 +701,10 @@
       "request": {
         "method": "tools/call",
         "params": {
-          "name": "get_practice_question",
+          "name": "check_answer",
           "arguments": {
-            "domain": "[redacted string]"
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
           }
         },
         "jsonrpc": "2.0",
@@ -734,31 +716,39 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
             }
           ],
           "structuredContent": {
+            "exam_id": "[redacted string]",
             "question_id": "[redacted string]",
             "domain": "[redacted string]",
-            "stem": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
             "options": [
               {
                 "label": "[redacted string]",
-                "text": "[redacted string]"
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
               },
               {
                 "label": "[redacted string]",
-                "text": "[redacted string]"
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
               },
               {
                 "label": "[redacted string]",
-                "text": "[redacted string]"
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
               },
               {
                 "label": "[redacted string]",
-                "text": "[redacted string]"
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
               }
             ],
+            "informational_link": "[redacted string]",
             "disclaimer": "[redacted string]"
           }
         },
@@ -786,13 +776,14 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":true,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
             }
           ],
           "structuredContent": {
+            "exam_id": "[redacted string]",
             "question_id": "[redacted string]",
             "domain": "[redacted string]",
-            "is_correct": true,
+            "is_correct": false,
             "selected_label": "[redacted string]",
             "correct_option": "[redacted string]",
             "options": [
@@ -830,72 +821,14 @@
       "request": {
         "method": "tools/call",
         "params": {
-          "name": "check_answer",
-          "arguments": {
-            "question_id": "[redacted string]",
-            "selected_label": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 12
-      },
-      "status": 200,
-      "response": {
-        "result": {
-          "content": [
-            {
-              "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
-            }
-          ],
-          "structuredContent": {
-            "question_id": "[redacted string]",
-            "domain": "[redacted string]",
-            "is_correct": false,
-            "selected_label": "[redacted string]",
-            "correct_option": "[redacted string]",
-            "options": [
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              }
-            ],
-            "informational_link": "[redacted string]",
-            "disclaimer": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 12
-      }
-    },
-    {
-      "method": "POST",
-      "request": {
-        "method": "tools/call",
-        "params": {
           "name": "get_practice_question",
           "arguments": {
+            "exam": "[redacted string]",
             "domain": "[redacted string]"
           }
         },
         "jsonrpc": "2.0",
-        "id": 13
+        "id": 12
       },
       "status": 200,
       "response": {
@@ -903,10 +836,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
             }
           ],
           "structuredContent": {
+            "exam_id": "[redacted string]",
             "question_id": "[redacted string]",
             "domain": "[redacted string]",
             "stem": "[redacted string]",
@@ -932,22 +866,22 @@
           }
         },
         "jsonrpc": "2.0",
+        "id": 12
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
         "id": 13
-      }
-    },
-    {
-      "method": "POST",
-      "request": {
-        "method": "tools/call",
-        "params": {
-          "name": "check_answer",
-          "arguments": {
-            "question_id": "[redacted string]",
-            "selected_label": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 14
       },
       "status": 200,
       "response": {
@@ -955,69 +889,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":true,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
             }
           ],
           "structuredContent": {
-            "question_id": "[redacted string]",
-            "domain": "[redacted string]",
-            "is_correct": true,
-            "selected_label": "[redacted string]",
-            "correct_option": "[redacted string]",
-            "options": [
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              }
-            ],
-            "informational_link": "[redacted string]",
-            "disclaimer": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 14
-      }
-    },
-    {
-      "method": "POST",
-      "request": {
-        "method": "tools/call",
-        "params": {
-          "name": "check_answer",
-          "arguments": {
-            "question_id": "[redacted string]",
-            "selected_label": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 15
-      },
-      "status": 200,
-      "response": {
-        "result": {
-          "content": [
-            {
-              "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
-            }
-          ],
-          "structuredContent": {
+            "exam_id": "[redacted string]",
             "question_id": "[redacted string]",
             "domain": "[redacted string]",
             "is_correct": false,
@@ -1050,7 +926,67 @@
           }
         },
         "jsonrpc": "2.0",
-        "id": 15
+        "id": 13
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 14
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "exam_id": "[redacted string]",
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 14
       }
     },
     {
@@ -1060,7 +996,61 @@
         "params": {
           "name": "get_practice_question",
           "arguments": {
+            "exam": "[redacted string]",
             "domain": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 15
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "exam_id": "[redacted string]",
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "stem": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              }
+            ],
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 15
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
           }
         },
         "jsonrpc": "2.0",
@@ -1072,31 +1062,39 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
             }
           ],
           "structuredContent": {
+            "exam_id": "[redacted string]",
             "question_id": "[redacted string]",
             "domain": "[redacted string]",
-            "stem": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
             "options": [
               {
                 "label": "[redacted string]",
-                "text": "[redacted string]"
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
               },
               {
                 "label": "[redacted string]",
-                "text": "[redacted string]"
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
               },
               {
                 "label": "[redacted string]",
-                "text": "[redacted string]"
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
               },
               {
                 "label": "[redacted string]",
-                "text": "[redacted string]"
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
               }
             ],
+            "informational_link": "[redacted string]",
             "disclaimer": "[redacted string]"
           }
         },
@@ -1124,10 +1122,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
             }
           ],
           "structuredContent": {
+            "exam_id": "[redacted string]",
             "question_id": "[redacted string]",
             "domain": "[redacted string]",
             "is_correct": false,
@@ -1168,72 +1167,14 @@
       "request": {
         "method": "tools/call",
         "params": {
-          "name": "check_answer",
-          "arguments": {
-            "question_id": "[redacted string]",
-            "selected_label": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 18
-      },
-      "status": 200,
-      "response": {
-        "result": {
-          "content": [
-            {
-              "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
-            }
-          ],
-          "structuredContent": {
-            "question_id": "[redacted string]",
-            "domain": "[redacted string]",
-            "is_correct": false,
-            "selected_label": "[redacted string]",
-            "correct_option": "[redacted string]",
-            "options": [
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              },
-              {
-                "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
-              }
-            ],
-            "informational_link": "[redacted string]",
-            "disclaimer": "[redacted string]"
-          }
-        },
-        "jsonrpc": "2.0",
-        "id": 18
-      }
-    },
-    {
-      "method": "POST",
-      "request": {
-        "method": "tools/call",
-        "params": {
           "name": "get_practice_question",
           "arguments": {
+            "exam": "[redacted string]",
             "domain": "[redacted string]"
           }
         },
         "jsonrpc": "2.0",
-        "id": 19
+        "id": 18
       },
       "status": 200,
       "response": {
@@ -1241,10 +1182,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
             }
           ],
           "structuredContent": {
+            "exam_id": "[redacted string]",
             "question_id": "[redacted string]",
             "domain": "[redacted string]",
             "stem": "[redacted string]",
@@ -1270,6 +1212,66 @@
           }
         },
         "jsonrpc": "2.0",
+        "id": 18
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 19
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":true,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "exam_id": "[redacted string]",
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": true,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
         "id": 19
       }
     },
@@ -1293,10 +1295,11 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
             }
           ],
           "structuredContent": {
+            "exam_id": "[redacted string]",
             "question_id": "[redacted string]",
             "domain": "[redacted string]",
             "is_correct": false,
@@ -1337,10 +1340,10 @@
       "request": {
         "method": "tools/call",
         "params": {
-          "name": "check_answer",
+          "name": "get_practice_question",
           "arguments": {
-            "question_id": "[redacted string]",
-            "selected_label": "[redacted string]"
+            "exam": "[redacted string]",
+            "domain": "[redacted string]"
           }
         },
         "jsonrpc": "2.0",
@@ -1352,38 +1355,32 @@
           "content": [
             {
               "type": "text",
-              "text": "{\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
             }
           ],
           "structuredContent": {
+            "exam_id": "[redacted string]",
             "question_id": "[redacted string]",
             "domain": "[redacted string]",
-            "is_correct": false,
-            "selected_label": "[redacted string]",
-            "correct_option": "[redacted string]",
+            "stem": "[redacted string]",
             "options": [
               {
                 "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
+                "text": "[redacted string]"
               },
               {
                 "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
+                "text": "[redacted string]"
               },
               {
                 "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
+                "text": "[redacted string]"
               },
               {
                 "label": "[redacted string]",
-                "text": "[redacted string]",
-                "explanation": "[redacted string]"
+                "text": "[redacted string]"
               }
             ],
-            "informational_link": "[redacted string]",
             "disclaimer": "[redacted string]"
           }
         },
@@ -1404,6 +1401,299 @@
         },
         "jsonrpc": "2.0",
         "id": 22
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":true,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "exam_id": "[redacted string]",
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": true,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 22
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 23
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "exam_id": "[redacted string]",
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 23
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "get_practice_question",
+          "arguments": {
+            "exam": "[redacted string]",
+            "domain": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 24
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"stem\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\"}],\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "exam_id": "[redacted string]",
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "stem": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]"
+              }
+            ],
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 24
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 25
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "exam_id": "[redacted string]",
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 25
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 26
+      },
+      "status": 200,
+      "response": {
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"exam_id\":\"[redacted string]\",\"question_id\":\"[redacted string]\",\"domain\":\"[redacted string]\",\"is_correct\":false,\"selected_label\":\"[redacted string]\",\"correct_option\":\"[redacted string]\",\"options\":[{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"},{\"label\":\"[redacted string]\",\"text\":\"[redacted string]\",\"explanation\":\"[redacted string]\"}],\"informational_link\":\"[redacted string]\",\"disclaimer\":\"[redacted string]\"}"
+            }
+          ],
+          "structuredContent": {
+            "exam_id": "[redacted string]",
+            "question_id": "[redacted string]",
+            "domain": "[redacted string]",
+            "is_correct": false,
+            "selected_label": "[redacted string]",
+            "correct_option": "[redacted string]",
+            "options": [
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              },
+              {
+                "label": "[redacted string]",
+                "text": "[redacted string]",
+                "explanation": "[redacted string]"
+              }
+            ],
+            "informational_link": "[redacted string]",
+            "disclaimer": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 26
+      }
+    },
+    {
+      "method": "POST",
+      "request": {
+        "method": "tools/call",
+        "params": {
+          "name": "check_answer",
+          "arguments": {
+            "question_id": "[redacted string]",
+            "selected_label": "[redacted string]"
+          }
+        },
+        "jsonrpc": "2.0",
+        "id": 27
       },
       "status": 200,
       "response": {
@@ -1421,7 +1711,7 @@
           "isError": true
         },
         "jsonrpc": "2.0",
-        "id": 22
+        "id": 27
       }
     }
   ],

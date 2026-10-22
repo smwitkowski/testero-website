@@ -53,7 +53,7 @@ describe("non-destructive deployment configuration", () => {
     const names = read(".env.example").split(/\r?\n/)
       .filter(line => /^[A-Z][A-Z_0-9]*=/.test(line)).map(line => line.split("=")[0]).sort();
     expect(names).toEqual([
-      "BETA_DIAGNOSTIC_CERTS", "NEXT_PUBLIC_POSTHOG_HOST", "NEXT_PUBLIC_POSTHOG_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_URL", "OPENAI_APPS_CHALLENGE",
+      "BETA_DIAGNOSTIC_CERTS", "CHATGPT_EXAMS", "NEXT_PUBLIC_POSTHOG_HOST", "NEXT_PUBLIC_POSTHOG_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_URL", "OPENAI_APPS_CHALLENGE",
       "STRIPE_PRICE_PMLE_PASS", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "SUPABASE_SERVICE_ROLE_KEY",
     ]);
   });

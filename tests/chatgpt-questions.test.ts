@@ -2,11 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import freeSet from "@/lib/chatgpt/free-set.json";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
 
+const syntheticSource = {
+  kind: "local-export", upstream: "read-only-database-content-export",
+  exported_at: "2026-10-22T00:00:00.000Z", export_sha256: "a".repeat(64), selection: "synthetic-test",
+};
+
 const db = vi.hoisted(() => ({ create: vi.fn(), from: vi.fn(), select: vi.fn(), eq: vi.fn(), is: vi.fn(), in: vi.fn() }));
 vi.mock("@/lib/supabase/service", () => ({ createServiceSupabaseClient: db.create }));
 // Synthetic authored text only; no source-bank stems, options, or answer keys.
 function row(index = 0) {
-  return { id: freeSet.question_ids[index], exam: "GCP_PM_ML_ENG", status: "ACTIVE", review_status: "GOOD",
+  return { id: freeSet.question_ids[index], exam: "GCP_PM_ML_ENG", status: "ACTIVE", review_status: "GOOD", question_type: "single_select",
     parent_question_id: null as string | null, stem: `Synthetic scenario ${index}: select the test-designated response.`,
     exam_domains: { code: PMLE_BLUEPRINT[index % 6].domainCode },
     answers: ["A", "B", "C", "D"].map((label, optionIndex) => ({ choice_label: label,
@@ -19,13 +24,17 @@ let questions: typeof import("@/lib/chatgpt/questions");
 beforeEach(async () => {
   vi.resetModules();
   vi.resetAllMocks();
+  vi.stubEnv("CHATGPT_EXAMS", undefined);
   const query = { select: db.select, eq: db.eq, is: db.is, in: db.in };
   db.create.mockReturnValue({ from: db.from }); db.from.mockReturnValue(query);
   db.select.mockReturnValue(query); db.eq.mockReturnValue(query); db.is.mockReturnValue(query);
   db.in.mockResolvedValue({ data: [row()], error: null });
   questions = await import("@/lib/chatgpt/questions");
 });
-afterEach(() => { vi.restoreAllMocks(); vi.doUnmock("@/lib/chatgpt/free-set.json"); });
+afterEach(() => {
+  vi.restoreAllMocks(); vi.unstubAllEnvs();
+  vi.doUnmock("@/lib/chatgpt/free-set.json"); vi.doUnmock("@/lib/chatgpt/free-sets.json");
+});
 
 describe("ChatGPT server-only allowlist question loader", () => {
   it("selects all eligibility fields and enforces every database predicate", async () => {
@@ -34,11 +43,11 @@ describe("ChatGPT server-only allowlist question loader", () => {
     expect(questions.isAllowedQuestionId("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")).toBe(false);
     const loaded = await questions.loadChatgptQuestions();
     expect(loaded).toHaveLength(1);
-    expect(loaded![0]).toMatchObject({ id: row().id, domain: row().exam_domains.code, stem: row().stem });
+    expect(loaded![0]).toMatchObject({ exam: "GCP_PM_ML_ENG", id: row().id, domain: row().exam_domains.code, stem: row().stem });
     expect(db.create).toHaveBeenCalledOnce();
     expect(db.from).toHaveBeenCalledExactlyOnceWith("questions");
-    expect(db.select).toHaveBeenCalledExactlyOnceWith("id,exam,status,review_status,parent_question_id,stem,exam_domains!inner(code),answers(choice_label,choice_text,is_correct,explanation_text)");
-    expect(db.eq.mock.calls).toEqual([["exam", "GCP_PM_ML_ENG"], ["status", "ACTIVE"], ["review_status", "GOOD"]]);
+    expect(db.select).toHaveBeenCalledExactlyOnceWith("id,exam,status,review_status,question_type,parent_question_id,stem,exam_domains!inner(code),answers(choice_label,choice_text,is_correct,explanation_text)");
+    expect(db.eq.mock.calls).toEqual([["exam", "GCP_PM_ML_ENG"], ["status", "ACTIVE"], ["review_status", "GOOD"], ["question_type", "single_select"]]);
     expect(db.is).toHaveBeenCalledExactlyOnceWith("parent_question_id", null);
     expect(db.in).toHaveBeenCalledExactlyOnceWith("id", freeSet.question_ids);
   });
@@ -58,6 +67,7 @@ describe("ChatGPT server-only allowlist question loader", () => {
     ["retired", (value: ReturnType<typeof row>) => { value.status = "RETIRED"; }],
     ["unreviewed", (value: ReturnType<typeof row>) => { value.review_status = "PENDING"; }],
     ["wrong exam", (value: ReturnType<typeof row>) => { value.exam = "OTHER_EXAM"; }],
+    ["multiple select", (value: ReturnType<typeof row>) => { value.question_type = "multiple_select"; }],
     ["wrong domain", (value: ReturnType<typeof row>) => { value.exam_domains.code = "OTHER_DOMAIN"; }],
     ["blank stem", (value: ReturnType<typeof row>) => { value.stem = " "; }],
     ["three answers", (value: ReturnType<typeof row>) => { value.answers.pop(); }],
@@ -78,7 +88,7 @@ describe("ChatGPT server-only allowlist question loader", () => {
     expect(db.in).toHaveBeenCalledOnce();
   });
 
-  it.each([null, {}, { ...row(), parent_question_id: undefined }, { ...row(), exam_domains: null },
+  it.each([null, {}, { ...row(), parent_question_id: undefined }, { ...row(), question_type: undefined }, { ...row(), exam_domains: null },
     { ...row(), exam_domains: [{ code: PMLE_BLUEPRINT[0].domainCode }] },
     { ...row(), answers: [{ ...row().answers[0], is_correct: "true" }, ...row().answers.slice(1)] },
   ])("drops invalid returned structure without throwing", async invalid => {
@@ -163,5 +173,127 @@ describe("ChatGPT server-only allowlist question loader", () => {
     expect(loader.CHATGPT_SELECTION_SIZE).toBe(0);
     expect(await loader.loadChatgptQuestions()).toBeNull();
     expect(db.create).not.toHaveBeenCalled();
+  });
+
+  describe("per-exam selection and cache isolation", () => {
+    const extraId = "11111111-1111-4111-8111-111111111111";
+    const extraExam = "data-engineer";
+    const extraDomain = "data-engineer:standard:1";
+    function extraRow() {
+      return { ...row(), id: extraId, exam: extraExam, exam_domains: { code: extraDomain } };
+    }
+    async function enableExtra(ids = [extraId]) {
+      vi.doMock("@/lib/chatgpt/free-sets.json", () => ({ default: {
+        [extraExam]: { version: 1, source: syntheticSource, question_ids: ids },
+      } }));
+      vi.stubEnv("CHATGPT_EXAMS", `GCP_PM_ML_ENG,${extraExam}`);
+      vi.resetModules();
+      questions = await import("@/lib/chatgpt/questions");
+    }
+
+    it("keeps the default PMLE-only and rejects unknown or disabled exams before DB access", async () => {
+      expect(questions.findQuestionExam(freeSet.question_ids[0])?.id).toBe("GCP_PM_ML_ENG");
+      expect(questions.findQuestionExam(extraId)).toBeUndefined();
+      expect(questions.isAllowedQuestionId(extraId, extraExam)).toBe(false);
+      expect(await questions.loadChatgptQuestions(extraExam)).toBeNull();
+      expect(await questions.loadChatgptQuestions("not-an-exam")).toBeNull();
+      expect(db.create).not.toHaveBeenCalled();
+    });
+
+    it("loads an enabled extra set with its own predicates and drops cross-exam IDs and domains", async () => {
+      await enableExtra();
+      expect(questions.isAllowedQuestionId(extraId)).toBe(false);
+      expect(questions.isAllowedQuestionId(extraId, extraExam)).toBe(true);
+      expect(questions.isAllowedQuestionId(freeSet.question_ids[0], extraExam)).toBe(false);
+      expect(questions.findQuestionExam(extraId)?.id).toBe(extraExam);
+      db.in.mockResolvedValue({ data: [extraRow(), row(), { ...row(1), exam: extraExam,
+        exam_domains: { code: extraDomain } }], error: null });
+      const loaded = await questions.loadChatgptQuestions(extraExam);
+      expect(loaded).toHaveLength(1);
+      expect(loaded![0]).toMatchObject({ id: extraId, exam: extraExam, domain: extraDomain });
+      expect(db.eq.mock.calls).toEqual([["exam", extraExam], ["status", "ACTIVE"],
+        ["review_status", "GOOD"], ["question_type", "single_select"]]);
+      expect(db.in).toHaveBeenCalledExactlyOnceWith("id", [extraId]);
+      db.in.mockResolvedValue({ data: [row(), extraRow()], error: null });
+      expect((await questions.loadChatgptQuestions())!.map(question => question.id)).toEqual([freeSet.question_ids[0]]);
+      expect(await questions.loadChatgptQuestions(extraExam)).toBe(loaded);
+      expect(db.in).toHaveBeenCalledTimes(2);
+    });
+
+    it("validates extra-exam domain membership instead of PMLE domains", async () => {
+      await enableExtra();
+      db.in.mockResolvedValue({ data: [{ ...extraRow(), exam_domains: row().exam_domains }], error: null });
+      expect(await questions.loadChatgptQuestions(extraExam)).toEqual([]);
+    });
+
+    it("does not resolve answer checks to a set when an ID belongs to two enabled exams", async () => {
+      await enableExtra([freeSet.question_ids[0]]);
+      expect(questions.findQuestionExam(freeSet.question_ids[0])).toBeUndefined();
+      expect(questions.isAllowedQuestionId(freeSet.question_ids[0])).toBe(false);
+      expect(await questions.loadChatgptQuestions()).toBeNull();
+      expect(await questions.loadChatgptQuestions(extraExam)).toBeNull();
+      expect(db.create).not.toHaveBeenCalled();
+      vi.stubEnv("CHATGPT_EXAMS", "GCP_PM_ML_ENG");
+      expect(questions.findQuestionExam(freeSet.question_ids[0])?.id).toBe("GCP_PM_ML_ENG");
+    });
+
+    it("discards a disabled exam's warm cache immediately and does not accept its IDs", async () => {
+      await enableExtra();
+      db.in.mockResolvedValue({ data: [extraRow()], error: null });
+      expect(await questions.loadChatgptQuestions(extraExam)).toHaveLength(1);
+      vi.stubEnv("CHATGPT_EXAMS", "GCP_PM_ML_ENG");
+      expect(await questions.loadChatgptQuestions(extraExam)).toBeNull();
+      expect(questions.isAllowedQuestionId(extraId, extraExam)).toBe(false);
+      expect(questions.findQuestionExam(extraId)).toBeUndefined();
+      expect(db.in).toHaveBeenCalledOnce();
+    });
+
+    it("deduplicates loads within each exam but never across exams", async () => {
+      await enableExtra();
+      const finish: ((value: unknown) => void)[] = [];
+      db.in.mockImplementation(() => new Promise(resolve => { finish.push(resolve); }));
+      const pmle = questions.loadChatgptQuestions();
+      const extra = questions.loadChatgptQuestions(extraExam);
+      const extraAgain = questions.loadChatgptQuestions(extraExam);
+      expect(db.in).toHaveBeenCalledTimes(2);
+      finish[1]({ data: [extraRow()], error: null });
+      expect(await extra).toEqual(await extraAgain);
+      finish[0]({ data: [row()], error: null });
+      expect((await pmle)![0].exam).toBe("GCP_PM_ML_ENG");
+    });
+
+    it("rejects a result when the enabled exam is removed during its database read", async () => {
+      await enableExtra();
+      let finish!: (value: unknown) => void;
+      db.in.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+      const pending = questions.loadChatgptQuestions(extraExam);
+      vi.stubEnv("CHATGPT_EXAMS", "GCP_PM_ML_ENG");
+      finish({ data: [extraRow()], error: null });
+      expect(await pending).toBeNull();
+    });
+
+    it("does not let one exam's failed refresh evict another exam's cached content", async () => {
+      await enableExtra();
+      const now = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+      const pmle = await questions.loadChatgptQuestions();
+      now.mockReturnValue(1_010_000);
+      db.in.mockResolvedValue({ data: [extraRow()], error: null });
+      const extra = await questions.loadChatgptQuestions(extraExam);
+      now.mockReturnValue(1_030_000);
+      db.in.mockResolvedValue({ data: null, error: { message: "synthetic failure" } });
+      expect(await questions.loadChatgptQuestions()).toBeNull();
+      expect(await questions.loadChatgptQuestions(extraExam)).toBe(extra);
+      expect(pmle).toHaveLength(1);
+      expect(db.in).toHaveBeenCalledTimes(3);
+    });
+
+    it("fails closed for invalid allowlist configuration even with a warm PMLE cache", async () => {
+      expect(await questions.loadChatgptQuestions()).toHaveLength(1);
+      vi.stubEnv("CHATGPT_EXAMS", "GCP_PM_ML_ENG,unknown");
+      expect(await questions.loadChatgptQuestions()).toBeNull();
+      expect(questions.isAllowedQuestionId(freeSet.question_ids[0])).toBe(false);
+      expect(questions.findQuestionExam(freeSet.question_ids[0])).toBeUndefined();
+      expect(db.in).toHaveBeenCalledOnce();
+    });
   });
 });

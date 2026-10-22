@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import snapshot from "@/lib/chatgpt/free-set.json";
+import additionalSnapshots from "@/lib/chatgpt/free-sets.json";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
 
 interface ExportQuestion {
@@ -44,6 +45,51 @@ function fixture(): Bank {
 }
 const select = (bank: Bank) => selectFreeSet(JSON.stringify(bank), blueprint);
 
+// Independent recursive check: never hide disabled manifests behind CHATGPT_EXAMS.
+function inspectPublicManifest(value: unknown, pmle = false, path = "") {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  const sourceKeys = ["kind", "upstream", "exported_at", "export_sha256", "blueprint_sha256", "selection"];
+  const metadata: Record<string, RegExp> = {
+    "source.kind": /^local-export$/,
+    "source.upstream": /^read-only-database-content-export$/,
+    "source.exported_at": /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+    "source.export_sha256": /^[0-9a-f]{64}$/,
+    "source.blueprint_sha256": /^[0-9a-f]{64}$/,
+    "source.selection": /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+  };
+  if (Array.isArray(value)) {
+    expect(path).toBe("question_ids");
+    expect(value.length).toBeGreaterThan(0);
+    expect(new Set(value).size).toBe(value.length);
+    if (pmle) expect(value).toHaveLength(40);
+    for (const id of value) { expect(typeof id).toBe("string"); expect(id).toMatch(uuidPattern); }
+  } else if (typeof value === "object" && value !== null) {
+    expect(["", "source"]).toContain(path);
+    const keys = Object.keys(value);
+    const required = path === "" ? ["version", "source", "question_ids"]
+      : sourceKeys.filter(key => pmle || key !== "blueprint_sha256");
+    const allowed = path === "" ? required : sourceKeys;
+    for (const key of required) expect(keys).toContain(key);
+    for (const key of keys) expect(allowed).toContain(key);
+    for (const [key, item] of Object.entries(value)) inspectPublicManifest(item, pmle, path ? `${path}.${key}` : key);
+  } else if (path === "version") {
+    expect(value).toBe(1);
+  } else {
+    expect(typeof value).toBe("string");
+    expect(metadata[path]).toBeDefined();
+    expect(value).toMatch(metadata[path]);
+    if (path === "source.selection") {
+      expect((value as string).length).toBeLessThanOrEqual(100);
+      if (pmle) expect(value).toBe("hamilton-40-lexicographic-uuid-v1");
+    }
+    if (path === "source.exported_at") {
+      const timestamp = new Date(value as string);
+      expect(Number.isFinite(timestamp.valueOf())).toBe(true);
+      expect(timestamp.toISOString()).toBe(value);
+    }
+  }
+}
+
 describe("D-042 fixed ChatGPT free set", () => {
   it("contains exactly 40 unique UUIDs, not question content", () => {
     expect(snapshot.version).toBe(1);
@@ -53,38 +99,26 @@ describe("D-042 fixed ChatGPT free set", () => {
       expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     }
   });
-  it("recursively contains only IDs and approved rule/provenance metadata", () => {
-    const schema: Record<string, readonly string[]> = {
-      "": ["version", "source", "question_ids"],
-      source: ["kind", "upstream", "exported_at", "export_sha256", "blueprint_sha256", "selection"],
-    };
-    const metadata: Record<string, RegExp> = {
-      "source.kind": /^local-export$/,
-      "source.upstream": /^read-only-database-content-export$/,
-      "source.exported_at": /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
-      "source.export_sha256": /^[0-9a-f]{64}$/,
-      "source.blueprint_sha256": /^[0-9a-f]{64}$/,
-      "source.selection": /^hamilton-40-lexicographic-uuid-v1$/,
-    };
-    function inspect(value: unknown, path = "") {
-      if (Array.isArray(value)) {
-        expect(path).toBe("question_ids");
-        for (const id of value) {
-          expect(typeof id).toBe("string");
-          expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
-        }
-      } else if (typeof value === "object" && value !== null) {
-        expect(Object.keys(value).sort()).toEqual([...schema[path]].sort());
-        for (const [key, item] of Object.entries(value)) inspect(item, path ? `${path}.${key}` : key);
-      } else if (path === "version") {
-        expect(value).toBe(1);
-      } else {
-        expect(typeof value).toBe("string");
-        expect(value).toMatch(metadata[path]);
-      }
+  it("recursively contains only IDs and bounded provenance in every committed manifest, even disabled sets", () => {
+    inspectPublicManifest(snapshot, true);
+    inspectPublicManifest(select(fixture()), true);
+    expect(typeof additionalSnapshots).toBe("object");
+    expect(Array.isArray(additionalSnapshots)).toBe(false);
+    for (const [exam, manifest] of Object.entries(additionalSnapshots)) {
+      expect(exam).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+      expect(exam.length).toBeLessThanOrEqual(100);
+      inspectPublicManifest(manifest);
     }
-    inspect(snapshot);
-    inspect(select(fixture()));
+  });
+  it("independently rejects missing provenance and nested content in a public additional manifest", () => {
+    const valid = { version: 1, question_ids: [uuid(9999)], source: {
+      kind: "local-export", upstream: "read-only-database-content-export",
+      exported_at: "2026-10-22T00:00:00.000Z", export_sha256: "a".repeat(64), selection: "synthetic-test",
+    } };
+    expect(() => inspectPublicManifest(valid)).not.toThrow();
+    expect(() => inspectPublicManifest({ version: 1, question_ids: valid.question_ids })).toThrow();
+    expect(() => inspectPublicManifest({ ...valid, source: { ...valid.source, stem: "synthetic-content" } })).toThrow();
+    expect(() => inspectPublicManifest({ ...valid, source: { ...valid.source, selection: { stem: "synthetic-content" } } })).toThrow();
   });
   it("uses exact Hamilton quotas from the canonical blueprint, with blueprint-order ties", () => {
     expect(apportionDomains(parseBlueprint(blueprint)).map(d => d.count)).toEqual(quotas);
