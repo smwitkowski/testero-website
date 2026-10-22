@@ -2,7 +2,7 @@ export const comparisonChecked = "2026-10-18";
 export const practiceOptions = [
   {
     "name": "Testero",
-    "format": "PMLE diagnostic with domain report; five-question practice sessions with explanations on PMLE Pass.",
+    "format": "PMLE diagnostic with domain report; unlimited practice with explanations on PMLE Pass.",
     "access": "Free diagnostic, no account required. PMLE Pass lasts 90 days; no subscription or auto-renewal.",
     "price": "USD $39 one-time for 90 days; free diagnostic.",
     "url": "https://testero.ai/pricing",
