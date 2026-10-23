@@ -14,8 +14,8 @@ describe("SEO function contracts", () => {
     expect(result.alternates).toEqual({ canonical: "https://testero.ai/pricing" });
     expect(result.openGraph).toMatchObject({ title: "PMLE Pass pricing | Testero", description: result.description, url: "https://testero.ai/pricing", images: [{ url: SOCIAL_IMAGE, width: 1200, height: 630 }] });
     expect(result.twitter).toMatchObject({ card: "summary_large_image", title: "PMLE Pass pricing | Testero", description: result.description, images: [SOCIAL_IMAGE] });
-    expect(SOCIAL_IMAGE).toBe(`${SITE_ORIGIN}/og-v2.png`);
-    const asset = readFileSync(resolve(import.meta.dirname, "../public/og-v2.png"));
+    expect(SOCIAL_IMAGE).toBe(`${SITE_ORIGIN}/og-pmle-2026.png`);
+    const asset = readFileSync(resolve(import.meta.dirname, "../public/og-pmle-2026.png"));
     expect(asset.subarray(1, 4).toString()).toBe("PNG");
     expect([asset.readUInt32BE(16), asset.readUInt32BE(20)]).toEqual([1200, 630]);
   });
@@ -29,7 +29,7 @@ describe("SEO function contracts", () => {
   it.each(["https://evil.example", "//evil.example", "/%2Fevil.example", "/pricing?preview=true", "/pricing#top", "/%2e%2e/other", "/%5cevil"])
     ("rejects non-path or unsafe canonical input %s", path => { expect(() => canonicalUrl(path)).toThrow(); });
 
-  it("sitemap includes only public pages and all blog and FAQ entries", () => {
+  it("sitemap includes public pages and published blog and FAQ entries", () => {
     expect(catalog.blog).toHaveLength(17);
     expect(catalog.faq).toHaveLength(9);
     const entries = sitemap();
@@ -38,6 +38,7 @@ describe("SEO function contracts", () => {
     expect(entries).toHaveLength(indexable.length);
     expect(entries.map(entry => entry.url)).toContain(canonicalUrl("/blog/google-cloud-certification-path"));
     expect(publicPaths).toContain("/support");
+    expect(publicPaths).toContain("/about");
     expect(entries.map(entry => entry.url)).toContain(canonicalUrl("/support"));
     expect(new Set(entries.map(entry => entry.url)).size).toBe(entries.length);
     for (const entry of entries) {

@@ -1,11 +1,8 @@
-import type { Metadata } from "next";
+import { noIndexMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-export const metadata: Metadata = {
-  title: "Page not found",
-  robots: { index: false, follow: false },
-};
+export const metadata = noIndexMetadata("Page not found", "This Testero page may have moved, or the link may be incorrect. Go home or start a free readiness check.");
 
 export default function NotFound() {
   return <section className="mx-auto max-w-[760px] space-y-6 rounded-lg border border-border bg-card p-5 sm:p-8">

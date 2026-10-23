@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { faqDocumentForPublication, getBlogEntries, getBlogEntry, getFaqEntries, getFaqEntry, getLegalDocument, legalDocumentFromSource } from "@/lib/content/loader";
 import { BLOG_PUBLICATION_OVERLAYS, FAQ_PUBLICATION_OVERLAYS } from "@/lib/content/editorial";
@@ -6,10 +7,10 @@ import { parseFrontmatter } from "@/lib/content/markdown";
 import { pageMetadata } from "@/lib/seo";
 
 describe("local content loader", () => {
-  it("returns all preserved catalog routes with bodies and safe publication metadata", () => {
+  it("returns published catalog routes with bodies and safe publication metadata", () => {
     const blogs = getBlogEntries();
     const faqs = getFaqEntries();
-    expect(blogs).toHaveLength(17);
+    expect(blogs).toHaveLength(15);
     expect(faqs).toHaveLength(9);
     for (const entry of [...blogs, ...faqs]) {
       expect(entry.body.length).toBeGreaterThan(300);
@@ -27,6 +28,12 @@ describe("local content loader", () => {
       expect(entry.title).toBe(BLOG_PUBLICATION_OVERLAYS[entry.slug].title);
       expect(entry.title).not.toMatch(/success story|expert solutions|hardest|complete guide|complete 2025 guide/i);
     }
+  });
+  it.each(["5-hardest-pmle-questions", "pmle-vs-aws-ml-vs-azure-ai"])("preserves the reviewed source hash for retired %s without publishing it", slug => {
+    const original = readFileSync(`content/blog/${slug}.md`, "utf8");
+    expect(createHash("sha256").update(original).digest("hex")).toBe(BLOG_PUBLICATION_OVERLAYS[slug].sourceSha256);
+    expect(getBlogEntry(slug)).toBeUndefined();
+    expect(getBlogEntries().map(entry => entry.slug)).not.toContain(slug);
   });
   it("publishes reviewed current articles without historical notices", () => {
     const entries = getBlogEntries().filter(entry => !entry.republished);
