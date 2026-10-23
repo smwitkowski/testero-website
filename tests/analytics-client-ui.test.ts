@@ -88,5 +88,5 @@ it("never submits or captures an answered event while viewing a saved question",
   mocks.nullStateCalls = 0;
   const html = renderToStaticMarkup(createElement(DiagnosticSession, { sessionId: "session" }));
   expect(html).toContain("Your saved answer");
-  expect(html).toContain("Saved answer. Previous answers are read-only and cannot be changed.");
+  expect(html).toContain("Already answered. Answers can&#x27;t be changed.");
 });

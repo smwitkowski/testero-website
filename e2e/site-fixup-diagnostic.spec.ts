@@ -33,14 +33,14 @@ test("one-click start preserves progress through Browser Back, Forward and cache
   await expect(page.getByText("Question 1 of 5", { exact: true })).toBeVisible();
   await page.getByRole("radio").first().check();
   await page.getByRole("button", { name: "Check answer", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText(/Correct: [A-D]\.|Not quite\. You chose [A-D]; the answer is [A-D]\./);
+  await expect(page.getByRole("status")).toContainText(/Correct\. The answer is [A-D]\.|Not quite\. The correct answer is [A-D]\./);
   await page.getByRole("button", { name: "Next question", exact: true }).click();
   await expect(page.getByText("Question 2 of 5", { exact: true })).toBeVisible();
 
   await page.goBack();
   await expect(page).toHaveURL(/\/diagnostic$/);
-  await expect(page.getByRole("link", { name: "Resume your diagnostic", exact: true })).toHaveAttribute("href", `/diagnostic/${sessionId}`);
-  await expect(page.getByRole("button", { name: "Start over", exact: true })).toBeEnabled();
+  await expect(page.getByRole("link", { name: "Continue where I left off", exact: true })).toHaveAttribute("href", `/diagnostic/${sessionId}`);
+  await expect(page.getByRole("button", { name: "Start a new 5-question check", exact: true })).toBeEnabled();
   await page.screenshot({ path: ".qa/site-fixup/screenshots/resume-desktop.png", fullPage: true });
   expect(posts).toHaveLength(1);
   await page.goForward();
@@ -51,13 +51,13 @@ test("one-click start preserves progress through Browser Back, Forward and cache
   expect(saved.answeredQuestions).toHaveLength(1);
 
   await page.goto("/diagnostic?start=1&length=5");
-  await expect(page.getByRole("link", { name: "Resume your diagnostic", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Continue where I left off", exact: true })).toBeVisible();
   expect(posts).toHaveLength(1);
   await page.getByRole("link", { name: "Back to home", exact: true }).click();
   await expect(page).toHaveURL("/");
   await page.goBack();
-  await expect(page.getByRole("link", { name: "Resume your diagnostic", exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "Resume your diagnostic", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Continue where I left off", exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Continue where I left off", exact: true }).click();
   await expect(page.getByText("Question 2 of 5", { exact: true })).toBeVisible();
   expect(posts).toHaveLength(1);
 });
@@ -72,7 +72,7 @@ test("failed fresh-resume checks block autostart until retry succeeds", async ({
   });
   await page.goto("/diagnostic?start=1&length=5");
   await expect(page.getByRole("button", { name: "Retry saved progress", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Begin diagnostic", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Start the 5-question check", exact: true })).toBeEnabled();
   expect(starts).toBe(0);
   outage = false;
   const createdResponse = page.waitForResponse(response => new URL(response.url()).pathname === "/api/diagnostic" && response.request().method() === "POST");

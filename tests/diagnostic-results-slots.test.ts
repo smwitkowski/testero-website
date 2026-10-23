@@ -28,7 +28,7 @@ it("puts the score before the short-run note and keeps value before optional ema
   expect(html).toContain("1 of 2 correct");
   expect(html).toContain("based on 2 questions");
   expect(html.indexOf("Free explanation")).toBeLessThan(html.indexOf("Default email form"));
-  expect(html).toContain("review your answers");
+  expect(html).toContain("review every answer");
   expect(html).not.toContain(">Review your answers</h2>");
 });
 it("replaces email acquisition with account review and pass access check for signed-in owners", () => {
@@ -55,8 +55,8 @@ it.each([false, true])("shows honest quick-check reads and targeted study advice
   expect(html).toContain('href="/diagnostic?length=20"');
   expect(html).toContain(signedIn ? "Signed-in unlock" : "Secondary pass option");
   if (!signedIn) {
-    expect(html).toContain("60 free practice questions per month");
-    expect(html.indexOf("Free explanation")).toBeLessThan(html.indexOf("Start practice"));
+    expect(html).toContain("practice 60 questions a month");
+    expect(html.indexOf("Free explanation")).toBeLessThan(html.indexOf("Create free account"));
     expect(html.indexOf("Free explanation")).toBeLessThan(html.indexOf("Secondary pass option"));
   }
 });

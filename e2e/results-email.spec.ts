@@ -27,7 +27,7 @@ test("completed diagnostic offers optional results email with consent (mocked su
       expect((await page.request.post(`${api}/answer`, { data: { itemId: question.id, selectedLabel: question.options[0].label } })).status()).toBe(200);
     }
     await page.goto(`/diagnostic/${sessionId}/results`);
-    await expect(page.getByRole("heading", { name: "PMLE readiness report", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Your 5-question PMLE check", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Score by domain", exact: true })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "take the 20-question diagnostic →", exact: true })).toHaveAttribute("href", "/diagnostic?length=20");
     const section = page.locator('[aria-labelledby="email-results-heading"]');

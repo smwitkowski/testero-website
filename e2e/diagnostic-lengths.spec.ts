@@ -5,10 +5,10 @@ import type { DiagnosticProgress } from "../lib/diagnostic/types";
 for (const count of [5, 10]) {
   test(`${count}-question diagnostic preserves ownership, completion and full-length follow-up`, async ({ page, browser }) => {
     await page.goto("/diagnostic");
-    await expect(page.getByRole("radio", { name: "Quick check (5)" })).toBeChecked();
-    await page.getByRole("radio", { name: count === 5 ? "Quick check (5)" : "Short (10)" }).check();
+    await expect(page.getByRole("radio", { name: "5 questions · ~5 min" })).toBeChecked();
+    await page.getByRole("radio", { name: count === 5 ? "5 questions · ~5 min" : "10 questions · ~10 min" }).check();
     const response = page.waitForResponse(response => response.url().endsWith("/api/diagnostic") && response.request().method() === "POST");
-    await page.getByRole("button", { name: "Begin diagnostic" }).click();
+    await page.getByRole("button", { name: `Start the ${count}-question check` }).click();
     const created = await response;
     expect(created.status()).toBe(201);
     expect(created.request().postDataJSON()).toEqual({ questionCount: count });
@@ -34,7 +34,7 @@ for (const count of [5, 10]) {
     expect((await page.locator('[aria-label="Overall score"]').boundingBox())!.y).toBeLessThan((await page.getByText(`Based on ${count} questions.`, { exact: false }).boundingBox())!.y);
     await expect(page.getByRole("heading", { name: "One full explanation, free", exact: true })).toBeVisible();
     await expect(page.getByText("Report a problem with this question", { exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Unlock PMLE Pass: $39", exact: true })).toHaveAttribute("href", "/signup?next=%2Fpricing");
+    await expect(page.getByRole("link", { name: "See PMLE Pass", exact: true })).toHaveAttribute("href", "/pricing");
     const result = await (await page.request.get(`${api}/results`)).json();
     expect(result.totalQuestions).toBe(count);
     expect(result.review).toBeUndefined();
@@ -48,12 +48,12 @@ for (const count of [5, 10]) {
       await expect(page.locator("#next-step")).not.toBeEmpty();
       await mkdir(".qa/site-fixup/screenshots", { recursive: true });
       await page.screenshot({ path: ".qa/site-fixup/screenshots/five-question-report-desktop.png", fullPage: true });
-      await expect(page.getByRole("link", { name: "PMLE Pass · $39 / 90 days", exact: true })).toHaveAttribute("href", "/pricing");
+      await expect(page.getByRole("link", { name: "See PMLE Pass", exact: true })).toHaveAttribute("href", "/pricing");
       const explanation = page.getByRole("heading", { name: "One full explanation, free", exact: true });
-      const practice = page.getByRole("link", { name: "Start practice", exact: true });
+      const practice = page.getByRole("link", { name: "Create free account", exact: true });
       expect((await explanation.boundingBox())!.y).toBeLessThan((await practice.boundingBox())!.y);
     }
     await page.getByRole("link", { name: "take the 20-question diagnostic →" }).click();
-    await expect(page.getByRole("radio", { name: "Full readiness (20)" })).toBeChecked();
+    await expect(page.getByRole("radio", { name: "20 questions · ~20 min" })).toBeChecked();
   });
 }

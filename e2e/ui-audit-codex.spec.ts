@@ -20,7 +20,7 @@ async function diagnostic(page: Page, count: number) {
     expect((await page.request.post(`/api/diagnostic/${sessionId}/answer`, { data: { itemId: progress.currentQuestion!.id, selectedLabel: progress.currentQuestion!.options[0].label } })).status()).toBe(200);
   }
   await page.goto(`/diagnostic/${sessionId}/results`);
-  await expect(page.getByRole("heading", { name: "PMLE readiness report", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: count === 5 ? "Your 5-question PMLE check" : "PMLE readiness report", exact: true })).toBeVisible();
   await expect(page.getByText("Loading your free explanation…", { exact: true })).toHaveCount(0);
 }
 test("Codex audit changed states at desktop and touch mobile", async ({ browser }, info) => {
@@ -105,9 +105,12 @@ test("Codex audit changed states at desktop and touch mobile", async ({ browser 
       }
       for (const count of [5, 10, 20]) {
         await diagnostic(page, count);
-        const compact = page.getByRole("link", { name: "PMLE Pass · $39 / 90 days", exact: true });
-        if (role === "paid") await expect(compact).toHaveCount(0);
-        else await expect(compact).toHaveAttribute("href", role === "anonymous" ? "/signup?next=%2Fpricing" : "/pricing");
+        const passOption = page.getByRole("link", { name: "See PMLE Pass", exact: true });
+        if (role === "anonymous") await expect(passOption).toHaveAttribute("href", "/pricing");
+        else {
+          await expect(passOption).toHaveCount(0);
+          await expect(page.getByRole("button", { name: "Get PMLE Pass: $39", exact: true })).toHaveCount(role === "paid" ? 0 : 1);
+        }
         await shot(page, `results-${count}`, role, width);
         await shot(page, `results-${count}`, role, width, true);
         if (count === 5) {

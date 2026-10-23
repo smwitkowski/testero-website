@@ -60,9 +60,9 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
   }
   await page.goto("/diagnostic");
   await captureV3(page, "diagnostic");
-  await page.getByRole("radio", { name: "Full readiness (20)" }).check();
+  await page.getByRole("radio", { name: "20 questions · ~20 min" }).check();
   const createdResponse = page.waitForResponse(response => response.url().endsWith("/api/diagnostic") && response.request().method() === "POST");
-  await page.getByRole("button", { name: "Begin diagnostic" }).click();
+  await page.getByRole("button", { name: "Start the 20-question check" }).click();
   const created = await createdResponse;
   expect(created.status()).toBe(201);
   const { sessionId } = await created.json() as { sessionId: string };
@@ -136,9 +136,9 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
       if (index === 3) {
         // B5: starting again from /diagnostic offers to resume this browser's session.
         await page.goto("/diagnostic");
-        await expect(page.getByRole("button", { name: "Begin diagnostic" })).toHaveCount(0);
-        await expect(page.getByRole("button", { name: "Start over" })).toBeVisible();
-        await page.getByRole("link", { name: "Resume your diagnostic", exact: true }).click();
+        await expect(page.getByRole("button", { name: "Start the 20-question check" })).toHaveCount(0);
+        await expect(page.getByRole("button", { name: "Start a new 5-question check" })).toBeVisible();
+        await page.getByRole("link", { name: "Continue where I left off", exact: true }).click();
         await expect(page).toHaveURL(new RegExp(`/diagnostic/${sessionId}$`));
         await page.reload();
         await expect(page.getByText("Question 4 of 20", { exact: true })).toBeVisible();
@@ -156,7 +156,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
         const savedLabel = progress.answeredQuestions[1].selectedLabel;
         await expect(page.locator(`input[type=radio][value="${savedLabel}"]`)).toBeChecked();
         for (const radio of await page.getByRole("radio").all()) await expect(radio).toBeDisabled();
-        await expect(page.getByText("Saved answer. Previous answers are read-only and cannot be changed.")).toBeVisible();
+        await expect(page.getByText("Already answered. Answers can't be changed.")).toBeVisible();
         await page.getByRole("button", { name: "Previous", exact: true }).click();
         await expect(page.getByText("Question 1 of 20", { exact: true })).toBeVisible();
         await expect(page.getByRole("button", { name: "Previous", exact: true })).toBeDisabled();
@@ -208,7 +208,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
       noAnswerKeys(answer.progress);
       expect(answer.feedback).toEqual({ itemId: progress.currentQuestion!.id, selectedLabel: progress.currentQuestion!.options[0].label, correctLabel: expect.stringMatching(/^[A-D]$/), isCorrect: expect.any(Boolean) });
       if (index < 3) await assertTransition(page, api, "feedback");
-      await expect(page.getByRole("status")).toContainText(answer.feedback.isCorrect ? `Correct: ${answer.feedback.correctLabel}.` : `Not quite. You chose ${answer.feedback.selectedLabel}; the answer is ${answer.feedback.correctLabel}.`);
+      await expect(page.getByRole("status")).toContainText(answer.feedback.isCorrect ? `Correct. The answer is ${answer.feedback.correctLabel}.` : `Not quite. The correct answer is ${answer.feedback.correctLabel}.`);
       if (index < 3) await armTransition(page, { path: api, ordinal: index + 2, total: 20 });
       await page.getByRole("button", { name: nextName }).click();
       if (index < 3) await assertTransition(page, api, "next");

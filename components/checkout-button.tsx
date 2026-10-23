@@ -32,7 +32,7 @@ export async function beginCheckout(): Promise<string> {
   return href;
 }
 
-export function CheckoutButton({ onCheckout }: { onCheckout?: () => void } = {}) {
+export function CheckoutButton({ onCheckout, label = "Unlock PMLE Pass: $39" }: { onCheckout?: () => void; label?: string } = {}) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
@@ -43,7 +43,7 @@ export function CheckoutButton({ onCheckout }: { onCheckout?: () => void } = {})
     catch (reason) { setError(reason instanceof Error ? reason.message : "Checkout is unavailable. Please retry."); inFlight.current = false; setPending(false); }
   }
   return <div className="space-y-3" aria-busy={pending}>
-    <Button disabled={pending} onClick={() => void checkout()}>{pending ? "Opening checkout…" : "Unlock PMLE Pass: $39"}</Button>
+    <Button disabled={pending} onClick={() => void checkout()}>{pending ? "Opening checkout…" : label}</Button>
     {error && <p role="alert" className="text-destructive">{error}</p>}
   </div>;
 }

@@ -45,7 +45,7 @@ describe("beta diagnostic UI", () => {
     const html = renderToStaticMarkup(createElement(DiagnosticStart, { initialCount, resumeId: "pmle-session" }));
     expect(html).toContain(`checked="" value="${initialCount}"`);
     expect(html).toContain('value="20"');
-    expect(html).toContain("PMLE readiness diagnostic");
+    expect(html).toContain(`Free ${initialCount}-question PMLE check`);
     expect(html).toContain('href="/diagnostic/pmle-session"');
   });
   it.each(betaIds.flatMap(certId => [5, 10].map(totalQuestions => ({ certId, totalQuestions }))))("keeps $certId $totalQuestions-question results tier-only, with practice waitlist and cert retake", ({ certId, totalQuestions }) => {
@@ -109,12 +109,13 @@ describe("server-gated diagnostic entry", () => {
     expect(metadata.description).not.toContain("Choose");
     expect(mocks.availability).not.toHaveBeenCalled();
   });
-  it.each(betaIds)("gates %s with service client and filters resume by certification", async certId => {
+  it.each(betaIds)("gates %s availability without blocking entry on a resume lookup", async certId => {
     mocks.findOpen.mockResolvedValue("resume");
     const page = await DiagnosticStartPage({ searchParams: Promise.resolve({ cert: certId, length: "10" }) });
     expect(mocks.availability).toHaveBeenCalledWith(certId);
-    expect(mocks.findOpen).toHaveBeenCalledWith(mocks.client, mocks.credentials, undefined, certId);
-    expect(page.props).toMatchObject({ certId, initialCount: 10, resumeId: "resume" });
+    expect(mocks.findOpen).not.toHaveBeenCalled();
+    expect(page.props).toMatchObject({ certId, initialCount: 10 });
+    expect(page.props.resumeId).toBeUndefined();
     expect(page.props.children).toBeUndefined();
   });
   it.each(["20", "500", "invalid"])("does not offer unsupported beta length %s", async length => {
@@ -136,7 +137,7 @@ describe("server-gated diagnostic entry", () => {
   it.each([undefined, PMLE_CERT_ID])("preserves PMLE default and longer selection (%s)", async cert => {
     const page = await DiagnosticStartPage({ searchParams: Promise.resolve({ cert, length: "20" }) });
     expect(mocks.availability).toHaveBeenCalledWith(PMLE_CERT_ID);
-    expect(mocks.findOpen).toHaveBeenCalledWith(mocks.client, mocks.credentials, undefined, PMLE_CERT_ID);
+    expect(mocks.findOpen).not.toHaveBeenCalled();
     expect(page.props.initialCount).toBe(20);
     expect(renderToStaticMarkup(page)).toContain("What the PMLE diagnostic covers");
   });

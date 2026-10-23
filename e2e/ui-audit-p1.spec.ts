@@ -26,7 +26,7 @@ async function diagnostic(page: Page, count: number) {
     expect((await page.request.post(`/api/diagnostic/${sessionId}/answer`, { data: { itemId: question.id, selectedLabel: question.options[0].label } })).status()).toBe(200);
   }
   await page.goto(`/diagnostic/${sessionId}/results`);
-  await expect(page.getByRole("heading", { name: "PMLE readiness report", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: count === 5 ? "Your 5-question PMLE check" : "PMLE readiness report", exact: true })).toBeVisible();
   return sessionId;
 }
 
@@ -71,9 +71,9 @@ test("P1 audit: stable manual previews, PMLE discovery and anonymous/free/paid r
     await expect(page.locator("[data-question-review-items] > li")).toHaveCount(1);
     await expect(page.getByRole("heading", { name: "Question review", exact: true })).toHaveCount(0);
     await expect(page.getByRole("navigation", { name: "Question review navigation" })).toHaveCount(0);
-    const unlock = page.getByRole("link", { name: "Unlock PMLE Pass: $39", exact: true });
+    const unlock = page.getByRole("link", { name: "See PMLE Pass", exact: true });
     await expect(unlock).toBeVisible();
-    const order = await page.evaluate(() => ["#domains-heading", "#free-explanation-heading", '[aria-label="Unlock PMLE Pass"]', "#email-results-heading"].map(selector => document.querySelector(selector)!.getBoundingClientRect().top));
+    const order = await page.evaluate(() => ["#domains-heading", "#free-explanation-heading", '#keep-going-heading', "#email-results-heading"].map(selector => document.querySelector(selector)!.getBoundingClientRect().top));
     expect(order).toEqual([...order].sort((a, b) => a - b));
     await expect(page.getByRole("button", { name: "Email my results", exact: true })).not.toHaveClass(/bg-primary/);
     if (count < 20) {
@@ -97,14 +97,14 @@ test("P1 audit: stable manual previews, PMLE discovery and anonymous/free/paid r
     await expect(page.getByRole("heading", { name: "Email me my results + a 4-week plan", exact: true })).toHaveCount(0);
     const access = await (await page.request.get("/api/billing/access")).json();
     expect(access.owned).toBe(kind === "paid");
-    if (kind === "free") await expect(page.getByRole("button", { name: "Unlock PMLE Pass: $39", exact: true })).toBeVisible();
+    if (kind === "free") await expect(page.getByRole("button", { name: "Get PMLE Pass: $39", exact: true })).toBeVisible();
     else await expect(page.getByRole("region", { name: "Unlock PMLE Pass", exact: true })).toHaveCount(0);
     await capture(page, `${kind}-results`);
     await expect(page.locator("header").getByRole("link", { name: "Start free", exact: true })).toHaveCount(0);
     await expect(page.locator("header").getByRole("link", { name: "Dashboard", exact: true }).first()).toBeVisible();
     if (kind === "free") {
       const request = page.waitForResponse(response => response.url().endsWith("/api/billing/checkout") && response.request().method() === "POST");
-      await page.getByRole("button", { name: "Unlock PMLE Pass: $39", exact: true }).click();
+      await page.getByRole("button", { name: "Get PMLE Pass: $39", exact: true }).click();
       expect((await request).status()).toBe(200);
       await expect(page).toHaveURL(/\/checkout\/success\?session_id=cs_/);
       await page.goto(`/diagnostic/${sessionId}/results`);
