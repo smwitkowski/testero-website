@@ -105,3 +105,30 @@ test("failed lookup does not block a fresh manual start", async ({ page }) => {
   sessions.add((await created.json() as DiagnosticStartResponse).sessionId);
   await expect(page.getByText("Question 1 of 5", { exact: true })).toBeVisible();
 });
+
+test.describe("Google Ads final-URL checker", () => {
+  test.use({ userAgent: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; Mozilla/5.0, Google-AdWords-Express) Chrome/153..." });
+  test("does not create a session automatically, but an explicit click still works", async ({ page }) => {
+    let posts = 0;
+    await page.route("**/api/diagnostic", async route => {
+      if (route.request().method() === "GET") return route.fulfill({ json: { resumeId: null } });
+      posts++;
+      await route.continue();
+    });
+    const lookup = page.waitForResponse(value => new URL(value.url()).pathname === "/api/diagnostic" && value.request().method() === "GET");
+    await page.goto("/diagnostic?start=1&length=5");
+    await lookup;
+    // Wait through hydration and passive effects, not just server-rendered HTML.
+    await page.waitForLoadState("networkidle");
+    expect(posts).toBe(0);
+    const cta = page.getByRole("button", { name: "Start the 5-question check", exact: true });
+    await expect(cta).toBeEnabled();
+    const response = page.waitForResponse(value => new URL(value.url()).pathname === "/api/diagnostic" && value.request().method() === "POST");
+    await cta.click();
+    const created = await response;
+    expect(created.status()).toBe(201);
+    sessions.add((await created.json() as DiagnosticStartResponse).sessionId);
+    await expect(page.getByText("Question 1 of 5", { exact: true })).toBeVisible();
+    expect(posts).toBe(1);
+  });
+});

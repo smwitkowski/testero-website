@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ANALYTICS_ID_COOKIE, ATTRIBUTION_COOKIE, attributionFromCookies, browserIdentity, checkoutAnalyticsMetadata, cookieValue, rememberFirstTouch, sanitizeAttribution } from "@/lib/analytics/attribution";
+import { ANALYTICS_ID_COOKIE, ATTRIBUTION_COOKIE, attributionFromCookies, browserIdentity, checkoutAnalyticsMetadata, cookieValue, isKnownBotUserAgent, rememberFirstTouch, sanitizeAttribution } from "@/lib/analytics/attribution";
 import { scheduleFunnelEvent, trackPurchaseCompleted } from "@/lib/analytics/server";
 const deferred = vi.hoisted(() => vi.fn());
 vi.mock("next/server", () => ({ after: deferred }));
@@ -80,6 +80,32 @@ describe("first-party first-touch attribution", () => {
     const client = await import("@/lib/analytics/client");
     expect(() => client.analyticsHeaders()).not.toThrow();
     expect(client.analyticsHeaders()).toEqual({});
+  });
+});
+describe("named Google ad crawlers", () => {
+  it.each([
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; Mozilla/5.0, Google-AdWords-Express) Chrome/153...",
+    "AdsBot-Google (+http://www.google.com/adsbot.html)",
+    "AdsBot-Google-Mobile (+http://www.google.com/mobile/adsbot.html)",
+    "Google-Ads",
+    "Mediapartners-Google",
+  ])("excludes %s from client init, server scheduling and durable checkout collection", async userAgent => {
+    const b = browser(); vi.stubGlobal("navigator", { userAgent });
+    expect(isKnownBotUserAgent(userAgent)).toBe(true);
+    const client = await import("@/lib/analytics/client");
+    client.initializeAnalytics("/diagnostic");
+    expect(client.analyticsHeaders()).toEqual({});
+    expect(sdk.init).not.toHaveBeenCalled(); expect(b.writes).toEqual([]);
+    const request = new Request("https://testero.ai/api/diagnostic", { headers: { "user-agent": userAgent, cookie: cookies() } });
+    scheduleFunnelEvent(request, "diagnostic_started", "session", { session_id: "session" });
+    expect(deferred).not.toHaveBeenCalled(); expect(fetchMock).not.toHaveBeenCalled();
+    expect(checkoutAnalyticsMetadata(request)).toEqual({ analytics_enabled: "0" });
+  });
+  it.each(["HeadlessChrome", "Playwright", "Googlebot", "crawler", "spider"])("preserves existing bot exclusion: %s", userAgent => {
+    expect(isKnownBotUserAgent(userAgent)).toBe(true);
+  });
+  it("does not classify a normal mobile browser as a bot", () => {
+    expect(isKnownBotUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0) Mobile/15E148 Safari/604.1")).toBe(false);
   });
 });
 describe("server attribution and identity", () => {

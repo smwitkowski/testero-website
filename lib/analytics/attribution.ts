@@ -36,8 +36,12 @@ export function isAccountId(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
+export function isKnownBotUserAgent(userAgent: string): boolean {
+  return /HeadlessChrome|Playwright|bot\b|crawler|spider|Google-AdWords-Express|AdsBot-Google|Google-Ads|Mediapartners-Google/i.test(userAgent);
+}
+
 export function excludedTraffic(cookies: string, userAgent: string): boolean {
-  return /(?:^|;\s*)testero_internal=1(?:;|$)/.test(cookies) || /HeadlessChrome|Playwright|bot\b|crawler|spider/i.test(userAgent);
+  return /(?:^|;\s*)testero_internal=1(?:;|$)/.test(cookies) || isKnownBotUserAgent(userAgent);
 }
 
 function writeCookie(name: string, value: string) {

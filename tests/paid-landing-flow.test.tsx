@@ -132,3 +132,30 @@ it("ignores an older pageshow lookup even if it resolves after the fresh lookup"
   expect(nodes(tree).find(node => node.props.href === "/diagnostic/fresh-session")).toBeDefined();
   expect(nodes(tree).find(node => node.props.href === "/diagnostic/old-session")).toBeUndefined();
 });
+
+const adCheckerUserAgent = "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; Mozilla/5.0, Google-AdWords-Express) Chrome/153...";
+it.each([adCheckerUserAgent, "AdsBot-Google", "AdsBot-Google-Mobile", "Google-Ads", "Mediapartners-Google"])("never autostarts a known bot but allows its explicit CTA: %s", async userAgent => {
+  vi.stubGlobal("navigator", { userAgent });
+  window.location.search = "?start=1&length=5";
+  const lookup = deferred<{ resumeId: string | null }>();
+  mocks.request.mockImplementation((_url, options) => options.method === "POST" ? Promise.resolve(created) : lookup.promise);
+  render({ autoStart: true });
+  lookup.resolve({ resumeId: null }); await lookup.promise;
+  const tree = render({ autoStart: true });
+  expect(mocks.request.mock.calls.filter(([, options]) => options.method === "POST")).toHaveLength(0);
+  const cta = button(tree, "Start the 5-question check");
+  expect(cta.props.disabled).toBe(false);
+  await (cta.props.onClick as () => Promise<void>)();
+  expect(mocks.request.mock.calls.filter(([, options]) => options.method === "POST")).toHaveLength(1);
+});
+
+it("still autostarts a regular browser after a confirmed empty resume lookup", async () => {
+  vi.stubGlobal("navigator", { userAgent: "Mozilla/5.0 Chrome/153.0.0.0 Safari/537.36" });
+  window.location.search = "?start=1&length=5";
+  const lookup = deferred<{ resumeId: string | null }>();
+  mocks.request.mockImplementation((_url, options) => options.method === "POST" ? Promise.resolve(created) : lookup.promise);
+  render({ autoStart: true });
+  lookup.resolve({ resumeId: null }); await lookup.promise;
+  render({ autoStart: true });
+  expect(mocks.request.mock.calls.filter(([, options]) => options.method === "POST")).toHaveLength(1);
+});

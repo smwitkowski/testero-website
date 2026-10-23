@@ -2,7 +2,7 @@
 
 import posthog from "posthog-js";
 import { certifications, PMLE_CERT_ID } from "@/lib/certifications/catalog";
-import { firstTouchPersonProperties, rememberAnalyticsId, rememberFirstTouch } from "./attribution";
+import { firstTouchPersonProperties, isKnownBotUserAgent, rememberAnalyticsId, rememberFirstTouch } from "./attribution";
 
 let initialized = false;
 let recordingEnabled = false;
@@ -10,7 +10,7 @@ let recordingEnabled = false;
 function excludedBrowser(): boolean {
   try {
     return (typeof document !== "undefined" && /(?:^|;\s*)testero_internal=1(?:;|$)/.test(document.cookie))
-      || (typeof navigator !== "undefined" && /HeadlessChrome|Playwright|bot\b|crawler|spider/i.test(navigator.userAgent));
+      || (typeof navigator !== "undefined" && isKnownBotUserAgent(navigator.userAgent));
   } catch { return true; } // If exclusions cannot be checked, skip optional analytics.
 }
 

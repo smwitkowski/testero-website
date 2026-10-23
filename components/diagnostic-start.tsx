@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { DiagnosticSession } from "@/components/diagnostic-session";
 import type { DiagnosticStartResponse } from "@/lib/diagnostic/types";
 import { trackDiagnostic } from "@/lib/analytics/client";
+import { isKnownBotUserAgent } from "@/lib/analytics/attribution";
 import { Button } from "@/components/ui/button";
 import { diagnosticRequest, requestError } from "@/components/diagnostic-resource";
 import { PMLE_CERT_ID } from "@/lib/certifications/catalog";
@@ -103,6 +104,9 @@ export function DiagnosticStart({ resumeId: serverResumeId = null, autoStart = f
 
   useEffect(() => {
     if (!autoStart || autoAttempted.current || restoredId || checkingResume || resumeError || resumeId) return;
+    // Ad URL checkers may execute JavaScript. They must not create real sessions
+    // without an explicit CTA click, even when the legacy URL requests autostart.
+    if (typeof navigator !== "undefined" && isKnownBotUserAgent(navigator.userAgent)) return;
     // A cached server payload can outlive its query. Back to a consumed URL must not start.
     const explicitStart = new URLSearchParams(window.location.search).getAll("start");
     if (explicitStart.length !== 1 || explicitStart[0] !== "1") return;
