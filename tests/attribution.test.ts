@@ -61,9 +61,25 @@ describe("first-party first-touch attribution", () => {
     b.document.cookie = "testero_internal=0"; b.writes.length = 0; vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "");
     expect(client.analyticsHeaders()).toEqual({}); expect(b.writes).toEqual([]);
   });
-  it("does not block when browser cookie storage throws", async () => {
-    browser(); vi.stubGlobal("document", { get cookie() { throw new Error("blocked"); } });
+  it("returns empty request headers when browser cookie storage throws SecurityError with analytics configured", async () => {
+    browser(); vi.stubGlobal("document", { get cookie() { throw new DOMException("Cookie access blocked", "SecurityError"); } });
+    const client = await import("@/lib/analytics/client");
     expect(rememberFirstTouch()).toEqual({});
+    expect(() => client.analyticsHeaders()).not.toThrow();
+    expect(client.analyticsHeaders()).toEqual({});
+    expect(sdk.init).not.toHaveBeenCalled();
+  });
+  it("returns empty request headers when SDK initialization fails", async () => {
+    browser(); sdk.init.mockImplementation(() => { throw new Error("SDK unavailable"); });
+    const client = await import("@/lib/analytics/client");
+    expect(() => client.analyticsHeaders()).not.toThrow();
+    expect(client.analyticsHeaders()).toEqual({});
+  });
+  it("returns empty request headers when SDK identity access fails", async () => {
+    browser(); sdk.get_distinct_id.mockImplementation(() => { throw new Error("Identity unavailable"); });
+    const client = await import("@/lib/analytics/client");
+    expect(() => client.analyticsHeaders()).not.toThrow();
+    expect(client.analyticsHeaders()).toEqual({});
   });
 });
 describe("server attribution and identity", () => {
