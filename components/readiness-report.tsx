@@ -39,8 +39,12 @@ export function DomainStatus({ correct, total }: { correct: number; total: numbe
   return <span className={`inline-block whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium sm:text-sm ${status.className}`}>{status.label}</span>;
 }
 
-export function DomainScores({ domains }: { domains: DiagnosticResult["domainBreakdown"] }) {
-  const ordered = weakestFirst(domains);
+export function DomainScores({ domains, sampled = false }: { domains: DiagnosticResult["domainBreakdown"]; sampled?: boolean }) {
+  const ordered = weakestFirst(domains.filter(domain => domain.total > 0));
+  if (sampled) return <dl aria-label="Sampled domain results, weakest first" className="divide-y divide-border">{ordered.map(domain => <div key={domain.domainCode} className="space-y-1 py-3">
+    <dt className="text-sm leading-relaxed sm:text-base">{domain.domainName}</dt>
+    <dd className="text-sm text-muted-foreground"><span className="font-semibold text-body">{domain.correct} of {domain.total} correct</span>, based on {domain.total === 1 ? "one question" : `${domain.total} questions`}</dd>
+  </div>)}</dl>;
   return <>
     <dl aria-label="Domain results, weakest first" className="divide-y divide-border sm:hidden">{ordered.map(domain => <div key={domain.domainCode} className="space-y-1 py-3">
       <dt className="text-sm leading-relaxed">{domain.domainName}</dt>

@@ -106,8 +106,8 @@ describe("legacy redirects run in Next config before auth", () => {
     ["/dashboard/settings/billing", "/account"], ["/dashboard/settings/privacy", "/account"],
     ["/blog/tags/vertex-ai", "/blog"], ["/blog/categories/pmle", "/blog"],
     ["/content/unknown.md", "/faq"], ["/content/hub/google-cloud-certification-guide.md", "/faq/what-is-google-cloud-certification"],
-    ["/content/blog/5-hardest-pmle-questions.md", "/blog/5-hardest-pmle-questions"],
-    ["/content/spokes/pmle-vs-aws-ml-vs-azure-ai", "/blog/pmle-vs-aws-ml-vs-azure-ai"],
+    ["/content/blog/5-hardest-pmle-questions.md", "/pmle/sample-questions"],
+    ["/content/spokes/pmle-vs-aws-ml-vs-azure-ai", "/certifications/machine-learning-engineer"],
     ["/practice/question/anything/", "/dashboard"], ["/practice/question/%61nything", "/dashboard"],
   ])("resolves %s to closest v2 route %s", (path, destination) => {
     expect(resolveLegacyPath(path)).toEqual({ path: destination, status: 308 });
@@ -119,6 +119,8 @@ describe("legacy redirects run in Next config before auth", () => {
 
 describe("retired PMLE articles", () => {
   const replacements = [
+    ["5-hardest-pmle-questions", "/pmle/sample-questions"],
+    ["pmle-vs-aws-ml-vs-azure-ai", "/certifications/machine-learning-engineer"],
     ["pmle-october-2024-exam-changes", "/blog/pmle-exam-changes-june-2026"],
     ["accelerated-google-ml-certification-30-day-success-story-2025", "/blog/pmle-study-plan-by-domain"],
   ] as const;
@@ -128,13 +130,21 @@ describe("retired PMLE articles", () => {
     const response = await unstable_getResponseFromNextConfig({ url: `${SITE_ORIGIN}${path}`, nextConfig });
     expect(response.status).toBe(308);
     expect(getRedirectUrl(response)).toBe(`${SITE_ORIGIN}${destination}`);
+    const attributed = await unstable_getResponseFromNextConfig({ url: `${SITE_ORIGIN}${path}?utm_source=audit`, nextConfig });
+    expect(attributed.status).toBe(308);
+    expect(getRedirectUrl(attributed)).toBe(`${SITE_ORIGIN}${destination}?utm_source=audit`);
     expect(getLegacyRedirect(destination)).toBeUndefined();
     for (const prefix of ["blog", "spoke", "spokes"]) {
       for (const extension of ["", ".md"]) {
-        expect(resolveLegacyPath(`/content/${prefix}/${slug}${extension}`)).toEqual({ path: destination, status: 308 });
+        const alias = `/content/${prefix}/${slug}${extension}`;
+        expect(resolveLegacyPath(alias)).toEqual({ path: destination, status: 308 });
+        const aliasResponse = await unstable_getResponseFromNextConfig({ url: `${SITE_ORIGIN}${alias}`, nextConfig });
+        expect(aliasResponse.status).toBe(308);
+        expect(getRedirectUrl(aliasResponse)).toBe(`${SITE_ORIGIN}${destination}`);
       }
     }
-    expect(getBlogEntry(destination.slice("/blog/".length))).toBeDefined();
+    expect(publicPaths).toContain(destination);
+    if (destination.startsWith("/blog/")) expect(getBlogEntry(destination.slice("/blog/".length))).toBeDefined();
   });
 
   it.each(["", ".md"])("sends the retired success-story brief%s directly to the study plan", extension => {
@@ -142,7 +152,7 @@ describe("retired PMLE articles", () => {
       .toEqual({ path: "/blog/pmle-study-plan-by-domain", status: 308 });
   });
 
-  it("unpublishes both articles from all public content surfaces while preserving their source files", () => {
+  it("unpublishes retired articles from all public content surfaces while preserving their source files", () => {
     const entries = [...getBlogEntries(), ...getFaqEntries()];
     for (const [slug] of replacements) {
       const path = `/blog/${slug}`;

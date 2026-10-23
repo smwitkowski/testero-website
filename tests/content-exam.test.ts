@@ -30,7 +30,7 @@ describe("exam preparation availability", () => {
   });
   it("shows notices near the top of all non-PMLE pages, including mixed-platform and general topics", async () => {
     const entries = [...getBlogEntries(), ...getFaqEntries()];
-    expect(entries.filter(e => isComingSoon(e.exam))).toHaveLength(14);
+    expect(entries.filter(e => isComingSoon(e.exam))).toHaveLength(13);
     for (const entry of entries) {
       const Page = entry.href.startsWith("/blog/") ? BlogArticlePage : FaqArticlePage;
       const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ slug: entry.slug }) }));
@@ -66,10 +66,10 @@ describe("exam preparation availability", () => {
     const faq = renderToStaticMarkup(createElement(FaqPage));
     expect(faq).not.toMatch(/>(?:Diagnostic coming|Not on Testero yet)</);
     const home = renderToStaticMarkup(createElement(HomePage));
-    expect(home).toContain('href="/diagnostic"');
+    expect(home).toContain('href="/diagnostic?start=1&amp;length=5"');
     expect(home).toContain('href="/certifications"');
-    expect(home).toContain("Only PMLE has a diagnostic and paid practice today");
-    expect(home).toContain('aria-roledescription="carousel"');
-    expect(home).toContain("Illustrative PMLE data, not a user result");
+    expect(home).toContain("PMLE practice for the June 2026 exam guide");
+    expect(home).not.toContain("Only PMLE has a diagnostic and paid practice today");
+    // Streaming homepage/bio tests cover the live directory inside Suspense.
   });
 });

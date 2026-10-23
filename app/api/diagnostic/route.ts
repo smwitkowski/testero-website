@@ -5,12 +5,25 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { PMLE_CERT_ID } from "@/lib/certifications/catalog";
+import { getCertification } from "@/lib/certifications/data";
 import { isBetaDiagnosticCertId } from "@/lib/diagnostic/beta";
-import { createDiagnosticStart } from "@/lib/diagnostic/service";
+import { createDiagnosticStart, findOpenDiagnostic } from "@/lib/diagnostic/service";
 import { diagnosticCredentials } from "@/lib/diagnostic/request";
 import { ANONYMOUS_COOKIE, ANONYMOUS_COOKIE_MAX_AGE, createAnonymousToken, hashAnonymousToken } from "@/lib/diagnostic/ownership";
 import { DiagnosticError, diagnosticErrorResponse, requireSameOrigin } from "@/lib/diagnostic/http";
 export const runtime = "nodejs";
+
+/** Fresh owner-scoped resume lookup, including when Next restores a cached start page. */
+export async function GET(request: Request) {
+  try {
+    const query = new URL(request.url).searchParams;
+    const certId = (query.get("cert") ?? PMLE_CERT_ID).toLowerCase();
+    if (query.getAll("cert").length > 1 || !getCertification(certId)) throw new DiagnosticError(404, "Diagnostic not found");
+    const resumeId = await findOpenDiagnostic(createServiceSupabaseClient(), await diagnosticCredentials(), undefined, certId);
+    return NextResponse.json({ resumeId }, { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) { return diagnosticErrorResponse(error); }
+}
+
 export async function POST(request: Request) {
   const timing = new ServerTiming();
   try {

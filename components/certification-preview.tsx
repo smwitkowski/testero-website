@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DomainScores, ScoreBar } from "@/components/readiness-report";
 import { PMLE_BLUEPRINT_MAP } from "@/lib/constants/pmle-blueprint";
+import type { DiagnosticAvailabilityMap } from "@/lib/certifications/availability";
 
 const previews = [
   { name: "Machine Learning Engineer", slug: "machine-learning-engineer", focus: ["ML solutions", "Model serving", "ML pipelines"] },
@@ -19,15 +20,16 @@ const sampleDomains = [
   { domainCode: "COLLABORATING_TO_MANAGE_DATA_AND_MODELS", total: 4, correct: 3, percentage: 75 },
 ].map(domain => ({ ...domain, domainName: PMLE_BLUEPRINT_MAP[domain.domainCode].displayName }));
 
-export function CertificationPreview() {
+export function CertificationPreview({ availability }: { availability: DiagnosticAvailabilityMap }) {
   const [index, setIndex] = useState(0);
   const preview = previews[index];
+  const status = availability[preview.slug] ?? "coming-soon";
   function move(direction: number) {
     setIndex(value => (value + direction + previews.length) % previews.length);
   }
   return <section aria-label="Certification readiness previews" aria-roledescription="carousel" className="min-w-0 space-y-4">
     <Card variant="featured" className="min-h-[41rem] space-y-5 p-5 sm:min-h-[45rem] sm:p-7 lg:min-h-[43rem]" aria-live="polite" aria-atomic="true">
-      <p className="flex flex-wrap justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><span>Readiness report preview</span><span>{index === 0 ? "PMLE · Live" : "Coming soon"}</span></p>
+      <p className="flex flex-wrap justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><span>Readiness report preview</span><span>{status === "available" ? "PMLE · Live" : status === "beta" ? "Beta" : "Coming soon"}</span></p>
       <h2 className="text-xl font-semibold">{preview.name}</h2>
       {index === 0 ? <>
         <div className="flex flex-wrap items-baseline gap-3"><span className="text-5xl font-semibold leading-none">55</span><span className="text-muted-foreground">/ 100</span><span className="ml-auto rounded border border-input px-2 py-1 text-xs font-medium">Tier: Building</span></div>
@@ -35,10 +37,11 @@ export function CertificationPreview() {
         <div><DomainScores domains={sampleDomains} /><p className="pt-2 text-xs text-muted-foreground">Illustrative PMLE data, not a user result. 3 of 6 domains shown.</p></div>
       </> : <>
         <p className="border-y border-border py-5 text-lg font-medium">Your next certification. A clearer study focus.</p>
-        <p className="leading-relaxed text-body">This diagnostic is not available yet. Explore the official exam facts and preparation guide while we build it.</p>
+        <p className="leading-relaxed text-body">{status === "beta" ? "Try a free beta diagnostic with 5 or 10 questions and a readiness tier. Paid practice is not available for this exam yet." : "This diagnostic is not available yet. Explore the official exam facts and preparation guide while we build it."}</p>
         <ul className="divide-y divide-border text-sm text-body">{preview.focus.map(topic => <li key={topic} className="py-3">{topic}</li>)}</ul>
-        <p className="text-xs text-muted-foreground">Concept preview only. No readiness scores or launch date are promised.</p>
+        <p className="text-xs text-muted-foreground">{status === "beta" ? "Beta results are a study signal, not a prediction of your exam result." : "Concept preview only. No readiness scores or launch date are promised."}</p>
       </>}
+      {status === "beta" && <Button asChild><Link href={`/diagnostic?cert=${encodeURIComponent(preview.slug)}`}>Try the free beta diagnostic →</Link></Button>}
       <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-primary underline" href={`/certifications/${preview.slug}`}>Explore this certification →</Link>
     </Card>
     <div className="flex flex-wrap items-center justify-between gap-2">

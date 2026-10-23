@@ -8,7 +8,7 @@ describe("public sample bank isolation", () => {
   it("has no ID collisions with the available local DB bank", async context => {
     let local: { API_URL: string; SERVICE_ROLE_KEY: string };
     try {
-      const { stdout } = await promisify(execFile)("supabase", ["status", "-o", "json"]);
+      const { stdout } = await promisify(execFile)("supabase", ["status", "-o", "json"], { timeout: 20_000 });
       local = JSON.parse(stdout);
     } catch { context.skip(true, "Local Supabase is not available"); return; }
     const url = new URL(local.API_URL);
@@ -22,5 +22,5 @@ describe("public sample bank isolation", () => {
     } catch { context.skip(true, "Local DB is not reachable"); return; }
     if (!response.ok) throw new Error("Local bank ID check failed");
     expect(await response.json()).toEqual([]);
-  });
+  }, 30_000);
 });

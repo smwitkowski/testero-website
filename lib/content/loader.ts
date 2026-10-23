@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import catalog from "@/content/catalog.json";
 import { contentExam } from "@/lib/content/exam";
+import { editorialRedirects } from "@/lib/navigation/legacy-redirects";
 import { parseFrontmatter, safeHref } from "@/lib/content/markdown";
 import { BLOG_EDITORIAL_NOTICE, BLOG_PUBLICATION_OVERLAYS, FAQ_PUBLICATION_OVERLAYS } from "@/lib/content/editorial";
 
@@ -29,7 +30,8 @@ function readDocument(kind: "blog" | "faq" | "legal", slug: string) {
 }
 
 export function getBlogEntries(): ContentEntry[] {
-  return catalog.blog.map((item) => {
+  // Preserve the source blobs and hash-locked definitions, but do not publish redirected notices.
+  return catalog.blog.filter(item => !editorialRedirects.some(rule => rule.source === item.href)).map((item) => {
     const document = readDocument("blog", item.slug);
     const overlay = BLOG_PUBLICATION_OVERLAYS[item.slug];
     if (!overlay || createHash("sha256").update(document.source).digest("hex") !== overlay.sourceSha256) {

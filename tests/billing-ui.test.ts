@@ -53,7 +53,8 @@ describe("verified billing pages", () => {
     const html = renderToStaticMarkup(await PricingPage());
     expect(html).toContain("$39</span>");
     expect(html).toContain("123 distinct PMLE questions across all six domains; sessions can repeat questions");
-    expect(html).toContain('dateTime="2026-10-18T00:00:00Z"');
+    expect(html).not.toContain("Count checked");
+    expect(html).not.toContain("2026-10-18");
     expect(html).toContain("One-time payment");
     expect(html).toContain("USD");
     expect(html).toContain("90 days of access to PMLE practice questions and explanations");

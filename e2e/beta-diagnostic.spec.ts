@@ -134,7 +134,11 @@ test.describe("beta diagnostic with a real local bank and server allowlist", () 
   test("unknown and non-allowlisted certs stay closed even with 20 approved originals", async ({ page }) => {
     for (const cert of ["not-a-real-cert", "cloud-developer"]) {
       const response = await page.goto(`/diagnostic?cert=${cert}`);
-      expect(response?.status()).toBe(404);
+      expect(response?.status()).toBe(cert === "not-a-real-cert" ? 404 : 200);
+      if (cert === "cloud-developer") {
+        await expect(page.getByRole("heading", { name: "Professional Cloud Developer diagnostic is coming soon", exact: true })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Notify me", exact: true })).toBeVisible();
+      }
       await expect(page.getByRole("button", { name: "Begin diagnostic", exact: true })).toHaveCount(0);
       const denied = await page.request.post("/api/diagnostic", { data: { certId: cert, questionCount: 5 } });
       await rememberCreated(denied);
@@ -145,9 +149,30 @@ test.describe("beta diagnostic with a real local bank and server allowlist", () 
     await expect(page.getByRole("button", { name: "Notify me", exact: true })).toBeVisible();
   });
 
+  test("PDE live status agrees across homepage, carousel, directory and diagnostic metadata", async ({ page }) => {
+    await page.goto("/");
+    const otherExams = page.locator('section[aria-labelledby="other-exams"]');
+    await expect(otherExams.getByRole("link", { name: "Professional Data Engineer diagnostic →", exact: true })).toHaveAttribute("href", "/diagnostic?cert=data-engineer");
+    await expect(otherExams.getByText("Beta", { exact: true })).toBeVisible();
+    const carousel = page.getByRole("region", { name: "Certification readiness previews", exact: true });
+    for (let index = 0; index < 3; index++) await carousel.getByRole("button", { name: "Next certification", exact: true }).click();
+    await expect(carousel.getByRole("heading", { name: "Data Engineer", exact: true })).toBeVisible();
+    await expect(carousel.getByText("Beta", { exact: true })).toBeVisible();
+    await expect(carousel.getByRole("link", { name: "Try the free beta diagnostic →", exact: true })).toHaveAttribute("href", "/diagnostic?cert=data-engineer");
+    await page.goto("/certifications");
+    const card = page.getByRole("listitem").filter({ has: page.getByRole("heading", { name: "Professional Data Engineer →", exact: true }) });
+    await expect(card.getByText("Beta", { exact: true })).toBeVisible();
+    await expect(card.locator('a[href="/diagnostic?cert=data-engineer"]')).toBeVisible();
+    await page.goto("/diagnostic?cert=DATA-ENGINEER");
+    await expect(page).toHaveTitle("Free Professional Data Engineer beta diagnostic | Testero");
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://testero.ai/diagnostic?cert=data-engineer");
+  });
+
   test("19 approved originals stay closed; exactly 20 opens the diagnostic and cert CTA", async ({ page }) => {
     const closed = await page.goto("/diagnostic?cert=cloud-engineer");
-    expect(closed?.status()).toBe(404);
+    expect(closed?.status()).toBe(200);
+    await expect(page.getByRole("heading", { name: "Associate Cloud Engineer diagnostic is coming soon", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Notify me", exact: true })).toBeVisible();
     const denied = await page.request.post("/api/diagnostic", { data: { certId: "cloud-engineer", questionCount: 5 } });
     await rememberCreated(denied);
     expect(denied.status()).toBe(404);
@@ -220,7 +245,7 @@ test.describe("beta diagnostic with a real local bank and server allowlist", () 
         noAnswerKeys(answer.progress);
         expect(Object.keys(answer.feedback).sort()).toEqual(["correctLabel", "isCorrect", "itemId", "selectedLabel"].sort());
         expect(answer.feedback.itemId).toBe(question.id);
-        await expect(page.getByRole("status")).toContainText(`the correct answer is ${answer.feedback.correctLabel}.`);
+        await expect(page.getByRole("status")).toContainText(answer.feedback.isCorrect ? `Correct: ${answer.feedback.correctLabel}.` : `Not quite. You chose ${answer.feedback.selectedLabel}; the answer is ${answer.feedback.correctLabel}.`);
         for (const radio of await page.getByRole("radio").all()) await expect(radio).toBeDisabled();
         await expect(page.getByText("Private fixture explanation", { exact: false })).toHaveCount(0);
         if (index === 0) {
@@ -230,7 +255,7 @@ test.describe("beta diagnostic with a real local bank and server allowlist", () 
         await page.getByRole("button", { name: index === count - 1 ? "See my results" : "Next question", exact: true }).click();
         if (index === 0) {
           await page.goto("/diagnostic?cert=data-engineer");
-          await expect(page.getByRole("link", { name: "Resume diagnostic", exact: true })).toHaveAttribute("href", `/diagnostic/${sessionId}?cert=data-engineer`);
+          await expect(page.getByRole("link", { name: "Resume your diagnostic", exact: true })).toHaveAttribute("href", `/diagnostic/${sessionId}?cert=data-engineer`);
           await page.goto("/diagnostic");
           await expect(page.getByRole("button", { name: "Begin diagnostic", exact: true })).toBeVisible();
           // Remove the query: the saved session, not a client URL, owns the certification.

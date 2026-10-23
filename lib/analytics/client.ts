@@ -6,6 +6,11 @@ import { certifications, PMLE_CERT_ID } from "@/lib/certifications/catalog";
 let initialized = false;
 let recordingEnabled = false;
 
+function excludedBrowser(): boolean {
+  return (typeof document !== "undefined" && /(?:^|;\s*)testero_internal=1(?:;|$)/.test(document.cookie))
+    || (typeof navigator !== "undefined" && /HeadlessChrome|Playwright|bot\b|crawler|spider/i.test(navigator.userAgent));
+}
+
 function appRecordingRoute(path: string): boolean {
   return /^\/(diagnostic|practice|dashboard|account|checkout)(?:\/|$)/.test(path);
 }
@@ -22,8 +27,8 @@ export function configureAnalyticsForPath(path: string) {
 
 export function initializeAnalytics(path = typeof window === "undefined" ? "/" : window.location.pathname) {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-  // Internal browsers (testero_internal=1 cookie) never send analytics, matching the server-side guard.
-  if (!key || initialized || (typeof document !== "undefined" && /(?:^|;\s*)testero_internal=1(?:;|$)/.test(document.cookie))) return;
+  // Match the server-side internal-traffic and bot exclusions before loading the SDK.
+  if (!key || initialized || excludedBrowser()) return;
   recordingEnabled = appRecordingRoute(path);
   posthog.init(key, {
     api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
@@ -74,9 +79,10 @@ export function analyticsHeaders(): Record<string, string> {
   return { "X-PostHog-Distinct-Id": posthog.get_distinct_id() };
 }
 
-export function trackDiagnosticAnswer(sessionId: string, ordinal: number, domainCode: string, isCorrect: boolean, certId = PMLE_CERT_ID) {
-  if (initialized) posthog.capture("diagnostic_question_answered", {
-    session_id: sessionId, ordinal, domain_code: domainCode, is_correct: isCorrect, cert_id: certId,
+export function trackDiagnosticAnswer(sessionId: string, ordinal: number, domainCode: string, isCorrect: boolean, certId = PMLE_CERT_ID, total = 20) {
+  if (initialized && !excludedBrowser()) posthog.capture("diagnostic_question_answered", {
+    session_id: sessionId, question_index: ordinal, total, domain: domainCode, correct: isCorrect, exam: certId, length: total,
+    $insert_id: `diagnostic_question_answered:${sessionId}:${ordinal}`,
   });
 }
 

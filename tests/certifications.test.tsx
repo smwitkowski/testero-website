@@ -12,15 +12,15 @@ import sitemap from "@/app/sitemap";
 import overviews from "@/lib/certifications/verified-overviews.json";
 
 const betaMocks = vi.hoisted(() => ({ enabled: vi.fn() }));
-vi.mock("@/lib/diagnostic/beta", () => ({ betaDiagnosticEnabled: betaMocks.enabled }));
+vi.mock("@/lib/diagnostic/beta", async importOriginal => ({ ...await importOriginal<typeof import("@/lib/diagnostic/beta")>(), betaDiagnosticEnabled: betaMocks.enabled }));
 vi.mock("@/lib/supabase/service", () => ({ createServiceSupabaseClient: () => ({}) }));
 beforeEach(() => { betaMocks.enabled.mockReset().mockResolvedValue(false); });
 
 describe("sourced certification directory", () => {
-  it("generates exactly the registry, groups levels and links PMLE practice", () => {
+  it("generates exactly the registry, groups levels and links PMLE practice", async () => {
     expect(generateStaticParams()).toEqual(certifications.map(cert => ({ slug: cert.cert_id })));
     expect(getCertification("../registry")).toBeUndefined();
-    const html = renderToStaticMarkup(createElement(CertificationsPage));
+    const html = renderToStaticMarkup(await CertificationsPage());
     for (const cert of certifications) expect(html).toContain(`href="${certificationPath(cert.cert_id)}"`);
     expect(html).toContain('id="foundational"'); expect(html).toContain('id="associate"'); expect(html).toContain('id="professional"');
     expect(html).toContain('id="professional" open=""');
@@ -78,6 +78,14 @@ describe("sourced certification directory", () => {
     const unavailable = renderToStaticMarkup(await CertPage({ params: Promise.resolve({ slug: "data-engineer" }) }));
     expect(unavailable).not.toContain("Try the free beta diagnostic");
     expect(unavailable).toContain("Get notified");
+  });
+  it("uses the same live beta gate for directory and certification detail", async () => {
+    betaMocks.enabled.mockImplementation(async (client, certId) => certId === "data-engineer");
+    const html = renderToStaticMarkup(await CertificationsPage());
+    expect(html).toContain('href="/diagnostic?cert=data-engineer"');
+    expect(html).toContain(">Beta</p>");
+    expect((html.match(/Diagnostic coming<\/p>/g) ?? []).length).toBe(13);
+    expect(html).not.toContain('href="/diagnostic?cert=cloud-architect"');
   });
   it("does not check beta availability or change the PMLE CTA", async () => {
     const html = renderToStaticMarkup(await CertPage({ params: Promise.resolve({ slug: "machine-learning-engineer" }) }));

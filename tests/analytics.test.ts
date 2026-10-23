@@ -12,12 +12,12 @@ describe("private analytics event wiring", () => {
     const analytics = await import("@/lib/analytics/client");
     analytics.initializeAnalytics();
     analytics.trackDiagnostic("diagnostic_started", "beta-session", 5, certId);
-    analytics.trackDiagnosticAnswer("beta-session", 1, `${certId}:standard:1`, false, certId);
+    analytics.trackDiagnosticAnswer("beta-session", 1, `${certId}:standard:1`, false, certId, 5);
     analytics.trackDiagnostic("diagnostic_completed", "beta-session", 5, certId);
-    expect(sdk.capture.mock.calls.map(([event, properties]) => [event, properties.cert_id])).toEqual([
+    expect(sdk.capture.mock.calls.map(([event, properties]) => [event, properties.cert_id ?? properties.exam])).toEqual([
       ["diagnostic_started", certId], ["diagnostic_question_answered", certId], ["diagnostic_completed", certId],
     ]);
-    expect(sdk.capture.mock.calls[1][1]).toEqual({ session_id: "beta-session", ordinal: 1, domain_code: `${certId}:standard:1`, is_correct: false, cert_id: certId });
+    expect(sdk.capture.mock.calls[1][1]).toEqual({ session_id: "beta-session", question_index: 1, total: 5, domain: `${certId}:standard:1`, correct: false, exam: certId, length: 5, $insert_id: "diagnostic_question_answered:beta-session:1" });
   });
   it("still excludes internal browsers from all beta diagnostic events", async () => {
     vi.stubGlobal("document", { cookie: "testero_internal=1" });
@@ -120,7 +120,8 @@ describe("private analytics event wiring", () => {
     const analytics = await import("@/lib/analytics/client");
     analytics.initializeAnalytics(); analytics.trackDiagnosticAnswer("session", 3, "D2", false);
     expect(sdk.capture.mock.calls).toEqual([["diagnostic_question_answered", {
-      session_id: "session", ordinal: 3, domain_code: "D2", is_correct: false, cert_id: "machine-learning-engineer",
+      session_id: "session", question_index: 3, total: 20, domain: "D2", correct: false, exam: "machine-learning-engineer", length: 20,
+      $insert_id: "diagnostic_question_answered:session:3",
     }]]);
   });
 

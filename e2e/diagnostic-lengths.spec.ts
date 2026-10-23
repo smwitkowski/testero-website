@@ -1,3 +1,4 @@
+import { mkdir } from "node:fs/promises";
 import { test, expect } from "@playwright/test";
 import type { DiagnosticProgress } from "../lib/diagnostic/types";
 
@@ -37,6 +38,21 @@ for (const count of [5, 10]) {
     const result = await (await page.request.get(`${api}/results`)).json();
     expect(result.totalQuestions).toBe(count);
     expect(result.review).toBeUndefined();
+    if (count === 5) {
+      await expect(page.getByRole("heading", { name: "Sampled domain reads", exact: true })).toBeVisible();
+      const reads = page.getByRole("definition");
+      await expect(reads).toHaveCount(5);
+      for (const domain of result.domainBreakdown) {
+        await expect(page.getByText(`${domain.correct} of 1 correct, based on one question`, { exact: false })).not.toHaveCount(0);
+      }
+      await expect(page.locator("#next-step")).not.toBeEmpty();
+      await mkdir(".qa/site-fixup/screenshots", { recursive: true });
+      await page.screenshot({ path: ".qa/site-fixup/screenshots/five-question-report-desktop.png", fullPage: true });
+      await expect(page.getByRole("link", { name: "PMLE Pass · $39 / 90 days", exact: true })).toHaveAttribute("href", "/pricing");
+      const explanation = page.getByRole("heading", { name: "One full explanation, free", exact: true });
+      const practice = page.getByRole("link", { name: "Start practice", exact: true });
+      expect((await explanation.boundingBox())!.y).toBeLessThan((await practice.boundingBox())!.y);
+    }
     await page.getByRole("link", { name: "take the 20-question diagnostic →" }).click();
     await expect(page.getByRole("radio", { name: "Full readiness (20)" })).toBeChecked();
   });

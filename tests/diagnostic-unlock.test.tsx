@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { DiagnosticUnlockCard, SignedInDiagnosticUnlock } from "@/components/diagnostic-unlock";
+import { DiagnosticPassOption, DiagnosticUnlockCard, SignedInDiagnosticUnlock } from "@/components/diagnostic-unlock";
 const mocks = vi.hoisted(() => ({ resource: vi.fn(), track: vi.fn() }));
 vi.mock("@/components/diagnostic-resource", () => ({ useDiagnosticResource: mocks.resource }));
 vi.mock("@/lib/analytics/client", () => ({ trackResults: mocks.track }));
@@ -33,4 +33,10 @@ it("keeps the results unlock event on the anonymous CTA", () => {
   const button = card.props.children[2] as ReactElement<{ children: ReactElement<{ onClick: () => void }> }>;
   button.props.children.props.onClick();
   expect(mocks.track).toHaveBeenCalledWith("unlock_cta_clicked", result);
+});
+
+it.each([false, true])("sends the PMLE Pass summary link to pricing (account: %s)", signedIn => {
+  const html = renderToStaticMarkup(createElement(DiagnosticPassOption, { result: { ...result, ...(signedIn ? { review: [] } : {}) } }));
+  expect(html).toContain('href="/pricing"');
+  expect(html).not.toContain("/signup");
 });

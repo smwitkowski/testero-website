@@ -33,9 +33,9 @@ const ibmPlexSansOptional = localFont({
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  ...pageMetadata("PMLE readiness diagnostic", DEFAULT_DESCRIPTION, "/"),
+  ...pageMetadata("PMLE practice for the June 2026 exam guide", DEFAULT_DESCRIPTION, "/"),
   metadataBase: new URL(SITE_ORIGIN),
-  title: { default: "PMLE readiness diagnostic | Testero", template: "%s | Testero" },
+  title: { default: "PMLE practice for the June 2026 exam guide | Testero", template: "%s | Testero" },
   // Do not inherit a root canonical on private pages. Public pages set their own.
   alternates: undefined,
   icons: { icon: "/logo.svg" },

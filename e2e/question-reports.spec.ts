@@ -18,7 +18,10 @@ test("question reporting saves a diagnostic typo and rejects foreign ownership a
     const itemId = progress.currentQuestion!.id;
     await page.goto(`/diagnostic/${sessionId}`);
     await page.getByRole("button", { name: "Report a problem with this question" }).click();
-    await page.getByRole("combobox", { name: "Reason", exact: true }).selectOption("typo");
+    const reason = page.getByRole("combobox", { name: "Reason", exact: true });
+    await expect(reason).toHaveValue("");
+    expect(await reason.evaluate((select: HTMLSelectElement) => select.checkValidity())).toBe(false);
+    await reason.selectOption("typo");
     await page.getByLabel("Note (optional)").fill("Local reporting browser verifier");
     const saved = page.waitForResponse(response => response.url().endsWith("/api/question-reports") && response.request().method() === "POST");
     await page.getByRole("button", { name: "Send report", exact: true }).click();
