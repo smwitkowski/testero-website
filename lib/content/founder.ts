@@ -1,0 +1,2 @@
+// Draft bio pending founder approval. Keep homepage and /about in sync here.
+export const FOUNDER_BIO = "Testero is built by Stephen Witkowski, an independent developer. I started it because PMLE practice material kept lagging behind Google's exam guide. Questions are drafted with AI from current Google Cloud documentation, then checked against those docs before they go live. When you report a problem, I fix the question and note the change.";
