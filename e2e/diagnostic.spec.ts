@@ -138,7 +138,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
         await page.goto("/diagnostic");
         await expect(page.getByRole("button", { name: "Begin diagnostic" })).toHaveCount(0);
         await expect(page.getByRole("button", { name: "Start over" })).toBeVisible();
-        await page.getByRole("link", { name: "Resume diagnostic", exact: true }).click();
+        await page.getByRole("link", { name: "Resume your diagnostic", exact: true }).click();
         await expect(page).toHaveURL(new RegExp(`/diagnostic/${sessionId}$`));
         await page.reload();
         await expect(page.getByText("Question 4 of 20", { exact: true })).toBeVisible();
@@ -208,7 +208,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
       noAnswerKeys(answer.progress);
       expect(answer.feedback).toEqual({ itemId: progress.currentQuestion!.id, selectedLabel: progress.currentQuestion!.options[0].label, correctLabel: expect.stringMatching(/^[A-D]$/), isCorrect: expect.any(Boolean) });
       if (index < 3) await assertTransition(page, api, "feedback");
-      await expect(page.getByRole("status")).toContainText(`the correct answer is ${answer.feedback.correctLabel}.`);
+      await expect(page.getByRole("status")).toContainText(answer.feedback.isCorrect ? `Correct: ${answer.feedback.correctLabel}.` : `Not quite. You chose ${answer.feedback.selectedLabel}; the answer is ${answer.feedback.correctLabel}.`);
       if (index < 3) await armTransition(page, { path: api, ordinal: index + 2, total: 20 });
       await page.getByRole("button", { name: nextName }).click();
       if (index < 3) await assertTransition(page, api, "next");

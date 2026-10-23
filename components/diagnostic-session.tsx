@@ -73,7 +73,7 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
         body: JSON.stringify({ itemId: question.id, selectedLabel: selected }), signal,
       });
       if (signal.aborted) return;
-      trackDiagnosticAnswer(sessionId, question.ordinal, question.domainCode, result.feedback.isCorrect, result.progress.certId ?? certId);
+      trackDiagnosticAnswer(sessionId, question.ordinal, question.domainCode, result.feedback.isCorrect, result.progress.certId ?? certId, data.totalQuestions);
       if (result.completed) trackDiagnostic("diagnostic_completed", sessionId, undefined, result.progress.certId ?? certId);
       setAnswer(result);
     } catch (reason) {
@@ -146,7 +146,7 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
                   })}
                 </fieldset>
                 {feedback && <div ref={reveal} role="status" className={`rounded-md p-4 ${feedback.isCorrect ? "bg-solid-background text-solid" : "bg-focus-area-background text-focus-area"}`}>
-                  <p className="font-semibold">{feedback.isCorrect ? "Correct" : "Not quite"}. You chose {feedback.selectedLabel}; the correct answer is {feedback.correctLabel}.</p>
+                  <p className="font-semibold">{feedback.isCorrect ? `Correct: ${feedback.correctLabel}.` : `Not quite. You chose ${feedback.selectedLabel}; the answer is ${feedback.correctLabel}.`}</p>
                   <p className="mt-1 text-sm">{beta ? "Your readiness tier comes at the end." : data.totalQuestions < 10 ? "Your overall readiness score comes at the end." : "Your full report, with your strongest and weakest domains, comes at the end."}</p>
                 </div>}
                 {pending && <p role="status" className="text-sm text-muted-foreground">Saving your answer…</p>}

@@ -9,10 +9,11 @@ import DiagnosticStartPage, { generateMetadata } from "@/app/diagnostic/page";
 import { pageMetadata } from "@/lib/seo";
 import { certifications, PMLE_CERT_ID } from "@/lib/certifications/catalog";
 
-const mocks = vi.hoisted(() => ({ resource: vi.fn(), enabled: vi.fn(), findOpen: vi.fn(), client: {}, credentials: { token: "test-token" }, pathname: "/diagnostic" }));
+const mocks = vi.hoisted(() => ({ resource: vi.fn(), availability: vi.fn(), findOpen: vi.fn(), client: {}, credentials: { token: "test-token" }, pathname: "/diagnostic" }));
 vi.mock("next/navigation", () => ({ usePathname: () => mocks.pathname, useRouter: () => ({ replace: vi.fn() }), notFound: () => { throw new Error("NOT_FOUND"); } }));
 vi.mock("@/components/diagnostic-resource", () => ({ useDiagnosticResource: mocks.resource, diagnosticRequest: vi.fn(), requestError: () => "Error" }));
-vi.mock("@/lib/diagnostic/beta", () => ({ betaDiagnosticEnabled: mocks.enabled, isBetaDiagnosticCertId: (certId: string) => ["data-engineer", "cloud-architect", "cloud-engineer", "generative-ai-leader", "agentic-architect"].includes(certId) }));
+vi.mock("@/lib/diagnostic/beta", () => ({ isBetaDiagnosticCertId: (certId: string) => ["data-engineer", "cloud-architect", "cloud-engineer", "generative-ai-leader", "agentic-architect"].includes(certId) }));
+vi.mock("@/lib/certifications/availability", () => ({ getDiagnosticAvailability: mocks.availability }));
 vi.mock("@/lib/diagnostic/service", () => ({ findOpenDiagnostic: mocks.findOpen }));
 vi.mock("@/lib/diagnostic/request", () => ({ diagnosticCredentials: async () => mocks.credentials }));
 vi.mock("@/lib/supabase/service", () => ({ createServiceSupabaseClient: () => mocks.client }));
@@ -23,7 +24,7 @@ vi.mock("@/components/report-question", () => ({ ReportQuestion: () => null }));
 vi.mock("@/lib/analytics/client", () => ({ trackDiagnostic: vi.fn(), trackDiagnosticAnswer: vi.fn(), trackResults: vi.fn() }));
 const betaIds = ["data-engineer", "cloud-architect", "cloud-engineer", "generative-ai-leader", "agentic-architect"];
 beforeEach(() => {
-  mocks.enabled.mockReset().mockResolvedValue(true);
+  mocks.availability.mockReset().mockImplementation(async (certId: string) => certId === PMLE_CERT_ID ? "available" : "beta");
   mocks.findOpen.mockReset().mockResolvedValue(null);
   mocks.resource.mockReset();
   mocks.pathname = "/diagnostic";
@@ -90,26 +91,28 @@ describe("beta diagnostic UI", () => {
 });
 
 describe("server-gated diagnostic entry", () => {
-  it.each(betaIds)("uses cert-specific beta metadata for %s without querying availability", async cert => {
+  it.each(betaIds)("uses cert-specific beta metadata for %s using live availability", async cert => {
     const metadata = await generateMetadata({ searchParams: Promise.resolve({ cert }) });
     expect(metadata.title).toBe(`Free ${certifications.find(item => item.cert_id === cert)!.name} beta diagnostic`);
     expect(metadata.description).toContain("5 or 10");
-    expect(mocks.enabled).not.toHaveBeenCalled();
+    expect(metadata.alternates?.canonical).toBe(`https://testero.ai/diagnostic?cert=${cert}`);
+    expect(metadata.openGraph?.url).toBe(`https://testero.ai/diagnostic?cert=${cert}`);
+    expect(mocks.availability).toHaveBeenCalledWith(cert);
     expect(mocks.findOpen).not.toHaveBeenCalled();
   });
   it.each([undefined, PMLE_CERT_ID])("preserves exact PMLE metadata (%s)", async cert => {
     expect(await generateMetadata({ searchParams: Promise.resolve({ cert }) })).toEqual(pageMetadata("Start your free PMLE diagnostic", "Choose 5, 10 or 20 PMLE questions. See your readiness and study focus without an account.", "/diagnostic"));
   });
-  it.each(["unknown", "cloud-developer"])("does not claim a beta diagnostic for unsupported cert %s", async cert => {
+  it.each(["unknown"])("does not claim a beta diagnostic for unsupported cert %s", async cert => {
     const metadata = await generateMetadata({ searchParams: Promise.resolve({ cert }) });
     expect(metadata.title).toBe("Diagnostic");
     expect(metadata.description).not.toContain("Choose");
-    expect(mocks.enabled).not.toHaveBeenCalled();
+    expect(mocks.availability).not.toHaveBeenCalled();
   });
   it.each(betaIds)("gates %s with service client and filters resume by certification", async certId => {
     mocks.findOpen.mockResolvedValue("resume");
     const page = await DiagnosticStartPage({ searchParams: Promise.resolve({ cert: certId, length: "10" }) });
-    expect(mocks.enabled).toHaveBeenCalledWith(mocks.client, certId);
+    expect(mocks.availability).toHaveBeenCalledWith(certId);
     expect(mocks.findOpen).toHaveBeenCalledWith(mocks.client, mocks.credentials, undefined, certId);
     expect(page.props).toMatchObject({ certId, initialCount: 10, resumeId: "resume" });
     expect(page.props.children).toBeUndefined();
@@ -118,10 +121,12 @@ describe("server-gated diagnostic entry", () => {
     const page = await DiagnosticStartPage({ searchParams: Promise.resolve({ cert: "data-engineer", length }) });
     expect(page.props.initialCount).toBe(5);
   });
-  it.each([false, "failure"])("fails closed when beta availability is %s", async enabled => {
-    if (enabled === "failure") mocks.enabled.mockRejectedValue(new Error("Unavailable"));
-    else mocks.enabled.mockResolvedValue(enabled);
-    await expect(DiagnosticStartPage({ searchParams: Promise.resolve({ cert: "data-engineer" }) })).rejects.toThrow("NOT_FOUND");
+  it("shows the waitlist for a known coming-soon certification instead of a 404", async () => {
+    mocks.availability.mockResolvedValue("coming-soon");
+    const page = await DiagnosticStartPage({ searchParams: Promise.resolve({ cert: "cloud-architect" }) });
+    const html = renderToStaticMarkup(page);
+    expect(html).toContain("diagnostic is coming soon");
+    expect(html).toContain("Get notified");
     expect(mocks.findOpen).not.toHaveBeenCalled();
   });
   it.each(["not-a-cert", "", ["data-engineer", "cloud-architect"]])("rejects invalid or ambiguous cert %j", async cert => {
@@ -130,9 +135,27 @@ describe("server-gated diagnostic entry", () => {
   });
   it.each([undefined, PMLE_CERT_ID])("preserves PMLE default and longer selection (%s)", async cert => {
     const page = await DiagnosticStartPage({ searchParams: Promise.resolve({ cert, length: "20" }) });
-    expect(mocks.enabled).not.toHaveBeenCalled();
+    expect(mocks.availability).toHaveBeenCalledWith(PMLE_CERT_ID);
     expect(mocks.findOpen).toHaveBeenCalledWith(mocks.client, mocks.credentials, undefined, PMLE_CERT_ID);
     expect(page.props.initialCount).toBe(20);
     expect(renderToStaticMarkup(page)).toContain("What the PMLE diagnostic covers");
   });
+});
+
+it("normalizes cert case and permits autostart only for one explicit start=1", async () => {
+  const page = await DiagnosticStartPage({ searchParams: Promise.resolve({ cert: "DATA-ENGINEER", start: "1" }) });
+  expect(page.props).toMatchObject({ certId: "data-engineer", autoStart: true });
+  const ambiguous = await DiagnosticStartPage({ searchParams: Promise.resolve({ start: ["1", "1"] }) });
+  expect(ambiguous.props.autoStart).toBe(false);
+  const metadata = await generateMetadata({ searchParams: Promise.resolve({ cert: "DATA-ENGINEER" }) });
+  expect(metadata.alternates?.canonical).toBe("https://testero.ai/diagnostic?cert=data-engineer");
+});
+
+it.each(["cloud-architect", "cloud-developer"])("does not advertise an open beta in metadata for closed %s", async cert => {
+  mocks.availability.mockResolvedValue("coming-soon");
+  const metadata = await generateMetadata({ searchParams: Promise.resolve({ cert }) });
+  expect(metadata.title).toContain("diagnostic coming soon");
+  expect(metadata.description).toContain("Get notified");
+  expect(metadata.description).not.toContain("Choose");
+  expect(metadata.openGraph?.title).toContain("coming soon");
 });
