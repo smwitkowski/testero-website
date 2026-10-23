@@ -551,3 +551,9 @@ describe("exam-scoped diagnostic resume", () => {
     expect(query.gt).toHaveBeenCalledWith("expires_at", new Date(now).toISOString());
   });
 });
+
+it("does not treat a failed resume query as no unfinished session", async () => {
+  const query = { select: vi.fn(() => query), eq: vi.fn(() => query), is: vi.fn(() => query), gt: vi.fn(() => query), order: vi.fn(() => query), limit: vi.fn(() => query), maybeSingle: vi.fn(async () => ({ data: null, error: { message: "database unavailable" } })) };
+  const client = { from: vi.fn(() => query) } as unknown as SupabaseClient;
+  await expect(findOpenDiagnostic(client, credentials, now)).rejects.toMatchObject({ status: 503 });
+});

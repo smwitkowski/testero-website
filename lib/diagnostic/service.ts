@@ -92,7 +92,8 @@ export async function findOpenDiagnostic(client: SupabaseClient, credentials: Ow
   const owned = credentials.userId ? base.eq("user_id", credentials.userId) : base.is("user_id", null).eq("anonymous_owner_hash", ownerHash!);
   const { data, error } = await owned.order("created_at", { ascending: false }).limit(1).maybeSingle();
   const session = data as StudySession | null;
-  return !error && session && ownsSession(session, credentials) ? session.id : null;
+  if (error) throw unavailable();
+  return session && ownsSession(session, credentials) ? session.id : null;
 }
 
 async function ownedSession(client: SupabaseClient, id: string, credentials: OwnerCredentials, now: number): Promise<StudySession> {

@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { scheduleFunnelEvent } from "@/lib/analytics/server";
 vi.mock("@/lib/analytics/server", () => ({ scheduleFunnelEvent: vi.fn() }));
-import { POST as start } from "@/app/api/diagnostic/route";
+import { GET as resume, POST as start } from "@/app/api/diagnostic/route";
 import { GET as read } from "@/app/api/diagnostic/[sessionId]/route";
 import { POST as answer } from "@/app/api/diagnostic/[sessionId]/answer/route";
 import { GET as results } from "@/app/api/diagnostic/[sessionId]/results/route";
-import { createDiagnosticStart, readDiagnostic, answerDiagnostic, diagnosticResults } from "@/lib/diagnostic/service";
+import { createDiagnosticStart, findOpenDiagnostic, readDiagnostic, answerDiagnostic, diagnosticResults } from "@/lib/diagnostic/service";
 import { DiagnosticError } from "@/lib/diagnostic/http";
 import { diagnosticCredentials } from "@/lib/diagnostic/request";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
@@ -21,7 +21,7 @@ vi.mock("next/headers", () => ({ cookies: vi.fn(async () => ({
 vi.mock("@/lib/supabase/service", () => ({ createServiceSupabaseClient: vi.fn(() => mocks.client) }));
 vi.mock("@/lib/supabase/server", () => ({ createServerSupabaseClient: vi.fn(async () => ({ auth: { getUser: mocks.getUser } })) }));
 vi.mock("@/lib/diagnostic/service", () => ({
-  createDiagnosticStart: vi.fn(), readDiagnostic: vi.fn(), answerDiagnostic: vi.fn(), diagnosticResults: vi.fn(),
+  findOpenDiagnostic: vi.fn(), createDiagnosticStart: vi.fn(), readDiagnostic: vi.fn(), answerDiagnostic: vi.fn(), diagnosticResults: vi.fn(),
 }));
 const sessionId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const itemId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -36,6 +36,7 @@ function request(body: unknown = {}, origin: string | null = "http://localhost:3
 function getRequest() { return new Request(`http://localhost:3000/api/diagnostic/${sessionId}`); }
 beforeEach(() => {
   mocks.cookie = undefined;
+  vi.mocked(findOpenDiagnostic).mockReset().mockResolvedValue(null);
   mocks.getUser.mockReset().mockResolvedValue({ data: { user: null }, error: null });
   vi.mocked(createDiagnosticStart).mockReset().mockResolvedValue({ sessionId, href: `/diagnostic/${sessionId}`, progress: { sessionId, status: "in_progress", answeredCount: 0, totalQuestions: 20, answeredQuestions: [], currentQuestion: { id: itemId, ordinal: 1, domainCode: "TEST", stem: "Safe stem", options: [{ label: "A", text: "Safe option" }] } } });
   vi.mocked(readDiagnostic).mockReset().mockResolvedValue({ sessionId, status: "in_progress", totalQuestions: 20, answeredCount: 0, answeredQuestions: [], currentQuestion: null });
@@ -275,4 +276,29 @@ it("tags beta completion with the persisted session cert, not caller input", asy
   vi.mocked(answerDiagnostic).mockResolvedValue({ answeredCount: 5, totalQuestions: 5, completed: true, progress: { sessionId, certId: "data-engineer", status: "completed", totalQuestions: 5, answeredCount: 5, answeredQuestions: [], currentQuestion: null }, feedback: { itemId, selectedLabel: "A", correctLabel: "A", isCorrect: true } });
   await answer(request({ itemId, selectedLabel: "A" }), context);
   expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_completed", sessionId, { session_id: sessionId, cert_id: "data-engineer" });
+});
+
+describe("fresh diagnostic resume lookup", () => {
+  it.each([undefined, "machine-learning-engineer", "DATA-ENGINEER"])("checks only server-owned progress for %s", async cert => {
+    mocks.cookie = token;
+    vi.mocked(findOpenDiagnostic).mockResolvedValue(sessionId);
+    const response = await resume(new Request(`http://localhost:3000/api/diagnostic${cert ? `?cert=${cert}` : ""}`));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(await response.json()).toEqual({ resumeId: sessionId });
+    expect(findOpenDiagnostic).toHaveBeenCalledWith(mocks.client, { userId: null, anonymousToken: token }, undefined, cert?.toLowerCase() ?? "machine-learning-engineer");
+  });
+  it.each(["?cert=unknown", "?cert=", "?cert=data-engineer&cert=cloud-architect"])("rejects invalid or ambiguous certification %s", async query => {
+    const response = await resume(new Request(`http://localhost:3000/api/diagnostic${query}`));
+    expect(response.status).toBe(404);
+    expect(findOpenDiagnostic).not.toHaveBeenCalled();
+  });
+  it("does not turn a resume lookup outage into permission to start fresh", async () => {
+    vi.mocked(findOpenDiagnostic).mockRejectedValue(new DiagnosticError(503, "Unavailable"));
+    const response = await resume(new Request("http://localhost:3000/api/diagnostic"));
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(await response.json()).not.toHaveProperty("resumeId");
+  });
 });
