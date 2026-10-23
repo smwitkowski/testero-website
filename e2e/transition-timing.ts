@@ -27,7 +27,7 @@ export async function armTransition(page: Page, options: { path: string; ordinal
         const heading = document.querySelector("h1");
         const radios = [...document.querySelectorAll<HTMLInputElement>("input[type=radio]")];
         const ready = ordinal && heading && heading.getClientRects().length && (options.feedback
-          ? radios.length === 4 && requests.some(request => request.path === `${options.path}/answer` && request.end > 0) && /^(Correct: [A-Z]\.|Not quite\. You chose [A-Z]; the answer is [A-Z]\.)/.test(document.querySelector("[role=status]")?.textContent ?? "") && radios.every(radio => radio.matches(":disabled"))
+          ? radios.length === 4 && requests.some(request => request.path === `${options.path}/answer` && request.end > 0) && /^(Correct: [A-Z]\.|Not quite\. You chose [A-Z]; the answer is [A-Z]\.|(?:Correct|Incorrect)\. You chose [A-Z]; the correct answer is [A-Z]\.)/.test(document.querySelector("[role=status]")?.textContent ?? "") && radios.every(radio => radio.matches(":disabled"))
           : radios.length === 4 && radios.every(radio => !radio.matches(":disabled")));
         if (!click || !ready) return;
         dom ||= performance.now();
