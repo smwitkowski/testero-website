@@ -1,0 +1,80 @@
+{
+  "sourceHead": "2b4857da04d06491573574f4c36183ea85b4e288",
+  "gates": [
+    {
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm test",
+      "exitCode": 0,
+      "filesPassed": 90,
+      "testsPassed": 1669
+    },
+    {
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run lint",
+      "exitCode": 0
+    },
+    {
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run typecheck",
+      "exitCode": 0
+    },
+    {
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true docker build .",
+      "exitCode": 0,
+      "image": "sha256:73384caf02fe74d0e4175708892de9fb72d7834d1009dc6fb0dd5d496fdc09ec"
+    },
+    {
+      "command": "npm run test:db:local",
+      "exitCode": 0,
+      "note": "All integration checks passed; isolated fixtures removed."
+    },
+    {
+      "command": "Local all-five-allowlist beta browser verifier",
+      "exitCode": 0,
+      "testsPassed": 5
+    },
+    {
+      "command": "Local targeted diagnostic/history browser verifier",
+      "exitCode": 0,
+      "testsPassed": 3
+    },
+    {
+      "command": "Fresh-cache env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run test:e2e:local",
+      "exitCode": 0,
+      "testsPassed": 14,
+      "testsSkipped": 16,
+      "testsFailed": 0
+    },
+    {
+      "command": "Local targeted accounts-practice + free-tier-monthly browser verifier",
+      "exitCode": 0,
+      "testsPassed": 2
+    },
+    {
+      "command": "Clean placeholder-config npm run build",
+      "exitCode": 0
+    }
+  ],
+  "safety": {
+    "productionWrites": false,
+    "deployed": false,
+    "merged": false,
+    "runtimeDependencies": 15,
+    "originalBlogEditorialSourcesChanged": false
+  },
+  "screenshots": {
+    "hero-viewport.png": {
+      "sha256": "4bd4c58c00793bf04746247d3365ea2b45cd736d71c598836f10a223bd26b97f",
+      "bytes": 137275
+    },
+    "resume-desktop.png": {
+      "sha256": "d7475ee53c8cf0dc0805829883718f447a04154d6f8488cc1cc1e5df4775b4a9",
+      "bytes": 271734
+    },
+    "five-question-report-desktop.png": {
+      "sha256": "700caddcef923028536d7920847df50fffd8ef83e44382081ff539e2b2d1570c",
+      "bytes": 479208
+    },
+    "hero-desktop.png": {
+      "sha256": "ec727bacde7c658da6d59e07df7bde949a0a3904788b651b08506837262e3396",
+      "bytes": 560821
+    }
+  }
+}
