@@ -36,13 +36,17 @@ describe("PMLE homepage and founder", () => {
     expect(html).toContain('href="/diagnostic?start=1&amp;length=5"');
     expect(html).toContain(`href="${PMLE_EXAM_GUIDE_URL}"`);
     expect(html.indexOf('id="pass"')).toBeLessThan(html.indexOf('id="other-exams"'));
-    expect((html.match(/Not affiliated with Google/g) ?? []).length).toBe(1);
+    expect((html.match(/Independent study tool\. Not affiliated with Google\./g) ?? []).length).toBe(1);
+    expect(html).toContain("Turn your readiness report into a focused study plan.");
+    expect(html).toContain("Revisit the objectives you missed and practice those workflows hands-on.");
+    expect(html).not.toMatch(/not a verdict|Neither reproduces|predicts its result|We do not promise a launch date/);
   });
   it("uses live statuses in the other-exam box without calling PDE coming soon", async () => {
     const html = await homeMarkup();
     expect(html).toContain('href="/diagnostic?cert=data-engineer"');
     expect(html).toContain(">Beta</span>");
-    const coming = html.slice(html.indexOf("Diagnostics coming soon"), html.indexOf("We do not promise a launch date"));
+    const comingStart = html.indexOf("Diagnostics coming soon");
+    const coming = html.slice(comingStart, html.indexOf("</p>", comingStart));
     expect(coming).not.toContain("Professional Data Engineer");
     expect(coming).toContain("Professional Cloud Architect");
     expect(html).not.toContain("Only PMLE has a diagnostic");
