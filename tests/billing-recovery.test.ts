@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/billing/status/route";
 import { POST } from "@/app/api/billing/webhook/route";
 import { trackPurchaseCompleted } from "@/lib/analytics/server";
+vi.mock("next/server", async importOriginal => ({ ...await importOriginal<typeof import("next/server")>(), after: (callback: () => unknown) => { void callback(); } }));
 const m = vi.hoisted(() => ({ session: vi.fn(), intent: vi.fn(), construct: vi.fn(), pass: null as Record<string, unknown> | null, receipt: null as Record<string, unknown> | null, events: new Map<string, Record<string, unknown>>(), rpc: vi.fn(), receiptFailure: false, readFailure: false, claimFailure: false, failFreshAccess: false, grants: 0, refunded: false }));
 vi.mock("@/lib/auth/session", () => ({ getVerifiedUser: async () => ({ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }) }));
 vi.mock("@/lib/stripe/stripe-service", () => ({ StripeService: class { retrieveCheckoutSession = m.session; retrievePaymentIntent = m.intent; constructWebhookEvent = m.construct; } }));
@@ -69,7 +70,7 @@ describe("shared fulfillment without webhook delivery", () => {
     expect(m.session).toHaveBeenCalledTimes(1);
     expect((await webhook()).status).toBe(200);
     expect(m.grants).toBe(1); expect(m.pass).toEqual(original);
-    expect(trackPurchaseCompleted).toHaveBeenCalledExactlyOnceWith("cs_test_owned");
+    expect(trackPurchaseCompleted).toHaveBeenCalledExactlyOnceWith("cs_test_owned", user, expect.objectContaining({ user_id: user, plan_name: "PMLE Pass" }), { amountTotal: 3900, currency: "usd" });
   });
   it("webhook first makes return read-only", async () => {
     expect((await webhook()).status).toBe(200); expect((await (await poll()).json()).status).toBe("active");

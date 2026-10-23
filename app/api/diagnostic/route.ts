@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       ? await createDiagnosticStart(client, token, undefined, credentials.userId, timing, questionCount)
       : await createDiagnosticStart(client, token, undefined, credentials.userId, timing, questionCount, certId);
     const { sessionId } = result;
-    scheduleFunnelEvent(request, "diagnostic_started", sessionId, { session_id: sessionId, length: questionCount, cert_id: certId });
+    scheduleFunnelEvent(request, "diagnostic_started", sessionId, { session_id: sessionId, length: questionCount, cert_id: certId }, undefined, credentials.userId);
     const response = NextResponse.json(result, { status: 201 });
     response.cookies.set(ANONYMOUS_COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: ANONYMOUS_COOKIE_MAX_AGE });
     response.headers.set("Cache-Control", "private, no-store");

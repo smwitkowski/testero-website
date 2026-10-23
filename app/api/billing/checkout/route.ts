@@ -1,3 +1,4 @@
+import { checkoutAnalyticsMetadata } from "@/lib/analytics/attribution";
 import { scheduleFunnelEvent } from "@/lib/analytics/server";
 import { requestOrigin } from "@/lib/auth/redirects";
 import { createHash } from "node:crypto";
@@ -8,8 +9,11 @@ import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { StripeService } from "@/lib/stripe/stripe-service";
 export const runtime = "nodejs";
 /** Ten-minute windows reuse checkout creation; this is not an authorization cache. */
-export function checkoutIdempotencyKey(userId: string, price: string, now = Date.now()) {
-  return `pmle-pass:${createHash("sha256").update(`${userId}:${price}:${Math.floor(now / 600_000)}`).digest("hex")}`;
+export function checkoutIdempotencyKey(userId: string, price: string, now = Date.now(), analyticsMetadata: Record<string, string> = {}) {
+  // Stripe requires identical parameters for an idempotent retry. Different browser
+  // attribution/exclusion metadata must not collide within the same time window.
+  const analytics = JSON.stringify(Object.entries(analyticsMetadata).sort(([a], [b]) => a.localeCompare(b)));
+  return `pmle-pass:${createHash("sha256").update(`${userId}:${price}:${Math.floor(now / 600_000)}:${analytics}`).digest("hex")}`;
 }
 export async function POST(request: Request) {
   try {
@@ -24,9 +28,11 @@ export async function POST(request: Request) {
     const stripe = new StripeService();
     const customer = await stripe.createOrRetrieveCustomer(user.id);
     const origin = requestOrigin(request);
+    const analyticsMetadata = checkoutAnalyticsMetadata(request);
     const session = await stripe.createCheckoutSession({ customerId: customer.id, userId: user.id,
       successUrl: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`, cancelUrl: `${origin}/pricing`,
-      idempotencyKey: checkoutIdempotencyKey(user.id, price),
+      idempotencyKey: checkoutIdempotencyKey(user.id, price, Date.now(), analyticsMetadata),
+      analyticsMetadata,
     });
     if (!session.url) throw new Error("Missing checkout URL");
     scheduleFunnelEvent(request, "checkout_started", user.id, { plan_name: "PMLE Pass" }, `checkout_started:${createHash("sha256").update(session.id).digest("hex")}`);

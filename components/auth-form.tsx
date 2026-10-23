@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { safeNext } from "@/lib/auth/redirects";
-import { identifyAnalytics } from "@/lib/analytics/client";
+import { analyticsHeaders, identifyAnalytics } from "@/lib/analytics/client";
 export type AuthMode = "signup" | "login" | "forgot-password" | "reset-password";
 const labels: Record<AuthMode, string> = {
   signup: "Create account", login: "Sign in", "forgot-password": "Send reset link", "reset-password": "Update password",
@@ -74,7 +74,7 @@ export function AuthForm({ mode, next = "/dashboard", confirmationFailed = false
     if (mode !== "reset-password") body.next = destination;
     setPending(true); setError(""); setMessage("");
     try {
-      const response = await fetch(`/api/auth/${mode}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const response = await fetch(`/api/auth/${mode}`, { method: "POST", headers: { "Content-Type": "application/json", ...analyticsHeaders() }, body: JSON.stringify(body) });
       const result = await response.json() as { error?: string; message?: string; href?: string; userId?: string };
       if (!response.ok) {
         setError(result.error ?? "Unable to complete this request. Please try again.");

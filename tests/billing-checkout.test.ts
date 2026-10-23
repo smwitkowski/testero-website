@@ -28,6 +28,10 @@ describe("PMLE checkout", () => {
     const k = checkoutIdempotencyKey(user.id, "price_pass", 600_001);
     expect(k).toBe(checkoutIdempotencyKey(user.id, "price_pass", 1_199_999));
     expect(k).not.toBe(checkoutIdempotencyKey(user.id, "price_other", 600_001)); expect(k).not.toBe(checkoutIdempotencyKey("other", "price_pass", 600_001)); expect(k).not.toBe(checkoutIdempotencyKey(user.id, "price_pass", 1_200_000));
+    const attributed = checkoutIdempotencyKey(user.id, "price_pass", 600_001, { analytics_enabled: "1", utm_source: "google" });
+    expect(attributed).toBe(checkoutIdempotencyKey(user.id, "price_pass", 600_002, { utm_source: "google", analytics_enabled: "1" }));
+    expect(attributed).not.toBe(checkoutIdempotencyKey(user.id, "price_pass", 600_001, { analytics_enabled: "0" }));
+    expect(attributed).not.toBe(checkoutIdempotencyKey(user.id, "price_pass", 600_001, { analytics_enabled: "1", utm_source: "reddit" }));
   });
   it("preserves the browser origin when Next uses an internal localhost URL", async () => { const request = new Request("http://localhost:3000/api/billing/checkout", { method: "POST", headers: { host: "127.0.0.1:3000", origin: "http://127.0.0.1:3000" }, body: "{}" }); expect((await POST(request)).status).toBe(200); expect(mocks.checkout).toHaveBeenCalledWith(expect.objectContaining({ successUrl: "http://127.0.0.1:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}", cancelUrl: "http://127.0.0.1:3000/pricing" })); });
   it("rejects cross origin before auth or Stripe", async () => { expect((await POST(req({}, "https://evil.example"))).status).toBe(403); expect(getVerifiedUser).not.toHaveBeenCalled(); expect(mocks.ctor).not.toHaveBeenCalled(); });

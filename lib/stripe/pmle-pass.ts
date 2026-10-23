@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { StripeService } from "./stripe-service";
 import { trackPurchaseCompleted } from "@/lib/analytics/server";
@@ -138,7 +139,10 @@ export async function fulfillCheckoutSession(
       .eq("stripe_checkout_session_id", session.id).is("refunded_at", null).is("purchase_completed_at", null)
       .select("id").maybeSingle();
     if (claimError) throw claimError;
-    if (claimed) await trackPurchaseCompleted(session.id);
+    if (claimed) {
+      try { after(() => trackPurchaseCompleted(session.id, result.pass.user_id, session.metadata, { amountTotal: session.amount_total, currency: session.currency })); }
+      catch { /* Missing analytics scheduling context must not affect paid access. */ }
+    }
   }
   return result;
 }

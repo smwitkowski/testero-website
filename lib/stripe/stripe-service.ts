@@ -1,5 +1,6 @@
 import "server-only";
 import Stripe from "stripe";
+import { sanitizeAttribution } from "@/lib/analytics/attribution";
 
 /** A tiny SDK adapter. The explicit fixture gate can never fall back to Stripe. */
 export class StripeService {
@@ -33,13 +34,17 @@ export class StripeService {
     if (existing.data.length) return existing.data[0];
     return this.stripe.customers.create({ metadata: { supabase_user_id: userId } }, { idempotencyKey: `pmle-customer:${userId}` });
   }
-  async createCheckoutSession(input: { customerId: string; userId: string; successUrl: string; cancelUrl: string; idempotencyKey: string }): Promise<Stripe.Checkout.Session> {
+  async createCheckoutSession(input: { customerId: string; userId: string; successUrl: string; cancelUrl: string; idempotencyKey: string; analyticsMetadata?: Record<string, string> }): Promise<Stripe.Checkout.Session> {
     const price = process.env.STRIPE_PRICE_PMLE_PASS;
     if (!price) throw new Error("Pass price configuration is missing");
     const metadata = { user_id: input.userId, plan_name: "PMLE Pass" };
+    const analytics = input.analyticsMetadata ? {
+      analytics_enabled: input.analyticsMetadata.analytics_enabled === "1" ? "1" : "0",
+      ...sanitizeAttribution(input.analyticsMetadata),
+    } : {};
     const session = await this.stripe.checkout.sessions.create({
       customer: input.customerId, mode: "payment", allowed_payment_method_types: ["card"],
-      line_items: [{ price, quantity: 1 }], metadata, payment_intent_data: { metadata },
+      line_items: [{ price, quantity: 1 }], metadata: { ...analytics, ...metadata }, payment_intent_data: { metadata },
       success_url: input.successUrl, cancel_url: input.cancelUrl,
     }, { idempotencyKey: input.idempotencyKey });
     if (!session.url) throw new Error("Missing checkout URL");
