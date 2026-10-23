@@ -13,7 +13,10 @@ describe("dated PMLE preparation comparison", () => {
       for (const source of option.sources) expect(html).toContain(source);
     }
     expect(html).toContain(comparisonChecked);
-    expect(html).toContain("Check site; not verified.");
+    expect(html).toContain("Price not published.");
+    expect(html).not.toContain("displayed $");
+    expect(html).not.toContain("not verified");
+    expect(html).not.toContain("retrieved introduction");
     expect(practiceOptions[0].name).toBe("Testero");
     expect(html).toContain("not a quality ranking"); expect(html).toContain("Testero publishes this page");
     expect(practiceOptions.find(option => option.name === "Testero")!.price).toContain("USD $39 one-time for 90 days");
