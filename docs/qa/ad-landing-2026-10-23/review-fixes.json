@@ -1,0 +1,48 @@
+{
+  "applicationSourceCommit": "5fb0dc187cdb89a235a72a5dc98037ad836ab5ae",
+  "fixes": [
+    "stable verified user/price/ten-minute window checkout key and owned open-session reuse on actual StripeIdempotencyError",
+    "no server identify for account-shaped browser ID even with anonymous tag",
+    "no empty first-touch cookie; recover legacy sanitized-empty cookie on first real campaign"
+  ],
+  "verification": {
+    "unit": {
+      "exitCode": 0,
+      "files": 95,
+      "tests": 1758
+    },
+    "lint": {
+      "exitCode": 0
+    },
+    "typecheck": {
+      "exitCode": 0
+    },
+    "optimizedBuild": {
+      "exitCode": 0,
+      "freshNextOutput": true,
+      "publicAnalytics": "disabled",
+      "buildCredentials": "explicit placeholders only"
+    },
+    "docker": {
+      "exitCode": 0,
+      "image": "sha256:20b914428afba5578a968bf87c67df57e8f3e474a2fe542648161f20d2a218a8"
+    },
+    "optimizedPaidE2e": {
+      "exitCode": 0,
+      "passed": 5,
+      "failed": 0,
+      "mode": "optimized local next start, not dev",
+      "runnerSeconds": 9.6,
+      "publicAnalytics": "disabled",
+      "services": "validated loopback Supabase v2 only"
+    }
+  },
+  "independentReview": "no blocking findings",
+  "limits": [
+    "Stripe SDK session storage/listing is simulated, not live Stripe proof",
+    "parallel in-flight checkout visibility not tested; missing safe session fails closed",
+    "no new development full-suite run after review fixes; historical matched baseline remains separate"
+  ],
+  "runtimeDependenciesChanged": false,
+  "mergeDeployProductionWrites": false
+}
