@@ -1,0 +1,50 @@
+Browser verification history (loopback-only local v2)
+
+Run 1 — env -i PATH="$PATH" HOME="$HOME" CI=true npm run test:e2e:local
+  16 skipped
+  18 passed (3.2m)
+
+Run 2 — same command, final application source
+  1 failed: e2e/free-tier-monthly.spec.ts:83
+  Locator: getByRole('heading', { name: 'Your practice summary', exact: true })
+  Timeout: 5000ms
+  Snapshot: Loading your practice summary…
+  16 skipped
+  17 passed (2.8m)
+  Redacted API evidence: summary HTTP200 in238ms and433ms; no console error.
+  All four dedicated paid-landing cases passed. No unrelated code or timeout changed.
+
+Run 3 — same command, no concurrent unit/lint/type gates
+  16 failed,16 skipped,2 passed(3.1m).
+  API diagnostic POST: expected201,received404; response MIME text/html (framework404HTML).
+  Billing checkout: expected401,received404.
+  Existing protected practice routes: expected307,received404.
+  Existing /tools route: expected200,received404.
+  Both source and generated compiled route files existed.
+
+Partial-cache recovery — DEBUG=pw:webserver, only.next/dev removed
+  Canceled after unrelated slow auth/practice timeouts.
+  Routing recovered: diagnostic POST/GET/answer HTTP200/201 in server logs.
+  No application/test changes.
+
+Coordinator18:56UTC: known stale Next dev routing cache (alsoPR304).
+Use a production build or fully clear.next; time-box15min; then openPR with caveat ifneeded.
+
+Final full.next-clear run — standard command above, no concurrent gates
+  Exit1:15passed,16existingopt-inskips,3failed(6.9min).
+  All4newpaidcasespass;5/10/20diagnosticflowsandbillingpass.
+  Failures:accounts-practice120s timeout;auth-email CheckyourEmail heading5s timeout;free-tier-monthly paidPracticeScore heading5s timeout.
+  Whole generated.next removed only after own servers stopped. Framework404s disappeared.
+  No test timeout/source relaxation. No further dev-cache retries per coordinator15min timebox.
+
+Raw Playwright traces are NOT committed: they include local test authentication cookies.
+
+Optimized local final paid-landing follow-up:5passed(7.0s),including exactGoogleAdWordsExpress no-gesture session suppression and manualclick success. Initial optimized APIRequestContext setup could not send theSecure cookie onplainHTTP; switched returning setup to real browserinteractions and all5passed.
+
+Coordinator-requested matched baseline follow-up (2026-10-23):
+  Exact command: env -i PATH="$PATH" HOME="$HOME" CI=true npm run test:e2e:local
+  Main8231d73:clean checkout,npmci,absent.next;exit0,14passed,16skipped(2.3min).
+  PR1024acd:serverstopped,whole.nextremoved,npmci;exit0,19passed,16skipped(2.3min).
+  All3prior timeoutcases pass onboth;no regressionreproduced;not provenpre-existing.
+  No runtime,testsourceortimeoutchanges. Mode is fresh Nextdev fullsuite,not optimizedproduction. Optimizedpaid5/5evidence remainsseparate.
+  See baseline-comparison.md and baseline-comparison.json.

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-const sdk = vi.hoisted(() => ({ init: vi.fn(), capture: vi.fn() }));
+const sdk = vi.hoisted(() => ({ init: vi.fn(), capture: vi.fn(), get_distinct_id: vi.fn(() => "anonymous-browser"), get_property: vi.fn(() => "anonymous") }));
 vi.mock("posthog-js", () => ({ default: sdk }));
 
 beforeEach(() => {

@@ -13,7 +13,7 @@ vi.mock("react", async importOriginal => {
   return { ...actual, useState: vi.fn((value: unknown) => [value, vi.fn()]),
     useEffect: (effect: () => void) => { effect(); } };
 });
-vi.mock("@/lib/analytics/client", () => ({ identifyAnalytics: mocks.identify, resetAnalytics: mocks.reset }));
+vi.mock("@/lib/analytics/client", () => ({ identifyAnalytics: mocks.identify, resetAnalytics: mocks.reset, analyticsHeaders: () => ({}) }));
 
 function find(node: ReactElement, type: unknown): ReactElement | undefined {
   if (node.type === type) return node;

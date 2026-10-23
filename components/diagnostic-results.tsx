@@ -56,12 +56,12 @@ export function DiagnosticResults({ sessionId, aboveFoldCta, emailCard }: { sess
   const practiceHref = data.review ? dashboardPath : `/signup?next=${encodeURIComponent(dashboardPath)}`;
 
   return <div className="mx-auto max-w-[896px] space-y-8">
-    <header className="space-y-3"><h1 className="text-3xl font-semibold tracking-tight">PMLE readiness report</h1><p className="text-sm text-muted-foreground">{data.totalQuestions} questions</p></header>
+    <header className="space-y-3"><h1 className="text-3xl font-semibold tracking-tight">{quickCheck ? "Your 5-question PMLE check" : "PMLE readiness report"}</h1><p className="text-sm text-muted-foreground">{data.totalQuestions} questions</p></header>
     <div className="grid gap-6 md:grid-cols-2">
       <ScoreReport score={data.score} correctAnswers={data.correctAnswers} totalQuestions={data.totalQuestions} />
       {weakest && <Card aria-labelledby="next-step" className="flex flex-col">
         <CardHeader><p className="text-sm font-medium text-muted-foreground">Recommended next step</p><CardTitle id="next-step">{weakest.domainName}</CardTitle></CardHeader>
-        <CardContent className="flex-1"><p className="text-sm leading-relaxed text-muted-foreground">{quickCheck ? "Try this domain next, based only on the questions sampled. This is a starting point for study, not a firm ranking of your knowledge." : "Choose this domain on your dashboard for a focused 5-question session."}</p></CardContent>
+        <CardContent className="flex-1"><p className="text-sm leading-relaxed text-muted-foreground">{quickCheck ? "Start here. With 5 questions this is a rough pointer, not a firm ranking." : "Choose this domain on your dashboard for a focused 5-question session."}</p></CardContent>
       </Card>}
     </div>
     {data.totalQuestions < 20 && <p className="text-sm leading-relaxed text-muted-foreground">Based on {data.totalQuestions} questions. For a broader signal, <Link href="/diagnostic?length=20" className="text-primary underline">take the 20-question diagnostic →</Link></p>}
@@ -73,12 +73,15 @@ export function DiagnosticResults({ sessionId, aboveFoldCta, emailCard }: { sess
     {!data.review && <FreeDiagnosticExplanation key={data.sessionId} result={data} />}
     {data.review && <QuestionReviewList review={data.review} sessionId={sessionId} kind="diagnostic" />}
     {aboveFoldCta}
-    <section aria-label="Continue with practice" className="space-y-4 rounded-lg border border-border bg-card p-5 sm:p-7">
-      {!data.review && <p className="text-sm text-muted-foreground">Create a free account to review your answers, save this report and get 60 free practice questions per month.</p>}
-      <div className="flex flex-wrap items-center gap-3"><Button asChild><Link href={practiceHref}>Start practice</Link></Button>{data.review ? <SignedInDiagnosticUnlock result={data} compact /> : <DiagnosticPassOption result={data} />}</div>
-      {!data.review && <p className="text-sm text-muted-foreground">Create a free account to continue.</p>}
+    <section aria-labelledby="keep-going-heading" className="space-y-4 rounded-lg border border-border bg-card p-5 sm:p-7">
+      <h2 id="keep-going-heading" className="text-xl font-semibold">Keep going</h2>
+      {!data.review && <p className="text-sm text-muted-foreground">Free account: review every answer, save this report and practice 60 questions a month.</p>}
+      <Button asChild><Link href={practiceHref}>{data.review ? "Start practice" : "Create free account"}</Link></Button>
+      {data.review ? <SignedInDiagnosticUnlock result={data} /> : <>
+        <p className="text-sm text-muted-foreground">Want every option explained? PMLE Pass is $39 once for 90 days. No auto-renew, 7-day refund.</p>
+        <DiagnosticPassOption result={data} />
+      </>}
     </section>
-    {data.review && <SignedInDiagnosticUnlock result={data} />}
     {!data.review && (emailCard === undefined ? <ResultsEmailForm sessionId={sessionId} /> : emailCard)}
     <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border pt-5"><p className="text-sm text-muted-foreground">Study guidance, not a prediction of your exam result.</p><Link href="/diagnostic" className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline">Retake the diagnostic</Link></div>
   </div>;

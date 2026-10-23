@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-const sdk = vi.hoisted(() => ({ init: vi.fn(), capture: vi.fn(), identify: vi.fn(), reset: vi.fn(), set_config: vi.fn(), stopSessionRecording: vi.fn(), get_distinct_id: vi.fn(() => "anonymous-id") }));
+const sdk = vi.hoisted(() => ({ init: vi.fn(), capture: vi.fn(), identify: vi.fn(), reset: vi.fn(), set_config: vi.fn(), stopSessionRecording: vi.fn(), get_property: vi.fn(), get_distinct_id: vi.fn(() => "anonymous-id") }));
 vi.mock("posthog-js", () => ({ default: sdk }));
 beforeEach(() => {
   vi.resetModules(); sdk.init.mockReset(); sdk.capture.mockReset(); sdk.identify.mockReset(); sdk.reset.mockReset();

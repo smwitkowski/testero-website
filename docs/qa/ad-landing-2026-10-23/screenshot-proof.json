@@ -1,0 +1,18 @@
+{
+  "rows": [
+    {
+      "width": 1280,
+      "freshCtaY": 302.5,
+      "returningCtaY": 387.5,
+      "resumedQuestion": 2
+    },
+    {
+      "width": 375,
+      "freshCtaY": 330,
+      "returningCtaY": 435,
+      "resumedQuestion": 2
+    }
+  ],
+  "createdSessions": 2,
+  "cleanup": "deleted exact created session IDs from local v2"
+}

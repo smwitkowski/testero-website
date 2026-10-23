@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
 import { scheduleFunnelEvent } from "@/lib/analytics/server";
 vi.mock("@/lib/analytics/server", () => ({ scheduleFunnelEvent: vi.fn() }));
 import { POST, checkoutIdempotencyKey } from "@/app/api/billing/checkout/route";
@@ -28,6 +29,7 @@ describe("PMLE checkout", () => {
     const k = checkoutIdempotencyKey(user.id, "price_pass", 600_001);
     expect(k).toBe(checkoutIdempotencyKey(user.id, "price_pass", 1_199_999));
     expect(k).not.toBe(checkoutIdempotencyKey(user.id, "price_other", 600_001)); expect(k).not.toBe(checkoutIdempotencyKey("other", "price_pass", 600_001)); expect(k).not.toBe(checkoutIdempotencyKey(user.id, "price_pass", 1_200_000));
+    expect(k).toBe(`pmle-pass:${createHash("sha256").update(`${user.id}:price_pass:1`).digest("hex")}`);
   });
   it("preserves the browser origin when Next uses an internal localhost URL", async () => { const request = new Request("http://localhost:3000/api/billing/checkout", { method: "POST", headers: { host: "127.0.0.1:3000", origin: "http://127.0.0.1:3000" }, body: "{}" }); expect((await POST(request)).status).toBe(200); expect(mocks.checkout).toHaveBeenCalledWith(expect.objectContaining({ successUrl: "http://127.0.0.1:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}", cancelUrl: "http://127.0.0.1:3000/pricing" })); });
   it("rejects cross origin before auth or Stripe", async () => { expect((await POST(req({}, "https://evil.example"))).status).toBe(403); expect(getVerifiedUser).not.toHaveBeenCalled(); expect(mocks.ctor).not.toHaveBeenCalled(); });

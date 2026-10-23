@@ -23,9 +23,8 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   const lengthOptions = page.locator("input[name=diagnostic-length]");
   for (const [index, count] of [5, 10, 20].entries()) {
     await lengthOptions.nth(index).check();
-    await expect(page.locator("dl").getByText(`~${count} min`, { exact: true })).toBeVisible();
-    const values = await page.locator("dl dd").allTextContents();
-    expect(values).toEqual([String(count), `~${count} min`, count === 5 ? "5" : "6"]);
+    await expect(page.getByRole("radio", { name: `${count} questions · ~${count} min`, exact: true })).toBeChecked();
+    await expect(page.getByRole("heading", { name: `Free ${count}-question PMLE check`, exact: true })).toBeVisible();
   }
   await expect(page.getByRole("table")).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "Approx. weight" })).toBeVisible();
@@ -37,9 +36,9 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   await expect(page.getByText("Question 1 of 20", { exact: true })).toBeVisible();
   await page.context().clearCookies();
   await page.goto("/diagnostic");
-  await page.getByRole("radio", { name: "Full readiness (20)" }).check();
+  await page.getByRole("radio", { name: "20 questions · ~20 min" }).check();
   const started = performance.now();
-  await page.getByRole("button", { name: "Begin diagnostic" }).click();
+  await page.getByRole("button", { name: "Start the 20-question check" }).click();
   await expect(page.getByText("Question 1 of 20", { exact: true })).toBeVisible();
   timings.diagnosticStart = performance.now() - started;
   const actions = page.locator("[data-diagnostic-actions]");
@@ -71,7 +70,7 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Check answer", exact: true })).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("status")).toContainText("the correct answer is");
+  await expect(page.getByRole("status")).toContainText(/Correct\. The answer is|Not quite\. The correct answer is/);
   await page.getByRole("button", { name: "Next question", exact: true }).click();
   await expect(page.getByText("Question 2 of 20", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
@@ -106,7 +105,7 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
   await expect(page.getByRole("heading", { name: "Question review", exact: true })).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Question review navigation" })).toHaveCount(0);
   await expect(page.locator("[data-question-review-items] > li")).toHaveCount(1);
-  await expect(page.getByRole("link", { name: "Unlock PMLE Pass: $39", exact: true })).toHaveAttribute("href", "/signup?next=%2Fpricing");
+  await expect(page.getByRole("link", { name: "See PMLE Pass", exact: true })).toHaveAttribute("href", "/pricing");
   const accounts = JSON.parse(await readFile(".qa/accounts.json", "utf8"));
   const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
   for (const kind of ["free", "refunded", "unconfirmed"]) {
@@ -155,14 +154,14 @@ test("instant start measurement", async ({ page }, info) => {
   await page.addInitScript(() => {
     const events: Record<string, unknown>[] = []; (window as unknown as { instantEvents: unknown[] }).instantEvents = events;
     const original = window.fetch; window.fetch = async (...args) => { const start = performance.now(); const response = await original(...args); if (String(args[0]) === "/api/diagnostic") { events.push({kind:"create",start,end:performance.now(),timing:response.headers.get("server-timing")}); const json=response.json.bind(response); response.json=async()=>{const body=await json();events.push({kind:"json",at:performance.now()});return body;}; } return response; };
-    document.addEventListener("click", event => { if ((event.target as Element).closest("button")?.textContent === "Begin diagnostic") events.push({kind:"click",at:performance.now()}); },true);
+    document.addEventListener("click", event => { if ((event.target as Element).closest("button")?.textContent === "Start the 20-question check") events.push({kind:"click",at:performance.now()}); },true);
     document.addEventListener("focusin",()=>{ if (events.some(x=>x.kind==="click") && !events.some(x=>x.kind==="dom") && document.activeElement?.tagName === "H1" && document.querySelectorAll('input[type="radio"]').length===4) events.push({kind:"dom",at:performance.now()}); });
     new MutationObserver(() => { if (events.some(x=>x.kind==="click") && !events.some(x=>x.kind==="dom") && document.querySelectorAll('input[type="radio"]').length === 4 && document.activeElement?.tagName === "H1") events.push({kind:"dom",at:performance.now()}); }).observe(document,{subtree:true,childList:true,attributes:true});
   });
   const runs=[];
   for(let i=0;i<6;i++) {
     await page.context().clearCookies(); await page.goto("/diagnostic?length=20");
-    await page.getByRole("button",{name:"Begin diagnostic",exact:true}).click(); await expect(page.getByText("Question 1 of 20",{exact:true})).toBeVisible();
+    await page.getByRole("button",{name:"Start the 20-question check",exact:true}).click(); await expect(page.getByText("Question 1 of 20",{exact:true})).toBeVisible();
     await expect(page.getByRole("heading",{level:1})).toBeFocused();
     const events = await page.evaluate(()=>(window as unknown as {instantEvents:{kind:string;at?:number}[]}).instantEvents);
     const click = events.find(x=>x.kind==="click")!.at!;
@@ -185,9 +184,9 @@ test("instant start restores URL, refresh and back/forward without creating anot
   const beginRequests: string[] = []; let recordingBegin = false;
   let creates = 0; page.on("request", request => { if (recordingBegin) beginRequests.push(`${request.method()} ${new URL(request.url()).pathname}${new URL(request.url()).search}`); if (new URL(request.url()).pathname === "/api/diagnostic" && request.method() === "POST") creates++; });
   await page.goto("/"); await diagnosticLink().click();
-  await page.getByRole("radio", { name: "Full readiness (20)" }).check();
+  await page.getByRole("radio", { name: "20 questions · ~20 min" }).check();
   recordingBegin = true;
-  await page.getByRole("button", { name: "Begin diagnostic", exact: true }).click();
+  await page.getByRole("button", { name: "Start the 20-question check", exact: true }).click();
   await expect(page.getByText("Question 1 of 20", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading",{level:1})).toBeFocused();
   recordingBegin = false;
@@ -209,9 +208,9 @@ test("instant start restores URL, refresh and back/forward without creating anot
   expect(creates).toBe(1);
   await page.getByRole("link", {name:"Testero home"}).click(); await expect(page).toHaveURL(/\/$/);
   await diagnosticLink().click();
-  await expect(page.getByRole("heading",{name:"PMLE readiness diagnostic",exact:true})).toBeVisible();
-  await page.getByRole("radio", { name: "Full readiness (20)" }).check();
-  await page.getByRole("button",{name:"Start over",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"Free 5-question PMLE check",exact:true})).toBeVisible();
+  await page.getByRole("radio", { name: "20 questions · ~20 min" }).check();
+  await page.getByRole("button",{name:"Start a new 20-question check",exact:true}).click();
   await expect(page.getByText("Question 1 of 20",{exact:true})).toBeVisible();
   expect(page.url()).not.toBe(sessionURL); expect(creates).toBe(2);
 });

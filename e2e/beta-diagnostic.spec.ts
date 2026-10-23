@@ -139,7 +139,7 @@ test.describe("beta diagnostic with a real local bank and server allowlist", () 
         await expect(page.getByRole("heading", { name: "Professional Cloud Developer diagnostic is coming soon", exact: true })).toBeVisible();
         await expect(page.getByRole("button", { name: "Notify me", exact: true })).toBeVisible();
       }
-      await expect(page.getByRole("button", { name: "Begin diagnostic", exact: true })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Start the 5-question check", exact: true })).toHaveCount(0);
       const denied = await page.request.post("/api/diagnostic", { data: { certId: cert, questionCount: 5 } });
       await rememberCreated(denied);
       expect(denied.status()).toBe(404);
@@ -182,7 +182,7 @@ test.describe("beta diagnostic with a real local bank and server allowlist", () 
     try {
       expect((await service.from("questions").update({ status: "ACTIVE" }).eq("id", twentiethCloudQuestion)).error).toBeNull();
       expect((await page.goto("/diagnostic?cert=cloud-engineer"))?.status()).toBe(200);
-      await expect(page.getByRole("button", { name: "Begin diagnostic", exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Start the 5-question check", exact: true })).toBeVisible();
       await page.goto("/certifications/cloud-engineer");
       await expect(page.getByRole("link", { name: "Try the free beta diagnostic", exact: true })).toHaveAttribute("href", "/diagnostic?cert=cloud-engineer");
     } finally {
@@ -204,13 +204,13 @@ test.describe("beta diagnostic with a real local bank and server allowlist", () 
       await page.goto(`/diagnostic?cert=data-engineer&length=${count === 5 ? 20 : 10}`);
       await expect(page.getByRole("heading", { name: `${certName} beta diagnostic`, exact: true })).toBeVisible();
       await expect(page.getByRole("radio")).toHaveCount(2);
-      await expect(page.getByRole("radio", { name: "Full readiness (20)", exact: true })).toHaveCount(0);
-      await expect(page.getByRole("radio", { name: count === 5 ? "Quick check (5)" : "Short (10)", exact: true })).toBeChecked();
+      await expect(page.getByRole("radio", { name: "20 questions · ~20 min", exact: true })).toHaveCount(0);
+      await expect(page.getByRole("radio", { name: count === 5 ? "5 questions · ~5 min" : "10 questions · ~10 min", exact: true })).toBeChecked();
       const forbidden = await page.request.post("/api/diagnostic", { data: { certId, questionCount: 20 } });
       await rememberCreated(forbidden);
       expect(forbidden.status()).toBe(400);
       const response = page.waitForResponse(response => new URL(response.url()).pathname === "/api/diagnostic" && response.request().method() === "POST");
-      await page.getByRole("button", { name: "Begin diagnostic", exact: true }).click();
+      await page.getByRole("button", { name: `Start the ${count}-question check`, exact: true }).click();
       const createdResponse = await response;
       const created = await rememberCreated(createdResponse);
       expect(createdResponse.status()).toBe(201);
@@ -245,7 +245,7 @@ test.describe("beta diagnostic with a real local bank and server allowlist", () 
         noAnswerKeys(answer.progress);
         expect(Object.keys(answer.feedback).sort()).toEqual(["correctLabel", "isCorrect", "itemId", "selectedLabel"].sort());
         expect(answer.feedback.itemId).toBe(question.id);
-        await expect(page.getByRole("status")).toContainText(answer.feedback.isCorrect ? `Correct: ${answer.feedback.correctLabel}.` : `Not quite. You chose ${answer.feedback.selectedLabel}; the answer is ${answer.feedback.correctLabel}.`);
+        await expect(page.getByRole("status")).toContainText(answer.feedback.isCorrect ? `Correct. The answer is ${answer.feedback.correctLabel}.` : `Not quite. The correct answer is ${answer.feedback.correctLabel}.`);
         for (const radio of await page.getByRole("radio").all()) await expect(radio).toBeDisabled();
         await expect(page.getByText("Private fixture explanation", { exact: false })).toHaveCount(0);
         if (index === 0) {
@@ -255,9 +255,9 @@ test.describe("beta diagnostic with a real local bank and server allowlist", () 
         await page.getByRole("button", { name: index === count - 1 ? "See my results" : "Next question", exact: true }).click();
         if (index === 0) {
           await page.goto("/diagnostic?cert=data-engineer");
-          await expect(page.getByRole("link", { name: "Resume your diagnostic", exact: true })).toHaveAttribute("href", `/diagnostic/${sessionId}?cert=data-engineer`);
+          await expect(page.getByRole("link", { name: "Continue where I left off", exact: true })).toHaveAttribute("href", `/diagnostic/${sessionId}?cert=data-engineer`);
           await page.goto("/diagnostic");
-          await expect(page.getByRole("button", { name: "Begin diagnostic", exact: true })).toBeVisible();
+          await expect(page.getByRole("button", { name: "Start the 5-question check", exact: true })).toBeVisible();
           // Remove the query: the saved session, not a client URL, owns the certification.
           await page.goto(`/diagnostic/${sessionId}`);
           await page.reload();

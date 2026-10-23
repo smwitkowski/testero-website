@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { DiagnosticUnlockCard } from "@/components/diagnostic-unlock";
 import type { DiagnosticResult, PaidQuestionReview } from "@/lib/diagnostic/types";
 import { useDiagnosticResource } from "@/components/diagnostic-resource";
 import { QuestionReviewList } from "@/components/question-review";
@@ -20,6 +19,5 @@ export function FreeDiagnosticExplanation({ result }: { result: DiagnosticResult
   return <section aria-labelledby="free-explanation-heading" className="space-y-5">
     <div className="space-y-2"><h2 id="free-explanation-heading" className="text-xl font-semibold">One full explanation, free</h2><p className="text-muted-foreground">{result.totalQuestions < 10 ? "Review one question with a full explanation of each option." : "Learn from a missed question in your lowest-scoring domain. If you missed none, review one from that domain."}</p></div>
     {error ? <div role="status" className="space-y-3"><p>We could not load your free explanation.</p><Button variant="outline" onClick={reload}>Retry explanation</Button></div> : data ? <QuestionReviewList review={[data]} sessionId={result.sessionId} kind="diagnostic" paginated /> : <p role="status">Loading your free explanation…</p>}
-    <DiagnosticUnlockCard result={result} />
   </section>;
 }

@@ -21,8 +21,8 @@ it.each([5, 10, 20])("shows rationales, report control and count-safe CTA for %i
     expect(html).not.toContain("lowest-scoring domain");
   } else expect(html).toContain("lowest-scoring domain");
   expect(html).toContain("Report a problem with this question");
-  expect(html).toContain("Unlock PMLE Pass: $39");
-  expect(html).toContain('href="/signup?next=%2Fpricing"');
+  expect(html).not.toContain("Get PMLE Pass");
+  expect(html).not.toContain('href="/signup?next=%2Fpricing"');
   expect(html).not.toContain("Question review navigation");
   expect(html).not.toContain(">Question review</h2>");
   expect(mocks.track).toHaveBeenCalledWith("free_explanation_viewed", report);

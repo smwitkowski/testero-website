@@ -2,13 +2,16 @@
 
 import posthog from "posthog-js";
 import { certifications, PMLE_CERT_ID } from "@/lib/certifications/catalog";
+import { firstTouchPersonProperties, isKnownBotUserAgent, rememberAnalyticsId, rememberFirstTouch } from "./attribution";
 
 let initialized = false;
 let recordingEnabled = false;
 
 function excludedBrowser(): boolean {
-  return (typeof document !== "undefined" && /(?:^|;\s*)testero_internal=1(?:;|$)/.test(document.cookie))
-    || (typeof navigator !== "undefined" && /HeadlessChrome|Playwright|bot\b|crawler|spider/i.test(navigator.userAgent));
+  try {
+    return (typeof document !== "undefined" && /(?:^|;\s*)testero_internal=1(?:;|$)/.test(document.cookie))
+      || (typeof navigator !== "undefined" && isKnownBotUserAgent(navigator.userAgent));
+  } catch { return true; } // If exclusions cannot be checked, skip optional analytics.
 }
 
 function appRecordingRoute(path: string): boolean {
@@ -28,7 +31,9 @@ export function configureAnalyticsForPath(path: string) {
 export function initializeAnalytics(path = typeof window === "undefined" ? "/" : window.location.pathname) {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   // Match the server-side internal-traffic and bot exclusions before loading the SDK.
-  if (!key || initialized || excludedBrowser()) return;
+  if (!key || excludedBrowser()) return;
+  rememberFirstTouch();
+  if (initialized) { rememberAnalyticsId(posthog.get_distinct_id(), posthog.get_property("$user_state") !== "identified"); return; }
   recordingEnabled = appRecordingRoute(path);
   posthog.init(key, {
     api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
@@ -42,6 +47,7 @@ export function initializeAnalytics(path = typeof window === "undefined" ? "/" :
     persistence: "localStorage+cookie",
   });
   initialized = true;
+  rememberAnalyticsId(posthog.get_distinct_id(), posthog.get_property("$user_state") !== "identified");
 }
 
 export function trackPageview(path: string) {
@@ -65,18 +71,27 @@ export function trackCheckoutStarted() {
 }
 
 export function identifyAnalytics(userId: string) {
-  initializeAnalytics();
-  if (initialized && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) posthog.identify(userId);
+  try {
+    initializeAnalytics();
+    if (initialized && !excludedBrowser() && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      const first = firstTouchPersonProperties(rememberFirstTouch());
+      if (Object.keys(first).length) posthog.identify(userId, undefined, first);
+      else posthog.identify(userId);
+      rememberAnalyticsId(posthog.get_distinct_id(), false);
+    }
+  } catch { /* Identity telemetry must not block successful login or signup. */ }
 }
 
 export function resetAnalytics() {
-  if (initialized) posthog.reset();
+  if (initialized) { posthog.reset(); rememberAnalyticsId(posthog.get_distinct_id(), true); }
 }
 
 export function analyticsHeaders(): Record<string, string> {
-  initializeAnalytics();
-  if (!initialized) return {};
-  return { "X-PostHog-Distinct-Id": posthog.get_distinct_id() };
+  try {
+    initializeAnalytics();
+    if (!initialized || excludedBrowser()) return {};
+    return { "X-PostHog-Distinct-Id": posthog.get_distinct_id() };
+  } catch { return {}; } // SDK/storage failure must never prevent a product request.
 }
 
 export function trackDiagnosticAnswer(sessionId: string, ordinal: number, domainCode: string, isCorrect: boolean, certId = PMLE_CERT_ID, total = 20) {

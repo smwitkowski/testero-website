@@ -28,7 +28,7 @@ describe("beta start API", () => {
     const response = await start(request({ certId: "data-engineer", questionCount: count }));
     expect(response.status).toBe(201);
     expect(createDiagnosticStart).toHaveBeenCalledWith(mocks.client, expect.any(String), undefined, null, expect.anything(), count, "data-engineer");
-    expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_started", sessionId, { session_id: sessionId, length: count, cert_id: "data-engineer" });
+    expect(scheduleFunnelEvent).toHaveBeenCalledWith(expect.any(Request), "diagnostic_started", sessionId, { session_id: sessionId, length: count, cert_id: "data-engineer" }, undefined, null);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
   });
   it("defaults beta requests to five while preserving PMLE default twenty", async () => {

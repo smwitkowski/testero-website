@@ -1,0 +1,58 @@
+[
+  {
+    "phase": "before-production",
+    "width": 1280,
+    "medianMs": 985.7,
+    "minMs": 978.9,
+    "maxMs": 993.3
+  },
+  {
+    "phase": "before-production",
+    "width": 375,
+    "medianMs": 993.6,
+    "minMs": 991.6,
+    "maxMs": 996.8
+  },
+  {
+    "phase": "after-production",
+    "width": 1280,
+    "medianMs": 966.5,
+    "minMs": 960.4,
+    "maxMs": 1018
+  },
+  {
+    "phase": "after-production",
+    "width": 375,
+    "medianMs": 959.7,
+    "minMs": 959.5,
+    "maxMs": 961.4
+  },
+  {
+    "phase": "before-production-slow-resume",
+    "width": 1280,
+    "medianMs": 5987.8,
+    "minMs": 5976.3,
+    "maxMs": 6013.2
+  },
+  {
+    "phase": "before-production-slow-resume",
+    "width": 375,
+    "medianMs": 5974.4,
+    "minMs": 5969.8,
+    "maxMs": 5976
+  },
+  {
+    "phase": "after-production-slow-resume",
+    "width": 1280,
+    "medianMs": 981.5,
+    "minMs": 971.8,
+    "maxMs": 1044.9
+  },
+  {
+    "phase": "after-production-slow-resume",
+    "width": 375,
+    "medianMs": 971.5,
+    "minMs": 963.4,
+    "maxMs": 973.1
+  }
+]

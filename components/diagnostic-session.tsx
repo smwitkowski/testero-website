@@ -77,7 +77,7 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
       if (result.completed) trackDiagnostic("diagnostic_completed", sessionId, undefined, result.progress.certId ?? certId);
       setAnswer(result);
     } catch (reason) {
-      if (!signal.aborted) setAnswerError(`${requestError(reason)} Retry loads your saved progress before you answer again.`);
+      if (!signal.aborted) setAnswerError(`${requestError(reason)} Tap Retry to reload your progress, then answer again.`);
     } finally {
       if (!signal.aborted) {
         submitting.current = false;
@@ -100,7 +100,7 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
     {beta && certName && <p className="text-sm text-muted-foreground">{certName} · Beta diagnostic</p>}
   </header>;
   if (error || answerError) return <div className="space-y-6">{header}<DiagnosticError message={error || answerError!} onRetry={retry} /></div>;
-  if (!data || data.status === "completed") return <div className="space-y-6">{header}<DiagnosticLoading message={data ? "Opening your results…" : "Loading your saved progress…"} /></div>;
+  if (!data || data.status === "completed") return <div className="space-y-6">{header}<DiagnosticLoading message={data ? "Opening your results…" : "Loading your question…"} /></div>;
   if (!question) return <div className="space-y-6">{header}<DiagnosticError message="Your next question could not be loaded. Retry to load your saved progress." onRetry={retry} /></div>;
 
   // ~60s per remaining question (this one included), rounded up; hidden under a minute.
@@ -133,7 +133,7 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
             </CardHeader>
             <CardContent className="px-0 pb-0 sm:px-8 sm:pb-8">
               <form id="diagnostic-answer" onSubmit={submit} className="space-y-6" aria-busy={pending}>
-                {readOnly && <p className="text-sm text-muted-foreground">Saved answer. Previous answers are read-only and cannot be changed.</p>}
+                {readOnly && <p className="text-sm text-muted-foreground">Already answered. Answers can&apos;t be changed.</p>}
                 <fieldset disabled={pending || readOnly || !!feedback} className="space-y-3">
                   <legend className="mb-3 text-sm font-medium">{readOnly ? "Your saved answer" : feedback ? "Your answer" : "Choose one answer"}</legend>
                   {question.options.map((option) => {
@@ -146,8 +146,8 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
                   })}
                 </fieldset>
                 {feedback && <div ref={reveal} role="status" className={`rounded-md p-4 ${feedback.isCorrect ? "bg-solid-background text-solid" : "bg-focus-area-background text-focus-area"}`}>
-                  <p className="font-semibold">{feedback.isCorrect ? `Correct: ${feedback.correctLabel}.` : `Not quite. You chose ${feedback.selectedLabel}; the answer is ${feedback.correctLabel}.`}</p>
-                  <p className="mt-1 text-sm">{beta ? "Your readiness tier comes at the end." : data.totalQuestions < 10 ? "Your overall readiness score comes at the end." : "Your full report, with your strongest and weakest domains, comes at the end."}</p>
+                  <p className="font-semibold">{feedback.isCorrect ? `Correct. The answer is ${feedback.correctLabel}.` : `Not quite. The correct answer is ${feedback.correctLabel}.`}</p>
+                  <p className="mt-1 text-sm">{beta ? "Your readiness tier comes at the end." : data.totalQuestions < 10 ? "Your score and one free full explanation come at the end." : "Your score by domain and one free full explanation come at the end."}</p>
                 </div>}
                 {pending && <p role="status" className="text-sm text-muted-foreground">Saving your answer…</p>}
               </form>

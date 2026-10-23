@@ -9,15 +9,15 @@ import type { DiagnosticResult } from "@/lib/diagnostic/types";
 
 export function DiagnosticUnlockCard({ result, signedIn = false }: { result: DiagnosticResult; signedIn?: boolean }) {
   return <section aria-label="Unlock PMLE Pass" className="space-y-3 rounded-lg border border-border bg-card p-5 sm:p-7">
-    <h2 className="text-xl font-semibold">See why each option is right or wrong</h2>
-    <p className="text-sm leading-relaxed text-muted-foreground">Explanations for every question + progress tracking + unlimited practice · $39 one-time, 90 days · no auto-renew.</p>
-    {signedIn ? <CheckoutButton onCheckout={() => trackResults("unlock_cta_clicked", result)} /> : <Button asChild><Link href="/signup?next=%2Fpricing" onClick={() => trackResults("unlock_cta_clicked", result)}>Unlock PMLE Pass: $39</Link></Button>}
-    {!signedIn && <p className="text-sm text-muted-foreground">Create an account, then continue to checkout for PMLE Pass.</p>}
+    <h2 className="text-xl font-semibold">Get explanations for every question</h2>
+    <p className="text-sm leading-relaxed text-muted-foreground">Every option explained, progress tracking and unlimited practice. $39 one-time for 90 days. No auto-renew. 7-day refund.</p>
+    {signedIn ? <CheckoutButton label="Get PMLE Pass: $39" onCheckout={() => trackResults("unlock_cta_clicked", result)} /> : <Button asChild><Link href="/signup?next=%2Fpricing" onClick={() => trackResults("unlock_cta_clicked", result)}>Get PMLE Pass: $39</Link></Button>}
+    {!signedIn && <p className="text-sm text-muted-foreground">Free account first, then checkout. Nothing is charged until checkout.</p>}
   </section>;
 }
 
 export function DiagnosticPassOption({ result }: { result: DiagnosticResult }) {
-  return <Button asChild variant="outline"><Link href="/pricing" onClick={() => trackResults("unlock_cta_clicked", result)}>PMLE Pass · $39 / 90 days</Link></Button>;
+  return <Button asChild variant="outline"><Link href="/pricing" onClick={() => trackResults("unlock_cta_clicked", result)}>See PMLE Pass</Link></Button>;
 }
 
 export function SignedInDiagnosticUnlock({ result, compact = false }: { result: DiagnosticResult; compact?: boolean }) {

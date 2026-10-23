@@ -1,0 +1,67 @@
+{
+  "phase": "before-production",
+  "throttle": "Fast 4G: 4Mbps down / 3Mbps up / 20ms RTT, no CPU throttling",
+  "mode": "local production build, route warmed, cold browser context each run",
+  "rows": [
+    {
+      "width": 1280,
+      "run": 1,
+      "enabled": 985.6999999880791,
+      "interactive": 985.6999999880791,
+      "question": null,
+      "aboveFold": true,
+      "y": 615.25,
+      "domContentLoaded": 164.59999999403954
+    },
+    {
+      "width": 1280,
+      "run": 2,
+      "enabled": 978.8999999761581,
+      "interactive": 978.8999999761581,
+      "question": null,
+      "aboveFold": true,
+      "y": 615.25,
+      "domContentLoaded": 165.89999997615814
+    },
+    {
+      "width": 1280,
+      "run": 3,
+      "enabled": 993.3000000119209,
+      "interactive": 993.3000000119209,
+      "question": null,
+      "aboveFold": true,
+      "y": 615.25,
+      "domContentLoaded": 171
+    },
+    {
+      "width": 375,
+      "run": 1,
+      "enabled": 996.7999999821186,
+      "interactive": 996.7999999821186,
+      "question": null,
+      "aboveFold": false,
+      "y": 816.75,
+      "domContentLoaded": 174.2999999821186
+    },
+    {
+      "width": 375,
+      "run": 2,
+      "enabled": 993.5999999940395,
+      "interactive": 993.5999999940395,
+      "question": null,
+      "aboveFold": false,
+      "y": 816.75,
+      "domContentLoaded": 168.09999999403954
+    },
+    {
+      "width": 375,
+      "run": 3,
+      "enabled": 991.5,
+      "interactive": 991.6000000238419,
+      "question": null,
+      "aboveFold": false,
+      "y": 816.75,
+      "domContentLoaded": 165.80000001192093
+    }
+  ]
+}

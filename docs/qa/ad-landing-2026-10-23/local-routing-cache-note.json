@@ -1,0 +1,9 @@
+{
+  "run": "third full local e2e",
+  "exitCode": 1,
+  "passed": 2,
+  "skipped": 16,
+  "failed": 16,
+  "diagnosis": "Multiple existing API/page routes returned framework HTML404, despite source and compiled route files existing. Diagnostic POST404 content-type text/html proves framework routing failure, not application JSON error. No Next process remains after managed runner exits.",
+  "recovery": "Remove only own generated .next/dev cache; retry standard full command with DEBUG=pw:webserver for logs; no product/test code or timeouts changed."
+}
