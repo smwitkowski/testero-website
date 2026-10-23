@@ -1,0 +1,68 @@
+{
+  "phase": "before-production-slow-resume",
+  "resumeDelayMs": 5000,
+  "throttle": "Fast 4G: 4Mbps down / 3Mbps up / 20ms RTT, no CPU throttling",
+  "mode": "local production build, route warmed, cold browser context each run",
+  "rows": [
+    {
+      "width": 1280,
+      "run": 1,
+      "enabled": 6013.100000023842,
+      "interactive": 6013.200000017881,
+      "question": null,
+      "aboveFold": true,
+      "y": 615.25,
+      "domContentLoaded": 156.30000001192093
+    },
+    {
+      "width": 1280,
+      "run": 2,
+      "enabled": 5976.299999982119,
+      "interactive": 5976.299999982119,
+      "question": null,
+      "aboveFold": true,
+      "y": 615.25,
+      "domContentLoaded": 174.69999998807907
+    },
+    {
+      "width": 1280,
+      "run": 3,
+      "enabled": 5987.800000011921,
+      "interactive": 5987.800000011921,
+      "question": null,
+      "aboveFold": true,
+      "y": 615.25,
+      "domContentLoaded": 167.80000001192093
+    },
+    {
+      "width": 375,
+      "run": 1,
+      "enabled": 5974.300000011921,
+      "interactive": 5974.4000000059605,
+      "question": null,
+      "aboveFold": false,
+      "y": 816.75,
+      "domContentLoaded": 168.19999998807907
+    },
+    {
+      "width": 375,
+      "run": 2,
+      "enabled": 5969.800000011921,
+      "interactive": 5969.800000011921,
+      "question": null,
+      "aboveFold": false,
+      "y": 816.75,
+      "domContentLoaded": 171.40000000596046
+    },
+    {
+      "width": 375,
+      "run": 3,
+      "enabled": 5976,
+      "interactive": 5976,
+      "question": null,
+      "aboveFold": false,
+      "y": 816.75,
+      "domContentLoaded": 171.5
+    }
+  ]
+}

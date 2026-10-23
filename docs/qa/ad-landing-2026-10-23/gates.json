@@ -1,0 +1,66 @@
+{
+  "unit": {
+    "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm test",
+    "exitCode": 0,
+    "files": 94,
+    "tests": 1722
+  },
+  "lint": {
+    "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run lint",
+    "exitCode": 0
+  },
+  "typecheck": {
+    "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run typecheck",
+    "exitCode": 0
+  },
+  "optimizedBuild": {
+    "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:56541 NEXT_PUBLIC_SUPABASE_ANON_KEY=local-anon-key-placeholder SUPABASE_SERVICE_ROLE_KEY=local-service-role-key-placeholder NEXT_PUBLIC_POSTHOG_KEY= NEXT_PUBLIC_POSTHOG_HOST= NEXT_TELEMETRY_DISABLED=1 npm run build",
+    "exitCode": 0
+  },
+  "e2e": {
+    "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run test:e2e:local",
+    "exitCode": 1,
+    "passed": 15,
+    "skipped": 16,
+    "failed": 3,
+    "firstFullRun": {
+      "exitCode": 0,
+      "passed": 18,
+      "skipped": 16
+    },
+    "finalRecovery": "whole generated.next cleared before finalrun;framework404 gone",
+    "failures": [
+      "accounts-practice120s timeout",
+      "auth-email CheckyourEmail heading5s timeout",
+      "free-tier-monthly paidPracticeScore heading5s timeout"
+    ],
+    "newPaidCases": "4passed in finalrun",
+    "note": "Fullbrowsergate not consistentlygreen;no unrelatedsourceortimeoutchanges;timeboxed by coordinator."
+  },
+  "docker": {
+    "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true docker build .",
+    "exitCode": 0,
+    "image": "sha256:420d8d47a3781789cf69c80c9db2e335b79ab4b8ae2e91abae61d9402c3730fa",
+    "note": "final Google ad-crawler followup application source; known ENV-name warning uses placeholder only"
+  },
+  "applicationSourceCommit": "c16d6c5",
+  "baselineCommit": "8231d73",
+  "testHardeningCommit": "d396fab",
+  "timingApplicationSourceCommit": "166a05a",
+  "adCrawlerCases": {
+    "unitAndExclusions": "passed all five Google ad crawler UA cases plus preserved prior bots and normal browser control",
+    "exactUserAgent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; Mozilla/5.0, Google-AdWords-Express) Chrome/153..."
+  },
+  "optimizedPaidE2e": {
+    "exitCode": 0,
+    "passed": 5,
+    "mode": "optimized local Next build via next start, loopback3000 and local v2 only",
+    "cases": [
+      "desktop slow lookup",
+      "375px slow lookup",
+      "returning owned question2",
+      "failed lookup manual start",
+      "exactGoogleAdWordsExpressUA no autostart then explicit click"
+    ]
+  }
+}

@@ -63,13 +63,20 @@ for (const width of [1280, 375]) {
 
 test("returning paid visitor resumes owned answers without creating a new check", async ({ page, context, browser }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  const created = await page.request.post("/api/diagnostic", { data: { questionCount: 5 } });
+  // Use browser requests so the real httpOnly Secure cookie is respected in
+  // optimized local runs too; APIRequestContext treats plain HTTP differently.
+  await page.goto("/diagnostic?length=5&src=ad");
+  const createdResponse = page.waitForResponse(response => new URL(response.url()).pathname === "/api/diagnostic" && response.request().method() === "POST");
+  await page.getByRole("button", { name: "Start the 5-question check", exact: true }).click();
+  const created = await createdResponse;
   expect(created.status()).toBe(201);
   const data = await created.json() as DiagnosticStartResponse;
   sessions.add(data.sessionId);
-  const question = data.progress.currentQuestion!;
-  const saved = await page.request.post(`/api/diagnostic/${data.sessionId}/answer`, { data: { itemId: question.id, selectedLabel: question.options[0].label } });
-  expect(saved.status()).toBe(200);
+  await expect(page.getByText("Question 1 of 5", { exact: true })).toBeVisible();
+  await page.getByRole("radio").first().check();
+  await page.getByRole("button", { name: "Check answer", exact: true }).click();
+  await page.getByRole("button", { name: "Next question", exact: true }).click();
+  await expect(page.getByText("Question 2 of 5", { exact: true })).toBeVisible();
   const before = (await context.cookies()).find(cookie => cookie.name === "testero_anon");
   expect(before).toMatchObject({ httpOnly: true, sameSite: "Lax" });
   let posts = 0;

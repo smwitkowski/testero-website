@@ -1,0 +1,11 @@
+[WebServer] ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+
+Running 5 tests using 1 worker
+
+  ✓  1 [chromium] › e2e/paid-landing.spec.ts:18:3 › paid 1280px CTA starts while saved-progress lookup is held (1.3s)
+  ✓  2 [chromium] › e2e/paid-landing.spec.ts:18:3 › paid 375px CTA starts while saved-progress lookup is held (503ms)
+  ✓  3 [chromium] › e2e/paid-landing.spec.ts:64:1 › returning paid visitor resumes owned answers without creating a new check (784ms)
+  ✓  4 [chromium] › e2e/paid-landing.spec.ts:99:1 › failed lookup does not block a fresh manual start (297ms)
+  ✓  5 [chromium] › e2e/paid-landing.spec.ts:118:3 › Google Ads final-URL checker › does not create a session automatically, but an explicit click still works (798ms)
+
+  5 passed (7.0s)

@@ -1,0 +1,61 @@
+{
+  "phase": "before",
+  "throttle": "Fast 4G: 4Mbps down / 3Mbps up / 20ms RTT, no CPU throttling",
+  "mode": "local Next dev, route warmed, cold browser context each run",
+  "rows": [
+    {
+      "width": 1280,
+      "run": 1,
+      "enabled": 3914.5999999940395,
+      "question": null,
+      "aboveFold": true,
+      "y": 615.25,
+      "domContentLoaded": 203.59999999403954
+    },
+    {
+      "width": 1280,
+      "run": 2,
+      "enabled": 2810.7000000178814,
+      "question": null,
+      "aboveFold": true,
+      "y": 615.25,
+      "domContentLoaded": 223.09999999403954
+    },
+    {
+      "width": 1280,
+      "run": 3,
+      "enabled": 2763,
+      "question": null,
+      "aboveFold": true,
+      "y": 615.25,
+      "domContentLoaded": 192.90000000596046
+    },
+    {
+      "width": 375,
+      "run": 1,
+      "enabled": 2820.5,
+      "question": null,
+      "aboveFold": false,
+      "y": 816.75,
+      "domContentLoaded": 208.40000000596046
+    },
+    {
+      "width": 375,
+      "run": 2,
+      "enabled": 3018.0999999940395,
+      "question": null,
+      "aboveFold": false,
+      "y": 816.75,
+      "domContentLoaded": 499.69999998807907
+    },
+    {
+      "width": 375,
+      "run": 3,
+      "enabled": 2809.5,
+      "question": null,
+      "aboveFold": false,
+      "y": 816.75,
+      "domContentLoaded": 219.7000000178814
+    }
+  ]
+}

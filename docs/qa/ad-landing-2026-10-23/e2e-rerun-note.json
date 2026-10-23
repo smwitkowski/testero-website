@@ -1,0 +1,25 @@
+{
+  "run": "second full clean local e2e",
+  "exitCode": 1,
+  "passed": 17,
+  "skipped": 16,
+  "failure": "existing free-tier-monthly practice summary heading timed out at5000ms while Loading your practice summary was shown",
+  "apiEvidence": [
+    {
+      "method": "GET",
+      "status": -1,
+      "durationMs": 1.0540000000037253
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "durationMs": 433.249
+    },
+    {
+      "method": "GET",
+      "status": 200,
+      "durationMs": 237.99700000000303
+    }
+  ],
+  "scopeDecision": "No unrelated practice source or timeout changes. Inspect/retry complete suite without concurrent gates."
+}
