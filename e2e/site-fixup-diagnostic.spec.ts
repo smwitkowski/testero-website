@@ -54,6 +54,7 @@ test("one-click start preserves progress through Browser Back, Forward and cache
   await expect(page.getByRole("link", { name: "Resume your diagnostic", exact: true })).toBeVisible();
   expect(posts).toHaveLength(1);
   await page.getByRole("link", { name: "Back to home", exact: true }).click();
+  await expect(page).toHaveURL("/");
   await page.goBack();
   await expect(page.getByRole("link", { name: "Resume your diagnostic", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Resume your diagnostic", exact: true }).click();

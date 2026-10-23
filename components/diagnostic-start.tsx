@@ -90,6 +90,9 @@ export function DiagnosticStart({ resumeId: serverResumeId = null, autoStart = f
 
   useEffect(() => {
     if (!autoStart || autoAttempted.current || restoredId || checkingResume || resumeError || resumeId) return;
+    // A cached server payload can outlive its query. Back to a consumed URL must not start.
+    const explicitStart = new URLSearchParams(window.location.search).getAll("start");
+    if (explicitStart.length !== 1 || explicitStart[0] !== "1") return;
     autoAttempted.current = true;
     void start();
   }, [autoStart, restoredId, checkingResume, resumeError, resumeId, start]);
