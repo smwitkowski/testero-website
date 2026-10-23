@@ -17,7 +17,7 @@ export function DiagnosticUnlockCard({ result, signedIn = false }: { result: Dia
 }
 
 export function DiagnosticPassOption({ result }: { result: DiagnosticResult }) {
-  return <Button asChild variant="outline"><Link href={result.review ? "/pricing" : "/signup?next=%2Fpricing"} onClick={() => trackResults("unlock_cta_clicked", result)}>PMLE Pass · $39 / 90 days</Link></Button>;
+  return <Button asChild variant="outline"><Link href="/pricing" onClick={() => trackResults("unlock_cta_clicked", result)}>PMLE Pass · $39 / 90 days</Link></Button>;
 }
 
 export function SignedInDiagnosticUnlock({ result, compact = false }: { result: DiagnosticResult; compact?: boolean }) {

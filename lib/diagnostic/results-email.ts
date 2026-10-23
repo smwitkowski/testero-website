@@ -58,7 +58,7 @@ export function resultsEmailText(result: DiagnosticResult, now = Date.now()) {
   const domains = weakestFirst(result.domainBreakdown);
   return ["Your PMLE diagnostic results", `${result.correctAnswers}/${result.totalQuestions} correct (${result.score}%). Study guidance: ${result.readiness.label}.`,
     "Small diagnostic samples are study signals, not an exam-readiness prediction.",
-    ...(tierOnly ? ["\nFor a per-domain breakdown, take the 20-question diagnostic: https://testero.ai/diagnostic?length=20"] : [
+    ...(tierOnly ? ["\nFor a broader per-domain breakdown, take the 20-question diagnostic: https://testero.ai/diagnostic?length=20"] : [
       "\nScores by domain:", ...result.domainBreakdown.map(d => `${d.domainName}: ${d.correct}/${d.total} (${d.percentage}%)`),
       "\nWeakest sampled domains:", ...domains.slice(0, 2).map(d => `- ${d.domainName}`),
     ]),
@@ -86,7 +86,7 @@ export function resultsEmailHtml(result: DiagnosticResult, now = Date.now()) {
 <h1 style="margin:0 0 16px;font-size:22px">Your PMLE diagnostic results</h1>
 <p style="color:#344054">${e(result.correctAnswers)}/${e(result.totalQuestions)} correct (${e(result.score)}%). Study guidance: ${e(result.readiness.label)}.</p>
 <p style="font-size:14px;color:#475467">Small diagnostic samples are study signals, not an exam-readiness prediction.</p>
-${tierOnly ? '<p style="font-size:16px;font-weight:600"><a href="https://testero.ai/diagnostic?length=20" style="color:#1F4CB5">Take the 20-question diagnostic for a per-domain breakdown →</a></p>' : `<h2 style="font-size:18px">Scores by domain</h2><table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-size:14px"><thead><tr><th scope="col" style="${cell}">Domain</th><th scope="col" style="${cell}">Correct</th><th scope="col" style="${cell}">Score</th></tr></thead><tbody>${scores}</tbody></table>
+${tierOnly ? '<p style="font-size:16px;font-weight:600"><a href="https://testero.ai/diagnostic?length=20" style="color:#1F4CB5">Take the 20-question diagnostic for a broader per-domain breakdown →</a></p>' : `<h2 style="font-size:18px">Scores by domain</h2><table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-size:14px"><thead><tr><th scope="col" style="${cell}">Domain</th><th scope="col" style="${cell}">Correct</th><th scope="col" style="${cell}">Score</th></tr></thead><tbody>${scores}</tbody></table>
 <h2 style="font-size:18px">Weakest sampled domains</h2><ul style="margin:0;padding-left:20px;font-size:14px">${weakestFirst(result.domainBreakdown).slice(0, 2).map(domain => `<li style="margin:4px 0">${e(domain.domainName)}</li>`).join("")}</ul>`}
 <h2 style="font-size:18px">Your 4-week study plan</h2><p style="font-size:14px;color:#475467">4 hours/week (16 hours total), in 15-minute blocks. Plan ends: ${e(plan.examDate)}. ${tierOnly ? "Time uses official section weights, not quick-check domain scores." : "Time uses official section weight × (1 + sampled error rate), so weaker sampled domains receive more time. Unsampled domains retain their official weight."}</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tbody>${weeks}</tbody></table>
