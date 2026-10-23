@@ -10,8 +10,7 @@ import { CertWaitlistForm } from "@/components/cert-waitlist-form";
 import { CertificationExplainer } from "@/components/certification-explainer";
 import { getBlogEntries, getFaqEntries } from "@/lib/content/loader";
 import { pageMetadata } from "@/lib/seo";
-import { betaDiagnosticEnabled } from "@/lib/diagnostic/beta";
-import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { getDiagnosticAvailability } from "@/lib/certifications/availability";
 
 type Props = { params: Promise<{ slug: string }> };
 export const dynamicParams = false;
@@ -28,11 +27,7 @@ export default async function CertificationPage({ params }: Props) {
   const { slug } = await params;
   const cert = getCertification(slug);
   if (!cert) notFound();
-  let betaEnabled = false;
-  if (slug !== PMLE_CERT_ID) {
-    try { betaEnabled = await betaDiagnosticEnabled(createServiceSupabaseClient(), slug); }
-    catch { /* Keep the existing notify form when availability cannot be verified. */ }
-  }
+  const betaEnabled = await getDiagnosticAvailability(slug) === "beta";
   const checked = checkedDate(cert).slice(0, 10);
   const primary = cert.exam_variants.find(exam => exam.variant === "standard" || exam.variant === "ga") ?? cert.exam_variants[0];
   const related = certifications.filter(item => item.cert_id !== slug && item.level === cert.level).slice(0, 3);
