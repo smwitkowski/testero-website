@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import HomePage from "@/app/page";
 import AboutPage from "@/app/about/page";
 import { CertificationPreview } from "@/components/certification-preview";
-import { FOUNDER_BIO } from "@/lib/content/founder";
+import { FOUNDER_BIO, FOUNDER_STORY } from "@/lib/content/founder";
 import { PMLE_EXAM_GUIDE_URL } from "@/lib/constants/pmle-guide";
 
 const state = vi.hoisted(() => ({ slide: 0, availability: {} as Record<string, string> }));
@@ -51,11 +51,13 @@ describe("PMLE homepage and founder", () => {
     expect(coming).toContain("Professional Cloud Architect");
     expect(html).not.toContain("Only PMLE has a diagnostic");
   });
-  it("shares the exact editable founder copy across homepage and about", async () => {
-    const bioMarkup = renderToStaticMarkup(createElement("p", null, FOUNDER_BIO)).slice(3, -4);
-    expect(await homeMarkup()).toContain(bioMarkup);
-    expect(renderToStaticMarkup(createElement(AboutPage))).toContain(bioMarkup);
-    expect(FOUNDER_BIO).toBe("Testero is built by Stephen Witkowski, an independent developer. I started it because PMLE practice material kept lagging behind Google's exam guide. Questions are drafted with AI from current Google Cloud documentation, then checked against those docs before they go live. When you report a problem, I fix the question and note the change.");
+  it("shows the short founder bio on the homepage and the full story on /about", async () => {
+    const text = (s: string) => renderToStaticMarkup(createElement("p", null, s)).slice(3, -4);
+    expect(await homeMarkup()).toContain(text(FOUNDER_BIO));
+    const about = renderToStaticMarkup(createElement(AboutPage));
+    for (const paragraph of FOUNDER_STORY) expect(about).toContain(text(paragraph));
+    expect(FOUNDER_BIO).toContain("Professional Machine Learning Engineer certification");
+    expect(FOUNDER_STORY.join(" ")).toContain("drafted with AI");
   });
   it("uses the same map for the PDE beta carousel and removes its beta when unavailable", () => {
     state.slide = 3;
