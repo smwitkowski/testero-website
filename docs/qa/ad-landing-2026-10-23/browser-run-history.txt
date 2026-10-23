@@ -40,3 +40,11 @@ Final full.next-clear run — standard command above, no concurrent gates
 Raw Playwright traces are NOT committed: they include local test authentication cookies.
 
 Optimized local final paid-landing follow-up:5passed(7.0s),including exactGoogleAdWordsExpress no-gesture session suppression and manualclick success. Initial optimized APIRequestContext setup could not send theSecure cookie onplainHTTP; switched returning setup to real browserinteractions and all5passed.
+
+Coordinator-requested matched baseline follow-up (2026-10-23):
+  Exact command: env -i PATH="$PATH" HOME="$HOME" CI=true npm run test:e2e:local
+  Main8231d73:clean checkout,npmci,absent.next;exit0,14passed,16skipped(2.3min).
+  PR1024acd:serverstopped,whole.nextremoved,npmci;exit0,19passed,16skipped(2.3min).
+  All3prior timeoutcases pass onboth;no regressionreproduced;not provenpre-existing.
+  No runtime,testsourceortimeoutchanges. Mode is fresh Nextdev fullsuite,not optimizedproduction. Optimizedpaid5/5evidence remainsseparate.
+  See baseline-comparison.md and baseline-comparison.json.

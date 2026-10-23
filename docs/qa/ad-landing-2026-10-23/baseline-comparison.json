@@ -1,0 +1,53 @@
+{
+  "mainCommit": "8231d73125ab57ca937e33915116f2e3242e9140",
+  "prCommit": "1024acd40962f3e16d87a4c9fd514bb241ed71b7",
+  "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run test:e2e:local",
+  "mode": "fresh Next dev full suite; not optimized production",
+  "environment": {
+    "node": "v22.23.4",
+    "npm": "10.9.9",
+    "ci": true,
+    "cleanEnvironmentKeys": [
+      "PATH",
+      "HOME",
+      "CI"
+    ],
+    "localServices": "same loopback testero-v2 Supabase and Stripe fixtures",
+    "workers": 1,
+    "retries": 0,
+    "publicAnalytics": "disabled",
+    "npmCi": "fresh on both",
+    "nextCache": "absent before both runs",
+    "concurrentGates": false
+  },
+  "main": {
+    "exitCode": 0,
+    "passed": 14,
+    "skipped": 16,
+    "failed": 0
+  },
+  "pr": {
+    "exitCode": 0,
+    "passed": 19,
+    "skipped": 16,
+    "failed": 0
+  },
+  "cases": [
+    {
+      "path": "e2e/accounts-practice.spec.ts:49",
+      "mainSeconds": 42.9,
+      "prSeconds": 33.4
+    },
+    {
+      "path": "e2e/auth-email.spec.ts:50",
+      "mainSeconds": 13.0,
+      "prSeconds": 13.6
+    },
+    {
+      "path": "e2e/free-tier-monthly.spec.ts:36",
+      "mainSeconds": 9.2,
+      "prSeconds": 15.7
+    }
+  ],
+  "finding": "All three passed on main and PR; no regression reproduced. Earlier failures not proven pre-existing."
+}
