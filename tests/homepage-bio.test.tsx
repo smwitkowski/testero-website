@@ -57,7 +57,8 @@ describe("PMLE homepage and founder", () => {
     const about = renderToStaticMarkup(createElement(AboutPage));
     for (const paragraph of FOUNDER_STORY) expect(about).toContain(text(paragraph));
     expect(FOUNDER_BIO).toContain("Professional Machine Learning Engineer certification");
-    expect(FOUNDER_STORY.join(" ")).toContain("drafted with AI");
+    expect(FOUNDER_STORY.join(" ")).toContain("AI helps write each scenario");
+    expect(`${FOUNDER_BIO} ${FOUNDER_STORY.join(" ")}`).not.toMatch(/66degrees/i);
   });
   it("uses the same map for the PDE beta carousel and removes its beta when unavailable", () => {
     state.slide = 3;
