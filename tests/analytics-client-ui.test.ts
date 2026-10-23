@@ -33,11 +33,34 @@ it("captures question metadata only after its answer was saved, before completio
   const form = formIn(DiagnosticSession({ sessionId: "session" }))!;
   await form.props.onSubmit({ preventDefault: vi.fn() });
   expect(diagnosticRequest).toHaveBeenCalledWith("/api/diagnostic/session/answer", expect.objectContaining({ body: JSON.stringify({ itemId: "item", selectedLabel: "A" }) }));
-  expect(mocks.answer.mock.calls).toEqual([["session", 3, "D2", true, "machine-learning-engineer"]]);
+  expect(mocks.answer.mock.calls).toEqual([["session", 3, "D2", true, "machine-learning-engineer", 20]]);
   // The reveal shows first; results open only from its "See my results" button.
   expect(mocks.replace).not.toHaveBeenCalled();
   expect(mocks.completed).toHaveBeenCalledWith("diagnostic_completed", "session", undefined, "machine-learning-engineer");
   expect(mocks.answer.mock.invocationCallOrder[0]).toBeLessThan(mocks.completed.mock.invocationCallOrder[0]);
+});
+it.each([5, 10, 20])("captures each of %i committed answers once with the session length", async total => {
+  mocks.totalQuestions = total;
+  for (let index = 0; index < total; index++) {
+    mocks.answeredCount = index;
+    mocks.nullStateCalls = 0;
+    mocks.request.mockResolvedValue({ completed: index === total - 1, progress: { certId: "data-engineer" }, feedback: { itemId: "item", selectedLabel: "A", correctLabel: "B", isCorrect: false } });
+    await formIn(DiagnosticSession({ sessionId: "session" }))!.props.onSubmit({ preventDefault: vi.fn() });
+    expect(mocks.answer).toHaveBeenCalledTimes(index + 1);
+  }
+  expect(mocks.answer.mock.calls).toEqual(Array.from({ length: total }, (_, index) => ["session", index + 1, "D2", false, "data-engineer", total]));
+});
+it("ignores duplicate submissions while an answer is being committed", async () => {
+  let finish!: (result: unknown) => void;
+  mocks.request.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+  const submit = formIn(DiagnosticSession({ sessionId: "session" }))!.props.onSubmit;
+  const first = submit({ preventDefault: vi.fn() });
+  await submit({ preventDefault: vi.fn() });
+  expect(mocks.request).toHaveBeenCalledOnce();
+  expect(mocks.answer).not.toHaveBeenCalled();
+  finish({ completed: false, progress: {}, feedback: { itemId: "item", selectedLabel: "A", correctLabel: "A", isCorrect: true } });
+  await first;
+  expect(mocks.answer).toHaveBeenCalledOnce();
 });
 it("does not capture question answered when saving fails", async () => {
   mocks.request.mockRejectedValue(new Error("Save failed"));
