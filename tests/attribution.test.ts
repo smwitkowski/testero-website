@@ -34,9 +34,32 @@ describe("first-party first-touch attribution", () => {
     expect(b.writes[0]).toMatch(/Path=\/; Max-Age=7776000; SameSite=Lax; Secure$/);
     expect(b.document.cookie).not.toMatch(/diagnostic|https|email/);
   });
-  it("records a direct first visit without borrowing a later campaign", () => {
-    const b = browser(""); expect(rememberFirstTouch()).toEqual({});
-    b.location.search = "?utm_source=later"; expect(rememberFirstTouch()).toEqual({});
+  it.each(["", "?utm_source=private%40example.com&utm_campaign=https%3A%2F%2Fprivate.test"])("leaves untagged or invalid visits (%s) open for the first real campaign", search => {
+    const b = browser(search);
+    expect(rememberFirstTouch()).toEqual({});
+    expect(b.writes).toEqual([]);
+    expect(cookieValue(b.document.cookie, ATTRIBUTION_COOKIE)).toBeUndefined();
+    b.location.search = "?" + new URLSearchParams(first);
+    expect(rememberFirstTouch()).toEqual(first);
+    expect(attributionFromCookies(b.document.cookie)).toEqual(first);
+    b.location.search = "?utm_source=reddit&gclid=later";
+    expect(rememberFirstTouch()).toEqual(first);
+    expect(attributionFromCookies(b.document.cookie)).toEqual(first);
+    expect(b.writes).toHaveLength(1);
+  });
+  it("replaces a legacy empty cookie only when a real campaign arrives", () => {
+    const b = browser("");
+    b.document.cookie = `${ATTRIBUTION_COOKIE}=${encodeURIComponent("{}")}`;
+    b.writes.length = 0;
+    expect(rememberFirstTouch()).toEqual({});
+    expect(b.writes).toEqual([]);
+    b.location.search = "?" + new URLSearchParams(first);
+    expect(rememberFirstTouch()).toEqual(first);
+    expect(attributionFromCookies(b.document.cookie)).toEqual(first);
+    b.location.search = "?utm_source=later";
+    expect(rememberFirstTouch()).toEqual(first);
+    expect(attributionFromCookies(b.document.cookie)).toEqual(first);
+    expect(b.writes).toHaveLength(1);
   });
   it("rejects PII syntax, controls, non-strings, URLs, unbounded fields and unknown keys", () => {
     expect(sanitizeAttribution({ ...first, email: "private@example.com", utm_source: "private@example.com", utm_medium: "https://private.test", utm_campaign: "x".repeat(121), utm_content: "name\nprivate", gclid: {} })).toEqual({});
@@ -123,6 +146,15 @@ describe("server attribution and identity", () => {
     expect(payloads[1].properties).toMatchObject({ ...first, distinct_id: user, source: "server" });
     expect(payloads[1].properties.$set_once.$initial_gclid).toBe(first.gclid);
     expect(JSON.stringify(payloads)).not.toContain("token_hash");
+  });
+  it("does not merge an account UUID disguised as an anonymous browser, but still captures signup", async () => {
+    const otherAccount = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    scheduleFunnelEvent(new Request("https://testero.ai/auth/confirm", { headers: { cookie: cookies(`a.${otherAccount}`) } }), "signup_completed", user);
+    await deferred.mock.calls[0][0]();
+    const payloads = fetchMock.mock.calls.map(([, init]) => JSON.parse(init.body));
+    expect(payloads.map(payload => payload.event)).toEqual(["signup_completed"]);
+    expect(payloads[0].properties).toMatchObject({ ...first, distinct_id: user, source: "server" });
+    expect(JSON.stringify(payloads)).not.toContain(otherAccount);
   });
   it("does not merge another identified account or require cookies to complete signup", async () => {
     for (const cookie of [cookies(`i.bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb`), ""]) {

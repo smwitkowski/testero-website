@@ -34,7 +34,7 @@ export class StripeService {
     if (existing.data.length) return existing.data[0];
     return this.stripe.customers.create({ metadata: { supabase_user_id: userId } }, { idempotencyKey: `pmle-customer:${userId}` });
   }
-  async createCheckoutSession(input: { customerId: string; userId: string; successUrl: string; cancelUrl: string; idempotencyKey: string; analyticsMetadata?: Record<string, string> }): Promise<Stripe.Checkout.Session> {
+  async createCheckoutSession(input: { customerId: string; userId: string; successUrl: string; cancelUrl: string; idempotencyKey: string; idempotencyWindowStart?: number; analyticsMetadata?: Record<string, string> }): Promise<Stripe.Checkout.Session> {
     const price = process.env.STRIPE_PRICE_PMLE_PASS;
     if (!price) throw new Error("Pass price configuration is missing");
     const metadata = { user_id: input.userId, plan_name: "PMLE Pass" };
@@ -42,19 +42,54 @@ export class StripeService {
       analytics_enabled: input.analyticsMetadata.analytics_enabled === "1" ? "1" : "0",
       ...sanitizeAttribution(input.analyticsMetadata),
     } : {};
-    const session = await this.stripe.checkout.sessions.create({
-      customer: input.customerId, mode: "payment", allowed_payment_method_types: ["card"],
-      line_items: [{ price, quantity: 1 }], metadata: { ...analytics, ...metadata }, payment_intent_data: { metadata },
-      success_url: input.successUrl, cancel_url: input.cancelUrl,
-    }, { idempotencyKey: input.idempotencyKey });
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await this.stripe.checkout.sessions.create({
+        customer: input.customerId, mode: "payment", allowed_payment_method_types: ["card"],
+        line_items: [{ price, quantity: 1 }], metadata: { ...analytics, ...metadata }, payment_intent_data: { metadata },
+        success_url: input.successUrl, cancel_url: input.cancelUrl,
+      }, { idempotencyKey: input.idempotencyKey });
+    } catch (error) {
+      if (!(error instanceof Stripe.errors.StripeIdempotencyError)) throw error;
+      // Stripe rejects changed attribution on the same key. Reuse only an owned,
+      // open checkout for this exact product; never create with a different key.
+      const windowStart = input.idempotencyWindowStart ?? Math.floor(Date.now() / 600_000) * 600;
+      let startingAfter: string | undefined;
+      do {
+        const page = await this.stripe.checkout.sessions.list({
+          customer: input.customerId, status: "open", limit: 100,
+          created: { gte: windowStart, lt: windowStart + 600 },
+          expand: ["data.line_items.data.price"],
+          ...(startingAfter ? { starting_after: startingAfter } : {}),
+        });
+        for (const candidate of page.data) {
+          const customerId = typeof candidate.customer === "string" ? candidate.customer : candidate.customer?.id;
+          const items = candidate.line_items;
+          if (customerId === input.customerId && candidate.metadata?.user_id === input.userId &&
+            candidate.metadata?.plan_name === "PMLE Pass" && candidate.mode === "payment" &&
+            candidate.status === "open" && candidate.payment_status === "unpaid" &&
+            candidate.created >= windowStart && candidate.created < windowStart + 600 &&
+            items && !items.has_more && items.data.length === 1 &&
+            items.data[0].price?.id === price && items.data[0].quantity === 1 &&
+            this.permittedCheckoutUrl(candidate, input.successUrl)) return candidate;
+        }
+        startingAfter = page.has_more ? page.data.at(-1)?.id : undefined;
+      } while (startingAfter);
+      throw error;
+    }
     if (!session.url) throw new Error("Missing checkout URL");
-    const url = new URL(session.url);
-    const expected = new URL(input.successUrl);
-    const permitted = this.local
-      ? url.origin === expected.origin && url.pathname === "/checkout/success" && url.searchParams.get("session_id") === session.id
-      : url.protocol === "https:" && url.hostname === "checkout.stripe.com";
-    if (!permitted) throw new Error("Invalid checkout URL");
+    if (!this.permittedCheckoutUrl(session, input.successUrl)) throw new Error("Invalid checkout URL");
     return session;
+  }
+  private permittedCheckoutUrl(session: Stripe.Checkout.Session, successUrl: string): boolean {
+    if (!session.url) return false;
+    try {
+      const url = new URL(session.url);
+      const expected = new URL(successUrl);
+      return this.local
+        ? url.origin === expected.origin && url.pathname === "/checkout/success" && url.searchParams.get("session_id") === session.id
+        : url.protocol === "https:" && url.hostname === "checkout.stripe.com";
+    } catch { return false; }
   }
   retrieveCheckoutSession(id: string) {
     return this.stripe.checkout.sessions.retrieve(id, { expand: ["customer", "line_items.data.price"] });

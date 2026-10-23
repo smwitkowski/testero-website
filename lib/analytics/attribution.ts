@@ -54,11 +54,15 @@ export function rememberFirstTouch(): Attribution {
   try {
     const previous = cookieValue(document.cookie, ATTRIBUTION_COOKIE);
     if (previous !== undefined) {
-      try { return sanitizeAttribution(JSON.parse(previous)); } catch { /* Replace corrupt cookies. */ }
+      try {
+        const saved = sanitizeAttribution(JSON.parse(previous));
+        // Legacy empty cookies must not prevent the first real campaign from being saved.
+        if (Object.keys(saved).length > 0) return saved;
+      } catch { /* Replace corrupt cookies. */ }
     }
     const params = new URLSearchParams(window.location.search);
     const first = sanitizeAttribution(Object.fromEntries(ATTRIBUTION_KEYS.map(key => [key, params.get(key)])));
-    writeCookie(ATTRIBUTION_COOKIE, JSON.stringify(first));
+    if (Object.keys(first).length > 0) writeCookie(ATTRIBUTION_COOKIE, JSON.stringify(first));
     return first;
   } catch { return {}; } // Blocked cookies must not block any product flow.
 }

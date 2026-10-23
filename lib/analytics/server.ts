@@ -47,7 +47,7 @@ export function scheduleFunnelEvent(request: Request, event: FunnelEvent, fallba
     const first = attributionFromCookies(cookies);
     after(async () => {
       // Only merge an anonymous browser. Never merge another identified account in a shared browser.
-      if (event === "signup_completed" && browser?.anonymous && browser.id !== fallbackId && isAccountId(fallbackId)) {
+      if (event === "signup_completed" && browser?.anonymous && !isAccountId(browser.id) && browser.id !== fallbackId && isAccountId(fallbackId)) {
         await captureIdentity(fallbackId, browser.id, first);
       }
       await captureFunnelEvent(event, distinctId, { ...properties, ...first }, insertId);
