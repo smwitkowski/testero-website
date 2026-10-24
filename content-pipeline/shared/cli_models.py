@@ -286,7 +286,7 @@ def _cli_env():
     env = dict(os.environ)
     # Use the CLI login/subscription, not inherited pay-per-token API keys.
     for name in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "OPENAI_API_KEY", "CODEX_API_KEY",
-                 "OPENROUTER_API_KEY", "EXA_API_KEY", "SUPABASE_SERVICE_ROLE_KEY",
+                 "OPENROUTER_API_KEY", "EXA_API_KEY", "SUPABASE_SERVICE_ROLE_KEY", "RESEND_API_KEY",
                  "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY",
                  "ANTHROPIC_BASE_URL", "OPENAI_BASE_URL"):
         env.pop(name, None)
