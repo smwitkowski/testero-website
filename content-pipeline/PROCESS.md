@@ -1,5 +1,44 @@
 # Docs-grounded question process
 
+## Pipeline v6 week 1 (D-045; coordinator-operated live rollout)
+
+New generation freezes `execution_policy: short_circuit_v2` and Argon request
+version 3. Its independent learner-only blind solve is restored before full
+Argon review. Historical review-only version-2 requests remain DRAFT-ingestible,
+but are **never publishable** under v6. The frozen v5 instructions below are
+historical for those existing requests, not permission to omit blind Argon.
+
+The never-stop runner finishes ready candidates after ordinary quality vetoes
+and retries system failures at most twice per candidate. It never retries an
+unchanged quality rejection. Existing PDE frozen slot/retry/resume admission
+rules remain strict; ready requests are judged even when a partial system cohort
+cannot be admitted safely. Generation and ingestion still write **DRAFT only**.
+
+Publication uses `scripts/publish_batch.py`, not `verify_batch.py` or the old
+human `review_batch.py` flow. Defaults are offline shadow reports with a local
+`--questions` export. Explicit `--read-db` permits a coordinator shadow query;
+`--apply` reads current rows and calls atomic `publish_question`. Every seat must
+supply its complete schema and PASS. Both blind solvers must select the exact key
+with confidence >=0.8. Registry, receipts, all explanations, deterministic product
+freshness and canonical content hash must pass. Partial/unknown write checkpoints
+require event reconciliation, never blind retries.
+
+Canaries use normal request shapes in a separate `.council-canaries` tree, which
+cannot reach ingest or publication. Council health requires rolling windows of
+at least 20 observations per defect; missing/malformed judgments are system errors,
+not catches. Critical escapes or full-window catch rate below95% pause publishing.
+Gold below80% pages only. First two defects ship; semantic second-defensible-option
+mutation is deferred. Re-council never retires on missing/error/UNCERTAIN evidence.
+
+Apply migrations A–C in order and complete two coordinator-run shadow nights before
+creating the `PUBLISH_LIVE` flag. Do not edit the scheduled task from this worker.
+Exact commands, queue shape, caps, scheduler diff and deferrals are documented in
+[`../docs/pipeline-v6-week1.md`](../docs/pipeline-v6-week1.md),
+[`../docs/pipeline-v6-nightly.md`](../docs/pipeline-v6-nightly.md),
+[`docs/council-health-v6.md`](docs/council-health-v6.md), and
+[`docs/recouncil.md`](docs/recouncil.md). No live/paid/model calls or production
+writes were used to build or verify this implementation.
+
 ## PDE saved-wave resume (2026-10-20)
 
 The full-plan PDE runner accepts `--resume /absolute/path/to/<cert>-v5-<tag>.json`.

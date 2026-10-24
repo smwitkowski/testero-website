@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "products": [
+    {
+      "old": "AI Platform Training",
+      "new": "Agent Platform custom training",
+      "status": "retired",
+      "source": "certs/STYLE.md historical sample comparison; PROCESS.md existing-bank drift"
+    },
+    {
+      "old": "AI Platform Prediction",
+      "new": "Agent Platform Inference",
+      "status": "retired",
+      "source": "PROCESS.md existing-bank drift"
+    },
+    {
+      "old": "AutoML Tables",
+      "new": "Agent Platform AutoML tabular training",
+      "status": "retired",
+      "source": "certs/STYLE.md historical sample comparison"
+    },
+    {
+      "old": "Vertex AI Feature Store",
+      "new": "Agent Platform Feature Store",
+      "status": "renamed",
+      "source": "scripts/audit_bank.py NAME_MAP, guide 2.1/4.2"
+    },
+    {
+      "old": "Vertex AI Workbench",
+      "new": "Agent Platform Workbench",
+      "status": "renamed",
+      "source": "scripts/audit_bank.py NAME_MAP, guide 2.2"
+    },
+    {
+      "old": "Vertex AI Pipelines",
+      "new": "Agent Platform Pipelines",
+      "status": "renamed",
+      "source": "scripts/audit_bank.py NAME_MAP, guide 5.1"
+    },
+    {
+      "old": "Vertex AI Model Registry",
+      "new": "Agent Platform Model Registry",
+      "status": "renamed",
+      "source": "scripts/audit_bank.py NAME_MAP, guide 4.1"
+    },
+    {
+      "old": "Vertex AI Prediction",
+      "new": "Agent Platform Inference",
+      "status": "renamed",
+      "source": "scripts/audit_bank.py NAME_MAP, guide 4.2"
+    },
+    {
+      "old": "Vertex AI Experiments",
+      "new": "Experiments on Agent Platform",
+      "status": "renamed",
+      "source": "scripts/audit_bank.py NAME_MAP, guide 2.3"
+    },
+    {
+      "old": "Vertex ML Metadata",
+      "new": "Agent Platform ML Metadata",
+      "status": "renamed",
+      "source": "scripts/audit_bank.py NAME_MAP, guide 2.3"
+    },
+    {
+      "old": "Vertex AI",
+      "new": "Agent Platform",
+      "status": "renamed",
+      "source": "scripts/audit_bank.py NAME_MAP, guide-wide branding"
+    }
+  ]
+}
