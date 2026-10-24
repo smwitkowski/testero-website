@@ -21,7 +21,7 @@ vi.mock("@/components/free-diagnostic-explanation", () => ({ FreeDiagnosticExpla
 vi.mock("@/components/diagnostic-unlock", () => ({ DiagnosticPassOption: () => createElement("p", null, "PMLE Pass checkout"), SignedInDiagnosticUnlock: () => createElement("p", null, "PMLE Pass unlock") }));
 vi.mock("@/components/results-email-form", () => ({ ResultsEmailForm: () => createElement("p", null, "Results email") }));
 vi.mock("@/components/report-question", () => ({ ReportQuestion: () => null }));
-vi.mock("@/lib/analytics/client", () => ({ trackDiagnostic: vi.fn(), trackDiagnosticAnswer: vi.fn(), trackResults: vi.fn() }));
+vi.mock("@/lib/analytics/client", () => ({ trackDiagnosticAnswer: vi.fn(), trackResults: vi.fn() }));
 const betaIds = ["data-engineer", "cloud-architect", "cloud-engineer", "generative-ai-leader", "agentic-architect"];
 beforeEach(() => {
   mocks.availability.mockReset().mockImplementation(async (certId: string) => certId === PMLE_CERT_ID ? "available" : "beta");

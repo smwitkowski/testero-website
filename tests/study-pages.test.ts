@@ -13,7 +13,7 @@ vi.mock("@/lib/dashboard/service", () => ({ loadDashboard: mocks.load }));
 vi.mock("@/lib/supabase/service", () => ({ createServiceSupabaseClient: () => mocks.client }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock("@/lib/analytics/client", () => ({ trackPractice: vi.fn(), trackSignupCompleted: vi.fn() }));
+vi.mock("@/lib/analytics/client", () => ({ trackPractice: vi.fn() }));
 
 beforeEach(() => {
   mocks.requireUser.mockReset().mockResolvedValue({ id: "verified-owner" });

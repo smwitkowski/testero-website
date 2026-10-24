@@ -11,39 +11,23 @@ describe("private analytics event wiring", () => {
   it.each(["data-engineer", "cloud-architect", "cloud-engineer", "generative-ai-leader", "agentic-architect"])("tags beta diagnostic events with %s", async certId => {
     const analytics = await import("@/lib/analytics/client");
     analytics.initializeAnalytics();
-    analytics.trackDiagnostic("diagnostic_started", "beta-session", 5, certId);
     analytics.trackDiagnosticAnswer("beta-session", 1, `${certId}:standard:1`, false, certId, 5);
-    analytics.trackDiagnostic("diagnostic_completed", "beta-session", 5, certId);
-    expect(sdk.capture.mock.calls.map(([event, properties]) => [event, properties.cert_id ?? properties.exam])).toEqual([
-      ["diagnostic_started", certId], ["diagnostic_question_answered", certId], ["diagnostic_completed", certId],
-    ]);
-    expect(sdk.capture.mock.calls[1][1]).toEqual({ session_id: "beta-session", question_index: 1, total: 5, domain: `${certId}:standard:1`, correct: false, exam: certId, length: 5, $insert_id: "diagnostic_question_answered:beta-session:1" });
+    expect(sdk.capture.mock.calls[0][1]).toEqual({ session_id: "beta-session", question_index: 1, total: 5, domain: `${certId}:standard:1`, correct: false, exam: certId, length: 5, $insert_id: "diagnostic_question_answered:beta-session:1" });
   });
   it("still excludes internal browsers from all beta diagnostic events", async () => {
     vi.stubGlobal("document", { cookie: "testero_internal=1" });
     try {
       const analytics = await import("@/lib/analytics/client");
       analytics.initializeAnalytics();
-      analytics.trackDiagnostic("diagnostic_started", "beta-session", 5, "data-engineer");
       analytics.trackDiagnosticAnswer("beta-session", 1, "data-engineer:standard:1", true, "data-engineer");
-      analytics.trackDiagnostic("diagnostic_completed", "beta-session", 5, "data-engineer");
       expect(sdk.init).not.toHaveBeenCalled();
       expect(sdk.capture).not.toHaveBeenCalled();
     } finally { vi.unstubAllGlobals(); }
   });
-  it.each([5, 10, 20, 7])("includes only supported diagnostic length %i", async length => {
-    const analytics = await import("@/lib/analytics/client");
-    analytics.initializeAnalytics();
-    analytics.trackDiagnostic("diagnostic_started", "session", length);
-    const properties = sdk.capture.mock.calls[0][1];
-    if ([5, 10, 20].includes(length)) expect(properties.length).toBe(length);
-    else expect(properties).not.toHaveProperty("length");
-  });
   it("makes no SDK calls when the optional key is empty", async () => {
     vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "");
     const analytics = await import("@/lib/analytics/client");
-    analytics.initializeAnalytics(); analytics.trackSignupCompleted(); analytics.trackPractice("session");
-    analytics.trackDiagnostic("diagnostic_started", "session");
+    analytics.initializeAnalytics(); analytics.trackPractice("session");
     analytics.identifyAnalytics("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"); analytics.resetAnalytics();
     analytics.trackDiagnosticAnswer("session", 1, "D1", true);
     expect(analytics.analyticsHeaders()).toEqual({});
@@ -73,25 +57,14 @@ describe("private analytics event wiring", () => {
     expect(sdk.capture).toHaveBeenCalledWith("$pageview", { $current_url: "https://testero.ai/blog?utm_source=reddit&utm_campaign=pmle" });
     vi.unstubAllGlobals();
   });
-  it("sends signup completion without any user, email, or token properties", async () => {
+  it("leaves server funnel events to the server so they are not double-counted", async () => {
     const analytics = await import("@/lib/analytics/client");
-    analytics.initializeAnalytics(); analytics.trackSignupCompleted();
-    expect(sdk.capture.mock.calls).toEqual([["signup_completed"]]);
+    for (const name of ["trackDiagnostic", "trackSignupCompleted", "trackCheckoutStarted"]) expect(analytics).not.toHaveProperty(name);
   });
   it("sends practice start with session and remaining quota metadata", async () => {
     const analytics = await import("@/lib/analytics/client");
     analytics.initializeAnalytics(); analytics.trackPractice("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", 1);
     expect(sdk.capture.mock.calls).toEqual([["practice_started", { session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", free_questions_remaining_at_check: 1 }]]);
-  });
-  it("sends checkout start with only the public offer name", async () => {
-    const analytics = await import("@/lib/analytics/client");
-    analytics.initializeAnalytics(); analytics.trackCheckoutStarted();
-    expect(sdk.capture.mock.calls).toEqual([["checkout_started", { plan_name: "PMLE Pass" }]]);
-  });
-  it.each(["diagnostic_started", "diagnostic_completed"] as const)("preserves %s without answers or explanations", async event => {
-    const analytics = await import("@/lib/analytics/client");
-    analytics.initializeAnalytics(); analytics.trackDiagnostic(event, "session");
-    expect(sdk.capture.mock.calls).toEqual([[event, { session_id: "session", cert_id: "machine-learning-engineer", $insert_id: `${event}:session` }]]);
   });
   it("identifies only opaque UUIDs and resets identity after logout", async () => {
     const analytics = await import("@/lib/analytics/client");

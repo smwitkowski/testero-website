@@ -56,18 +56,10 @@ export function trackPageview(path: string) {
   if (initialized) posthog.capture("$pageview", { $current_url: `${window.location.origin}${safePath}` });
 }
 
-export function trackDiagnostic(event: "diagnostic_started" | "diagnostic_completed", sessionId: string, length?: number, certId = PMLE_CERT_ID) {
-  if (initialized) posthog.capture(event, { session_id: sessionId, cert_id: certId, ...([5, 10, 20].includes(length ?? 0) ? { length } : {}), $insert_id: `${event}:${sessionId}` });
-}
-
-export function trackSignupCompleted() {
-  if (initialized) posthog.capture("signup_completed");
-}
+// diagnostic_started, diagnostic_completed, signup_completed and checkout_started are
+// server-only (lib/analytics/server.ts); capturing them here too double-counted them.
 export function trackPractice(sessionId: string, remaining: number | null = null) {
   if (initialized) posthog.capture("practice_started", { session_id: sessionId, free_questions_remaining_at_check: remaining });
-}
-export function trackCheckoutStarted() {
-  if (initialized) posthog.capture("checkout_started", { plan_name: "PMLE Pass" });
 }
 
 export function identifyAnalytics(userId: string) {

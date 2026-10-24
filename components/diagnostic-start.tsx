@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { DiagnosticSession } from "@/components/diagnostic-session";
 import type { DiagnosticStartResponse } from "@/lib/diagnostic/types";
-import { trackDiagnostic } from "@/lib/analytics/client";
 import { isKnownBotUserAgent } from "@/lib/analytics/attribution";
 import { Button } from "@/components/ui/button";
 import { diagnosticRequest, requestError } from "@/components/diagnostic-resource";
@@ -54,7 +53,6 @@ export function DiagnosticStart({ resumeId: serverResumeId = null, autoStart = f
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ questionCount, ...(beta ? { certId } : {}) }), signal,
       });
       if (signal.aborted) return;
-      trackDiagnostic("diagnostic_started", result.sessionId, questionCount, result.progress.certId ?? certId);
       // Keep the start page in history so Browser Back can offer the saved session.
       // Consume explicit autostart before pushing; Back must never create a second run.
       window.history.replaceState(null, "", paidLanding ? "/diagnostic?length=5&src=ad" : `/diagnostic${certQuery}`);
