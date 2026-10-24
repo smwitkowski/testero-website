@@ -43,7 +43,7 @@ function webhook(type = "checkout.session.completed", id = "evt_complete") {
   return POST(new Request("http://localhost/api/billing/webhook", { method: "POST", headers: { "stripe-signature": "mock" }, body: "mock" }));
 }
 beforeEach(() => {
-  vi.stubEnv("STRIPE_PRICE_PMLE_PASS", "price_pass"); vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_mock");
+  vi.stubEnv("STRIPE_PRICE_PMLE_PASS", "price_pass"); vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", undefined); vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_mock");
   m.pass = null; m.receipt = null; m.events.clear(); m.grants = 0; m.refunded = false; m.receiptFailure = false; m.readFailure = false; m.claimFailure = false; m.failFreshAccess = false;
   m.session.mockResolvedValue(checkout());
   m.intent.mockImplementation(async () => ({ status: "succeeded", metadata: { user_id: user, plan_name: "PMLE Pass" }, latest_charge: { created: paidAt, refunded: m.refunded, amount_refunded: m.refunded ? 1 : 0 } }));
@@ -84,11 +84,62 @@ describe("shared fulfillment without webhook delivery", () => {
   it.each([
     { metadata: { user_id: "another-user", plan_name: "PMLE Pass" } },
     { payment_status: "unpaid" },
-    { line_items: { has_more: false, data: [{ price: { id: "price_other" }, quantity: 1 }] } },
-  ])("never grants foreign, unpaid or other-price sessions %#", async change => {
+  ])("never grants foreign or unpaid sessions %#", async change => {
     m.session.mockResolvedValue(checkout(change));
     expect(await (await poll()).json()).toEqual({ status: "processing", accessUntil: null });
     expect(m.session).toHaveBeenCalledTimes(1); expect(m.intent).not.toHaveBeenCalled(); expect(m.rpc).not.toHaveBeenCalled(); expect(trackPurchaseCompleted).not.toHaveBeenCalled();
+  });
+  it("grants a legacy checkout on owned return with its actual amount/currency, then webhook is idempotent", async () => {
+    vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", "price_old39");
+    m.session.mockResolvedValue(checkout({ line_items: { has_more: false, data: [{ price: { id: "price_old39" }, quantity: 1 }] } }));
+    expect((await (await poll()).json()).status).toBe("active");
+    expect(m.grants).toBe(1);
+    expect(m.receipt).toMatchObject({ amount: 3900, currency: "usd" });
+    const original = { ...m.pass };
+    expect((await webhook()).status).toBe(200);
+    expect(m.grants).toBe(1); expect(m.pass).toEqual(original);
+  });
+  it("reports an owned unknown paid checkout as unavailable, then recovers after allowlisting", async () => {
+    const report = vi.spyOn(console, "error").mockImplementation(() => {});
+    m.session.mockResolvedValue(checkout({ line_items: { has_more: false, data: [{ price: { id: "price_unknown" }, quantity: 1 }] } }));
+    const response = await poll();
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "Billing is unavailable. Please try again." });
+    expect(report.mock.calls).toEqual([["Paid PMLE Pass price is not allowlisted"], ["Billing request failed"]]);
+    expect(m.grants).toBe(0); expect(m.intent).not.toHaveBeenCalled(); expect(m.rpc).not.toHaveBeenCalled();
+    vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", "price_unknown");
+    expect((await (await poll()).json()).status).toBe("active");
+    expect(m.grants).toBe(1);
+  });
+  it("retains unknown-price webhook event for successful replay after configuration recovery", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    m.session.mockResolvedValue(checkout({ line_items: { has_more: false, data: [{ price: { id: "price_unknown" }, quantity: 1 }] } }));
+    expect((await webhook()).status).toBe(503);
+    expect(m.events.get("evt_complete")).toMatchObject({ processed: false, error: "Billing processing failed" });
+    expect(m.grants).toBe(0); expect(m.rpc).not.toHaveBeenCalled();
+    vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", "price_unknown");
+    expect((await webhook()).status).toBe(200);
+    expect(m.events.get("evt_complete")).toMatchObject({ processed: true, error: null });
+    expect(m.grants).toBe(1);
+  });
+  it.each([undefined, "", "prod_invalid"])("returns unavailable for paid current price when required current config is invalid: %s", async current => {
+    vi.stubEnv("STRIPE_PRICE_PMLE_PASS", current);
+    vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", "price_pass");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect((await poll()).status).toBe(503); expect(m.grants).toBe(0); expect(m.rpc).not.toHaveBeenCalled();
+  });
+  it("returns unavailable rather than processing for malformed legacy configuration", async () => {
+    const report = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", "price_old39,,price_older");
+    expect((await poll()).status).toBe(503);
+    expect(report).toHaveBeenCalledWith("Invalid PMLE Pass price configuration");
+    expect(m.grants).toBe(0); expect(m.rpc).not.toHaveBeenCalled();
+  });
+  it("does not log unknown-price paid checkouts owned by a different account", async () => {
+    const report = vi.spyOn(console, "error").mockImplementation(() => {});
+    m.session.mockResolvedValue(checkout({ metadata: { user_id: "another-user", plan_name: "PMLE Pass" }, line_items: { has_more: false, data: [{ price: { id: "price_unknown" }, quantity: 1 }] } }));
+    expect(await (await poll()).json()).toEqual({ status: "processing", accessUntil: null });
+    expect(report).not.toHaveBeenCalled(); expect(m.rpc).not.toHaveBeenCalled();
   });
   it("refund after return revokes pass and receipt and replay cannot restore either", async () => {
     await poll(); const original = { ...m.pass };

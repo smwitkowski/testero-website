@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import { StripeService } from "@/lib/stripe/stripe-service";
-import { fulfillCheckoutSession, isPaidPassSession, refundPmlePass, stripeId } from "@/lib/stripe/pmle-pass";
+import { assertPaidPassPriceRecognized, fulfillCheckoutSession, isPaidPassSession, refundPmlePass, stripeId } from "@/lib/stripe/pmle-pass";
 import { HANDLED_STRIPE_EVENTS } from "@/lib/stripe/events";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { billingJson, billingErrorResponse } from "@/lib/billing/http";
@@ -33,6 +33,9 @@ export async function POST(request: Request) {
           const delivered = event.data.object as Stripe.Checkout.Session;
           const session = await stripe.retrieveCheckoutSession(delivered.id);
           if (session.id !== delivered.id) throw new Error("Checkout identity mismatch");
+          // A paid unknown price must remain unprocessed so Stripe can retry
+          // after the allowlist is corrected, rather than acknowledge a lost pass.
+          assertPaidPassPriceRecognized(session);
           if (!isPaidPassSession(session)) break;
           await fulfillCheckoutSession(stripe, db, session);
           break;
