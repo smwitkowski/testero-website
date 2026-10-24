@@ -46,8 +46,8 @@ async function mailLink(request: APIRequestContext, email: string, type: "signup
   return link;
 }
 
-test("local account confirmation claims only owned diagnostics, practices five, and blocks further free starts", async ({ page, browser }) => {
-  test.setTimeout(process.env.TESTERO_V3_SCREENSHOTS ? 240_000 : 120_000);
+test("local account confirmation claims only owned diagnostics, practices past sixty with free tracking and locked Pass features", async ({ page, browser }) => {
+  test.setTimeout(process.env.TESTERO_V3_SCREENSHOTS ? 300_000 : 240_000);
   const service = localSetup();
   const visualDirectory = process.env.TESTERO_V3_SCREENSHOTS ?? "test-results/accounts-visual";
   await mkdir(visualDirectory, { recursive: true });
@@ -80,7 +80,7 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     const denied = await page.request.post("/api/practice", { data: { domainCode: "MONITORING_ML_SOLUTIONS" } });
     expect(denied.status()).toBe(401);
 
-    const created = await page.request.post("/api/diagnostic", { data: {} });
+    const created = await page.request.post("/api/diagnostic", { data: { questionCount: 20 } });
     expect(created.status()).toBe(201);
     const { sessionId: diagnosticId } = await created.json() as { sessionId: string };
     ids.push(diagnosticId);
@@ -159,8 +159,6 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     await expect(reviewNav.getByRole("button", { name: /^Review question 19,/ })).toHaveAttribute("aria-current", "step");
     await page.goto("/dashboard");
 
-    const seededQuota = await service.from("free_practice_quota").insert({ user_id: userId, month_start: new Date().toISOString().slice(0, 7) + "-01", questions_used: 55 });
-    expect(seededQuota.error).toBeNull();
     const startedResponse = page.waitForResponse(response => response.url().endsWith("/api/practice") && response.request().method() === "POST");
     await page.getByRole("button", { name: /^Practice / }).first().click();
     const started = await startedResponse;
@@ -226,21 +224,48 @@ test("local account confirmation claims only owned diagnostics, practices five, 
     expect(summaryResponse.status()).toBe(200);
     const summary = await summaryResponse.json() as PracticeSummary;
     expect(summary.review).toHaveLength(5);
-    expect(summary.hasPaidTracking).toBe(false);
-    expect(summary).not.toHaveProperty("correctAnswers"); expect(summary).not.toHaveProperty("score"); expect(summary).not.toHaveProperty("domainBreakdown");
-    await expect(page.getByRole("heading", { name: "Practice score", exact: true })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Explore PMLE Pass", exact: true })).toBeVisible();
+    expect(summary).not.toHaveProperty("hasPaidTracking");
+    expect(summary.correctAnswers).toBeGreaterThanOrEqual(0);
+    expect(summary.score).toBeGreaterThanOrEqual(0);
+    expect(summary.domainBreakdown).toHaveLength(1);
+    await expect(page.getByRole("heading", { name: "Practice score", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Progress by domain", exact: true })).toBeVisible();
     noExplanations(summary);
     expect((await foreign.request.get(`http://127.0.0.1:3000/api/practice/${practiceId}/summary`)).status()).toBe(401);
     await page.getByRole("link", { name: "Back to dashboard", exact: true }).click();
-    await expect(page.getByRole("link", { name: "Upgrade to PMLE Pass", exact: true })).toBeVisible();
-    await expect(page.getByLabel("Practice domain", { exact: true })).toHaveCount(0);
-    const exhausted = await page.request.post("/api/practice", { data: { domainCode: "MONITORING_ML_SOLUTIONS" } });
-    expect(exhausted.status()).toBe(429);
-    expect((await exhausted.json()).upgradeHref).toBe("/pricing");
+    await expect(page.getByLabel("Practice domain", { exact: true })).toBeVisible();
+    // These are real committed answers after a real email-confirmed signup, not seeded usage.
+    for (let session = 0; session < 12; session++) {
+      const started = await page.request.post("/api/practice", { data: { domainCode: "MONITORING_ML_SOLUTIONS" } });
+      expect(started.status()).toBe(201);
+      const nextId = (await started.json()).sessionId as string;
+      ids.push(nextId);
+      for (let ordinal = 1; ordinal <= 5; ordinal++) {
+        const progress = await (await page.request.get(`/api/practice/${nextId}`)).json() as DiagnosticProgress;
+        expect(progress.currentQuestion!.ordinal).toBe(ordinal);
+        const accepted = await page.request.post(`/api/practice/${nextId}/answer`, { data: {
+          itemId: progress.currentQuestion!.id, selectedLabel: progress.currentQuestion!.options[0].label,
+        } });
+        expect(accepted.status()).toBe(200);
+        noExplanations(await accepted.json());
+      }
+    }
+    const answeredCount = await service.from("session_items").select("id", { count: "exact", head: true })
+      .in("session_id", ids.slice(2)).not("selected_label", "is", null);
+    expect(answeredCount.error).toBeNull();
+    expect(answeredCount.count).toBe(65);
     const practices = await service.from("study_sessions").select("id").eq("user_id", userId).eq("kind", "practice");
-    expect(practices.data).toHaveLength(1);
-    await page.getByRole("link", { name: "Upgrade to PMLE Pass", exact: true }).click();
+    expect(practices.error).toBeNull();
+    expect(practices.data).toHaveLength(13);
+    await page.goto("/dashboard");
+    await expect(page.getByRole("heading", { name: "Your progress", exact: true })).toBeVisible();
+    await expect(page.getByText(/questions left this month|quota exhausted/i)).toHaveCount(0);
+    expect((await page.request.post("/api/practice", { data: { mode: "weak" } })).status()).toBe(403);
+    expect((await page.request.post("/api/mock/start", { data: {} })).status()).toBe(403);
+    await expect(page.getByRole("link", { name: "Unlock Timed mock exams with PMLE Pass", exact: true })).toBeVisible();
+    await expect(page.getByText(/Fresh-first practice/).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Unlock Weak-area drills with PMLE Pass", exact: true })).toBeVisible();
+    await page.goto("/pricing");
     await expect(page).toHaveURL(/\/pricing$/);
     await expect(page.getByRole("heading", { name: "PMLE Pass", exact: true })).toBeVisible();
     await expect(page.getByText(/Coming in Phase 3/i)).toHaveCount(0);

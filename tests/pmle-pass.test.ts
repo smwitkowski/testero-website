@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { StripeService } from "@/lib/stripe/stripe-service";
-import { grantPmlePass, isPaidPassSession, refundPmlePass, stripeId, PASS_DURATION_MS } from "@/lib/stripe/pmle-pass";
+import { assertPaidPassPriceRecognized, grantPmlePass, isPaidPassSession, refundPmlePass, stripeId, PASS_DURATION_MS } from "@/lib/stripe/pmle-pass";
 import { trackPurchaseCompleted } from "@/lib/analytics/server";
 const m = vi.hoisted(() => ({ constructor: vi.fn(), search: vi.fn(), customerCreate: vi.fn(), checkoutCreate: vi.fn(), checkoutRetrieve: vi.fn(), intentRetrieve: vi.fn(), portalCreate: vi.fn(), construct: vi.fn() }));
 vi.mock("stripe", () => ({ default: class { constructor(...args: unknown[]) { m.constructor(...args); } customers = { search: m.search, create: m.customerCreate }; checkout = { sessions: { create: m.checkoutCreate, retrieve: m.checkoutRetrieve } }; paymentIntents = { retrieve: m.intentRetrieve }; billingPortal = { sessions: { create: m.portalCreate } }; webhooks = { constructEvent: m.construct }; } }));
@@ -19,6 +19,7 @@ beforeEach(() => {
   vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_mock_never_network");
   vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_mock");
   vi.stubEnv("STRIPE_PRICE_PMLE_PASS", "price_pass");
+  vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", undefined);
   vi.stubEnv("TESTERO_LOCAL_STRIPE", undefined);
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:56541");
   vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "");
@@ -33,6 +34,65 @@ describe("reviewed PMLE pass fulfillment port", () => {
     expect(isPaidPassSession(session())).toBe(true);
     for (const change of [ { mode: "subscription" }, { payment_status: "unpaid" }, { metadata: { user_id: user, plan_name: "Other" } }, { payment_intent: null }, { customer: null }, { line_items: undefined }, { line_items: { has_more: true, data: [{ price: { id: "price_pass" }, quantity: 1 }] } }, { line_items: { has_more: false, data: [{ price: { id: "price_wrong" }, quantity: 1 }] } }, { line_items: { has_more: false, data: [{ price: { id: "price_pass" }, quantity: 2 }] } } ]) expect(isPaidPassSession(session(change))).toBe(false);
     vi.stubEnv("STRIPE_PRICE_PMLE_PASS", ""); expect(isPaidPassSession(session())).toBe(false);
+  });
+  it("accepts only exact current/legacy prices from a trimmed comma-separated allowlist", () => {
+    vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", " price_old39 , price_older ,price_old39 ");
+    for (const id of ["price_pass", "price_old39", "price_older"])
+      expect(isPaidPassSession(session({ line_items: { has_more: false, data: [{ price: { id }, quantity: 1 }] } }))).toBe(true);
+    for (const id of ["price_old", "price_old39_extra", "price_unknown"])
+      expect(isPaidPassSession(session({ line_items: { has_more: false, data: [{ price: { id }, quantity: 1 }] } }))).toBe(false);
+  });
+  it.each([undefined, "", "   "])("allows an omitted or empty optional legacy list: %s", legacy => {
+    vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", legacy);
+    expect(isPaidPassSession(session())).toBe(true);
+  });
+  it.each([",", "price_old,", ",price_old", "price_old,,price_older", "price_old, ,price_older", "price_old;price_older", "prod_wrong", "price_has space", "price_", `price_${"a".repeat(241)}`])("fails closed for malformed legacy list %s even for the current price", legacy => {
+    vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", legacy);
+    expect(isPaidPassSession(session())).toBe(false);
+    const report = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(() => assertPaidPassPriceRecognized(session())).toThrow("configuration recovery");
+    expect(report).toHaveBeenCalledExactlyOnceWith("Invalid PMLE Pass price configuration");
+  });
+  it.each([undefined, "", " ", "price_", "prod_wrong", "price_pass,price_other", " price_pass "])("requires a valid current price even when legacy is set: %s", current => {
+    vi.stubEnv("STRIPE_PRICE_PMLE_PASS", current);
+    vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", "price_pass");
+    expect(isPaidPassSession(session())).toBe(false);
+  });
+  it("still rejects unsafe line items and unpaid/foreign-plan shapes for legacy prices", () => {
+    vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", "price_old39");
+    const item = { price: { id: "price_old39" }, quantity: 1 };
+    const old = { line_items: { has_more: false, data: [item] } };
+    for (const change of [{ payment_status: "unpaid" }, { mode: "subscription" }, { metadata: { user_id: user, plan_name: "Other" } }, { payment_intent: null }, { customer: null }, { line_items: { has_more: true, data: [item] } }, { line_items: { has_more: false, data: [item, item] } }, { line_items: { has_more: false, data: [{ ...item, quantity: 2 }] } }])
+      expect(isPaidPassSession(session({ ...old, ...change }))).toBe(false);
+  });
+  it("grants a paid legacy price using the same current payment/ownership checks", async () => {
+    vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", "price_old39");
+    const mdb = dbMock();
+    await grantPmlePass(new StripeService(), mdb.db, session({ line_items: { has_more: false, data: [{ price: { id: "price_old39" }, quantity: 1 }] } }));
+    expect(m.intentRetrieve).toHaveBeenCalledTimes(2);
+    expect(mdb.rpc).toHaveBeenCalledWith("fulfill_pmle_pass", expect.objectContaining({ p_user_id: user, p_stripe_payment_intent_id: "pi_pass" }));
+  });
+  it.each([{ status: "processing" }, { metadata: { user_id: "victim", plan_name: "PMLE Pass" } }])("rejects invalid current payment for a legacy checkout %#", async override => {
+    vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", "price_old39");
+    m.intentRetrieve.mockResolvedValue({ ...intent(), ...override });
+    const mdb = dbMock();
+    await expect(grantPmlePass(new StripeService(), mdb.db, session({ line_items: { has_more: false, data: [{ price: { id: "price_old39" }, quantity: 1 }] } }))).rejects.toThrow("ownership or status");
+    expect(mdb.rpc).not.toHaveBeenCalled();
+  });
+  it("keeps legacy refunds revoked", async () => {
+    vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", "price_old39");
+    m.intentRetrieve.mockResolvedValue(intent(true));
+    const mdb = dbMock();
+    expect((await grantPmlePass(new StripeService(), mdb.db, session({ line_items: { has_more: false, data: [{ price: { id: "price_old39" }, quantity: 1 }] } }))).refunded).toBe(true);
+    expect(mdb.rpc.mock.calls.map(call => call[0])).toEqual(["refund_pmle_pass", "fulfill_pmle_pass"]);
+  });
+  it("reports unknown paid prices with fixed text and never reads payment or grants", async () => {
+    const report = vi.spyOn(console, "error").mockImplementation(() => {});
+    const mdb = dbMock();
+    await expect(grantPmlePass(new StripeService(), mdb.db, session({ line_items: { has_more: false, data: [{ price: { id: "price_unknown" }, quantity: 1 }] } }))).rejects.toThrow("configuration recovery");
+    expect(report).toHaveBeenCalledExactlyOnceWith("Paid PMLE Pass price is not allowlisted");
+    expect(m.intentRetrieve).not.toHaveBeenCalled();
+    expect(mdb.rpc).not.toHaveBeenCalled();
   });
   it("finishes two current payment reads before publishing the database RPC", async () => {
     const mdb = dbMock(); const service = new StripeService(); await grantPmlePass(service, mdb.db, session());
@@ -71,13 +131,13 @@ describe("minimal SDK adapter and fixture guard", () => {
   it.each([ { NODE_ENV: "production" }, { STRIPE_SECRET_KEY: "sk_live_wrong" }, { NEXT_PUBLIC_SUPABASE_URL: "https://remote.supabase.co" }, { NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321" }, { TESTERO_LOCAL_STRIPE: "0" } ])("rejects invalid fixture configuration without SDK network fallback %#", override => { vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_testero_local_only"); vi.stubEnv("TESTERO_LOCAL_STRIPE", "1"); vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:56541"); Object.entries(override).forEach(([key, value]) => vi.stubEnv(key, value)); expect(() => new StripeService()).toThrow("Invalid local Stripe configuration"); expect(m.constructor).not.toHaveBeenCalled(); });
   it.each([ { STRIPE_SECRET_KEY: "sk_test_placeholder" }, { STRIPE_PRICE_PMLE_PASS: "price_testero_local_pmle" }, { STRIPE_WEBHOOK_SECRET: "whsec_testero_local_only" }, { STRIPE_WEBHOOK_SECRET: "whsec_testero_local_other" }, { STRIPE_WEBHOOK_SECRET: "whsec_placeholder" } ])("rejects known local placeholders outside fixture mode %#", override => { Object.entries(override).forEach(([key, value]) => vi.stubEnv(key, value)); expect(() => new StripeService()).toThrow("Local placeholder Stripe configuration is forbidden"); expect(m.constructor).not.toHaveBeenCalled(); });
   it("rejects local test secret without local flag", () => { vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_testero_local_only"); vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:56541"); expect(() => new StripeService()).toThrow("Invalid local Stripe configuration"); });
-  it("sends card-only payment, server price, metadata on both objects, and idempotency", async () => { await new StripeService().createCheckoutSession({ customerId: "cus_owned", userId: user, successUrl: "http://localhost:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}", cancelUrl: "http://localhost:3000/pricing", idempotencyKey: "bounded" }); expect(m.checkoutCreate).toHaveBeenCalledWith({ customer: "cus_owned", mode: "payment", allowed_payment_method_types: ["card"], line_items: [{ price: "price_pass", quantity: 1 }], metadata: { user_id: user, plan_name: "PMLE Pass" }, payment_intent_data: { metadata: { user_id: user, plan_name: "PMLE Pass" } }, success_url: "http://localhost:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}", cancel_url: "http://localhost:3000/pricing" }, { idempotencyKey: "bounded" }); });
+  it("sends card-only payment, current server price even with legacy configured, metadata on both objects, and idempotency", async () => { vi.stubEnv("STRIPE_PRICE_PMLE_PASS_LEGACY", "price_old39"); await new StripeService().createCheckoutSession({ customerId: "cus_owned", userId: user, successUrl: "http://localhost:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}", cancelUrl: "http://localhost:3000/pricing", idempotencyKey: "bounded" }); expect(m.checkoutCreate).toHaveBeenCalledWith({ customer: "cus_owned", mode: "payment", allowed_payment_method_types: ["card"], line_items: [{ price: "price_pass", quantity: 1 }], metadata: { user_id: user, plan_name: "PMLE Pass" }, payment_intent_data: { metadata: { user_id: user, plan_name: "PMLE Pass" } }, success_url: "http://localhost:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}", cancel_url: "http://localhost:3000/pricing" }, { idempotencyKey: "bounded" }); });
   it("does not put email in customer metadata or payload", async () => { m.search.mockResolvedValue({ data: [] }); m.customerCreate.mockResolvedValue({ id: "cus_owned" }); await new StripeService().createOrRetrieveCustomer(user); expect(m.customerCreate).toHaveBeenCalledWith({ metadata: { supabase_user_id: user } }, { idempotencyKey: `pmle-customer:${user}` }); });
   it("requests full expanded checkout and verifies raw signature via SDK", async () => { const sdk = new StripeService(); await sdk.retrieveCheckoutSession("cs_test_pass"); expect(m.checkoutRetrieve).toHaveBeenCalledWith("cs_test_pass", { expand: ["customer", "line_items.data.price"] }); sdk.constructWebhookEvent("raw-body", "sig", "whsec_mock"); expect(m.construct).toHaveBeenCalledWith("raw-body", "sig", "whsec_mock"); });
   it("rejects unsafe hosted checkout and allows only exact same-app fixture URL", async () => { const args = { customerId: "cus_owned", userId: user, successUrl: "http://127.0.0.1:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}", cancelUrl: "http://127.0.0.1:3000/pricing", idempotencyKey: "bounded" }; m.checkoutCreate.mockResolvedValue({ id: "cs_test_local", url: "https://evil.example/c/pay" }); await expect(new StripeService().createCheckoutSession(args)).rejects.toThrow("Invalid checkout URL"); vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_testero_local_only"); vi.stubEnv("TESTERO_LOCAL_STRIPE", "1"); vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:56541"); m.checkoutCreate.mockResolvedValue({ id: "cs_test_local", url: "http://127.0.0.1:3000/checkout/success?session_id=cs_test_local" }); await expect(new StripeService().createCheckoutSession(args)).resolves.toMatchObject({ id: "cs_test_local" }); m.checkoutCreate.mockResolvedValue({ id: "cs_test_local", url: "http://127.0.0.1:3000/checkout/success?session_id=cs_other" }); await expect(new StripeService().createCheckoutSession(args)).rejects.toThrow("Invalid checkout URL"); });
 });
 describe("server purchase analytics without PII", () => {
   it("is disabled with no key and never uses network", async () => { const fetchMock = vi.fn(); vi.stubGlobal("fetch", fetchMock); await trackPurchaseCompleted("cs_test_opaque", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", { analytics_enabled: "1" }); expect(fetchMock).not.toHaveBeenCalled(); });
-  it("sends account identity and stable opaque purchase insert ID without customer/email", async () => { vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "public_mock"); vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "http://analytics.local"); const fetchMock = vi.fn().mockResolvedValue({ ok: true }); vi.stubGlobal("fetch", fetchMock); await trackPurchaseCompleted("cs_test_opaque", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", { analytics_enabled: "1" }); await trackPurchaseCompleted("cs_test_opaque", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", { analytics_enabled: "1" }); const args = fetchMock.mock.calls[0]; expect(args[0]).toBe("http://analytics.local/capture/"); const body = JSON.parse(args[1].body); expect(body.event).toBe("purchase_completed"); expect(body.properties.distinct_id).toBe("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"); expect(body.properties.$insert_id).toMatch(/^[a-f0-9]{64}$/); expect(body.properties.$process_person_profile).toBe(true); expect(args[1].body).not.toContain("cs_test_opaque"); expect(args[1].body).toBe(fetchMock.mock.calls[1][1].body); expect(Object.keys(body.properties).sort()).toEqual(["$insert_id", "$process_person_profile", "$set_once", "distinct_id", "plan_name", "source"]); });
+  it("sends account identity and stable opaque purchase insert ID without customer/email", async () => { vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "public_mock"); vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "http://analytics.local"); const fetchMock = vi.fn().mockResolvedValue({ ok: true }); vi.stubGlobal("fetch", fetchMock); await trackPurchaseCompleted("cs_test_opaque", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", { analytics_enabled: "1" }, { amountTotal: 4250, currency: "usd" }); await trackPurchaseCompleted("cs_test_opaque", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", { analytics_enabled: "1" }, { amountTotal: 4250, currency: "usd" }); const args = fetchMock.mock.calls[0]; expect(args[0]).toBe("http://analytics.local/capture/"); const body = JSON.parse(args[1].body); expect(body.event).toBe("purchase_completed"); expect(body.properties.distinct_id).toBe("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"); expect(body.properties.$insert_id).toMatch(/^[a-f0-9]{64}$/); expect(body.properties.$process_person_profile).toBe(true); expect(body.properties).toMatchObject({ revenue: 42.5, currency: "USD" }); expect(args[1].body).not.toContain("cs_test_opaque"); expect(args[1].body).toBe(fetchMock.mock.calls[1][1].body); expect(Object.keys(body.properties).sort()).toEqual(["$insert_id", "$process_person_profile", "$set_once", "currency", "distinct_id", "plan_name", "revenue", "source"]); });
   it("analytics timeout/failure does not fail the purchase", async () => { vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "public_mock"); vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("analytics unavailable"))); await expect(trackPurchaseCompleted("cs_opaque", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", { analytics_enabled: "1" })).resolves.toBeUndefined(); });
 });

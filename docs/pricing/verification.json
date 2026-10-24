@@ -1,0 +1,87 @@
+{
+  "task": "D-044",
+  "environment": "loopback local fixtures only",
+  "gates": {
+    "unit": {
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm test",
+      "exitCode": 0,
+      "summary": [
+        "Test Files  103 passed (103)",
+        "Tests  1833 passed (1833)",
+        "Duration  6.32s (tests 42%, transform 31%, import 22%, setup 4%, worker 1%)"
+      ],
+      "completedAt": "2026-10-24T19:07:22.181540+00:00"
+    },
+    "lint": {
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run lint",
+      "exitCode": 0,
+      "completedAt": "2026-10-24T19:07:22.181538+00:00"
+    },
+    "docker": {
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true docker build .",
+      "exitCode": 0,
+      "image": "sha256:96604eea9982c4cdd3911e640de2ad41a50d743a3dd931f5a3d132c6bc99e782",
+      "completedAt": "2026-10-24T18:59:03.756468+00:00"
+    },
+    "e2e": {
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run test:e2e:local",
+      "exitCode": 0,
+      "passed": 20,
+      "skipped": 16,
+      "skipScope": "Existing opt-in beta, production-cache, certification, MCP and UI audit cases; all required D-044 scenarios ran",
+      "log": "evidence/tiers-e2e-final.log",
+      "completedAt": "2026-10-24T19:07:10.242836+00:00"
+    },
+    "db": {
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run test:db:local",
+      "exitCode": 0,
+      "summary": "All local integration checks passed; isolated fixtures removed",
+      "log": "evidence/tiers-db-final.log",
+      "completedAt": "2026-10-24T19:07:10.242845+00:00"
+    },
+    "typecheck": {
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run typecheck",
+      "exitCode": 0,
+      "completedAt": "2026-10-24T19:07:22.181530+00:00"
+    },
+    "build": {
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run build",
+      "exitCode": 0,
+      "completedAt": "2026-10-24T19:07:22.181535+00:00"
+    }
+  },
+  "testSourceFence": {
+    "manifest": "evidence/tiers-test-source-sha256.json",
+    "allCurrentHashesMatch": true
+  },
+  "screenshots": [
+    "screenshots/pricing-1280.png",
+    "screenshots/pricing-375.png",
+    "screenshots/dashboard-free-1280.png",
+    "screenshots/dashboard-free-375.png",
+    "screenshots/dashboard-paid-1280.png",
+    "screenshots/dashboard-paid-375.png",
+    "screenshots/mock-in-progress-1280.png",
+    "screenshots/mock-in-progress-375.png",
+    "screenshots/mock-results-1280.png",
+    "screenshots/mock-results-375.png"
+  ],
+  "sourceFence": {
+    "aggregateSha256": "1b0ef6861906f238b1a3570c7ea6f5e8da92685ce513c42a27aab3902c1e4f08",
+    "fileCount": 218,
+    "implementationCommit": "35f1d55",
+    "checkedAt": "2026-10-24T19:08:11.966517+00:00"
+  },
+  "screenshotSha256": {
+    "screenshots/pricing-1280.png": "0f59415120f8f6314f2f88faca72024e91c56a4e6496f1ddca457c7cb68b7b5d",
+    "screenshots/pricing-375.png": "654b763db40ad210e5968f12e7600e8e43dbbe93b26315851e03a0c9382981af",
+    "screenshots/dashboard-free-1280.png": "f3fd69de2efefae736428c0999fd6ab08b3252cef5ac4ddc44c428dd4b24537d",
+    "screenshots/dashboard-free-375.png": "f39b6f6da556760289286636150ab3774ee486371dd6e2712f2d15d1d4ae08c5",
+    "screenshots/dashboard-paid-1280.png": "bf776dcccdc8f18941582bbad3f3515fd682b936116a275951d99205fedc9585",
+    "screenshots/dashboard-paid-375.png": "e6d4386dd828f16b64f183ea58525508927b68dcd792f8dd410f76fe8f0a7276",
+    "screenshots/mock-in-progress-1280.png": "4bc4f98ab08d4252ecf64bdf1f3ec58942c771cbc62d8a86f6ccdf764b1d19a6",
+    "screenshots/mock-in-progress-375.png": "8faa955dca35305a440ca7a112b5ec4ccbaf16b080355f68a78d059c73ee3383",
+    "screenshots/mock-results-1280.png": "a1654a6b295d50aa9fdbccdaf482772c5b7e2ba21b2a15a3fbeaa02b2d26a332",
+    "screenshots/mock-results-375.png": "3465a3a342b3708c9db4f7ad631700f53c01614ee84648533681c0ed1a7a1023"
+  }
+}

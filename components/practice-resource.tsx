@@ -15,7 +15,7 @@ export async function practiceRequest<T>(path: string, init: RequestInit = {}): 
       : response.status === 403 || response.status === 404 ? "This practice session is not available."
       : response.status === 409 ? "Your practice has changed. Reload your saved progress to continue."
       : response.status === 410 ? "This practice session has expired. Return to your dashboard."
-      : response.status === 429 ? "You have used your 60 free practice questions for this month."
+      : response.status === 429 ? "Too many requests. Please wait a moment and retry."
       : "Practice could not be loaded. Check your connection and retry.";
     throw new PracticeRequestError(response.status, message);
   }

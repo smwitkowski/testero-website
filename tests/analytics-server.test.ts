@@ -112,3 +112,37 @@ describe("internal traffic is never captured server-side", () => {
     expect(afterMock).toHaveBeenCalledTimes(internal ? 0 : 1);
   });
 });
+
+it.each([
+  { amountTotal: 3999, currency: "usd" },
+  { amountTotal: 4250, currency: "usd" },
+  { amountTotal: 1999, currency: "eur" },
+  { amountTotal: 0, currency: "gBp" },
+])("reports the verified Stripe total and currency, including discounts and zero: %j", async payment => {
+  await trackPurchaseCompleted("cs_test_opaque", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", { analytics_enabled: "1" }, payment);
+  const properties = JSON.parse(fetchMock.mock.calls[0][1].body).properties;
+  expect(properties).toMatchObject({ revenue: payment.amountTotal / 100, currency: payment.currency.toUpperCase() });
+});
+it.each([
+  undefined,
+  { amountTotal: null, currency: null },
+  { amountTotal: null, currency: "usd" },
+  { amountTotal: -1, currency: "usd" },
+  { amountTotal: 1.5, currency: "usd" },
+  { amountTotal: Number.MAX_SAFE_INTEGER + 1, currency: "usd" },
+  { amountTotal: Number.NaN, currency: "usd" },
+  { amountTotal: Number.POSITIVE_INFINITY, currency: "usd" },
+  { amountTotal: 3999, currency: null },
+  { amountTotal: 3999, currency: "" },
+  { amountTotal: 3999, currency: "US" },
+  { amountTotal: 3999, currency: "usd " },
+  { amountTotal: 0, currency: "123" },
+])("keeps the purchase event but omits revenue and currency for missing or invalid Stripe totals: %j", async payment => {
+  await trackPurchaseCompleted("cs_test_opaque", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", { analytics_enabled: "1" }, payment);
+  expect(fetchMock).toHaveBeenCalledOnce();
+  const payload = JSON.parse(fetchMock.mock.calls[0][1].body);
+  expect(payload.event).toBe("purchase_completed");
+  expect(payload.properties).toMatchObject({ plan_name: "PMLE Pass", distinct_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" });
+  expect(payload.properties).not.toHaveProperty("revenue");
+  expect(payload.properties).not.toHaveProperty("currency");
+});

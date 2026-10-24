@@ -55,7 +55,7 @@ it.each([false, true])("shows honest quick-check reads and targeted study advice
   expect(html).toContain('href="/diagnostic?length=20"');
   expect(html).toContain(signedIn ? "Signed-in unlock" : "Secondary pass option");
   if (!signedIn) {
-    expect(html).toContain("practice 60 questions a month");
+    expect(html).toContain("practice with no monthly limit and track your progress");
     expect(html.indexOf("Free explanation")).toBeLessThan(html.indexOf("Create free account"));
     expect(html.indexOf("Free explanation")).toBeLessThan(html.indexOf("Secondary pass option"));
   }

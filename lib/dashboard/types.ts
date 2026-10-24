@@ -6,5 +6,6 @@ export interface DashboardData {
   weakestDomains: DiagnosticResult["domainBreakdown"];
   domains: { domainCode: string; domainName: string }[];
   openPractice: { sessionId: string; domainName: string } | null;
-  quota: { remaining: number; monthStart: string };
+  progress: Omit<DiagnosticResult, "sessionId" | "readiness" | "review">;
+  practiceHistory: { sessionId: string; completedAt: string; totalQuestions: number; correctAnswers: number; score: number }[];
 }

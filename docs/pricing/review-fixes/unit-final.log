@@ -1,0 +1,177 @@
+
+> testero@2.0.0 test
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.3 [39m[90m/Users/switkowski/Projects/Testero/frontend.prime-tiers[39m
+
+ [32m✓[39m tests/prod-schema-verifier.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 269[2mms[22m[39m
+ [32m✓[39m tests/certifications.test.tsx [2m([22m[2m20 tests[22m[2m)[22m[33m 382[2mms[22m[39m
+ [32m✓[39m tests/chatgpt-questions.test.ts [2m([22m[2m59 tests[22m[2m)[22m[33m 714[2mms[22m[39m
+ [32m✓[39m tests/structured-data.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 298[2mms[22m[39m
+ [32m✓[39m tests/content-exam.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 335[2mms[22m[39m
+ [32m✓[39m tests/old-urls.test.ts [2m([22m[2m29 tests[22m[2m)[22m[33m 358[2mms[22m[39m
+ [32m✓[39m tests/chatgpt-exams.test.ts [2m([22m[2m69 tests[22m[2m)[22m[33m 1030[2mms[22m[39m
+ [32m✓[39m tests/billing-ui.test.ts [2m([22m[2m39 tests[22m[2m)[22m[32m 97[2mms[22m[39m
+ [32m✓[39m tests/pmle-pass-copy.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 76[2mms[22m[39m
+ [32m✓[39m tests/diagnostic-results-slots.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32m✓[39m tests/content-loader.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 66[2mms[22m[39m
+ [32m✓[39m tests/tools.test.tsx [2m([22m[2m25 tests[22m[2m)[22m[32m 146[2mms[22m[39m
+ [32m✓[39m tests/public-samples-bank.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 1367[2mms[22m[39m
+   [32m✓[39m public sample bank isolation [2m(1)[22m
+     [33m[2m✓[22m[39m has no ID collisions with the available local DB bank[33m 1365[2mms[22m[39m
+ [32m✓[39m tests/practice-service.test.ts [2m([22m[2m77 tests[22m[2m)[22m[32m 186[2mms[22m[39m
+ [32m✓[39m tests/attribution-sdk.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 132[2mms[22m[39m
+ [32m✓[39m tests/diagnostic-service.test.ts [2m([22m[2m102 tests[22m[2m)[22m[32m 104[2mms[22m[39m
+ [32m✓[39m tests/chatgpt-analytics.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 91[2mms[22m[39m
+ [32m✓[39m tests/public-samples.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 112[2mms[22m[39m
+ [32m✓[39m tests/agentic-architect.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+ [32m✓[39m tests/analytics-server.test.ts [2m([22m[2m39 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32m✓[39m tests/chatgpt-free-set.test.ts [2m([22m[2m35 tests[22m[2m)[22m[32m 62[2mms[22m[39m
+ [32m✓[39m tests/pmle-facts.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 56[2mms[22m[39m
+ [32m✓[39m tests/billing-status.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m tests/attribution.test.ts [2m([22m[2m41 tests[22m[2m)[22m[32m 75[2mms[22m[39m
+ [32m✓[39m tests/practice-ui.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 118[2mms[22m[39m
+ [32m✓[39m tests/pmle-cheat-sheet.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 86[2mms[22m[39m
+ [32m✓[39m tests/chatgpt-mcp.test.ts [2m([22m[2m84 tests[22m[2m)[22m[33m 2129[2mms[22m[39m
+   [32m✓[39m ChatGPT MCP tools over real Streamable HTTP JSON-RPC [2m(38)[22m
+     [33m[2m✓[22m[39m checks every option of all 40 questions with the full original explanations[33m 317[2mms[22m[39m
+ [32m✓[39m tests/pmle-practice-options.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m tests/results-email.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 122[2mms[22m[39m
+ [32m✓[39m tests/diagnostic-routes.test.ts [2m([22m[2m64 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+ [32m✓[39m tests/homepage-bio.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+ [32m✓[39m tests/public-personalization.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m tests/beta-diagnostic-routes.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m tests/mobile-navigation.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m tests/analytics.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m tests/cert-rate-limit.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m tests/auth-routes.test.ts [2m([22m[2m59 tests[22m[2m)[22m[32m 60[2mms[22m[39m
+ [32m✓[39m tests/billing-webhook.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m tests/analytics-client-ui.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 61[2mms[22m[39m
+ [32m✓[39m tests/proxy.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m tests/question-review.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m tests/diagnostic-beta-ui.test.tsx [2m([22m[2m46 tests[22m[2m)[22m[32m 68[2mms[22m[39m
+ [32m✓[39m tests/analytics-auth-ui.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+[90mstdout[2m | tests/selection.test.ts[2m > [22m[2mported Supabase selector[2m > [22m[2mincludes domains beyond the first inventory page
+[22m[39m📊 PMLE Diagnostic Domain Distribution:
+✅ ARCHITECTING_LOW_CODE_ML_SOLUTIONS: 3/3 (available: 1000)
+✅ COLLABORATING_TO_MANAGE_DATA_AND_MODELS: 3/3 (available: 5)
+✅ SCALING_PROTOTYPES_INTO_ML_MODELS: 4/4 (available: 5)
+✅ SERVING_AND_SCALING_MODELS: 4/4 (available: 5)
+✅ AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES: 3/3 (available: 5)
+✅ MONITORING_ML_SOLUTIONS: 3/3 (available: 5)
+Total selected: 20/20
+
+ [32m✓[39m tests/attribution-stripe.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+[90mstdout[2m | tests/selection.test.ts[2m > [22m[2mported Supabase selector[2m > [22m[2mloads the full inventory once rather than serial per-domain reads
+[22m[39m📊 PMLE Diagnostic Domain Distribution:
+✅ ARCHITECTING_LOW_CODE_ML_SOLUTIONS: 3/3 (available: 5)
+✅ COLLABORATING_TO_MANAGE_DATA_AND_MODELS: 3/3 (available: 5)
+✅ SCALING_PROTOTYPES_INTO_ML_MODELS: 4/4 (available: 5)
+✅ SERVING_AND_SCALING_MODELS: 4/4 (available: 5)
+✅ AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES: 3/3 (available: 5)
+✅ MONITORING_ML_SOLUTIONS: 3/3 (available: 5)
+Total selected: 20/20
+
+[90mstdout[2m | tests/selection.test.ts[2m > [22m[2mdiagnostic freshness preferences[2m > [22m[2mselection serves new unseen questions per domain and keeps blueprint targets
+[22m[39m📊 PMLE Diagnostic Domain Distribution:
+✅ ARCHITECTING_LOW_CODE_ML_SOLUTIONS: 3/3 (available: 10)
+✅ COLLABORATING_TO_MANAGE_DATA_AND_MODELS: 3/3 (available: 10)
+✅ SCALING_PROTOTYPES_INTO_ML_MODELS: 4/4 (available: 10)
+✅ SERVING_AND_SCALING_MODELS: 4/4 (available: 10)
+✅ AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES: 3/3 (available: 10)
+✅ MONITORING_ML_SOLUTIONS: 3/3 (available: 10)
+Total selected: 20/20
+
+[90mstdout[2m | tests/selection.test.ts[2m > [22m[2mloads inventory while history preferences are pending, then honors those preferences
+[22m[39m📊 PMLE Diagnostic Domain Distribution:
+✅ ARCHITECTING_LOW_CODE_ML_SOLUTIONS: 3/3 (available: 10)
+✅ COLLABORATING_TO_MANAGE_DATA_AND_MODELS: 3/3 (available: 10)
+✅ SCALING_PROTOTYPES_INTO_ML_MODELS: 4/4 (available: 10)
+✅ SERVING_AND_SCALING_MODELS: 4/4 (available: 10)
+✅ AUTOMATING_AND_ORCHESTRATING_ML_PIPELINES: 3/3 (available: 10)
+✅ MONITORING_ML_SOLUTIONS: 3/3 (available: 10)
+Total selected: 20/20
+
+ [32m✓[39m tests/dashboard.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+ [32m✓[39m tests/selection.test.ts [2m([22m[2m44 tests[22m[2m)[22m[32m 84[2mms[22m[39m
+ [32m✓[39m tests/pmle-pass.test.ts [2m([22m[2m60 tests[22m[2m)[22m[32m 175[2mms[22m[39m
+ [32m✓[39m tests/billing-recovery.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 69[2mms[22m[39m
+ [32m✓[39m tests/auth-validation.test.ts [2m([22m[2m73 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m tests/billing-checkout-idempotency.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32m✓[39m tests/mock-service.test.ts [2m([22m[2m34 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m tests/stripe-events.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 3572[2mms[22m[39m
+   [32m✓[39m rotation script with fake cloud/payment CLIs only [2m(7)[22m
+     [33m[2m✓[22m[39m creates exact event list, stores secret before disabling only matching old endpoints[33m 689[2mms[22m[39m
+     [33m[2m✓[22m[39m --check ok is read-only with expected exit 0[33m 501[2mms[22m[39m
+     [33m[2m✓[22m[39m --check mismatch is read-only with expected exit 1[33m 492[2mms[22m[39m
+     [33m[2m✓[22m[39m --check pagination is read-only with expected exit 1[33m 489[2mms[22m[39m
+     [33m[2m✓[22m[39m stops on secret-failure without disabling any endpoint[33m 614[2mms[22m[39m
+     [33m[2m✓[22m[39m stops on pagination without disabling any endpoint[33m 538[2mms[22m[39m
+ [32m✓[39m tests/claim.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+ [32m✓[39m tests/analytics-request.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m tests/diagnostic-answer-tracking.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 85[2mms[22m[39m
+ [32m✓[39m tests/auth-form-ui.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 57[2mms[22m[39m
+ [32m✓[39m tests/paid-explanations.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m tests/site-chrome.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m tests/mock-routes.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m tests/site-header.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m tests/seo.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32m✓[39m tests/practice-routes.test.ts [2m([22m[2m37 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+ [32m✓[39m tests/free-explanation-ui.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m tests/content-markdown.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 59[2mms[22m[39m
+ [32m✓[39m tests/pmle-guide.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m tests/beta-diagnostic-server.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m tests/qa-safety.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+[90mstderr[2m | tests/billing-checkout.test.ts[2m > [22m[2mtracks checkout only when Stripe returns a usable checkout
+[22m[39mBilling request failed
+
+ [32m✓[39m tests/billing-checkout.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m tests/practice-selection.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m tests/paid-access.test.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m tests/support-page.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32m✓[39m tests/billing-portal.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m tests/site-availability.test.tsx [2m([22m[2m12 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tests/diagnostic-unlock.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m tests/paid-landing-flow.test.tsx [2m([22m[2m11 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m tests/health.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m tests/schema.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m tests/site-copy-fixes.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m tests/study-pages.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m tests/cert-waitlist.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m tests/question-report-route.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/question-reports.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/answer-order.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/ui-primitives.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m tests/mock-session-timer.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/results-email-route.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m tests/mock-selection.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/readiness.test.ts [2m([22m[2m35 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m tests/navigation-auth.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m tests/mock-timer.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/ownership.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m tests/chatgpt-transcript.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m tests/free-explanation-route.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/auth-cookies.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/deployment.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m tests/pmle-inventory.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m tests/protected-auth.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tests/legal-terms.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tests/scoring.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/auth-session.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/practice-selection-label.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tests/stripe-fixture.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tests/test-environment.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/server-timing.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/page-metadata.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m105 passed[39m[22m[90m (105)[39m
+[2m      Tests [22m [1m[32m1914 passed[39m[22m[90m (1914)[39m
+[2m   Start at [22m 15:26:49
+[2m   Duration [22m 5.13s[2m (tests 43%, transform 27%, import 25%, setup 4%, worker 1%)[22m
+
+[2m  Transform [22m [33mtransforming modules took 9.07s[39m[2m · 27% of tracked time, re-done on every run[22m
+[2m            [22m [2mpersist transforms across runs with [22m[33mfsModuleCache: true[39m
+[2m            [22m [2mon CI this only helps when the cache directory is persisted between runs[22m
+[2m            [22m [2mlearn more: https://vitest.dev/guide/improving-performance#caching-between-reruns[22m
+

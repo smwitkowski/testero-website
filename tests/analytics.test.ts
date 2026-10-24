@@ -61,10 +61,10 @@ describe("private analytics event wiring", () => {
     const analytics = await import("@/lib/analytics/client");
     for (const name of ["trackDiagnostic", "trackSignupCompleted", "trackCheckoutStarted"]) expect(analytics).not.toHaveProperty(name);
   });
-  it("sends practice start with session and remaining quota metadata", async () => {
+  it("sends practice start without quota metadata", async () => {
     const analytics = await import("@/lib/analytics/client");
-    analytics.initializeAnalytics(); analytics.trackPractice("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", 1);
-    expect(sdk.capture.mock.calls).toEqual([["practice_started", { session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", free_questions_remaining_at_check: 1 }]]);
+    analytics.initializeAnalytics(); analytics.trackPractice("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    expect(sdk.capture.mock.calls).toEqual([["practice_started", { session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }]]);
   });
   it("identifies only opaque UUIDs and resets identity after logout", async () => {
     const analytics = await import("@/lib/analytics/client");

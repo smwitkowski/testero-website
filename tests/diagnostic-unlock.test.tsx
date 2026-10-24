@@ -10,12 +10,12 @@ beforeEach(() => { vi.clearAllMocks(); });
 it("offers account creation anonymously and the existing checkout button for a verified free account", () => {
   const anonymous = renderToStaticMarkup(createElement(DiagnosticUnlockCard, { result }));
   expect(anonymous).toContain('href="/signup?next=%2Fpricing"');
-  expect(anonymous).toContain("Get PMLE Pass: $39");
-  expect(anonymous).toContain("Every option explained, progress tracking and unlimited practice");
+  expect(anonymous).toContain("Get PMLE Pass: $39.99");
+  expect(anonymous).toContain("Every option explained, timed mock exams, fresh-first practice and weak-area drills");
   expect(anonymous).toContain("No auto-renew");
   mocks.resource.mockReturnValue({ data: { signedIn: true, owned: false }, error: null });
   const signedIn = renderToStaticMarkup(createElement(SignedInDiagnosticUnlock, { result }));
-  expect(signedIn).toContain("Get PMLE Pass: $39</button>");
+  expect(signedIn).toContain("Get PMLE Pass: $39.99</button>");
   expect(signedIn).not.toContain("/signup");
 });
 it.each([{ signedIn: true, owned: true }, { signedIn: false }, null])("does not advertise a purchase until free signed-in access is verified: %j", data => {

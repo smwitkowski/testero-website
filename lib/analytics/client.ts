@@ -58,8 +58,8 @@ export function trackPageview(path: string) {
 
 // diagnostic_started, diagnostic_completed, signup_completed and checkout_started are
 // server-only (lib/analytics/server.ts); capturing them here too double-counted them.
-export function trackPractice(sessionId: string, remaining: number | null = null) {
-  if (initialized) posthog.capture("practice_started", { session_id: sessionId, free_questions_remaining_at_check: remaining });
+export function trackPractice(sessionId: string) {
+  if (initialized) posthog.capture("practice_started", { session_id: sessionId });
 }
 
 export function identifyAnalytics(userId: string) {

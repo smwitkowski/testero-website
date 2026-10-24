@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { PMLE_PASS_PRICE_DISPLAY } from "@/lib/billing/pmle-pass";
 import { analyticsHeaders } from "@/lib/analytics/client";
 import { Button } from "@/components/ui/button";
 
@@ -31,7 +32,7 @@ export async function beginCheckout(): Promise<string> {
   return href;
 }
 
-export function CheckoutButton({ onCheckout, label = "Unlock PMLE Pass: $39" }: { onCheckout?: () => void; label?: string } = {}) {
+export function CheckoutButton({ onCheckout, label = `Unlock PMLE Pass: ${PMLE_PASS_PRICE_DISPLAY}` }: { onCheckout?: () => void; label?: string } = {}) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);

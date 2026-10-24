@@ -22,13 +22,20 @@ export function stripeId(value: string | { id: string } | null | undefined): str
   return typeof value === "string" ? value : value?.id || null;
 }
 
-/** Line items, not client metadata or totals, identify the purchased product. */
-export function isPaidPassSession(session: Stripe.Checkout.Session): boolean {
-  const priceId = process.env.STRIPE_PRICE_PMLE_PASS;
+/** Configuration is all-or-nothing; legacy prices can never replace the current price. */
+function passPriceIds(): Set<string> | null {
+  const current = process.env.STRIPE_PRICE_PMLE_PASS;
+  const legacy = process.env.STRIPE_PRICE_PMLE_PASS_LEGACY?.trim();
+  const ids = [current, ...(legacy ? legacy.split(",").map(id => id.trim()) : [])];
+  if (ids.some(id => !id || !/^price_[A-Za-z0-9_]{1,240}$/.test(id))) return null;
+  return new Set(ids as string[]);
+}
+
+/** Product shape and ownership metadata still need current payment verification. */
+function hasPaidPassShape(session: Stripe.Checkout.Session): boolean {
   const items = session.line_items;
   return Boolean(
-    priceId &&
-      session.mode === "payment" &&
+    session.mode === "payment" &&
       session.payment_status === "paid" &&
       session.metadata?.user_id &&
       session.metadata?.plan_name === "PMLE Pass" &&
@@ -37,9 +44,24 @@ export function isPaidPassSession(session: Stripe.Checkout.Session): boolean {
       items &&
       !items.has_more &&
       items.data.length === 1 &&
-      items.data[0].price?.id === priceId &&
+      items.data[0].price?.id &&
       items.data[0].quantity === 1
   );
+}
+
+/** Line items, not client metadata or totals, identify the purchased product. */
+export function isPaidPassSession(session: Stripe.Checkout.Session): boolean {
+  return hasPaidPassShape(session) && Boolean(passPriceIds()?.has(session.line_items!.data[0].price!.id));
+}
+
+/** Keep paid price/configuration failures visible and retryable, without provider data. */
+export function assertPaidPassPriceRecognized(session: Stripe.Checkout.Session): void {
+  if (!hasPaidPassShape(session)) return;
+  const prices = passPriceIds();
+  if (prices?.has(session.line_items!.data[0].price!.id)) return;
+  // Fixed messages only: never log checkout/payment IDs, metadata, or customer data.
+  console.error(prices ? "Paid PMLE Pass price is not allowlisted" : "Invalid PMLE Pass price configuration");
+  throw new Error("Paid PMLE Pass requires billing configuration recovery");
 }
 
 /** Always read current charge state; a stale checkout event cannot undo a refund. */
@@ -85,6 +107,7 @@ export async function grantPmlePass(
   supabase: SupabaseClient,
   session: Stripe.Checkout.Session
 ) {
+  assertPaidPassPriceRecognized(session);
   if (!isPaidPassSession(session)) throw new Error("Invalid paid PMLE Pass checkout");
   const paymentIntentId = stripeId(session.payment_intent)!;
   const payment = await getPassPayment(service, session);

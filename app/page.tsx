@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PMLE_PASS_PRICE_DISPLAY } from "@/lib/billing/pmle-pass";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { CertificationPreview } from "@/components/certification-preview";
@@ -32,7 +33,7 @@ async function CertificationDirectory() {
 const steps = [
   { title: "Answer real-world scenarios", label: "Check", body: "Start with a free PMLE diagnostic. Choose 5, 10 or 20 questions; the full check spans all six exam domains. No account is needed, so you can see the report before deciding whether to sign up." },
   { title: "Turn a score into a study focus", label: "Understand", body: "Read your overall score, readiness tier and domain breakdown together. Look at the number of questions behind each domain score. A small sample is a starting signal, not proof that you have mastered a topic." },
-  { title: "Work on the gaps", label: "Practice", body: "Use the official guide to review your weakest areas, then practice. Free accounts get 60 practice questions per month. The PMLE Pass adds explanations, progress tracking and unlimited practice for 90 days." },
+  { title: "Work on the gaps", label: "Practice", body: "Use the official guide to review your weakest areas, then practice. Free accounts get practice with no monthly limit and progress tracking. PMLE Pass adds explanations, timed mock exams, fresh-first practice and weak-area drills for 90 days." },
 ];
 export default function HomePage() {
   return <div className="space-y-14 sm:space-y-20">
@@ -59,7 +60,7 @@ export default function HomePage() {
     <section aria-labelledby="method" className="max-w-3xl">
       <div className="space-y-4"><h2 id="method" className="text-2xl font-semibold">Practice decisions, not just product names</h2><p className="leading-7 text-body">Testero’s questions use scenarios mapped to official exam-guide objectives. Consider the requirements in each scenario, choose an approach, and explain to yourself why the alternatives do not fit. Recognizing a service name is different from knowing when to use it.</p><p className="leading-7 text-body">Start with our <Link className="text-primary underline" href="/pmle/sample-questions">free sample questions and explanations</Link> to see the format before taking a diagnostic. Use the explanations to understand why each option fits or does not fit the scenario.</p></div>
     </section>
-    <section aria-labelledby="pass" className="flex flex-wrap items-center justify-between gap-6 rounded-lg border border-border bg-card p-6 sm:p-9"><div className="max-w-2xl space-y-3"><h2 id="pass" className="text-2xl font-semibold">Go deeper with the PMLE Pass</h2><p className="leading-7 text-body">$39 USD one-time for 90 days. Get explanations for every option, progress tracking and unlimited practice. No auto-renewal; 7-day refund. A refund ends pass access. Start free and decide after you see your study focus.</p></div><Button asChild variant="outline"><Link href="/pricing">Compare free and paid</Link></Button></section>
+    <section aria-labelledby="pass" className="flex flex-wrap items-center justify-between gap-6 rounded-lg border border-border bg-card p-6 sm:p-9"><div className="max-w-2xl space-y-3"><h2 id="pass" className="text-2xl font-semibold">Go deeper with the PMLE Pass</h2><p className="leading-7 text-body">{PMLE_PASS_PRICE_DISPLAY} USD one-time for 90 days. Get explanations for every option, timed mock exams, fresh-first practice and weak-area drills. Free practice and progress tracking stay free. No auto-renewal; 7-day refund. A refund ends pass access. Start free and decide after you see your study focus.</p></div><Button asChild variant="outline"><Link href="/pricing">Compare free and paid</Link></Button></section>
     <RelatedPmleGuides home />
     <section aria-labelledby="founder" className="max-w-3xl space-y-4 border-t border-border pt-8">
       <h2 id="founder" className="text-2xl font-semibold">Who builds this</h2>

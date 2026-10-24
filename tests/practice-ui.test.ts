@@ -21,7 +21,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: 
 vi.mock("@/lib/analytics/client", () => ({ trackPractice: vi.fn() }));
 
 const domains = Array.from({ length: 6 }, (_, index) => ({ domainCode: `D${index}`, domainName: `Domain ${index}` }));
-const empty: DashboardData = { paidAccess: { hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null }, diagnostic: null, weakestDomains: [], domains, openPractice: null, quota: { remaining: 60, monthStart: "2026-10-01" } };
+const empty: DashboardData = { paidAccess: { hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null }, diagnostic: null, weakestDomains: [], domains, openPractice: null, progress: { totalQuestions: 0, correctAnswers: 0, score: 0, domainBreakdown: [] }, practiceHistory: [] };
 
 beforeEach(() => { vi.stubGlobal("fetch", vi.fn()); state.progress = null; });
 afterEach(() => vi.unstubAllGlobals());
@@ -50,7 +50,7 @@ describe("practice HTTP boundary", () => {
 
 describe("dashboard and practice states", () => {
   it.each([["D3", "D3"], ["unknown", "D0"]])("selects only a supported requested domain %s", (requestedDomain, selected) => {
-    const html = renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: [], remaining: 60, requestedDomain }));
+    const html = renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: [], requestedDomain }));
     expect(html).toContain(`value="${selected}" selected=""`);
     expect(html).not.toContain('value="unknown"');
   });
@@ -61,7 +61,9 @@ describe("dashboard and practice states", () => {
     domains.forEach(domain => expect(html).toContain(domain.domainName));
     expect(html).not.toContain("0% score");
     expect(html).not.toContain("Coming in Phase 2");
-    expect(html).toContain("Free account. 60 practice questions each month.");
+    expect(html).toContain("Your progress");
+    expect(html).toContain("Practice as often as you like");
+    expect(html).toContain("Locked · Pass only");
     expect(html).not.toContain("Phase 3");
   });
   it("shows score, weakest-domain CTAs and an owned resume link without question review", () => {
@@ -77,24 +79,21 @@ describe("dashboard and practice states", () => {
     expect(html).toContain("Recommended: Domain 0");
     expect(html).toContain('/practice/owned%2Fsession');
     expect(html).not.toContain("Question review");
-    expect(html).toContain("Progress tracking · PMLE Pass");
+    expect(html).toContain("Your progress");
+    expect(html).not.toContain("Progress tracking · PMLE Pass");
   });
-  it("replaces ungated practice controls with the exhausted allowance and pricing CTA", () => {
-    const html = renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: [], remaining: 0 }));
-    expect(html).toContain("0 of 60 free practice questions left this month");
-    expect(html).toContain('href="/pricing"');
-    expect(html).toContain("Upgrade to PMLE Pass");
-    expect(html).not.toContain("<select");
-    expect(html).not.toContain("Start practice</button>");
+  it("offers free practice without an allowance or quota state", () => {
+    const html = renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: [] }));
+    expect(html).toContain("Practice as often as you like");
+    expect(html).toContain("Start practice</button>");
+    expect(html).not.toMatch(/60|allowance|quota|questions left|reset/);
   });
-  it("allows paid practice with an exhausted free quota, with unlimited 5-question sessions", () => {
-    const html = renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: [], remaining: 0, hasPaidAccess: true }));
-    expect(html).toContain("unlimited practice sessions");
-    expect(html).toContain("5 questions");
+  it("explains fresh-first selection for Pass practice", () => {
+    const html = renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: [], hasPaidAccess: true }));
+    expect(html).toContain("Fresh-first selection");
+    expect(html).toContain("5-question sessions");
     expect(html).toContain("Start practice</button>");
     expect(html).toContain("<select");
-    expect(html).not.toContain("free practice questions remaining");
-    expect(html).not.toContain("Upgrade to PMLE Pass");
   });
   it("renders the verified pass expiry or legacy status instead of Phase 3 placeholders", () => {
     const html = renderToStaticMarkup(createElement(DashboardPanel, { data: { ...empty, paidAccess: { hasPaidAccess: true, isLegacySubscriber: false, accessUntil: "2027-01-01T00:00:00Z", pass: { id: "pass", paid_at: "2026-10-03T00:00:00Z", expires_at: "2027-01-01T00:00:00Z", refunded_at: null } } } }));
@@ -194,37 +193,44 @@ describe("practice explanation display boundary", () => {
 describe("QA 2026-10-14 practice start", () => {
   it("defaults the domain select to the weakest domain unless one was requested", () => {
     const weakest = [{ domainCode: "D4", domainName: "Domain 4", total: 3, correct: 0, percentage: 0 }];
-    expect(renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: weakest, remaining: 5 }))).toContain('value="D4" selected=""');
-    expect(renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: weakest, remaining: 60, requestedDomain: "D2" }))).toContain('value="D2" selected=""');
+    expect(renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: weakest }))).toContain('value="D4" selected=""');
+    expect(renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: weakest, requestedDomain: "D2" }))).toContain('value="D2" selected=""');
   });
-  it("shows the quota reset date", () => {
-    const html = renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: [], remaining: 0, quotaMonthStart: "2026-10-01" }));
-    expect(html).toContain("resets November 1 at 00:00 UTC");
-    expect(html).not.toContain("0 free practice questions remaining");
-  });
-});
+ });
 
-describe("reservation contention", () => {
-  it("asks to reload the actual allowance instead of claiming exhaustion", () => {
-    vi.mocked(useState).mockImplementationOnce(() => [true, vi.fn()] as never);
-    const html = renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: [], remaining: 6 }));
-    expect(html).toContain("Reload allowance");
-    expect(html).not.toContain("0 of 60");
-    expect(html).not.toContain("used your free practice allowance");
-  });
-});
-
-describe("paid practice tracking", () => {
-  it.each([false, true])("shows practice score only for active paid tracking %s", hasPaidTracking => {
-    state.progress = { sessionId: "owned", hasPaidTracking, totalQuestions: 5, score: 80, correctAnswers: 4, review: [] };
+describe("free practice tracking", () => {
+  it("always renders scores and per-domain tracking without a Pass", () => {
+    state.progress = { sessionId: "owned", totalQuestions: 5, score: 80, correctAnswers: 4, domainBreakdown: [{domainCode:"D0",domainName:"Domain 0",total:5,correct:4,percentage:80}], review: [] };
     const html = renderToStaticMarkup(createElement(PracticeSummary, { sessionId: "owned" }));
-    expect(html.includes("Practice score")).toBe(hasPaidTracking);
-    expect(html.includes("80%")).toBe(hasPaidTracking);
-    expect(html.includes("Explore PMLE Pass")).toBe(!hasPaidTracking);
+    expect(html).toContain("Practice score"); expect(html).toContain("80%");
+    expect(html).toContain("Progress by domain"); expect(html).toContain("Domain 0");
+    expect(html).not.toContain("Explore PMLE Pass");
   });
-  it.each([60, 1])("keeps a usable start at %s questions remaining", remaining => {
-    const html = renderToStaticMarkup(createElement(PracticeStart, { domains, weakestDomains: [], remaining, quotaMonthStart: "2026-10-01" }));
-    expect(html).toContain(`${remaining} of 60 free practice questions left this month`);
-    expect(html).toContain("Start practice</button>");
+  it("shows free history with real saved scores", () => {
+    const html = renderToStaticMarkup(createElement(DashboardPanel, { data: { ...empty,
+      progress: {totalQuestions:65,correctAnswers:52,score:80,domainBreakdown:[{domainCode:"D0",domainName:"Domain 0",total:65,correct:52,percentage:80}]},
+      practiceHistory:[{sessionId:"owned",completedAt:"2026-10-24T15:00:00Z",totalQuestions:5,correctAnswers:4,score:80}],
+    } }));
+    expect(html).toContain("52 of 65 answers correct"); expect(html).toContain("Recent practice sessions");
+    expect(html).toContain("/practice/owned/summary"); expect(html).toContain("4/5 correct");
+    expect(html).not.toContain("Unlock score tracking");
+  });
+  it("offers three real locked Pass entry points without invented results", () => {
+    const html = renderToStaticMarkup(createElement(DashboardPanel, {data:empty}));
+    for (const title of ["Timed mock exams","Fresh-first practice","Weak-area drills"]) expect(html).toContain(`Unlock ${title} with PMLE Pass`);
+    expect(html.match(/Locked · Pass only/g)).toHaveLength(3);
+    expect(html).not.toContain("Start weak-area drill</button>");
+    expect(html).not.toContain("Mock score");
+  });
+});
+
+describe("persisted drill focus UI", () => {
+  it("shows the server-restored selection across reloads", () => {
+    state.progress = { sessionId:"owned",status:"in_progress",answeredCount:0,totalQuestions:5,
+      selection:{reason:"general",domainCode:"D0",message:"Trusted server selection"},
+      currentQuestion:{id:"item",ordinal:1,domainCode:"D0",stem:"Question",options:[{label:"A",text:"One"},{label:"B",text:"Two"}]},
+    };
+    const html=renderToStaticMarkup(createElement(PracticeSession,{sessionId:"owned"}));
+    expect(html).toContain("Trusted server selection");
   });
 });

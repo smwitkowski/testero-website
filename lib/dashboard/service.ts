@@ -4,7 +4,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
 import { computeResult } from "@/lib/diagnostic/scoring";
 import { DiagnosticError } from "@/lib/diagnostic/http";
-import { freePracticeQuota } from "@/lib/practice/service";
 import type { DashboardData } from "@/lib/dashboard/types";
 import { weakestFirst } from "@/lib/readiness";
 
@@ -22,12 +21,53 @@ export async function loadDashboard(client: SupabaseClient, userId: string, now 
   if (pendingError) throw unavailable();
   const domains = PMLE_BLUEPRINT.map(domain => ({ domainCode: domain.domainCode, domainName: domain.displayName }));
   const pendingCode = pending?.domain_codes?.[0];
+  const tracking = await loadProgress(client, userId);
   return {
     paidAccess: await getPaidAccess(userId, client, now),
     diagnostic,
     weakestDomains: diagnostic ? weakestFirst(diagnostic.domainBreakdown).slice(0, 2) : [],
     domains,
     openPractice: pending ? { sessionId: pending.id, domainName: domains.find(domain => domain.domainCode === pendingCode)?.domainName ?? "Your selected domain" } : null,
-    quota: await freePracticeQuota(client, userId, new Date(now)),
+    ...tracking,
   };
+}
+
+interface ProgressRow {
+  session_id: string;
+  domain_code: string;
+  domain_name: string;
+  is_correct: boolean;
+  answered_at: string;
+  study_sessions: { kind: string; completed_at: string | null };
+}
+
+/** Account-owned answer aggregates are free. Never select question or explanation text. */
+async function loadProgress(client: SupabaseClient, userId: string): Promise<Pick<DashboardData, "progress" | "practiceHistory">> {
+  const rows: ProgressRow[] = [];
+  const pageSize = 1000;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await client.from("session_items")
+      .select("session_id,domain_code,domain_name,is_correct,answered_at,study_sessions!inner(kind,completed_at)")
+      .eq("study_sessions.user_id", userId).eq("study_sessions.exam", "GCP_PM_ML_ENG")
+      .in("study_sessions.kind", ["diagnostic", "practice"]).not("answered_at", "is", null)
+      .order("answered_at").order("id").range(offset, offset + pageSize - 1);
+    if (error || !Array.isArray(data) || data.some(row => !row.answered_at || typeof row.is_correct !== "boolean" || !row.study_sessions)) {
+      throw new DiagnosticError(503, "Your dashboard is unavailable. Please try again.");
+    }
+    rows.push(...data as unknown as ProgressRow[]);
+    if (data.length < pageSize) break;
+  }
+  const { sessionId: _sessionId, readiness: _readiness, ...progress } = computeResult("history", rows);
+  void _sessionId; void _readiness;
+  const sessions = new Map<string, { completedAt: string; rows: ProgressRow[] }>();
+  for (const row of rows) {
+    if (row.study_sessions.kind !== "practice" || !row.study_sessions.completed_at) continue;
+    const session = sessions.get(row.session_id) ?? { completedAt: row.study_sessions.completed_at, rows: [] };
+    session.rows.push(row); sessions.set(row.session_id, session);
+  }
+  const practiceHistory = [...sessions].map(([sessionId, session]) => {
+    const { totalQuestions, correctAnswers, score } = computeResult(sessionId, session.rows);
+    return { sessionId, completedAt: session.completedAt, totalQuestions, correctAnswers, score };
+  }).sort((a, b) => b.completedAt.localeCompare(a.completedAt) || a.sessionId.localeCompare(b.sessionId)).slice(0, 10);
+  return { progress, practiceHistory };
 }

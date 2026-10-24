@@ -1,0 +1,106 @@
+
+> testero@2.0.0 build
+> next build
+
+▲ Next.js 16.3.8 (Turbopack)
+✓ Running next.config.ts took 112ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1212ms
+  Running TypeScript ...
+  Finished TypeScript in 2.1s ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/79) ...
+  Generating static pages using 9 workers (19/79) 
+  Generating static pages using 9 workers (39/79) 
+  Generating static pages using 9 workers (59/79) 
+✓ Generating static pages using 9 workers (79/79) in 459ms
+  Finalizing page optimization ...
+
+Route (app)                                                                                    Revalidate  Expire
+┌ ƒ /
+├ ○ /_not-found                                                                                        5m      1d
+├ ƒ /.well-known/openai-apps-challenge
+├ ○ /about                                                                                             5m      1d
+├ ƒ /account
+├ ƒ /api/auth/forgot-password
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/navigation
+├ ƒ /api/auth/resend
+├ ƒ /api/auth/reset-password
+├ ƒ /api/auth/signup
+├ ƒ /api/billing/access
+├ ƒ /api/billing/checkout
+├ ƒ /api/billing/portal
+├ ƒ /api/billing/status
+├ ƒ /api/billing/webhook
+├ ƒ /api/cert-waitlist
+├ ƒ /api/diagnostic
+├ ƒ /api/diagnostic/[sessionId]
+├ ƒ /api/diagnostic/[sessionId]/answer
+├ ƒ /api/diagnostic/[sessionId]/email
+├ ƒ /api/diagnostic/[sessionId]/free-explanation
+├ ƒ /api/diagnostic/[sessionId]/results
+├ ƒ /api/health
+├ ƒ /api/mcp
+├ ƒ /api/mock/[id]
+├ ƒ /api/mock/[id]/answer
+├ ƒ /api/mock/[id]/results
+├ ƒ /api/mock/[id]/submit
+├ ƒ /api/mock/start
+├ ƒ /api/practice
+├ ƒ /api/practice/[id]
+├ ƒ /api/practice/[id]/answer
+├ ƒ /api/practice/[id]/summary
+├ ƒ /api/question-reports
+├ ƒ /auth/confirm
+├ ƒ /blog
+├   /blog/[slug]
+│ ├ ● /blog/canary-vs-shadow-deployment-agent-platform-pmle                                            5m      1d
+│ ├ ● /blog/colab-enterprise-vs-agent-platform-workbench                                               5m      1d
+│ ├ ● /blog/bigquery-ml-vs-automl-vs-custom-training                                                   5m      1d
+│ └ ● [+12 more paths]
+├ ƒ /certifications
+├ ƒ /certifications/[slug]
+├ ƒ /checkout/success
+├ ƒ /dashboard
+├ ƒ /diagnostic
+├ ƒ /diagnostic/[sessionId]
+├ ƒ /diagnostic/[sessionId]/results
+├ ○ /faq                                                                                               5m      1d
+├   /faq/[slug]
+│ ├ ● /faq/what-is-google-cloud-certification                                                          5m      1d
+│ ├ ● /faq/is-google-cloud-certification-worth-it                                                      5m      1d
+│ ├ ● /faq/what-are-the-five-sections-of-the-associate-cloud-engineer-certification-by-google          5m      1d
+│ └ ● [+6 more paths]
+├ ƒ /forgot-password
+├ ƒ /login
+├ ƒ /mock
+├ ƒ /mock/[id]
+├ ƒ /mock/[id]/results
+├ ○ /pmle/practice-options-compared                                                                    5m      1d
+├ ○ /pmle/sample-questions                                                                             5m      1d
+├ ○ /pmle/vertex-ai-agent-platform-cheat-sheet                                                         5m      1d
+├ ƒ /practice/[id]
+├ ƒ /practice/[id]/summary
+├ ƒ /pricing
+├ ○ /privacy                                                                                           5m      1d
+├ ƒ /reset-password
+├ ○ /robots.txt                                                                                        5m      1d
+├ ƒ /signup
+├ ○ /sitemap.xml                                                                                       5m      1d
+├ ○ /support                                                                                           5m      1d
+├ ○ /terms                                                                                             5m      1d
+├ ○ /tools                                                                                             5m      1d
+├ ○ /tools/exam-guide-changes                                                                          5m      1d
+├ ○ /tools/study-plan                                                                                  5m      1d
+└ ○ /tools/which-google-cloud-certification                                                            5m      1d
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+

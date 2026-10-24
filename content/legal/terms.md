@@ -3,7 +3,7 @@ title: "Terms of service"
 approved: true
 ---
 
-Last updated: October 20, 2026.
+Last updated: October 24, 2026.
 
 These terms apply when you use Testero (testero.ai). By using the site you agree to them. If you don't agree, please don't use the service.
 
@@ -15,7 +15,7 @@ For service, billing or refund questions, contact [support@testero.ai](mailto:su
 
 ## Study tools and accounts
 
-You can take a free 5-, 10- or 20-question diagnostic without an account. A confirmed free account saves results, enables answer review and provides 60 free practice questions per UTC calendar month. Sessions contain up to five questions, capped at the remaining allowance. Questions count when the session starts even if you do not finish. The allowance resets on the first day of each month at 00:00 UTC; unfinished practice sessions expire after 24 hours. Free practice shows right/wrong and the correct answer, without explanations or progress tracking. Your latest diagnostic report remains free.
+You can take a free 5-, 10- or 20-question diagnostic without an account. A confirmed free account saves results, enables answer review and provides unlimited practice with no monthly cap. Practice sessions contain up to five questions; unfinished practice sessions expire after 24 hours. Free practice shows right/wrong and the correct answer, with progress tracking including per-domain history and stats, but without explanations. Your latest diagnostic report remains free.
 
 One server-selected question from each completed diagnostic has a free full explanation. Other diagnostic and practice explanations require paid access. Sessions can repeat questions. We may change the question bank and service features; the diagnostic is a study signal, not a prediction of an official exam outcome.
 
@@ -23,9 +23,9 @@ Use an email address you control, confirm it before using account features and p
 
 ## PMLE Pass and payments
 
-PMLE Pass costs **$39 USD as a one-time payment for 90 days** of paid PMLE access. It is not a subscription and does not auto-renew. Its 90-day period starts at the successful payment time, not your first practice session. Access from the pass ends at its displayed expiry time. Creating an account does not take a payment; checkout is handled by Stripe after email confirmation. Any applicable taxes or final charges are shown before you pay.
+PMLE Pass costs **$39.99 USD as a one-time payment for 90 days** of paid PMLE access. It is not a subscription and does not auto-renew. Its 90-day period starts at the successful payment time, not your first practice session. Access from the pass ends at its displayed expiry time. Creating an account does not take a payment; checkout is handled by Stripe after email confirmation. Any applicable taxes or final charges are shown before you pay.
 
-PMLE Pass includes full question explanations, progress tracking and unlimited practice while the pass is active. It does not include registration for Google's exam. Existing legacy subscriptions, if applicable to your account, are separate from this non-renewing pass; check your account for their status.
+PMLE Pass includes full question explanations, timed full-length mock exams, fresh-first practice and weak-area drills while the pass is active. Fresh-first practice prioritizes questions you have not answered. Weak-area drills select practice from your lowest-scoring objectives. It does not include registration for Google's exam. Existing legacy subscriptions, if applicable to your account, are separate from this non-renewing pass; check your account for their status.
 
 ## Seven-day refund policy
 

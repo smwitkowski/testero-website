@@ -204,7 +204,7 @@ test("ui-audit-p2 checkout UI fixtures processing active refunded error", async 
 });
 
 
-test("ui-audit-p2 isolated free empty dashboard feedback and exhausted quota", async ({ page }, info) => {
+test("ui-audit-p2 isolated free empty dashboard feedback and unlimited practice", async ({ page }, info) => {
   local(info); test.setTimeout(180_000);
   const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!);
   expect(["localhost", "127.0.0.1"]).toContain(url.hostname); expect(url.port).toBe("56541");
@@ -234,8 +234,6 @@ test("ui-audit-p2 isolated free empty dashboard feedback and exhausted quota", a
     for (const width of [1280, 390]) { await page.setViewportSize({ width, height: 844 }); await shot(page, "isolated-free-results-review", width); }
     await page.goto("/dashboard"); await expect(page.getByRole("heading", { name: "Latest diagnostic by domain", exact: true })).toBeVisible();
     for (const width of [1280, 390]) { await page.setViewportSize({ width, height: 844 }); await shot(page, "isolated-free-dashboard-with-diagnostic", width); }
-    const seededQuota = await service.from("free_practice_quota").insert({ user_id: data.user!.id, month_start: new Date().toISOString().slice(0, 7) + "-01", questions_used: 55 });
-    expect(seededQuota.error).toBeNull();
     const created = page.waitForResponse(response => response.url().endsWith("/api/practice") && response.request().method() === "POST");
     await page.getByRole("button", { name: /^(?:Practice |Start practice$)/ }).first().click();
     const response = await created; expect(response.status()).toBe(201); const { sessionId } = await response.json();
@@ -247,8 +245,8 @@ test("ui-audit-p2 isolated free empty dashboard feedback and exhausted quota", a
       if (ordinal === 1) for (const width of [1280, 390]) { await page.setViewportSize({ width, height: 844 }); await shot(page, "isolated-free-practice-feedback", width); }
       if (ordinal < 5) await page.getByRole("button", { name: "Next question", exact: true }).click();
     }
-    const quota = await page.request.post("/api/practice", { data: { domainCode: "MONITORING_ML_SOLUTIONS" } }); expect(quota.status()).toBe(429);
+    const continued = await page.request.post("/api/practice", { data: { domainCode: "MONITORING_ML_SOLUTIONS" } }); expect(continued.status()).toBe(201);
     await page.goto("/dashboard");
-    for (const width of [1280, 390]) { await page.setViewportSize({ width, height: 844 }); await shot(page, "isolated-free-quota-exhausted", width); }
+    for (const width of [1280, 390]) { await page.setViewportSize({ width, height: 844 }); await shot(page, "isolated-free-continued-practice", width); }
   } finally { const removed = await service.auth.admin.deleteUser(data.user!.id); expect(removed.error).toBeNull(); }
 });

@@ -109,7 +109,7 @@ test("Codex audit changed states at desktop and touch mobile", async ({ browser 
         if (role === "anonymous") await expect(passOption).toHaveAttribute("href", "/pricing");
         else {
           await expect(passOption).toHaveCount(0);
-          await expect(page.getByRole("button", { name: "Get PMLE Pass: $39", exact: true })).toHaveCount(role === "paid" ? 0 : 1);
+          await expect(page.getByRole("button", { name: "Get PMLE Pass: $39.99", exact: true })).toHaveCount(role === "paid" ? 0 : 1);
         }
         await shot(page, `results-${count}`, role, width);
         await shot(page, `results-${count}`, role, width, true);

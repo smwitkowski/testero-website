@@ -3,7 +3,7 @@ import { billingUser, billingJson, billingErrorResponse } from "@/lib/billing/ht
 import { DiagnosticError } from "@/lib/diagnostic/http";
 import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { StripeService } from "@/lib/stripe/stripe-service";
-import { fulfillCheckoutSession, isPaidPassSession } from "@/lib/stripe/pmle-pass";
+import { assertPaidPassPriceRecognized, fulfillCheckoutSession, isPaidPassSession } from "@/lib/stripe/pmle-pass";
 export const runtime = "nodejs";
 export async function GET(request: Request) {
   try {
@@ -32,7 +32,10 @@ export async function GET(request: Request) {
       const stripe = new StripeService();
       const session = await stripe.retrieveCheckoutSession(ids[0]);
       if (session.id !== ids[0]) throw new Error("Checkout identity mismatch");
-      if (session.metadata?.user_id !== user.id || !isPaidPassSession(session))
+      if (session.metadata?.user_id !== user.id)
+        return billingJson({ status: "processing", accessUntil: null });
+      assertPaidPassPriceRecognized(session);
+      if (!isPaidPassSession(session))
         return billingJson({ status: "processing", accessUntil: null });
       await fulfillCheckoutSession(stripe, db, session);
       const { data: fulfilled, error: fulfilledError } = await db.from("pmle_passes")

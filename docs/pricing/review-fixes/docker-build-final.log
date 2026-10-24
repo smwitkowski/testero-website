@@ -1,0 +1,175 @@
+#0 building with "colima" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.58kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:22-alpine
+#2 DONE 0.2s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 480B done
+#3 DONE 0.0s
+
+#4 [base 1/2] FROM docker.io/library/node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 35.72kB 1.3s done
+#5 DONE 1.3s
+
+#6 [base 2/2] WORKDIR /app
+#6 CACHED
+
+#7 [deps 1/2] COPY package.json package-lock.json ./
+#7 CACHED
+
+#8 [deps 2/2] RUN npm ci
+#8 CACHED
+
+#9 [builder 1/3] COPY --from=deps /app/node_modules ./node_modules
+#9 CACHED
+
+#10 [builder 2/3] COPY . .
+#10 DONE 0.1s
+
+#11 [builder 3/3] RUN npm run build
+#11 0.458 
+#11 0.458 > testero@2.0.0 build
+#11 0.458 > next build
+#11 0.458 
+#11 0.899 ▲ Next.js 16.3.8 (Turbopack)
+#11 0.942 ✓ Running next.config.ts took 42ms
+#11 0.971 
+#11 1.012   Creating an optimized production build ...
+#11 9.366 ✓ Compiled successfully in 8.2s
+#11 9.368   Running TypeScript ...
+#11 17.93   Finished TypeScript in 8.6s ...
+#11 17.93   Collecting page data using 3 workers ...
+#11 18.65   Generating static pages using 3 workers (0/79) ...
+#11 18.95   Generating static pages using 3 workers (19/79) 
+#11 19.18   Generating static pages using 3 workers (39/79) 
+#11 19.24   Generating static pages using 3 workers (59/79) 
+#11 19.58 ✓ Generating static pages using 3 workers (79/79) in 931ms
+#11 19.59   Finalizing page optimization ...
+#11 19.94 
+#11 19.94 Route (app)                                                                                    Revalidate  Expire
+#11 19.94 ┌ ƒ /
+#11 19.94 ├ ○ /_not-found                                                                                        5m      1d
+#11 19.94 ├ ƒ /.well-known/openai-apps-challenge
+#11 19.94 ├ ○ /about                                                                                             5m      1d
+#11 19.94 ├ ƒ /account
+#11 19.94 ├ ƒ /api/auth/forgot-password
+#11 19.94 ├ ƒ /api/auth/login
+#11 19.94 ├ ƒ /api/auth/logout
+#11 19.94 ├ ƒ /api/auth/navigation
+#11 19.94 ├ ƒ /api/auth/resend
+#11 19.94 ├ ƒ /api/auth/reset-password
+#11 19.94 ├ ƒ /api/auth/signup
+#11 19.94 ├ ƒ /api/billing/access
+#11 19.94 ├ ƒ /api/billing/checkout
+#11 19.94 ├ ƒ /api/billing/portal
+#11 19.94 ├ ƒ /api/billing/status
+#11 19.94 ├ ƒ /api/billing/webhook
+#11 19.94 ├ ƒ /api/cert-waitlist
+#11 19.94 ├ ƒ /api/diagnostic
+#11 19.94 ├ ƒ /api/diagnostic/[sessionId]
+#11 19.94 ├ ƒ /api/diagnostic/[sessionId]/answer
+#11 19.94 ├ ƒ /api/diagnostic/[sessionId]/email
+#11 19.94 ├ ƒ /api/diagnostic/[sessionId]/free-explanation
+#11 19.94 ├ ƒ /api/diagnostic/[sessionId]/results
+#11 19.94 ├ ƒ /api/health
+#11 19.94 ├ ƒ /api/mcp
+#11 19.94 ├ ƒ /api/mock/[id]
+#11 19.94 ├ ƒ /api/mock/[id]/answer
+#11 19.94 ├ ƒ /api/mock/[id]/results
+#11 19.94 ├ ƒ /api/mock/[id]/submit
+#11 19.94 ├ ƒ /api/mock/start
+#11 19.94 ├ ƒ /api/practice
+#11 19.94 ├ ƒ /api/practice/[id]
+#11 19.94 ├ ƒ /api/practice/[id]/answer
+#11 19.94 ├ ƒ /api/practice/[id]/summary
+#11 19.94 ├ ƒ /api/question-reports
+#11 19.94 ├ ƒ /auth/confirm
+#11 19.94 ├ ƒ /blog
+#11 19.94 ├   /blog/[slug]
+#11 19.94 │ ├ ● /blog/canary-vs-shadow-deployment-agent-platform-pmle                                            5m      1d
+#11 19.94 │ ├ ● /blog/colab-enterprise-vs-agent-platform-workbench                                               5m      1d
+#11 19.94 │ ├ ● /blog/bigquery-ml-vs-automl-vs-custom-training                                                   5m      1d
+#11 19.94 │ └ ● [+12 more paths]
+#11 19.94 ├ ƒ /certifications
+#11 19.94 ├ ƒ /certifications/[slug]
+#11 19.94 ├ ƒ /checkout/success
+#11 19.94 ├ ƒ /dashboard
+#11 19.94 ├ ƒ /diagnostic
+#11 19.94 ├ ƒ /diagnostic/[sessionId]
+#11 19.94 ├ ƒ /diagnostic/[sessionId]/results
+#11 19.94 ├ ○ /faq                                                                                               5m      1d
+#11 19.94 ├   /faq/[slug]
+#11 19.94 │ ├ ● /faq/what-is-google-cloud-certification                                                          5m      1d
+#11 19.94 │ ├ ● /faq/is-google-cloud-certification-worth-it                                                      5m      1d
+#11 19.94 │ ├ ● /faq/what-are-the-five-sections-of-the-associate-cloud-engineer-certification-by-google          5m      1d
+#11 19.94 │ └ ● [+6 more paths]
+#11 19.94 ├ ƒ /forgot-password
+#11 19.94 ├ ƒ /login
+#11 19.94 ├ ƒ /mock
+#11 19.94 ├ ƒ /mock/[id]
+#11 19.94 ├ ƒ /mock/[id]/results
+#11 19.94 ├ ○ /pmle/practice-options-compared                                                                    5m      1d
+#11 19.94 ├ ○ /pmle/sample-questions                                                                             5m      1d
+#11 19.94 ├ ○ /pmle/vertex-ai-agent-platform-cheat-sheet                                                         5m      1d
+#11 19.94 ├ ƒ /practice/[id]
+#11 19.94 ├ ƒ /practice/[id]/summary
+#11 19.94 ├ ƒ /pricing
+#11 19.94 ├ ○ /privacy                                                                                           5m      1d
+#11 19.94 ├ ƒ /reset-password
+#11 19.94 ├ ○ /robots.txt                                                                                        5m      1d
+#11 19.94 ├ ƒ /signup
+#11 19.94 ├ ○ /sitemap.xml                                                                                       5m      1d
+#11 19.94 ├ ○ /support                                                                                           5m      1d
+#11 19.94 ├ ○ /terms                                                                                             5m      1d
+#11 19.94 ├ ○ /tools                                                                                             5m      1d
+#11 19.94 ├ ○ /tools/exam-guide-changes                                                                          5m      1d
+#11 19.94 ├ ○ /tools/study-plan                                                                                  5m      1d
+#11 19.94 └ ○ /tools/which-google-cloud-certification                                                            5m      1d
+#11 19.94 
+#11 19.94 
+#11 19.94 ƒ Proxy (Middleware)
+#11 19.94 
+#11 19.94 ○  (Static)   prerendered as static content
+#11 19.94 ●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+#11 19.94 ƒ  (Dynamic)  server-rendered on demand
+#11 19.94 
+#11 19.99 npm notice
+#11 19.99 npm notice New major version of npm available! 10.9.9 -> 12.2.1
+#11 19.99 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+#11 19.99 npm notice To update run: npm install -g npm@12.2.1
+#11 19.99 npm notice
+#11 DONE 20.2s
+
+#12 [runner 1/6] RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+#12 CACHED
+
+#13 [runner 2/6] COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+#13 CACHED
+
+#14 [runner 3/6] COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+#14 DONE 0.3s
+
+#15 [runner 4/6] COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+#15 DONE 0.0s
+
+#16 [runner 5/6] COPY --from=builder --chown=nextjs:nodejs /app/app/fonts/OFL.txt ./licenses/IBM-Plex-Sans-OFL.txt
+#16 DONE 0.0s
+
+#17 [runner 6/6] COPY --from=builder --chown=nextjs:nodejs /app/content ./content
+#17 DONE 0.0s
+
+#18 exporting to image
+#18 exporting layers
+#18 exporting layers 0.3s done
+#18 writing image sha256:67fdb16225a34911f6e5d80eeaa8f80938429420c3bfda07da0c4fe25cfc3e2a done
+#18 DONE 0.3s
+
+ [33m1 warning found (use docker --debug to expand):
+[0m - SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "SUPABASE_SERVICE_ROLE_KEY") (line 22)

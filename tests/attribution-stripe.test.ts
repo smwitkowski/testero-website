@@ -23,7 +23,7 @@ it("Stripe adapter re-allowlists metadata and cannot overwrite account/product i
 });
 function fulfillment() {
   const metadata = { analytics_enabled: "1", ...first, user_id: user, plan_name: "PMLE Pass" };
-  const session = { id: "cs_unit", mode: "payment", payment_status: "paid", metadata, payment_intent: "pi_unit", customer: "cus_unit", amount_total: 3900, currency: "usd", line_items: { has_more: false, data: [{ price: { id: "price_unit" }, quantity: 1 }] } } as unknown as Stripe.Checkout.Session;
+  const session = { id: "cs_unit", mode: "payment", payment_status: "paid", metadata, payment_intent: "pi_unit", customer: "cus_unit", amount_total: 4250, currency: "usd", line_items: { has_more: false, data: [{ price: { id: "price_unit" }, quantity: 1 }] } } as unknown as Stripe.Checkout.Session;
   const pass = { id: "pass", user_id: user, stripe_payment_intent_id: "pi_unit", refunded_at: null };
   const db = { rpc: vi.fn((name: string) => name === "fulfill_pmle_pass" ? { single: async () => ({ data: pass, error: null }) } : Promise.resolve({ error: null })), from: vi.fn(() => query) };
   const query = { update: vi.fn(() => query), eq: vi.fn(() => query), is: vi.fn(() => query), select: vi.fn(() => query), maybeSingle: async () => ({ data: { id: pass.id }, error: null }) };
@@ -37,7 +37,7 @@ it("fulfillment returns paid access before purchase telemetry starts and preserv
   expect(fetchMock).not.toHaveBeenCalled(); expect(mocks.after).toHaveBeenCalledOnce();
   await mocks.after.mock.calls[0][0]();
   const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-  expect(body.properties).toMatchObject({ ...first, distinct_id: user, source: "server", revenue: 39, currency: "USD" });
+  expect(body.properties).toMatchObject({ ...first, distinct_id: user, source: "server", revenue: 42.5, currency: "USD" });
   expect(body.properties.$set_once.$initial_gclid).toBe(first.gclid);
   expect(body.$set_once).toBeUndefined(); // Public Capture API puts person mutations inside properties.
 });

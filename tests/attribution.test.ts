@@ -199,10 +199,13 @@ describe("server attribution and identity", () => {
     const properties = JSON.parse(fetchMock.mock.calls[0][1].body).properties;
     expect(properties).toMatchObject({ revenue: 39, currency: "USD" }); expect(typeof properties.revenue).toBe("number");
   });
-  it.each([{ amountTotal: -1, currency: "usd" }, { amountTotal: 39.5, currency: "usd" }, { amountTotal: null, currency: null }, { amountTotal: 3900, currency: "private@example.com" }])("omits invalid revenue instead of inventing a payment value: %j", async payment => {
-    await trackPurchaseCompleted("cs_opaque", user, { analytics_enabled: "1" }, payment);
+  it.each([{ amountTotal: -1, currency: "usd" }, { amountTotal: 39.5, currency: "usd" }, { amountTotal: null, currency: null }, { amountTotal: 3900, currency: "private@example.com" }])("omits unavailable or invalid Stripe revenue without losing attribution: %j", async payment => {
+    await trackPurchaseCompleted("cs_opaque", user, { analytics_enabled: "1", ...first }, payment);
     const properties = JSON.parse(fetchMock.mock.calls[0][1].body).properties;
-    expect(properties).not.toHaveProperty("revenue"); expect(properties).not.toHaveProperty("currency");
+    expect(properties).toMatchObject({ ...first, distinct_id: user, plan_name: "PMLE Pass" });
+    expect(properties.$set_once.$initial_gclid).toBe(first.gclid);
+    expect(properties).not.toHaveProperty("revenue");
+    expect(properties).not.toHaveProperty("currency");
   });
   it("purchase analytics failure remains best effort", async () => {
     fetchMock.mockRejectedValue(new Error("transport unavailable"));

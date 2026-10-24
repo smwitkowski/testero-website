@@ -1,10 +1,12 @@
+import { PMLE_PASS_PRICE_DISPLAY } from "@/lib/billing/pmle-pass";
+
 export const comparisonChecked = "2026-10-18";
 export const practiceOptions = [
   {
     "name": "Testero",
-    "format": "PMLE diagnostic with domain report; unlimited practice with explanations on PMLE Pass.",
+    "format": "Free PMLE diagnostic, practice and progress tracking; explanations, timed mock exams, fresh-first practice and weak-area drills on PMLE Pass.",
     "access": "Free diagnostic, no account required. PMLE Pass lasts 90 days; no subscription or auto-renewal.",
-    "price": "USD $39 one-time for 90 days; free diagnostic.",
+    "price": `USD ${PMLE_PASS_PRICE_DISPLAY} one-time for 90 days; free diagnostic, practice and progress tracking.`,
     "url": "https://testero.ai/pricing",
     "sources": [
       "https://testero.ai/pricing"

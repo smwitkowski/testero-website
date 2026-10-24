@@ -37,7 +37,7 @@ test("confirmed account and diagnostic responses stay private while public HTML 
     }
     const beforeNav = await authenticatedRequest.get("/api/auth/navigation");
     expect((await beforeNav.json()).userId).toBe(userId);
-    const created = await authenticatedRequest.post("/api/diagnostic", { data: {} });
+    const created = await authenticatedRequest.post("/api/diagnostic", { data: { questionCount: 20 } });
     expect(created.status()).toBe(201);
     privateResponse(created);
     sessionId = (await created.json()).sessionId;
