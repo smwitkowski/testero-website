@@ -1,16 +1,8 @@
 "use client";
 import { useEffect } from "react";
-import { identifyAnalytics, trackSignupCompleted } from "@/lib/analytics/client";
-/** Mounted for a verified user after a confirmed signup callback. */
+import { identifyAnalytics } from "@/lib/analytics/client";
+/** Mounted for a verified user after a confirmed signup callback. signup_completed itself is sent by the server. */
 export function SignupAnalytics({ userId }: { userId: string }) {
-  useEffect(() => {
-    identifyAnalytics(userId);
-    const key = `testero:signup-confirmed:${userId}`;
-    try {
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, "1");
-    } catch { return; }
-    trackSignupCompleted();
-  }, [userId]);
+  useEffect(() => { identifyAnalytics(userId); }, [userId]);
   return null;
 }

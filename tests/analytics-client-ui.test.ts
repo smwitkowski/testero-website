@@ -11,7 +11,7 @@ vi.mock("react", async importOriginal => {
     useRef: (value: unknown) => ({ current: value }), useEffect: (effect: () => void) => { effect(); } };
 });
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: mocks.replace }) }));
-vi.mock("@/lib/analytics/client", () => ({ trackDiagnostic: mocks.completed, trackDiagnosticAnswer: mocks.answer }));
+vi.mock("@/lib/analytics/client", () => ({ trackDiagnosticAnswer: mocks.answer }));
 vi.mock("@/components/diagnostic-resource", () => ({ diagnosticRequest: mocks.request, requestError: () => "Failed",
   useDiagnosticResource: () => ({ data: { status: "in_progress", totalQuestions: mocks.totalQuestions, answeredCount: mocks.answeredCount,
     answeredQuestions: [{ id: "saved-item", ordinal: 1, domainCode: "D1", stem: "Saved private question", selectedLabel: "B", options: [{ label: "B", text: "Saved answer" }] }], currentQuestion: { id: "item", ordinal: mocks.answeredCount + 1, domainCode: "D2", stem: "Private question", options: [{ label: "A", text: "Private answer" }] } },
@@ -36,8 +36,6 @@ it("captures question metadata only after its answer was saved, before completio
   expect(mocks.answer.mock.calls).toEqual([["session", 3, "D2", true, "machine-learning-engineer", 20]]);
   // The reveal shows first; results open only from its "See my results" button.
   expect(mocks.replace).not.toHaveBeenCalled();
-  expect(mocks.completed).toHaveBeenCalledWith("diagnostic_completed", "session", undefined, "machine-learning-engineer");
-  expect(mocks.answer.mock.invocationCallOrder[0]).toBeLessThan(mocks.completed.mock.invocationCallOrder[0]);
 });
 it.each([5, 10, 20])("captures each of %i committed answers once with the session length", async total => {
   mocks.totalQuestions = total;
@@ -65,7 +63,7 @@ it("ignores duplicate submissions while an answer is being committed", async () 
 it("does not capture question answered when saving fails", async () => {
   mocks.request.mockRejectedValue(new Error("Save failed"));
   await formIn(DiagnosticSession({ sessionId: "session" }))!.props.onSubmit({ preventDefault: vi.fn() });
-  expect(mocks.answer).not.toHaveBeenCalled(); expect(mocks.completed).not.toHaveBeenCalled();
+  expect(mocks.answer).not.toHaveBeenCalled();
 });
 
 it.each([[10, 5, true], [20, 10, true], [5, 2, false], [10, 4, false]])("shows halfway encouragement only at the midpoint of %s questions", (total, answered, visible) => {
@@ -84,7 +82,6 @@ it("never submits or captures an answered event while viewing a saved question",
   await form.props.onSubmit({ preventDefault: vi.fn() });
   expect(diagnosticRequest).not.toHaveBeenCalled();
   expect(mocks.answer).not.toHaveBeenCalled();
-  expect(mocks.completed).not.toHaveBeenCalled();
   mocks.nullStateCalls = 0;
   const html = renderToStaticMarkup(createElement(DiagnosticSession, { sessionId: "session" }));
   expect(html).toContain("Your saved answer");

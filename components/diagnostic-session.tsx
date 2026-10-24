@@ -5,7 +5,7 @@ import { ReportQuestion } from "@/components/report-question";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { DiagnosticAnswerResponse, DiagnosticProgress } from "@/lib/diagnostic/types";
-import { trackDiagnostic, trackDiagnosticAnswer } from "@/lib/analytics/client";
+import { trackDiagnosticAnswer } from "@/lib/analytics/client";
 import { SiteLogo } from "@/components/site-logo";
 import { Button } from "@/components/ui/button";
 import { PMLE_BLUEPRINT_MAP } from "@/lib/constants/pmle-blueprint";
@@ -74,7 +74,6 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
       });
       if (signal.aborted) return;
       trackDiagnosticAnswer(sessionId, question.ordinal, question.domainCode, result.feedback.isCorrect, result.progress.certId ?? certId, data.totalQuestions);
-      if (result.completed) trackDiagnostic("diagnostic_completed", sessionId, undefined, result.progress.certId ?? certId);
       setAnswer(result);
     } catch (reason) {
       if (!signal.aborted) setAnswerError(`${requestError(reason)} Tap Retry to reload your progress, then answer again.`);

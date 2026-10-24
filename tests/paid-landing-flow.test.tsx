@@ -31,7 +31,6 @@ vi.mock("react", async importOriginal => ({
 vi.mock("next/navigation", () => ({ usePathname: () => mocks.pathname, notFound: () => { throw new Error("NOT_FOUND"); } }));
 vi.mock("@/components/diagnostic-session", () => ({ DiagnosticSession: () => null }));
 vi.mock("@/components/diagnostic-resource", () => ({ diagnosticRequest: mocks.request, requestError: () => "Unavailable" }));
-vi.mock("@/lib/analytics/client", () => ({ trackDiagnostic: mocks.track }));
 vi.mock("@/lib/diagnostic/service", () => ({ findOpenDiagnostic: mocks.findOpen }));
 vi.mock("@/lib/diagnostic/request", () => ({ diagnosticCredentials: mocks.credentials }));
 vi.mock("@/lib/certifications/availability", () => ({ getDiagnosticAvailability: mocks.availability }));
@@ -61,7 +60,7 @@ function deferred<T>() {
 const created = { sessionId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", href: "/diagnostic/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", progress: {} };
 beforeEach(() => {
   hooks.slots = []; hooks.effects = []; hooks.index = 0;
-  mocks.request.mockReset(); mocks.track.mockReset(); mocks.findOpen.mockReset(); mocks.credentials.mockReset();
+  mocks.request.mockReset(); mocks.findOpen.mockReset(); mocks.credentials.mockReset();
   mocks.availability.mockResolvedValue("available"); mocks.pathname = "/diagnostic";
   const events = new EventTarget();
   vi.stubGlobal("window", { location: { search: "" }, history: { replaceState: vi.fn(), pushState: vi.fn() }, addEventListener: events.addEventListener.bind(events), removeEventListener: events.removeEventListener.bind(events), dispatchEvent: events.dispatchEvent.bind(events) });
@@ -91,7 +90,6 @@ it("keeps the CTA enabled during lookup and starts once without waiting", async 
   const restored = render();
   expect(nodes(restored).find(node => node.props.href === `/diagnostic/${created.sessionId}`)).toBeDefined();
   expect(nodes(restored).find(node => node.props.href === "/diagnostic/stale-session")).toBeUndefined();
-  expect(mocks.track).toHaveBeenCalledOnce();
 });
 
 it("keeps manual start available if lookup fails, without unsafe automatic start", async () => {
@@ -105,7 +103,7 @@ it("keeps manual start available if lookup fails, without unsafe automatic start
   const cta = button(tree, "Start the 5-question check");
   expect(cta.props.disabled).toBe(false);
   await (cta.props.onClick as () => Promise<void>)();
-  expect(mocks.track).toHaveBeenCalledOnce();
+  expect(mocks.request.mock.calls.filter(([, options]) => options.method === "POST")).toHaveLength(1);
 });
 
 it("offers a returning owner's unfinished session instead of autostarting", async () => {

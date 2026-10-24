@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { analyticsHeaders, trackCheckoutStarted } from "@/lib/analytics/client";
+import { analyticsHeaders } from "@/lib/analytics/client";
 import { Button } from "@/components/ui/button";
 
 /** Only accept the destination returned by the verified billing API. */
@@ -28,7 +28,6 @@ export async function beginCheckout(): Promise<string> {
   const result = await response.json();
   const href = checkoutDestination(result.href);
   if (!href || (result.alreadyActive && href !== "/account")) throw new Error("Checkout is unavailable. Please retry.");
-  if (href !== "/account" && new URL(href).hostname === "checkout.stripe.com" && !result.alreadyActive) trackCheckoutStarted();
   return href;
 }
 

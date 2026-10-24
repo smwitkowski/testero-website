@@ -9,7 +9,7 @@ import PricingPage from "@/app/pricing/page";
 import AccountPage from "@/app/account/page";
 import CheckoutSuccessPage from "@/app/checkout/success/page";
 
-const mocks = vi.hoisted(() => ({ user: vi.fn(), requireUser: vi.fn(), access: vi.fn(), checkoutEvent: vi.fn(), inventory: vi.fn(), effects: [] as (() => void | (() => void))[] }));
+const mocks = vi.hoisted(() => ({ user: vi.fn(), requireUser: vi.fn(), access: vi.fn(), inventory: vi.fn(), effects: [] as (() => void | (() => void))[] }));
 vi.mock("react", async importOriginal => {
   const actual = await importOriginal<typeof import("react")>();
   return { ...actual, useEffect: (effect: () => void | (() => void)) => { mocks.effects.push(effect); } };
@@ -17,7 +17,7 @@ vi.mock("react", async importOriginal => {
 vi.mock("@/lib/auth/session", () => ({ getVerifiedUser: mocks.user }));
 vi.mock("@/lib/auth/require-user", () => ({ requireUser: mocks.requireUser }));
 vi.mock("@/lib/billing/paid-access", () => ({ getPaidAccess: mocks.access }));
-vi.mock("@/lib/analytics/client", () => ({ trackCheckoutStarted: mocks.checkoutEvent, analyticsHeaders: () => ({ "X-PostHog-Distinct-Id": "anonymous-id" }) }));
+vi.mock("@/lib/analytics/client", () => ({ analyticsHeaders: () => ({ "X-PostHog-Distinct-Id": "anonymous-id" }) }));
 vi.mock("next/server", () => ({ connection: vi.fn() }));
 vi.mock("@/lib/pmle/inventory", () => ({ getPmleInventory: mocks.inventory }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
@@ -30,7 +30,6 @@ beforeEach(() => {
   mocks.user.mockReset().mockResolvedValue(null);
   mocks.requireUser.mockReset().mockResolvedValue({ id: "verified", email: "learner@example.com" });
   mocks.access.mockReset().mockResolvedValue(free);
-  mocks.checkoutEvent.mockReset();
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
@@ -111,19 +110,18 @@ describe("verified billing pages", () => {
 describe("billing browser boundary", () => {
   it("posts only {} and tracks checkout_started only for the actual Stripe redirect", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ href: "https://checkout.stripe.com/c/pay/test" })));
-    expect(await beginCheckout()).toBe("https://checkout.stripe.com/c/pay/test"); expect(mocks.checkoutEvent).toHaveBeenCalledOnce();
+    expect(await beginCheckout()).toBe("https://checkout.stripe.com/c/pay/test");
     expect(fetch).toHaveBeenCalledWith("/api/billing/checkout", expect.objectContaining({ method: "POST", body: "{}", cache: "no-store", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-PostHog-Distinct-Id": "anonymous-id" } }));
-    mocks.checkoutEvent.mockClear();
     vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ href: "/account", alreadyActive: true })));
-    expect(await beginCheckout()).toBe("/account"); expect(mocks.checkoutEvent).not.toHaveBeenCalled();
+    expect(await beginCheckout()).toBe("/account");
   });
   it("rejects inconsistent already-active checkout redirects without tracking", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ href: "https://checkout.stripe.com/c/pay/test", alreadyActive: true })));
-    await expect(beginCheckout()).rejects.toThrow("unavailable"); expect(mocks.checkoutEvent).not.toHaveBeenCalled();
+    await expect(beginCheckout()).rejects.toThrow("unavailable");
   });
   it.each([401, 503])("does not track or expose server details for checkout failure %s", async status => {
     vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ error: "secret-provider-token" }), { status }));
-    await expect(beginCheckout()).rejects.not.toThrow("secret-provider-token"); expect(mocks.checkoutEvent).not.toHaveBeenCalled();
+    await expect(beginCheckout()).rejects.not.toThrow("secret-provider-token");
   });
   it.each(["javascript:alert(1)", "https://checkout.stripe.com.evil.example/pay", "//checkout.stripe.com/pay", "https://user:pw@checkout.stripe.com/pay", "https://evil.example", undefined])("rejects unsafe destination %s", href => expect(checkoutDestination(href)).toBeNull());
   it("only accepts the real Stripe portal destination and sends a no-store strict body", async () => {
@@ -169,7 +167,7 @@ describe("bounded checkout verification and authoritative focus reload", () => {
     expect(checkoutDestination("https://evil.example/checkout/success?session_id=cs_test_local")).toBeNull();
     expect(checkoutDestination("http://127.0.0.1:3000/checkout/success?session_id=cs_test_local#grant")).toBeNull();
     vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ href })));
-    expect(await beginCheckout()).toBe(href); expect(mocks.checkoutEvent).not.toHaveBeenCalled();
+    expect(await beginCheckout()).toBe(href);
   });
   it("accepts only exact same-origin local portal account return", async () => {
     browser();
