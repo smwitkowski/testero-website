@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { run, q, scalar, service, denied } from "./helpers/pipeline-v6-db.mjs";
+import { run, q, scalar, service, denied, openTransaction } from "./helpers/pipeline-v6-db.mjs";
 
 const domain = randomUUID(), ids = Array.from({ length: 9 }, () => randomUUID());
 const vectors = JSON.parse(readFileSync("content-pipeline/tests/fixtures/content_hash_vectors.json", "utf8"));
@@ -43,6 +43,22 @@ try {
   assert.equal(await scalar(`SELECT count(*) FROM public.question_events WHERE question_id=${q(id)} AND action='published'`),'1');
   await denied(service(`UPDATE public.answers SET explanation_text='Changed' WHERE question_id=${q(id)}`), /Withdraw question/);
   await denied(service(`UPDATE public.questions SET stem='Changed' WHERE id=${q(id)}`), /Withdraw question/);
+  await run(service(`UPDATE public.answers SET choice_label=choice_label||'X' WHERE question_id=${q(id)}`));
+  assert.equal(await scalar(`SELECT revision FROM public.questions WHERE id=${q(id)}`),'1','labels do not create revisions');
+  assert.equal(await hash(id),h,'labels do not change hash');
+  await run(service(`UPDATE public.questions SET stem=stem||' edited' WHERE id=${q(ids[0])}`));
+  assert.equal(await scalar(`SELECT revision FROM public.questions WHERE id=${q(ids[0])}`),'2','draft stem edit advances revision');
+  // A pending child-content write owns the parent lock. Publication must wait
+  // and recompute the committed content, rather than accepting the old hash.
+  const staleHash = await hash(ids[0]);
+  const editor = await openTransaction(`UPDATE public.answers SET explanation_text=explanation_text||' race' WHERE question_id=${q(ids[0])} AND is_correct`);
+  const waitingPublisher = run(service(publish(ids[0],staleHash)),true);
+  editor.release();
+  await editor.completed;
+  const stalePublish = await waitingPublisher;
+  assert.notEqual(stalePublish.code,0);
+  assert.match(stalePublish.error,/content hash mismatch/);
+  assert.equal(await scalar(`SELECT status FROM public.questions WHERE id=${q(ids[0])}`),'DRAFT');
   // Create exactly four original ACTIVE questions; two removals race on different rows.
   for (const activeId of ids.slice(4,7)) await run(service(publish(activeId,await hash(activeId))));
   const withdrawals = await Promise.all([result(quarantine(ids[3])),result(quarantine(ids[4]))]);
@@ -60,6 +76,8 @@ try {
   // Stale council retirement refuses any changed explanation, even same stem/key.
   const oldHash = await hash(quarantined);
   await run(service(`UPDATE public.answers SET explanation_text=explanation_text||' changed' WHERE question_id=${q(quarantined)} AND is_correct`));
+  assert.equal(await scalar(`SELECT revision FROM public.questions WHERE id=${q(quarantined)}`),'2','quarantined answer edit advances revision');
+  assert.equal(await scalar(`SELECT content_sha256 IS NULL FROM public.questions WHERE id=${q(quarantined)}`),'t','edit invalidates cached hash');
   await denied(service(retire(quarantined,oldHash)),/content hash mismatch/);
   await run(service(retire(quarantined,await hash(quarantined))));
   // Atomic draft-only legacy eligibility must not retire a concurrently published row.

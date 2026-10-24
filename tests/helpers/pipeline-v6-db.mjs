@@ -42,3 +42,26 @@ export async function denied(sql, pattern) {
   assert.notEqual(result.code, 0);
   assert.match(result.error, pattern);
 }
+
+/** Hold an actual transaction after writes; release explicitly, without sleeps. */
+export async function openTransaction(sql) {
+  const child = spawn("psql", ["-X", "-qAt", "-v", "ON_ERROR_STOP=1"], {env,stdio:["pipe","pipe","pipe"]});
+  let error = "", output = "";
+  const completed = new Promise((resolve,reject) => {
+    child.on("error",reject);
+    child.on("close",code => code === 0 ? resolve() : reject(new Error(`Local transaction failed: ${error}`)));
+  });
+  completed.catch(()=>{});
+  child.stderr.on("data",part=>{error+=part;});
+  await new Promise((resolve,reject)=>{
+    const timeout = setTimeout(()=>{child.kill();reject(new Error("Local transaction readiness timeout"));},5000);
+    child.stdout.on("data",part=>{
+      output+=part;
+      if (output.includes("PIPELINE_V6_READY")) {clearTimeout(timeout);resolve();}
+    });
+    child.on("error",error=>{clearTimeout(timeout);reject(error);});
+    child.on("close",code=>{clearTimeout(timeout);reject(new Error(`Local transaction exited before release: ${code}`));});
+    child.stdin.write(`BEGIN; SET LOCAL ROLE service_role; ${sql}; SELECT 'PIPELINE_V6_READY';\n`);
+  });
+  return {completed,release:()=>child.stdin.end("COMMIT;\n")};
+}

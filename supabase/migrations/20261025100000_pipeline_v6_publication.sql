@@ -45,14 +45,27 @@ UPDATE public.questions SET content_sha256=public.question_content_sha256(id);
 -- Otherwise locking existing answers alone would not protect against insert phantoms.
 CREATE FUNCTION public.lock_question_answer_content() RETURNS TRIGGER
 LANGUAGE plpgsql SET search_path = public, pg_temp AS $fn$
-DECLARE v_id UUID; v_status TEXT;
+DECLARE v_id UUID; v_question public.questions; v_changed BOOLEAN;
 BEGIN
+ -- Relabeling/reordering does not change the canonical content or revision.
+ IF TG_OP = 'UPDATE' AND (NEW.question_id,NEW.choice_text,NEW.explanation_text,NEW.is_correct)
+  IS NOT DISTINCT FROM (OLD.question_id,OLD.choice_text,OLD.explanation_text,OLD.is_correct) THEN
+  RETURN NEW;
+ END IF;
  FOR v_id IN SELECT DISTINCT id FROM unnest(ARRAY[
    CASE WHEN TG_OP <> 'INSERT' THEN OLD.question_id END,
    CASE WHEN TG_OP <> 'DELETE' THEN NEW.question_id END]) id WHERE id IS NOT NULL ORDER BY id LOOP
-  SELECT status INTO v_status FROM public.questions WHERE id=v_id FOR UPDATE;
-  IF v_status = 'ACTIVE' THEN
+  SELECT * INTO v_question FROM public.questions WHERE id=v_id FOR UPDATE;
+  IF NOT FOUND THEN CONTINUE; END IF; -- parent deletion cascade
+  IF v_question.status = 'ACTIVE' THEN
    RAISE EXCEPTION 'Withdraw question before editing answers' USING ERRCODE='55000';
+  END IF;
+  -- Initial DRAFT answer inserts keep revision 1. Subsequent edits advance the
+  -- revision and invalidate the cache. Hash authority always remains recomputation.
+  v_changed := TG_OP <> 'INSERT' OR v_question.content_sha256 IS NOT NULL OR
+    EXISTS (SELECT 1 FROM public.question_events WHERE question_id=v_id);
+  IF v_changed THEN
+   UPDATE public.questions SET revision=revision+1,content_sha256=NULL,updated_at=clock_timestamp() WHERE id=v_id;
   END IF;
  END LOOP;
  IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
@@ -64,9 +77,13 @@ CREATE TRIGGER question_answer_content_lock BEFORE INSERT OR UPDATE OR DELETE ON
 CREATE FUNCTION public.guard_active_question_content() RETURNS TRIGGER
 LANGUAGE plpgsql SET search_path = public, pg_temp AS $fn$
 BEGIN
- IF OLD.status = 'ACTIVE' AND (NEW.stem,NEW.domain_id,NEW.exam,NEW.question_type,NEW.parent_question_id)
+ IF (NEW.stem,NEW.domain_id,NEW.exam,NEW.question_type,NEW.parent_question_id)
   IS DISTINCT FROM (OLD.stem,OLD.domain_id,OLD.exam,OLD.question_type,OLD.parent_question_id) THEN
-  RAISE EXCEPTION 'Withdraw question before editing content' USING ERRCODE='55000';
+  IF OLD.status = 'ACTIVE' THEN
+   RAISE EXCEPTION 'Withdraw question before editing content' USING ERRCODE='55000';
+  END IF;
+  NEW.revision := OLD.revision+1;
+  NEW.content_sha256 := NULL;
  END IF;
  RETURN NEW;
 END;
