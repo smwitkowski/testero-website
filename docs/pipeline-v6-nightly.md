@@ -208,3 +208,58 @@ Tests use local fixtures and fake transports. They prove caps, fail-closed costs
 reservation concurrency, no generation fallback, quota checkpointing interfaces,
 print mode, kill switch and email dedupe. They do not prove live authentication,
 pricing, model quality, deliverability or production readiness.
+
+## Item 8: draft provenance and legacy retirement
+
+`content-pipeline/sql/draft_provenance.sql` is read-only SQL, not a migration. It
+uses `BEGIN READ ONLY` and rolls back. It counts PMLE DRAFTs by the strict UTC
+2026-10-04 boundary, generation run, review status, and a local persisted-artifact
+id manifest. SQL cannot inspect the coordinator's filesystem; supply the manifest
+explicitly with psql's quoted `artifact_ids` variable. An unavailable/missing
+artifact root fails rather than claiming that no artifact exists.
+
+From `content-pipeline/`:
+
+```sh
+# Offline. No env files, DB, generation, judging, embeddings or retrieval.
+uv run --frozen --offline python -m scripts.draft_provenance \
+  --questions /absolute/pmle-draft-export.json \
+  --artifact-root "$PWD/.cache/generation" --report /absolute/provenance.json
+
+# Offline manifest for the committed read-only SQL. Use the complete artifact root.
+uv run --frozen --offline python -m scripts.draft_provenance \
+  --artifact-root "$PWD/.cache/generation" --artifact-ids > /absolute/artifact-ids.json
+
+# Coordinator only: approved read-only psql connection configuration already set.
+# Shell substitution passes ids, never database credentials, in this command.
+psql -v ON_ERROR_STOP=1 -v artifact_ids="$(cat /absolute/artifact-ids.json)" \
+  -f sql/draft_provenance.sql
+
+# Coordinator only: explicit current DB read, runtime credentials already injected.
+uv run --frozen --offline python -m scripts.draft_provenance \
+  --artifact-root "$PWD/.cache/generation" --read-db --report /absolute/provenance-db.json
+
+# Coordinator only, after inspecting the count. This is NOT a migration.
+uv run --frozen --offline python -m scripts.draft_provenance \
+  --artifact-root "$PWD/.cache/generation" --apply --report /absolute/legacy-retirement.json
+```
+
+Local export rows require `id,exam,status,created_at,generation_run_id,review_status`.
+Artifact presence means an exact `inserted_question_id` link in a local candidate
+artifact, not a candidate id guess, stem match or a request directory. It scans
+nested JSON artifacts irrespective of filename and skips `.env*` paths.
+
+`--apply` always reads a fresh DB selection. It retires only PMLE DRAFTs strictly
+before `2026-10-04T00:00:00Z`; on/after drafts and ACTIVE questions are untouched.
+Each call uses `retire_question` with reason exactly `D-025 legacy` and payload
+`expected_status=DRAFT`, `expected_exam=GCP_PM_ML_ENG`, and
+`expected_created_before=2026-10-04T00:00:00+00:00`. Migration A checks those guards
+under the row lock. An intervening publish cannot turn this selection into an
+ACTIVE-question retirement. The row content hash is passed when present.
+
+No direct row UPDATE, deletes, migration, bulk promotion or production operation
+is performed by this implementation worker. RPC errors/unknown outcomes stop
+further calls. There is no cross-row transaction: earlier successful retirements
+remain. Inspect `question_events` and current rows before a manual retry. Old RPC
+versions without the eligibility guards must not be used. Post-Oct-4 drafts stay
+unpublished; re-grounding/re-council is a separate coordinator action.
