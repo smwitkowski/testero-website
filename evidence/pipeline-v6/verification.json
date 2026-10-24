@@ -1,7 +1,7 @@
 {
-  "schema_version": 1,
-  "task": "D-045 pipeline v6 week1",
-  "code_commit": "19af7b4607a4d26cb299c4fa73e55964ff847339",
+  "schema_version": 2,
+  "task": "D-045 pipeline v6 week1 \u2014 PR308 review remediation",
+  "code_commit": "9c3219b9894d0d5713671e43f516315bc2073636",
   "environment": {
     "project": "frontend.prime-pipeline-v6",
     "branch": "prime/pipeline-v6",
@@ -21,42 +21,42 @@
       "name": "python",
       "command": "cd content-pipeline && env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true PYTHON_DOTENV_DISABLED=1 uv run --frozen --offline pytest -q",
       "exit_code": 0,
-      "duration_seconds": 111.29515862500011,
-      "local_log": "evidence/pipeline-v6/pytest-final.log",
-      "log_sha256": "9525d1c18ec6c0a88861824dd4550645aac05b5d620d2cc31616e35657747e30",
+      "duration_seconds": 136.31356962499922,
+      "local_log": "evidence/pipeline-v6/review-pytest-full.log",
+      "log_sha256": "fcfde5418de4b854bc8f2d2cff14910568df35f4487d5790ae6e3eaf4e20f7b7",
       "summary": {
-        "passed": 3148,
+        "passed": 3198,
         "skipped": 3,
         "warnings": 25,
-        "subtests_passed": 48,
-        "pytest_seconds": 109.82
+        "subtests_passed": 51,
+        "pytest_seconds": 134.27
       }
     },
     {
       "name": "app",
       "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm test",
       "exit_code": 0,
-      "duration_seconds": 19.534442082999703,
-      "local_log": "evidence/pipeline-v6/npm-test-final.log",
-      "log_sha256": "35e6fdad96495a193c03394a739e67b180289d05dfc378e51317d73730ca3ae9",
+      "duration_seconds": 9.109667374999844,
+      "local_log": "evidence/pipeline-v6/review-npm-test-final.log",
+      "log_sha256": "bb722c6c03d333ae23b0a6eb2ddc3a98636c18e4c10e4d4ea0f3a50219e2e702",
       "summary": {
-        "passed": 1934,
-        "files_passed": 106
+        "passed": 1952,
+        "files_passed": 109
       }
     },
     {
       "name": "database",
       "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run test:db:local",
       "exit_code": 0,
-      "duration_seconds": 58.221376249999594,
-      "local_log": "evidence/pipeline-v6/db-local-final.log",
-      "log_sha256": "7313e45919b2f139e434985f3cc56b04346007405442f29955aae50bcb3a1f3e",
+      "duration_seconds": 54.28499699999884,
+      "local_log": "evidence/pipeline-v6/review-db-local.log",
+      "log_sha256": "4574627a4d300b181aceb316997165eb69cdfa1cf13de25ed45a57150b644b19",
       "summary": {
         "groups": [
           "baseline",
-          "migrationA publication/hash/ACL/revision/cycle/floor/variants/concurrent writers",
-          "migrationB ownership/mockreport/dedupe/repeatpage/globalUTC5perday/owner10perhour",
-          "migrationC withdrawnanswer/mockexclusion/history/ACL"
+          "A: lifecycle UPDATE guard, exception-safe flag, guarded DRAFT finalization, hash/revision/cycle/ACL/floor, recursive cross-domain cascade and ancestry",
+          "B: current-cycle anonymous n=2, signed-in n=1, dedupe/caps, deterministic question-FK and source-session-FK lock-order races",
+          "C: persistent withdrawal, restore-before-answer, quarantine-complete-restore history, immutable completed denominators, ACL"
         ]
       }
     },
@@ -64,8 +64,8 @@
       "name": "lint",
       "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run lint",
       "exit_code": 0,
-      "duration_seconds": 19.902102625000225,
-      "local_log": "evidence/pipeline-v6/lint-final.log",
+      "duration_seconds": 15.0209246659997,
+      "local_log": "evidence/pipeline-v6/review-lint-final.log",
       "log_sha256": "1b84a718594e4458301221050423eb670311de83beeac6c27fc3540a0b668ad0",
       "summary": {}
     },
@@ -73,36 +73,56 @@
       "name": "provenance_sql",
       "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true node --input-type=module -e 'import {readFileSync} from \"node:fs\"; import {run} from \"./tests/helpers/pipeline-v6-db.mjs\"; const sql=readFileSync(\"content-pipeline/sql/draft_provenance.sql\",\"utf8\").replaceAll(\":'\"'\"'artifact_ids'\"'\"'\",\"'\"'\"'[]'\"'\"'\"); const result=await run(sql); console.log(\"PASS local provenance SQL in READ ONLY transaction with explicit empty artifact manifest; grouping rows=\"+(result.output ? result.output.split(\"\\n\").length : 0));'",
       "exit_code": 0,
-      "duration_seconds": 1.061204292000184,
-      "local_log": "evidence/pipeline-v6/provenance-sql.log",
-      "log_sha256": "d12f43743e016b1ea995ce28468ea452b48e860dad16315a9b30b2fa50fee496",
+      "duration_seconds": 1.6822063330000674,
+      "local_log": "evidence/pipeline-v6/review-provenance-sql.log",
+      "log_sha256": "07f9a992f23269e958d07d60736c3c71f04e29b2a8595c454a15ce1086836463",
       "summary": {
-        "scope": "Local loopback DB only; committed SQL READ ONLY/ROLLBACK; explicit artifact_ids=[]; output counts not production evidence"
+        "scope": "Local loopback DB only; SQL READ ONLY/ROLLBACK; artifact_ids=[]; no production evidence"
       }
     },
     {
-      "name": "withdrawal_e2e_target",
-      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true node --input-type=module -e 'import {execFile,spawn} from \"node:child_process\";import {promisify} from \"node:util\";import {LOCAL_STRIPE_ENV,startStripeFixtureServer} from \"./scripts/stripe-fixture.mjs\";const {stdout}=await promisify(execFile)(\"supabase\",[\"status\",\"-o\",\"json\"]);const s=JSON.parse(stdout);const api=new URL(s.API_URL),db=new URL(s.DB_URL);if(![\"localhost\",\"127.0.0.1\"].includes(api.hostname)||api.port!==\"56541\"||![\"localhost\",\"127.0.0.1\"].includes(db.hostname)||db.port!==\"56542\")throw Error(\"Local endpoints required\");const fixture=await startStripeFixtureServer();const env={...process.env,...LOCAL_STRIPE_ENV,NEXT_PUBLIC_SUPABASE_URL:s.API_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY:s.ANON_KEY,SUPABASE_SERVICE_ROLE_KEY:s.SERVICE_ROLE_KEY,DATABASE_URL:s.DB_URL,NEXT_PUBLIC_POSTHOG_KEY:\"\",NEXT_PUBLIC_POSTHOG_HOST:\"\",NEXT_TELEMETRY_DISABLED:\"1\"};const child=spawn(\"npx\",[\"playwright\",\"test\",\"e2e/withdrawn-questions.spec.ts\"],{env,stdio:\"inherit\"});for(const signal of [\"SIGINT\",\"SIGTERM\"])process.on(signal,()=>child.kill(signal));child.on(\"exit\",async code=>{await fixture.close();process.exitCode=code??1});'",
+      "name": "build",
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run build",
       "exit_code": 0,
-      "duration_seconds": 14.701581666000493,
-      "local_log": "evidence/pipeline-v6/e2e-withdrawal.log",
-      "log_sha256": "81d69eda72fd90824348dbcb4dd86ed29862ee32319e0fb74e018c4ea9b5c276",
+      "duration_seconds": 9.826810833001218,
+      "local_log": "evidence/pipeline-v6/review-build.log",
+      "log_sha256": "8f593de1b4d05edf7d686aa12267a5507a715f8b50df4f4d79ddb088ab6c745d",
+      "summary": {}
+    },
+    {
+      "name": "typecheck",
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run typecheck",
+      "exit_code": 0,
+      "duration_seconds": 6.458114167000531,
+      "local_log": "evidence/pipeline-v6/review-typecheck-final.log",
+      "log_sha256": "a8a91395e946881ebe9fc6bf6005d3f7962bf4aa3576af3bcf38175b9e9a3792",
+      "summary": {}
+    },
+    {
+      "name": "docker",
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true docker build .",
+      "exit_code": 0,
+      "duration_seconds": 34.05565991600088,
+      "local_log": "evidence/pipeline-v6/review-docker.log",
+      "log_sha256": "9e1fddf46ad08a494c3bcb7e3b2fc96323a8fe5219da03a9e16fa98fdba2948b",
       "summary": {
-        "passed": 1,
-        "required_flow": "quarantined saved questions disappear from diagnostic, practice, mock answers and review"
+        "image_sha256": "ff08b85477e512d9000bf06b6f6ab6a22fe95df1ec631f9d03a3401a8cbd483c",
+        "warnings": [
+          "Pre-existing SecretsUsedInArgOrEnv warning for local placeholder ENV; no real service key supplied."
+        ]
       }
     },
     {
       "name": "browser_full",
       "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run test:e2e:local",
       "exit_code": 0,
-      "duration_seconds": 231.90024358299888,
-      "local_log": "evidence/pipeline-v6/e2e-final.log",
-      "log_sha256": "38c6afac6574261dbcf596a489cb746ed88c8c9dac4f712cc971aa167591fff6",
+      "duration_seconds": 402.06716791600047,
+      "local_log": "evidence/pipeline-v6/review-e2e-full.log",
+      "log_sha256": "11f41b5ca884a188beff8c929c2bccd2dc285455c1d02deb608894c51143c175",
       "summary": {
         "passed": 21,
         "skipped": 16,
-        "required_withdrawal_flow": "passed",
+        "required_withdrawal_restore_flow": "passed across diagnostic/practice/mock answer, scoring, results/history and review",
         "skip_reasons": [
           "5beta cases require explicit allowlist and dedicated empty beta bank",
           "2production-server-only checks",
@@ -112,44 +132,25 @@
       }
     },
     {
-      "name": "build",
-      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run build",
-      "exit_code": 0,
-      "duration_seconds": 10.58490458399865,
-      "local_log": "evidence/pipeline-v6/build-final.log",
-      "log_sha256": "00eda738c6fa87c0110d2e6a668962f51c021d7eb817f58e13e7a36c69dae3e4",
-      "summary": {}
-    },
-    {
-      "name": "typecheck",
+      "name": "typecheck_closing",
       "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run typecheck",
       "exit_code": 0,
-      "duration_seconds": 2.1333249590006744,
-      "local_log": "evidence/pipeline-v6/typecheck-final.log",
+      "duration_seconds": 3.9834979160004877,
+      "local_log": "evidence/pipeline-v6/review-typecheck-closing.log",
       "log_sha256": "a8a91395e946881ebe9fc6bf6005d3f7962bf4aa3576af3bcf38175b9e9a3792",
-      "summary": {}
-    },
-    {
-      "name": "docker",
-      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true docker build .",
-      "exit_code": 0,
-      "duration_seconds": 23.86592458300038,
-      "local_log": "evidence/pipeline-v6/docker-final.log",
-      "log_sha256": "d1f7afd761f7c8560789af16ff1072ed7b363bbd36bd0cb9aa25353473f14627",
       "summary": {
-        "image_sha256": "a9cc38bc8e7ec0dcd53d92e710cfbcad2256de728e02a1a768ea4ef10bee7bf6",
-        "warnings": [
-          "Docker SecretsUsedInArgOrEnv warning refers to pre-existing local placeholder ENV; no real service key supplied."
-        ]
+        "scope": "After browser finished and next-env.d.ts restored to tracked non-dev build imports"
       }
     }
   ],
   "external_wrappers": {
     "pipeline-nightly.sh": {
       "path": "/Users/switkowski/Projects/Testero/hq/tools/pipeline-nightly.sh",
-      "sha256": "77501f8eed0b4beea1e6e813098b9e3b0815fbb19202548346b29e9b66f2c10b",
-      "bash_n_exit": 0,
-      "committed_in_frontend_repo": false
+      "sha256": "5eeee1a65a516fe6060f168f0c4cf7ac734b9f6f83f73fd535f431e387af7972",
+      "interpreter": "Python shebang (invoke directly, not bash)",
+      "syntax_check": "ast.parse completed in memory; no bytecode/output files",
+      "committed_in_frontend_repo": false,
+      "live_launcher_invoked": false
     },
     "judge-and-ingest.sh": {
       "path": "/Users/switkowski/Projects/Testero/hq/tools/judge-and-ingest.sh",
@@ -169,15 +170,31 @@
     "Council pauses survive a later malformed verdict; malformed outputs are not catches.",
     "Re-council carries PDE style/evidence policies through receipt/artifact builders and strict parsing.",
     "Argon v3 honors frozen cert style; historical v1/v2 request hashes remain exact.",
-    "Legacy retirement accepts actual SQL outcomechanged and journals partial/unknown writes.",
-    "Withdrawal E2E report-form selector changed from label text to accessible combobox role/name after trace-confirmed locator timeout; all scoring/withdrawal assertions retained."
+    "Withdrawal E2E report-form selector changed from label text to accessible combobox role/name after trace-confirmed locator timeout; all scoring/withdrawal assertions retained.",
+    "B1: persistent per-item withdrawal snapshots; quarantine-complete-restore readers and immutable completed denominators; optional-column deploy-window fallback.",
+    "M1: guarded lifecycle status/review UPDATE, exception-safe transaction flag, disabled legacy raw writers, narrow service-only staged DRAFT review finalizer.",
+    "M2: new detached exact-reviewed origin/main checkout per invocation; durable external calls/state/cache/venv; no editable PR checkout execution.",
+    "M3: documented A -> deploy app -> B+C; retire old rotation schedule before enabling nightly.",
+    "m1: anonymous current-cycle corroboration from two distinct owned hashes; signed-in n=1; >=7-day blocked preparation founder pages.",
+    "m2: renamed-product and receipt-only evidence failures remain quarantined for rewrite, never automatically retire.",
+    "m3: atomic active-descendant variant withdrawal and separate events; no auto-restore; active ancestry required for variant restoration.",
+    "m4: RESEND_API_KEY stripped from Codex and Claude CLI child environments.",
+    "m5: typed ordinary partial failure skips new publication but continues independent re-council and digest; hard/unknown stops forbid paid/write stages.",
+    "m6: explicit trusted service-role boundary accepted and documented; no claim of SQL council attestation.",
+    "Integration: deterministic question-FK and source-session-FK report/answer deadlock regressions; all passed in final full DB gate."
   ],
-  "gate_scope_note": "Full Python ran at4c0f0d9; later commit changes one E2E locator only. App/SQL source remained unchanged across final gates.",
+  "gate_scope_note": "All review-round gates ran on source 9c3219b; subsequent changes are runbook/evidence only. Browser suite includes the required withdrawal/restore test; its earlier standalone worker pass is supplementary, not a separate final-source run. Generated next-env.d.ts dev imports restored to tracked build paths; closing standalone typecheck recorded below.",
   "skipped_work": [
     "Third semantic second-defensible-answer canary deferred with reason in runbook.",
     "Live corpus quality, live pilot and two shadow nights are explicitly coordinator-only.",
     "Per-cert cache generalization and per-revision/exposure metrics are week2."
   ],
-  "recorded_at": "2026-10-24T20:18:50.645105+00:00",
-  "status": "passed_with_documented_skips"
+  "recorded_at": "2026-10-24T21:01:30.776932+00:00",
+  "status": "passed_with_documented_skips",
+  "review_audit": {
+    "scope": "Read-only independent source audit of snapshots, lifecycle guard/cascade/finalizer, report threshold/locks, detached-main launcher and typed nightly continuation",
+    "confirmed_finding": "Report source-session FK lock inversion; fixed by owned source-session KEY SHARE before lifecycle/question locks",
+    "remaining_confirmed_high_priority_findings": 0,
+    "runtime_proof": "Final full local DB gate passed both deterministic FK lock-order regressions; audit itself did not access DB."
+  }
 }

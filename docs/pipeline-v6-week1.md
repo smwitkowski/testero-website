@@ -43,7 +43,7 @@ npm run test:db:local
 npm run test:e2e:local
 ```
 
-See `evidence/pipeline-v6/verification.json` for actual completed commands and results. Passing fixtures prove contracts, not live semantic model quality or production readiness.
+See `evidence/pipeline-v6/verification.json` for completed commands, source pin and log hashes. The PR308 remediation run passed 3,198 Python tests plus 51 subtests (3 skipped), 1,952 app tests, the full local DB gate, lint, typecheck, build and Docker. The full browser run passed 21 tests with 16 conditional skips, including the required withdrawal/restore flow. Passing fixtures prove contracts, not live semantic model quality or production readiness.
 
 ## Canonical content hash
 
