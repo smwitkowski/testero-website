@@ -88,12 +88,28 @@ def provider(row):
     raise BudgetError("Unknown provider; paid spend cannot be inferred")
 
 
-def accounting(rows, now, *, rates=None):
+def effective_caps(now, overrides=None):
+    """Weekly caps. A coordinator override applies only until its expiry, which
+    must fall within the current UTC week, so a one-time raise cannot persist."""
+    caps = dict(CAPS)
+    for item in overrides or []:
+        if not isinstance(item, dict) or set(item) != {"provider", "usd", "until"} or item["provider"] not in CAPS:
+            raise BudgetError("Invalid cap override")
+        until = instant(item["until"])
+        if until > week_start(now) + timedelta(days=7):
+            raise BudgetError("Cap override must expire within the current week")
+        if now < until:
+            caps[item["provider"]] = money(item["usd"])
+    return caps
+
+
+def accounting(rows, now, *, rates=None, cap_overrides=None):
     """Explicit USD or configured token rates; absent cost/usage blocks paid work.
 
     Rate entries use full model ids and input/output USD per million tokens.
     Cached/reasoning counts are subsets, never added to input/output totals.
     """
+    caps = effective_caps(now, cap_overrides)
     totals = {name: Decimal(0) for name in CAPS}
     selected = []
     for row in rows:
@@ -117,8 +133,9 @@ def accounting(rows, now, *, rates=None):
         totals[name] += money(cost)
     report = summarize(selected, None)
     report["weekly_usd"] = {name: str(value) for name, value in totals.items()}
-    report["remaining_usd"] = {name: str(CAPS[name] - value) for name, value in totals.items()}
-    if any(value > CAPS[name] for name, value in totals.items()):
+    report["caps_usd"] = {name: str(value) for name, value in caps.items()}
+    report["remaining_usd"] = {name: str(caps[name] - value) for name, value in totals.items()}
+    if any(value > caps[name] for name, value in totals.items()):
         raise BudgetError("Weekly paid cap exceeded")
     return report
 

@@ -74,7 +74,7 @@ All nightly and manually run pipeline paid calls must share `calls_root`; includ
 all current-week historical `*.calls.jsonl` there. Reconcile any historical
 unmetered Exa spend first; absence of old Exa logs is not evidence of zero spend.
 
-Weekly UTC limits reset Monday: OpenRouter $10; Exa $5. Reservations use the
+Weekly UTC limits reset Monday: OpenRouter $10; Exa $5. A coordinator may add a one-time raise in the config as `"cap_overrides": [{"provider": "openrouter", "usd": "20", "until": "<UTC ISO time within this week>"}]`; it expires automatically and invalid entries fail closed. Reservations use the
 serialized text UTF-8 byte length plus 4096 framing tokens and the output bound.
 This overestimates input tokens. Full upper-bound reservations remain charged even
 when a call fails; there are no unsafe refunds. One file lock serializes admission
