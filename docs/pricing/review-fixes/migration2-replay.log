@@ -1,0 +1,27 @@
+BEGIN
+NOTICE:  relation "mock_exam_sessions" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "mock_exam_items" already exists, skipping
+CREATE TABLE
+NOTICE:  relation "mock_exam_sessions_user_created_idx" already exists, skipping
+CREATE INDEX
+DROP INDEX
+CREATE INDEX
+NOTICE:  relation "mock_exam_items_question_idx" already exists, skipping
+ALTER TABLE
+ALTER TABLE
+REVOKE
+GRANT
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+REVOKE
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+GRANT
+COMMIT
