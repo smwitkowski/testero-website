@@ -94,6 +94,80 @@ def test_full_seat_schema_and_no_skips(publish_case, seat):
     assert publisher.publication_errors(question, scope, request, raw)
 
 
+def _reject_short_circuit(raw, seat):
+    raw[seat]["verdict"] = "FAIL"
+    order = ("style", "evidence", "blind_solver")
+    for name in order[order.index(seat) + 1:]:
+        raw[name] = {"status": "skipped", "reason": "prior_gate_failed", "gate": seat}
+    raw["argon"] = {"status": "skipped", "reason": "prior_gate_failed"}
+
+
+@pytest.mark.parametrize("seat", ["style", "evidence", "blind_solver"])
+@pytest.mark.parametrize("defect", ["FAIL", "UNCERTAIN", "low_score"])
+def test_short_circuit_quality_refusal_names_failed_seat(publish_case, seat, defect):
+    _, _, question, scope, request, raw, _ = publish_case
+    _reject_short_circuit(raw, seat)
+    raw[seat]["verdict"] = "PASS" if defect == "low_score" else defect
+    if defect == "low_score":
+        raw[seat]["confidence" if seat == "blind_solver" else "score"] = .79
+    assert publisher.publication_errors(question, scope, request, raw) == ["council_rejected:" + seat]
+
+
+@pytest.mark.parametrize("seat", ["style", "evidence", "blind_solver"])
+def test_short_circuit_report_never_publishes(publish_case, seat):
+    case, _, _, _, _, raw, row = publish_case
+    _reject_short_circuit(raw, seat)
+    (case[1] / case[6].name).write_text(json.dumps(raw))
+    report, _ = publisher.plan_publication(case[0], case[1], [row])
+    assert report["would_publish"] == report["published"] == 0
+    assert report["candidates"][0]["would_publish"] is False
+    assert report["candidates"][0]["reasons"] == ["council_rejected:" + seat]
+
+
+@pytest.mark.parametrize("defect", ["wrong_key", "low_confidence", "uncertain"])
+def test_argon_blind_short_circuit_names_failed_seat(publish_case, defect):
+    _, _, question, scope, request, raw, _ = publish_case
+    blind = raw["argon"]["blind"]
+    if defect == "wrong_key":
+        blind["choice"] = next(choice for choice in "ABCD" if choice != blind["choice"])
+    elif defect == "low_confidence":
+        blind["confidence"] = .79
+    else:
+        blind["verdict"] = "UNCERTAIN"
+    raw["argon"]["review"] = {"status": "skipped", "reason": "prior_gate_failed", "gate": "argon.blind"}
+    assert publisher.publication_errors(question, scope, request, raw) == ["council_rejected:argon.blind"]
+
+
+@pytest.mark.parametrize("defect", ["wrong_gate", "wrong_reason", "extra_field", "no_failure",
+    "malformed_failure", "malformed_later_seat", "malformed_argon_skip"])
+def test_malformed_short_circuits_remain_invalid(publish_case, defect):
+    _, _, question, scope, request, raw, _ = publish_case
+    _reject_short_circuit(raw, "style")
+    if defect == "wrong_gate": raw["evidence"]["gate"] = "evidence"
+    elif defect == "wrong_reason": raw["evidence"]["reason"] = "private provider detail"
+    elif defect == "extra_field": raw["evidence"]["extra"] = True
+    elif defect == "no_failure": raw["style"]["verdict"] = "PASS"
+    elif defect == "malformed_failure": raw["style"]["score"] = "0.1"
+    elif defect == "malformed_later_seat": raw["blind_solver"] = {"verdict": "FAIL"}
+    elif defect == "malformed_argon_skip": raw["argon"]["gate"] = "style"
+    errors = publisher.publication_errors(question, scope, request, raw)
+    assert errors and all(error.startswith("invalid_council:") for error in errors)
+    assert "private provider detail" not in json.dumps(errors)
+
+
+@pytest.mark.parametrize("defect", ["wrong_gate", "no_blind_failure", "bad_receipt", "bad_schema"])
+def test_malformed_argon_review_skip_remains_invalid(publish_case, defect):
+    _, _, question, scope, request, raw, _ = publish_case
+    raw["argon"]["blind"]["confidence"] = .79
+    raw["argon"]["review"] = {"status": "skipped", "reason": "prior_gate_failed", "gate": "argon.blind"}
+    if defect == "wrong_gate": raw["argon"]["review"]["gate"] = "style"
+    elif defect == "no_blind_failure": raw["argon"]["blind"]["confidence"] = .9
+    elif defect == "bad_receipt": raw["argon"]["request_sha256"] = "0" * 64
+    elif defect == "bad_schema": raw["argon"]["blind"]["confidence"] = "0.1"
+    errors = publisher.publication_errors(question, scope, request, raw)
+    assert errors and all(error.startswith("invalid_council:") for error in errors)
+
+
 @pytest.mark.parametrize("seat", ["blind_solver", "argon"])
 @pytest.mark.parametrize("defect", ["wrong", "low", "ambiguous", "missing", "uncertain"])
 def test_both_blind_solvers_must_match_at_point_eight(publish_case, seat, defect):
@@ -159,6 +233,27 @@ def test_real_frozen_council_replay_never_upgrades_old_policy(artifact):
     for row in artifact["rows"]:
         request = replay_request(row, False)
         assert publisher.publication_errors(row["question"], {}, request, row["verdict"])
+
+
+def test_recorded_mixed_pilot_publisher_quality_labels():
+    # Minimal, recorded pilot replay. No live model, provider or database calls.
+    fixture = json.loads((Path(__file__).parent / "fixtures/v6_mixed_pilot.json").read_text())
+    payload = fixture["artifact"]
+    results = {}
+    for entry in payload["candidates"]:
+        ident = entry["candidate_id"]
+        if ident not in fixture["verdicts"]:
+            continue
+        scope = payload["plan"][entry["index"] - 1]
+        question = candidate_question(entry)
+        request = build_request(ident, scope, question, entry["sources"], canonical_evidence(entry),
+            argon_gate=True, execution_policy=payload["execution_policy"],
+            doc_context_chars=payload["documentation_context_policy"]["max_chars"])
+        raw = deepcopy(fixture["verdicts"][ident])
+        if "request_sha256" in raw["argon"]:
+            raw["argon"]["request_sha256"] = canonical_sha256(request["argon"])
+        results[ident] = publisher.publication_errors(question, scope, request, raw)
+    assert sorted(results.values()) == [[], ["council_rejected:style"]]
 
 
 def test_new_draft_without_cached_hash_uses_recomputed_content(publish_case):

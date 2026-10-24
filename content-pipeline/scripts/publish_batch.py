@@ -48,27 +48,51 @@ def publication_errors(question, scope, request, verdict, *, rules_version=5):
         verdict = verdict_gates(verdict, request.get("distractor_evidence"))
         if not isinstance(verdict, dict) or set(verdict) != {*signatures, "argon"}:
             raise ValueError("Every independent council seat is required")
+        # Validate skip provenance before treating skipped outputs as quality
+        # refusals. A bare/mismatched skip must still be invalid council data.
+        skipped = {name for name in signatures
+            if isinstance(verdict[name], dict) and verdict[name].get("status") == "skipped"}
+        argon_skipped = verdict["argon"] == {"status": "skipped", "reason": "prior_gate_failed"}
+        review_skipped = (isinstance(verdict["argon"], dict)
+            and isinstance(verdict["argon"].get("review"), dict)
+            and verdict["argon"]["review"].get("status") == "skipped")
+        short_circuited = bool(skipped or argon_skipped or review_skipped)
+        decision = None
+        if short_circuited:
+            decision = ingest._external_decision(question, scope, [], [], original_verdict, "codex",
+                gate_version=2, rules_version=rules_version, argon_request=request["argon"])
+            if decision.passed:
+                raise ValueError("Skipped seats cannot approve content")
         for name, signature in signatures.items():
             gate = request["gates"][name]
             if (set(gate) != {"judge_prompt", "verdict_schema"}
                     or not isinstance(gate["judge_prompt"], str) or not gate["judge_prompt"].strip()
                     or gate["verdict_schema"] != output_model(signature).model_json_schema()):
                 raise ValueError("Council request schema mismatch")
+            if name in skipped:
+                continue
             parsed = parse_output(json.dumps(verdict[name], allow_nan=False), signature)
-            # No historical waiver may turn a recorded FAIL into a new publish.
-            if parsed.get("verdict") != "PASS":
-                errors.append(name + ": seat did not PASS")
             passed, _ = evaluate_gate(name, verdict[name], question, version=rules_version,
                 style_policy=scope.get("style_policy"))
+            # No historical waiver may turn a recorded FAIL into a new publish.
+            if short_circuited:
+                if parsed.get("verdict") != "PASS" or not passed:
+                    errors.append("council_rejected:" + name)
+            else:
+                if parsed.get("verdict") != "PASS":
+                    errors.append(name + ": seat did not PASS")
+                if not passed:
+                    errors.append(name + ": seat rejected")
+        if not argon_skipped:
+            passed, _ = evaluate_argon(question, verdict["argon"], request["argon"])
             if not passed:
-                errors.append(name + ": seat rejected")
-        passed, _ = evaluate_argon(question, verdict["argon"], request["argon"])
-        if not passed:
-            errors.append("argon: blind or review rejected")
+                errors.append("council_rejected:argon.blind" if review_skipped else
+                    "argon: blind or review rejected")
         # Strict external decision additionally validates frozen evidence policy.
-        decision = ingest._external_decision(question, scope, [], [], original_verdict, "codex",
-            gate_version=2, rules_version=rules_version, argon_request=request["argon"])
-        if not decision.passed:
+        if decision is None:
+            decision = ingest._external_decision(question, scope, [], [], original_verdict, "codex",
+                gate_version=2, rules_version=rules_version, argon_request=request["argon"])
+        if not decision.passed and not short_circuited:
             errors.append("council: unanimous independent decision failed")
         errors.extend(freshness_errors(question, scope.get("cert_id")))
     except Exception as error:

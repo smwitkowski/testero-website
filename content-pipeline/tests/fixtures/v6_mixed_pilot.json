@@ -1,0 +1,805 @@
+{
+  "provenance": {
+    "source": "v6-pilot-10241752",
+    "source_artifact_sha256": "70e58a1dada938578cf1ba910690d863c7c8e4a7db0a967d206db56fc141639a",
+    "selection": "Original candidates 1 (style reject), 2 (pass), 3 (decision veto). Sources reduced to exact proof/evidence quotes; request hashes rebuilt for this minimal local replay. Persistence journals and unused diagnostic copies omitted. Recorded question, decision, policy and verdict content preserved."
+  },
+  "artifact": {
+    "version": 1,
+    "cert_id": "machine-learning-engineer",
+    "model": "codex",
+    "judge_model": "external",
+    "generator_family": "openai",
+    "judge_family": "anthropic",
+    "dry_run": false,
+    "seed": null,
+    "requested_objective_ids": [],
+    "parallel": 2,
+    "gen_effort": "high",
+    "cite_effort": "medium",
+    "rules_version": 5,
+    "style_policy_version": "5.1",
+    "section_allocation": null,
+    "decision_first": true,
+    "distractor_evidence": {
+      "version": 1,
+      "mode": "consistent"
+    },
+    "documentation_context_policy": {
+      "version": 1,
+      "max_chars": 400000
+    },
+    "argon_gate": true,
+    "execution_policy": "short_circuit_v2",
+    "difficulty": "MEDIUM",
+    "exam": "GCP_PM_ML_ENG",
+    "external_judge_version": 2,
+    "planned_count": 3,
+    "plan": [
+      {
+        "style_policy": {
+          "version": "5.1",
+          "objective_id": "machine-learning-engineer:standard:1.1:2",
+          "allowance": null
+        },
+        "cert_id": "machine-learning-engineer",
+        "domain_code": "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
+        "domain_name": "Architecting low-code AI solutions",
+        "objective_id": "machine-learning-engineer:standard:1.1:2",
+        "guide_sha256": "bee925a0fb365488f57fee26b1fca8cdfc82e67fdb8753afb0472c2d3b257701",
+        "objective_offset": 1,
+        "scenario_moment": "recent deployment",
+        "opening_style": "You are",
+        "question_line": "What should you do?",
+        "key_length_rank": 1,
+        "objective_text": "Performing feature engineering or selection using BigQuery ML",
+        "objective_context": "Performing feature engineering or selection using BigQuery ML",
+        "services": [
+          "BigQuery ML",
+          "AutoML",
+          "Gemini Enterprise Agent Platform"
+        ],
+        "subsection": "1.1",
+        "domain_prompt": "Certification: Professional Machine Learning Engineer (machine-learning-engineer)\nGuide SHA256: bee925a0fb365488f57fee26b1fca8cdfc82e67fdb8753afb0472c2d3b257701\nDomain: Architecting low-code AI solutions (ARCHITECTING_LOW_CODE_ML_SOLUTIONS)\nOfficial Exam Weight: ~13.0% (normalized when planning)\nTarget Subsection: Developing ML models using BigQuery ML or AutoML on Gemini Enterprise Agent Platform. (1.1)\nExplicit service mentions: BigQuery ML, AutoML, Gemini Enterprise Agent Platform, Agent Platform AutoML, Gemini, BigQuery\nOfficial objectives:\n- Building models in BigQuery ML or Agent Platform AutoML (e.g., classification, regression, forecasting, and clustering) based on the business problem\n- Performing feature engineering or selection using BigQuery ML\n- Generating predictions using BigQuery ML\n- Training models using Agent Platform AutoML\n- Fine-tuning Gemini models using BigQuery\nUse the reviewed official guide objectives and current product names. Do not add unsupported exam scope.\nGenerate a realistic scenario-based certification question with specific constraints.\nTarget Objective: machine-learning-engineer:standard:1.1:2\nPerforming feature engineering or selection using BigQuery ML\nTest this objective specifically.\nScenario moment: recent deployment. Use an already-running workload at this moment, not a new build. Keep the selected objective's actual decision central; the moment is context, not permission to add unsupported exam scope. Keep the selected objective's actual decision central; the scenario moment must not displace the objective or turn it into a different decision.\nOpening style: You are. Use this second-person prefix family naturally; when slashes separate alternatives, choose one (for example, Your company or You manage). Business-first and concrete task-first contexts are both valid in the first 1\u20132 sentences. Never start with an imperative or a gerund-led opening such as Deploy a model or Building a model. Prefix hints must not invent a role, chronology or scope unsupported by the objective. Every opening must name a business application or a concrete ML task relevant to the selected objective (for example, train a fraud classifier or summarize articles). Never use an abstract task such as deploy a model without its purpose. For non-ML objectives, name the concrete task and its business application purpose; do not introduce ML beyond the selected scope. Do not expand the selected exam scope.\nQuestion line hint: What should you do? Use this exact phrase when it fits the selected decision; otherwise use a natural question-line variant ending in ?. Do not force 'first' when the scenario has no sequencing decision or introduce a false premise. These are wording hints, not permission to expand the selected exam scope.\nKey length rank hint: 1 of 4 (1 shortest, 4 longest). Distribute key ranks evenly, reaching comparable length with meaningful detail. Rank 4 should tie one non-key option for longest; never make the key uniquely longest. Keep all options balanced and the mechanical two-word key lead limit.",
+        "distractor_evidence": {
+          "version": 1,
+          "mode": "consistent"
+        },
+        "decision_objective": {
+          "objective_id": "machine-learning-engineer:standard:1.1:2",
+          "objective_text": "Performing feature engineering or selection using BigQuery ML"
+        },
+        "decision_plan": {
+          "objective_id": "machine-learning-engineer:standard:1.1:2",
+          "engineering_decision": "Choose how to select training features for a recently deployed shipment-spoilage classifier whose offline performance does not carry over to dispatch-time predictions. What should you do?",
+          "business_consequence": "Missed spoilage risks cause a seafood distributor to dispatch shipments that arrive unusable, increasing replacement costs and customer refunds.",
+          "existing_system": "You are managing a seafood distributor's shipment-spoilage classifier, recently deployed using BigQuery ML boosted trees. The training query joins dispatch records with completed-trip summaries, including maximum temperature during transit and actual journey duration. A random holdout showed strong performance, but predictions made at dispatch are poor. The scoring query supplies NULL for those trip summaries because they become available after delivery.",
+          "decisive_constraints": [
+            "The classifier should learn from features available when dispatch decisions are made.",
+            "The analytics team wants to retain its existing BigQuery SQL training and prediction workflow with minimal operational changes."
+          ],
+          "best_action": "A. Retrain using an explicit selection of dispatch-available features, excluding completed-trip summaries from the BigQuery ML training query.",
+          "mistakes": [
+            {
+              "action": "B. Use ML.GLOBAL_EXPLAIN to rank the existing features, then retrain on the highest-attribution features to preserve the strongest predictors.",
+              "scenario_reason": "Attribution measures a feature's contribution to predictions, not its availability at dispatch. Completed-trip summaries can rank highly precisely because they reveal information unavailable when the business needs a prediction."
+            },
+            {
+              "action": "C. Increase L1_REG when retraining the BigQuery ML boosted tree classifier, allowing regularization to select useful features from the existing joined dataset.",
+              "scenario_reason": "Regularization penalizes model complexity; it does not enforce prediction-time feature availability. Highly predictive completed-trip information can remain useful during training despite the penalty."
+            },
+            {
+              "action": "D. Move the existing joined dataset to Agent Platform AutoML tabular classification and let automated feature processing select an appropriate representation.",
+              "scenario_reason": "Automated processing cannot establish the business timing of the supplied columns. Training on the same completed-trip summaries preserves the leakage, while migration adds operational changes without correcting feature selection."
+            }
+          ]
+        },
+        "decision_proof": {
+          "supported": true,
+          "uniquely_best": true,
+          "scenario_reasons_supported": true,
+          "no_feature_gotchas": true,
+          "reason": "A directly corrects the training-serving feature mismatch while preserving the existing SQL workflow. B and C optimize features without enforcing dispatch-time availability; D retains the problematic inputs and adds migration work. The supplied current documentation supports the relevant capabilities without a conflicting lifecycle restriction.",
+          "reasons": [
+            {
+              "option_label": "A",
+              "url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create",
+              "quote": "The query_statement argument specifies the query that is used to generate the training data.",
+              "scenario_reason": "Explicitly excluding completed-trip summaries from the training query removes information unavailable at dispatch and preserves the existing BigQuery ML workflow."
+            },
+            {
+              "option_label": "B",
+              "url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create",
+              "quote": "ENABLE_GLOBAL_EXPLAIN Specifies whether to compute global explanations using explainable AI to evaluate global feature importance to the model.",
+              "scenario_reason": "Model importance does not establish dispatch-time availability. Selecting the highest-attribution existing features can retain completed-trip summaries, so this action does not enforce the required feature constraint."
+            },
+            {
+              "option_label": "C",
+              "url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create",
+              "quote": "L1_REG The amount of L1 regularization applied. Linear & logistic regression, Boosted trees Random forest",
+              "scenario_reason": "L1 regularization is supported for boosted trees, but increasing its penalty does not exclude features based on when they become available. The existing training dataset still contains the unavailable trip summaries."
+            },
+            {
+              "option_label": "D",
+              "url": "https://docs.cloud.google.com/architecture/ml-on-gcp-best-practices",
+              "quote": "Nearly all aspects of training and serving a model, like choosing an architecture, hyperparameter tuning, and provisioning machines, are handled for you.",
+              "scenario_reason": "Automating training on the same joined dataset does not impose the required dispatch-time feature selection. Migration also introduces operational changes when the existing SQL training query can directly exclude the problematic columns."
+            }
+          ],
+          "distractor_evidence": {
+            "version": 1,
+            "mode": "consistent"
+          },
+          "mechanical_check": {
+            "passed": true,
+            "errors": []
+          },
+          "passed": true
+        }
+      },
+      {
+        "style_policy": {
+          "version": "5.1",
+          "objective_id": "machine-learning-engineer:standard:2.3:3",
+          "allowance": null
+        },
+        "cert_id": "machine-learning-engineer",
+        "domain_code": "COLLABORATING_TO_MANAGE_DATA_AND_MODELS",
+        "domain_name": "Collaborating within and across teams to manage data and models",
+        "objective_id": "machine-learning-engineer:standard:2.3:3",
+        "guide_sha256": "bee925a0fb365488f57fee26b1fca8cdfc82e67fdb8753afb0472c2d3b257701",
+        "objective_offset": 9,
+        "scenario_moment": "monitoring",
+        "opening_style": "Your company/organization/team",
+        "question_line": "What should you do?",
+        "key_length_rank": 2,
+        "objective_text": "Tracking and comparing model artifacts, versions, and lineage (e.g., Experiments on Agent Platform and Gemini Enterprise Agent Platform ML Metadata)",
+        "objective_context": "Tracking and comparing model artifacts, versions, and lineage (e.g., Experiments on Agent Platform and Gemini Enterprise Agent Platform ML Metadata)",
+        "services": [
+          "Gemini Enterprise Agent Platform"
+        ],
+        "subsection": "2.3",
+        "domain_prompt": "Certification: Professional Machine Learning Engineer (machine-learning-engineer)\nGuide SHA256: bee925a0fb365488f57fee26b1fca8cdfc82e67fdb8753afb0472c2d3b257701\nDomain: Collaborating within and across teams to manage data and models (COLLABORATING_TO_MANAGE_DATA_AND_MODELS)\nOfficial Exam Weight: ~16.0% (normalized when planning)\nTarget Subsection: Tracking and running ML experiments. (2.3)\nExplicit service mentions: Gemini Enterprise Agent Platform, Kubeflow Pipelines\nOfficial objectives:\n- Choosing the appropriate Google Cloud environment for development and experimentation (e.g., Experiments on Gemini Enterprise Agent Platform, Gemini Enterprise Agent Platform Pipelines, and Kubeflow Pipelines) given the framework\n- Evaluating predictive and gen AI solutions (e.g., model evaluation metrics and LLM-as-a-judge)\n- Tracking and comparing model artifacts, versions, and lineage (e.g., Experiments on Agent Platform and Gemini Enterprise Agent Platform ML Metadata)\nUse the reviewed official guide objectives and current product names. Do not add unsupported exam scope.\nGenerate a realistic scenario-based certification question with specific constraints.\nTarget Objective: machine-learning-engineer:standard:2.3:3\nTracking and comparing model artifacts, versions, and lineage (e.g., Experiments on Agent Platform and Gemini Enterprise Agent Platform ML Metadata)\nTest this objective specifically.\nScenario moment: monitoring. Use an already-running workload at this moment, not a new build. Keep the selected objective's actual decision central; the moment is context, not permission to add unsupported exam scope. Keep the selected objective's actual decision central; the scenario moment must not displace the objective or turn it into a different decision.\nOpening style: Your company/organization/team. Use this second-person prefix family naturally; when slashes separate alternatives, choose one (for example, Your company or You manage). Business-first and concrete task-first contexts are both valid in the first 1\u20132 sentences. Never start with an imperative or a gerund-led opening such as Deploy a model or Building a model. Prefix hints must not invent a role, chronology or scope unsupported by the objective. Every opening must name a business application or a concrete ML task relevant to the selected objective (for example, train a fraud classifier or summarize articles). Never use an abstract task such as deploy a model without its purpose. For non-ML objectives, name the concrete task and its business application purpose; do not introduce ML beyond the selected scope. Do not expand the selected exam scope.\nQuestion line hint: What should you do? Use this exact phrase when it fits the selected decision; otherwise use a natural question-line variant ending in ?. Do not force 'first' when the scenario has no sequencing decision or introduce a false premise. These are wording hints, not permission to expand the selected exam scope.\nKey length rank hint: 2 of 4 (1 shortest, 4 longest). Distribute key ranks evenly, reaching comparable length with meaningful detail. Rank 4 should tie one non-key option for longest; never make the key uniquely longest. Keep all options balanced and the mechanical two-word key lead limit.",
+        "distractor_evidence": {
+          "version": 1,
+          "mode": "consistent"
+        },
+        "decision_objective": {
+          "objective_id": "machine-learning-engineer:standard:2.3:3",
+          "objective_text": "Tracking and comparing model artifacts, versions, and lineage (e.g., Experiments on Agent Platform and Gemini Enterprise Agent Platform ML Metadata)"
+        },
+        "decision_plan": {
+          "objective_id": "machine-learning-engineer:standard:2.3:3",
+          "engineering_decision": "Your company uses a support-ticket classifier to route urgent customer requests. Production monitoring reveals inconsistent results across nightly model releases, and engineers need to compare the exact artifacts and training records behind those releases. What should you do?",
+          "business_consequence": "Conflating successive training executions can cause the support team to attribute routing failures to the wrong model release and select an unsuitable replacement.",
+          "existing_system": "An existing scheduler runs nightly custom training jobs. Jobs with the same hyperparameters resume the same named run in Experiments on Agent Platform, even when they produce different model artifacts. Model Registry stores the released model versions.",
+          "decisive_constraints": [
+            "Preserve separately comparable records for every training execution and its model artifacts, including executions with identical hyperparameters.",
+            "Keep the functioning scheduler and training code while making monitored releases traceable to their originating experiment records."
+          ],
+          "best_action": "Create a distinct experiment run for each training execution. Record its parameters and metrics, associate its uniquely identified model artifacts, and preserve the mapping to each registered model version.",
+          "mistakes": [
+            {
+              "action": "Continue resuming one experiment run per hyperparameter configuration, and attach every nightly model artifact to that run so engineers can compare all releases from one consolidated record.",
+              "scenario_reason": "Resuming a run continues an existing execution record; it does not create independent nightly run versions. Combining artifacts and updated scalar metrics makes release-specific comparisons ambiguous."
+            },
+            {
+              "action": "Use Model Registry versions and a production alias as the comparison record, adding the shared experiment-run name to each version so engineers can retrieve the associated training information.",
+              "scenario_reason": "Registry versions distinguish released models, but referencing the same consolidated experiment run still leaves their execution-specific parameters, metrics, and artifacts conflated. Moving an alias does not repair those associations."
+            },
+            {
+              "action": "Give each nightly job a separate Agent Platform TensorBoard log directory, and use its training curves as the historical record for comparing the models reported by production monitoring.",
+              "scenario_reason": "Separate TensorBoard logs help compare training behavior, but curves alone do not establish which exported artifact and registered model version came from each experiment execution."
+            }
+          ]
+        },
+        "decision_proof": {
+          "supported": true,
+          "uniquely_best": true,
+          "scenario_reasons_supported": true,
+          "no_feature_gotchas": true,
+          "reason": "A directly addresses execution-level artifact tracking while preserving the existing scheduler and training code. The supplied current documentation supports distinct experiment executions, model artifact logging, and registry versions. B\u2013D leave execution records conflated or omit the required artifact-to-release mapping.",
+          "reasons": [
+            {
+              "option_label": "A",
+              "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/experiments/intro-vertex-ai-experiments",
+              "quote": "A specific, trackable execution within a Vertex AI Experiment, which logs inputs (like algorithm, parameters, and datasets) and outputs (like models, checkpoints, and metrics) to monitor and compare ML development iterations.",
+              "scenario_reason": "A distinct run represents each nightly execution independently, even when hyperparameters match. Associating uniquely identified artifacts and retaining their registered-version mapping makes monitored releases traceable and comparable."
+            },
+            {
+              "option_label": "B",
+              "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/experiments/log-data",
+              "quote": "When the optional resume parameter is specified as TRUE, the previously started run resumes. When not specified, resume defaults to FALSE and a new run is created.",
+              "scenario_reason": "Resuming the same run preserves a consolidated record instead of separately comparable execution records. Attaching additional artifacts does not satisfy the requirement to distinguish every nightly execution."
+            },
+            {
+              "option_label": "C",
+              "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/model-registry/versioning",
+              "quote": "Model versioning lets you create multiple versions of the same model.",
+              "scenario_reason": "Registry versions distinguish released models, but adding the same shared experiment-run name to each version still points to conflated execution records. A production alias does not separate those records."
+            },
+            {
+              "option_label": "D",
+              "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/experiments/log-data",
+              "quote": "Vertex AI TensorBoard is the backing time series metric store.",
+              "scenario_reason": "Separate training curves distinguish training behavior, but using curves alone omits the required association between each execution, its exported model artifacts, and its registered release version."
+            }
+          ],
+          "distractor_evidence": {
+            "version": 1,
+            "mode": "consistent"
+          },
+          "mechanical_check": {
+            "passed": true,
+            "errors": []
+          },
+          "passed": true
+        }
+      },
+      {
+        "style_policy": {
+          "version": "5.1",
+          "objective_id": "machine-learning-engineer:standard:2.1:1",
+          "allowance": null
+        },
+        "cert_id": "machine-learning-engineer",
+        "domain_code": "COLLABORATING_TO_MANAGE_DATA_AND_MODELS",
+        "domain_name": "Collaborating within and across teams to manage data and models",
+        "objective_id": "machine-learning-engineer:standard:2.1:1",
+        "guide_sha256": "bee925a0fb365488f57fee26b1fca8cdfc82e67fdb8753afb0472c2d3b257701",
+        "objective_offset": 9,
+        "scenario_moment": "migration",
+        "opening_style": "You work for",
+        "question_line": "Which approach should you use?",
+        "key_length_rank": 3,
+        "objective_text": "Organizing and exploring different data types (e.g., tabular, text, and images) for efficient experimenting, training, and serving",
+        "objective_context": "Organizing and exploring different data types (e.g., tabular, text, and images) for efficient experimenting, training, and serving",
+        "services": [],
+        "subsection": "2.1",
+        "domain_prompt": "Certification: Professional Machine Learning Engineer (machine-learning-engineer)\nGuide SHA256: bee925a0fb365488f57fee26b1fca8cdfc82e67fdb8753afb0472c2d3b257701\nDomain: Collaborating within and across teams to manage data and models (COLLABORATING_TO_MANAGE_DATA_AND_MODELS)\nOfficial Exam Weight: ~16.0% (normalized when planning)\nTarget Subsection: Exploring and preprocessing data for ML. (2.1)\nExplicit service mentions: BigQuery, Dataflow, Apache Spark, Gemini Enterprise Agent Platform\nOfficial objectives:\n- Organizing and exploring different data types (e.g., tabular, text, and images) for efficient experimenting, training, and serving\n- Choosing the right tool for data preprocessing based on scale and complexity (e.g., BigQuery [SQL], Dataflow, Apache Spark, and in-memory Python frameworks)\n- Creating and consolidating features in Gemini Enterprise Agent Platform Feature Store\n- Ensuring data privacy and handling sensitive information (e.g., personally identifiable information [PII])\nUse the reviewed official guide objectives and current product names. Do not add unsupported exam scope.\nGenerate a realistic scenario-based certification question with specific constraints.\nTarget Objective: machine-learning-engineer:standard:2.1:1\nOrganizing and exploring different data types (e.g., tabular, text, and images) for efficient experimenting, training, and serving\nTest this objective specifically.\nScenario moment: migration. Use an already-running workload at this moment, not a new build. Keep the selected objective's actual decision central; the moment is context, not permission to add unsupported exam scope. Keep the selected objective's actual decision central; the scenario moment must not displace the objective or turn it into a different decision.\nOpening style: You work for. Use this second-person prefix family naturally; when slashes separate alternatives, choose one (for example, Your company or You manage). Business-first and concrete task-first contexts are both valid in the first 1\u20132 sentences. Never start with an imperative or a gerund-led opening such as Deploy a model or Building a model. Prefix hints must not invent a role, chronology or scope unsupported by the objective. Every opening must name a business application or a concrete ML task relevant to the selected objective (for example, train a fraud classifier or summarize articles). Never use an abstract task such as deploy a model without its purpose. For non-ML objectives, name the concrete task and its business application purpose; do not introduce ML beyond the selected scope. Do not expand the selected exam scope.\nQuestion line hint: Which approach should you use? Use this exact phrase when it fits the selected decision; otherwise use a natural question-line variant ending in ?. Do not force 'first' when the scenario has no sequencing decision or introduce a false premise. These are wording hints, not permission to expand the selected exam scope.\nKey length rank hint: 3 of 4 (1 shortest, 4 longest). Distribute key ranks evenly, reaching comparable length with meaningful detail. Rank 4 should tie one non-key option for longest; never make the key uniquely longest. Keep all options balanced and the mechanical two-word key lead limit.",
+        "distractor_evidence": {
+          "version": 1,
+          "mode": "consistent"
+        }
+      }
+    ],
+    "generation_runs": {},
+    "existing_questions": {
+      "sha256": null,
+      "questions": []
+    },
+    "candidates": [
+      {
+        "cert_id": "machine-learning-engineer",
+        "domain_code": "ARCHITECTING_LOW_CODE_ML_SOLUTIONS",
+        "objective_id": "machine-learning-engineer:standard:1.1:2",
+        "guide_sha256": "bee925a0fb365488f57fee26b1fca8cdfc82e67fdb8753afb0472c2d3b257701",
+        "scenario_moment": "recent deployment",
+        "opening_style": "You are",
+        "question_line": "What should you do?",
+        "key_length_rank": 1,
+        "style_policy": {
+          "version": "5.1",
+          "objective_id": "machine-learning-engineer:standard:1.1:2",
+          "allowance": null
+        },
+        "distractor_evidence": {
+          "version": 1,
+          "mode": "consistent"
+        },
+        "index": 1,
+        "stem": "You are managing a seafood distributor's shipment-spoilage classifier, recently deployed using BigQuery ML boosted trees. Training joins dispatch records with completed-trip summaries, including maximum transit temperature and actual journey duration. A random holdout showed strong performance, but dispatch-time predictions are poor. The scoring query supplies missing values for these summaries because they become available after delivery. You want the classifier to learn from features available at dispatch while minimizing changes to the team's BigQuery SQL training and prediction workflow. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Move the existing joined training dataset to Agent Platform AutoML tabular classification, then use automated training to rebuild the shipment-spoilage classifier with those features."
+          },
+          {
+            "label": "B",
+            "text": "Increase L1 regularization when retraining the BigQuery ML boosted tree classifier, letting the stronger penalty determine which features from the joined dataset remain useful."
+          },
+          {
+            "label": "C",
+            "text": "Rank the existing BigQuery ML features by global feature importance, then retrain the classifier using the highest-ranked features from the joined training dataset."
+          },
+          {
+            "label": "D",
+            "text": "Retrain the BigQuery ML classifier using a training query that explicitly selects dispatch-available features and excludes completed-trip summaries from the model inputs."
+          }
+        ],
+        "key": "D",
+        "rationales": {
+          "A": "This fails to correct the training feature selection. Agent Platform AutoML automates tasks such as architecture selection, hyperparameter tuning, and machine provisioning. Supplying the same joined dataset still supplies completed-trip summaries unavailable at dispatch. Selecting the appropriate columns in the existing BigQuery ML training query addresses the issue with fewer workflow changes.",
+          "B": "This fails to ensure that training features are available at dispatch. BigQuery ML supports L1 regularization for boosted trees, but changing its amount does not change which columns the training query supplies. The completed-trip summaries remain candidate inputs rather than being excluded according to their availability.",
+          "C": "This fails to ensure that selected features are available at dispatch. BigQuery ML global explanations evaluate feature importance to the model. Importance does not establish when a feature becomes available, so selecting highly ranked features can retain the completed-trip summaries.",
+          "D": "The goals are to use features available at dispatch and minimize changes to the SQL workflow. BigQuery ML generates training data from the training query, so explicitly selecting dispatch-available features removes the unavailable summaries while preserving the existing workflow. Feature importance and regularization do not select columns according to availability, and moving the unchanged dataset to Agent Platform AutoML leaves the problematic inputs in training."
+        },
+        "evidence": [
+          {
+            "option_label": "A",
+            "url": "https://docs.cloud.google.com/architecture/ml-on-gcp-best-practices",
+            "quote": "Nearly all aspects of training and serving a model, like choosing an architecture, hyperparameter tuning, and provisioning machines, are handled for you.",
+            "retrieved_at": "2026-10-24T21:53:29.988221+00:00",
+            "text_sha256": "135e9de75a75b7e4c2b864d278cb88d22bc28c64c4ddf78e9e0731f4fd1ec459"
+          },
+          {
+            "option_label": "B",
+            "url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create",
+            "quote": "L1_REG The amount of L1 regularization applied. Linear & logistic regression, Boosted trees Random forest",
+            "retrieved_at": "2026-10-24T21:54:53.518903+00:00",
+            "text_sha256": "fabf7be132f8cf76d86b5ae0a50573bd63ace0a99b2478b703367a9e136013e3"
+          },
+          {
+            "option_label": "C",
+            "url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create",
+            "quote": "ENABLE_GLOBAL_EXPLAIN Specifies whether to compute global explanations using explainable AI to evaluate global feature importance to the model.",
+            "retrieved_at": "2026-10-24T21:54:53.518903+00:00",
+            "text_sha256": "fabf7be132f8cf76d86b5ae0a50573bd63ace0a99b2478b703367a9e136013e3"
+          },
+          {
+            "option_label": "D",
+            "url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create",
+            "quote": "The query_statement argument specifies the query that is used to generate the training data.",
+            "retrieved_at": "2026-10-24T21:54:53.518903+00:00",
+            "text_sha256": "fabf7be132f8cf76d86b5ae0a50573bd63ace0a99b2478b703367a9e136013e3"
+          }
+        ],
+        "candidate_id": "0d3e76d1-8441-5f79-a249-1304d8d2f96b",
+        "sources": [
+          {
+            "requested_url": "https://docs.cloud.google.com/architecture/ml-on-gcp-best-practices",
+            "url": "https://docs.cloud.google.com/architecture/ml-on-gcp-best-practices",
+            "text": "Nearly all aspects of training and serving a model, like choosing an architecture, hyperparameter tuning, and provisioning machines, are handled for you.",
+            "retrieved_at": "2026-10-24T21:53:29.988221+00:00",
+            "text_sha256": "135e9de75a75b7e4c2b864d278cb88d22bc28c64c4ddf78e9e0731f4fd1ec459",
+            "language": "en",
+            "discovery_kind": "option",
+            "discovery_options": [
+              "A"
+            ]
+          },
+          {
+            "requested_url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create",
+            "url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create",
+            "text": "L1_REG The amount of L1 regularization applied. Linear & logistic regression, Boosted trees Random forest\nENABLE_GLOBAL_EXPLAIN Specifies whether to compute global explanations using explainable AI to evaluate global feature importance to the model.\nThe query_statement argument specifies the query that is used to generate the training data.",
+            "retrieved_at": "2026-10-24T21:54:53.518903+00:00",
+            "text_sha256": "fabf7be132f8cf76d86b5ae0a50573bd63ace0a99b2478b703367a9e136013e3",
+            "language": "en",
+            "discovery_kind": "option",
+            "discovery_options": [
+              "C"
+            ]
+          }
+        ],
+        "decision_objective": {
+          "objective_id": "machine-learning-engineer:standard:1.1:2",
+          "objective_text": "Performing feature engineering or selection using BigQuery ML"
+        },
+        "decision_plan": {
+          "objective_id": "machine-learning-engineer:standard:1.1:2",
+          "engineering_decision": "Choose how to select training features for a recently deployed shipment-spoilage classifier whose offline performance does not carry over to dispatch-time predictions. What should you do?",
+          "business_consequence": "Missed spoilage risks cause a seafood distributor to dispatch shipments that arrive unusable, increasing replacement costs and customer refunds.",
+          "existing_system": "You are managing a seafood distributor's shipment-spoilage classifier, recently deployed using BigQuery ML boosted trees. The training query joins dispatch records with completed-trip summaries, including maximum temperature during transit and actual journey duration. A random holdout showed strong performance, but predictions made at dispatch are poor. The scoring query supplies NULL for those trip summaries because they become available after delivery.",
+          "decisive_constraints": [
+            "The classifier should learn from features available when dispatch decisions are made.",
+            "The analytics team wants to retain its existing BigQuery SQL training and prediction workflow with minimal operational changes."
+          ],
+          "best_action": "A. Retrain using an explicit selection of dispatch-available features, excluding completed-trip summaries from the BigQuery ML training query.",
+          "mistakes": [
+            {
+              "action": "B. Use ML.GLOBAL_EXPLAIN to rank the existing features, then retrain on the highest-attribution features to preserve the strongest predictors.",
+              "scenario_reason": "Attribution measures a feature's contribution to predictions, not its availability at dispatch. Completed-trip summaries can rank highly precisely because they reveal information unavailable when the business needs a prediction."
+            },
+            {
+              "action": "C. Increase L1_REG when retraining the BigQuery ML boosted tree classifier, allowing regularization to select useful features from the existing joined dataset.",
+              "scenario_reason": "Regularization penalizes model complexity; it does not enforce prediction-time feature availability. Highly predictive completed-trip information can remain useful during training despite the penalty."
+            },
+            {
+              "action": "D. Move the existing joined dataset to Agent Platform AutoML tabular classification and let automated feature processing select an appropriate representation.",
+              "scenario_reason": "Automated processing cannot establish the business timing of the supplied columns. Training on the same completed-trip summaries preserves the leakage, while migration adds operational changes without correcting feature selection."
+            }
+          ]
+        },
+        "decision_proof": {
+          "supported": true,
+          "uniquely_best": true,
+          "scenario_reasons_supported": true,
+          "no_feature_gotchas": true,
+          "reason": "A directly corrects the training-serving feature mismatch while preserving the existing SQL workflow. B and C optimize features without enforcing dispatch-time availability; D retains the problematic inputs and adds migration work. The supplied current documentation supports the relevant capabilities without a conflicting lifecycle restriction.",
+          "reasons": [
+            {
+              "option_label": "A",
+              "url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create",
+              "quote": "The query_statement argument specifies the query that is used to generate the training data.",
+              "scenario_reason": "Explicitly excluding completed-trip summaries from the training query removes information unavailable at dispatch and preserves the existing BigQuery ML workflow."
+            },
+            {
+              "option_label": "B",
+              "url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create",
+              "quote": "ENABLE_GLOBAL_EXPLAIN Specifies whether to compute global explanations using explainable AI to evaluate global feature importance to the model.",
+              "scenario_reason": "Model importance does not establish dispatch-time availability. Selecting the highest-attribution existing features can retain completed-trip summaries, so this action does not enforce the required feature constraint."
+            },
+            {
+              "option_label": "C",
+              "url": "https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create",
+              "quote": "L1_REG The amount of L1 regularization applied. Linear & logistic regression, Boosted trees Random forest",
+              "scenario_reason": "L1 regularization is supported for boosted trees, but increasing its penalty does not exclude features based on when they become available. The existing training dataset still contains the unavailable trip summaries."
+            },
+            {
+              "option_label": "D",
+              "url": "https://docs.cloud.google.com/architecture/ml-on-gcp-best-practices",
+              "quote": "Nearly all aspects of training and serving a model, like choosing an architecture, hyperparameter tuning, and provisioning machines, are handled for you.",
+              "scenario_reason": "Automating training on the same joined dataset does not impose the required dispatch-time feature selection. Migration also introduces operational changes when the existing SQL training query can directly exclude the problematic columns."
+            }
+          ],
+          "distractor_evidence": {
+            "version": 1,
+            "mode": "consistent"
+          },
+          "mechanical_check": {
+            "passed": true,
+            "errors": []
+          },
+          "passed": true
+        },
+        "option_order": {
+          "A": "D",
+          "B": "C",
+          "C": "B",
+          "D": "A"
+        },
+        "accepted": false,
+        "awaiting_external_judge": true
+      },
+      {
+        "cert_id": "machine-learning-engineer",
+        "domain_code": "COLLABORATING_TO_MANAGE_DATA_AND_MODELS",
+        "objective_id": "machine-learning-engineer:standard:2.3:3",
+        "guide_sha256": "bee925a0fb365488f57fee26b1fca8cdfc82e67fdb8753afb0472c2d3b257701",
+        "scenario_moment": "monitoring",
+        "opening_style": "Your company/organization/team",
+        "question_line": "What should you do?",
+        "key_length_rank": 2,
+        "style_policy": {
+          "version": "5.1",
+          "objective_id": "machine-learning-engineer:standard:2.3:3",
+          "allowance": null
+        },
+        "distractor_evidence": {
+          "version": 1,
+          "mode": "consistent"
+        },
+        "index": 2,
+        "stem": "Your company uses a support-ticket classifier to route urgent customer requests. Production monitoring shows inconsistent results across nightly releases. An existing scheduler runs custom training jobs, and jobs with identical hyperparameters resume the same run in Agent Platform Experiments. Model Registry stores released versions. You want release comparisons to retain each training execution's parameters, metrics, and model artifacts while minimizing changes to the functioning scheduler and training code. What should you do?",
+        "options": [
+          {
+            "label": "A",
+            "text": "Log each nightly job's training curves separately in Agent Platform TensorBoard. Compare curves by release date and inspect Model Registry versions as the historical record for monitored releases."
+          },
+          {
+            "label": "B",
+            "text": "Use Model Registry versions as the release comparison records. Add the shared Agent Platform Experiments run name to each version's description, then inspect that run for the training parameters, metrics, and artifacts."
+          },
+          {
+            "label": "C",
+            "text": "Create a distinct Agent Platform Experiments run for each training execution. Log its parameters and metrics, associate uniquely identified model artifacts, and record the mapping to its Model Registry version."
+          },
+          {
+            "label": "D",
+            "text": "Resume the existing Agent Platform Experiments run for each hyperparameter configuration. Attach every nightly model artifact and log the latest metrics there, using this consolidated record to compare registered model releases."
+          }
+        ],
+        "key": "C",
+        "rationales": {
+          "A": "Agent Platform TensorBoard stores time series metrics, which help compare training behavior. Separate curves and Model Registry versions do not, by themselves, record which execution produced each model artifact. This leaves the required release-to-training lineage incomplete. Agent Platform Experiments tracks execution inputs and output artifacts, providing the associations needed for these comparisons.",
+          "B": "Model Registry versions distinguish released models and allow version descriptions. However, putting the same experiment-run name in every description still points releases to a combined training record. This fails to preserve independently comparable execution records: creating model versions does not separate the executions already consolidated into one Agent Platform Experiments run.",
+          "C": "The goal is to compare release-specific training records and artifacts with minimal workflow changes. Agent Platform Experiments represents each execution as a run and tracks its parameters, metrics, and artifacts. Creating distinct runs and recording their mappings to Model Registry versions preserves those associations within the existing workflow. Shared runs combine execution records, references from Model Registry do not separate them, and training curves alone do not establish artifact lineage.",
+          "D": "This fails to preserve independently comparable training executions. Resuming an Agent Platform Experiments run continues the existing run rather than creating a new one. Summary metrics have a single value for each metric key in a run, so attaching successive artifacts to that shared record does not preserve separate execution-level comparisons."
+        },
+        "evidence": [
+          {
+            "option_label": "A",
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/experiments/log-data",
+            "quote": "Vertex AI TensorBoard is the backing time series metric store.",
+            "retrieved_at": "2026-10-24T21:53:45.666316+00:00",
+            "text_sha256": "ccfd175a2e5c81f45fb840130462f66cdd492d6bff605042b450933065ddd3f7"
+          },
+          {
+            "option_label": "B",
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/model-registry/versioning",
+            "quote": "Model versioning lets you create multiple versions of the same model.",
+            "retrieved_at": "2026-10-24T21:53:40.318748+00:00",
+            "text_sha256": "7a7ff16a66ce62a50311ba45ee9bb51506830d1b754cdceecb645669186c9eff"
+          },
+          {
+            "option_label": "C",
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/experiments/intro-vertex-ai-experiments",
+            "quote": "A specific, trackable execution within a Vertex AI Experiment, which logs inputs (like algorithm, parameters, and datasets) and outputs (like models, checkpoints, and metrics) to monitor and compare ML development iterations.",
+            "retrieved_at": "2026-10-24T21:53:44.303173+00:00",
+            "text_sha256": "99921ab1d6da70a0a9c1e6f39c51d9b2f301158e920e24ba12d59a32343aa34e"
+          },
+          {
+            "option_label": "D",
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/experiments/log-data",
+            "quote": "When the optional resume parameter is specified as TRUE, the previously started run resumes. When not specified, resume defaults to FALSE and a new run is created.",
+            "retrieved_at": "2026-10-24T21:53:45.666316+00:00",
+            "text_sha256": "ccfd175a2e5c81f45fb840130462f66cdd492d6bff605042b450933065ddd3f7"
+          }
+        ],
+        "candidate_id": "66d81c81-aac7-5fcb-902f-ce30d4969088",
+        "sources": [
+          {
+            "requested_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/model-registry/versioning",
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/model-registry/versioning",
+            "text": "Model versioning lets you create multiple versions of the same model.",
+            "retrieved_at": "2026-10-24T21:53:40.318748+00:00",
+            "text_sha256": "7a7ff16a66ce62a50311ba45ee9bb51506830d1b754cdceecb645669186c9eff",
+            "language": "en",
+            "discovery_kind": "option",
+            "discovery_options": [
+              "C"
+            ]
+          },
+          {
+            "requested_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/experiments/intro-vertex-ai-experiments",
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/experiments/intro-vertex-ai-experiments",
+            "text": "A specific, trackable execution within a Vertex AI Experiment, which logs inputs (like algorithm, parameters, and datasets) and outputs (like models, checkpoints, and metrics) to monitor and compare ML development iterations.",
+            "retrieved_at": "2026-10-24T21:53:44.303173+00:00",
+            "text_sha256": "99921ab1d6da70a0a9c1e6f39c51d9b2f301158e920e24ba12d59a32343aa34e",
+            "language": "en",
+            "discovery_kind": "option",
+            "discovery_options": [
+              "A"
+            ]
+          },
+          {
+            "requested_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/experiments/log-data",
+            "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/experiments/log-data",
+            "text": "Vertex AI TensorBoard is the backing time series metric store.\nWhen the optional resume parameter is specified as TRUE, the previously started run resumes. When not specified, resume defaults to FALSE and a new run is created.",
+            "retrieved_at": "2026-10-24T21:53:45.666316+00:00",
+            "text_sha256": "ccfd175a2e5c81f45fb840130462f66cdd492d6bff605042b450933065ddd3f7",
+            "language": "en",
+            "discovery_kind": "option",
+            "discovery_options": [
+              "B"
+            ]
+          }
+        ],
+        "decision_objective": {
+          "objective_id": "machine-learning-engineer:standard:2.3:3",
+          "objective_text": "Tracking and comparing model artifacts, versions, and lineage (e.g., Experiments on Agent Platform and Gemini Enterprise Agent Platform ML Metadata)"
+        },
+        "decision_plan": {
+          "objective_id": "machine-learning-engineer:standard:2.3:3",
+          "engineering_decision": "Your company uses a support-ticket classifier to route urgent customer requests. Production monitoring reveals inconsistent results across nightly model releases, and engineers need to compare the exact artifacts and training records behind those releases. What should you do?",
+          "business_consequence": "Conflating successive training executions can cause the support team to attribute routing failures to the wrong model release and select an unsuitable replacement.",
+          "existing_system": "An existing scheduler runs nightly custom training jobs. Jobs with the same hyperparameters resume the same named run in Experiments on Agent Platform, even when they produce different model artifacts. Model Registry stores the released model versions.",
+          "decisive_constraints": [
+            "Preserve separately comparable records for every training execution and its model artifacts, including executions with identical hyperparameters.",
+            "Keep the functioning scheduler and training code while making monitored releases traceable to their originating experiment records."
+          ],
+          "best_action": "Create a distinct experiment run for each training execution. Record its parameters and metrics, associate its uniquely identified model artifacts, and preserve the mapping to each registered model version.",
+          "mistakes": [
+            {
+              "action": "Continue resuming one experiment run per hyperparameter configuration, and attach every nightly model artifact to that run so engineers can compare all releases from one consolidated record.",
+              "scenario_reason": "Resuming a run continues an existing execution record; it does not create independent nightly run versions. Combining artifacts and updated scalar metrics makes release-specific comparisons ambiguous."
+            },
+            {
+              "action": "Use Model Registry versions and a production alias as the comparison record, adding the shared experiment-run name to each version so engineers can retrieve the associated training information.",
+              "scenario_reason": "Registry versions distinguish released models, but referencing the same consolidated experiment run still leaves their execution-specific parameters, metrics, and artifacts conflated. Moving an alias does not repair those associations."
+            },
+            {
+              "action": "Give each nightly job a separate Agent Platform TensorBoard log directory, and use its training curves as the historical record for comparing the models reported by production monitoring.",
+              "scenario_reason": "Separate TensorBoard logs help compare training behavior, but curves alone do not establish which exported artifact and registered model version came from each experiment execution."
+            }
+          ]
+        },
+        "decision_proof": {
+          "supported": true,
+          "uniquely_best": true,
+          "scenario_reasons_supported": true,
+          "no_feature_gotchas": true,
+          "reason": "A directly addresses execution-level artifact tracking while preserving the existing scheduler and training code. The supplied current documentation supports distinct experiment executions, model artifact logging, and registry versions. B\u2013D leave execution records conflated or omit the required artifact-to-release mapping.",
+          "reasons": [
+            {
+              "option_label": "A",
+              "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/experiments/intro-vertex-ai-experiments",
+              "quote": "A specific, trackable execution within a Vertex AI Experiment, which logs inputs (like algorithm, parameters, and datasets) and outputs (like models, checkpoints, and metrics) to monitor and compare ML development iterations.",
+              "scenario_reason": "A distinct run represents each nightly execution independently, even when hyperparameters match. Associating uniquely identified artifacts and retaining their registered-version mapping makes monitored releases traceable and comparable."
+            },
+            {
+              "option_label": "B",
+              "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/experiments/log-data",
+              "quote": "When the optional resume parameter is specified as TRUE, the previously started run resumes. When not specified, resume defaults to FALSE and a new run is created.",
+              "scenario_reason": "Resuming the same run preserves a consolidated record instead of separately comparable execution records. Attaching additional artifacts does not satisfy the requirement to distinguish every nightly execution."
+            },
+            {
+              "option_label": "C",
+              "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/model-registry/versioning",
+              "quote": "Model versioning lets you create multiple versions of the same model.",
+              "scenario_reason": "Registry versions distinguish released models, but adding the same shared experiment-run name to each version still points to conflated execution records. A production alias does not separate those records."
+            },
+            {
+              "option_label": "D",
+              "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/experiments/log-data",
+              "quote": "Vertex AI TensorBoard is the backing time series metric store.",
+              "scenario_reason": "Separate training curves distinguish training behavior, but using curves alone omits the required association between each execution, its exported model artifacts, and its registered release version."
+            }
+          ],
+          "distractor_evidence": {
+            "version": 1,
+            "mode": "consistent"
+          },
+          "mechanical_check": {
+            "passed": true,
+            "errors": []
+          },
+          "passed": true
+        },
+        "option_order": {
+          "A": "D",
+          "B": "C",
+          "C": "A",
+          "D": "B"
+        },
+        "accepted": false,
+        "awaiting_external_judge": true
+      },
+      {
+        "cert_id": "machine-learning-engineer",
+        "domain_code": "COLLABORATING_TO_MANAGE_DATA_AND_MODELS",
+        "objective_id": "machine-learning-engineer:standard:2.1:1",
+        "guide_sha256": "bee925a0fb365488f57fee26b1fca8cdfc82e67fdb8753afb0472c2d3b257701",
+        "scenario_moment": "migration",
+        "opening_style": "You work for",
+        "question_line": "Which approach should you use?",
+        "key_length_rank": 3,
+        "style_policy": {
+          "version": "5.1",
+          "objective_id": "machine-learning-engineer:standard:2.1:1",
+          "allowance": null
+        },
+        "distractor_evidence": {
+          "version": 1,
+          "mode": "consistent"
+        },
+        "index": 3,
+        "stem": null,
+        "options": [],
+        "key": "A",
+        "rationales": {},
+        "evidence": [],
+        "candidate_id": "71493ece-3691-5421-b512-be3ecc58c070",
+        "accepted": false,
+        "failure_stage": "decision_veto",
+        "error_class": "DecisionVetoError",
+        "reason": "A's partition and block pruning are directly supported, and B\u2013C have defensible losing reasons. D needs replacement or a better-supported rationale: the supplied docs don't establish that external-table queries are generally slower than native-table queries. They document Hive partition filtering, so D credibly supports selective SQL exploration under the stated constraints. The recommendation to load data for optimal processing at scale doesn't establish the claimed performance comparison.",
+        "decision_attempts": [
+          {
+            "proof": {
+              "supported": false,
+              "uniquely_best": false,
+              "scenario_reasons_supported": false,
+              "no_feature_gotchas": true,
+              "reason": "A's partition and block pruning are directly supported, and B\u2013C have defensible losing reasons. D needs replacement or a better-supported rationale: the supplied docs don't establish that external-table queries are generally slower than native-table queries. They document Hive partition filtering, so D credibly supports selective SQL exploration under the stated constraints. The recommendation to load data for optimal processing at scale doesn't establish the claimed performance comparison.",
+              "reasons": [],
+              "distractor_evidence": {
+                "version": 1,
+                "mode": "consistent"
+              },
+              "mechanical_check": {
+                "passed": false,
+                "errors": [
+                  "Evidence must contain A, B, C and D exactly once"
+                ]
+              },
+              "passed": false
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "verdicts": {
+    "0d3e76d1-8441-5f79-a249-1304d8d2f96b": {
+      "style": {
+        "verdict": "FAIL",
+        "score": 0.5,
+        "reason": "Leakage fix is a real decision, but it rests on generic ML knowledge rather than a Google Cloud hinge. The key (D) is obvious. Only the AutoML option is Google Cloud-specific, and it fails by being unnecessary migration. Distractors are plausible.",
+        "decision_level": true,
+        "no_hidden_gotcha": true,
+        "current_names": true,
+        "distractors_plausible": true,
+        "distractors_need_knowledge": true,
+        "options_distinct_approaches": true,
+        "scenario_clear": true,
+        "business_context": true,
+        "constraints_as_wants": true,
+        "decisions_not_syntax": true,
+        "product_knowledge_hinge": false,
+        "cloud_specific_alternative": false,
+        "generic_validation_key": false
+      },
+      "evidence": {
+        "status": "skipped",
+        "reason": "prior_gate_failed",
+        "gate": "style"
+      },
+      "blind_solver": {
+        "status": "skipped",
+        "reason": "prior_gate_failed",
+        "gate": "style"
+      },
+      "argon": {
+        "status": "skipped",
+        "reason": "prior_gate_failed"
+      },
+      "distractor_evidence": {
+        "version": 1,
+        "mode": "consistent"
+      }
+    },
+    "66d81c81-aac7-5fcb-902f-ce30d4969088": {
+      "style": {
+        "verdict": "PASS",
+        "score": 0.8,
+        "reason": "Real workflow decision: a distinct Experiments run per execution avoids resume collisions and links to Model Registry. Distractors are plausible (consolidated run, registry-only, TensorBoard). Minor: B and D both lean on Registry; stem is slightly long.",
+        "decision_level": true,
+        "no_hidden_gotcha": true,
+        "current_names": true,
+        "distractors_plausible": true,
+        "distractors_need_knowledge": true,
+        "options_distinct_approaches": true,
+        "scenario_clear": true,
+        "business_context": true,
+        "constraints_as_wants": true,
+        "decisions_not_syntax": true,
+        "product_knowledge_hinge": true,
+        "cloud_specific_alternative": true,
+        "generic_validation_key": false
+      },
+      "evidence": {
+        "verdict": "PASS",
+        "score": 0.82,
+        "reason": "Docs define an experiment run as one trackable execution logging parameters, metrics and models. Resume defaults to FALSE and creates a new run. That supports distinct runs per execution and defeats the shared-run options. The Model Registry mapping is a design step, not a documented feature.",
+        "correct_answer_accurate": true,
+        "distractors_incorrect": true,
+        "explanations_accurate": true,
+        "evidence_supported": true,
+        "no_credible_second_answer": true,
+        "scenario_relevant": true,
+        "supported_decision_hinge": true
+      },
+      "blind_solver": {
+        "verdict": "PASS",
+        "choice": "C",
+        "confidence": 0.9,
+        "ambiguous_answers": false,
+        "reason": "Identical hyperparameters resume the same run, overwriting or merging each nightly execution's data. A distinct run per execution keeps parameters, metrics and artifacts separate, and a mapping to the Model Registry version ties them to releases. A, B and D lose per-execution data."
+      },
+      "argon": {
+        "model": "openrouter/google/gemini-4-argon",
+        "version": 3,
+        "request_sha256": "65bc188388d7b8694846d0f4b20f7f818f810b6eb529ca6ddc13f51164423415",
+        "blind": {
+          "verdict": "PASS",
+          "choice": "C",
+          "confidence": 0.98,
+          "ambiguous_answers": false,
+          "reason": "Resuming the same Experiment run overwrites or conflates metrics and artifacts across nightly executions. Creating a distinct Experiment run per execution preserves individual parameters, metrics, and artifacts, and linking it to the Model Registry version enables accurate release comparisons."
+        },
+        "review": {
+          "verdict": "PASS",
+          "key_correct": true,
+          "other_defensible_option": false,
+          "issues": [],
+          "fix": "No changes needed"
+        }
+      },
+      "distractor_evidence": {
+        "version": 1,
+        "mode": "consistent"
+      }
+    }
+  }
+}
