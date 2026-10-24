@@ -30,7 +30,7 @@ def test_retire_uses_atomic_guards_and_d025_reason():
     class Client:
         def rpc(self, name, args):
             calls.append((name,args))
-            return SimpleNamespace(execute=lambda: SimpleNamespace(data={"question_id":args["p_question_id"], "outcome":"retired", "changed":True}))
+            return SimpleNamespace(execute=lambda: SimpleNamespace(data={"question_id":args["p_question_id"], "outcome":"changed", "changed":True, "revision":1, "content_sha256":"a"*64}))
     selected = [row(), row(id="new",created_at=provenance.CUTOFF), row(id="live",status="ACTIVE"), row(id="beta",exam="data-engineer")]
     assert provenance.retire(Client(), selected) == ["legacy"]
     name,args = calls[0]
@@ -69,3 +69,32 @@ def test_artifacts_do_not_require_historical_filename_pattern(tmp_path):
 def test_missing_artifact_root_does_not_claim_absence(tmp_path):
     with pytest.raises(ValueError):
         provenance.artifact_ids(tmp_path/"absent")
+
+
+def test_retirement_journal_keeps_success_before_unknown_response(tmp_path):
+    path = tmp_path/"retirement.json"
+    calls = []
+    class Client:
+        def rpc(self,name,args):
+            calls.append(args["p_question_id"])
+            if len(calls) == 1:
+                data = {"question_id":"legacy","revision":1,"content_sha256":"a"*64,"changed":True,"outcome":"changed"}
+            else:
+                data = None
+            return SimpleNamespace(execute=lambda:SimpleNamespace(data=data))
+    with pytest.raises(ValueError,match="Unknown"):
+        provenance.retire(Client(),[row(),row(id="second"),row(id="third")],journal_path=path)
+    saved = json.loads(path.read_text())
+    assert saved["retired"] == ["legacy"]
+    assert saved["status"] == "stopped_reconcile"
+    assert [a["status"] for a in saved["attempts"]] == ["retired","unknown"]
+    assert calls == ["legacy","second"]
+    with pytest.raises(ValueError,match="Existing"):
+        provenance.retire(Client(),[row(id="third")],journal_path=path)
+    assert calls == ["legacy","second"]
+
+
+def test_rpc_sql_outcome_contract_is_changed_not_action_name():
+    sql = (Path(__file__).parents[2]/"supabase/migrations/20261025100000_pipeline_v6_publication.sql").read_text()
+    assert "v_outcome TEXT := 'changed'" in sql
+    assert "'changed',v_changed,'outcome',v_outcome" in sql

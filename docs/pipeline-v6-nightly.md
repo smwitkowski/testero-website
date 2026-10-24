@@ -259,7 +259,13 @@ ACTIVE-question retirement. The row content hash is passed when present.
 
 No direct row UPDATE, deletes, migration, bulk promotion or production operation
 is performed by this implementation worker. RPC errors/unknown outcomes stop
-further calls. There is no cross-row transaction: earlier successful retirements
-remain. Inspect `question_events` and current rows before a manual retry. Old RPC
+further calls. Apply requires `--report` and persists an adjacent
+`.retire-journal.json` before each RPC and after each confirmed success. Its
+`attempting`/`unknown` records are uncertainty, never a failed-write assumption.
+Existing journals refuse automatic replay. The script accepts SQL's exact
+`outcome=changed` response (not the action name). A stopped report retains prior
+successful IDs and the unknown attempt. There is no cross-row transaction:
+earlier successful retirements remain. Inspect the journal, `question_events`
+and current rows before a manual retry. Old RPC
 versions without the eligibility guards must not be used. Post-Oct-4 drafts stay
 unpublished; re-grounding/re-council is a separate coordinator action.

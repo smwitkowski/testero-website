@@ -70,21 +70,58 @@ def report(rows, ids):
         "note": "Local artifact means an inserted_question_id link under the supplied artifact root; not semantic similarity."}
 
 
-def retire(client, rows):
-    result = []
-    for row in rows:
-        if (row.get("exam") != EXAM or row.get("status") != "DRAFT"
-                or instant(row["created_at"]) >= instant(CUTOFF)):
-            continue
+def write_report(path, value):
+    import os
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    with temporary.open("w") as handle:
+        os.chmod(temporary, 0o600)
+        json.dump(value, handle, indent=2, allow_nan=False)
+        handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    temporary.replace(path)
+
+
+def retire(client, rows, *, journal_path=None):
+    selected = [row for row in rows if row.get("exam") == EXAM and row.get("status") == "DRAFT"
+                and instant(row["created_at"]) < instant(CUTOFF)]
+    if journal_path and Path(journal_path).exists():
+        raise ValueError("Existing retirement journal requires reconciliation, not replay")
+    journal = {"version": 1, "status": "prepared", "eligible_ids": [r["id"] for r in selected],
+               "attempts": [], "retired": []}
+    def flush():
+        if journal_path:
+            write_report(journal_path, journal)
+    flush()
+    for row in selected:
         args = {"p_question_id": row["id"], "p_reason": "D-025 legacy", "p_actor": "pipeline-v6-legacy-retire",
                 "p_payload": {"expected_status": "DRAFT", "expected_exam": EXAM,
                               "expected_created_before": CUTOFF}, "p_expected_sha256": row.get("content_sha256")}
-        outcome = client.rpc("retire_question", args).execute().data
-        if (not isinstance(outcome, dict) or outcome.get("question_id") != row["id"]
-                or outcome.get("outcome") != "retired" or outcome.get("changed") is not True):
-            raise ValueError("Unknown retirement result; reconcile before retrying")
-        result.append(row["id"])
-    return result
+        attempt = {"question_id": row["id"], "status": "attempting"}
+        journal["attempts"].append(attempt)
+        journal["status"] = "in_progress"
+        flush()  # Durable uncertainty marker precedes the RPC.
+        try:
+            outcome = client.rpc("retire_question", args).execute().data
+            if (not isinstance(outcome, dict) or outcome.get("question_id") != row["id"]
+                    or outcome.get("outcome") != "changed" or outcome.get("changed") is not True
+                    or type(outcome.get("revision")) is not int or outcome["revision"] < 1
+                    or not isinstance(outcome.get("content_sha256"), str)
+                    or len(outcome["content_sha256"]) != 64):
+                raise ValueError("Unknown retirement result; reconcile before retrying")
+            attempt.update(status="retired", response=outcome)
+            journal["retired"].append(row["id"])
+            flush()
+        except Exception as error:
+            attempt.update(status="unknown", error_class=type(error).__name__)
+            journal["status"] = "stopped_reconcile"
+            flush()
+            raise
+    journal["status"] = "complete"
+    flush()
+    return journal["retired"]
 
 
 def read_db(client):
@@ -102,6 +139,10 @@ def main():
     mode.add_argument("--read-db", action="store_true")
     mode.add_argument("--apply", action="store_true")
     args = parser.parse_args()
+    if args.apply and not args.report:
+        parser.error("--apply requires --report for durable outcome recording")
+    output = None
+    journal_path = args.report.with_suffix(args.report.suffix + ".retire-journal.json") if args.report else None
     try:
         ids = artifact_ids(args.artifact_root)
         if args.artifact_ids:
@@ -119,13 +160,25 @@ def main():
             parser.error("Use --questions for offline reporting or explicit --read-db/--apply")
         output = report(rows, ids)
         output["would_retire"] = [r["id"] for r in rows if instant(r["created_at"]) < instant(CUTOFF)]
-        output["retired"] = retire(client, rows) if args.apply else []
+        output["retired"] = []
         output["mode"] = "apply" if args.apply else "dry-run"
+        if args.apply:
+            output["journal"] = str(journal_path)
+            output["status"] = "prepared"
+            write_report(args.report, output)
+            output["retired"] = retire(client, rows, journal_path=journal_path)
+            output["status"] = "complete"
         text = json.dumps(output, indent=2) + "\n"
         if args.report:
-            args.report.write_text(text)
+            write_report(args.report, output)
         print(text, end="")
     except Exception:
+        if args.apply and output is not None:
+            output["status"] = "stopped_reconcile"
+            if journal_path and journal_path.exists():
+                output["retirement_journal"] = json.loads(journal_path.read_text())
+                output["retired"] = output["retirement_journal"]["retired"]
+            write_report(args.report, output)
         parser.exit(1, "Provenance/retirement failed; inspect inputs and reconcile any partial RPC outcomes before retry.\n")
 
 
