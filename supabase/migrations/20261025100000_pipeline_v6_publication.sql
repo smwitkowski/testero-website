@@ -12,7 +12,7 @@ CREATE TABLE public.question_events (
  question_id UUID NOT NULL REFERENCES public.questions(id) ON DELETE RESTRICT,
  revision INTEGER NOT NULL CHECK (revision > 0),
  at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(), actor TEXT NOT NULL CHECK (btrim(actor) <> ''),
- action TEXT NOT NULL CHECK (action IN ('published','quarantined','restored','retired','recouncil','report')),
+ action TEXT NOT NULL CHECK (action IN ('published','quarantined','restored','retired','reviewed','recouncil','report')),
  reason TEXT NOT NULL DEFAULT '', payload JSONB NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(payload) = 'object')
 );
 CREATE INDEX question_events_question_time_idx ON public.question_events(question_id,at DESC);
@@ -91,12 +91,33 @@ $fn$;
 CREATE TRIGGER question_active_content_guard BEFORE UPDATE ON public.questions
  FOR EACH ROW EXECUTE FUNCTION public.guard_active_question_content();
 
--- All lifecycle paths lock the domain first, then the question. Two different
--- questions cannot both observe four originals and remove one each (floor race).
+-- UPDATE authority is deliberately a trusted service boundary, not SQL proof of
+-- council verdicts. The service role can set this GUC (or insert legacy ACTIVE
+-- rows); browser roles cannot execute lifecycle RPCs or write bank rows.
+CREATE FUNCTION public.guard_question_lifecycle() RETURNS TRIGGER
+LANGUAGE plpgsql SET search_path = public, pg_temp AS $fn$
+BEGIN
+ IF (NEW.status,NEW.review_status) IS DISTINCT FROM (OLD.status,OLD.review_status)
+ AND current_setting('testero.lifecycle',true) IS DISTINCT FROM '1' THEN
+  RAISE EXCEPTION 'Use transition_question for lifecycle changes' USING ERRCODE='55000';
+ END IF;
+ RETURN NEW;
+END;
+$fn$;
+CREATE TRIGGER question_lifecycle_guard BEFORE UPDATE ON public.questions
+ FOR EACH ROW EXECUTE FUNCTION public.guard_question_lifecycle();
+
+-- Global lifecycle fence, then domain, then rows. A family may span domains
+-- (the parent FK does not restrict this). Serializing lifecycle transactions
+-- prevents opposite original/variant calls from taking domain/row locks in
+-- reverse order. Reports acquire their cap lock BEFORE this fence; lifecycle
+-- code never acquires report locks. Content writers retain the row-lock fence.
+-- The domain lock also prevents concurrent removals from breaking the floor.
 CREATE FUNCTION public.lock_question_lifecycle(p_question_id UUID) RETURNS public.questions
 LANGUAGE plpgsql SET search_path = public, pg_temp AS $fn$
 DECLARE v_domain UUID; v_question public.questions;
 BEGIN
+ PERFORM pg_advisory_xact_lock(hashtextextended('question-lifecycle-global',0));
  SELECT domain_id INTO v_domain FROM public.questions WHERE id=p_question_id;
  IF NOT FOUND THEN RAISE EXCEPTION 'Question not found' USING ERRCODE='P0002'; END IF;
  PERFORM pg_advisory_xact_lock(hashtextextended('question-domain:' || v_domain::text,0));
@@ -113,11 +134,11 @@ CREATE FUNCTION public.transition_question(p_question_id UUID,p_action TEXT,p_ex
  p_actor TEXT,p_reason TEXT,p_payload JSONB) RETURNS JSONB
 LANGUAGE plpgsql SET search_path = public, pg_temp AS $fn$
 DECLARE v_question public.questions; v_hash TEXT; v_action TEXT; v_outcome TEXT := 'changed';
- v_changed BOOLEAN := true;
+ v_changed BOOLEAN := true; v_previous_flag TEXT; v_variant public.questions;
 BEGIN
  IF p_actor IS NULL OR btrim(p_actor) = '' OR p_reason IS NULL OR p_payload IS NULL
  OR jsonb_typeof(p_payload) <> 'object' OR p_action IS NULL
- OR p_action NOT IN ('published','quarantined','restored','retired') THEN
+ OR p_action NOT IN ('published','quarantined','restored','retired','reviewed') THEN
   RAISE EXCEPTION 'Invalid lifecycle arguments' USING ERRCODE='22023';
  END IF;
  v_question := public.lock_question_lifecycle(p_question_id);
@@ -133,6 +154,20 @@ BEGIN
      ORDER BY at DESC,id DESC LIMIT 1)
  ) THEN
   RAISE EXCEPTION 'Question quarantine cycle changed' USING ERRCODE='55000';
+ END IF;
+ -- Draft ingest finalization is NOT publication. Only the exact pending run
+ -- and unchanged review receipt may finalize UNREVIEWED -> GOOD/failed. Neither
+ -- quarantined nor previously finalized rows may use this path to escape their
+ -- lifecycle. The browser cannot call the wrapper or this shared transition.
+ IF p_action='reviewed' AND (
+  v_question.status IS DISTINCT FROM 'DRAFT' OR v_question.review_status IS DISTINCT FROM 'UNREVIEWED'
+  OR p_reason NOT IN ('GOOD','NEEDS_ANSWER_FIX')
+  OR nullif(p_payload->>'generation_run_id','') IS NULL
+  OR v_question.generation_run_id IS DISTINCT FROM (p_payload->>'generation_run_id')::uuid
+  OR p_payload->>'review_notes' IS NULL
+  OR v_question.review_notes IS DISTINCT FROM p_payload->>'review_notes'
+ ) THEN
+  RAISE EXCEPTION 'Question review finalization eligibility changed' USING ERRCODE='55000';
  END IF;
  -- Optional eligibility fences make legacy retirement safe against a concurrent
  -- publisher; the caller's earlier inventory query is not an atomic precondition.
@@ -159,7 +194,20 @@ BEGIN
     OR v_question.review_status IS DISTINCT FROM 'QUARANTINED') THEN
   RAISE EXCEPTION 'Only quarantined questions may restore' USING ERRCODE='55000';
  END IF;
- IF p_action IN ('published','restored') THEN
+ -- Restoring the original never restores variants. Each variant needs a fresh
+ -- council/hash and an ACTIVE GOOD ancestry; otherwise it could bypass a still
+ -- withdrawn original. The lifecycle-global fence serializes ancestry changes
+ -- made by lifecycle RPCs; active content/parent edits are already forbidden.
+ IF p_action='restored' AND v_question.parent_question_id IS NOT NULL AND EXISTS (
+  WITH RECURSIVE ancestors AS (
+   SELECT id,parent_question_id,status,review_status FROM public.questions WHERE id=v_question.parent_question_id
+   UNION
+   SELECT q.id,q.parent_question_id,q.status,q.review_status FROM public.questions q JOIN ancestors a ON q.id=a.parent_question_id
+  ) SELECT 1 FROM ancestors WHERE status<>'ACTIVE' OR review_status<>'GOOD'
+ ) THEN
+  RAISE EXCEPTION 'Restore original ancestry before variant' USING ERRCODE='55000';
+ END IF;
+ IF p_action IN ('published','restored') OR (p_action='reviewed' AND p_reason='GOOD') THEN
   IF v_question.question_type <> 'single_select' OR nullif(btrim(v_question.stem),'') IS NULL
    OR (SELECT count(*) FROM public.answers WHERE question_id=p_question_id) <> 4
    OR (SELECT count(*) FROM public.answers WHERE question_id=p_question_id AND is_correct) <> 1
@@ -180,12 +228,46 @@ BEGIN
   v_changed := false; v_outcome := 'floor_blocked';
  END IF;
  IF v_changed THEN
-  UPDATE public.questions SET
-   status=CASE WHEN p_action IN ('published','restored') THEN 'ACTIVE'
-               WHEN p_action='quarantined' THEN 'DRAFT' ELSE 'RETIRED' END,
-   review_status=CASE WHEN p_action IN ('published','restored') THEN 'GOOD'
-                      WHEN p_action='quarantined' THEN 'QUARANTINED' ELSE 'RETIRED' END,
-   content_sha256=v_hash, updated_at=clock_timestamp() WHERE id=p_question_id;
+  v_previous_flag := current_setting('testero.lifecycle',true);
+  BEGIN
+   PERFORM set_config('testero.lifecycle','1',true);
+   UPDATE public.questions SET
+    status=CASE WHEN p_action IN ('published','restored') THEN 'ACTIVE'
+                WHEN p_action='reviewed' THEN 'DRAFT'
+                WHEN p_action='quarantined' THEN 'DRAFT' ELSE 'RETIRED' END,
+    review_status=CASE WHEN p_action IN ('published','restored') THEN 'GOOD'
+                       WHEN p_action='reviewed' THEN p_reason
+                       WHEN p_action='quarantined' THEN 'QUARANTINED' ELSE 'RETIRED' END,
+    content_sha256=v_hash, updated_at=clock_timestamp() WHERE id=p_question_id;
+   IF p_action IN ('quarantined','retired') THEN
+    -- Descendants, not just immediate children: legacy data may contain nested
+    -- variants or cross-exam/domain families. Only ACTIVE variants change. They
+    -- never count toward the originals-only floor. A blocked parent withdrawal
+    -- never enters this block. Every child has its own audit event, atomically.
+    FOR v_variant IN
+     WITH RECURSIVE family AS (
+      SELECT id FROM public.questions WHERE parent_question_id=p_question_id
+      UNION
+      SELECT q.id FROM public.questions q JOIN family f ON q.parent_question_id=f.id
+     ) SELECT q.* FROM public.questions q JOIN family f ON f.id=q.id
+       WHERE q.status='ACTIVE' AND q.id<>p_question_id ORDER BY q.id FOR UPDATE OF q
+    LOOP
+     UPDATE public.questions SET
+      status=CASE WHEN p_action='quarantined' THEN 'DRAFT' ELSE 'RETIRED' END,
+      review_status=CASE WHEN p_action='quarantined' THEN 'QUARANTINED' ELSE 'RETIRED' END,
+      content_sha256=public.question_content_sha256(id),updated_at=clock_timestamp()
+     WHERE id=v_variant.id;
+     INSERT INTO public.question_events(question_id,revision,actor,action,reason,payload)
+     VALUES(v_variant.id,v_variant.revision,p_actor,p_action,p_reason,
+      jsonb_build_object('outcome','changed','requested_action',p_action,
+       'cascade_from_question_id',p_question_id,'content_sha256',public.question_content_sha256(v_variant.id)));
+    END LOOP;
+   END IF;
+   PERFORM set_config('testero.lifecycle',coalesce(v_previous_flag,''),true);
+  EXCEPTION WHEN OTHERS THEN
+   PERFORM set_config('testero.lifecycle',coalesce(v_previous_flag,''),true);
+   RAISE;
+  END;
  END IF;
  v_action := CASE WHEN v_changed THEN p_action ELSE 'recouncil' END;
  INSERT INTO public.question_events(question_id,revision,actor,action,reason,payload)
@@ -194,6 +276,12 @@ BEGIN
  RETURN jsonb_build_object('question_id',p_question_id,'revision',v_question.revision,
    'content_sha256',v_hash,'changed',v_changed,'outcome',v_outcome);
 END;
+$fn$;
+CREATE FUNCTION public.finalize_question_review(p_question_id UUID,p_generation_run_id UUID,
+ p_review_status TEXT,p_review_notes TEXT) RETURNS JSONB
+LANGUAGE SQL SET search_path = public, pg_temp AS $fn$
+ SELECT public.transition_question(p_question_id,'reviewed',NULL,'pipeline-review',p_review_status,
+  jsonb_build_object('generation_run_id',p_generation_run_id,'review_notes',p_review_notes))
 $fn$;
 CREATE FUNCTION public.publish_question(p_question_id UUID,p_expected_sha256 TEXT,p_actor TEXT,p_payload JSONB DEFAULT '{}')
 RETURNS JSONB LANGUAGE SQL SET search_path = public, pg_temp AS $fn$
@@ -213,12 +301,13 @@ RETURNS JSONB LANGUAGE SQL SET search_path = public, pg_temp AS $fn$
 $fn$;
 -- Invoker rights, hardened search paths, no browser-accessible lifecycle/helper RPC.
 REVOKE ALL ON FUNCTION public.question_content_frame(TEXT),public.question_content_sha256(UUID),
- public.lock_question_answer_content(),public.guard_active_question_content(),public.lock_question_lifecycle(UUID),
- public.transition_question(UUID,TEXT,TEXT,TEXT,TEXT,JSONB),public.publish_question(UUID,TEXT,TEXT,JSONB),
+ public.lock_question_answer_content(),public.guard_active_question_content(),public.guard_question_lifecycle(),public.lock_question_lifecycle(UUID),
+ public.transition_question(UUID,TEXT,TEXT,TEXT,TEXT,JSONB),
+ public.finalize_question_review(UUID,UUID,TEXT,TEXT),public.publish_question(UUID,TEXT,TEXT,JSONB),
  public.quarantine_question(UUID,TEXT,TEXT,JSONB,TEXT),public.restore_question(UUID,TEXT,TEXT,JSONB),
  public.retire_question(UUID,TEXT,TEXT,JSONB,TEXT) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.question_content_frame(TEXT),public.question_content_sha256(UUID),
  public.lock_question_lifecycle(UUID),public.transition_question(UUID,TEXT,TEXT,TEXT,TEXT,JSONB),
- public.publish_question(UUID,TEXT,TEXT,JSONB),public.quarantine_question(UUID,TEXT,TEXT,JSONB,TEXT),
+ public.finalize_question_review(UUID,UUID,TEXT,TEXT),public.publish_question(UUID,TEXT,TEXT,JSONB),public.quarantine_question(UUID,TEXT,TEXT,JSONB,TEXT),
  public.restore_question(UUID,TEXT,TEXT,JSONB),public.retire_question(UUID,TEXT,TEXT,JSONB,TEXT) TO service_role;
 COMMIT;

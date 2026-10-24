@@ -63,5 +63,5 @@ export async function openTransaction(sql) {
     child.on("close",code=>{clearTimeout(timeout);reject(new Error(`Local transaction exited before release: ${code}`));});
     child.stdin.write(`BEGIN; SET LOCAL ROLE service_role; ${sql}; SELECT 'PIPELINE_V6_READY';\n`);
   });
-  return {completed,release:()=>child.stdin.end("COMMIT;\n")};
+  return {completed,release:(sql="")=>child.stdin.end(`${sql}; COMMIT;\n`)};
 }
