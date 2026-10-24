@@ -1,5 +1,4 @@
 import "server-only";
-import { PMLE_PASS_PRICE } from "@/lib/billing/pmle-pass";
 import { after } from "next/server";
 import { createHash } from "node:crypto";
 import { attributionFromCookies, browserIdentity, excludedTraffic, firstTouchPersonProperties, isAccountId, isAnalyticsId, sanitizeAttribution, type Attribution } from "./attribution";
@@ -17,7 +16,7 @@ export async function trackPurchaseCompleted(checkoutId: string, userId: string,
   const revenue = payment && payment.amountTotal !== null && Number.isSafeInteger(payment.amountTotal)
     && payment.amountTotal >= 0 && payment.currency && /^[a-z]{3}$/i.test(payment.currency)
     ? { revenue: payment.amountTotal / 100, currency: payment.currency.toUpperCase() }
-    : { revenue: PMLE_PASS_PRICE, currency: "USD" };
+    : {};
   try {
     await fetch(`${(process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com").replace(/\/$/, "")}/capture/`, {
       method: "POST", headers: { "Content-Type": "application/json" }, cache: "no-store",
