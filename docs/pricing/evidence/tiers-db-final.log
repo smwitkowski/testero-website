@@ -1,0 +1,19 @@
+
+> testero@2.0.0 test:db:local
+> node scripts/local.mjs verify-db
+
+PASS replay, seed inventory, table RLS and browser privilege denial
+PASS per-exam domain uniqueness, cross-exam FK, default single-select and non-live multiple-select storage
+PASS beta guide seeds/replay, optional unambiguous RPCs, five-cert 5/10 sessions, persisted exam, cross-exam/scope/threshold/original guards, PMLE-only free/paid practice and rollback
+PASS variant parent FK/self-check/index, strict free and diagnostic rejection, rollback, quota-free originals and paid inclusion
+PASS real queued-answer deadline race, idempotent timeout scoring and queued-read access revocation
+PASS Pass-only mock RPC/table isolation, canonical snapshots, fixed timer, safe resume, submit scoring, immutable completion, expiry and revocation
+PASS anonymous ownership, next ordinal, options, retry, server correctness, completion, expiry
+PASS quota-free concurrent starts, inert exhausted historical buckets, no monthly writes and snapshot rollback
+PASS hash-only bulk claim validation, duplicate/foreign/two-user concurrency, old-cookie denial and signed metadata RLS
+PASS concurrent five-question limit, transactional rollback, owned metadata RLS, legacy broad-policy isolation, browser write denial
+PASS Phase 3 eight-way fulfillment/receipt/refund races, refund-first and grant-first tombstone dominance, immutable completion/receipt replay, receipt mismatch denial and DST-safe 2160-hour expiry
+PASS paid-practice RPC rechecks valid/refunded/expired/future-paid access and accepts active legacy subscription
+PASS quota-free original practice for valid/refunded/expired pass and legacy accounts
+PASS refund-before/after fulfillment, duplicate identity, 2160-hour expiry, paid/legacy practice access
+PASS all local DB integration checks; isolated fixtures removed

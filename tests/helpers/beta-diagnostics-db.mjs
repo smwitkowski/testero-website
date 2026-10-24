@@ -123,14 +123,14 @@ export async function verifyBetaDiagnostics({ run, scalar, q, pmleDomain, pmleCo
       END IF;
     END $uncharged$;`);
     // PMLE keeps legacy lengths, no beta bank threshold, and original free/paid practice paths.
+    // D-044 removes quota reservations for both account tiers.
     for (const count of [1, 5, 10, 20]) checks.push(`SELECT ${legacy(pmleIds.slice(0, count), pmleCode, undefined)};`);
     checks.push(`SELECT public.create_free_practice_session(${q(owner)},${itemsSQL(pmleIds.slice(0, 1), pmleCode)},now()+interval '1 hour');`);
     checks.push(`SELECT ${legacy(pmleIds.slice(0, 1), pmleCode, undefined, "practice", q(paid))};`);
     checks.push(`DO $pmle$ BEGIN
-      IF (SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(owner)}) IS DISTINCT FROM 1
-        OR EXISTS (SELECT 1 FROM public.free_practice_quota WHERE user_id=${q(paid)})
+      IF EXISTS (SELECT 1 FROM public.free_practice_quota WHERE user_id IN (${q(owner)},${q(paid)}))
         OR EXISTS (SELECT 1 FROM public.study_sessions WHERE kind='practice' AND user_id IN (${q(owner)},${q(paid)}) AND exam <> 'GCP_PM_ML_ENG') THEN
-        RAISE EXCEPTION 'PMLE exam persistence or quota behavior changed';
+        RAISE EXCEPTION 'PMLE exam persistence or quota-free practice behavior changed';
       END IF;
     END $pmle$;`);
     await run(`BEGIN; ${fixture} SET LOCAL ROLE service_role; ${checks.join("\n")} ROLLBACK;`);

@@ -42,6 +42,35 @@ function run(sql, allowFailure = false) {
     child.stdin.end(sql);
   });
 }
+// Keep a real row-lock transaction open while a second psql connection queues.
+// Native test timers model elapsed exam time; this never touches DB lifecycle.
+async function openRowLock(sql) {
+  const ready = new Promise((resolve, reject) => {
+    const child = spawn("psql", ["-X", "-qAt", "-v", "ON_ERROR_STOP=1"], { env, stdio: ["pipe", "pipe", "pipe"] });
+    let output = "", error = "", settled = false;
+    const timeout = setTimeout(() => { child.kill(); reject(new Error("Local row-lock fixture did not become ready")); }, 5_000);
+    const completed = new Promise((finish, fail) => {
+      child.on("error", fail);
+      child.on("close", code => code === 0 ? finish() : fail(new Error(`Local lock transaction failed: ${error}`)));
+    });
+    child.stdout.on("data", part => {
+      output += part;
+      if (!settled && output.includes("TESTERO_MOCK_LOCK_READY")) {
+        settled = true; clearTimeout(timeout);
+        resolve({ release: () => { child.stdin.end("COMMIT;\n"); }, completed });
+      }
+    });
+    child.stderr.on("data", part => { error += part; });
+    child.on("error", error => { clearTimeout(timeout); reject(error); });
+    child.on("close", code => { if (!settled) { clearTimeout(timeout); reject(new Error(`Local row-lock fixture exited ${code}: ${error}`)); } });
+    // Attach a rejection handler before exposing completed to avoid an unhandled
+    // rejection if psql fails before it emits the ready marker.
+    completed.catch(() => {});
+    child.stdin.write(`BEGIN; ${sql}; SELECT 'TESTERO_MOCK_LOCK_READY';\n`);
+  });
+  return ready;
+}
+const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 const q = (text) => "'" + String(text).replaceAll("'", "''") + "'";
 const scalar = async (sql) => (await run(sql)).output;
 const service = (sql) => "BEGIN; SET LOCAL ROLE service_role; " + sql + "; COMMIT;";
@@ -51,7 +80,7 @@ async function denied(sql, reason) {
 }
 const tables = ["exam_domains", "questions", "answers", "explanations", "question_generation_runs",
   "user_subscriptions", "payment_history", "webhook_events", "pmle_passes", "pmle_pass_refunds",
-  "study_sessions", "session_items", "free_practice_quota"];
+  "study_sessions", "session_items", "free_practice_quota", "mock_exam_sessions", "mock_exam_items"];
 const digestSQL = tables.map((table) => `SELECT '${table}', count(*), md5(coalesce(string_agg(row_to_json(t)::text, '|' ORDER BY row_to_json(t)::text), '')) FROM public.${table} t;`).join("\n");
 const baseline = readFileSync("supabase/migrations/20261003000000_v2_baseline.sql", "utf8");
 const bankTables = tables.slice(0, 5);
@@ -101,10 +130,10 @@ if (prodSchema) {
 }
 assert.equal(await scalar(`SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname=ANY(ARRAY[${tables.map(q).join(",")}]) AND c.relrowsecurity;`), String(tables.length));
 for (const role of ["anon", "authenticated"]) {
-  for (const table of ["questions", "answers", "explanations", "session_items", "webhook_events", "pmle_pass_refunds"]) {
+  for (const table of ["questions", "answers", "explanations", "session_items", "webhook_events", "pmle_pass_refunds", "mock_exam_sessions", "mock_exam_items"]) {
     await denied(`BEGIN; SET LOCAL ROLE ${role}; SELECT * FROM public.${table}; ROLLBACK;`, `${role} must not read ${table}`);
   }
-  for (const signature of ["create_study_session(text,uuid,text,jsonb,timestamptz,text)", "answer_study_item(uuid,uuid,text,uuid,text)", "consume_free_practice_quota(uuid,integer)", "fulfill_pmle_pass(uuid,text,text,text,timestamptz)", "refund_pmle_pass(text,timestamptz)", "record_pmle_pass_payment(text,integer,text)", "v2_consume_free_practice_quota(uuid,integer)", "v2_create_study_session(text,uuid,text,jsonb,timestamptz,boolean,text)", "create_free_practice_session(uuid,jsonb,timestamptz)", "claim_anonymous_diagnostics(uuid,text)"]) {
+  for (const signature of ["create_study_session(text,uuid,text,jsonb,timestamptz,text)", "answer_study_item(uuid,uuid,text,uuid,text)", "consume_free_practice_quota(uuid,integer)", "fulfill_pmle_pass(uuid,text,text,text,timestamptz)", "refund_pmle_pass(text,timestamptz)", "record_pmle_pass_payment(text,integer,text)", "v2_consume_free_practice_quota(uuid,integer)", "v2_create_study_session(text,uuid,text,jsonb,timestamptz,boolean,text)", "create_free_practice_session(uuid,jsonb,timestamptz)", "claim_anonymous_diagnostics(uuid,text)", "require_mock_paid_access(uuid)", "create_mock_exam(uuid,jsonb,text)", "interact_mock_exam(uuid,uuid,text,uuid,text)", "create_pass_practice_session(uuid,jsonb,timestamptz)"]) {
     assert.equal(await scalar(`SELECT has_function_privilege('${role}', 'public.${signature}', 'EXECUTE');`), "f");
   }
 }
@@ -220,9 +249,9 @@ await run(variantTransaction(`
  $test$;
  ${variantStrict(q(JSON.stringify(variantSnapshot(variantParent))))}
  DO $test$ BEGIN
- IF (SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(variantOwner)}) <> 1
+ IF EXISTS (SELECT 1 FROM public.free_practice_quota WHERE user_id=${q(variantOwner)})
  OR (SELECT count(*) FROM public.study_sessions WHERE user_id=${q(variantOwner)}) <> 1 THEN
-  RAISE EXCEPTION 'parent free session must reserve exactly one question';
+  RAISE EXCEPTION 'parent free session must create one session without quota writes';
  END IF;
  END $test$;
 `));
@@ -238,28 +267,19 @@ await run(variantTransaction(`${variantPaidFixture} SET LOCAL ROLE service_role;
  END IF;
  END $test$;
 `));
-// Deterministic revocation at the old guard->quota boundary. This replacement
-// exists only in this transaction: a variant must never reach the fallback.
-await run(variantTransaction(`${variantPaidFixture}
+// Quota consumers must no longer run on any original-practice path. A rollback-only
+// tripwire catches accidental calls without altering the deployed function.
+await run(variantTransaction(`
  CREATE OR REPLACE FUNCTION public.consume_free_practice_quota(p_user_id UUID, p_question_count INTEGER)
  RETURNS VOID LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, pg_temp AS $race$
- BEGIN
-  UPDATE public.user_subscriptions SET status='canceled' WHERE user_id=p_user_id;
-  UPDATE public.pmle_passes SET refunded_at=now() WHERE user_id=p_user_id;
-  PERFORM public.v2_consume_free_practice_quota(p_user_id,p_question_count);
- END $race$;
+ BEGIN RAISE EXCEPTION 'obsolete quota consumer invoked'; END $race$;
  SET LOCAL ROLE service_role;
- SELECT public.create_study_session('practice',${q(variantOwner)},NULL,${variantItems}::jsonb,now()+interval '1 hour');
- DO $test$ BEGIN
- IF EXISTS (SELECT 1 FROM public.free_practice_quota WHERE user_id=${q(variantOwner)}) THEN
-  RAISE EXCEPTION 'variant entered revocation/free fallback';
- END IF;
- END $test$;
  SELECT public.create_study_session('practice',${q(variantOwner)},NULL,${q(JSON.stringify(variantSnapshot(variantParent)))}::jsonb,now()+interval '1 hour');
+ ${variantStrict(q(JSON.stringify(variantSnapshot(variantParent))))}
  DO $test$ BEGIN
- IF (SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(variantOwner)}) <> 1
- OR NOT EXISTS (SELECT 1 FROM public.user_subscriptions WHERE user_id=${q(variantOwner)} AND status='canceled') THEN
-  RAISE EXCEPTION 'nonvariant no longer uses original paid-or-free helper';
+ IF EXISTS (SELECT 1 FROM public.free_practice_quota WHERE user_id=${q(variantOwner)})
+ OR (SELECT count(*) FROM public.study_sessions WHERE user_id=${q(variantOwner)}) <> 2 THEN
+  RAISE EXCEPTION 'original practice must bypass obsolete quota accounting';
  END IF;
  END $test$;
 `));
@@ -282,7 +302,7 @@ await run(variantTransaction(`${variantPassFixture("now()+interval '88 days'", "
  END IF;
  END $test$;
 `));
-console.log("PASS variant parent FK/self-check/index, strict free and diagnostic rejection, rollback, original free quota and paid inclusion");
+console.log("PASS variant parent FK/self-check/index, strict free and diagnostic rejection, rollback, quota-free originals and paid inclusion");
 
 const owner = randomUUID(), other = randomUUID(), paidOwner = randomUUID(), legacyOwner = randomUUID();
 const strictOwner = randomUUID(), claimOwner = randomUUID(), claimOther = randomUUID();
@@ -308,13 +328,101 @@ try {
     FROM public.questions q JOIN public.exam_domains d ON d.id=q.domain_id
     WHERE ${prodSchema ? "q.status='ACTIVE' AND q.review_status='GOOD' AND q.exam='GCP_PM_ML_ENG'" : "q.source_ref LIKE 'local-educational-seed-%'"} ORDER BY q.id LIMIT 6) s;`));
   assert.equal(questions.length, 6);
+  // Pass-only mocks use separate snapshots and never leak keys through their RPC.
+  // An existing local mirror may have retired the educational seed rows. Do not
+  // reactivate them: mocks must use the current eligible original bank instead.
+  const mockBank = JSON.parse(await scalar(`SELECT json_agg(s) FROM (SELECT q.id AS question_id,d.code AS domain_code,d.name AS domain_name,q.stem,
+    (SELECT json_agg(json_build_object('label',a.choice_label,'text',a.choice_text) ORDER BY a.choice_label) FROM public.answers a WHERE a.question_id=q.id) AS options,
+    (SELECT a.choice_label FROM public.answers a WHERE a.question_id=q.id AND a.is_correct) AS correct_label
+    FROM public.questions q JOIN public.exam_domains d ON d.id=q.domain_id
+    WHERE q.status='ACTIVE' AND q.review_status='GOOD' AND q.exam='GCP_PM_ML_ENG' AND q.parent_question_id IS NULL ORDER BY q.id LIMIT 6) s;`));
+  assert.equal(mockBank.length, 6, "eligible original bank supplies mock fixtures");
+  const mockSnapshots = Array.from({ length: 50 }, (_, index) => mockBank[index % mockBank.length]);
+  const mockCreate = (user, snapshots = mockSnapshots) => `SELECT public.create_mock_exam(${q(user)},${q(JSON.stringify(snapshots))}::jsonb,'Isolated integration fixture: repeated bank questions');`;
+  const mockInteract = (user, id, action, item = null, label = null) => `SELECT public.interact_mock_exam(${q(user)},${q(id)},${q(action)},${item ? q(item) : "NULL"},${label ? q(label) : "NULL"});`;
+  await denied(service(mockCreate(owner)), "free account cannot create mock through trusted RPC");
+  await run(`INSERT INTO public.user_subscriptions(user_id,stripe_customer_id,status) VALUES
+    (${q(owner)},${q("local-mock-owner-" + randomUUID())},'active'),(${q(other)},${q("local-mock-foreign-" + randomUUID())},'active');`);
+  const mockId = await scalar(service(mockCreate(owner)));
+  assert.equal(await scalar(`SELECT count(*) FROM public.mock_exam_items WHERE session_id=${q(mockId)};`), "50");
+  assert.equal(await scalar(`SELECT abs(extract(epoch FROM deadline_at-created_at)-7200)<0.1 FROM public.mock_exam_sessions WHERE id=${q(mockId)};`), "t", "server fixes mock timer at120minutes");
+  await denied(service(mockInteract(other, mockId, "read")), "foreign paid owner cannot read mock");
+  await denied(service(mockCreate(owner, mockSnapshots.slice(0, 49))), "mock requires exactly50 snapshots");
+  await denied(service(mockCreate(owner, mockSnapshots.map((item, index) => index === 0 ? { ...item, stem: "Forged snapshot" } : item))), "mock validates canonical bank snapshot");
+  await denied(service(mockCreate(owner, mockSnapshots.map((item, index) => index === 49 ? { ...item, question_id: randomUUID() } : item))), "invalid final item rolls back all49 prior inserts");
+  const duplicateText = mockSnapshots.map((item, index) => index === 0 ? { ...item, options: item.options.map((option, optionIndex) => optionIndex === 1 ? { ...option, text: item.options[0].text } : option) } : item);
+  await denied(service(mockCreate(owner, duplicateText)), "duplicate mock option text rejected");
+  assert.equal(await scalar(`SELECT count(*) FROM public.mock_exam_sessions WHERE user_id=${q(owner)};`), "1", "invalid snapshots roll back complete session");
+  const mockItems = JSON.parse(await scalar(`SELECT json_agg(i ORDER BY ordinal) FROM (SELECT id,ordinal,correct_label,options FROM public.mock_exam_items WHERE session_id=${q(mockId)}) i;`));
+  const firstMock = mockItems[0];
+  await denied(service(mockInteract(owner, mockId, "answer", randomUUID(), firstMock.correct_label)), "foreign mock item rejected");
+  await denied(service(mockInteract(owner, mockId, "answer", firstMock.id, "INVALID")), "invalid mock option rejected");
+  const answeredMock = JSON.parse(await scalar(service(mockInteract(owner, mockId, "answer", firstMock.id, firstMock.correct_label))));
+  assert.equal(answeredMock.answered_count, 1); assert.equal(answeredMock.completed_at, null);
+  for (const key of ["correct_label", "is_correct", "score", "questions", "items", "explanation"]) assert.ok(!(key in answeredMock), `mock RPC does not return${key}`);
+  const resumedMock = JSON.parse(await scalar(service(mockInteract(owner, mockId, "read"))));
+  assert.equal(resumedMock.deadline_at, answeredMock.deadline_at, "resume does not reset deadline");
+  assert.equal(await scalar(`SELECT selected_label FROM public.mock_exam_items WHERE id=${q(firstMock.id)};`), firstMock.correct_label);
+  assert.equal(await scalar(`SELECT count(*) FROM public.mock_exam_items WHERE session_id=${q(mockId)} AND is_correct IS NOT NULL;`), "0", "no per-question reveal/scoring while mock active");
+  const submittedMock = JSON.parse(await scalar(service(mockInteract(owner, mockId, "submit"))));
+  assert.ok(submittedMock.completed_at); assert.equal(submittedMock.timed_out, false);
+  assert.equal(await scalar(`SELECT count(*) FROM public.mock_exam_items WHERE session_id=${q(mockId)} AND is_correct;`), "1", "submit scores saved answer, blanks incorrect");
+  assert.equal(await scalar(`SELECT count(*) FROM public.mock_exam_items WHERE session_id=${q(mockId)} AND is_correct IS NOT NULL;`), "50");
+  const alternateMockLabel = firstMock.options.find(option => option.label !== firstMock.correct_label).label;
+  await run(service(mockInteract(owner, mockId, "answer", firstMock.id, alternateMockLabel)));
+  assert.equal(await scalar(`SELECT selected_label FROM public.mock_exam_items WHERE id=${q(firstMock.id)};`), firstMock.correct_label, "post-submit answers cannot mutate exam");
+  const timerMock = await scalar(service(mockCreate(owner)));
+  const timerItem = await scalar(`SELECT id FROM public.mock_exam_items WHERE session_id=${q(timerMock)} AND ordinal=1;`);
+  await run(`UPDATE public.mock_exam_sessions SET created_at=clock_timestamp()-interval '121 minutes',deadline_at=clock_timestamp()-interval '1 minute' WHERE id=${q(timerMock)};`);
+  const expiredMock = JSON.parse(await scalar(service(mockInteract(owner, timerMock, "answer", timerItem, firstMock.correct_label))));
+  assert.ok(expiredMock.completed_at); assert.equal(expiredMock.timed_out, true);
+  assert.equal(expiredMock.answered_count, 0, "late answer is not saved");
+  assert.equal(await scalar(`SELECT count(*) FROM public.mock_exam_items WHERE session_id=${q(timerMock)} AND NOT is_correct;`), "50", "expired unanswered mock auto-submits as zero");
+  // Prove the wall clock is checked after lock acquisition, not at statement
+  // start. The queued answer began before its deadline but obtains the row late.
+  const lockedMock = await scalar(service(mockCreate(owner)));
+  const lockedItem = await scalar(`SELECT id FROM public.mock_exam_items WHERE session_id=${q(lockedMock)} AND ordinal=1;`);
+  await run(`UPDATE public.mock_exam_sessions SET deadline_at=clock_timestamp()+interval '1 second' WHERE id=${q(lockedMock)};`);
+  const deadlineLock = await openRowLock(`SELECT id FROM public.mock_exam_sessions WHERE id=${q(lockedMock)} FOR UPDATE`);
+  let queuedAnswer;
+  try {
+    queuedAnswer = run(service(mockInteract(owner, lockedMock, "answer", lockedItem, firstMock.correct_label)));
+    await delay(100);
+    assert.equal(await scalar(`SELECT count(*) FROM pg_stat_activity WHERE wait_event_type='Lock' AND query LIKE '%${lockedMock}%';`), "1", "answer is demonstrably queued on held mock row");
+    await delay(1_100);
+  } finally { deadlineLock.release(); await deadlineLock.completed; }
+  const lockedExpiry = JSON.parse((await queuedAnswer).output);
+  assert.equal(lockedExpiry.timed_out, true); assert.equal(lockedExpiry.answered_count, 0);
+  assert.equal(await scalar(`SELECT completed_at=deadline_at FROM public.mock_exam_sessions WHERE id=${q(lockedMock)};`), "t");
+  const scoredOnce = await scalar(`SELECT row_to_json(s) FROM public.mock_exam_sessions s WHERE id=${q(lockedMock)};`);
+  await run(service(mockInteract(owner, lockedMock, "results")));
+  assert.equal(await scalar(`SELECT row_to_json(s) FROM public.mock_exam_sessions s WHERE id=${q(lockedMock)};`), scoredOnce, "timeout results are idempotent");
+  // Revocation while an authorized read waits on the row must win when it wakes.
+  const revocationLock = await openRowLock(`SELECT id FROM public.mock_exam_sessions WHERE id=${q(mockId)} FOR UPDATE`);
+  let queuedRead;
+  try {
+    queuedRead = run(service(mockInteract(owner, mockId, "read")), true);
+    await delay(100);
+    assert.equal(await scalar(`SELECT count(*) FROM pg_stat_activity WHERE wait_event_type='Lock' AND query LIKE '%${mockId}%';`), "1", "read is queued before revocation");
+    await run(`UPDATE public.user_subscriptions SET status='canceled' WHERE user_id=${q(owner)};`);
+  } finally { revocationLock.release(); await revocationLock.completed; }
+  assert.notEqual((await queuedRead).code, 0, "paid access is rechecked after waiting for the row");
+  console.log("PASS real queued-answer deadline race, idempotent timeout scoring and queued-read access revocation");
+
+  await denied(service(mockInteract(owner, mockId, "results")), "revoked paid access cannot read prior mock");
+  await denied(service(mockCreate(owner)), "revoked paid access cannot start another mock");
+  await run(`DELETE FROM public.mock_exam_sessions WHERE user_id IN (${q(owner)},${q(other)}); DELETE FROM public.user_subscriptions WHERE user_id IN (${q(owner)},${q(other)});`);
+  console.log("PASS Pass-only mock RPC/table isolation, canonical snapshots, fixed timer, safe resume, submit scoring, immutable completion, expiry and revocation");
+
   const items = prodSchema ? questions : questions.map((question) => ({ ...question,
     options: [{ label: "A", text: "First" }, { label: "B", text: "Second" }], correct_label: "A" }));
   const firstCorrect = items[0].correct_label;
   const firstWrong = items[0].options.find(option => option.label !== firstCorrect).label;
   const secondCorrect = items[1].correct_label;
   const createSQL = (kind, user, anonymous, snapshots) => `SELECT public.create_study_session(${q(kind)},${user ? q(user) : "NULL"},${anonymous ? q(anonymous) : "NULL"},${q(JSON.stringify(snapshots))}::jsonb,now()+interval '1 hour')`;
+  const paidSQL = (user, snapshots) => `SELECT public.create_pass_practice_session(${q(user)},${q(JSON.stringify(snapshots))}::jsonb,now()+interval '1 hour')`;
   const strictSQL = (user, snapshots) => `SELECT public.create_free_practice_session(${q(user)},${q(JSON.stringify(snapshots))}::jsonb,now()+interval '1 hour')`;
+  await denied(service(paidSQL(owner, items.slice(0, 5))), "free account cannot invoke paid-practice RPC");
   const claimSQL = (user, digest) => `SELECT public.claim_anonymous_diagnostics(${user ? q(user) : "NULL"},${digest === null ? "NULL" : q(digest)})`;
   sessionId = await scalar(service(createSQL("diagnostic", null, hash, items.slice(0, 2))));
   const rows = JSON.parse(await scalar(`SELECT json_agg(s ORDER BY ordinal) FROM (SELECT id,ordinal FROM public.session_items WHERE session_id=${q(sessionId)}) s;`));
@@ -336,31 +444,30 @@ try {
   console.log("PASS anonymous ownership, next ordinal, options, retry, server correctness, completion, expiry");
 
   const monthSQL = "date_trunc('month', now() AT TIME ZONE 'UTC')::date";
-  // At 59 used, only one of eight real concurrent one-question reservations can win.
-  await run(`INSERT INTO public.free_practice_quota (user_id,month_start,questions_used) VALUES (${q(owner)},${monthSQL},59);`);
+  // Historical exhausted rows are inert. Every concurrent start succeeds for free.
+  await run(`INSERT INTO public.free_practice_quota (user_id,month_start,questions_used) VALUES (${q(owner)},${monthSQL},60);`);
   const concurrent = await Promise.all(Array.from({ length: 8 }, () => run(service(createSQL("practice", owner, null, items.slice(0, 1))), true)));
-  assert.equal(concurrent.filter(result => result.code === 0).length, 1, "59 to 60 has one concurrent winner");
-  assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(owner)} AND month_start=${monthSQL};`), "60");
-  assert.equal(await scalar(`SELECT count(*) FROM public.study_sessions WHERE user_id=${q(owner)};`), "1");
+  assert.equal(concurrent.filter(result => result.code === 0).length, 8, "all free starts succeed after historical sixty-question usage");
+  assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(owner)} AND month_start=${monthSQL};`), "60", "historical quota unchanged");
+  assert.equal(await scalar(`SELECT count(*) FROM public.study_sessions WHERE user_id=${q(owner)};`), "8");
   const invalidItem = { ...items[0], question_id: randomUUID() };
-  await denied(service(createSQL("practice", other, null, [invalidItem])), "failed insert rolls back quota");
+  await denied(service(createSQL("practice", other, null, [invalidItem])), "failed snapshot rolls back session");
   assert.equal(await scalar(`SELECT count(*) FROM public.free_practice_quota WHERE user_id=${q(other)};`), "0");
-  // Last month's exhausted bucket does not consume this month's allowance.
+  assert.equal(await scalar(`SELECT count(*) FROM public.study_sessions WHERE user_id=${q(other)};`), "0");
   await run(`INSERT INTO public.free_practice_quota (user_id,month_start,questions_used) VALUES (${q(other)},(${monthSQL} - interval '1 month')::date,60);`);
   await scalar(service(strictSQL(other, items.slice(0, 1))));
-  assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(other)} AND month_start=${monthSQL};`), "1", "month rollover starts fresh");
+  assert.equal(await scalar(`SELECT count(*) FROM public.free_practice_quota WHERE user_id=${q(other)} AND month_start=${monthSQL};`), "0", "no new monthly bucket");
   await run(`DELETE FROM public.study_sessions WHERE user_id=${q(other)}; DELETE FROM public.free_practice_quota WHERE user_id=${q(other)};`);
-  // Strict RPC remains race-safe for full-size sessions near the cap.
-  await run(`INSERT INTO public.free_practice_quota (user_id,month_start,questions_used) VALUES (${q(strictOwner)},${monthSQL},55);`);
+  await run(`INSERT INTO public.free_practice_quota (user_id,month_start,questions_used) VALUES (${q(strictOwner)},${monthSQL},60);`);
   const strictConcurrent = await Promise.all(Array.from({ length: 8 }, () => run(service(strictSQL(strictOwner, items.slice(0, 5))), true)));
-  assert.equal(strictConcurrent.filter(result => result.code === 0).length, 1, "one five-question request wins at 55 used");
+  assert.equal(strictConcurrent.filter(result => result.code === 0).length, 8, "strict free starts have no monthly cap");
   assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(strictOwner)};`), "60");
-  assert.equal(await scalar(`SELECT count(*) FROM public.study_sessions WHERE user_id=${q(strictOwner)} AND kind='practice';`), "1");
-  assert.equal(await scalar(`SELECT count(*) FROM public.session_items i JOIN public.study_sessions s ON s.id=i.session_id WHERE s.user_id=${q(strictOwner)};`), "5");
-  await denied(service(strictSQL(other, [invalidItem])), "strict snapshot FK failure rolls back charge");
+  assert.equal(await scalar(`SELECT count(*) FROM public.study_sessions WHERE user_id=${q(strictOwner)} AND kind='practice';`), "8");
+  assert.equal(await scalar(`SELECT count(*) FROM public.session_items i JOIN public.study_sessions s ON s.id=i.session_id WHERE s.user_id=${q(strictOwner)};`), "40");
+  await denied(service(strictSQL(other, [invalidItem])), "strict snapshot FK failure rolls back session");
   assert.equal(await scalar(`SELECT count(*) FROM public.free_practice_quota WHERE user_id=${q(other)};`), "0");
-  await denied(service(strictSQL(other, Array.from({ length: 61 }, () => items[0]))), "strict path refuses more than sixty questions");
-  console.log("PASS monthly 59→60 concurrency, month rollover, strict 55→60 contention and snapshot rollback");
+  assert.equal(await scalar(`SELECT count(*) FROM public.study_sessions WHERE user_id=${q(other)};`), "0");
+  console.log("PASS quota-free concurrent starts, inert exhausted historical buckets, no monthly writes and snapshot rollback");
 
   // Claims attach every diagnostic for the cookie, including completed/expired rows, once only.
   const claimSessions = await Promise.all(Array.from({ length: 3 }, () => scalar(service(createSQL("diagnostic", null, claimHash, items.slice(0, 1))))));
@@ -545,24 +652,31 @@ try {
   assert.equal(await scalar(`SELECT expires_at-paid_at=interval '2160 hours' FROM public.pmle_passes WHERE id=${q(validPassId)};`), "t");
   // Make the test independent of today's date without changing the verified RPC semantics.
   await run(`UPDATE public.pmle_passes SET paid_at=now()-interval '1 hour',expires_at=now()+interval '90 days' WHERE id=${q(validPassId)};`);
-  await run(service(createSQL("practice", paidOwner, null, items)));
+  await run(service(paidSQL(paidOwner, items)));
   assert.equal(await scalar(`SELECT count(*) FROM public.free_practice_quota WHERE user_id=${q(paidOwner)};`), "0", "valid pass bypasses free counter");
   await run(`INSERT INTO public.free_practice_quota(user_id,month_start,questions_used) VALUES (${q(paidOwner)},${monthSQL},55);`);
   await run(service(strictSQL(paidOwner, items.slice(0, 5))));
-  assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(paidOwner)};`), "60", "Phase 2 charges valid pass holder");
-  await denied(service(strictSQL(paidOwner, items.slice(0, 1))), "valid pass cannot bypass Phase 2 exhaustion");
+  assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(paidOwner)};`), "55", "strict free path does not charge valid pass holder");
+  await run(service(strictSQL(paidOwner, items.slice(0, 1))));
   await run(service(`SELECT public.refund_pmle_pass(${q(intentAfter)},now())`));
-  await denied(service(createSQL("practice", paidOwner, null, items)), "refund-after-fulfillment revokes unlimited practice");
+  await denied(service(paidSQL(paidOwner, items.slice(0, 5))), "refunded pass cannot invoke paid-practice RPC");
+  await run(service(createSQL("practice", paidOwner, null, items)));
+  assert.equal(await scalar(`SELECT questions_used FROM public.free_practice_quota WHERE user_id=${q(paidOwner)};`), "55", "refund does not revoke free unlimited practice");
   await run(`INSERT INTO public.user_subscriptions(user_id,stripe_customer_id,status,current_period_end) VALUES (${q(legacyOwner)},${q("local-legacy-" + randomUUID())},'active',NULL);`);
   await run(service(createSQL("practice", legacyOwner, null, items)));
   assert.equal(await scalar(`SELECT count(*) FROM public.free_practice_quota WHERE user_id=${q(legacyOwner)};`), "0", "legacy active subscription bypasses quota");
   await run(`INSERT INTO public.free_practice_quota(user_id,month_start,questions_used) VALUES (${q(legacyOwner)},${monthSQL},55);`);
   await run(service(strictSQL(legacyOwner, items.slice(0, 5))));
-  await denied(service(strictSQL(legacyOwner, items.slice(0, 1))), "legacy active cannot bypass strict Phase 2 exhaustion");
-  await denied(service(strictSQL(paidOwner, items.slice(0, 1))), "refunded pass cannot bypass strict Phase 2 exhaustion");
+  await run(service(strictSQL(legacyOwner, items.slice(0, 1))));
+  await run(service(strictSQL(paidOwner, items.slice(0, 1))));
   await run(`UPDATE public.pmle_passes SET paid_at=now()-interval '2 days',expires_at=now()-interval '1 day',refunded_at=NULL WHERE id=${q(validPassId)};`);
-  await denied(service(strictSQL(paidOwner, items.slice(0, 1))), "expired pass cannot bypass strict Phase 2 exhaustion");
-  console.log("PASS Phase 2 valid/refunded/expired pass and legacy strict exhaustion");
+  await run(service(strictSQL(paidOwner, items.slice(0, 1))));
+  await denied(service(paidSQL(paidOwner, items.slice(0, 5))), "expired pass cannot invoke paid-practice RPC");
+  await run(`UPDATE public.pmle_passes SET paid_at=now()+interval '1 day',expires_at=now()+interval '91 days' WHERE id=${q(validPassId)};`);
+  await denied(service(paidSQL(paidOwner, items.slice(0, 5))), "future-paid pass cannot invoke paid-practice RPC");
+  await run(service(paidSQL(legacyOwner, items.slice(0, 5))));
+  console.log("PASS paid-practice RPC rechecks valid/refunded/expired/future-paid access and accepts active legacy subscription");
+  console.log("PASS quota-free original practice for valid/refunded/expired pass and legacy accounts");
   console.log("PASS refund-before/after fulfillment, duplicate identity, 2160-hour expiry, paid/legacy practice access");
 } finally {
   // Only isolated generated owners/anonymous hash and fake payment intents are removed.

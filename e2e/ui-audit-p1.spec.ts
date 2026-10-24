@@ -97,14 +97,14 @@ test("P1 audit: stable manual previews, PMLE discovery and anonymous/free/paid r
     await expect(page.getByRole("heading", { name: "Email me my results + a 4-week plan", exact: true })).toHaveCount(0);
     const access = await (await page.request.get("/api/billing/access")).json();
     expect(access.owned).toBe(kind === "paid");
-    if (kind === "free") await expect(page.getByRole("button", { name: "Get PMLE Pass: $39", exact: true })).toBeVisible();
+    if (kind === "free") await expect(page.getByRole("button", { name: "Get PMLE Pass: $39.99", exact: true })).toBeVisible();
     else await expect(page.getByRole("region", { name: "Unlock PMLE Pass", exact: true })).toHaveCount(0);
     await capture(page, `${kind}-results`);
     await expect(page.locator("header").getByRole("link", { name: "Start free", exact: true })).toHaveCount(0);
     await expect(page.locator("header").getByRole("link", { name: "Dashboard", exact: true }).first()).toBeVisible();
     if (kind === "free") {
       const request = page.waitForResponse(response => response.url().endsWith("/api/billing/checkout") && response.request().method() === "POST");
-      await page.getByRole("button", { name: "Get PMLE Pass: $39", exact: true }).click();
+      await page.getByRole("button", { name: "Get PMLE Pass: $39.99", exact: true }).click();
       expect((await request).status()).toBe(200);
       await expect(page).toHaveURL(/\/checkout\/success\?session_id=cs_/);
       await page.goto(`/diagnostic/${sessionId}/results`);

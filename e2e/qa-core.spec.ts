@@ -3,11 +3,11 @@ import { readFile, writeFile } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
 import type { DiagnosticProgress } from "../lib/diagnostic/types";
 import type { PracticeAnswerResponse } from "../lib/practice/types";
-// Reuse the established full confirmation/claim/quota and signed fake-Stripe flows.
+// Reuse the established full confirmation/claim/unlimited practice and signed fake-Stripe flows.
 if (process.env.TESTERO_QA === "1") {
   await import("./chatgpt-mcp.spec");
   await import("./ui-audit-p2-summary.spec");
-  await import("./free-tier-monthly.spec");
+  await import("./pmle-tiers.spec");
   await import("./accounts-practice.spec");
   await import("./billing.spec");
   await import("./ui-audit-p1.spec");
