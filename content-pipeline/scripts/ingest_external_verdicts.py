@@ -67,6 +67,30 @@ def _read_json(path):
                       parse_constant=lambda value: (_ for _ in ()).throw(ValueError("Invalid JSON number")))
 
 
+def refuse_council_canary(path, payload):
+    """Block marked artifacts and artifacts below a .council-canaries boundary.
+
+    The marker is directory metadata, never a field in judge-visible requests.
+    The shared filesystem barrier checks ancestors and refuses symlink paths.
+    Also block request references back into a marked canary workspace.
+
+    Raises:
+        ValueError: The artifact or its request cohort is a council canary.
+    """
+    from shared.council_safety import refuse_canary_paths
+    refuse_canary_paths(path)
+    if not isinstance(payload, dict):
+        return
+    candidates = payload.get("candidates", [])
+    rows = [payload, *[row for row in candidates if isinstance(row, dict)]] if isinstance(candidates, list) else [payload]
+    if any(row.get("council_canary") is True for row in rows):
+        raise ValueError("Council canary artifacts cannot be ingested or published")
+    for row in rows[1:]:
+        metadata = row.get("external_judge_request")
+        if isinstance(metadata, dict) and isinstance(metadata.get("path"), str):
+            refuse_canary_paths(Path(path).parent / metadata["path"])
+
+
 def _flush(path, payload):
     """Durably flush the atomic artifact, including its directory rename."""
     write_artifact(path, payload)
@@ -282,7 +306,7 @@ def _external_decision(question, scope, sources, evidence, raw, generator_model,
             if raw["argon"] == {"status": "skipped", "reason": "prior_gate_failed"}:
                 decision = aggregate_gate_verdict(question, verdict_with_policy(base, policy), model=EXTERNAL_JUDGE_PROVENANCE,
                     version=rules_version, style_policy=scope.get("style_policy"), distractor_evidence=policy)
-                if argon_request["version"] != 2 or decision.passed:
+                if argon_request["version"] not in (2, 3) or decision.passed:
                     raise ValueError("Argon skip cannot approve content")
                 return decision
             passed, reason = evaluate_argon(question, raw["argon"], argon_request)
@@ -546,6 +570,7 @@ def validate_acknowledged_system_failures(payload, ids=()):
 def _strict_preflight(path, verdicts, payload, acknowledged_system_failure_ids=()):
     """Validate every request/verdict, even for a later duplicate-vetoed row."""
     try:
+        refuse_council_canary(path, payload)
         if path.is_symlink() or verdicts.is_symlink():
             raise ValueError("Unsafe artifact or verdict directory")
         if payload.get("batch_stop"):
@@ -627,6 +652,10 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None,
         raise click.ClickException("Invalid full-run option balance population")
     strict_preflight = continue_quality_rejections or expected_selected_ids is not None
     payload = _read_json(path)
+    try:
+        refuse_council_canary(path, payload)
+    except ValueError as error:
+        raise click.ClickException(str(error)) from None
     if (not isinstance(payload, dict) or not isinstance(payload.get("candidates"), list)
             or not payload["candidates"]
             or not isinstance(payload.get("plan"), list) or not payload["plan"]

@@ -272,6 +272,8 @@ def test_argon_quality_failure_is_retryable_but_bad_provenance_blocks(harness, d
                         "request_sha256": "0" * 64 if damage else canonical_sha256(request),
                         "review": {"verdict": "REJECT", "key_correct": False, "other_defensible_option": False,
                                    "issues": ["Synthetic independent content defect"], "fix": "Replace the action"}}
+        if "blind" in request["calls"]:
+            raw["argon"]["blind"] = deepcopy(raw["blind_solver"])
     write_verdict(directory, entry, add_argon)
     if damage:
         with pytest.raises(click.ClickException, match="preflight"):

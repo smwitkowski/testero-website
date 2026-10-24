@@ -27,7 +27,7 @@ from shared import argon_gate as argon
 from shared.completion_diagnostics import _safe_completion
 from shared.llm_limits import MaxTokensTruncation
 
-from shared.external_judge import REQUEST_CHARACTER_LIMIT
+from shared.external_judge import REQUEST_CHARACTER_LIMIT, BLIND_ARGON_POLICY, EXECUTION_POLICIES
 SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
 ALLOWED_MODELS = {"claude", "claude/claude-sonnet-5-5"}
 
@@ -105,7 +105,7 @@ def _read_request(path, ident, canonical, *, with_digest=False):
     if not isinstance(request, dict) or set(request) not in (legacy_fields, *modern_fields):
         raise RequestValidationError("Request must contain exactly the exported request fields")
     is_gates = set(request) in modern_fields
-    if "execution_policy" in request and request["execution_policy"] != "short_circuit_v1":
+    if "execution_policy" in request and request["execution_policy"] not in EXECUTION_POLICIES:
         raise RequestValidationError("Unsupported execution policy")
     if "distractor_evidence" in request:
         from shared.distractor_evidence import validate_policy
@@ -151,7 +151,9 @@ def _read_request(path, ident, canonical, *, with_digest=False):
         raise RequestValidationError("Request verdict schema differs from the current question quality schema")
     if "argon" in request:
         argon.validate_request(request["argon"])
-        if request["argon"]["version"] != (2 if "execution_policy" in request else 1):
+        expected_version = (3 if request.get("execution_policy") == BLIND_ARGON_POLICY
+                            else 2 if "execution_policy" in request else 1)
+        if request["argon"]["version"] != expected_version:
             raise RequestValidationError("Argon version differs from frozen execution policy")
     return (request, hashlib.sha256(raw).hexdigest()) if with_digest else request
 
@@ -282,6 +284,7 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
         if os.path.lexists(destination):
             return ident, "skipped", None
         sub_call, request_sha256 = "request_validation", None
+        failed_at = None
         try:
             request, request_sha256 = _read_request(path, ident, canonical, with_digest=True)
             if ("argon" in request) != argon_gate:
@@ -295,9 +298,8 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
                     return ident, "not_attempted", None
             if "gates" in request:
                 raw = {}
-                short = request.get("execution_policy") == "short_circuit_v1"
+                short = request.get("execution_policy") in EXECUTION_POLICIES
                 sampled = ordinals[ident] % full_gate_sample == 0
-                failed_at = None
                 # Evidence prompt is generated from canonical question JSON. Decode
                 # only its explicit field, never a model's interpretation of the key.
                 question = None
@@ -337,12 +339,14 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
                     raise cli_models.CLISchemaError("Invalid structured output")
             if argon_gate:
                 sub_call = "argon.validation"
-                if request.get("execution_policy") == "short_circuit_v1" and failed_at and not sampled:
+                if request.get("execution_policy") in EXECUTION_POLICIES and failed_at and not sampled:
                     raw["argon"] = {"status": "skipped", "reason": "prior_gate_failed"}
                 else:
                     with call_context(candidate_id=ident,
                                       attempt=1, calls_path=calls_path):
-                        raw["argon"] = argon.run_argon(request["argon"])
+                        raw["argon"] = (argon.run_argon(request["argon"], question=question, full_review=sampled)
+                                        if request.get("execution_policy") == BLIND_ARGON_POLICY
+                                        else argon.run_argon(request["argon"]))
             sub_call = "verdict_publication"
             from shared.distractor_evidence import verdict_with_policy
             raw = verdict_with_policy(raw, request.get("distractor_evidence"))
@@ -354,7 +358,9 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
                 pass
             return ident, "completed", None
         except Exception as error:
+            quality_rejected = bool(failed_at)
             if isinstance(error, argon.ArgonCallError):
+                quality_rejected = quality_rejected or error.quality_rejected
                 sub_call, error = "argon." + error.call, error.error
             error_class, message = _safe_failure(error)
             failure = error_class, f"{sub_call}: {message}"
@@ -363,7 +369,8 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
                     stopped.set()
             record = {"candidate_id": ident, "error_class": failure[0], "message": failure[1],
                       "sub_call": sub_call, "request_sha256": request_sha256,
-                      "judge_model": judge_model, "ts": datetime.now(timezone.utc).isoformat()}
+                      "judge_model": judge_model, "ts": datetime.now(timezone.utc).isoformat(),
+                      "quality_rejected": quality_rejected}
             try:
                 _publish(verdicts / ".failures" / (ident + ".json"), record, exclusive=False)
             except (OSError, ValueError, TypeError):
