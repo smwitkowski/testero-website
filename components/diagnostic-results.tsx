@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { PMLE_PASS_PRICE_DISPLAY } from "@/lib/billing/pmle-pass";
 import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
 import { trackResults } from "@/lib/analytics/client";
@@ -75,10 +76,10 @@ export function DiagnosticResults({ sessionId, aboveFoldCta, emailCard }: { sess
     {aboveFoldCta}
     <section aria-labelledby="keep-going-heading" className="space-y-4 rounded-lg border border-border bg-card p-5 sm:p-7">
       <h2 id="keep-going-heading" className="text-xl font-semibold">Keep going</h2>
-      {!data.review && <p className="text-sm text-muted-foreground">Free account: review every answer, save this report and practice 60 questions a month.</p>}
+      {!data.review && <p className="text-sm text-muted-foreground">Free account: review every answer, save this report, practice with no monthly limit and track your progress.</p>}
       <Button asChild><Link href={practiceHref}>{data.review ? "Start practice" : "Create free account"}</Link></Button>
       {data.review ? <SignedInDiagnosticUnlock result={data} /> : <>
-        <p className="text-sm text-muted-foreground">Want every option explained? PMLE Pass is $39 once for 90 days. No auto-renew, 7-day refund.</p>
+        <p className="text-sm text-muted-foreground">Want explanations, timed mock exams, fresh-first practice and weak-area drills? PMLE Pass is {PMLE_PASS_PRICE_DISPLAY} once for 90 days. No auto-renew, 7-day refund.</p>
         <DiagnosticPassOption result={data} />
       </>}
     </section>

@@ -19,7 +19,7 @@ describe("dated PMLE preparation comparison", () => {
     expect(html).not.toContain("retrieved introduction");
     expect(practiceOptions[0].name).toBe("Testero");
     expect(html).toContain("not a quality ranking"); expect(html).toContain("Testero publishes this page");
-    expect(practiceOptions.find(option => option.name === "Testero")!.price).toContain("USD $39 one-time for 90 days");
+    expect(practiceOptions.find(option => option.name === "Testero")!.price).toContain("USD $39.99 one-time for 90 days");
     expect(practiceOptions.find(option => option.name === "GCP Study Hub")!.price).toContain("$39/month");
     expect(html).toContain('href="/diagnostic"');
     expect(metadata.alternates?.canonical).toBe("https://testero.ai/pmle/practice-options-compared");

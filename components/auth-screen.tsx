@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type KeyboardEvent } from "react";
+import { PMLE_PASS_PRICE_DISPLAY } from "@/lib/billing/pmle-pass";
 import { AuthForm } from "@/components/auth-form";
 import { Card } from "@/components/ui/card";
 
@@ -25,12 +26,12 @@ export function AuthScreen({ mode: initialMode, next, confirmationFailed }: { mo
         {["Create account", "Sign in"].map((label, index) => <button key={label} ref={node => { tabs.current[index] = node; }} type="button" role="tab" id={`account-tab-${index}`} aria-selected={activeIndex === index} aria-controls="account-panel" tabIndex={activeIndex === index ? 0 : -1} onKeyDown={keyDown} onClick={() => activate(index)} className={`min-h-12 rounded px-4 text-sm font-medium ${activeIndex === index ? "border border-input bg-card text-foreground" : "border border-transparent text-muted-foreground hover:text-foreground"}`}>{label}</button>)}
       </div>
       <div id="account-panel" role="tabpanel" aria-labelledby={`account-tab-${activeIndex}`} className="space-y-6">
-        <header className="space-y-2"><h1 className="text-3xl font-semibold leading-tight">{mode === "signup" ? paidIntent ? "Create your free account, then get PMLE Pass" : "Save your report and start practicing" : "Sign in"}</h1><p className="leading-relaxed text-muted-foreground">{mode === "signup" ? paidIntent ? "$39 one-time · 90 days · 7-day refund" : "Free account. We’ll email a link to confirm your address." : "Continue your PMLE preparation."}</p>{mode === "signup" && paidIntent && <p className="text-sm leading-relaxed text-muted-foreground">Create your free account → confirm your email → checkout. No payment is taken when you create an account.</p>}</header>
+        <header className="space-y-2"><h1 className="text-3xl font-semibold leading-tight">{mode === "signup" ? paidIntent ? "Create your free account, then get PMLE Pass" : "Save your report and start practicing" : "Sign in"}</h1><p className="leading-relaxed text-muted-foreground">{mode === "signup" ? paidIntent ? `${PMLE_PASS_PRICE_DISPLAY} one-time · 90 days · no auto-renew · 7-day refund` : "Free practice and progress tracking. We’ll email a link to confirm your address." : "Continue your PMLE preparation."}</p>{mode === "signup" && paidIntent && <p className="text-sm leading-relaxed text-muted-foreground">Create your free account → confirm your email → checkout. No payment is taken when you create an account.</p>}</header>
         <AuthForm key={mode} mode={mode} next={next} confirmationFailed={confirmationFailed} />
       </div>
     {mode === "signup" && <aside aria-label="Free account includes" className="space-y-3 border-t border-border pt-6 text-sm text-body">
       <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Your free account</h2>
-      <ul className="list-disc space-y-2 pl-5"><li>Review your diagnostic answers against the correct ones</li><li>Keep your report on your dashboard</li><li>60 free practice questions per month</li></ul>
+      <ul className="list-disc space-y-2 pl-5"><li>Review your diagnostic answers against the correct ones</li><li>Keep your report on your dashboard</li><li>Practice with no monthly limit</li><li>Track your progress by domain</li></ul>
     </aside>}
     </Card>
   </div>;

@@ -3,6 +3,9 @@
  */
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
+import { PMLE_PASS_PRICE } from "../lib/billing/pmle-pass.ts";
+// Node 22.18+ loads this type-free shared constant without a separate price config.
+const PASS_PRICE_CENTS = Math.round(PMLE_PASS_PRICE * 100);
 export const LOCAL_STRIPE_ENV = Object.freeze({
   TESTERO_LOCAL_STRIPE: "1", STRIPE_SECRET_KEY: "sk_test_testero_local_only",
   STRIPE_WEBHOOK_SECRET: "whsec_testero_local_only", STRIPE_PRICE_PMLE_PASS: "price_testero_local_pmle",
@@ -34,8 +37,8 @@ export async function startStripeFixtureServer() {
         const session = sessions.get(input.sessionId);
         if (!session) return reply(response, 404, { error: "Unknown local session" });
         session.payment_status = "paid";
-        const charge = { id: id("ch_local_"), object: "charge", created: Math.floor(Date.now() / 1000), amount: 3900, amount_refunded: 0, refunded: false, currency: "usd", payment_intent: session.payment_intent, paid: true, status: "succeeded" };
-        const intent = { id: session.payment_intent, object: "payment_intent", status: "succeeded", amount: 3900, currency: "usd", metadata: session.metadata, latest_charge: charge };
+        const charge = { id: id("ch_local_"), object: "charge", created: Math.floor(Date.now() / 1000), amount: session.amount_total, amount_refunded: 0, refunded: false, currency: "usd", payment_intent: session.payment_intent, paid: true, status: "succeeded" };
+        const intent = { id: session.payment_intent, object: "payment_intent", status: "succeeded", amount: session.amount_total, currency: "usd", metadata: session.metadata, latest_charge: charge };
         intents.set(intent.id, intent);
         return reply(response, 200, { session, intent, charge });
       }
@@ -43,7 +46,7 @@ export async function startStripeFixtureServer() {
         const input = JSON.parse(await body(request));
         const intent = intents.get(input.paymentIntentId);
         if (!intent) return reply(response, 404, { error: "Unknown local intent" });
-        intent.latest_charge.refunded = true; intent.latest_charge.amount_refunded = 3900;
+        intent.latest_charge.refunded = true; intent.latest_charge.amount_refunded = intent.amount;
         return reply(response, 200, { charge: intent.latest_charge });
       }
       if (path === "/v1/customers/search" && request.method === "GET") {
@@ -65,9 +68,9 @@ export async function startStripeFixtureServer() {
         if (keys.has(key)) return reply(response, 200, sessions.get(keys.get(key)));
         if (form.get("mode") !== "payment" || form.get("allowed_payment_method_types[0]") !== "card" || form.get("line_items[0][price]") !== LOCAL_STRIPE_ENV.STRIPE_PRICE_PMLE_PASS) return reply(response, 400, { error: { message: "Local configured payment price required" } });
         const sessionId = id("cs_test_local_");
-        const session = { id: sessionId, object: "checkout.session", livemode: false, created: Math.floor(Date.now() / 1000), mode: "payment", payment_status: "unpaid", customer: form.get("customer"), payment_intent: id("pi_local_"), amount_total: 3900, currency: "usd",
+        const session = { id: sessionId, object: "checkout.session", livemode: false, created: Math.floor(Date.now() / 1000), mode: "payment", payment_status: "unpaid", customer: form.get("customer"), payment_intent: id("pi_local_"), amount_total: PASS_PRICE_CENTS, currency: "usd",
           metadata: { user_id: form.get("metadata[user_id]"), plan_name: form.get("metadata[plan_name]") },
-          line_items: { object: "list", has_more: false, data: [{ id: id("li_local_"), object: "item", quantity: 1, price: { id: LOCAL_STRIPE_ENV.STRIPE_PRICE_PMLE_PASS, object: "price", type: "one_time", unit_amount: 3900, currency: "usd" } }] },
+          line_items: { object: "list", has_more: false, data: [{ id: id("li_local_"), object: "item", quantity: 1, price: { id: LOCAL_STRIPE_ENV.STRIPE_PRICE_PMLE_PASS, object: "price", type: "one_time", unit_amount: PASS_PRICE_CENTS, currency: "usd" } }] },
           url: `http://127.0.0.1:3000/checkout/success?session_id=${sessionId}` };
         if (!session.customer || !session.metadata.user_id || session.metadata.plan_name !== "PMLE Pass" || form.get("payment_intent_data[metadata][user_id]") !== session.metadata.user_id || form.get("payment_intent_data[metadata][plan_name]") !== "PMLE Pass") return reply(response, 400, { error: { message: "Local ownership metadata required" } });
         sessions.set(session.id, session); keys.set(key, session.id); return reply(response, 200, session);

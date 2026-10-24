@@ -18,10 +18,10 @@ it("labels the account tabpanel with the selected tab", () => {
 it("preserves paid signup intent without hiding free-account benefits", () => {
   const html = renderToStaticMarkup(createElement(AuthScreen, { mode: "signup", next: "/pricing", confirmationFailed: false }));
   expect(html).toContain("Create your free account, then get PMLE Pass");
-  expect(html).toContain("$39 one-time · 90 days · 7-day refund");
+  expect(html).toContain("$39.99 one-time · 90 days · no auto-renew · 7-day refund");
   expect(html).toContain("confirm your email → checkout");
   expect(html).toContain("No payment is taken when you create an account.");
-  expect(html).toContain("60 free practice questions per month");
+  expect(html).toContain("Practice with no monthly limit");
   const free = renderToStaticMarkup(createElement(AuthScreen, { mode: "signup", next: "/dashboard", confirmationFailed: false }));
   expect(free).not.toContain("$39");
 });

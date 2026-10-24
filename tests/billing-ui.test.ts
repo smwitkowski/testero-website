@@ -37,7 +37,8 @@ describe("verified billing pages", () => {
   it("omits an unavailable inventory count without blocking checkout", async () => {
     mocks.inventory.mockResolvedValue(null);
     const html = renderToStaticMarkup(await PricingPage());
-    expect(html).toContain("Practice across all six PMLE domains; sessions can repeat questions.");
+    expect(html).toContain("Practice with no monthly limit, with a free account");
+    expect(html).not.toContain("Unlimited practice from");
     expect(html).not.toContain("Count checked");
     expect(html).toContain("/signup?next=/pricing");
   });
@@ -48,15 +49,15 @@ describe("verified billing pages", () => {
     expect(html).not.toContain("refund window until");
     expect(renderToStaticMarkup(createElement(BillingAccount, { access: free }))).not.toContain("Purchased");
   });
-  it("offers one $39 one-time 90-day pass, signup return, free diagnostic and no placeholder", async () => {
+  it("offers one $39.99 one-time 90-day pass, signup return, free diagnostic and no placeholder", async () => {
     const html = renderToStaticMarkup(await PricingPage());
-    expect(html).toContain("$39</span>");
-    expect(html).toContain("123 distinct PMLE questions across all six domains; sessions can repeat questions");
+    expect(html).toContain("$39.99</span>");
+    expect(html).toContain("Unlimited practice from 123 questions, updated weekly.");
     expect(html).not.toContain("Count checked");
     expect(html).not.toContain("2026-10-18");
     expect(html).toContain("One-time payment");
     expect(html).toContain("USD");
-    expect(html).toContain("90 days of access to PMLE practice questions and explanations");
+    expect(html).toContain("90 days of PMLE Pass features");
     expect(html).toContain("Updated for the June 2026 exam guide.");
     expect(html).toContain("No subscription. No auto-renew."); expect(html).toContain("7-day refund");
     expect(html).toContain('href="/signup?next=/pricing"'); expect(html).toContain('href="/diagnostic"');
@@ -100,7 +101,7 @@ describe("verified billing pages", () => {
   it("protects success with its safe checkout reference and starts pending, not paid", async () => {
     const html = renderToStaticMarkup(await CheckoutSuccessPage({ searchParams: Promise.resolve({ session_id: "cs_test_owned" }) }));
     expect(mocks.requireUser).toHaveBeenCalledWith("/checkout/success?session_id=cs_test_owned");
-    expect(html).toContain("$39 one-time payment for 90 days of access");
+    expect(html).toContain("$39.99 one-time payment for 90 days of explanations");
     expect(html).toContain("No subscription. No auto-renew.");
     expect(html).toContain("Access starts only after your payment is verified"); expect(html).not.toContain("Pass is active");
     expect(MAX_STATUS_CHECKS).toBeLessThanOrEqual(6);
@@ -146,7 +147,7 @@ describe("billing browser boundary", () => {
     await expect(readCheckoutStatus("cs_test_owned")).rejects.toThrow("could not be verified");
   });
   it("renders accessible initial checkout controls and never a fabricated success", () => {
-    expect(renderToStaticMarkup(createElement(CheckoutButton))).toContain("Unlock PMLE Pass: $39");
+    expect(renderToStaticMarkup(createElement(CheckoutButton))).toContain("Unlock PMLE Pass: $39.99");
     expect(renderToStaticMarkup(createElement(CheckoutStatus, { sessionId: "cs_test_owned" }))).not.toContain("Pass is active");
   });
 });

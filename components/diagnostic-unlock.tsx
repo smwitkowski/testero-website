@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PMLE_PASS_PRICE_DISPLAY } from "@/lib/billing/pmle-pass";
 import { Button } from "@/components/ui/button";
 import { CheckoutButton } from "@/components/checkout-button";
 import { useDiagnosticResource } from "@/components/diagnostic-resource";
@@ -10,8 +11,8 @@ import type { DiagnosticResult } from "@/lib/diagnostic/types";
 export function DiagnosticUnlockCard({ result, signedIn = false }: { result: DiagnosticResult; signedIn?: boolean }) {
   return <section aria-label="Unlock PMLE Pass" className="space-y-3 rounded-lg border border-border bg-card p-5 sm:p-7">
     <h2 className="text-xl font-semibold">Get explanations for every question</h2>
-    <p className="text-sm leading-relaxed text-muted-foreground">Every option explained, progress tracking and unlimited practice. $39 one-time for 90 days. No auto-renew. 7-day refund.</p>
-    {signedIn ? <CheckoutButton label="Get PMLE Pass: $39" onCheckout={() => trackResults("unlock_cta_clicked", result)} /> : <Button asChild><Link href="/signup?next=%2Fpricing" onClick={() => trackResults("unlock_cta_clicked", result)}>Get PMLE Pass: $39</Link></Button>}
+    <p className="text-sm leading-relaxed text-muted-foreground">Every option explained, timed mock exams, fresh-first practice and weak-area drills. {PMLE_PASS_PRICE_DISPLAY} one-time for 90 days. No auto-renew. 7-day refund.</p>
+    {signedIn ? <CheckoutButton label={`Get PMLE Pass: ${PMLE_PASS_PRICE_DISPLAY}`} onCheckout={() => trackResults("unlock_cta_clicked", result)} /> : <Button asChild><Link href="/signup?next=%2Fpricing" onClick={() => trackResults("unlock_cta_clicked", result)}>Get PMLE Pass: {PMLE_PASS_PRICE_DISPLAY}</Link></Button>}
     {!signedIn && <p className="text-sm text-muted-foreground">Free account first, then checkout. Nothing is charged until checkout.</p>}
   </section>;
 }

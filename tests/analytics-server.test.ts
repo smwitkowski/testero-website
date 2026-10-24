@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { PMLE_PASS_PRICE } from "@/lib/billing/pmle-pass";
 import { captureFunnelEvent, isInternalRequest, scheduleFunnelEvent, trackPurchaseCompleted } from "@/lib/analytics/server";
 const afterMock = vi.hoisted(() => vi.fn());
 vi.mock("next/server", () => ({ after: afterMock }));
@@ -23,7 +24,7 @@ describe("server purchase analytics", () => {
     expect(request[0]).toBe("http://127.0.0.1:56546/capture/");
     const payload = JSON.parse(request[1].body);
     expect(payload.event).toBe("purchase_completed");
-    expect(Object.keys(payload.properties).sort()).toEqual(["distinct_id", "$insert_id", "$process_person_profile", "plan_name", "source", "$set_once"].sort());
+    expect(Object.keys(payload.properties).sort()).toEqual(["distinct_id", "$insert_id", "$process_person_profile", "plan_name", "source", "$set_once", "revenue", "currency"].sort());
     expect(payload.properties.$insert_id).toMatch(/^[0-9a-f]{64}$/);
     expect(payload.properties.distinct_id).toBe("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
     expect(payload.properties.$process_person_profile).toBe(true);
@@ -111,4 +112,14 @@ describe("internal traffic is never captured server-side", () => {
     scheduleFunnelEvent(req(headers), "diagnostic_started", "anon_1", { session_id: "s1", length: 5 });
     expect(afterMock).toHaveBeenCalledTimes(internal ? 0 : 1);
   });
+});
+
+it.each([3999, 4250, 1999, 0])("reports the verified Stripe total %i, not a configured literal", async amountTotal => {
+  await trackPurchaseCompleted("cs_test_opaque", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", { analytics_enabled: "1" }, { amountTotal, currency: "usd" });
+  const properties = JSON.parse(fetchMock.mock.calls[0][1].body).properties;
+  expect(properties).toMatchObject({ revenue: amountTotal / 100, currency: "USD" });
+});
+it.each([undefined, { amountTotal: null, currency: null }, { amountTotal: -1, currency: "usd" }, { amountTotal: 1.5, currency: "usd" }])("falls back to the configured PMLE price when Stripe totals are unavailable: %j", async payment => {
+  await trackPurchaseCompleted("cs_test_opaque", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", { analytics_enabled: "1" }, payment);
+  expect(JSON.parse(fetchMock.mock.calls[0][1].body).properties).toMatchObject({ revenue: PMLE_PASS_PRICE, currency: "USD" });
 });
