@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 from pathlib import Path
 import sys
@@ -20,7 +21,7 @@ from shared.option_order import RATIONALE_FIELDS, canonical_evidence
 from shared.cli_models import output_model, signature_prompt, parse_output
 from shared.argon_gate import build_argon_request, evaluate_argon, ArgonReviewSignature
 from shared.cert_context import plan_questions
-from shared.distractor_evidence import verdict_gates
+from shared.distractor_evidence import verdict_gates, validate_policy
 
 
 def _path(path):
@@ -124,6 +125,8 @@ def _scope(row, grounding):
         supplied = grounding.get(name, row.get(name))
         if supplied is not None and supplied != scope[name]:
             raise ValueError("Stored scope differs from current reviewed registry")
+    if "distractor_evidence" in grounding:
+        scope["distractor_evidence"] = dict(validate_policy(grounding["distractor_evidence"]))
     return scope
 
 
@@ -172,15 +175,22 @@ def _receipt_request(ident, scope, question, evidence):
     context = ("Stored documentation receipts only; full fetched source bodies are unavailable. "
                "Do not infer missing context or current document availability. Return UNCERTAIN "
                "if these receipts do not support every decisive claim.\n" + json.dumps(evidence, ensure_ascii=False))
-    inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence)
-    return {"candidate_id": ident, "objective_id": scope["objective_id"], "gate_version": 5,
+    inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence,
+                               style_policy=scope.get("style_policy"))
+    signatures = gate_signatures(5, cert_id=scope["cert_id"],
+        style_policy=scope.get("style_policy"), distractor_evidence=scope.get("distractor_evidence"))
+    request = {"candidate_id": ident, "objective_id": scope["objective_id"], "gate_version": 5,
             "execution_policy": BLIND_ARGON_POLICY,
             "decision_provenance_sha256": canonical_sha256({"recouncil": "stored-receipts", "scope": scope}),
             "gates": {name: {"judge_prompt": signature_prompt(signature, inputs[name]),
                              "verdict_schema": output_model(signature).model_json_schema()}
-                      for name, signature in gate_signatures(5).items()},
+                      for name, signature in signatures.items()},
             "argon": build_argon_request(question, scope, context, evidence, version=3),
             "trimming": {"enabled": False, "method": "stored receipts only", "sources": []}}
+    for name in ("style_policy", "distractor_evidence"):
+        if name in scope:
+            request[name] = dict(scope[name])
+    return request
 
 
 def prepare_question(row, artifact=None):
@@ -228,6 +238,16 @@ def prepare_question(row, artifact=None):
             if any(frozen.get(k) != scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256")):
                 raise ValueError("Artifact scope differs from DB/current registry")
             sources, evidence = entry.get("sources", []), canonical_evidence(entry)
+            policies = [record["distractor_evidence"] for record in (payload, frozen, entry)
+                        if "distractor_evidence" in record]
+            if policies:
+                for policy in policies:
+                    validate_policy(policy)
+                if any(policy != policies[0] for policy in policies):
+                    raise ValueError("Artifact mixes frozen distractor-evidence policies")
+                if "distractor_evidence" in scope and scope["distractor_evidence"] != policies[0]:
+                    raise ValueError("Artifact/DB evidence policy mismatch")
+                scope["distractor_evidence"] = dict(policies[0])
         errors = _receipt_errors(evidence)
         if errors:
             raise ValueError(errors[0])
@@ -258,7 +278,19 @@ def evaluate_question(row, prepared, verdict):
         raw = verdict_gates(verdict, request.get("distractor_evidence"))
         if set(raw) != {"blind_solver", "style", "evidence", "argon"}:
             raise ValueError("Incomplete council")
-        parsed = {name: parse_gate_output(name, raw[name], version=5) for name in ("blind_solver", "style", "evidence")}
+        signatures = gate_signatures(5, cert_id=scope["cert_id"],
+            style_policy=request.get("style_policy"), distractor_evidence=request.get("distractor_evidence"))
+        parsed = {}
+        for name, signature in signatures.items():
+            gate = request["gates"][name]
+            if gate["verdict_schema"] != output_model(signature).model_json_schema():
+                raise ValueError("Council request differs from selected policy schema")
+            data = parse_output(json.dumps(raw[name], allow_nan=False), signature)
+            numeric = data["confidence" if name == "blind_solver" else "score"]
+            if (type(numeric) not in (int, float) or not math.isfinite(numeric) or not 0 <= numeric <= 1
+                    or not 0 < len(data["reason"].strip()) <= 300):
+                raise ValueError("Invalid gate score or reason")
+            parsed[name] = data
         # Evaluate provenance first; skipped/error Argon review is not a complete council.
         evaluate_argon(question, raw["argon"], request["argon"])
         argon_blind = parse_gate_output("blind_solver", raw["argon"]["blind"])

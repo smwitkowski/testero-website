@@ -51,15 +51,22 @@ def verdict(prepared):
     key = next(k for k, v in blind_choice_map(question).items() if v == "A")
     blind = {"verdict": "PASS", "choice": key, "confidence": .9, "ambiguous_answers": False,
              "reason": "Synthetic unique answer"}
-    return {"blind_solver": deepcopy(blind),
+    from shared.gates import gate_signatures
+    signatures = gate_signatures(5, cert_id=prepared["scope"]["cert_id"],
+        style_policy=request.get("style_policy"), distractor_evidence=request.get("distractor_evidence"))
+    raw = {"blind_solver": deepcopy(blind),
             "style": {"verdict": "PASS", "score": .9, "reason": "Synthetic good style",
-                      **{k: True for k in STYLE_CHECKS}, "generic_validation_key": False},
+                      **{k: True for k, field in signatures["style"].output_fields.items()
+                         if field.annotation is bool}, "generic_validation_key": False},
             "evidence": {"verdict": "PASS", "score": .9, "reason": "Synthetic complete support",
                          **{k: True for k in EVIDENCE_CHECKS}},
             "argon": {"model": request["argon"]["model"], "version": 3,
                       "request_sha256": canonical_sha256(request["argon"]), "blind": deepcopy(blind),
                       "review": {"verdict": "PASS", "key_correct": True, "other_defensible_option": False,
                                  "issues": [], "fix": "No changes needed"}}}
+    if "distractor_evidence" in request:
+        raw["distractor_evidence"] = deepcopy(request["distractor_evidence"])
+    return raw
 
 
 def test_frozen_real_content_artifact_reexport_is_hash_bound_and_does_not_mutate(case):
@@ -386,3 +393,81 @@ def test_apply_final_local_fence_refuses_changed_verdict(case, tmp_path, monkeyp
     result = recouncil.run_recouncil([row], tmp_path / "run", verdict_dir=verdict_dir, apply=True)
     client.rpc.assert_not_called()
     assert result["questions"][0]["outcome"] == "quarantined"
+
+
+@pytest.fixture
+def pde_case(case):
+    """Real saved learner text, recertified only for synthetic policy plumbing tests."""
+    from shared.cert_context import plan_questions
+    row, artifact, question = case
+    scope = plan_questions("data-engineer", 1,
+        objective_ids=["data-engineer:standard:2.2:5"], seed=0, generation_tuning=False)[0]
+    assert scope["style_policy"]["version"] == "5.3"
+    grounding = row["review_notes"]["grounding"]
+    grounding.update({k: scope[k] for k in ("cert_id", "domain_code", "objective_id", "guide_sha256")})
+    row["exam"] = "data-engineer"
+    row["domain"].update(code=scope["domain_code"], exam="data-engineer")
+    artifact["payload"]["plan"] = [scope]
+    return row, artifact, question
+
+
+@pytest.mark.parametrize("source", ["artifact", "receipts"])
+@pytest.mark.parametrize("mode", [None, "strict", "consistent"])
+def test_pde_current_policy_full_council_restores_without_schema_weakening(pde_case, source, mode):
+    from shared.gates import gate_signatures
+    from shared.cli_models import output_model
+    row, artifact, _ = pde_case
+    if mode:
+        policy = {"version": 1, "mode": mode}
+        row["review_notes"]["grounding"]["distractor_evidence"] = deepcopy(policy)
+        artifact["payload"]["distractor_evidence"] = deepcopy(policy)
+        artifact["payload"]["plan"][0]["distractor_evidence"] = deepcopy(policy)
+        artifact["entry"]["distractor_evidence"] = deepcopy(policy)
+    prepared = recouncil.prepare_question(row, artifact if source == "artifact" else None)
+    request = prepared["request"]
+    assert request["style_policy"]["version"] == "5.3"
+    signatures = gate_signatures(5, cert_id="data-engineer", style_policy=request["style_policy"],
+                                  distractor_evidence=request.get("distractor_evidence"))
+    for name, signature in signatures.items():
+        assert request["gates"][name]["verdict_schema"] == output_model(signature).model_json_schema()
+    raw = verdict(prepared)
+    assert raw["style"]["distractors_no_generic_filler"] is True
+    assert raw["style"]["inference_required"] is True
+    assert raw["style"]["options_no_goal_restatement"] is True
+    if mode == "consistent":
+        assert "consistent v1" in request["gates"]["evidence"]["judge_prompt"]
+        assert raw["distractor_evidence"] == {"version": 1, "mode": "consistent"}
+    from scripts.publish_batch import publication_errors
+    assert publication_errors(prepared["question"], prepared["scope"], request, raw) == []
+    assert recouncil.evaluate_question(row, prepared, raw)["outcome"] == "restore"
+
+
+@pytest.mark.parametrize("defect", ["missing_filler_check", "missing_inference_check", "extra_check", "bad_score", "uncertain", "wrong_evidence_policy"])
+def test_pde_consistent_council_remains_strict(pde_case, defect):
+    row, _, _ = pde_case
+    row["review_notes"]["grounding"]["distractor_evidence"] = {"version": 1, "mode": "consistent"}
+    prepared = recouncil.prepare_question(row)
+    raw = verdict(prepared)
+    if defect == "missing_filler_check": del raw["style"]["distractors_no_generic_filler"]
+    elif defect == "missing_inference_check": del raw["style"]["inference_required"]
+    elif defect == "extra_check": raw["style"]["unknown_check"] = True
+    elif defect == "bad_score": raw["style"]["score"] = 1.1
+    elif defect == "uncertain": raw["evidence"]["verdict"] = "UNCERTAIN"
+    elif defect == "wrong_evidence_policy": raw["distractor_evidence"] = {"version": 1, "mode": "strict"}
+    assert recouncil.evaluate_question(row, prepared, raw)["outcome"] == "quarantined"
+
+
+def test_pde_consistent_confirmed_defect_can_retire(pde_case):
+    row, _, _ = pde_case
+    row["review_notes"]["grounding"]["distractor_evidence"] = {"version": 1, "mode": "consistent"}
+    prepared = recouncil.prepare_question(row)
+    raw = verdict(prepared)
+    raw["evidence"].update(verdict="FAIL", evidence_supported=False)
+    assert recouncil.evaluate_question(row, prepared, raw)["outcome"] == "retire"
+
+
+def test_artifact_mixed_evidence_policy_is_not_silently_changed(pde_case):
+    row, artifact, _ = pde_case
+    artifact["payload"]["distractor_evidence"] = {"version": 1, "mode": "consistent"}
+    artifact["entry"]["distractor_evidence"] = {"version": 1, "mode": "strict"}
+    assert "request" not in recouncil.prepare_question(row, artifact)

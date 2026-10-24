@@ -69,6 +69,10 @@ and mocked RPCs only.
   and stored receipts. Receipt-only prompts explicitly state that full source
   bodies and current document availability are not known. No fetched page is
   fabricated from a quote. Missing/invalid evidence keeps the item quarantined.
+- New requests use the current objective style policy (including PDE 5.3),
+  preserve a validated stored distractor-evidence policy, and require every field
+  of each selected schema. Mixed evidence policies fail closed. Scope planning
+  disables generation tuning, not current style checks.
 - New requests use the current blind-Argon contract, not legacy review-only
   requests. The request filename binds the question, revision, content hash and
   latest quarantine event. Use a fresh verdict directory for each cycle.
