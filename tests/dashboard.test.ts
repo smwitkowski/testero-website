@@ -70,7 +70,7 @@ describe("owned dashboard aggregates", () => {
   });
   it("does not read incomplete diagnostic detail fields; access is read fresh", async () => {
     const database = db({ latest: { id: sessionId, question_count: 6 } }); await loadDashboard(database.client, userId, now);
-    expect(database.calls.find(call => call.table === "session_items")?.selected).toBe("domain_code,domain_name,is_correct,answered_at");
+    expect(database.calls.find(call => call.table === "session_items")?.selected).toBe("domain_code,domain_name,is_correct,answered_at,withdrawn_at");
     expect(database.from.mock.calls.every(([table]) => ["study_sessions", "session_items"].includes(table))).toBe(true);
   });
   it.each([null, [], rows.slice(0, 5), rows.map(row => ({ ...row, answered_at: null })), rows.map(row => ({ ...row, is_correct: null }))])("rejects malformed latest aggregate rows %#", async items => {
@@ -109,4 +109,16 @@ describe("free progress tracking", () => {
   it("rejects corrupt history instead of publishing inaccurate free scores",async()=>{
     await expect(loadDashboard(db({history:[{...rows[0],is_correct:null}]}).client,userId,now)).rejects.toMatchObject({status:503});
   });
+});
+
+it("uses stable exclusions for restored diagnostic and practice history", async () => {
+  const included = { ...rows[0], withdrawn_at: null };
+  const excluded = { ...rows[1], withdrawn_at: "2026-10-03T10:00:00Z", answered_at: null, is_correct: null };
+  const completed = "2026-10-03T11:00:00Z";
+  const history = [{ ...included, session_id: "practice-snapshot", study_sessions: { kind: "practice", completed_at: completed } },
+    { ...rows[1], withdrawn_at: completed, session_id: "practice-snapshot", study_sessions: { kind: "practice", completed_at: completed } }];
+  const result = await loadDashboard(db({ latest: { id: sessionId, question_count: 2 }, items: [included, excluded], history }).client, userId, now);
+  expect(result.diagnostic).toMatchObject({ totalQuestions: 1, score: 100, withdrawnCount: 1 });
+  expect(result.practiceHistory).toMatchObject([{ sessionId: "practice-snapshot", totalQuestions: 1, score: 100 }]);
+  expect(result.progress).toMatchObject({ totalQuestions: 1, score: 100 });
 });

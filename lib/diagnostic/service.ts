@@ -1,3 +1,4 @@
+import { includedSessionItem, liveSessionItem, readWithdrawalSnapshot } from "@/lib/questions/session-snapshot";
 import type { ServerTiming } from "@/lib/server-timing";
 import "server-only";
 import { PMLE_CERT_ID } from "@/lib/certifications/catalog";
@@ -19,7 +20,7 @@ interface StudySession extends SessionOwner { id: string; exam?: string; questio
 interface SessionItem {
   id: string; question_id?: string; ordinal: number; stem: string; options: { label: string; text: string }[];
   domain_code: string; domain_name: string; is_correct: boolean | null; answered_at: string | null;
-  correct_label?: string; selected_label?: string | null;
+  withdrawn_at?: string | null; correct_label?: string; selected_label?: string | null;
   questions: { status: string; review_status: string } | null;
 }
 const SESSION_FIELDS = "id,user_id,anonymous_owner_hash,question_count,expires_at,completed_at,exam";
@@ -28,7 +29,7 @@ const PMLE_EXAM = "GCP_PM_ML_ENG";
 const sessionCertId = (session: Pick<StudySession, "exam">) => session.exam === PMLE_EXAM ? undefined : session.exam;
 const isPmleSession = (session: Pick<StudySession, "exam">) => session.exam === undefined || session.exam === PMLE_EXAM;
 const ITEM_FIELDS = "id,question_id,ordinal,stem,options,domain_code,domain_name,is_correct,answered_at,selected_label,questions(status,review_status)";
-const activeItem = (item: SessionItem) => item.questions?.status === "ACTIVE" && item.questions.review_status === "GOOD";
+const activeItem = liveSessionItem;
 const unavailable = () => new DiagnosticError(503, "The diagnostic is unavailable. Please try again.");
 
 /** Questions from this owner's earlier diagnostics. Freshness is best effort: errors mean "none seen". */
@@ -108,10 +109,8 @@ async function ownedSession(client: SupabaseClient, id: string, credentials: Own
   return session;
 }
 async function sessionItems(client: SupabaseClient, id: string, includeReview = false): Promise<SessionItem[]> {
-  const query = client.from("session_items");
-  const { data, error } = includeReview
-    ? await query.select(`${ITEM_FIELDS},correct_label`).eq("session_id", id).order("ordinal")
-    : await query.select(ITEM_FIELDS).eq("session_id", id).order("ordinal");
+  const { data, error } = await readWithdrawalSnapshot(marker => client.from("session_items")
+    .select(`${ITEM_FIELDS}${includeReview ? ",correct_label" : ""}${marker ? ",withdrawn_at" : ""}`).eq("session_id", id).order("ordinal"));
   if (error || !Array.isArray(data)) throw unavailable();
   return data as unknown as SessionItem[];
 }
@@ -124,8 +123,8 @@ export async function readDiagnostic(client: SupabaseClient, id: string, credent
 
 function diagnosticProgress(session: Pick<StudySession, "id" | "question_count" | "completed_at" | "exam">, items: SessionItem[]): DiagnosticProgress {
   if (items.length !== session.question_count) throw unavailable();
-  const withdrawnCount = items.filter(item => !activeItem(item)).length;
-  items = items.filter(activeItem);
+  const withdrawnCount = items.filter(item => !includedSessionItem(item, !!session.completed_at)).length;
+  items = items.filter(item => includedSessionItem(item, !!session.completed_at));
   const answeredCount = items.filter(item => item.answered_at !== null).length;
   const completed = !!session.completed_at || answeredCount === items.length;
   const current = completed ? null : items.find(item => item.answered_at === null);
@@ -182,7 +181,7 @@ export async function diagnosticResults(client: SupabaseClient, id: string, cred
   const includeReview = isPmleSession(session) && session.user_id !== null && session.user_id === credentials.userId;
   const saved = await sessionItems(client, id, includeReview);
   if (saved.length !== session.question_count) throw unavailable();
-  const items = saved.filter(activeItem);
+  const items = saved.filter(item => includedSessionItem(item, !!session.completed_at));
   if (!session.completed_at && items.some(item => !item.answered_at)) throw new DiagnosticError(409, "Finish the diagnostic to see your results");
   if (items.some(item => !item.answered_at || typeof item.is_correct !== "boolean")) throw unavailable();
   let result = computeResult(session.id, items);
@@ -194,11 +193,11 @@ export async function diagnosticResults(client: SupabaseClient, id: string, cred
     const explanations = access.hasPaidAccess ? await loadPaidExplanations(client, items) : null;
     const final = await sessionItems(client, id, true);
     if (final.length !== session.question_count) throw unavailable();
-    const reviewItems = final.filter(activeItem);
+    const reviewItems = final.filter(item => includedSessionItem(item, !!session.completed_at));
     if (reviewItems.some(item => !item.answered_at || typeof item.is_correct !== "boolean")) throw unavailable();
     result = computeResult(session.id, reviewItems);
     if (reviewItems.length < final.length) result.withdrawnCount = final.length - reviewItems.length;
-    result.review = reviewItems.map(item => {
+    result.review = reviewItems.filter(activeItem).map(item => {
       if (typeof item.selected_label !== "string" || typeof item.correct_label !== "string" ||
           !item.options.some(option => option.label === item.selected_label) ||
           !item.options.some(option => option.label === item.correct_label)) throw unavailable();

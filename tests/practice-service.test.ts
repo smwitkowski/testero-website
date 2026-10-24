@@ -398,3 +398,13 @@ it("fences practice feedback after withdrawal during explanation loading", async
   const result = await answerPractice(db({ items, rpcData: { answeredCount: 5, totalQuestions: 5, completed: true } }).client, sessionId, userId, itemId, "A", now);
   expect(result.feedback).toBeNull(); expect(result.progress).toMatchObject({ totalQuestions: 4, withdrawnCount: 1 });
 });
+
+describe("completed withdrawal snapshots", () => {
+  it("keeps a skipped restored question excluded from summary and review", async () => {
+    const saved = rows().map(row => ({ ...row, withdrawn_at: null as string | null, selected_label: "A" as string | null, answered_at: "done" as string | null, is_correct: true as boolean | null }));
+    Object.assign(saved[0], { withdrawn_at: "2026-10-03T10:00:00Z", selected_label: null, answered_at: null, is_correct: null });
+    const result = await practiceSummary(db({ session: { ...session, completed_at: "done" }, items: saved }).client, sessionId, userId, now);
+    expect(result).toMatchObject({ totalQuestions: 4, correctAnswers: 4, score: 100, withdrawnCount: 1 });
+    expect(result.review).toHaveLength(4); expect(JSON.stringify(result)).not.toContain(saved[0].stem);
+  });
+});

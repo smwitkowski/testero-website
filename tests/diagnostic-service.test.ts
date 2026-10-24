@@ -1,3 +1,4 @@
+import { resultsEmailText, resultsEmailHtml } from "@/lib/diagnostic/results-email";
 import { loadPaidExplanations } from "@/lib/billing/explanations";
 import { getPaidAccess } from "@/lib/billing/paid-access";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -600,4 +601,17 @@ it("fences the server-selected free explanation after a concurrent withdrawal", 
   const rows = items().map(row => ({ ...row, answered_at: "done", is_correct: true }));
   vi.mocked(loadPaidExplanations).mockImplementationOnce(async () => { rows[0].questions = { status: "RETIRED", review_status: "GOOD" }; return new Map(); });
   await expect(diagnosticFreeExplanation(database({ session: session({ completed_at: "done" }), items: rows }).client, sessionId, credentials, now)).rejects.toMatchObject({ status: 410 });
+});
+
+describe("completed withdrawal snapshots", () => {
+  it("keeps a skipped restored question excluded from results and results email", async () => {
+    const saved = items().map(row => ({ ...row, withdrawn_at: null as string | null, answered_at: "done" as string | null, is_correct: true as boolean | null }));
+    Object.assign(saved[0], { withdrawn_at: "2026-10-03T10:00:00Z", answered_at: null, is_correct: null });
+    const db = database({ session: session({ completed_at: "done" }), items: saved });
+    const result = await diagnosticResults(db.client, sessionId, credentials, now);
+    expect(result).toMatchObject({ totalQuestions: 19, correctAnswers: 19, score: 100, withdrawnCount: 1 });
+    expect(resultsEmailText(result, now)).toContain("19/19 correct (100%)");
+    expect(resultsEmailHtml(result, now)).toContain("19/19 correct (100%)");
+    expect(JSON.stringify(result)).not.toContain(saved[0].stem);
+  });
 });

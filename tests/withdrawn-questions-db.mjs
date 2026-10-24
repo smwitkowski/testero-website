@@ -12,4 +12,4 @@ for (const key of ["PGSERVICE","PGSERVICEFILE","PGHOSTADDR","PGOPTIONS","PGPASSF
 const child = spawn("psql",["-X","-q","-v","ON_ERROR_STOP=1"],{ env, stdio: ["pipe","inherit","inherit"] });
 child.stdin.end(readFileSync(new URL("./sql/withdrawn-session-questions.sql",import.meta.url),"utf8"));
 child.on("error", () => { console.error("Could not run local psql verifier"); process.exitCode = 1; });
-child.on("exit", code => { process.exitCode = code ?? 1; if (code === 0) console.log("PASS withdrawn study answers, mock exclusion, history and permissions (rolled back)"); });
+child.on("exit", code => { process.exitCode = code ?? 1; if (code === 0) console.log("PASS persistent withdrawal snapshots, restore-before-answer, completed study/mock denominators, mock history and permissions (rolled back)"); });

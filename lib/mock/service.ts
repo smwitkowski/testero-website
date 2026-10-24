@@ -1,3 +1,4 @@
+import { includedSessionItem, liveSessionItem, readWithdrawalSnapshot } from "@/lib/questions/session-snapshot";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getPaidAccess } from "@/lib/billing/paid-access";
@@ -14,8 +15,8 @@ import type { MockProgress, MockResults, MockAttempt } from "@/lib/mock/types";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const unavailable = () => new DiagnosticError(503, "Mock exams are unavailable. Please try again.");
 interface Session { id: string; user_id: string; question_count: number; created_at: string; deadline_at: string; completed_at: string | null; timed_out: boolean; allocation_notice: string | null; server_now: string; answered_count: number }
-interface Item extends Omit<QuestionReviewSource, "selected_label" | "is_correct"> { question_id: string; selected_label: string | null; is_correct: boolean | null; answered_at: string | null; questions: { status: string; review_status: string } | null }
-const activeItem = (item: Item) => item.questions?.status === "ACTIVE" && item.questions.review_status === "GOOD";
+interface Item extends Omit<QuestionReviewSource, "selected_label" | "is_correct"> { withdrawn_at?: string | null; question_id: string; selected_label: string | null; is_correct: boolean | null; answered_at: string | null; questions: { status: string; review_status: string } | null }
+const activeItem = liveSessionItem;
 export async function requireMockAccess(client: SupabaseClient, userId: string) {
   if (!UUID.test(userId)) throw new DiagnosticError(401, "Please sign in to continue");
   const access = await getPaidAccess(userId, client);
@@ -67,7 +68,7 @@ async function interact(client: SupabaseClient, userId: string, id: string, acti
   return session;
 }
 async function readItems(client: SupabaseClient, id: string): Promise<Item[]> {
-  const { data, error } = await client.from("mock_exam_items").select("id,question_id,ordinal,domain_code,domain_name,stem,options,correct_label,selected_label,is_correct,answered_at,questions(status,review_status)").eq("session_id", id).order("ordinal");
+  const { data, error } = await readWithdrawalSnapshot(marker => client.from("mock_exam_items").select(`id,question_id,ordinal,domain_code,domain_name,stem,options,correct_label,selected_label,is_correct,answered_at,questions(status,review_status)${marker ? ",withdrawn_at" : ""}`).eq("session_id", id).order("ordinal"));
   if (error || !Array.isArray(data) || data.length !== 50) throw unavailable();
   const rows = data as unknown as Item[];
   if (new Set(rows.map(row => row.id)).size !== 50 || rows.some((row, index) => row.ordinal !== index + 1 || !Array.isArray(row.options) || row.options.length < 2
@@ -78,8 +79,8 @@ async function readItems(client: SupabaseClient, id: string): Promise<Item[]> {
   return rows;
 }
 function progress(session: Session, rows: Item[]): MockProgress {
-  const withdrawnCount = rows.filter(row => !activeItem(row)).length;
-  rows = rows.filter(activeItem);
+  const withdrawnCount = rows.filter(row => !includedSessionItem(row, !!session.completed_at)).length;
+  rows = rows.filter(row => includedSessionItem(row, !!session.completed_at));
   return { sessionId: session.id, status: session.completed_at ? "completed" : "in_progress", startedAt: session.created_at, deadlineAt: session.deadline_at,
     serverNow: session.server_now, totalQuestions: rows.length, ...(withdrawnCount ? { withdrawnCount } : {}), answeredCount: rows.filter(row => row.answered_at !== null).length,
     allocationNotice: session.allocation_notice,
@@ -114,14 +115,14 @@ export async function mockResults(client: SupabaseClient, id: string, userId: st
   const session = await interact(client, userId, id, "results");
   if (!session.completed_at) throw new DiagnosticError(409, "Submit your mock exam to see results.");
   const saved = await readItems(client, id);
-  let rows = saved.filter(activeItem);
+  let rows = saved.filter(item => includedSessionItem(item, !!session.completed_at));
   if (rows.some(row => typeof row.is_correct !== "boolean" || row.is_correct !== (row.selected_label === row.correct_label))) throw unavailable();
   const explanations = await loadPaidExplanations(client, rows);
   await requireMockAccess(client, userId);
-  rows = (await readItems(client, id)).filter(activeItem);
+  rows = (await readItems(client, id)).filter(item => includedSessionItem(item, true));
   if (rows.some(row => typeof row.is_correct !== "boolean" || row.is_correct !== (row.selected_label === row.correct_label))) throw unavailable();
   return { ...computeResult(id, rows), ...(rows.length < saved.length ? { withdrawnCount: saved.length - rows.length } : {}), completedAt: session.completed_at, timedOut: session.timed_out, allocationNotice: session.allocation_notice,
-    review: rows.map(row => addPaidReview(mapReview({ ...row, selected_label: row.selected_label ?? "Unanswered", is_correct: row.is_correct! }), explanations.get(row.id))) };
+    review: rows.filter(activeItem).map(row => addPaidReview(mapReview({ ...row, selected_label: row.selected_label ?? "Unanswered", is_correct: row.is_correct! }), explanations.get(row.id))) };
 }
 interface HistoryRow {
   id: string; user_id: string; created_at: string; deadline_at: string; completed_at: string | null;

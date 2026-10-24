@@ -1,3 +1,4 @@
+import { includedSessionItem, liveSessionItem, readWithdrawalSnapshot } from "@/lib/questions/session-snapshot";
 import type { ServerTiming } from "@/lib/server-timing";
 import "server-only";
 import { getPaidAccess } from "@/lib/billing/paid-access";
@@ -18,10 +19,10 @@ export const PRACTICE_SESSION_LENGTH = 5;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const unavailable = () => new DiagnosticError(503, "Practice is unavailable. Please try again.");
 interface Session { id: string; user_id: string | null; anonymous_owner_hash: string | null; question_count: number; completed_at: string | null; expires_at: string; practice_selection?: unknown }
-interface Item extends Omit<QuestionReviewSource, "selected_label" | "is_correct"> { question_id?: string; selected_label: string | null; is_correct: boolean | null; answered_at: string | null; questions: { parent_question_id: string | null; status: string; review_status: string } | null }
+interface Item extends Omit<QuestionReviewSource, "selected_label" | "is_correct"> { withdrawn_at?: string | null; question_id?: string; selected_label: string | null; is_correct: boolean | null; answered_at: string | null; questions: { parent_question_id: string | null; status: string; review_status: string } | null }
 interface Question { id: string; parent_question_id: string | null; stem: string; answers: CanonicalAnswer[]; exam_domains: { code: string; name: string } }
 const ITEM_FIELDS = "id,question_id,ordinal,stem,options,domain_code,domain_name,selected_label,correct_label,is_correct,answered_at,questions(parent_question_id,status,review_status)";
-const activeItem = (item: Item) => item.questions?.status === "ACTIVE" && item.questions.review_status === "GOOD";
+const activeItem = liveSessionItem;
 function validAnsweredItem(row: Pick<Item, "options" | "selected_label" | "correct_label" | "is_correct">): boolean {
   if (!Array.isArray(row.options) || row.options.length < 2 || row.options.some(option => !option || typeof option.label !== "string" || !option.label.trim() || typeof option.text !== "string" || !option.text.trim())) return false;
   const labels = row.options.map(option => option.label);
@@ -100,7 +101,7 @@ async function ownedPractice(client: SupabaseClient, id: string, userId: string,
   return session;
 }
 async function items(client: SupabaseClient, id: string): Promise<Item[]> {
-  const { data, error } = await client.from("session_items").select(ITEM_FIELDS).eq("session_id", id).order("ordinal");
+  const { data, error } = await readWithdrawalSnapshot(marker => client.from("session_items").select(`${ITEM_FIELDS}${marker ? ",withdrawn_at" : ""}`).eq("session_id", id).order("ordinal"));
   if (error || !Array.isArray(data)) throw unavailable();
   // session_items.question_id is a to-one FK; the untyped client infers joins as arrays.
   return data as unknown as Item[];
@@ -112,8 +113,8 @@ export async function readPractice(client: SupabaseClient, id: string, userId: s
 }
 function practiceProgress(session: Session, rows: Item[]): PracticeProgress {
   if (rows.length !== session.question_count) throw unavailable();
-  const withdrawnCount = rows.filter(row => !activeItem(row)).length;
-  rows = rows.filter(activeItem);
+  const withdrawnCount = rows.filter(row => !includedSessionItem(row, !!session.completed_at)).length;
+  rows = rows.filter(row => includedSessionItem(row, !!session.completed_at));
   const answeredCount = rows.filter(row => row.answered_at !== null).length;
   const completed = !!session.completed_at || answeredCount === rows.length;
   const current = completed ? null : rows.find(row => row.answered_at === null);
@@ -156,15 +157,15 @@ export async function practiceSummary(client: SupabaseClient, id: string, userId
   const session = await ownedPractice(client, id, userId, now);
   const saved = await items(client, id);
   if (saved.length !== session.question_count) throw unavailable();
-  let rows = saved.filter(activeItem);
+  let rows = saved.filter(item => includedSessionItem(item, !!session.completed_at));
   if (!session.completed_at && rows.some(row => !row.answered_at)) throw new DiagnosticError(409, "Finish practice to see your summary");
   if (rows.some(row => !row.answered_at || !validAnsweredItem(row))) throw unavailable();
   const access = await getPaidAccess(userId, client, now);
   const explanations = access.hasPaidAccess ? await loadPaidExplanations(client, rows) : null;
   const final = await items(client, id);
   if (final.length !== session.question_count) throw unavailable();
-  rows = final.filter(activeItem);
+  rows = final.filter(item => includedSessionItem(item, !!session.completed_at));
   if (rows.some(row => !row.answered_at || !validAnsweredItem(row))) throw unavailable();
   return { ...computeResult(id, rows), ...(rows.length < saved.length ? { withdrawnCount: saved.length - rows.length } : {}),
-    review: rows.map(row => addPaidReview(mapReview(row as QuestionReviewSource), explanations?.get(row.id))) };
+    review: rows.filter(activeItem).map(row => addPaidReview(mapReview(row as QuestionReviewSource), explanations?.get(row.id))) };
 }

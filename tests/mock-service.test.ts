@@ -206,3 +206,21 @@ it("fences learner mock content after withdrawal during the final paid lookup", 
   const result = await readMock(db({ rows: items }).client, id, user);
   expect(result).toMatchObject({ totalQuestions: 49, withdrawnCount: 1 }); expect(JSON.stringify(result)).not.toContain('"Question 0"');
 });
+
+describe("completed withdrawal snapshots", () => {
+  it("does not resurrect an excluded unanswered item after restore", async () => {
+    const items = rows().map(row => ({ ...row, withdrawn_at: null as string | null, selected_label: "A" as string | null, answered_at: session.server_now as string | null, is_correct: true as boolean | null }));
+    Object.assign(items[0], { withdrawn_at: session.server_now, selected_label: null, answered_at: null, is_correct: null });
+    const database = db({ session: { completed_at: session.server_now }, rows: items, history: [{ ...session, completed_at: session.server_now, score: 100 }] });
+    const result = await mockResults(database.client, id, user);
+    expect(result).toMatchObject({ totalQuestions: 49, correctAnswers: 49, score: 100, withdrawnCount: 1 });
+    expect(result.review.some(row => row.itemId === itemId)).toBe(false);
+    expect(await mockHistory(database.client, user)).toMatchObject([{ score: 100 }]);
+  });
+  it("keeps completed scores when a different item is withdrawn later, without revealing it", async () => {
+    const items = rows().map(row => ({ ...row, withdrawn_at: null, selected_label: "A", answered_at: session.server_now, is_correct: true }));
+    items[0].questions.status = "DRAFT";
+    const result = await mockResults(db({ session: { completed_at: session.server_now }, rows: items }).client, id, user);
+    expect(result).toMatchObject({ totalQuestions: 50, score: 100 }); expect(result.review).toHaveLength(49);
+  });
+});

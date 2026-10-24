@@ -1,3 +1,4 @@
+import { readWithdrawalSnapshot } from "@/lib/questions/session-snapshot";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { shuffleArray } from "@/lib/questions/answer-order";
@@ -31,12 +32,15 @@ export async function loadAnswerHistory(client: SupabaseClient, userId: string):
     const fields = `id,question_id,domain_code,is_correct,answered_at,session_id,${sessions}!inner(user_id,completed_at${mock ? "" : ",kind,exam"})`;
     const pageSize = 1000;
     for (let offset = 0; ; offset += pageSize) {
-      let query = client.from(table).select(fields).eq(`${sessions}.user_id`, userId).not("answered_at", "is", null).order("id").range(offset, offset + pageSize - 1);
-      if (!mock) query = query.eq(`${sessions}.exam`, "GCP_PM_ML_ENG").in(`${sessions}.kind`, ["diagnostic", "practice"]);
-      const { data, error } = await query;
+      const { data, error } = await readWithdrawalSnapshot(marker => {
+        let query = client.from(table).select(`${fields}${marker ? ",withdrawn_at" : ""}`).eq(`${sessions}.user_id`, userId).not("answered_at", "is", null).order("id").range(offset, offset + pageSize - 1);
+        if (!mock) query = query.eq(`${sessions}.exam`, "GCP_PM_ML_ENG").in(`${sessions}.kind`, ["diagnostic", "practice"]);
+        return query;
+      });
       if (error || !Array.isArray(data)) throw new DiagnosticError(503, "Practice history is unavailable. Please try again.");
       for (const raw of data) {
-        const row = raw as unknown as { question_id: string; domain_code: string; is_correct: boolean | null; answered_at: string; session_id: string; [key: string]: unknown };
+        const row = raw as unknown as { withdrawn_at?: string | null; question_id: string; domain_code: string; is_correct: boolean | null; answered_at: string; session_id: string; [key: string]: unknown };
+        if (row.withdrawn_at != null) continue;
         const owner = row[sessions] as { user_id: string; completed_at: string | null; kind?: string; exam?: string } | null;
         if (!owner || owner.user_id !== userId || (!mock && (owner.exam !== "GCP_PM_ML_ENG" || !["diagnostic", "practice"].includes(owner.kind ?? "")))
           || typeof row.question_id !== "string" || typeof row.domain_code !== "string" || typeof row.session_id !== "string"
