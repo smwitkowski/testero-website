@@ -295,6 +295,7 @@ describe("Pass personalization enforced in service", () => {
     const result = await startPractice(database.client, userId, { mode: "weak" }, now);
     expect(result).toMatchObject({ sessionId, selection: { reason: "history", domainCode: domain } });
     expect(result.selection?.message).toContain("at least 5");
+    expect(database.rpc).toHaveBeenCalledWith("create_pass_practice_session", expect.objectContaining({ p_selection: { reason: "history", domainCode: domain } }));
   });
   it("falls back to diagnostic study focus when there are too few distinct answered questions", async () => {
     vi.mocked(getPaidAccess).mockResolvedValue({ ...freeAccess, hasPaidAccess: true });
@@ -349,5 +350,19 @@ describe("paid selection closes stale-access races", () => {
     const database = db();
     await expect(startPractice(database.client, userId, { mode: "weak" }, now)).rejects.toMatchObject({ status: 403 });
     expect(database.rpc).toHaveBeenCalledWith("create_pass_practice_session", expect.anything());
+  });
+});
+
+describe("stored practice selection", () => {
+  it("restores a saved drill focus on resume without trusting stored prose", async () => {
+    const database = db({ session: { ...session, practice_selection: { reason: "diagnostic_focus", domainCode: domain } } });
+    const result = await readPractice(database.client, sessionId, userId, now);
+    expect(result.selection).toMatchObject({ reason: "diagnostic_focus", domainCode: domain });
+    expect(result.selection?.message).toContain(PMLE_BLUEPRINT[0].displayName);
+    expect(result.selection?.message).toContain("Not enough practice history");
+    expect(database.queries[0].selected).toContain("practice_selection");
+  });
+  it.each([{ reason:"history",domainCode:domain,message:"forged prose" },{ reason:"forged",domainCode:domain },{ reason:"general",domainCode:"foreign" }])("rejects malformed stored metadata %#", async selection => {
+    await expect(readPractice(db({ session: { ...session, practice_selection: selection } }).client,sessionId,userId,now)).rejects.toMatchObject({status:503});
   });
 });

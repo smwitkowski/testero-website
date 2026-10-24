@@ -1,5 +1,6 @@
 import type { DiagnosticProgress, DiagnosticResult, PaidQuestionReview } from "@/lib/diagnostic/types";
 export type PracticeProgress = Omit<DiagnosticProgress, "answeredQuestions" | "currentQuestion"> & {
+  selection?: import("@/lib/practice/selection-label").PracticeSelection;
   currentQuestion: (NonNullable<DiagnosticProgress["currentQuestion"]> & { isVariant?: boolean }) | null;
 };
 export interface PracticeAnswerResponse {

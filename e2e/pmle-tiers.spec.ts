@@ -171,6 +171,40 @@ test("D-044 Pass fresh-first ordering, weak-drill diagnostic fallback and suffic
   const created = await service.auth.admin.createUser({ email, password, email_confirm: true });
   expect(created.error).toBeNull(); const userId = created.data.user!.id;
   const domainCode = PMLE_BLUEPRINT[0].domainCode;
+  const domainName = PMLE_BLUEPRINT[0].displayName;
+  const forgedFocus = "Forged URL focus must not replace saved selection";
+  async function expectSavedSelection(session: { sessionId: string; href: string; selection: unknown }, reason: "general" | "diagnostic_focus" | "history", message: string) {
+    const metadata = { reason, domainCode };
+    const selection = { ...metadata, message };
+    expect(session.href).toBe(`/practice/${session.sessionId}`);
+    expect(session.selection).toEqual(selection);
+    const expectStored = async () => {
+      const stored = await service.from("study_sessions").select("practice_selection").eq("id", session.sessionId).eq("user_id", userId).single();
+      expect(stored.error).toBeNull();
+      expect(stored.data!.practice_selection).toEqual(metadata);
+      const response = await page.request.get(`/api/practice/${session.sessionId}`);
+      expect(response.status()).toBe(200);
+      expect((await response.json()).selection).toEqual(selection);
+    };
+    const expectCanonicalLabel = async () => {
+      await expect(page.getByText(message, { exact: true })).toBeVisible();
+      await expect(page.getByText(forgedFocus, { exact: true })).toHaveCount(0);
+    };
+    await expect(page).toHaveURL(new RegExp(`/practice/${session.sessionId}$`));
+    await expectStored();
+    await expectCanonicalLabel();
+    await page.goto(`${session.href}?focus=${encodeURIComponent(forgedFocus)}`);
+    await expectCanonicalLabel();
+    await page.reload();
+    await expectCanonicalLabel();
+    await page.goto("/dashboard");
+    const resume = page.getByRole("link", { name: "Resume practice", exact: true });
+    await expect(resume).toHaveAttribute("href", session.href);
+    await resume.click();
+    await expect(page).toHaveURL(new RegExp(`/practice/${session.sessionId}$`));
+    await expectCanonicalLabel();
+    await expectStored();
+  }
   try {
     expect((await service.rpc("fulfill_pmle_pass", { p_user_id: userId, p_stripe_checkout_session_id: `cs_test_selection_${randomUUID()}`, p_stripe_payment_intent_id: `pi_local_selection_${randomUUID()}`, p_stripe_customer_id: "cus_local_selection", p_paid_at: new Date().toISOString() })).error).toBeNull();
     await page.goto("/login?next=/dashboard");
@@ -179,9 +213,8 @@ test("D-044 Pass fresh-first ordering, weak-drill diagnostic fallback and suffic
     await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
     const generalResponse = await page.request.post("/api/practice", { data: { mode: "weak" } }); expect(generalResponse.status()).toBe(201);
     const general = await generalResponse.json();
-    expect(general.selection).toMatchObject({ reason: "general", domainCode });
-    expect(general.selection.message).toMatch(/not enough/i);
-    await page.goto(`${general.href}?focus=${encodeURIComponent(general.selection.message)}`); await expect(page.getByText(general.selection.message, { exact: true })).toBeVisible();
+    await page.goto(general.href);
+    await expectSavedSelection(general, "general", `Not enough answered history or a completed diagnostic yet. Start with ${domainName} to build your study history.`);
 
     const diagnostic = await page.request.post("/api/diagnostic", { data: { questionCount: 20 } }); expect(diagnostic.status()).toBe(201);
     const diagnosticId = (await diagnostic.json()).sessionId as string;
@@ -197,9 +230,8 @@ test("D-044 Pass fresh-first ordering, weak-drill diagnostic fallback and suffic
     }
     const fallbackResponse = await page.request.post("/api/practice", { data: { mode: "weak" } }); expect(fallbackResponse.status()).toBe(201);
     const fallback = await fallbackResponse.json();
-    expect(fallback.selection).toMatchObject({ reason: "diagnostic_focus", domainCode });
-    expect(fallback.selection.message).toMatch(/diagnostic/i);
-    await page.goto(`${fallback.href}?focus=${encodeURIComponent(fallback.selection.message)}`); await expect(page.getByText(fallback.selection.message, { exact: true })).toBeVisible();
+    await page.goto(fallback.href);
+    await expectSavedSelection(fallback, "diagnostic_focus", `Not enough practice history yet. Starting with ${domainName}, the study focus from your latest diagnostic.`);
     const selected = await service.from("session_items").select("id,question_id,ordinal,correct_label,options,domain_code").eq("session_id", fallback.sessionId).order("ordinal");
     expect(selected.error).toBeNull(); expect(selected.data).toHaveLength(5);
     let seenReached = false;
@@ -223,10 +255,7 @@ test("D-044 Pass fresh-first ordering, weak-drill diagnostic fallback and suffic
     await page.getByRole("button", { name: "Start weak-area drill", exact: true }).click();
     const weak = await weakResponse; expect(weak.status()).toBe(201);
     const drilled = await weak.json();
-    expect(drilled.selection).toMatchObject({ reason: "history", domainCode });
-    expect(drilled.selection.message).toMatch(/at least 5/i);
-    await expect(page).toHaveURL(new RegExp(`/practice/${drilled.sessionId}`));
-    await expect(page.getByText(drilled.selection.message, { exact: true })).toBeVisible();
+    await expectSavedSelection(drilled, "history", `Practicing ${domainName}: your lowest-scoring domain with at least 5 different answered questions.`);
     // Mock selection uses the same account answer history, across domains.
     for (const item of selected.data!) history.add(item.question_id);
     const freshMockResponse = await page.request.post("/api/mock/start", { data: {} }); expect(freshMockResponse.status()).toBe(201);

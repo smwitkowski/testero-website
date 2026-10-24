@@ -13,12 +13,8 @@ export interface AnswerHistory {
   answeredAt: string;
   completedAt: string | null;
 }
-export interface PracticeSelection {
-  reason: "history" | "diagnostic_focus" | "general";
-  domainCode: string;
-  message: string;
-}
-export const WEAK_AREA_MIN_ANSWERS = 5;
+import { restorePracticeSelection, WEAK_AREA_MIN_ANSWERS, type PracticeSelection } from "@/lib/practice/selection-label";
+export { WEAK_AREA_MIN_ANSWERS, type PracticeSelection } from "@/lib/practice/selection-label";
 
 /** Shuffle within each group, but never put an answered question ahead of an unseen one. */
 export function freshFirst<T extends { id: string }>(questions: readonly T[], answeredIds: ReadonlySet<string>): T[] {
@@ -64,9 +60,9 @@ export function selectWeakArea(history: readonly AnswerHistory[]): PracticeSelec
   // Diagnostic and practice outcomes drive drills. Mock history is used for freshness, not weak-area claims.
   const practiceHistory = history.filter(row => row.kind !== "mock");
   const weak = stats(practiceHistory).filter(domain => domain.count >= WEAK_AREA_MIN_ANSWERS).sort((a, b) => a.score - b.score)[0];
-  if (weak) return { reason: "history", domainCode: weak.domain.domainCode, message: `Practicing ${weak.domain.displayName}: your lowest-scoring domain with at least ${WEAK_AREA_MIN_ANSWERS} different answered questions.` };
+  if (weak) return restorePracticeSelection({ reason: "history", domainCode: weak.domain.domainCode })!;
   const latest = practiceHistory.filter(row => row.kind === "diagnostic" && row.completedAt).sort((a, b) => Date.parse(b.completedAt!) - Date.parse(a.completedAt!))[0];
   const focus = latest ? stats(practiceHistory.filter(row => row.kind === "diagnostic" && row.sessionId === latest.sessionId)).filter(domain => domain.count > 0).sort((a, b) => a.score - b.score)[0] : undefined;
-  if (focus) return { reason: "diagnostic_focus", domainCode: focus.domain.domainCode, message: `Not enough practice history yet. Starting with ${focus.domain.displayName}, the study focus from your latest diagnostic.` };
-  return { reason: "general", domainCode: PMLE_BLUEPRINT[0].domainCode, message: "Not enough answered history or a completed diagnostic yet. Start with this domain to build your study history." };
+  if (focus) return restorePracticeSelection({ reason: "diagnostic_focus", domainCode: focus.domain.domainCode })!;
+  return restorePracticeSelection({ reason: "general", domainCode: PMLE_BLUEPRINT[0].domainCode })!;
 }

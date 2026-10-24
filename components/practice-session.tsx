@@ -82,6 +82,7 @@ export function PracticeSession({ sessionId, initialData = null }: { sessionId: 
   const answeredCount = answer?.answeredCount ?? data.answeredCount;
 
   return <div className="mx-auto max-w-[760px] space-y-6">
+    {data.selection && <p role="status" className="rounded-md border border-border bg-muted p-4">{data.selection.message}</p>}
     <div className="space-y-3">
       <div className="flex flex-wrap justify-between gap-2 text-sm text-muted-foreground"><span>Question {question.ordinal} of {data.totalQuestions}</span><span>{answeredCount} answered</span></div>
       <div role="progressbar" aria-label="Practice progress" aria-valuemin={0} aria-valuemax={data.totalQuestions} aria-valuenow={answeredCount} className="h-2 overflow-hidden rounded border border-input bg-border">

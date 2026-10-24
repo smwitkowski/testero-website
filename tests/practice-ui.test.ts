@@ -223,3 +223,14 @@ describe("free practice tracking", () => {
     expect(html).not.toContain("Mock score");
   });
 });
+
+describe("persisted drill focus UI", () => {
+  it("shows the server-restored selection across reloads", () => {
+    state.progress = { sessionId:"owned",status:"in_progress",answeredCount:0,totalQuestions:5,
+      selection:{reason:"general",domainCode:"D0",message:"Trusted server selection"},
+      currentQuestion:{id:"item",ordinal:1,domainCode:"D0",stem:"Question",options:[{label:"A",text:"One"},{label:"B",text:"Two"}]},
+    };
+    const html=renderToStaticMarkup(createElement(PracticeSession,{sessionId:"owned"}));
+    expect(html).toContain("Trusted server selection");
+  });
+});

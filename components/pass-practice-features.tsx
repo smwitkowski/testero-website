@@ -22,9 +22,8 @@ export function PassPracticeFeatures({ hasPaidAccess }: { hasPaidAccess: boolean
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "weak" }),
       });
       trackPractice(result.sessionId);
-      // The server chooses and describes the focus. The message is plain text, never HTML.
-      const query = result.selection ? `?focus=${encodeURIComponent(result.selection.message)}` : "";
-      router.push(`/practice/${encodeURIComponent(result.sessionId)}${query}`);
+      // The saved session supplies its focus on every load and resume.
+      router.push(`/practice/${encodeURIComponent(result.sessionId)}`);
     } catch (reason) {
       setError(practiceError(reason).message); submitting.current = false; setPending(false);
     }

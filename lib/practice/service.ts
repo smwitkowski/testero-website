@@ -7,6 +7,7 @@ import { PMLE_BLUEPRINT } from "@/lib/constants/pmle-blueprint";
 import { hasValidAnswers, type CanonicalAnswer } from "@/lib/diagnostic/pmle-selection";
 import { createAnswerSnapshot, shuffleArray } from "@/lib/questions/answer-order";
 import { freshFirst, loadAnswerHistory, selectWeakArea } from "@/lib/practice/selection";
+import { restorePracticeSelection } from "@/lib/practice/selection-label";
 import { ownsSession } from "@/lib/diagnostic/ownership";
 import { DiagnosticError } from "@/lib/diagnostic/http";
 import { computeResult } from "@/lib/diagnostic/scoring";
@@ -16,7 +17,7 @@ import type { PracticeProgress, PracticeAnswerResponse, PracticeSummary, Practic
 export const PRACTICE_SESSION_LENGTH = 5;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const unavailable = () => new DiagnosticError(503, "Practice is unavailable. Please try again.");
-interface Session { id: string; user_id: string | null; anonymous_owner_hash: string | null; question_count: number; completed_at: string | null; expires_at: string }
+interface Session { id: string; user_id: string | null; anonymous_owner_hash: string | null; question_count: number; completed_at: string | null; expires_at: string; practice_selection?: unknown }
 interface Item extends Omit<QuestionReviewSource, "selected_label" | "is_correct"> { question_id?: string; selected_label: string | null; is_correct: boolean | null; answered_at: string | null; questions?: { parent_question_id: string | null } | null }
 interface Question { id: string; parent_question_id: string | null; stem: string; answers: CanonicalAnswer[]; exam_domains: { code: string; name: string } }
 const ITEM_FIELDS = "id,question_id,ordinal,stem,options,domain_code,domain_name,selected_label,correct_label,is_correct,answered_at,questions(parent_question_id)";
@@ -79,7 +80,7 @@ export async function startPractice(client: SupabaseClient, userId: string, opti
   }
   const args = { p_user_id: userId, p_items: items, p_expires_at: new Date(now + 24 * 60 * 60 * 1000).toISOString() };
   const { data: id, error: createError } = paidAccess.hasPaidAccess
-    ? await client.rpc("create_pass_practice_session", args)
+    ? await client.rpc("create_pass_practice_session", { ...args, p_selection: selection ? { reason: selection.reason, domainCode: selection.domainCode } : null })
     : await client.rpc("create_free_practice_session", args);
   if (createError?.code === "42501") throw new DiagnosticError(403, "PMLE Pass access changed. Start practice again.");
   if (createError || typeof id !== "string" || !UUID.test(id)) throw unavailable();
@@ -90,7 +91,7 @@ export async function startPractice(client: SupabaseClient, userId: string, opti
 }
 async function ownedPractice(client: SupabaseClient, id: string, userId: string, now: number): Promise<Session> {
   if (!UUID.test(id)) throw new DiagnosticError(404, "Practice not found");
-  const { data, error } = await client.from("study_sessions").select("id,user_id,anonymous_owner_hash,question_count,completed_at,expires_at").eq("id", id).eq("kind", "practice").maybeSingle();
+  const { data, error } = await client.from("study_sessions").select("id,user_id,anonymous_owner_hash,question_count,completed_at,expires_at,practice_selection").eq("id", id).eq("kind", "practice").maybeSingle();
   if (error) throw unavailable();
   const session = data as Session | null;
   if (!session || !ownsSession(session, { userId, anonymousToken: null })) throw new DiagnosticError(404, "Practice not found");
@@ -114,7 +115,9 @@ function practiceProgress(session: Session, rows: Item[]): PracticeProgress {
   const completed = !!session.completed_at || answeredCount === session.question_count;
   const current = completed ? null : rows.find(row => row.answered_at === null);
   if (!completed && !current) throw unavailable();
-  return { sessionId: session.id, status: completed ? "completed" : "in_progress", totalQuestions: session.question_count, answeredCount,
+  const selection = restorePracticeSelection(session.practice_selection);
+  if (session.practice_selection != null && !selection) throw unavailable();
+  return { ...(selection ? { selection } : {}), sessionId: session.id, status: completed ? "completed" : "in_progress", totalQuestions: session.question_count, answeredCount,
     currentQuestion: current ? { id: current.id, ordinal: current.ordinal, domainCode: current.domain_code, stem: current.stem, ...(current.questions?.parent_question_id ? { isVariant: true } : {}), options: current.options.map(option => ({ label: option.label, text: option.text })) } : null };
 }
 export async function answerPractice(client: SupabaseClient, id: string, userId: string, itemId: string, selectedLabel: string, now = Date.now(), timing?: ServerTiming): Promise<PracticeAnswerResponse> {

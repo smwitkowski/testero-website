@@ -1,6 +1,26 @@
 -- D-044: unlimited free practice. Keep all ownership, exam, snapshot and paid-variant checks.
 -- Legacy quota rows/functions remain for rollback history, but creation never calls them.
 BEGIN;
+-- Persist only trusted selection metadata, never URL text or display prose.
+ALTER TABLE public.study_sessions ADD COLUMN IF NOT EXISTS practice_selection JSONB;
+DO $selection_constraint$
+BEGIN
+ IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.study_sessions'::regclass AND conname = 'study_sessions_practice_selection_check') THEN
+  ALTER TABLE public.study_sessions ADD CONSTRAINT study_sessions_practice_selection_check CHECK (
+   practice_selection IS NULL OR (
+    kind = 'practice' AND exam = 'GCP_PM_ML_ENG'
+    AND jsonb_typeof(practice_selection) = 'object'
+    AND (practice_selection - 'reason' - 'domainCode') = '{}'::jsonb
+    AND practice_selection->>'reason' IS NOT NULL
+    AND practice_selection->>'reason' IN ('history','diagnostic_focus','general')
+    AND practice_selection->>'domainCode' IS NOT NULL
+    AND cardinality(domain_codes) = 1
+    AND domain_codes[1] = practice_selection->>'domainCode'
+   )
+  );
+ END IF;
+END;
+$selection_constraint$;
 CREATE OR REPLACE FUNCTION public.v2_create_study_session(
  p_kind TEXT, p_user_id UUID, p_anonymous_owner_hash TEXT,
  p_items JSONB, p_expires_at TIMESTAMPTZ, p_free_only BOOLEAN,
@@ -123,8 +143,10 @@ GRANT EXECUTE ON FUNCTION public.v2_create_study_session(TEXT, UUID, TEXT, JSONB
 REVOKE EXECUTE ON FUNCTION public.create_free_practice_session(UUID, JSONB, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.create_free_practice_session(UUID, JSONB, TIMESTAMPTZ) TO service_role;
 -- All paid selection, including originals-only batches, rechecks access at creation.
+-- Remove the pre-review overload so optional metadata is unambiguous on local replay.
+DROP FUNCTION IF EXISTS public.create_pass_practice_session(UUID, JSONB, TIMESTAMPTZ);
 CREATE OR REPLACE FUNCTION public.create_pass_practice_session(
- p_user_id UUID, p_items JSONB, p_expires_at TIMESTAMPTZ
+ p_user_id UUID, p_items JSONB, p_expires_at TIMESTAMPTZ, p_selection JSONB DEFAULT NULL
 ) RETURNS UUID LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, pg_temp AS $fn$
 DECLARE v_id UUID;
 BEGIN
@@ -136,7 +158,22 @@ BEGIN
   AND paid_at <= clock_timestamp() AND expires_at > clock_timestamp()) THEN
   RAISE EXCEPTION 'Paid practice access required' USING ERRCODE = '42501';
  END IF;
+ IF p_selection IS NOT NULL THEN
+  IF jsonb_typeof(p_selection) IS DISTINCT FROM 'object' THEN
+   RAISE EXCEPTION 'Invalid practice selection' USING ERRCODE = '22023';
+  END IF;
+  IF (p_selection - 'reason' - 'domainCode') <> '{}'::jsonb
+   OR p_selection->>'reason' IS NULL OR p_selection->>'reason' NOT IN ('history','diagnostic_focus','general')
+   OR nullif(p_selection->>'domainCode','') IS NULL OR jsonb_typeof(p_items) IS DISTINCT FROM 'array' THEN
+   RAISE EXCEPTION 'Invalid practice selection' USING ERRCODE = '22023';
+  END IF;
+  IF EXISTS (SELECT 1 FROM jsonb_array_elements(p_items) item WHERE item->>'domain_code' IS DISTINCT FROM p_selection->>'domainCode') THEN
+   RAISE EXCEPTION 'Practice selection must match session domain' USING ERRCODE = '22023';
+  END IF;
+ END IF;
  v_id := public.v2_create_study_session('practice', p_user_id, NULL, p_items, p_expires_at, false, 'GCP_PM_ML_ENG');
+ UPDATE public.study_sessions SET practice_selection = p_selection WHERE id = v_id;
+
  -- Include time spent inserting snapshots. Exceptions roll back the entire session.
  IF NOT EXISTS (SELECT 1 FROM public.user_subscriptions WHERE user_id = p_user_id AND status = 'active')
  AND NOT EXISTS (SELECT 1 FROM public.pmle_passes WHERE user_id = p_user_id AND refunded_at IS NULL
@@ -146,6 +183,6 @@ BEGIN
  RETURN v_id;
 END;
 $fn$;
-REVOKE EXECUTE ON FUNCTION public.create_pass_practice_session(UUID, JSONB, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.create_pass_practice_session(UUID, JSONB, TIMESTAMPTZ) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.create_pass_practice_session(UUID, JSONB, TIMESTAMPTZ, JSONB) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.create_pass_practice_session(UUID, JSONB, TIMESTAMPTZ, JSONB) TO service_role;
 COMMIT;
