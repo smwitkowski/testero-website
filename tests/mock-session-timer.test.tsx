@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MockSession } from "@/components/mock-session";
+import { isValidElement, type ReactElement } from "react";
 import { mockRequest, useMockResource } from "@/components/mock-resource";
 const lifecycle = vi.hoisted(() => ({ effects: [] as (() => void | (() => void))[] }));
 vi.mock("react", async original => ({
@@ -17,7 +18,7 @@ const setData = vi.fn();
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "performance"] });
   lifecycle.effects.length = 0; setData.mockClear();
-  vi.mocked(useMockResource).mockReturnValue({ data: { sessionId: id, status: "in_progress", startedAt: "2026-10-24T10:00:00Z", deadlineAt: "2026-10-24T12:00:00Z", serverNow: "2026-10-24T11:59:58Z", totalQuestions: 50, answeredCount: 0, allocationNotice: null, questions: [{ id: "item", ordinal: 1, domainCode: "test", stem: "Question", options: [{ label: "A", text: "Answer" }], selectedLabel: null }] }, setData, error: null, setError: vi.fn(), reload: vi.fn() });
+  vi.mocked(useMockResource).mockReturnValue({ data: { sessionId: id, status: "in_progress", startedAt: "2026-10-24T10:00:00Z", deadlineAt: "2026-10-24T12:00:00Z", serverNow: "2026-10-24T11:59:58Z", totalQuestions: 50, answeredCount: 0, allocationNotice: null, questions: [{ id: "item", ordinal: 10, domainCode: "test", stem: "Question", options: [{ label: "A", text: "Answer" }], selectedLabel: null }] }, setData, error: null, setError: vi.fn(), reload: vi.fn() });
   vi.mocked(mockRequest).mockReset().mockResolvedValue({ status: "completed", questions: [] });
 });
 afterEach(() => vi.useRealTimers());
@@ -31,6 +32,16 @@ describe("mock session component timer effect", () => {
     expect(setData).toHaveBeenCalledWith({ status: "completed", questions: [] });
     await vi.advanceTimersByTimeAsync(10000); expect(mockRequest).toHaveBeenCalledOnce();
     if (cleanup) cleanup();
+  });
+  it("keeps two-digit navigator labels compact and on one line on mobile", () => {
+    type Props = { children?: unknown; className?: string; "aria-label"?: string };
+    const elements = (node: unknown): ReactElement<Props>[] => Array.isArray(node) ? node.flatMap(elements)
+      : isValidElement<Props>(node) ? [node, ...elements(node.props.children)] : [];
+    const navigator = elements(MockSession({ sessionId: id })).find(element => element.props["aria-label"] === "Question 10, unanswered");
+    expect(navigator).toBeDefined();
+    expect(navigator!.props.className).toContain("whitespace-nowrap");
+    expect(navigator!.props.className).toContain("px-2");
+    expect(navigator!.props.className).toContain("min-w-0");
   });
   it("cleans up the real effect timer when the component leaves the page", async () => {
     MockSession({ sessionId: id });
