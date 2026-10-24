@@ -57,7 +57,8 @@ def test_full_plan_is_one_artifact_with_unfiltered_weighted_budget(monkeypatch, 
         assert judge[judge.index("--judge-model") + 1] == "claude"
         assert "--argon-gate" in judge
         assert ingest == [batch.sys.executable, "scripts/ingest_external_verdicts.py",
-                          "--artifact", str(artifact), "--verdicts", str(artifact.with_suffix("")) + ".verdicts"]
+                          "--artifact", str(artifact), "--verdicts", str(artifact.with_suffix("")) + ".verdicts",
+                          "--continue-quality-rejections"]
 
 
 @pytest.mark.parametrize("section,expected", [("all", "40"), ("1.", "30")])

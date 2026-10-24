@@ -1197,13 +1197,16 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None,
 @click.option("--artifact", required=True, type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option("--verdicts", required=True, type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.option("--dry-run", is_flag=True, help="Validate and record decisions locally; never construct a DB client.")
-def main(artifact, verdicts, dry_run):
+@click.option("--continue-quality-rejections", is_flag=True,
+              help="Treat verified quality rejections as complete outcomes; missing or invalid verdicts still fail.")
+def main(artifact, verdicts, dry_run, continue_quality_rejections):
     try:
         if artifact.is_symlink():
             raise click.ClickException("Artifact cannot be a symlink")
         artifact = artifact.resolve()
         with artifact_lock(artifact):
-            ingest(artifact, verdicts.resolve(), dry_run=dry_run)
+            ingest(artifact, verdicts.resolve(), dry_run=dry_run,
+                   continue_quality_rejections=continue_quality_rejections)
     except click.ClickException:
         raise
     except Exception:

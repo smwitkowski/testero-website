@@ -128,7 +128,7 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resu
     judge = [sys.executable, "scripts/judge_requests.py", "--requests", str(base) + ".judge-requests",
              "--verdicts", str(base) + ".verdicts", "--judge-model", "claude", "--parallel", str(parallel), "--argon-gate"]
     ingest = [sys.executable, "scripts/ingest_external_verdicts.py", "--artifact", str(artifact),
-              "--verdicts", str(base) + ".verdicts"]
+              "--verdicts", str(base) + ".verdicts", "--continue-quality-rejections"]
     return artifact, export, [generate, judge, ingest]
 
 
