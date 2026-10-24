@@ -1,0 +1,76 @@
+[
+  {
+    "name": "ascii",
+    "stem": "What should you do?",
+    "answers": [
+      {
+        "choice_text": "Keep it",
+        "explanation_text": "Correct rationale",
+        "is_correct": true
+      },
+      {
+        "choice_text": "Change it",
+        "explanation_text": "Wrong rationale",
+        "is_correct": false
+      },
+      {
+        "choice_text": "Wait",
+        "explanation_text": "Too late",
+        "is_correct": false
+      },
+      {
+        "choice_text": "Ignore",
+        "explanation_text": "Unsafe",
+        "is_correct": false
+      }
+    ],
+    "canonical": "testero-content-v1|19:What should you do?7:Keep it17:Correct rationale1:39:Change it15:Wrong rationale6:Ignore6:Unsafe4:Wait8:Too late",
+    "sha256": "8f762c759c8a62f6673a32c03b89222c473deff170c761503542482319c97d65"
+  },
+  {
+    "name": "utf8-delimiters",
+    "stem": "Café | 雲\n12:?",
+    "answers": [
+      {
+        "choice_text": "É",
+        "explanation_text": "✅ yes",
+        "is_correct": true
+      },
+      {
+        "choice_text": "é",
+        "explanation_text": "No | 3:x",
+        "is_correct": false
+      },
+      {
+        "choice_text": "😀",
+        "explanation_text": "Line\nnext",
+        "is_correct": false
+      },
+      {
+        "choice_text": "Z",
+        "explanation_text": "",
+        "is_correct": false
+      }
+    ],
+    "canonical": "testero-content-v1|16:Café | 雲\n12:?2:É7:✅ yes1:31:Z0:3:é8:No | 3:x4:😀9:Line\nnext",
+    "sha256": "65d9c1293f75edf9d051aec7237c96c703b8191056cef766ae60b345eb2806da"
+  },
+  {
+    "name": "legacy-null",
+    "stem": "Legacy",
+    "answers": [
+      {
+        "choice_text": "One",
+        "explanation_text": null,
+        "is_correct": true
+      },
+      {
+        "choice_text": "Two",
+        "explanation_text": null,
+        "is_correct": false
+      }
+    ],
+    "canonical": "testero-content-v1|6:Legacy3:One0:1:13:Two0:",
+    "sha256": "14c6c7fbf103a220695c142410a1db2ccdc34acbdbc99bc7c3f482ea63d90cc0"
+  }
+]
