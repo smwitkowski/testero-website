@@ -27,3 +27,4 @@ gha-creds-*.json
 /content-pipeline/.cache/council-health-pytest/
 /content-pipeline/.cache/council-health-audit-tests/
 /content-pipeline/.cache/generation/machine-learning-engineer-v5-v6-offline-smoke.json
+/content-pipeline/.cache/nightly-offline-proof/

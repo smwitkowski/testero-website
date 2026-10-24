@@ -1,0 +1,183 @@
+{
+  "schema_version": 1,
+  "task": "D-045 pipeline v6 week1",
+  "code_commit": "19af7b4607a4d26cb299c4fa73e55964ff847339",
+  "environment": {
+    "project": "frontend.prime-pipeline-v6",
+    "branch": "prime/pipeline-v6",
+    "dependency_mode": "npm ci; uv sync --frozen; verification via clean native project commands",
+    "local_database": "loopback56541/56542; migrationsA-C applied locally without reset"
+  },
+  "restrictions": {
+    "production_writes": false,
+    "production_migrations": false,
+    "deployment": false,
+    "merge": false,
+    "secret_env_files_read": false,
+    "pipeline_model_or_paid_api_calls": false
+  },
+  "gates": [
+    {
+      "name": "python",
+      "command": "cd content-pipeline && env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true PYTHON_DOTENV_DISABLED=1 uv run --frozen --offline pytest -q",
+      "exit_code": 0,
+      "duration_seconds": 111.29515862500011,
+      "local_log": "evidence/pipeline-v6/pytest-final.log",
+      "log_sha256": "9525d1c18ec6c0a88861824dd4550645aac05b5d620d2cc31616e35657747e30",
+      "summary": {
+        "passed": 3148,
+        "skipped": 3,
+        "warnings": 25,
+        "subtests_passed": 48,
+        "pytest_seconds": 109.82
+      }
+    },
+    {
+      "name": "app",
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm test",
+      "exit_code": 0,
+      "duration_seconds": 19.534442082999703,
+      "local_log": "evidence/pipeline-v6/npm-test-final.log",
+      "log_sha256": "35e6fdad96495a193c03394a739e67b180289d05dfc378e51317d73730ca3ae9",
+      "summary": {
+        "passed": 1934,
+        "files_passed": 106
+      }
+    },
+    {
+      "name": "database",
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run test:db:local",
+      "exit_code": 0,
+      "duration_seconds": 58.221376249999594,
+      "local_log": "evidence/pipeline-v6/db-local-final.log",
+      "log_sha256": "7313e45919b2f139e434985f3cc56b04346007405442f29955aae50bcb3a1f3e",
+      "summary": {
+        "groups": [
+          "baseline",
+          "migrationA publication/hash/ACL/revision/cycle/floor/variants/concurrent writers",
+          "migrationB ownership/mockreport/dedupe/repeatpage/globalUTC5perday/owner10perhour",
+          "migrationC withdrawnanswer/mockexclusion/history/ACL"
+        ]
+      }
+    },
+    {
+      "name": "lint",
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run lint",
+      "exit_code": 0,
+      "duration_seconds": 19.902102625000225,
+      "local_log": "evidence/pipeline-v6/lint-final.log",
+      "log_sha256": "1b84a718594e4458301221050423eb670311de83beeac6c27fc3540a0b668ad0",
+      "summary": {}
+    },
+    {
+      "name": "provenance_sql",
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true node --input-type=module -e 'import {readFileSync} from \"node:fs\"; import {run} from \"./tests/helpers/pipeline-v6-db.mjs\"; const sql=readFileSync(\"content-pipeline/sql/draft_provenance.sql\",\"utf8\").replaceAll(\":'\"'\"'artifact_ids'\"'\"'\",\"'\"'\"'[]'\"'\"'\"); const result=await run(sql); console.log(\"PASS local provenance SQL in READ ONLY transaction with explicit empty artifact manifest; grouping rows=\"+(result.output ? result.output.split(\"\\n\").length : 0));'",
+      "exit_code": 0,
+      "duration_seconds": 1.061204292000184,
+      "local_log": "evidence/pipeline-v6/provenance-sql.log",
+      "log_sha256": "d12f43743e016b1ea995ce28468ea452b48e860dad16315a9b30b2fa50fee496",
+      "summary": {
+        "scope": "Local loopback DB only; committed SQL READ ONLY/ROLLBACK; explicit artifact_ids=[]; output counts not production evidence"
+      }
+    },
+    {
+      "name": "withdrawal_e2e_target",
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true node --input-type=module -e 'import {execFile,spawn} from \"node:child_process\";import {promisify} from \"node:util\";import {LOCAL_STRIPE_ENV,startStripeFixtureServer} from \"./scripts/stripe-fixture.mjs\";const {stdout}=await promisify(execFile)(\"supabase\",[\"status\",\"-o\",\"json\"]);const s=JSON.parse(stdout);const api=new URL(s.API_URL),db=new URL(s.DB_URL);if(![\"localhost\",\"127.0.0.1\"].includes(api.hostname)||api.port!==\"56541\"||![\"localhost\",\"127.0.0.1\"].includes(db.hostname)||db.port!==\"56542\")throw Error(\"Local endpoints required\");const fixture=await startStripeFixtureServer();const env={...process.env,...LOCAL_STRIPE_ENV,NEXT_PUBLIC_SUPABASE_URL:s.API_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY:s.ANON_KEY,SUPABASE_SERVICE_ROLE_KEY:s.SERVICE_ROLE_KEY,DATABASE_URL:s.DB_URL,NEXT_PUBLIC_POSTHOG_KEY:\"\",NEXT_PUBLIC_POSTHOG_HOST:\"\",NEXT_TELEMETRY_DISABLED:\"1\"};const child=spawn(\"npx\",[\"playwright\",\"test\",\"e2e/withdrawn-questions.spec.ts\"],{env,stdio:\"inherit\"});for(const signal of [\"SIGINT\",\"SIGTERM\"])process.on(signal,()=>child.kill(signal));child.on(\"exit\",async code=>{await fixture.close();process.exitCode=code??1});'",
+      "exit_code": 0,
+      "duration_seconds": 14.701581666000493,
+      "local_log": "evidence/pipeline-v6/e2e-withdrawal.log",
+      "log_sha256": "81d69eda72fd90824348dbcb4dd86ed29862ee32319e0fb74e018c4ea9b5c276",
+      "summary": {
+        "passed": 1,
+        "required_flow": "quarantined saved questions disappear from diagnostic, practice, mock answers and review"
+      }
+    },
+    {
+      "name": "browser_full",
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run test:e2e:local",
+      "exit_code": 0,
+      "duration_seconds": 231.90024358299888,
+      "local_log": "evidence/pipeline-v6/e2e-final.log",
+      "log_sha256": "38c6afac6574261dbcf596a489cb746ed88c8c9dac4f712cc971aa167591fff6",
+      "summary": {
+        "passed": 21,
+        "skipped": 16,
+        "required_withdrawal_flow": "passed",
+        "skip_reasons": [
+          "5beta cases require explicit allowlist and dedicated empty beta bank",
+          "2production-server-only checks",
+          "1MCP QA-only check",
+          "8manual/seeded QA capture checks"
+        ]
+      }
+    },
+    {
+      "name": "build",
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run build",
+      "exit_code": 0,
+      "duration_seconds": 10.58490458399865,
+      "local_log": "evidence/pipeline-v6/build-final.log",
+      "log_sha256": "00eda738c6fa87c0110d2e6a668962f51c021d7eb817f58e13e7a36c69dae3e4",
+      "summary": {}
+    },
+    {
+      "name": "typecheck",
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run typecheck",
+      "exit_code": 0,
+      "duration_seconds": 2.1333249590006744,
+      "local_log": "evidence/pipeline-v6/typecheck-final.log",
+      "log_sha256": "a8a91395e946881ebe9fc6bf6005d3f7962bf4aa3576af3bcf38175b9e9a3792",
+      "summary": {}
+    },
+    {
+      "name": "docker",
+      "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true docker build .",
+      "exit_code": 0,
+      "duration_seconds": 23.86592458300038,
+      "local_log": "evidence/pipeline-v6/docker-final.log",
+      "log_sha256": "d1f7afd761f7c8560789af16ff1072ed7b363bbd36bd0cb9aa25353473f14627",
+      "summary": {
+        "image_sha256": "a9cc38bc8e7ec0dcd53d92e710cfbcad2256de728e02a1a768ea4ef10bee7bf6",
+        "warnings": [
+          "Docker SecretsUsedInArgOrEnv warning refers to pre-existing local placeholder ENV; no real service key supplied."
+        ]
+      }
+    }
+  ],
+  "external_wrappers": {
+    "pipeline-nightly.sh": {
+      "path": "/Users/switkowski/Projects/Testero/hq/tools/pipeline-nightly.sh",
+      "sha256": "77501f8eed0b4beea1e6e813098b9e3b0815fbb19202548346b29e9b66f2c10b",
+      "bash_n_exit": 0,
+      "committed_in_frontend_repo": false
+    },
+    "judge-and-ingest.sh": {
+      "path": "/Users/switkowski/Projects/Testero/hq/tools/judge-and-ingest.sh",
+      "sha256": "cd692966a4a08bdb1d1aa07fd4340cb7ac7046ef9d3e1d4b8a85411d13925bc4",
+      "bash_n_exit": 0,
+      "committed_in_frontend_repo": false
+    }
+  },
+  "limits": [
+    "Offline fixtures do not establish live semantic model quality, production readiness, runtime auth, provider pricing, or email deliverability.",
+    "Full D-029 pilot12 and accepted PDE gold corpora must be supplied by coordinator.",
+    "Live pilot and two shadow nights are coordinator work after merge."
+  ],
+  "resolved_findings": [
+    "Atomic and Python publication refuse variants using actual parent_question_id.",
+    "Deterministic freshness veto includes all S11 aliases across learner fields.",
+    "Council pauses survive a later malformed verdict; malformed outputs are not catches.",
+    "Re-council carries PDE style/evidence policies through receipt/artifact builders and strict parsing.",
+    "Argon v3 honors frozen cert style; historical v1/v2 request hashes remain exact.",
+    "Legacy retirement accepts actual SQL outcomechanged and journals partial/unknown writes.",
+    "Withdrawal E2E report-form selector changed from label text to accessible combobox role/name after trace-confirmed locator timeout; all scoring/withdrawal assertions retained."
+  ],
+  "gate_scope_note": "Full Python ran at4c0f0d9; later commit changes one E2E locator only. App/SQL source remained unchanged across final gates.",
+  "skipped_work": [
+    "Third semantic second-defensible-answer canary deferred with reason in runbook.",
+    "Live corpus quality, live pilot and two shadow nights are explicitly coordinator-only.",
+    "Per-cert cache generalization and per-revision/exposure metrics are week2."
+  ],
+  "recorded_at": "2026-10-24T20:18:50.645105+00:00",
+  "status": "passed_with_documented_skips"
+}
