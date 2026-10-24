@@ -66,6 +66,18 @@
       "new": "Agent Platform",
       "status": "renamed",
       "source": "scripts/audit_bank.py NAME_MAP, guide-wide branding"
+    },
+    {
+      "old": "AI Platform",
+      "new": "Agent Platform",
+      "status": "retired",
+      "source": "shared/question_style.py S11"
+    },
+    {
+      "old": "Gemini Enterprise Agent Platform",
+      "new": "Agent Platform",
+      "status": "renamed",
+      "source": "shared/question_style.py S11 short-name rule"
     }
   ]
 }

@@ -130,7 +130,7 @@ def _row_errors(row, question, scope, expected_hash):
     if (not isinstance(domain, dict) or domain.get("id") != row.get("domain_id")
             or domain.get("code") != scope["domain_code"] or domain.get("exam") != exam):
         errors.append("database_domain_mismatch")
-    if row.get("variant_of") is not None:
+    if row.get("parent_question_id") is not None:
         errors.append("variants_not_original_publications")
     errors.extend("grounding:" + error for error in grounding_errors(row))
     return errors

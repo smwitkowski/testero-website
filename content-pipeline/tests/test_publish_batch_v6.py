@@ -220,3 +220,19 @@ def test_ambiguous_apply_keeps_durable_intent(publish_case):
     assert checkpoints[0]["candidates"][0]["write_status"] == "unknown"
     assert checkpoints[-1]["published"] == 0
     assert "private provider body" not in json.dumps(checkpoints)
+
+
+@pytest.mark.parametrize("field", ["stem","correct_answer","correct_explanation","distractor_1","distractor_1_explanation","distractor_2","distractor_2_explanation","distractor_3","distractor_3_explanation"])
+@pytest.mark.parametrize("old", ["AI Platform","Gemini Enterprise Agent Platform","Vertex AI"])
+def test_style_s11_names_veto_all_learner_fields(publish_case,field,old):
+    _,_,question,_,_,_,_=publish_case
+    question[field] += " " + old
+    assert freshness_errors(question)
+
+
+def test_variant_uses_real_parent_column_not_an_invented_alias(publish_case):
+    case,_,_,_,_,_,row=publish_case
+    row["parent_question_id"]="00000000-0000-0000-0000-000000000001"
+    report,_=publisher.plan_publication(case[0],case[1],[row])
+    assert not report["would_publish"]
+    assert "variants_not_original_publications" in report["candidates"][0]["reasons"]
