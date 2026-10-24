@@ -62,7 +62,7 @@ class SupabaseClient:
             return None
 
     def insert_question(self, question_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Insert a run-linked DRAFT; publication only happens in review_batch.py."""
+        """Insert a run-linked DRAFT; only the strict publisher authorizes ACTIVE."""
         if not question_data.get("generation_run_id"):
             raise ValueError("Generated questions require generation_run_id")
         draft_data = {**question_data, "status": "DRAFT"}
@@ -79,19 +79,26 @@ class SupabaseClient:
     def update_question_review(
         self, question_id: str, run_id: str, review_status: str, review_notes: str
     ) -> bool:
-        """Finalize review metadata only after all content for a DRAFT is saved."""
+        """Finalize complete staged DRAFT content through the guarded lifecycle RPC."""
+        if review_status not in ("GOOD", "NEEDS_ANSWER_FIX"):
+            raise ValueError("Unsupported DRAFT final review status")
         try:
-            response = (
-                self.client.table("questions")
-                .update({"review_status": review_status, "review_notes": review_notes})
-                .eq("id", question_id)
-                .eq("generation_run_id", run_id)
-                .eq("status", "DRAFT")
-                .execute()
-            )
-            return bool(response.data)
-        except Exception as e:
-            print(f"Error finalizing question review {question_id}: {e}")
+            data = self.client.rpc("finalize_question_review", {
+                "p_question_id": question_id,
+                "p_generation_run_id": run_id,
+                "p_review_status": review_status,
+                "p_review_notes": review_notes,
+            }).execute().data
+            return (isinstance(data, dict) and data.get("question_id") == question_id
+                    and data.get("changed") is True and data.get("outcome") == "changed"
+                    and type(data.get("revision")) is int and data["revision"] >= 1
+                    and isinstance(data.get("content_sha256"), str)
+                    and len(data["content_sha256"]) == 64
+                    and all(char in "0123456789abcdef" for char in data["content_sha256"]))
+        except Exception:
+            # Transport bodies can contain credentials. Unknown writes must be
+            # reconciled through the caller's persistence journal, never rerolled.
+            print(f"Error finalizing question review {question_id}; reconcile lifecycle event state")
             return False
 
     def insert_answers_batch(self, answers_data: list[Dict[str, Any]]) -> list[Dict[str, Any]]:

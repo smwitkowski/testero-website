@@ -212,7 +212,7 @@ def persist_candidate(client, scope, question, judge, grounding, exam, domain_id
         before_insert()
     saved = client.insert_question({
         "exam": exam, "domain_id": domain_id, "stem": question["stem"], "difficulty": difficulty,
-        "status": "DRAFT", "review_status": "UNREVIEWED" if judge.passed else final_review,
+        "status": "DRAFT", "review_status": "UNREVIEWED",
         "review_notes": review_notes, "generation_run_id": run_id,
         **({"id": question_id} if question_id is not None else {}),
     })
