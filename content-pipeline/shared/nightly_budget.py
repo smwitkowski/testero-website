@@ -36,7 +36,7 @@ def reserve(provider, ceiling, *, model):
     with (root / "nightly-budget.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         now = datetime.now(timezone.utc)
-        report = accounting(load_calls(root), now, rates=config.get("rates"))
+        report = accounting(load_calls(root), now, rates=config.get("rates"), cap_overrides=config.get("cap_overrides"))
         check_reserve(report, {"openrouter": ceiling if provider == "openrouter" else 0,
                                "exa": ceiling if provider == "exa" else 0})
         record = {"ts": now.isoformat(), "provider": provider, "model": model,

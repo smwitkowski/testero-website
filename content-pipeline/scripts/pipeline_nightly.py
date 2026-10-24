@@ -140,7 +140,7 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
     report = {"status": "planned", "mode": "shadow", "batches": [], "at": now.isoformat()}
     planned = plan(coverage, now, batches=config.get("batches", 2), count=config.get("count", 40))
     report["coverage"] = planned["coverage"]
-    report["budget"] = {} if live else accounting(load_calls(config["calls_root"]), now, rates=config.get("rates"))
+    report["budget"] = {} if live else accounting(load_calls(config["calls_root"]), now, rates=config.get("rates"), cap_overrides=config.get("cap_overrides"))
     publication_live = live and (tools / "PUBLISH_LIVE").is_file()
     report["mode"] = "publish-live" if publication_live else "shadow"
     run_dir = state_dir / now.strftime("%Y%m%d")
@@ -196,7 +196,7 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
                 paused(tools)
                 if "--apply" in command and not (tools / "PUBLISH_LIVE").is_file():
                     raise HardStop("PUBLISH_LIVE removed before a write stage")
-                report["budget"] = accounting(load_calls(config["calls_root"]), datetime.now(timezone.utc), rates=config.get("rates"))
+                report["budget"] = accounting(load_calls(config["calls_root"]), datetime.now(timezone.utc), rates=config.get("rates"), cap_overrides=config.get("cap_overrides"))
             report["status"], report["running_stage"] = "running", name
             report["next_command"] = command
             save(checkpoint, report)
@@ -222,7 +222,7 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
         try:
             # Pause/budget checks precede even the subscription model probes.
             paused(tools)
-            report["budget"] = accounting(load_calls(config["calls_root"]), datetime.now(timezone.utc), rates=config.get("rates"))
+            report["budget"] = accounting(load_calls(config["calls_root"]), datetime.now(timezone.utc), rates=config.get("rates"), cap_overrides=config.get("cap_overrides"))
             preflight(execute=execute, check=lambda: paused(tools))
             paused(tools)
             from scripts.retire_legacy import get_client
@@ -310,7 +310,7 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
 
         report["status"] = "checkpointed_stop" if hard_stop else ("partial" if stage_failed else "complete")
         try:
-            report["budget"] = accounting(load_calls(config["calls_root"]), datetime.now(timezone.utc), rates=config.get("rates"))
+            report["budget"] = accounting(load_calls(config["calls_root"]), datetime.now(timezone.utc), rates=config.get("rates"), cap_overrides=config.get("cap_overrides"))
         except Exception as error:
             failed(error)
             report["status"] = "checkpointed_stop"
