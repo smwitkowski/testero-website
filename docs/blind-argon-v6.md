@@ -5,6 +5,8 @@ New generation freezes `execution_policy: short_circuit_v2`. With `--argon-gate`
 and `review` calls. The blind prompt uses only the stem and deterministic
 learner-only shuffled choices. It contains no key, rationales, objective, docs,
 receipts, or other verdicts. Argon review remains an independent fresh call.
+Only v3 Argon review inherits the frozen objective style policy, including PDE
+5.2/5.3 rules. Historical v1/v2 style references remain byte-identical.
 No model or live calls were used to implement or test this policy.
 
 ## Execution and admission

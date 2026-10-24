@@ -47,7 +47,9 @@ def build_argon_request(question, scope, context, evidence, *, review_only=False
         version = 2 if review_only else 1
     if type(version) is not int or version not in (1, 2, 3) or review_only != (version == 2):
         raise ValueError("Invalid Argon request version or mode")
-    inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence)
+    # Frozen v1/v2 requests predate objective-scoped Argon style references.
+    inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence,
+                               **({"style_policy": scope.get("style_policy")} if version == 3 else {}))
     full = {**inputs["evidence"], "style_reference": inputs["style"]["style_reference"]}
     return {"model": MODEL, "version": version,
             "calls": {name: {"judge_prompt": signature_prompt(signature, data),

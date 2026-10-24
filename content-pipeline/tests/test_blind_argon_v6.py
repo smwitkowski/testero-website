@@ -279,3 +279,36 @@ def test_versioned_requests_rebuild_and_real_ingest_remain_draft_only(v4, policy
     entry = saved["candidates"][0]
     assert entry["judge_verdict"]["passed"] is passes
     assert entry["accepted"] is False and "inserted_question_id" not in entry
+
+
+@pytest.mark.parametrize("style_version", ["5.2", "5.3"])
+def test_v3_argon_review_uses_frozen_pde_style_without_leaking_to_blind(style_version):
+    from shared.gates import build_gate_inputs
+    from shared.question_style import PDE_STYLE_RULES, PDE_FILLER_STYLE_RULES
+    from test_external_generation import QUESTION, receipts
+    policy = {"version": style_version, "objective_id": "data-engineer:standard:1.1:1", "allowance": None}
+    scope = {"domain_prompt": "scope", "style_policy": policy}
+    request = argon.build_argon_request(QUESTION, scope, "docs", receipts(), version=3)
+    expected = build_gate_inputs(QUESTION, "scope", "docs", receipts(), style_policy=policy)["style"]["style_reference"]
+    review_user = request["calls"]["review"]["judge_prompt"].split("\n\nUSER:\n", 1)[1]
+    assert expected in review_user
+    assert (PDE_FILLER_STYLE_RULES if style_version == "5.3" else PDE_STYLE_RULES) in review_user
+    blind_user = request["calls"]["blind"]["judge_prompt"].split("\n\nUSER:\n", 1)[1]
+    assert "style_reference" not in blind_user
+    assert expected not in blind_user
+
+
+@pytest.mark.parametrize("version", [1, 2])
+def test_frozen_argon_v1_v2_ignore_new_scope_style_policy(version):
+    from test_external_generation import QUESTION, receipts
+    scope = {"domain_prompt": "scope", "style_policy": {
+        "version": "5.3", "objective_id": "data-engineer:standard:1.1:1", "allowance": None}}
+    legacy = argon.build_argon_request(QUESTION, {"domain_prompt": "scope"}, "docs", receipts(),
+        review_only=version == 2, version=version)
+    with_new_scope = argon.build_argon_request(QUESTION, scope, "docs", receipts(),
+        review_only=version == 2, version=version)
+    assert json.dumps(with_new_scope, ensure_ascii=False) == json.dumps(legacy, ensure_ascii=False)
+    # Captured before the v3-only style-policy fix; freeze historical prompt bytes.
+    expected = {1: "021b3c5d5a019bfaf8e901f16f0018ebbfcc60f443c7789a2d5c0c1dfe1accd4",
+                2: "f96009d2829d95dcf24096ac405fe8893b373f0f78036f5d49bd870bd23839a5"}
+    assert canonical_sha256(with_new_scope) == expected[version]
