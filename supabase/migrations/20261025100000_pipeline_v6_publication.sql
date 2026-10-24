@@ -149,6 +149,9 @@ BEGIN
     (p_expected_sha256 !~ '^[0-9a-f]{64}$' OR v_hash IS DISTINCT FROM p_expected_sha256)) THEN
   RAISE EXCEPTION 'Question content hash mismatch' USING ERRCODE='22023';
  END IF;
+ IF p_action = 'published' AND v_question.parent_question_id IS NOT NULL THEN
+  RAISE EXCEPTION 'Only original questions may publish' USING ERRCODE='55000';
+ END IF;
  IF p_action = 'published' AND (v_question.status IS DISTINCT FROM 'DRAFT'
     OR v_question.review_status IS DISTINCT FROM 'GOOD') THEN
   RAISE EXCEPTION 'Only GOOD DRAFT questions may publish' USING ERRCODE='55000';

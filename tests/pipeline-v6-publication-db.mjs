@@ -86,10 +86,23 @@ try {
   const race = await Promise.all([run(service(publish(ids[7],await hash(ids[7])))),result(quarantine(active))]);
   assert.equal(race[0].code,0);
   assert.ok(Number(await scalar(`SELECT count(*) FROM public.questions WHERE domain_id=${q(domain)} AND status='ACTIVE' AND parent_question_id IS NULL`))>=3);
-  // Variants never count towards the floor and may be removed without reducing it.
-  await run(`UPDATE public.questions SET parent_question_id=${q(active)} WHERE id=${q(ids[8])}`);
-  await run(service(publish(ids[8],await hash(ids[8]))));
+  // A concurrent family edit cannot sneak a variant through an original-only
+  // publisher. The parent metadata is checked AFTER acquiring the row lock.
+  const originalHash = await hash(ids[8]);
+  const familyEditor = await openTransaction(`UPDATE public.questions SET parent_question_id=${q(active)} WHERE id=${q(ids[8])}`);
+  const waitingVariantPublisher = run(service(publish(ids[8],originalHash)),true);
+  familyEditor.release();
+  await familyEditor.completed;
+  const variantPublish = await waitingVariantPublisher;
+  assert.notEqual(variantPublish.code,0);
+  assert.match(variantPublish.error,/Only original questions may publish/);
+  await denied(service(publish(ids[8],await hash(ids[8]))),/Only original questions may publish/);
+  assert.equal(await scalar(`SELECT count(*) FROM public.question_events WHERE question_id=${q(ids[8])} AND action='published'`),'0');
+  // Already-approved legacy variants can still withdraw and restore. This fixture
+  // uses an administrator-only setup write, not the original-only publish RPC.
+  await run(`UPDATE public.questions SET status='ACTIVE',content_sha256=public.question_content_sha256(id) WHERE id=${q(ids[8])}`);
   assert.equal((await result(quarantine(ids[8]))).changed,true);
+  assert.equal((await result(restore(ids[8],await hash(ids[8])))).changed,true);
   console.log('PASS pipeline v6 A: shared SQL/Python UTF8 hashes; service-only ACL/RLS; integrity/hash/revision/cycle fences; answer immutability; concurrent publish/withdraw/floor; variants; legacy eligibility');
 } finally {
   await run(`DELETE FROM public.question_events WHERE question_id IN (${ids.map(q).join(',')});
