@@ -1,5 +1,7 @@
 -- LOCAL DEVELOPMENT ONLY: educational samples, not real exam questions or production inventory.
 BEGIN;
+-- Trusted local fixture bootstrap; production transitions must use lifecycle RPCs.
+SELECT set_config('testero.lifecycle','1',true);
 INSERT INTO public.exam_domains (id,code,name,description) VALUES ('b2a13844-ac7b-56bf-bd99-38cd344e37c0','ARCHITECTING_LOW_CODE_ML_SOLUTIONS','Architecting Low-Code ML Solutions','Local educational PMLE sample domain') ON CONFLICT DO NOTHING;
 INSERT INTO public.exam_domains (id,code,name,description) VALUES ('65405f4d-c27d-5ce6-a46f-dbe1126639dd','COLLABORATING_TO_MANAGE_DATA_AND_MODELS','Collaborating to Manage Data & Models','Local educational PMLE sample domain') ON CONFLICT DO NOTHING;
 INSERT INTO public.exam_domains (id,code,name,description) VALUES ('ad88ed99-0ed0-5a8a-9eab-9d6cfdb40bfa','SCALING_PROTOTYPES_INTO_ML_MODELS','Scaling Prototypes into ML Models','Local educational PMLE sample domain') ON CONFLICT DO NOTHING;
@@ -187,4 +189,5 @@ INSERT INTO public.answers (id,question_id,choice_label,choice_text,is_correct,e
 INSERT INTO public.answers (id,question_id,choice_label,choice_text,is_correct,explanation_text) SELECT '0e6daedb-d172-5d4e-8f12-fdbab3ebc16e','b6a36901-6237-524c-8b0f-4106fbcfbfc5','D','Treat every alert as a confirmed outage',false,'A statistical alert requires interpretation and is not always an outage.' WHERE NOT EXISTS (SELECT 1 FROM public.answers WHERE id='0e6daedb-d172-5d4e-8f12-fdbab3ebc16e') ON CONFLICT DO NOTHING;
 INSERT INTO public.explanations (id,question_id,explanation_text,reasoning_style,doc_links) VALUES ('526e75bd-94ed-5365-984f-2b1ac63891a4','b6a36901-6237-524c-8b0f-4106fbcfbfc5','Actionable thresholds reduce noise while retaining useful detection.','SHORT_RATIONALE','[]'::jsonb) ON CONFLICT DO NOTHING;
 UPDATE public.questions SET status='ACTIVE' WHERE source_ref LIKE 'local-educational-seed-%' AND status='DRAFT' AND review_status='GOOD';
+SELECT set_config('testero.lifecycle','',true);
 COMMIT;

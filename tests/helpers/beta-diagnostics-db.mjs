@@ -133,7 +133,7 @@ export async function verifyBetaDiagnostics({ run, scalar, q, pmleDomain, pmleCo
         RAISE EXCEPTION 'PMLE exam persistence or quota-free practice behavior changed';
       END IF;
     END $pmle$;`);
-    await run(`BEGIN; ${fixture} SET LOCAL ROLE service_role; ${checks.join("\n")} ROLLBACK;`);
+    await run(`BEGIN; SELECT set_config('testero.lifecycle','1',true); ${fixture} SET LOCAL ROLE service_role; ${checks.join("\n")} ROLLBACK;`);
   }
   // An otherwise eligible bank outside the approved five must not become a beta.
   const outside = "security-engineer", domain = randomUUID(), ids = Array.from({ length: 20 }, () => randomUUID());

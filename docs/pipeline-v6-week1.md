@@ -2,11 +2,17 @@
 
 No live model calls, paid APIs, production writes, deployment, scheduler edits or merge were used to implement this branch. All live commands below are for the coordinator only, after merge and migration approval.
 
-## Apply in order (coordinator only)
+## Deploy order (coordinator only)
 
-1. `supabase/migrations/20261025100000_pipeline_v6_publication.sql` — revision/content hash, service-only events and locked lifecycle RPCs.
-2. `supabase/migrations/20261025110000_pipeline_v6_report_quarantine.sql` — report dedupe, global daily quarantine cap, floor and mock reports.
-3. `supabase/migrations/20261025120000_withdrawn_session_questions.sql` — refuse withdrawn answering/reveals and exclude mock scoring.
+1. Retire the old `run-cert-rotation.sh` schedule before enabling the new nightly. Do not run both schedulers or split their cap ledgers.
+2. Apply **A**: `supabase/migrations/20261025100000_pipeline_v6_publication.sql` — revision/hash, service-only events, guarded lifecycle RPCs and variant withdrawal.
+3. **Deploy the updated app**. It must handle withdrawn items and work before the new C snapshot columns exist.
+4. Apply **B**, then **C**, immediately after the new app is running:
+   - `supabase/migrations/20261025110000_pipeline_v6_report_quarantine.sql` — report quarantine, anonymous corroboration, dedupe and caps.
+   - `supabase/migrations/20261025120000_withdrawn_session_questions.sql` — persistent item withdrawal/exclusion snapshots and stable completed results/history.
+5. Configure the fresh detached `origin/main` nightly worktree with durable external state/cap ledgers. Run two reviewed shadow nights with `PUBLISH_LIVE` absent before enabling publication.
+
+**Do not apply B or C while the old app is still serving.** A report-driven withdrawal during that window can break old session readers. Keep re-council `--apply` disabled until the app and all three migrations are ready.
 
 Do not use `supabase db push`, link or project-ref against production from the worker. The coordinator applies reviewed migrations through the approved deployment process.
 
@@ -17,9 +23,9 @@ Do not use `supabase db push`, link or project-ref against production from the w
 - `publish_batch.py` is the sole v6 publisher. Every seat must provide its complete schema and PASS, both blind answers must equal the key with confidence at least 0.8, and freshness must pass. It validates frozen request/source/receipt/registry/journal provenance, stored grounding and all answer explanations. It compares label-independent canonical content and calls a row-locked hash-recomputing RPC.
 - Shadow mode is default. An explicit current DB read needs `--read-db`; offline reports need `--questions`. `--apply` reads current rows, never an offline export. A pre-write durable checkpoint preserves ambiguous outcomes; reconcile event history before retrying an unknown write.
 - Canary requests have the normal judge-visible shape in a separate marked tree. Ingest and publisher hard-refuse that tree before DB access. First two defect types ship (swapped key and retired name). Missing/malformed judgments are errors, not catches. Rolling windows are at least 20 per type. Gold below 80% pages without a pause.
-- Critical reports quarantine immediately, subject to the domain floor and abuse cap. Re-council binds hash, revision and latest quarantine cycle; uncertainty or errors never retire a question.
-- Saved diagnostic/practice/mock sessions recheck current status. Withdrawn items are skipped with a notice. Mock totals exclude them. Mock review includes reporting.
-- Nightly wrappers contain no paid generation fallback. Paid transport reservations enforce weekly caps, and unknown cost is not treated as zero. PMLE inventory revalidates every 300 seconds. Shared per-cert cache generalization is week 2.
+- One signed-in critical report can quarantine immediately; anonymous reports need two distinct owned hashes in the current publication/restoration cycle. The floor, dedupe and abuse caps still apply. Withdrawing an original also withdraws active variants. Re-council binds hash, revision and latest quarantine cycle. Renames and receipt-only evidence failures need rewrite, not retirement; blocked preparation pages after seven days.
+- Unfinished diagnostic/practice/mock sessions persist withdrawal/exclusion on each saved item. Completed results and history keep those snapshot denominators through later restoration. Current status still fences content/reveals. Mock review includes reporting.
+- Nightly runs reviewed code from a fresh detached `origin/main` worktree with state/cap ledgers outside it. There is no paid generation fallback. A stage failure blocks publication but still reaches safe re-council work and the digest; hard auth/quota/budget/pause stops do not authorize more paid calls. Unknown cost is not zero. PMLE inventory revalidates every 300 seconds; per-cert cache generalization remains week 2.
 
 ## Offline verification
 
@@ -72,8 +78,14 @@ See `content-pipeline/docs/council-health-v6.md` for separate prepare → live j
 
 ## External wrapper handoff
 
-The task-authorized files `hq/tools/pipeline-nightly.sh` and `hq/tools/judge-and-ingest.sh` were written directly outside this Git repository. Their SHA-256 values and syntax checks are recorded in the verification manifest. The old rotation wrapper and scheduled task were not changed. Before scheduling, set `TESTERO_FRONTEND_DIR` to the approved merged checkout and install its dependencies. Do not run this development worktree as an unattended production source.
+The task-authorized files `hq/tools/pipeline-nightly.sh` and `hq/tools/judge-and-ingest.sh` were written directly outside this Git repository. Their SHA-256 values and syntax checks are recorded in the verification manifest. Invoke the new launcher directly: it has a Python shebang despite the retained `.sh` filename. Do not invoke it with `bash`.
+
+The new launcher fetches `origin/main`, requires an exact coordinator-reviewed merged-main SHA through `--reviewed-main`, and creates a fresh detached owned worktree. It never executes this PR worktree or honors `TESTERO_FRONTEND_DIR`. Calls, state, cache and the project environment remain under the dedicated external `hq/pipeline-nightly-runtime/` root. Dirty or drifted retained checkouts fail closed; the launcher never resets or removes them. Prepare dependencies for the reviewed main checkout before scheduling. The old rotation wrapper and scheduled task were not changed by this worker; the coordinator must retire the old schedule before enabling the new one.
 
 ## Verification limits
 
 The default local browser suite skips dedicated beta-bank, production-server-only, and manual/seeded QA capture cases. The required withdrawal test is not skipped. Its real local diagnostic, practice, mock answer, scoring, review and report-form flow passes. The coordinator's full beta-bank/production QA and live semantic acceptance remain separate checks.
+
+## Trusted lifecycle boundary (review m6)
+
+The SQL RPC checks current content, integrity, revision, floor and lifecycle rules. The complete council evidence remains a Python publisher responsibility. Service-role callers and database administrators are trusted: they can supply the current hash, set the local lifecycle flag, or bootstrap privileged rows. The guard prevents accidental direct UPDATE bypasses; it is not a cryptographic council attestation against a compromised service role. Keep that role server-only and use `publish_batch.py` for publication. Anon/authenticated roles have no question-write or lifecycle RPC privileges. Setting a custom transaction variable does not grant those privileges; the app exposes no general SQL/flag-setting endpoint.
