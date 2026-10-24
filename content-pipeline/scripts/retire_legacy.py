@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Report PMLE replacement coverage; explicitly retire one legacy ACTIVE domain.
+"""Report read-only PMLE replacement coverage; legacy retirement is disabled.
 
 Receipts live in questions.review_notes. This tool never retrieves evidence or
-loads environment files. Guarded row updates are not a cross-row transaction;
-concurrent changes or unknown results stop further writes, not roll back writes.
+loads environment files. Retirement requires a reviewed lifecycle RPC workflow.
 """
 from __future__ import annotations
 
@@ -23,6 +22,12 @@ FIELDS = "id,exam,domain_id,status,review_status,review_notes,generation_run_id"
 RECEIPT_KEYS = {"cert_id", "objective_id", "guide_sha256", "generator_model",
                 "judge_model", "evidence", "mechanical_check"}
 EVIDENCE_KEYS = {"option_label", "url", "quote", "retrieved_at", "text_sha256"}
+RETIREMENT_DISABLED = (
+    "Legacy retirement is disabled: retire_legacy.py --apply cannot change question status. "
+    "Use a coordinator-reviewed lifecycle workflow through the retire_question RPC, "
+    "with revision/race guards, the domain floor and durable question_events receipts. "
+    "retire_legacy.py without --apply remains a read-only coverage report."
+)
 
 
 def get_client():
@@ -151,39 +156,18 @@ def snapshot(rows):
 
 
 def retire(client, rows, context, code, domain_id):
-    legacy = require_threshold(rows, context, code)
-    expected = snapshot(rows)
-    retired = 0
-    for row in legacy:
-        fresh = active_rows(client, domain_id)
-        if snapshot(fresh) != expected:
-            raise click.ClickException("ACTIVE counts or row snapshots changed; no further retirement performed.")
-        require_threshold(fresh, context, code)
-        update = (client.table("questions").update({"status": "RETIRED"})
-                  .eq("id", row["id"]).eq("exam", EXAM)
-                  .eq("domain_id", domain_id).eq("status", "ACTIVE"))
-        for field in ("review_notes", "generation_run_id", "review_status"):
-            value = row[field]
-            update = update.is_(field, "null") if value is None else update.eq(field, value)
-        data = update.execute().data
-        if (not isinstance(data, list) or len(data) != 1 or not isinstance(data[0], dict)
-                or set(row) - set(data[0])
-                or any(data[0][key] != value for key, value in {**row, "status": "RETIRED"}.items())):
-            raise click.ClickException("Retirement conflict or unknown update result; inspect persisted state before retrying.")
-        retired += 1
-        del expected[row["id"]]
-    if snapshot(active_rows(client, domain_id)) != expected:
-        raise click.ClickException("ACTIVE counts or row snapshots changed after retirement; inspect persisted state.")
-    click.echo(f"Retired: {retired} (status only; no deletes).")
+    """Reject legacy direct callers before reading the client or row snapshots."""
+    raise click.ClickException(RETIREMENT_DISABLED)
 
 
 @click.command()
-@click.option("--domain", help="Canonical PMLE domain CODE; required for --apply.")
-@click.option("--apply", "apply_changes", is_flag=True, help="Retire legacy ACTIVE rows in the selected domain only.")
+@click.option("--domain", help="Canonical PMLE domain CODE to validate for the read-only report.")
+@click.option("--apply", "apply_changes", is_flag=True, help="Disabled legacy write option; use a reviewed retire_question RPC workflow.")
 def main(domain, apply_changes):
-    """Dry-run PMLE coverage by default. No cross-row atomicity is guaranteed."""
-    if apply_changes and not domain:
-        raise click.UsageError("--apply requires --domain CODE.")
+    """Report read-only PMLE coverage. Legacy --apply is disabled."""
+    # Refuse before registry loading, connection imports, or credential access.
+    if apply_changes:
+        raise click.ClickException(RETIREMENT_DISABLED)
     try:
         context = load_cert_context(DEFAULT_CERT)
         if domain and domain not in context["domains"]:
@@ -191,31 +175,12 @@ def main(domain, apply_changes):
         client = get_client()
         mapping = domain_ids(client, context)
         rows = active_rows(client)
-        report(rows, context, mapping, "Before")
-        if not apply_changes:
-            click.echo("Dry run; no writes.")
-            return
-        if domain not in mapping:
-            raise click.ClickException("Selected canonical domain is not seeded; no retirement performed.")
-        selected = [row for row in rows if row["domain_id"] == mapping[domain]]
-        click.echo("Guarded row updates are not atomic across rows; conflicts stop further writes, without rollback.")
-        try:
-            require_threshold(selected, context, domain)
-            fresh = active_rows(client, mapping[domain])
-            if snapshot(fresh) != snapshot(selected):
-                raise click.ClickException("ACTIVE counts or row snapshots changed before retirement; no writes performed.")
-            require_threshold(fresh, context, domain)
-            retire(client, fresh, context, domain, mapping[domain])
-        finally:
-            try:
-                report(active_rows(client, mapping[domain]), context, mapping, "After", [domain])
-            except Exception:
-                click.echo("After PMLE ACTIVE coverage: unavailable; inspect persisted state before retrying.")
-                raise click.ClickException("After snapshot failed; no further retirement performed.") from None
+        report(rows, context, mapping, "Current")
+        click.echo("Dry run; no writes.")
     except click.ClickException:
         raise
     except Exception:
-        raise click.ClickException("Retirement database or registry operation failed; no further writes performed. Inspect persisted state before retrying.") from None
+        raise click.ClickException("Coverage database or registry operation failed; no writes performed.") from None
 
 
 if __name__ == "__main__":
