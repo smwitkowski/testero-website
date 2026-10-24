@@ -115,7 +115,9 @@ const mockMetadataSQL = `SELECT jsonb_build_object(
 );`;
 const mockRowsBeforeReplay = await scalar(digestSQL);
 const mockMetadataBeforeReplay = await scalar(mockMetadataSQL);
-const mockReplay = await run(mockMigration.replace(/COMMIT;\s*$/, `${mockMetadataSQL}\nROLLBACK;`));
+const withdrawalMigration = readFileSync("supabase/migrations/20261025120000_withdrawn_session_questions.sql", "utf8");
+const withdrawalReplay = withdrawalMigration.replace(/^BEGIN;/m, "").replace(/COMMIT;\s*$/, "");
+const mockReplay = await run(mockMigration.replace(/COMMIT;\s*$/, `${withdrawalReplay}\n${mockMetadataSQL}\nROLLBACK;`));
 assert.equal(mockReplay.output, mockMetadataBeforeReplay, "full replay leaves table/RLS/index/constraint/function/ACL metadata unchanged before rollback");
 assert.equal(await scalar(digestSQL), mockRowsBeforeReplay, "full mock migration replay preserves all rows");
 assert.equal(await scalar(mockMetadataSQL), mockMetadataBeforeReplay, "mock replay preserves table/RLS/index/constraint/function/ACL metadata");
@@ -354,7 +356,7 @@ try {
     (SELECT json_agg(json_build_object('label',a.choice_label,'text',a.choice_text) ORDER BY a.choice_label) FROM public.answers a WHERE a.question_id=q.id) AS options,
     (SELECT a.choice_label FROM public.answers a WHERE a.question_id=q.id AND a.is_correct) AS correct_label
     FROM public.questions q JOIN public.exam_domains d ON d.id=q.domain_id
-    WHERE ${prodSchema ? "q.status='ACTIVE' AND q.review_status='GOOD' AND q.exam='GCP_PM_ML_ENG'" : "q.source_ref LIKE 'local-educational-seed-%'"} ORDER BY q.id LIMIT 6) s;`));
+    WHERE q.status='ACTIVE' AND q.review_status='GOOD' AND q.exam='GCP_PM_ML_ENG' AND q.parent_question_id IS NULL ORDER BY q.id LIMIT 6) s;`));
   assert.equal(questions.length, 6);
   // Pass-only mocks use separate snapshots and never leak keys through their RPC.
   // An existing local mirror may have retired the educational seed rows. Do not
@@ -525,10 +527,10 @@ try {
   await denied(service(answerSQL(rows[1].id, secondCorrect)), "out of order answer denied");
   await denied(service(answerSQL(rows[0].id, "INVALID")), "unknown option denied");
   const first = JSON.parse(await scalar(service(answerSQL(rows[0].id, firstWrong))));
-  assert.deepEqual(first, { answeredCount: 1, totalQuestions: 2, completed: false });
+  assert.deepEqual(first, { answeredCount: 1, totalQuestions: 2, withdrawn: false, completed: false });
   assert.deepEqual(JSON.parse(await scalar(service(answerSQL(rows[0].id, firstWrong)))), first, "same answer retry idempotent");
   await denied(service(answerSQL(rows[0].id, firstCorrect)), "changed answer rejected");
-  assert.deepEqual(JSON.parse(await scalar(service(answerSQL(rows[1].id, secondCorrect)))), { answeredCount: 2, totalQuestions: 2, completed: true });
+  assert.deepEqual(JSON.parse(await scalar(service(answerSQL(rows[1].id, secondCorrect)))), { answeredCount: 2, totalQuestions: 2, withdrawn: false, completed: true });
   assert.equal(await scalar(`SELECT count(*) FROM public.session_items WHERE session_id=${q(sessionId)} AND is_correct;`), "1");
   assert.equal(await scalar(`SELECT completed_at IS NOT NULL FROM public.study_sessions WHERE id=${q(sessionId)};`), "t");
   // Expiry checked independently of item state.

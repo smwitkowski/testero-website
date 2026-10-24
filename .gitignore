@@ -19,3 +19,11 @@ content-pipeline/__pycache__/
 
 # Google auth artifacts must never enter source or Docker build layers.
 gha-creds-*.json
+
+# Local verification output; the committed verification manifest summarizes it.
+/evidence/pipeline-v6/*.log
+
+# Local v6 contract-test artifacts (never publication inputs)
+/content-pipeline/.cache/council-health-pytest/
+/content-pipeline/.cache/council-health-audit-tests/
+/content-pipeline/.cache/generation/machine-learning-engineer-v5-v6-offline-smoke.json
