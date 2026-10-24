@@ -18,7 +18,7 @@ vi.mock("@/lib/analytics/client", () => ({ trackPractice: vi.fn() }));
 beforeEach(() => {
   mocks.requireUser.mockReset().mockResolvedValue({ id: "verified-owner" });
   mocks.claim.mockReset().mockResolvedValue(0);
-  mocks.load.mockReset().mockResolvedValue({ paidAccess: { hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null }, diagnostic: null, weakestDomains: [], domains: [], openPractice: null, quota: { remaining: 60, monthStart: "2026-10-01" } });
+  mocks.load.mockReset().mockResolvedValue({ paidAccess: { hasPaidAccess: false, isLegacySubscriber: false, accessUntil: null, pass: null }, diagnostic: null, weakestDomains: [], domains: [], openPractice: null, progress: { totalQuestions: 0, correctAnswers: 0, score: 0, domainBreakdown: [] }, practiceHistory: [] });
   mocks.cookies.mockReset().mockResolvedValue({ get: (name: string) => name === "testero_anon" ? { value: "actual-cookie-token" } : undefined });
 });
 
@@ -66,7 +66,7 @@ describe("protected study pages", () => {
     expect(renderToStaticMarkup(page)).toContain("Password updated. Please sign in again with your new password.");
   });
   it("protects practice and summary with the encoded actual session return path", async () => {
-    await PracticePage({ params: Promise.resolve({ id: "actual/id" }) });
+    await PracticePage({ params: Promise.resolve({ id: "actual/id" }), searchParams: Promise.resolve({}) });
     expect(mocks.requireUser).toHaveBeenLastCalledWith("/practice/actual%2Fid");
     await PracticeSummaryPage({ params: Promise.resolve({ id: "actual/id" }) });
     expect(mocks.requireUser).toHaveBeenLastCalledWith("/practice/actual%2Fid/summary");

@@ -7,9 +7,10 @@ import { createServiceSupabaseClient } from "@/lib/supabase/service";
 
 export const metadata: Metadata = { title: "Practice session" };
 export const dynamic = "force-dynamic";
-export default async function PracticePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PracticePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ focus?: string }> }) {
   const { id } = await params;
+  const { focus } = await searchParams;
   const user = await requireUser(`/practice/${encodeURIComponent(id)}`);
   const initialData = await readPractice(createServiceSupabaseClient(), id, user.id).catch(() => null);
-  return <PracticeSession key={id} sessionId={id} initialData={initialData} />;
+  return <>{focus && <p role="status" className="mx-auto mb-6 max-w-[760px] rounded-md border border-border bg-muted p-4">{focus.slice(0, 500)}</p>}<PracticeSession key={id} sessionId={id} initialData={initialData} /></>;
 }

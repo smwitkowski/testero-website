@@ -16,8 +16,9 @@ export interface PracticeAnswerResponse {
     optionExplanations?: { label: string; text: string; explanation: string }[];
   };
 }
-export type PracticeSummary = { review: PaidQuestionReview[] } & (
-  | (DiagnosticResult & { hasPaidTracking: true })
-  | { sessionId: string; totalQuestions: number; hasPaidTracking: false }
-);
-export interface PracticeStartResponse { sessionId: string; href: string }
+export type PracticeSummary = DiagnosticResult & { review: PaidQuestionReview[] };
+export interface PracticeStartResponse {
+  sessionId: string;
+  href: string;
+  selection?: import("@/lib/practice/selection").PracticeSelection;
+}

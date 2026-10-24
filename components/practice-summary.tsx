@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import type { PracticeSummary as PracticeSummaryData } from "@/lib/practice/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { TrackingTeaser } from "@/components/tracking-teaser";
+import { DomainScores } from "@/components/readiness-report";
 import { QuestionReviewList } from "@/components/question-review";
 import { PracticeError, PracticeLoading, usePracticeResource } from "@/components/practice-resource";
 
@@ -30,10 +30,10 @@ export function PracticeSummary({ sessionId }: { sessionId: string }) {
       <h1 ref={heading} tabIndex={-1} className="text-3xl font-semibold tracking-tight">Your practice summary</h1>
       <p className="leading-relaxed text-muted-foreground">Review your answers to decide what to study next. This short session is study guidance, not an exam readiness guarantee.</p>
     </section>
-    {data.hasPaidTracking ? <Card>
+    <Card>
       <CardHeader><div className="flex flex-wrap items-baseline justify-between gap-4"><h2 className="text-xl font-semibold">Practice score</h2><p className="text-3xl font-semibold tabular-nums">{data.score}%</p></div></CardHeader>
-      <CardContent><p>{data.correctAnswers} of {data.totalQuestions} correct</p></CardContent>
-    </Card> : <TrackingTeaser />}
+      <CardContent className="space-y-5"><p>{data.correctAnswers} of {data.totalQuestions} correct</p><h3 className="font-semibold">Progress by domain</h3><DomainScores domains={data.domainBreakdown} /></CardContent>
+    </Card>
     <QuestionReviewList review={data.review} sessionId={sessionId} kind="practice" />
     <Button asChild><Link href="/dashboard">Back to dashboard</Link></Button>
   </div>;
