@@ -114,18 +114,23 @@ export async function mockResults(client: SupabaseClient, id: string, userId: st
   return { ...computeResult(id, rows), completedAt: session.completed_at, timedOut: session.timed_out, allocationNotice: session.allocation_notice,
     review: rows.map(row => addPaidReview(mapReview({ ...row, selected_label: row.selected_label ?? "Unanswered", is_correct: row.is_correct! }), explanations.get(row.id))) };
 }
+interface HistoryRow {
+  id: string; user_id: string; created_at: string; deadline_at: string; completed_at: string | null;
+  question_count: number; score: number | null;
+}
 export async function mockHistory(client: SupabaseClient, userId: string): Promise<MockAttempt[]> {
   await requireMockAccess(client, userId);
-  const { data, error } = await client.from("mock_exam_sessions").select("id,created_at,deadline_at,completed_at,question_count").eq("user_id", userId).order("created_at", { ascending: false }).limit(50);
-  if (error || !Array.isArray(data)) throw unavailable();
-  const attempts: MockAttempt[] = [];
-  // Interaction also closes expired attempts on the next authenticated visit.
-  for (const row of data) {
-    const session = await interact(client, userId, row.id, "read");
-    const rows = session.completed_at ? await readItems(client, row.id) : [];
-    attempts.push({ sessionId: session.id, startedAt: session.created_at, deadlineAt: session.deadline_at, completedAt: session.completed_at,
-      score: session.completed_at ? computeResult(session.id, rows).score : null, totalQuestions: session.question_count });
-  }
-  await requireMockAccess(client, userId);
-  return attempts;
+  // The service-only RPC locks, expires and scores the latest 50 owned attempts in
+  // bulk. It rechecks access after waiting for locks and immediately before return.
+  const { data, error } = await client.rpc("mock_exam_history", { p_user_id: userId });
+  rpcError(error);
+  if (!Array.isArray(data) || data.length > 50) throw unavailable();
+  const rows = data as HistoryRow[];
+  if (new Set(rows.map(row => row?.id)).size !== rows.length || rows.some(row => !row || !UUID.test(row.id)
+    || row.user_id !== userId || row.question_count !== 50
+    || !Number.isFinite(Date.parse(row.created_at)) || !Number.isFinite(Date.parse(row.deadline_at))
+    || (row.completed_at === null ? row.score !== null
+      : !Number.isFinite(Date.parse(row.completed_at)) || !Number.isInteger(row.score) || row.score! < 0 || row.score! > 100))) throw unavailable();
+  return rows.map(row => ({ sessionId: row.id, startedAt: row.created_at, deadlineAt: row.deadline_at,
+    completedAt: row.completed_at, score: row.score, totalQuestions: row.question_count }));
 }

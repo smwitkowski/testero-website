@@ -1,6 +1,6 @@
 -- Pass-only timed mocks. Apply locally/test only; coordinator applies after approval.
 BEGIN;
-CREATE TABLE public.mock_exam_sessions (
+CREATE TABLE IF NOT EXISTS public.mock_exam_sessions (
  id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
  question_count INTEGER NOT NULL CHECK (question_count = 50),
  created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
@@ -9,7 +9,7 @@ CREATE TABLE public.mock_exam_sessions (
  CHECK (isfinite(deadline_at) AND deadline_at > created_at),
  CHECK (completed_at IS NULL OR isfinite(completed_at))
 );
-CREATE TABLE public.mock_exam_items (
+CREATE TABLE IF NOT EXISTS public.mock_exam_items (
  id UUID PRIMARY KEY DEFAULT gen_random_uuid(), session_id UUID NOT NULL REFERENCES public.mock_exam_sessions(id) ON DELETE CASCADE,
  ordinal INTEGER NOT NULL CHECK (ordinal BETWEEN 1 AND 50), question_id UUID NOT NULL REFERENCES public.questions(id),
  domain_code TEXT NOT NULL, domain_name TEXT NOT NULL, stem TEXT NOT NULL,
@@ -18,9 +18,10 @@ CREATE TABLE public.mock_exam_items (
  UNIQUE (session_id, ordinal),
  CHECK ((selected_label IS NULL) = (answered_at IS NULL))
 );
-CREATE INDEX mock_exam_sessions_user_created_idx ON public.mock_exam_sessions(user_id, created_at DESC);
-CREATE INDEX mock_exam_items_session_idx ON public.mock_exam_items(session_id);
-CREATE INDEX mock_exam_items_question_idx ON public.mock_exam_items(question_id);
+CREATE INDEX IF NOT EXISTS mock_exam_sessions_user_created_idx ON public.mock_exam_sessions(user_id, created_at DESC);
+-- UNIQUE(session_id, ordinal) already supports session_id lookups.
+DROP INDEX IF EXISTS public.mock_exam_items_session_idx;
+CREATE INDEX IF NOT EXISTS mock_exam_items_question_idx ON public.mock_exam_items(question_id);
 ALTER TABLE public.mock_exam_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mock_exam_items ENABLE ROW LEVEL SECURITY;
 -- No browser reads: item keys must never be available during an exam, even to its owner.
@@ -121,9 +122,48 @@ BEGIN
   'timed_out',v_session.timed_out,'allocation_notice',v_session.allocation_notice,'server_now',clock_timestamp(),'answered_count',v_count);
 END;
 $fn$;
+-- One bounded, service-only history call replaces per-attempt reads. Lock rows in
+-- stable order, then check the wall clock and paid access again after any wait.
+CREATE OR REPLACE FUNCTION public.mock_exam_history(p_user_id UUID)
+RETURNS JSONB LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, pg_temp AS $fn$
+DECLARE v_ids UUID[]; v_expired UUID[]; v_now TIMESTAMPTZ; v_result JSONB;
+BEGIN
+ PERFORM public.require_mock_paid_access(p_user_id);
+ SELECT array_agg(locked.id) INTO v_ids FROM (
+  SELECT id FROM public.mock_exam_sessions WHERE user_id = p_user_id
+   ORDER BY created_at DESC, id DESC LIMIT 50 FOR UPDATE
+ ) locked;
+ PERFORM public.require_mock_paid_access(p_user_id);
+ v_now := clock_timestamp();
+ SELECT array_agg(id) INTO v_expired FROM public.mock_exam_sessions
+  WHERE id = ANY(v_ids) AND user_id = p_user_id AND completed_at IS NULL AND deadline_at <= v_now;
+ UPDATE public.mock_exam_items SET is_correct = coalesce(selected_label = correct_label,false)
+  WHERE session_id = ANY(v_expired);
+ UPDATE public.mock_exam_sessions SET completed_at = deadline_at, timed_out = true
+  WHERE id = ANY(v_expired) AND user_id = p_user_id;
+ -- No item data or provisional scores leave this RPC. Incomplete/corrupt scored
+ -- snapshots yield NULL, which the server rejects for a completed attempt.
+ SELECT coalesce(jsonb_agg(jsonb_build_object('id',s.id,'user_id',s.user_id,
+  'created_at',s.created_at,'deadline_at',s.deadline_at,'completed_at',s.completed_at,
+  'question_count',s.question_count,'score',CASE WHEN s.completed_at IS NOT NULL
+   AND scores.item_count = s.question_count AND scores.valid_count = s.question_count
+   THEN round(100.0 * scores.correct_count / s.question_count)::integer ELSE NULL END)
+  ORDER BY s.created_at DESC,s.id DESC),'[]'::jsonb) INTO v_result
+ FROM public.mock_exam_sessions s LEFT JOIN (
+  SELECT session_id,count(*) AS item_count,count(*) FILTER (WHERE is_correct) AS correct_count,
+   count(*) FILTER (WHERE is_correct IS NOT DISTINCT FROM coalesce(selected_label = correct_label,false)) AS valid_count
+  FROM public.mock_exam_items WHERE session_id = ANY(v_ids) GROUP BY session_id
+ ) scores ON scores.session_id = s.id
+ WHERE s.id = ANY(v_ids) AND s.user_id = p_user_id;
+ PERFORM public.require_mock_paid_access(p_user_id);
+ RETURN v_result;
+END;
+$fn$;
+REVOKE EXECUTE ON FUNCTION public.mock_exam_history(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.require_mock_paid_access(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.create_mock_exam(UUID,JSONB,TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.interact_mock_exam(UUID,UUID,TEXT,UUID,TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.mock_exam_history(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.require_mock_paid_access(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.create_mock_exam(UUID,JSONB,TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.interact_mock_exam(UUID,UUID,TEXT,UUID,TEXT) TO service_role;

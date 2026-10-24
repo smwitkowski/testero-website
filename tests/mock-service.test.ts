@@ -16,7 +16,7 @@ const free = { ...paid, hasPaidAccess: false };
 const session = { id, user_id: user, question_count: 50, created_at: "2026-10-24T10:00:00Z", deadline_at: "2026-10-24T12:00:00Z", completed_at: null as string | null, timed_out: false, allocation_notice: null, server_now: "2026-10-24T10:30:00Z", answered_count: 0 };
 function rows() { return Array.from({ length: 50 }, (_, n) => ({ id: n ? `item-${n}` : itemId, question_id: `bank-${n}`, ordinal: n + 1, stem: `Question ${n}`, domain_code: PMLE_BLUEPRINT[n % 6].domainCode, domain_name: `Domain ${n % 6}`, options: [{ label: "A", text: "Correct", explanation: "private injected" }, { label: "B", text: "Wrong" }], correct_label: "A", selected_label: null as string | null, is_correct: null as boolean | null, answered_at: null as string | null, explanation: "private injected" })); }
 function bank() { return PMLE_BLUEPRINT.flatMap((domain, i) => Array.from({ length: 15 }, (_, n) => ({ id: `${i}-${n}`, parent_question_id: null, stem: `Question ${i}-${n}`, exam_domains: { code: domain.domainCode, name: domain.displayName }, answers: [{ choice_label: "A", choice_text: "Correct", is_correct: true }, { choice_label: "B", choice_text: "Wrong", is_correct: false }] }))); }
-interface Options { session?: unknown; rows?: unknown; bank?: unknown; rpcError?: { code: string }; errorTable?: string; expired?: boolean; foreign?: boolean }
+interface Options { session?: unknown; rows?: unknown; bank?: unknown; history?: unknown; rpcError?: { code: string }; errorTable?: string; expired?: boolean; foreign?: boolean }
 function db(options: Options = {}) {
   let state = { ...session, ...(options.session as object ?? {}) };
   const items = (options.rows ?? rows()) as ReturnType<typeof rows>;
@@ -38,6 +38,7 @@ function db(options: Options = {}) {
       const item = items.find(item => item.id === args.p_item_id)!;
       item.selected_label = args.p_selected_label as string; item.answered_at = state.server_now;
     }
+    if (name === "mock_exam_history") return { data: options.history ?? [{ ...state, score: state.completed_at ? Math.round(items.filter(item => item.is_correct).length * 100 / 50) : null }], error: null };
     return { data: state, error: null };
   });
   return { client: { from, rpc } as unknown as SupabaseClient, from, rpc, queries, items };
@@ -108,7 +109,53 @@ describe("mock persistence, deadlines and no early reveal", () => {
   it("lists attempt scores and dates with owner-bound queries", async () => {
     const database = db({ expired: true }); const result = await mockHistory(database.client, user);
     expect(result).toEqual([{ sessionId: id, startedAt: session.created_at, deadlineAt: session.deadline_at, completedAt: session.deadline_at, score: 0, totalQuestions: 50 }]);
-    expect(database.queries[0].filters).toContainEqual(["user_id", user]);
+    expect(database.rpc).toHaveBeenCalledExactlyOnceWith("mock_exam_history", { p_user_id: user });
+    expect(database.from).not.toHaveBeenCalled();
+    expect(getPaidAccess).toHaveBeenCalledExactlyOnceWith(user, database.client);
+  });
+  it("loads 50 mixed attempts with one access lookup and one bulk RPC, with no early score or private fields", async () => {
+    const history = Array.from({ length: 50 }, (_, n) => ({ ...session,
+      id: `bbbbbbbb-bbbb-4bbb-8bbb-${String(n).padStart(12, "0")}`,
+      completed_at: n % 3 === 0 ? null : n % 3 === 1 ? session.server_now : session.deadline_at,
+      score: n % 3 === 0 ? null : n % 3 === 1 ? 76 : 0,
+      correct_label: "A", selected_label: "B", explanation: "private", options: [] }));
+    const database = db({ history });
+    const result = await mockHistory(database.client, user);
+    expect(result).toHaveLength(50);
+    expect(result[0]).toMatchObject({ score: null, completedAt: null });
+    expect(result[1]).toMatchObject({ score: 76, completedAt: session.server_now });
+    expect(result[2]).toMatchObject({ score: 0, completedAt: session.deadline_at });
+    expect(database.rpc).toHaveBeenCalledExactlyOnceWith("mock_exam_history", { p_user_id: user });
+    expect(database.from).not.toHaveBeenCalled();
+    expect(getPaidAccess).toHaveBeenCalledExactlyOnceWith(user, database.client);
+    expect(loadPaidExplanations).not.toHaveBeenCalled();
+    expect(JSON.stringify(result)).not.toMatch(/correct_label|selected_label|explanation|options|private|user_id/);
+  });
+  it("returns empty history without per-attempt reads", async () => {
+    const database = db({ history: [] });
+    await expect(mockHistory(database.client, user)).resolves.toEqual([]);
+    expect(database.rpc).toHaveBeenCalledOnce(); expect(database.from).not.toHaveBeenCalled();
+  });
+  it("denies access revoked inside the bulk transaction after the preflight", async () => {
+    const database = db({ rpcError: { code: "42501" } });
+    await expect(mockHistory(database.client, user)).rejects.toMatchObject({ status: 403 });
+    expect(getPaidAccess).toHaveBeenCalledOnce(); expect(database.rpc).toHaveBeenCalledOnce();
+    expect(database.from).not.toHaveBeenCalled();
+  });
+  it.each([
+    [{ ...session, user_id: itemId, score: null }],
+    [{ ...session, score: 2 }],
+    [{ ...session, completed_at: session.server_now, score: null }],
+    [{ ...session, completed_at: session.server_now, score: 101 }],
+    [{ ...session, completed_at: session.server_now, score: 1.5 }],
+    [{ ...session, score: null }, { ...session, score: null }],
+    Array.from({ length: 51 }, () => ({ ...session, score: null })),
+    [null],
+  ])("fails closed for foreign or malformed bulk history %#", async (...history) => {
+    await expect(mockHistory(db({ history }).client, user)).rejects.toMatchObject({ status: 503 });
+  });
+  it("maps a failed bulk lookup to unavailable", async () => {
+    await expect(mockHistory(db({ rpcError: { code: "XX000" } }).client, user)).rejects.toMatchObject({ status: 503 });
   });
   it("rejects ambiguous canonical option text before invoking the snapshot writer", async () => {
     const ambiguous = bank().map(row => ({ ...row, answers: row.answers.map(answer => ({ ...answer, choice_text: "Duplicate text" })) }));
