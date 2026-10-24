@@ -78,18 +78,37 @@ and mocked RPCs only.
   latest quarantine event. Use a fresh verdict directory for each cycle.
 - Restore requires all seats to pass the strict publisher helper, including both
   blind answers at confidence >=0.8 and deterministic freshness.
-- A confident, unambiguous blind disagreement, explicit evidence FAIL, or
-  deterministic freshness failure retires the question only after a complete,
-  schema-valid council with no UNCERTAIN seat. Style-only rejections, REVISE,
-  low confidence, skipped seats, malformed output, missing verdicts and system
-  errors keep it quarantined. An error never triggers retirement.
+- Retirement requires a complete, schema-valid council with no UNCERTAIN seat.
+  A confident, unambiguous blind key disagreement can retire. An explicit
+  evidence FAIL can retire only with validated captured source context (from
+  an artifact or the DB export), never from receipts alone. A deterministic
+  lexicon hit with status `retired` can also retire.
+- Lexicon hits with status `renamed` remain quarantined with `needs_rewrite`.
+  Receipt-only evidence FAIL also remains quarantined with `needs_rewrite`.
+  These conservative rewrite blockers take precedence even if a blind solver
+  disagrees or a retired-name hit also exists. Such signals do not establish
+  an independent key defect. Rewrite and run a fresh full council before any
+  transition; this script does not rewrite content automatically.
+- Style-only rejections, REVISE, low confidence, skipped seats, malformed output,
+  missing verdicts and system errors keep the item quarantined. An error never
+  triggers retirement. Publisher freshness vetoes remain unchanged for both
+  retired and renamed names.
 - `--apply` calls only `restore_question` or `retire_question`, with the expected
   content hash and payload fences `expected_revision` and `quarantine_event_id`.
   The DB RPC is responsible for current-state fences and atomic audit writes.
   Only a response with `changed: true` is reported as applied. Errors or unknown
   responses require event reconciliation; no fallback write is attempted.
 - Report `pages` entries identify a report after a same-revision restoration.
-  The nightly notifier owns email delivery and daily dedupe. This script sends
+  They also page `quarantine_preparation_blocked_7_days` when a DRAFT QUARANTINED
+  row cannot prepare a request (for example, no usable artifact or receipts)
+  and its latest current-revision quarantine cycle is at least seven days old.
+  A new cycle resets the clock. Aging never restores or retires a question.
+- Cycle timestamps must include a timezone. Ordering uses parsed UTC instants,
+  not timestamp strings. Missing, malformed, naive or future timestamps block
+  age calculation explicitly and page `quarantine_age_blocked`; no invented age
+  is used. `run_recouncil(..., now=aware_datetime)` supports fixed-clock tests;
+  a run otherwise captures one UTC clock value at its start.
+- The nightly notifier owns email delivery and daily dedupe. This script sends
   no email and does not mark events delivered.
 
 Offline verification:

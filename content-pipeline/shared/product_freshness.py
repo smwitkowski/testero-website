@@ -9,12 +9,12 @@ QUESTION_TEXT_FIELDS = ("stem", "correct_answer", "correct_explanation", "distra
     "distractor_3", "distractor_3_explanation")
 
 
-def freshness_errors(question, cert_id=None, *, lexicon_path=None):
-    """Return all retired/renamed learner-prose hits; never rewrite evidence."""
+def freshness_findings(question, cert_id=None, *, lexicon_path=None):
+    """Return structured retired/renamed learner-prose hits; never rewrite evidence."""
     data = json.loads(Path(lexicon_path or LEXICON_PATH).read_text(encoding="utf-8"))
     if data.get("version") != 1 or not isinstance(data.get("products"), list):
         raise ValueError("Invalid product freshness lexicon")
-    errors = []
+    findings = []
     for item in data["products"]:
         if (set(item) != {"old", "new", "status", "source"}
                 or item["status"] not in ("retired", "renamed")
@@ -28,5 +28,11 @@ def freshness_errors(question, cert_id=None, *, lexicon_path=None):
             # Keep captured URLs untouched: their legacy paths are not prose.
             prose = re.sub(r"https?://[^\s<>]+", "", text)
             if pattern.search(prose):
-                errors.append(f"freshness:{field}: {item['old']} ({item['status']}); use {item['new']}")
-    return errors
+                findings.append({"field": field, **item})
+    return findings
+
+
+def freshness_errors(question, cert_id=None, *, lexicon_path=None):
+    """Return publication vetoes for all freshness hits, including mere renames."""
+    return [f"freshness:{hit['field']}: {hit['old']} ({hit['status']}); use {hit['new']}"
+            for hit in freshness_findings(question, cert_id, lexicon_path=lexicon_path)]

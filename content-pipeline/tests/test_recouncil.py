@@ -337,7 +337,7 @@ def test_retirement_only_calls_atomic_retire_rpc_with_hash(case, tmp_path):
     row, _, _ = case
     prepared = recouncil.prepare_question(row)
     raw = verdict(prepared)
-    raw["evidence"].update(verdict="FAIL", evidence_supported=False)
+    raw["blind_solver"]["choice"] = next(k for k, v in blind_choice_map(prepared["question"]).items() if v != "A")
     verdict_dir = tmp_path / "verdicts"
     verdict_dir.mkdir()
     (verdict_dir / (prepared["request"]["candidate_id"] + ".json")).write_text(json.dumps(raw))
@@ -348,7 +348,7 @@ def test_retirement_only_calls_atomic_retire_rpc_with_hash(case, tmp_path):
     name, params = client.rpc.call_args.args
     assert name == "retire_question"
     assert params["p_expected_sha256"] == row["content_sha256"]
-    assert params["p_reason"] == "Evidence reviewer confirmed defect"
+    assert params["p_reason"] == "Claude blind solver confirmed key disagreement"
 
 
 def test_rpc_error_is_redacted_and_never_falls_back_to_retire(case, tmp_path):
@@ -458,9 +458,9 @@ def test_pde_consistent_council_remains_strict(pde_case, defect):
 
 
 def test_pde_consistent_confirmed_defect_can_retire(pde_case):
-    row, _, _ = pde_case
+    row, artifact, _ = pde_case
     row["review_notes"]["grounding"]["distractor_evidence"] = {"version": 1, "mode": "consistent"}
-    prepared = recouncil.prepare_question(row)
+    prepared = recouncil.prepare_question(row, artifact)
     raw = verdict(prepared)
     raw["evidence"].update(verdict="FAIL", evidence_supported=False)
     assert recouncil.evaluate_question(row, prepared, raw)["outcome"] == "retire"
@@ -471,3 +471,154 @@ def test_artifact_mixed_evidence_policy_is_not_silently_changed(pde_case):
     artifact["payload"]["distractor_evidence"] = {"version": 1, "mode": "consistent"}
     artifact["entry"]["distractor_evidence"] = {"version": 1, "mode": "strict"}
     assert "request" not in recouncil.prepare_question(row, artifact)
+
+
+@pytest.mark.parametrize("source", ["artifact", "db_sources", "receipts"])
+@pytest.mark.parametrize("mode", [None, "strict", "consistent"])
+def test_evidence_failure_retirement_requires_captured_source_context(case, source, mode):
+    row, artifact, _ = case
+    if source == "db_sources":
+        row["review_notes"]["grounding"]["sources"] = artifact["entry"]["sources"]
+    if mode:
+        policy = {"version": 1, "mode": mode}
+        row["review_notes"]["grounding"]["distractor_evidence"] = policy
+        artifact["payload"]["distractor_evidence"] = policy
+    prepared = recouncil.prepare_question(row, artifact if source == "artifact" else None)
+    raw = verdict(prepared)
+    raw["evidence"].update(verdict="FAIL", evidence_supported=False)
+    result = recouncil.evaluate_question(row, prepared, raw)
+    if source == "receipts":
+        assert result["outcome"] == "quarantined"
+        assert result["needs_rewrite"] is True
+    else:
+        assert result["evidence_context"] == "captured_sources"
+        assert result["outcome"] == "retire"
+
+
+@pytest.mark.parametrize("product,expected", [
+    ("Vertex AI", "quarantined"), ("Vertex AI Feature Store", "quarantined"),
+    ("Gemini Enterprise Agent Platform", "quarantined"),
+    ("AI Platform Training", "retire"), ("AutoML Tables", "retire")])
+@pytest.mark.parametrize("blind_disagrees", [False, True])
+def test_renames_need_rewrite_and_take_precedence_over_other_defects(case, product, expected, blind_disagrees):
+    row, _, _ = case
+    row["stem"] += " Use " + product + "."
+    row["content_sha256"] = content_sha256(row["stem"], row["answers"])
+    prepared = recouncil.prepare_question(row)
+    raw = verdict(prepared)
+    if blind_disagrees:
+        raw["blind_solver"]["choice"] = next(k for k, v in blind_choice_map(prepared["question"]).items() if v != "A")
+    result = recouncil.evaluate_question(row, prepared, raw)
+    assert result["outcome"] == expected
+    if expected == "quarantined":
+        assert result["needs_rewrite"] is True
+        assert "Renamed product" in result["reasons"][0]
+
+
+@pytest.mark.parametrize("days,paged", [(6, False), (7, True), (8, True)])
+@pytest.mark.parametrize("apply", [False, True])
+def test_unpreparable_missing_receipts_pages_at_seven_days_without_writing(case, tmp_path, days, paged, apply):
+    from datetime import datetime, timedelta, timezone
+    row, _, _ = case
+    row["review_notes"]["grounding"]["evidence"] = []
+    now = datetime(2026, 11, 1, tzinfo=timezone.utc)
+    row["question_events"][0]["at"] = (now - timedelta(days=days)).isoformat()
+    client = Mock()
+    report = recouncil.run_recouncil([row], tmp_path / "run", now=now, apply=apply, client=client)
+    assert report["questions"][0]["outcome"] == "quarantined"
+    assert bool(report["pages"]) is paged
+    if paged:
+        assert report["pages"][0]["reason"] == "quarantine_preparation_blocked_7_days"
+        assert report["pages"][0]["quarantine_event_id"] == row["question_events"][0]["id"]
+    client.rpc.assert_not_called()
+
+
+def test_aging_uses_latest_current_revision_cycle_and_actual_timezone_order(case, tmp_path):
+    from datetime import datetime, timezone
+    row, _, _ = case
+    row["review_notes"]["grounding"]["evidence"] = []
+    # Lexical order would incorrectly choose October 31 over November 1 here.
+    row["question_events"][0]["at"] = "2026-10-31T23:00:00-02:00"
+    new = {"id": str(uuid.uuid4()), "revision": 1, "action": "quarantined", "at": "2026-11-01T00:00:00+00:00"}
+    row["question_events"].extend([new, {**new, "id": str(uuid.uuid4()), "revision": 2, "at": "2026-11-07T00:00:00Z"}])
+    report = recouncil.run_recouncil([row], tmp_path / "run", now=datetime(2026, 11, 7, tzinfo=timezone.utc))
+    assert report["pages"] == []
+    age = report["questions"][0]["quarantine_age"]
+    assert age["quarantine_event_id"] == row["question_events"][0]["id"]
+    assert age["seconds"] == 6 * 86400 - 3600
+
+
+def test_new_quarantine_cycle_resets_aging(case, tmp_path):
+    from datetime import datetime, timezone
+    row, _, _ = case
+    row["review_notes"]["grounding"]["evidence"] = []
+    new = {"id": str(uuid.uuid4()), "revision": 1, "action": "quarantined", "at": "2026-11-01T00:00:00Z"}
+    row["question_events"].append(new)
+    report = recouncil.run_recouncil([row], tmp_path / "run", now=datetime(2026, 11, 7, tzinfo=timezone.utc))
+    assert report["pages"] == []
+    assert report["questions"][0]["quarantine_age"]["quarantine_event_id"] == new["id"]
+
+
+@pytest.mark.parametrize("at", [None, "bad", "2026-10-24T00:00:00", "2026-12-01T00:00:00Z"])
+def test_invalid_quarantine_age_is_explicitly_blocked_and_not_faked_old(case, tmp_path, at):
+    from datetime import datetime, timezone
+    row, _, _ = case
+    row["review_notes"]["grounding"]["evidence"] = []
+    row["question_events"][0]["at"] = at
+    report = recouncil.run_recouncil([row], tmp_path / "run", now=datetime(2026, 11, 1, tzinfo=timezone.utc))
+    assert report["questions"][0]["outcome"] == "quarantined"
+    assert report["questions"][0]["quarantine_age"]["status"] == "blocked"
+    assert "seconds" not in report["questions"][0]["quarantine_age"]
+    assert report["pages"][0]["reason"] == "quarantine_age_blocked"
+
+
+def test_preparable_old_quarantine_does_not_page_for_missing_artifact(case, tmp_path):
+    from datetime import datetime, timezone
+    row, _, _ = case
+    report = recouncil.run_recouncil([row], tmp_path / "run", now=datetime(2026, 11, 30, tzinfo=timezone.utc))
+    assert report["pages"] == []
+    assert "request_sha256" in report["questions"][0]
+
+
+def test_naive_injected_now_is_rejected(case, tmp_path):
+    from datetime import datetime
+    with pytest.raises(ValueError, match="timezone-aware"):
+        recouncil.run_recouncil([case[0]], tmp_path / "run", now=datetime(2026, 11, 1))
+
+
+@pytest.mark.parametrize("defect", ["missing", "malformed_old_event"])
+def test_unorderable_cycle_blocks_preparation_and_pages_explicit_error(case, tmp_path, defect):
+    from datetime import datetime, timezone
+    row, _, _ = case
+    if defect == "missing":
+        row["question_events"] = []
+    else:
+        row["question_events"].append({"id": str(uuid.uuid4()), "revision": 1,
+                                       "action": "quarantined", "at": "bad"})
+    assert "request" not in recouncil.prepare_question(row)
+    report = recouncil.run_recouncil([row], tmp_path / "run", now=datetime(2026, 11, 1, tzinfo=timezone.utc))
+    assert report["questions"][0]["quarantine_age"]["status"] == "blocked"
+    assert report["pages"][0]["reason"] == "quarantine_age_blocked"
+
+
+def test_receipt_only_failure_blocks_even_simultaneous_blind_disagreement(case):
+    row, _, _ = case
+    prepared = recouncil.prepare_question(row)
+    raw = verdict(prepared)
+    raw["blind_solver"]["choice"] = next(k for k, v in blind_choice_map(prepared["question"]).items() if v != "A")
+    raw["evidence"].update(verdict="FAIL", evidence_supported=False)
+    result = recouncil.evaluate_question(row, prepared, raw)
+    assert result["outcome"] == "quarantined"
+    assert result["needs_rewrite"] is True
+
+
+def test_rename_overrides_retired_hit_and_complete_artifact_council(case):
+    row, artifact, question = case
+    question["stem"] += " Compare Vertex AI with AI Platform Training."
+    row["stem"] = artifact["entry"]["stem"] = question["stem"]
+    row["content_sha256"] = content_sha256(row["stem"], row["answers"])
+    prepared = recouncil.prepare_question(row, artifact)
+    assert prepared["evidence_context"] == "captured_sources"
+    result = recouncil.evaluate_question(row, prepared, verdict(prepared))
+    assert result["outcome"] == "quarantined"
+    assert result["needs_rewrite"] is True

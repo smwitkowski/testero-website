@@ -2,6 +2,7 @@
 """Prepare and evaluate quarantine re-council offline; only --apply contacts the DB."""
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 import json
 import math
 import os
@@ -156,6 +157,50 @@ def _receipt_errors(evidence):
     return []
 
 
+def _event_time(value):
+    """Require an explicit offset; missing dates must never manufacture old age."""
+    try:
+        stamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if stamp.tzinfo is None or stamp.utcoffset() is None:
+            raise ValueError()
+        return stamp.astimezone(timezone.utc)
+    except (ValueError, TypeError, AttributeError):
+        raise ValueError("Missing or invalid timezone-aware quarantine timestamp") from None
+
+
+def _quarantine_cycle(row):
+    events = [event for event in row.get("question_events", [])
+              if event.get("action") == "quarantined" and event.get("revision") == row.get("revision")]
+    if not events:
+        raise ValueError("Missing quarantine event; cannot bind a fresh re-council cycle")
+    # Validate every candidate: an unorderable event could be the newest cycle.
+    return max(events, key=lambda event: (_event_time(event.get("at")), str(event.get("id", ""))))
+
+
+def blocked_quarantine_page(row, result, *, now):
+    """Page blocked preparation at seven days; age is never a retirement verdict."""
+    if (row.get("status") != "DRAFT" or row.get("review_status") != "QUARANTINED"
+            or "request_sha256" in result):
+        return None
+    base = {"question_id": row.get("id"), "revision": row.get("revision")}
+    try:
+        cycle = _quarantine_cycle(row)
+        started = _event_time(cycle.get("at"))
+        if started > now:
+            raise ValueError("Quarantine timestamp is in the future")
+        result["quarantine_age"] = {"status": "known", "quarantine_event_id": cycle["id"],
+                                    "since": cycle["at"], "seconds": (now - started).total_seconds()}
+        if now - started >= timedelta(days=7):
+            return {**base, "reason": "quarantine_preparation_blocked_7_days",
+                    "quarantine_event_id": cycle["id"], "quarantined_at": cycle["at"],
+                    "blocked_reasons": result["reasons"]}
+    except (KeyError, ValueError, TypeError, AttributeError):
+        result["quarantine_age"] = {"status": "blocked", "reason": "Invalid or missing quarantine cycle timestamp"}
+        return {**base, "reason": "quarantine_age_blocked",
+                "blocked_reasons": [result["quarantine_age"]["reason"]]}
+    return None
+
+
 def repeat_report_pages(events):
     """Return founder page records for reports after a restored revision."""
     pages = []
@@ -216,11 +261,7 @@ def prepare_question(row, artifact=None):
                 or domain.get("id") != row.get("domain_id") or domain.get("code") != scope["domain_code"]
                 or domain.get("exam") != expected_exam):
             raise ValueError("DB certification/domain does not match reviewed objective")
-        events = row.get("question_events", [])
-        quarantine = [e for e in events if e.get("action") == "quarantined" and e.get("revision") == row["revision"]]
-        if not quarantine:
-            raise ValueError("Missing quarantine event; cannot bind a fresh re-council cycle")
-        cycle = max(quarantine, key=lambda e: (e.get("at", ""), str(e.get("id", ""))))
+        cycle = _quarantine_cycle(row)
         uuid.UUID(cycle["id"])
         ident = str(uuid.uuid5(uuid.NAMESPACE_URL, "testero-recouncil:" + canonical_sha256(
             {"id": row["id"], "revision": row["revision"], "content_sha256": digest, "cycle": cycle})))
@@ -261,6 +302,7 @@ def prepare_question(row, artifact=None):
         result.update(request=request, question=question, scope=scope, content_sha256=digest,
                       revision=row["revision"], quarantine_event_id=cycle.get("id"),
                       source="artifact" if artifact is not None else "db",
+                      evidence_context="captured_sources" if sources else "receipts_only",
                       request_sha256=canonical_sha256(request), reasons=["Awaiting fresh complete council verdicts"])
     except (KeyError, ValueError, TypeError, IndexError, AttributeError) as error:
         # Deliberately omit arbitrary error bodies (provider/input text may contain secrets).
@@ -308,8 +350,18 @@ def evaluate_question(row, prepared, verdict):
                          and blind_choice_map(question)[output["choice"]] != "A"]
         evidence_failure = parsed["evidence"]["verdict"] == "FAIL" and any(
             parsed["evidence"][name] is False for name in EVIDENCE_CHECKS)
-        from shared.product_freshness import freshness_errors
-        freshness_failure = bool(freshness_errors(question, scope["cert_id"]))
+        from shared.product_freshness import freshness_findings
+        findings = freshness_findings(question, scope["cert_id"])
+        renamed = any(hit["status"] == "renamed" for hit in findings)
+        freshness_failure = any(hit["status"] == "retired" for hit in findings)
+        thin_evidence_failure = evidence_failure and prepared["evidence_context"] == "receipts_only"
+        # Conservative precedence: neither a rename nor thin evidence proves an
+        # independent key defect, even when a blind solver also disagrees.
+        if renamed or thin_evidence_failure:
+            result.update(needs_rewrite=True, reasons=(
+                (["Renamed product terminology; needs rewrite, remains quarantined"] if renamed else [])
+                + (["Receipt-only evidence FAIL; needs rewrite, remains quarantined"] if thin_evidence_failure else [])))
+            return result
         if disagreements or evidence_failure or freshness_failure:
             result.update(outcome="retire", reasons=(
                 [name + " blind solver confirmed key disagreement" for name in disagreements]
@@ -351,14 +403,20 @@ def get_client():
     return create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_ROLE_KEY"])
 
 
-def run_recouncil(rows, output_dir, *, artifact_root=None, verdict_dir=None, apply=False, client=None):
+def run_recouncil(rows, output_dir, *, artifact_root=None, verdict_dir=None, apply=False, client=None, now=None):
     output_dir = _path(output_dir)
-    results, events = [], []
+    now = datetime.now(timezone.utc) if now is None else now
+    if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("Re-council now must be a timezone-aware datetime")
+    now = now.astimezone(timezone.utc)
+    results, events, pages = [], [], []
     for row in rows:
         events.extend([{**e, "question_id": row["id"]} for e in row.get("question_events", [])])
+        preparation_complete = False
         try:
             prepared = prepare_question(row, find_artifact(row, artifact_root))
-            if "request" in prepared:
+            preparation_complete = "request" in prepared
+            if preparation_complete:
                 request = prepared["request"]
                 path = output_dir / "judge-requests" / (request["candidate_id"] + ".json")
                 if path.exists() and read_json(path) != request:
@@ -386,12 +444,15 @@ def run_recouncil(rows, output_dir, *, artifact_root=None, verdict_dir=None, app
                 if not isinstance(response.data, dict) or response.data.get("changed") is not True:
                     raise ValueError("RPC refused transition")
                 result["applied"] = True
-            results.append(result)
         except Exception:
-            results.append({"question_id": row.get("id"), "outcome": "quarantined", "applied": False,
-                            "reasons": ["Re-council operation failed; inspect coordinator logs before retrying"]})
+            result = {"question_id": row.get("id"), "outcome": "quarantined", "applied": False,
+                      "reasons": ["Re-council operation failed; inspect coordinator logs before retrying"]}
+        page = None if preparation_complete else blocked_quarantine_page(row, result, now=now)
+        if page is not None:
+            pages.append(page)
+        results.append(result)
     return {"version": 1, "mode": "apply" if apply else "dry-run", "questions": results,
-            "pages": repeat_report_pages(events)}
+            "pages": repeat_report_pages(events) + pages}
 
 
 @click.command()
