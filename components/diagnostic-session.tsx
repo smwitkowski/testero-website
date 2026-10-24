@@ -73,6 +73,7 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
         body: JSON.stringify({ itemId: question.id, selectedLabel: selected }), signal,
       });
       if (signal.aborted) return;
+      if (!result.feedback) { setData(result.progress); setSelected(""); setViewOrdinal(null); setAnswer(null); return; }
       trackDiagnosticAnswer(sessionId, question.ordinal, question.domainCode, result.feedback.isCorrect, result.progress.certId ?? certId, data.totalQuestions);
       setAnswer(result);
     } catch (reason) {
@@ -107,7 +108,7 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
   const minutesLeft = secondsLeft >= 60 ? Math.ceil(secondsLeft / 60) : 0;
   const midpoint = Math.floor(data.totalQuestions / 2);
   const answeredCount = answer?.answeredCount ?? data.answeredCount;
-  const feedback = answer?.feedback.itemId === question.id ? answer.feedback : null;
+  const feedback = answer?.feedback?.itemId === question.id ? answer.feedback : null;
   const halfway = !readOnly && !feedback && data.totalQuestions >= 10 && data.answeredCount === midpoint && question.ordinal === midpoint + 1;
 
   return (
@@ -115,6 +116,7 @@ export function DiagnosticSession({ sessionId, initialData = null }: { sessionId
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-[max(1.25rem,env(safe-area-inset-left),env(safe-area-inset-right))] py-4 sm:px-8 sm:py-16">
         <div className="mx-auto max-w-[720px] space-y-4 sm:space-y-6">
           {header}
+          {!!data.withdrawnCount && <p role="status">{data.withdrawnCount} withdrawn question(s) were skipped and excluded from your score.</p>}
           <div className="space-y-3">
             <div className="flex flex-wrap justify-between gap-2 text-sm text-muted-foreground">
               <span>Question {question.ordinal} of {data.totalQuestions}</span>

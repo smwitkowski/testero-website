@@ -137,9 +137,9 @@ test("QA diagnostic click-to-question budget and paid explanation/next/summary",
     await page.getByRole("button", { name: "Submit answer", exact: true }).click();
     const accepted = await (await response).json() as PracticeAnswerResponse;
     (timings.practiceAnswers as number[]).push(performance.now() - before);
-    expect(accepted.feedback.optionExplanations?.length).toBeGreaterThan(1);
+    expect(accepted.feedback!.optionExplanations?.length).toBeGreaterThan(1);
     await expect(page.getByRole("heading", { name: "Option explanations", exact: true })).toHaveCount(1);
-    for (const option of accepted.feedback.optionExplanations!) await expect(page.getByText(option.explanation, { exact: true })).toHaveCount(1);
+    for (const option of accepted.feedback!.optionExplanations!) await expect(page.getByText(option.explanation, { exact: true })).toHaveCount(1);
     if (ordinal < 5) await page.getByRole("button", { name: "Next question", exact: true }).click();
     else await page.getByRole("link", { name: "View summary", exact: true }).click();
   }

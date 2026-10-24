@@ -208,7 +208,7 @@ test("anonymous 20-question diagnostic persists snapshots and exposes aggregate 
       noAnswerKeys(answer.progress);
       expect(answer.feedback).toEqual({ itemId: progress.currentQuestion!.id, selectedLabel: progress.currentQuestion!.options[0].label, correctLabel: expect.stringMatching(/^[A-D]$/), isCorrect: expect.any(Boolean) });
       if (index < 3) await assertTransition(page, api, "feedback");
-      await expect(page.getByRole("status")).toContainText(answer.feedback.isCorrect ? `Correct. The answer is ${answer.feedback.correctLabel}.` : `Not quite. The correct answer is ${answer.feedback.correctLabel}.`);
+      await expect(page.getByRole("status")).toContainText(answer.feedback!.isCorrect ? `Correct. The answer is ${answer.feedback!.correctLabel}.` : `Not quite. The correct answer is ${answer.feedback!.correctLabel}.`);
       if (index < 3) await armTransition(page, { path: api, ordinal: index + 2, total: 20 });
       await page.getByRole("button", { name: nextName }).click();
       if (index < 3) await assertTransition(page, api, "next");

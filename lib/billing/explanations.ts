@@ -30,8 +30,12 @@ export async function loadPaidExplanations(client: SupabaseClient, items: Explan
       client.from("answers").select("question_id,choice_label,choice_text,explanation_text").in("question_id", ids),
       client.from("explanations").select("question_id,explanation_text").in("question_id", ids),
     ]);
-    if (answerError || explanationError || !Array.isArray(answers) || !Array.isArray(explanations)) return result;
+    // The status fence runs after content reads, not concurrently with them.
+    const { data: questions, error: questionError } = await client.from("questions").select("id").in("id", ids).eq("status", "ACTIVE").eq("review_status", "GOOD");
+    if (answerError || explanationError || questionError || !Array.isArray(answers) || !Array.isArray(explanations) || !Array.isArray(questions)) return result;
+    const active = new Set(questions.map(question => question.id));
     for (const item of eligible) {
+      if (!active.has(item.question_id)) continue;
       const canonical = answers.filter(answer => answer.question_id === item.question_id);
       const questionExplanations = explanations.filter(row => row.question_id === item.question_id);
       if (!Array.isArray(item.options) || item.options.length < 2 || canonical.length !== item.options.length || questionExplanations.length > 1

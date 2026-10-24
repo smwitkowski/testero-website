@@ -20,13 +20,15 @@ interface SessionItem {
   id: string; question_id?: string; ordinal: number; stem: string; options: { label: string; text: string }[];
   domain_code: string; domain_name: string; is_correct: boolean | null; answered_at: string | null;
   correct_label?: string; selected_label?: string | null;
+  questions: { status: string; review_status: string } | null;
 }
 const SESSION_FIELDS = "id,user_id,anonymous_owner_hash,question_count,expires_at,completed_at,exam";
 const PMLE_EXAM = "GCP_PM_ML_ENG";
 // Preserve the existing PMLE wire format; analytics defaults its missing cert ID to PMLE.
 const sessionCertId = (session: Pick<StudySession, "exam">) => session.exam === PMLE_EXAM ? undefined : session.exam;
 const isPmleSession = (session: Pick<StudySession, "exam">) => session.exam === undefined || session.exam === PMLE_EXAM;
-const ITEM_FIELDS = "id,ordinal,stem,options,domain_code,domain_name,is_correct,answered_at,selected_label";
+const ITEM_FIELDS = "id,question_id,ordinal,stem,options,domain_code,domain_name,is_correct,answered_at,selected_label,questions(status,review_status)";
+const activeItem = (item: SessionItem) => item.questions?.status === "ACTIVE" && item.questions.review_status === "GOOD";
 const unavailable = () => new DiagnosticError(503, "The diagnostic is unavailable. Please try again.");
 
 /** Questions from this owner's earlier diagnostics. Freshness is best effort: errors mean "none seen". */
@@ -108,10 +110,10 @@ async function ownedSession(client: SupabaseClient, id: string, credentials: Own
 async function sessionItems(client: SupabaseClient, id: string, includeReview = false): Promise<SessionItem[]> {
   const query = client.from("session_items");
   const { data, error } = includeReview
-    ? await query.select("id,question_id,ordinal,stem,options,domain_code,domain_name,is_correct,answered_at,correct_label,selected_label").eq("session_id", id).order("ordinal")
+    ? await query.select(`${ITEM_FIELDS},correct_label`).eq("session_id", id).order("ordinal")
     : await query.select(ITEM_FIELDS).eq("session_id", id).order("ordinal");
   if (error || !Array.isArray(data)) throw unavailable();
-  return data as SessionItem[];
+  return data as unknown as SessionItem[];
 }
 
 export async function readDiagnostic(client: SupabaseClient, id: string, credentials: OwnerCredentials, now = Date.now()): Promise<DiagnosticProgress> {
@@ -122,12 +124,14 @@ export async function readDiagnostic(client: SupabaseClient, id: string, credent
 
 function diagnosticProgress(session: Pick<StudySession, "id" | "question_count" | "completed_at" | "exam">, items: SessionItem[]): DiagnosticProgress {
   if (items.length !== session.question_count) throw unavailable();
+  const withdrawnCount = items.filter(item => !activeItem(item)).length;
+  items = items.filter(activeItem);
   const answeredCount = items.filter(item => item.answered_at !== null).length;
-  const completed = !!session.completed_at || answeredCount === session.question_count;
+  const completed = !!session.completed_at || answeredCount === items.length;
   const current = completed ? null : items.find(item => item.answered_at === null);
   if (!completed && !current) throw unavailable();
   const displayQuestion = (item: SessionItem) => ({
-    id: item.id, ordinal: item.ordinal, domainCode: item.domain_code, stem: item.stem,
+    id: item.id, ordinal: items.indexOf(item) + 1, domainCode: item.domain_code, stem: item.stem,
     ...(!isPmleSession(session) ? { domainName: item.domain_name } : {}),
     options: item.options.map(option => ({ label: option.label, text: option.text })),
   });
@@ -137,7 +141,7 @@ function diagnosticProgress(session: Pick<StudySession, "id" | "question_count" 
   });
   return {
     sessionId: session.id, ...(sessionCertId(session) ? { certId: sessionCertId(session) } : {}), status: completed ? "completed" : "in_progress",
-    totalQuestions: session.question_count, answeredCount,
+    totalQuestions: items.length, answeredCount, ...(withdrawnCount ? { withdrawnCount } : {}),
     currentQuestion: current ? displayQuestion(current) : null,
     answeredQuestions,
   };
@@ -158,14 +162,15 @@ export async function answerDiagnostic(client: SupabaseClient, id: string, crede
     }
     throw unavailable();
   }
-  const result = data as DiagnosticAnswerResponse | null;
-  if (!result || !Number.isInteger(result.answeredCount) || result.answeredCount < 0 || result.answeredCount > session.question_count || result.totalQuestions !== session.question_count || typeof result.completed !== "boolean" || result.completed !== (result.answeredCount === session.question_count)) throw unavailable();
+  const result = data as (Pick<DiagnosticAnswerResponse, "answeredCount" | "totalQuestions" | "completed"> & { withdrawn?: boolean }) | null;
+  if (!result || !Number.isInteger(result.answeredCount) || result.answeredCount < 0 || result.answeredCount > session.question_count || !Number.isInteger(result.totalQuestions) || result.totalQuestions < 0 || result.totalQuestions > session.question_count || typeof result.completed !== "boolean" || result.completed !== (result.answeredCount === result.totalQuestions)) throw unavailable();
   // Whitelist fields even if the RPC changes. Progress never carries correctness; only the
   // item just answered gets right/wrong and its correct label (no explanation), as in free practice (D-039).
   const items = await measure("progress_read", () => sessionItems(client, id, true));
   const progress = diagnosticProgress(session, items);
-  if (progress.answeredCount < result.answeredCount) throw unavailable();
   const answered = items.find(item => item.id === itemId);
+  if (result.withdrawn || (answered && !activeItem(answered))) return { answeredCount: progress.answeredCount, totalQuestions: progress.totalQuestions, completed: progress.status === "completed", progress, feedback: null };
+  if ((!progress.withdrawnCount && progress.totalQuestions !== result.totalQuestions) || progress.answeredCount < result.answeredCount) throw unavailable();
   if (!answered?.answered_at || typeof answered.is_correct !== "boolean" || typeof answered.selected_label !== "string" || typeof answered.correct_label !== "string" ||
       !answered.options.some(option => option.label === answered.correct_label)) throw unavailable();
   const feedback = { itemId, selectedLabel: answered.selected_label, correctLabel: answered.correct_label, isCorrect: answered.is_correct };
@@ -174,17 +179,26 @@ export async function answerDiagnostic(client: SupabaseClient, id: string, crede
 
 export async function diagnosticResults(client: SupabaseClient, id: string, credentials: OwnerCredentials, now = Date.now()): Promise<DiagnosticResult> {
   const session = await ownedSession(client, id, credentials, now);
-  if (!session.completed_at) throw new DiagnosticError(409, "Finish the diagnostic to see your results");
   const includeReview = isPmleSession(session) && session.user_id !== null && session.user_id === credentials.userId;
-  const items = await sessionItems(client, id, includeReview);
-  if (items.length !== session.question_count || items.some(item => !item.answered_at || typeof item.is_correct !== "boolean")) throw unavailable();
-  const result = computeResult(session.id, items);
+  const saved = await sessionItems(client, id, includeReview);
+  if (saved.length !== session.question_count) throw unavailable();
+  const items = saved.filter(activeItem);
+  if (!session.completed_at && items.some(item => !item.answered_at)) throw new DiagnosticError(409, "Finish the diagnostic to see your results");
+  if (items.some(item => !item.answered_at || typeof item.is_correct !== "boolean")) throw unavailable();
+  let result = computeResult(session.id, items);
+  if (items.length < saved.length) result.withdrawnCount = saved.length - items.length;
   if (sessionCertId(session)) result.certId = sessionCertId(session);
   if (!isPmleSession(session)) result.domainBreakdown = [];
   if (includeReview) {
     const access = await getPaidAccess(session.user_id!, client, now);
     const explanations = access.hasPaidAccess ? await loadPaidExplanations(client, items) : null;
-    result.review = items.map(item => {
+    const final = await sessionItems(client, id, true);
+    if (final.length !== session.question_count) throw unavailable();
+    const reviewItems = final.filter(activeItem);
+    if (reviewItems.some(item => !item.answered_at || typeof item.is_correct !== "boolean")) throw unavailable();
+    result = computeResult(session.id, reviewItems);
+    if (reviewItems.length < final.length) result.withdrawnCount = final.length - reviewItems.length;
+    result.review = reviewItems.map(item => {
       if (typeof item.selected_label !== "string" || typeof item.correct_label !== "string" ||
           !item.options.some(option => option.label === item.selected_label) ||
           !item.options.some(option => option.label === item.correct_label)) throw unavailable();
@@ -198,9 +212,12 @@ export async function diagnosticResults(client: SupabaseClient, id: string, cred
 export async function diagnosticFreeExplanation(client: SupabaseClient, id: string, credentials: OwnerCredentials, now = Date.now()) {
   const session = await ownedSession(client, id, credentials, now);
   if (!isPmleSession(session)) throw new DiagnosticError(404, "Explanation not available for this diagnostic");
-  if (!session.completed_at) throw new DiagnosticError(409, "Finish the diagnostic to see your explanation");
-  const items = await sessionItems(client, id, true);
-  if (items.length !== session.question_count || items.some(item => !item.answered_at || typeof item.is_correct !== "boolean")) throw unavailable();
+  const saved = await sessionItems(client, id, true);
+  if (saved.length !== session.question_count) throw unavailable();
+  const items = saved.filter(activeItem);
+  if (!session.completed_at && items.some(item => !item.answered_at)) throw new DiagnosticError(409, "Finish the diagnostic to see your explanation");
+  if (items.some(item => !item.answered_at || typeof item.is_correct !== "boolean")) throw unavailable();
+  if (!items.length) throw new DiagnosticError(410, "All questions in this diagnostic were withdrawn. There is no explanation to show.");
   const domains = computeResult(session.id, items).domainBreakdown;
   // Keep exam-guide order for equal accuracy. A perfect run uses its first domain.
   const weakest = [...domains].sort((a, b) => a.correct * b.total - b.correct * a.total)[0];
@@ -211,6 +228,8 @@ export async function diagnosticFreeExplanation(client: SupabaseClient, id: stri
       !item.options.some(option => option.label === item.correct_label)) throw unavailable();
   const content = (await loadPaidExplanations(client, [item])).get(item.id);
   // Never substitute a different question on retry if the selected bank item changed.
+  const final = await sessionItems(client, id);
+  if (!final.some(row => row.id === item.id && activeItem(row))) throw new DiagnosticError(410, "This question was withdrawn. Reload your diagnostic results.");
   if (!content || item.options.some(option => !content.optionExplanations?.some(row => row.label === option.label && row.text === option.text && row.explanation.trim()))) throw unavailable();
   return addPaidReview(mapReview({ ...item, selected_label: item.selected_label, correct_label: item.correct_label, is_correct: item.is_correct! }), content);
 }

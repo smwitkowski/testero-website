@@ -65,15 +65,15 @@ test("local return fulfillment grants paid explanations and unlimited practice; 
       const response = await page.request.post(`/api/practice/${id}/answer`, { data: { itemId: progress.currentQuestion!.id, selectedLabel: progress.currentQuestion!.options[0].label } });
       expect(response.status()).toBe(200);
       const accepted = await response.json() as PracticeAnswerResponse;
-      expect(accepted.feedback.itemId).toBe(progress.currentQuestion!.id);
+      expect(accepted.feedback!.itemId).toBe(progress.currentQuestion!.id);
       if (paid) {
-        expect(accepted.feedback.explanation).toBeTruthy();
-        expect(accepted.feedback.optionExplanations).toHaveLength(4);
-        expect(accepted.feedback.optionExplanations!.every(option => option.explanation.trim().length > 0)).toBe(true);
+        expect(accepted.feedback!.explanation).toBeTruthy();
+        expect(accepted.feedback!.optionExplanations).toHaveLength(4);
+        expect(accepted.feedback!.optionExplanations!.every(option => option.explanation.trim().length > 0)).toBe(true);
         if (process.env.TESTERO_PROD_SCHEMA === "1") {
           const restored = restoredItems.get(progress.currentQuestion!.id)!;
-          expect(accepted.feedback.explanation).toBe(restored.question.explanations[0].explanation_text);
-          for (const option of accepted.feedback.optionExplanations!) {
+          expect(accepted.feedback!.explanation).toBe(restored.question.explanations[0].explanation_text);
+          for (const option of accepted.feedback!.optionExplanations!) {
             expect(option.explanation).toBe(restored.question.answers.find(answer => answer.choice_text === option.text)!.explanation_text);
           }
         }
@@ -213,9 +213,9 @@ test("local return fulfillment grants paid explanations and unlimited practice; 
     const first = await service.from("session_items").select("id,selected_label").eq("session_id", paidPracticeId).eq("ordinal", 1).single();
     const withContent = await page.request.post(`/api/practice/${paidPracticeId}/answer`, { data: { itemId: first.data!.id, selectedLabel: first.data!.selected_label } });
     const liveFeedback = (await withContent.json()).feedback as PracticeAnswerResponse["feedback"];
-    expect(liveFeedback.optionExplanations).toHaveLength(4);
+    expect(liveFeedback!.optionExplanations).toHaveLength(4);
     await expect(page.getByRole("heading", { name: "Explanation", exact: true })).toHaveCount(0);
-    for (const option of liveFeedback.optionExplanations!) {
+    for (const option of liveFeedback!.optionExplanations!) {
       await expect(page.getByText(option.explanation, { exact: true })).toHaveCount(1);
     }
     const paidSummary = await completePractice(paidPracticeIds[1], true);

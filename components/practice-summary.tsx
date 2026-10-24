@@ -30,6 +30,7 @@ export function PracticeSummary({ sessionId }: { sessionId: string }) {
       <h1 ref={heading} tabIndex={-1} className="text-3xl font-semibold tracking-tight">Your practice summary</h1>
       <p className="leading-relaxed text-muted-foreground">Review your answers to decide what to study next. This short session is study guidance, not an exam readiness guarantee.</p>
     </section>
+    {!!data.withdrawnCount && <p role="status">{data.withdrawnCount} withdrawn question(s) were excluded from your score and review.</p>}
     <Card>
       <CardHeader><div className="flex flex-wrap items-baseline justify-between gap-4"><h2 className="text-xl font-semibold">Practice score</h2><p className="text-3xl font-semibold tabular-nums">{data.score}%</p></div></CardHeader>
       <CardContent className="space-y-5"><p>{data.correctAnswers} of {data.totalQuestions} correct</p><h3 className="font-semibold">Progress by domain</h3><DomainScores domains={data.domainBreakdown} /></CardContent>

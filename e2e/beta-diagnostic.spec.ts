@@ -243,9 +243,9 @@ test.describe("beta diagnostic with a real local bank and server allowlist", () 
         const answer = await accepted.json() as DiagnosticAnswerResponse;
         expect(answer.progress.certId).toBe(certId);
         noAnswerKeys(answer.progress);
-        expect(Object.keys(answer.feedback).sort()).toEqual(["correctLabel", "isCorrect", "itemId", "selectedLabel"].sort());
-        expect(answer.feedback.itemId).toBe(question.id);
-        await expect(page.getByRole("status")).toContainText(answer.feedback.isCorrect ? `Correct. The answer is ${answer.feedback.correctLabel}.` : `Not quite. The correct answer is ${answer.feedback.correctLabel}.`);
+        expect(Object.keys(answer.feedback!).sort()).toEqual(["correctLabel", "isCorrect", "itemId", "selectedLabel"].sort());
+        expect(answer.feedback!.itemId).toBe(question.id);
+        await expect(page.getByRole("status")).toContainText(answer.feedback!.isCorrect ? `Correct. The answer is ${answer.feedback!.correctLabel}.` : `Not quite. The correct answer is ${answer.feedback!.correctLabel}.`);
         for (const radio of await page.getByRole("radio").all()) await expect(radio).toBeDisabled();
         await expect(page.getByText("Private fixture explanation", { exact: false })).toHaveCount(0);
         if (index === 0) {
