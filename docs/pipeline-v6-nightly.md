@@ -98,7 +98,8 @@ confirm `testero-resend-api-key` or set `TESTERO_RESEND_SECRET` to the approved
 secret name. No key value is printed or saved. No env file is loaded.
 
 ```sh
-# Runtime probes + generation/judging + current DB reads + shadow reports only.
+# Runtime probes + generation/judging/DRAFT ingest + shadow publication reports.
+# This writes DRAFTs; it does not publish/restore/retire while the flag is absent.
 # PUBLISH_LIVE must be absent. Do this on two distinct nights and compare reports.
 /Users/switkowski/Projects/Testero/hq/tools/pipeline-nightly.sh \
   --config /absolute/coordinator-nightly-config.json --live
@@ -110,8 +111,7 @@ touch /Users/switkowski/Projects/Testero/hq/tools/PUBLISH_LIVE
   --config /absolute/coordinator-nightly-config.json --live
 ```
 
-Live means model/network execution. The flag controls DB publication/restore/
-retirement, not whether paid calls occur. The flag is checked again before publish.
+Live means model/network execution. Generation still ingests accepted DRAFTs in a shadow night. The flag controls ACTIVE publication/restore/retirement, not DRAFT ingestion or whether paid calls occur. The flag is checked again before publish.
 Remove it to return to shadow. Create `hq/tools/PIPELINE_PAUSED` to stop every stage.
 Health writes this pause itself on an escaped canary or bad rolling catch rate.
 Only the coordinator removes it after diagnosis.
