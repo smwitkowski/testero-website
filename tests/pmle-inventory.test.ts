@@ -10,14 +10,14 @@ beforeEach(() => {
   for (const method of [mocks.query.select, mocks.query.eq, mocks.query.is, mocks.query.order]) method.mockReset().mockReturnValue(mocks.query);
   mocks.query.range.mockReset().mockResolvedValue({ data: [valid, { ...valid, id: "empty", stem: " " }, { ...valid, id: "bad", answers: [] }, { ...valid, id: "other", exam_domains: { code: "UNKNOWN" } }], error: null });
 });
-it("counts only usable ACTIVE GOOD PMLE questions and observed domains, cached one hour", async () => {
+it("counts only usable ACTIVE GOOD PMLE questions and observed domains, cached five minutes", async () => {
   const inventory = await getPmleInventory();
   expect(inventory).toMatchObject({ count: 1, domainCount: 1 });
   expect(Number.isNaN(Date.parse(inventory!.checkedAt))).toBe(false);
   expect(mocks.query.eq.mock.calls).toEqual([["exam", "GCP_PM_ML_ENG"], ["status", "ACTIVE"], ["review_status", "GOOD"]]);
   expect(mocks.query.is).toHaveBeenCalledExactlyOnceWith("parent_question_id", null);
   expect(mocks.query.range).toHaveBeenCalledWith(0, 999);
-  expect(mocks.cacheConfig).toEqual([["active-pmle-question-inventory"], { revalidate: 3600 }]);
+  expect(mocks.cacheConfig).toEqual([["active-pmle-question-inventory"], { revalidate: 300 }]);
 });
 it("excludes variants from both bank and domain counts before pagination", async () => {
   const originals = Array.from({ length: 1001 }, (_, index) => ({ ...valid, id: `original-${index}`, parent_question_id: null }));

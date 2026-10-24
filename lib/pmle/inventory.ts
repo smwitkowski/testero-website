@@ -26,7 +26,7 @@ const readPmleInventory = unstable_cache(async () => {
     if (data.length < pageSize) break;
   }
   return { count: [...counts.values()].reduce((sum, ids) => sum + ids.size, 0), domainCount: counts.size, checkedAt: new Date().toISOString() };
-}, ["active-pmle-question-inventory"], { revalidate: 3600 });
+}, ["active-pmle-question-inventory"], { revalidate: 300 });
 
 export async function getPmleInventory() {
   try { return await readPmleInventory(); }

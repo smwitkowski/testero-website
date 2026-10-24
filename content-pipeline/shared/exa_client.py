@@ -70,7 +70,9 @@ def search_technical_facts(
             search_params["include_domains"] = include_domains
         
         # Perform search
-        results = client.search(**search_params)
+        from shared.nightly_budget import exa_call
+        with exa_call(num_results=num_results, include_text=include_text):
+            results = client.search(**search_params)
         
         # Extract results - Exa returns results in results.results
         search_results = [
@@ -89,6 +91,9 @@ def search_technical_facts(
         logger.warning("exa-py package not installed. Install with: pip install exa-py")
         return []
     except Exception as e:
+        from scripts.nightly_budget import BudgetError
+        if isinstance(e, BudgetError):
+            raise
         logger.warning(f"Exa search failed: {e}. Continuing without research context.")
         return []
 

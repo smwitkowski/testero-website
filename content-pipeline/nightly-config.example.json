@@ -1,0 +1,20 @@
+{
+  "calls_root": "/Users/switkowski/Projects/Testero/frontend.prime-pipeline-v6/content-pipeline/.cache/generation",
+  "batches": 2,
+  "count": 40,
+  "rates": {},
+  "exa_upper_bound": {
+    "request_usd": null,
+    "result_usd": null,
+    "text_result_usd": null
+  },
+  "sender": "Pipeline <pipeline@example.com>",
+  "recipient": "founder@example.com",
+  "health_artifacts": [
+    "/ABSOLUTE/accepted-frozen-artifact.json"
+  ],
+  "gold_artifacts": [
+    "/ABSOLUTE/pmle-d029-artifact.json",
+    "/ABSOLUTE/accepted-pde-artifact.json"
+  ]
+}

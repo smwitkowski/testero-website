@@ -337,7 +337,7 @@ def _run_cli(model, prompt, schema, signature, *, timeout, reasoning_effort="hig
     from shared.call_logging import model_call
     resolved = (DEFAULT_CODEX_MODEL if model == "codex" else
                 DEFAULT_CLAUDE_MODEL if model == "claude" else model.split("/", 1)[-1])
-    with model_call(resolved) as usage:
+    with model_call(resolved, provider="codex" if model == "codex" or model.startswith("codex/") else "claude") as usage:
         return _run_cli_transport(model, prompt, schema, signature, timeout=timeout,
                                   reasoning_effort=reasoning_effort, usage=usage)
 
