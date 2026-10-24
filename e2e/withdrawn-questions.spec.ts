@@ -60,7 +60,7 @@ test("quarantined saved questions disappear from diagnostic, practice, mock answ
     await page.goto(`/mock/${mock}/results`); await expect(page.getByText(/not marked incorrect/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Report a problem with this question", exact: true })).toHaveCount(49);
     await page.getByRole("button", { name: "Report a problem with this question", exact: true }).first().click();
-    await page.getByLabel("Reason", { exact: true }).first().selectOption("typo");
+    await page.getByRole("combobox", { name: "Reason", exact: true }).first().selectOption("typo");
     await expect(page.getByRole("button", { name: "Send report", exact: true })).toBeVisible();
     // Do not submit here: immutable report audit rows belong to the SQL B rollback verifier.
     expect(failures).toEqual([]);
