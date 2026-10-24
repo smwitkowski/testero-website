@@ -2,7 +2,9 @@
 
 This code was built and tested offline. It did not run models, retrieve keys,
 read login state, call production, apply migrations, merge, or deploy.
-Apply migrations A–C through the approved coordinator process before live use.
+Deployment order is mandatory: apply migration A (including the lifecycle guard),
+deploy the reviewed app, then apply B and C immediately. Do not apply B/C while
+the old app still serves sessions. Use the approved coordinator process only.
 
 ## Files and safety
 
@@ -16,11 +18,41 @@ Apply migrations A–C through the approved coordinator process before live use.
 - External `hq/tools/pipeline-nightly.sh`: small runtime credential-injection wrapper.
 - External `hq/tools/judge-and-ingest.sh`: retained, marked RETIRED, exits without calls.
 
-The old `run-cert-rotation.sh` is **unchanged**. Do not run it for v6. It resets a
-different worktree and contains the retired fallback. The replacement never resets
-or updates a checkout and never falls back to paid generation. Set
-`TESTERO_FRONTEND_DIR` to the approved, installed checkout after merge.
-Do not run old and new schedulers together.
+Retire/disable the old `run-cert-rotation.sh` schedule **before** enabling the new
+nightly schedule. Do not run both. The old rotation and its worktree are not
+modified by this wrapper. There is no paid generation fallback.
+
+The external `.sh` launcher is an executable Python 3 program (keep its shebang;
+do not invoke it with `bash`). Its source lives in coordinator-controlled `hq`,
+not in the editable PR checkout. The coordinator must inspect/install that source
+before enabling it. It never imports implementation-worktree code. Live launch:
+
+1. Lock `hq/pipeline-nightly-runtime/launcher.lock` for the entire child lifetime.
+   Check the runtime owner marker. Existing unmarked directories are refused.
+2. Check all previous owned checkouts for dirt, HEAD/branch drift and git ownership.
+   Refuse any change rather than resetting, cleaning or discarding files.
+3. Fetch `origin/main` from `Testero/frontend`. Require its fresh full SHA to equal
+   the explicit coordinator-reviewed `--reviewed-main` pin. A mismatch stops
+   before credentials or repository code run. Review/update the pin deliberately;
+   never substitute the PR HEAD or automatically accept a new main SHA.
+4. Create a **new detached worktree** at that exact SHA under
+   `hq/pipeline-nightly-runtime/worktrees/`. Do not check out/reset the source
+   checkout, this worker, or `frontend.prime-testero-pipeline`.
+5. Inject runtime keys and run the pinned coordinator with frozen offline uv
+   dependency resolution. `UV_PROJECT_ENVIRONMENT` is outside the checkout.
+
+`state/`, `calls/`, and `cache/` live under `hq/pipeline-nightly-runtime/` and are
+shared across nights. The wrapper requires `calls_root` to be the exact absolute
+`.../hq/pipeline-nightly-runtime/calls` path. The checkout's `.cache` is an owned
+symlink to durable `cache/`; batch/request paths are resolved to real paths before
+strict no-symlink input checks. Artifacts, reservations, publication slots,
+checkpoints, and mail claims survive a checkout change. Never clear them to retry.
+Prior worktrees are retained for inspection, not automatically deleted. Any dirt
+outside the owned cache link stops the next run, including ignored files.
+The coordinator may archive/remove a worktree only after reconciling its record;
+the wrapper itself has no reset/clean/delete path. Do not run other writers in
+these dedicated worktrees. The launcher lock protects cooperating invocations,
+not arbitrary human edits or a distributed cross-machine writer.
 
 `lib/pmle/inventory.ts` now revalidates after 300 seconds. Count failures still hide
 the count. Per-cert count/cache generalization is a week-2 seam, not shipped here.
@@ -75,7 +107,7 @@ Run from `content-pipeline/` with a local complete export:
 ```sh
 uv run --frozen --offline python -m scripts.pipeline_nightly \
   --config nightly-config.example.json --coverage /absolute/coverage.json \
-  --tools-dir /absolute/hq/tools --state-dir "$PWD/.cache/nightly" --print
+  --tools-dir /absolute/hq/tools --state-dir /absolute/durable/nightly-state --print
 ```
 
 Export shape: `{"complete":true,"captured_at":"UTC ISO timestamp","questions":[...]}`.
@@ -90,6 +122,12 @@ Agentic Architect stays disabled. Objective-grid/demand-tier planning is deferre
 `--dry-run` is an alias for offline print. It is **not** a shadow model night.
 Neither mode checks actual logins, keys, quota or DB state.
 
+The external wrapper's `--print` (also the default and `--dry-run`) is a
+credential-free **launch plan only**. It reads the explicit JSON config but does
+not fetch, create directories/worktrees, import repository code, or start uv.
+Use the repository command above for a batch-level offline preview. A wrapper
+preview never implies that the configured pin exists on main or was reviewed.
+
 ## Coordinator-only shadow and live commands
 
 The external wrapper gets Supabase from Secret Manager and OpenRouter/Exa from
@@ -102,17 +140,20 @@ secret name. No key value is printed or saved. No env file is loaded.
 # This writes DRAFTs; it does not publish/restore/retire while the flag is absent.
 # PUBLISH_LIVE must be absent. Do this on two distinct nights and compare reports.
 /Users/switkowski/Projects/Testero/hq/tools/pipeline-nightly.sh \
-  --config /absolute/coordinator-nightly-config.json --live
+  --config /absolute/coordinator-nightly-config.json \
+  --reviewed-main COORDINATOR_REVIEWED_FULL_MAIN_SHA --live
 
 # ONLY after the two shadow nights pass coordinator review:
 touch /Users/switkowski/Projects/Testero/hq/tools/PUBLISH_LIVE
 # Same command now allows strict publisher/re-council RPC writes.
 /Users/switkowski/Projects/Testero/hq/tools/pipeline-nightly.sh \
-  --config /absolute/coordinator-nightly-config.json --live
+  --config /absolute/coordinator-nightly-config.json \
+  --reviewed-main COORDINATOR_REVIEWED_FULL_MAIN_SHA --live
 ```
 
 Live means model/network execution. Generation still ingests accepted DRAFTs in a shadow night. The flag controls ACTIVE publication/restore/retirement, not DRAFT ingestion or whether paid calls occur. The flag is checked again before publish.
-Remove it to return to shadow. Create `hq/tools/PIPELINE_PAUSED` to stop every stage.
+Remove it to return to shadow. Create `hq/tools/PIPELINE_PAUSED` to stop model calls and lifecycle writes.
+Read-only queue reporting, local evaluation and the digest can still proceed.
 Health writes this pause itself on an escaped canary or bad rolling catch rate.
 Only the coordinator removes it after diagnosis.
 
@@ -148,14 +189,38 @@ flag. Omit `--apply` to evaluate without changing DB state.
 
 ## Stops and email
 
-Quota/auth/budget/system failures persist `.cache/nightly/YYYYMMDD/checkpoint.json`
-with completed stages and the stopped command. No sleep loop, provider fallback,
-or automatic generation replay runs. A second same-day live invocation refuses
-the existing checkpoint. The coordinator must inspect artifact/persistence journals
-and DB events first. Resume only the appropriate existing request/verdict stage;
-never regenerate a partial batch under the same tag or replay an unknown publish.
-The next UTC day has a fresh bounded plan. This is safe checkpointing, not an
-atomic multi-stage transaction or a generic resume engine.
+Every live night claims durable `state/YYYYMMDD/checkpoint.json`. A second same-day
+invocation refuses that checkpoint. No automatic generation or publication replay
+runs, and an uncertain write keeps its batch/publication reservation. Inspect
+artifact/persistence journals and DB events before any manual recovery.
+
+Failure handling is explicit:
+
+- A runner terminal `nightly-stage-v1` **partial** result proves an ordinary
+  candidate/transport failure using a narrow error-class allowlist. Generic CLI,
+  provider or unknown errors cannot produce this proof. The coordinator skips
+  the remaining generation cohorts and **all remaining new publications** that
+  night, but still processes the independent re-council queue and digest.
+  Earlier confirmed publications are not rolled back.
+- Auth, quota, budget, `PIPELINE_PAUSED`, a removed live flag, missing/malformed
+  result files, and unknown persistence outcomes are **hard stops**. No further
+  model calls or lifecycle writes run. The runner checks structured failures
+  before judging/retrying a failed generation stage; it does not treat a generic
+  nonzero exit as a quality veto. No paid fallback runs.
+- After a hard stop, an available DB client may read a fresh quarantine queue.
+  Local re-council preparation and `--dry-run` evaluation can record retained
+  quarantine reasons without new judging or RPCs. A failed re-council judge is
+  not retried by the coordinator; local dry evaluation and digest still run.
+- A monitor failure blocks publication and is conservatively a hard stop unless
+  a future stage supplies an explicit safe partial proof. Canary auto-pause
+  therefore cannot lead to paid re-council calls. Gold pages without a stage
+  failure remain reporting only.
+
+Live flag/pause/budget fences still run before paid or write stages. The local
+`digest.txt` is saved even when email delivery fails. Final status is `partial`
+for an ordinary stage failure and `checkpointed_stop` for a hard stop; both exit
+nonzero. The next UTC day can make a fresh bounded plan. This is safe checkpointing,
+not an atomic multi-stage transaction or a generic resume engine.
 
 Weekly digest and immediate pages use Resend. Sender/recipient come from config.
 The digest aggregates observed local checkpoints for the current UTC week and
@@ -173,7 +238,7 @@ remain week-2 work.
 
 ```sh
 uv run --frozen --offline python -m scripts.nightly_digest \
-  --report .cache/nightly/YYYYMMDD/checkpoint.json --print
+  --report /absolute/hq/pipeline-nightly-runtime/state/YYYYMMDD/checkpoint.json --print
 ```
 
 ## Exact scheduler change (coordinator only)
@@ -185,15 +250,19 @@ checkout/reset/fallback instructions) with:
 
 ```sh
 /Users/switkowski/Projects/Testero/hq/tools/pipeline-nightly.sh \
-  --config /absolute/coordinator-nightly-config.json --live
+  --config /absolute/coordinator-nightly-config.json \
+  --reviewed-main COORDINATOR_REVIEWED_FULL_MAIN_SHA --live
 ```
 
 Keep its existing nightly time. Add: "Run exactly this wrapper once. Never reset
 or change checkouts, run the retired fallback, remove PIPELINE_PAUSED, create
 PUBLISH_LIVE, fetch secrets outside the wrapper, retry an uncertain checkpoint,
 or substitute paid generation. Nonzero means stop and inspect the checkpoint."
-The coordinator must substitute the actual reviewed config path above, disable
-the old command, and record the two shadow-night reports before creating the flag.
+The coordinator must substitute the actual reviewed config path and full merged
+main SHA above, disable/retire the old rotation **before enabling** this command,
+and record the two shadow-night reports before creating the flag. When main
+changes, review the new main commit and explicitly update the pin; the wrapper
+must fail closed while the old pin remains.
 No scheduled-task file was read or changed by this worker.
 
 ## Verification
@@ -206,7 +275,11 @@ PYTHON_DOTENV_DISABLED=1 uv run --frozen --offline pytest -q \
 
 Tests use local fixtures and fake transports. They prove caps, fail-closed costs,
 reservation concurrency, no generation fallback, quota checkpointing interfaces,
-print mode, kill switch and email dedupe. They do not prove live authentication,
+print mode, kill switch, typed partial vs auth/quota/unknown outcomes, continued
+re-council/digest, and email dedupe. Native temporary local Git fixtures prove
+fresh detached pinning, lock exclusion, durable cache and dirty-tree refusal.
+Wrapper tests skip when the external hq launcher is not installed in a clone.
+They never invoke the wrapper live entry point. They do not prove live authentication,
 pricing, model quality, deliverability or production readiness.
 
 ## Item 8: draft provenance and legacy retirement

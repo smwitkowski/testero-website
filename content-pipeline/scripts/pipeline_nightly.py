@@ -15,6 +15,14 @@ from scripts.nightly_digest import digest, send
 from scripts.nightly_plan import plan
 
 PIPELINE = Path(__file__).resolve().parents[1]
+class StageFailure(ValueError):
+    """Proven ordinary partial batch; independent re-council is still permitted."""
+
+
+class HardStop(ValueError):
+    """No more model calls or lifecycle writes for this night."""
+
+
 REQUIRED_KEYS = ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "OPENROUTER_API_KEY", "EXA_API_KEY", "RESEND_API_KEY")
 QUEUE_FIELDS = ("id,exam,domain_id,status,review_status,parent_question_id,stem,revision,content_sha256,"
                 "created_at,review_notes,answers(choice_label,choice_text,is_correct,explanation_text),"
@@ -43,7 +51,7 @@ def run(command, *, output=None):
                           stderr=subprocess.DEVNULL, timeout=21600, check=False).returncode
 
 
-def preflight(*, execute=run, environ=None):
+def preflight(*, execute=run, environ=None, check=None):
     environ = os.environ if environ is None else environ
     if any(not environ.get(key) for key in REQUIRED_KEYS):
         raise ValueError("Runtime credential injection is incomplete")
@@ -52,6 +60,8 @@ def preflight(*, execute=run, environ=None):
               [sys.executable, "-m", "scripts.nightly_preflight", "--provider", "claude", "--live"],
               [sys.executable, "-m", "scripts.nightly_preflight", "--provider", "codex", "--live"]]
     for command in probes:
+        if check is not None:
+            check()
         if execute(command):
             raise ValueError("Authentication/quota probe failed; checkpoint and stop")
 
@@ -75,10 +85,11 @@ def publications_today(client, now):
 
 def commands_for_batch(batch, tag, *, state_dir, tools, live=False, limit=10):
     cert = batch["cert"]
-    base = PIPELINE / ".cache/generation" / (cert + "-v5-" + tag)
+    base = (PIPELINE / ".cache/generation").resolve() / (cert + "-v5-" + tag)
     report = Path(state_dir) / (tag + ".publish.json")
     generate = [sys.executable, "-m", "scripts.run_domain_batch", batch["section"], tag, cert,
-                "--count", str(batch["count"]), "--parallel", "2"]
+                "--count", str(batch["count"]), "--parallel", "2",
+                "--nightly-result", str(Path(state_dir) / (tag + ".batch.json"))]
     publish = [sys.executable, "-m", "scripts.publish_batch", "--artifact", str(base) + ".json",
                "--verdicts", str(base) + ".verdicts", "--limit", str(limit), "--report", str(report)]
     publish += ["--apply"] if live else ["--read-db", "--dry-run"]
@@ -129,7 +140,7 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
     report = {"status": "planned", "mode": "shadow", "batches": [], "at": now.isoformat()}
     planned = plan(coverage, now, batches=config.get("batches", 2), count=config.get("count", 40))
     report["coverage"] = planned["coverage"]
-    report["budget"] = accounting(load_calls(config["calls_root"]), now, rates=config.get("rates"))
+    report["budget"] = {} if live else accounting(load_calls(config["calls_root"]), now, rates=config.get("rates"))
     publication_live = live and (tools / "PUBLISH_LIVE").is_file()
     report["mode"] = "publish-live" if publication_live else "shadow"
     run_dir = state_dir / now.strftime("%Y%m%d")
@@ -139,7 +150,7 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
         preview.extend(commands_for_batch(batch, tag, state_dir=run_dir, tools=tools, live=publication_live))
     queue_dir = run_dir / "recouncil"
     common = [sys.executable, "-m", "scripts.recouncil", "--queue", str(run_dir / "quarantined.json"),
-              "--output-dir", str(queue_dir), "--artifact-root", str(PIPELINE / ".cache/generation")]
+              "--output-dir", str(queue_dir), "--artifact-root", str((PIPELINE / ".cache/generation").resolve())]
     queue_commands = [("recouncil-prepare", common + ["--report", str(run_dir / "recouncil-prepare.json")]),
                       ("recouncil-judge", [sys.executable, "-m", "scripts.judge_requests", "--requests", str(queue_dir / "judge-requests"),
                                            "--verdicts", str(queue_dir / "verdicts"), "--judge-model", "claude", "--argon-gate", "--full-gate-sample", "1"]),
@@ -162,30 +173,65 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
         checkpoint = run_dir / "checkpoint.json"
         report["status"] = "preflight"
         save(checkpoint, report)
+        hard_stop = False
+        stage_failed = False
+
+        def failed(error):
+            nonlocal hard_stop, stage_failed
+            stage_failed = True
+            hard_stop = hard_stop or not isinstance(error, StageFailure)
+            reason = str(error) if type(error) in (ValueError, BudgetError, StageFailure, HardStop) else type(error).__name__
+            report.setdefault("failures", []).append({"stage": report.get("running_stage", "preflight"),
+                                                      "reason": reason, "hard_stop": hard_stop,
+                                                      "command": report.get("next_command")})
+            report["reason"] = reason
+            report["publishing_disabled"] = True
+            report["paid_stages_stopped"] = hard_stop
+            save(checkpoint, report)
+
+        def step(name, command, output=None, *, read_only=False):
+            if not read_only:
+                if hard_stop:
+                    raise HardStop("Paid/write stages already stopped")
+                paused(tools)
+                if "--apply" in command and not (tools / "PUBLISH_LIVE").is_file():
+                    raise HardStop("PUBLISH_LIVE removed before a write stage")
+                report["budget"] = accounting(load_calls(config["calls_root"]), datetime.now(timezone.utc), rates=config.get("rates"))
+            report["status"], report["running_stage"] = "running", name
+            report["next_command"] = command
+            save(checkpoint, report)
+            code = execute(command, **({"output": output} if output else {}))
+            if code:
+                # Only the runner's explicit terminal partial proof permits more calls.
+                # Missing/malformed/unknown outcomes remain hard stops, not guesses.
+                partial = False
+                if "--nightly-result" in command:
+                    path = Path(command[command.index("--nightly-result") + 1])
+                    try:
+                        partial = (not path.is_symlink() and json.loads(path.read_text()) ==
+                                   {"schema": "nightly-stage-v1", "status": "partial"})
+                    except (OSError, ValueError):
+                        pass
+                if partial:
+                    raise StageFailure("Ordinary partial batch; skip all new publications tonight")
+                raise HardStop("Stage failed with hard/unknown outcome: " + name)
+            report.setdefault("completed_stages", []).append(name)
+            report.pop("running_stage", None)
+            save(checkpoint, report)
+
         try:
-            preflight(execute=execute)
+            # Pause/budget checks precede even the subscription model probes.
+            paused(tools)
+            report["budget"] = accounting(load_calls(config["calls_root"]), datetime.now(timezone.utc), rates=config.get("rates"))
+            preflight(execute=execute, check=lambda: paused(tools))
             paused(tools)
             from scripts.retire_legacy import get_client
             client = client or get_client()
             fresh = export_snapshot(client, now)
             save(run_dir / "coverage.json", fresh)
-            # Rebuild the plan from fresh database counts, never the preview export.
             planned = plan(fresh, now, batches=config.get("batches", 2), count=config.get("count", 40))
             report["coverage"] = planned["coverage"]
-            def step(name, command, output=None):
-                paused(tools)
-                if "--apply" in command and not (tools / "PUBLISH_LIVE").is_file():
-                    raise ValueError("PUBLISH_LIVE removed before a write stage")
-                report["budget"] = accounting(load_calls(config["calls_root"]), datetime.now(timezone.utc), rates=config.get("rates"))
-                report["status"], report["running_stage"] = "running", name
-                report["next_command"] = command
-                save(checkpoint, report)
-                if execute(command, **({"output": output} if output else {})):
-                    raise ValueError("Stage failed or quota exhausted: " + name)
-                report.setdefault("completed_stages", []).append(name)
-                report.pop("running_stage", None)
-                save(checkpoint, report)
-            # Health must pass before any new publication, including the first live night.
+            # Health must pass before any new publication.
             for name, command in monitors:
                 output = run_dir / (name + ".json") if name.endswith("evaluate") else None
                 step(name, command, output=output)
@@ -199,15 +245,13 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
                     report["reason"] = "Daily publication cap reached"
                     break
                 from shared.nightly_budget import daily_claim
-                # Reserve before generation; uncertainty never refunds a batch slot.
                 daily_claim(config["calls_root"], datetime.now(timezone.utc))
                 commands = commands_for_batch(batch, tag, state_dir=run_dir, tools=tools,
                                                live=publication_live, limit=remaining)
                 for name, command in commands:
-                    # Recheck the live flag immediately before each publication.
                     if name == "publish":
                         if publication_live and not (tools / "PUBLISH_LIVE").is_file():
-                            raise ValueError("PUBLISH_LIVE removed before publication")
+                            raise HardStop("PUBLISH_LIVE removed before publication")
                         current = datetime.now(timezone.utc)
                         used = publications_today(client, current)
                         remaining = max(0, 10 - used)
@@ -218,47 +262,85 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
                     step(tag + "-" + name, command)
                 result = json.loads((run_dir / (tag + ".publish.json")).read_text())
                 from scripts.nightly_metrics import batch_metrics
-                metrics = batch_metrics(PIPELINE / ".cache/generation" / (batch["cert"] + "-v5-" + tag + ".json"),
-                                        PIPELINE / ".cache/generation" / (batch["cert"] + "-v5-" + tag + ".verdicts"), result)
+                metrics = batch_metrics((PIPELINE / ".cache/generation").resolve() / (batch["cert"] + "-v5-" + tag + ".json"),
+                                        (PIPELINE / ".cache/generation").resolve() / (batch["cert"] + "-v5-" + tag + ".verdicts"), result)
                 report["batches"].append({"plan": batch, "publication": result, "metrics": metrics})
-            fresh_queue = export_snapshot(client, datetime.now(timezone.utc))
-            queue = [row for row in fresh_queue["questions"] if row["review_status"] == "QUARANTINED"]
-            save(run_dir / "quarantined.json", {"questions": queue})
-            if queue:
-                for name, command in queue_commands:
-                    if name == "recouncil-judge" and not list((queue_dir / "judge-requests").glob("*.json")):
-                        report["recouncil_judge"] = {"status": "skipped", "reason": "No valid prepared requests; evaluate retained-quarantine reasons"}
-                        save(checkpoint, report)
-                        continue
-                    step(name, command)
-                report["recouncil"] = json.loads((run_dir / "recouncil.json").read_text())
-            else:
-                report["recouncil"] = {"queued": 0, "note": "Fresh DB queue empty"}
-            report["status"] = "complete"
-            report["budget"] = accounting(load_calls(config["calls_root"]), datetime.now(timezone.utc), rates=config.get("rates"))
-            from scripts.nightly_metrics import observed_week
-            report["weekly_observed"] = observed_week(state_dir, report, now)
-            save(checkpoint, report)
-            pages = list(report.get("recouncil", {}).get("pages", []))
-            if report["weekly_observed"]["low_yield_two_batches"]:
-                pages.append("Yield below 15% in two observed consecutive batches")
-            report["pages"] = pages
-            for value in report.get("health", {}).values():
-                pages.extend(value.get("pages", []))
-            report["pages"] = pages
-            save(checkpoint, report)
-            notify(report, config, state, state_path, now, immediate=bool(pages))
         except Exception as error:
+            failed(error)
+
+        # Independent recovery/reporting must not disappear into the batch exception.
+        # A hard stop allows fresh DB reads and local prepare/evaluate, never judges
+        # or lifecycle writes. Ordinary partial batches still allow re-council calls.
+        try:
+            if client is None:
+                report["recouncil"] = {"status": "held", "reason": "No safe DB client after preflight failure"}
+            else:
+                fresh_queue = export_snapshot(client, datetime.now(timezone.utc))
+                queue = [row for row in fresh_queue["questions"] if row["review_status"] == "QUARANTINED"]
+                save(run_dir / "quarantined.json", {"questions": queue})
+                if queue:
+                    for name, original in queue_commands:
+                        command = list(original)
+                        read_only = name != "recouncil-judge" and (hard_stop or name == "recouncil-prepare")
+                        if name == "recouncil-judge":
+                            if hard_stop or not list((queue_dir / "judge-requests").glob("*.json")):
+                                report["recouncil_judge"] = {"status": "skipped", "reason": "Hard stop or no valid prepared requests; local evaluation only"}
+                                save(checkpoint, report)
+                                continue
+                        if hard_stop and "--apply" in command:
+                            command[command.index("--apply")] = "--dry-run"
+                        try:
+                            step(name, command, read_only=read_only)
+                        except Exception as error:
+                            failed(error)
+                            # A failed judge can still produce a local held-quarantine
+                            # report. Never retry it or apply partial verdicts.
+                            if name != "recouncil-judge":
+                                break
+                    path = run_dir / "recouncil.json"
+                    if path.exists():
+                        report["recouncil"] = json.loads(path.read_text())
+                    else:
+                        report["recouncil"] = {"status": "held", "reason": "Re-council stage failed; no replay"}
+                else:
+                    report["recouncil"] = {"queued": 0, "note": "Fresh DB queue empty"}
+        except Exception as error:
+            failed(error)
+            report["recouncil"] = {"status": "held", "reason": "Queue read/preparation unavailable; no replay"}
+
+        report["status"] = "checkpointed_stop" if hard_stop else ("partial" if stage_failed else "complete")
+        try:
+            report["budget"] = accounting(load_calls(config["calls_root"]), datetime.now(timezone.utc), rates=config.get("rates"))
+        except Exception as error:
+            failed(error)
             report["status"] = "checkpointed_stop"
-            # Allowlisted local errors only; never include external transport prose.
-            report["reason"] = str(error) if type(error) in (ValueError, BudgetError) else type(error).__name__
+        from scripts.nightly_metrics import observed_week
+        try:
+            report["weekly_observed"] = observed_week(state_dir, report, now)
+        except Exception as error:
+            failed(error)
+            report["weekly_observed"] = {"status": "unavailable"}
+            report["status"] = "checkpointed_stop"
+        pages = list(report.get("recouncil", {}).get("pages", []))
+        if stage_failed:
+            pages.append("Nightly stage failure; inspect durable checkpoint before any replay")
+        if report["weekly_observed"].get("low_yield_two_batches"):
+            pages.append("Yield below 15% in two observed consecutive batches")
+        for value in report.get("health", {}).values():
+            pages.extend(value.get("pages", []))
+        report["pages"] = pages
+        report.pop("next_command", None)
+        report.pop("running_stage", None)
+        # Always retain a credential-free local digest, even if delivery fails.
+        save(checkpoint, report)
+        with (run_dir / "digest.txt").open("w") as handle:
+            os.chmod(handle.name, 0o600)
+            handle.write(digest(report))
+        try:
+            notify(report, config, state, state_path, now, immediate=bool(pages))
+        except Exception:
+            report["email"] = "not confirmed; daily page claim retained to prevent repeats"
             save(checkpoint, report)
-            try:
-                notify(report, config, state, state_path, now, immediate=True)
-            except Exception:
-                report["email"] = "not confirmed; daily page claim retained to prevent repeats"
-                save(checkpoint, report)
-            return report
     return report
 
 
@@ -285,7 +367,7 @@ def main():
         result = nightly(config, coverage=coverage, tools=args.tools_dir,
                          state_dir=args.state_dir, now=now, live=args.live)
         print(json.dumps(result, indent=2))
-        return int(result["status"] == "checkpointed_stop")
+        return int(result["status"] in ("checkpointed_stop", "partial"))
     except Exception:
         parser.exit(2, "Nightly stopped; inspect offline inputs/runtime configuration. No fallback was attempted.\n")
 

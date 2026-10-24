@@ -1,5 +1,5 @@
 {
-  "calls_root": "/Users/switkowski/Projects/Testero/frontend.prime-pipeline-v6/content-pipeline/.cache/generation",
+  "calls_root": "/Users/switkowski/Projects/Testero/hq/pipeline-nightly-runtime/calls",
   "batches": 2,
   "count": 40,
   "rates": {},

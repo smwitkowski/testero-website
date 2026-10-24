@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 import json
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -13,6 +14,9 @@ from scripts.nightly_plan import plan
 from scripts.nightly_digest import digest
 from shared import nightly_budget as guard
 from shared.call_logging import call_context, log_lm_calls
+
+# Keep a native runner solely for allowlisted temporary local Git fixture commands.
+NATIVE_RUN = subprocess.run
 
 NOW = datetime(2026, 10, 24, 12, tzinfo=timezone.utc)
 
@@ -374,3 +378,221 @@ def test_flag_removed_before_recouncil_apply_stops_writes(tmp_path, monkeypatch)
     assert result["status"] == "checkpointed_stop"
     assert "removed before a write stage" in result["reason"]
     assert not any("--apply" in c for c in commands)
+
+
+@pytest.mark.parametrize("outcome,expected,judge", [("partial", "partial", True), ("hard_stop", "checkpointed_stop", False),
+                                                   (None, "checkpointed_stop", False)])
+def test_batch_failure_keeps_recouncil_and_digest_but_not_publication(tmp_path, monkeypatch, outcome, expected, judge):
+    _, value = config(tmp_path)
+    tools, state = tmp_path / "tools", tmp_path / "state"
+    tools.mkdir()
+    (tools / "PUBLISH_LIVE").touch()
+    monkeypatch.setattr(nightly, "preflight", lambda **_: None)
+    queued = {**snapshot(), "questions": [{"id": "held", "review_status": "QUARANTINED"}]}
+    snapshots = iter([snapshot(), queued])
+    monkeypatch.setattr(nightly, "export_snapshot", lambda *_: next(snapshots))
+    monkeypatch.setattr(nightly, "publications_today", lambda *_: 0)
+    notices, seen = [], []
+    monkeypatch.setattr(nightly, "notify", lambda report, *_a, **_k: notices.append(report["status"]))
+    def execute(command, output=None):
+        seen.append(command)
+        if output:
+            Path(output).write_text(json.dumps({"complete": True, "pages": []}))
+        if "scripts.run_domain_batch" in command:
+            if outcome:
+                Path(command[command.index("--nightly-result") + 1]).write_text(json.dumps({"schema": "nightly-stage-v1", "status": outcome}))
+            return 1
+        if "scripts.recouncil" in command:
+            root = Path(command[command.index("--output-dir") + 1])
+            requests = root / "judge-requests"
+            requests.mkdir(parents=True, exist_ok=True)
+            (requests / "held.json").write_text("{}")
+            Path(command[command.index("--report") + 1]).write_text(json.dumps({"questions": [{"outcome": "quarantined"}], "pages": []}))
+        return 0
+    result = nightly.nightly(value, coverage=snapshot(), tools=tools, state_dir=state, now=NOW,
+                             live=True, execute=execute, client=object())
+    assert result["status"] == expected
+    assert result["publishing_disabled"] is True
+    assert len([c for c in seen if "scripts.run_domain_batch" in c]) == 1  # No generation replay or second cohort.
+    assert not any("scripts.publish_batch" in c for c in seen)
+    assert any("scripts.judge_requests" in c for c in seen) is judge
+    evaluations = [c for c in seen if "scripts.recouncil" in c and "--verdict-dir" in c]
+    assert len(evaluations) == 1
+    assert ("--apply" in evaluations[0]) is judge
+    assert notices == [expected]
+    assert (state / "20261024/digest.txt").is_file()
+    assert result["recouncil"]["questions"][0]["outcome"] == "quarantined"
+
+
+def test_pause_before_preflight_makes_no_model_probes_and_keeps_digest(tmp_path, monkeypatch):
+    _, value = config(tmp_path)
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    (tools / "PIPELINE_PAUSED").touch()
+    monkeypatch.setattr(nightly, "preflight", lambda **_: pytest.fail("No probes after pause"))
+    monkeypatch.setattr(nightly, "notify", lambda *_a, **_k: None)
+    state = tmp_path / "state"
+    result = nightly.nightly(value, coverage=snapshot(), tools=tools, state_dir=state, now=NOW,
+                             live=True, execute=lambda *_a, **_k: pytest.fail("No calls after pause"))
+    assert result["status"] == "checkpointed_stop"
+    assert (state / "20261024/digest.txt").is_file()
+
+
+def test_recouncil_judge_unknown_failure_only_local_evaluate_follows(tmp_path, monkeypatch):
+    _, value = config(tmp_path)
+    value["batches"] = 0
+    tools, state = tmp_path / "tools", tmp_path / "state"
+    tools.mkdir()
+    (tools / "PUBLISH_LIVE").touch()
+    monkeypatch.setattr(nightly, "preflight", lambda **_: None)
+    queue = {**snapshot(), "questions": [{"id": "held", "review_status": "QUARANTINED"}]}
+    monkeypatch.setattr(nightly, "export_snapshot", lambda *_: queue)
+    monkeypatch.setattr(nightly, "notify", lambda *_a, **_k: None)
+    seen = []
+    def execute(command, output=None):
+        seen.append(command)
+        if output:
+            Path(output).write_text(json.dumps({"complete": True, "pages": []}))
+        if "scripts.judge_requests" in command:
+            return 1
+        if "scripts.recouncil" in command:
+            requests = Path(command[command.index("--output-dir") + 1]) / "judge-requests"
+            requests.mkdir(parents=True, exist_ok=True)
+            (requests / "held.json").write_text("{}")
+            Path(command[command.index("--report") + 1]).write_text(json.dumps({"questions": [], "pages": []}))
+        return 0
+    result = nightly.nightly(value, coverage=snapshot(), tools=tools, state_dir=state, now=NOW,
+                             live=True, execute=execute, client=object())
+    assert result["status"] == "checkpointed_stop"
+    assert seen[-1][2] == "scripts.recouncil"
+    assert "--dry-run" in seen[-1] and "--apply" not in seen[-1]
+    assert (state / "20261024/digest.txt").exists()
+
+
+@pytest.fixture
+def launcher():
+    import runpy
+    wrapper = Path("/Users/switkowski/Projects/Testero/hq/tools/pipeline-nightly.sh")
+    if not wrapper.is_file():
+        pytest.skip("External coordinator wrapper is not installed in this clone")
+    # This loads definitions only. It does NOT invoke main or the live path.
+    return SimpleNamespace(**runpy.run_path(str(wrapper), run_name="wrapper_test"))
+
+
+@pytest.fixture
+def local_git(tmp_path, monkeypatch):
+    def local_only(command, **kwargs):
+        assert command[0] == "git" and "-C" in command
+        assert Path(command[command.index("-C") + 1]).resolve().is_relative_to(tmp_path.resolve())
+        assert not any(str(arg).startswith(("http:", "https:", "ssh:", "git@")) for arg in command)
+        return NATIVE_RUN(command, **kwargs)
+    # All origins below are local temporary repos. Models and sockets stay blocked.
+    monkeypatch.setattr(subprocess, "run", local_only)
+    def git(path, *args):
+        return subprocess.check_output(["git", "-C", str(path), *args], text=True, stderr=subprocess.DEVNULL).strip()
+    source, origin, repo = tmp_path / "source", tmp_path / "origin.git", tmp_path / "repo"
+    source.mkdir()
+    git(source, "init", "-b", "main")
+    git(source, "config", "user.name", "Offline Test")
+    git(source, "config", "user.email", "offline@example.invalid")
+    (source / "content-pipeline").mkdir()
+    (source / "content-pipeline/README.md").write_text("fixture")
+    git(source, "add", ".")
+    git(source, "commit", "-m", "fixture")
+    git(tmp_path, "clone", "--bare", str(source), str(origin))
+    git(tmp_path, "clone", str(origin), str(repo))
+    return SimpleNamespace(git=git, source=source, origin=origin, repo=repo, head=git(repo, "rev-parse", "HEAD"))
+
+
+def test_launcher_fresh_detached_pin_and_durable_cache(launcher, local_git, tmp_path):
+    root = tmp_path / "runtime"
+    with launcher.checkout(local_git.repo, root, local_git.head) as first:
+        assert local_git.git(first, "rev-parse", "HEAD") == local_git.head
+        assert local_git.git(first, "branch", "--show-current") == ""
+        assert (first / "content-pipeline/.cache").resolve() == root / "cache"
+        (first / "content-pipeline/.cache/proof.json").write_text("durable")
+        with pytest.raises(BlockingIOError):
+            with launcher.checkout(local_git.repo, root, local_git.head):
+                pytest.fail("Concurrent launcher admitted")
+    with launcher.checkout(local_git.repo, root, local_git.head) as second:
+        assert first != second
+        assert (second / "content-pipeline/.cache/proof.json").read_text() == "durable"
+    assert local_git.git(local_git.repo, "branch", "--show-current") == "main"
+    assert local_git.git(local_git.repo, "status", "--porcelain") == ""
+
+
+def test_launcher_fetches_then_rejects_unreviewed_main(launcher, local_git, tmp_path):
+    (local_git.source / "content-pipeline/README.md").write_text("new main")
+    local_git.git(local_git.source, "commit", "-am", "new main")
+    local_git.git(local_git.source, "push", str(local_git.origin), "main")
+    root = tmp_path / "runtime"
+    with pytest.raises(ValueError, match="reviewed pin"):
+        with launcher.checkout(local_git.repo, root, local_git.head):
+            pytest.fail("Unreviewed main ran")
+    assert not list((root / "worktrees").iterdir())
+    assert local_git.git(local_git.repo, "rev-parse", "HEAD") == local_git.head
+
+
+def test_launcher_refuses_human_root_and_dirty_prior_worktree(launcher, local_git, tmp_path):
+    root = tmp_path / "human"
+    root.mkdir()
+    (root / "notes.txt").write_text("keep")
+    with pytest.raises((ValueError, FileNotFoundError)):
+        with launcher.checkout(local_git.repo, root, local_git.head):
+            pytest.fail("Adopted a human directory")
+    assert sorted(p.name for p in root.iterdir()) == ["notes.txt"]
+    root = tmp_path / "owned"
+    with launcher.checkout(local_git.repo, root, local_git.head) as previous:
+        pass
+    (previous / "human-notes.txt").write_text("keep exactly")
+    with pytest.raises(ValueError, match="dirty or drifted"):
+        with launcher.checkout(local_git.repo, root, local_git.head):
+            pytest.fail("Discarded human edits")
+    assert (previous / "human-notes.txt").read_text() == "keep exactly"
+
+
+def test_launcher_print_never_loads_repo_or_mutates_worktrees(launcher, tmp_path, monkeypatch, capsys):
+    globals_ = launcher.main.__globals__
+    root = tmp_path / "runtime"
+    monkeypatch.setitem(globals_, "RUNTIME", root)
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps({"calls_root": str(root / "calls")}))
+    monkeypatch.setitem(globals_, "checkout", lambda *_: pytest.fail("Print touched worktrees"))
+    monkeypatch.setitem(globals_, "secret", lambda *_: pytest.fail("Print fetched keys"))
+    assert launcher.main(["--config", str(config_path), "--reviewed-main", "a" * 40, "--print"]) == 0
+    output = json.loads(capsys.readouterr().out)
+    assert output["mode"] == "offline-launch-plan"
+    assert not root.exists()
+
+
+
+def test_durable_cache_symlink_is_resolved_before_strict_stage_inputs(tmp_path, monkeypatch):
+    checkout = tmp_path / "checkout"
+    checkout.mkdir()
+    durable = tmp_path / "durable"
+    durable.mkdir()
+    (checkout / ".cache").symlink_to(durable, target_is_directory=True)
+    monkeypatch.setattr(nightly, "PIPELINE", checkout)
+    from scripts import run_domain_batch
+    monkeypatch.setattr(run_domain_batch, "PIPELINE", checkout)
+    artifact, _, batch_commands = run_domain_batch.batch_commands("1.", "night", "machine-learning-engineer", 2, 1)
+    assert artifact.parent == durable / "generation"
+    assert not any(part.is_symlink() for part in artifact.parents)
+    batch_plan = {"cert": "machine-learning-engineer", "section": "1.", "count": 2}
+    commands = nightly.commands_for_batch(batch_plan, "night", state_dir=tmp_path / "state", tools=tmp_path)
+    publish = commands[-1][1]
+    assert Path(publish[publish.index("--artifact") + 1]) == artifact
+    assert Path(batch_commands[1][batch_commands[1].index("--requests") + 1]).parent == durable / "generation"
+
+
+
+def test_pause_between_preflight_commands_stops_before_model_probe(tmp_path):
+    seen = []
+    def execute(command):
+        seen.append(command)
+        (tmp_path / "PIPELINE_PAUSED").touch()
+        return 0
+    with pytest.raises(ValueError, match="PAUSED"):
+        nightly.preflight(execute=execute, environ={key: "fixture" for key in nightly.REQUIRED_KEYS},
+                          check=lambda: nightly.paused(tmp_path))
+    assert len(seen) == 1 and seen[0] == ["claude", "auth", "status"]

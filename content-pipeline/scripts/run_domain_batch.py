@@ -103,7 +103,7 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resu
         count = len(saved["plan"])
         base = artifact.with_suffix("")
     else:
-        base = PIPELINE / ".cache/generation" / (cert + "-v5-" + tag)
+        base = (PIPELINE / ".cache/generation").resolve() / (cert + "-v5-" + tag)
         artifact = base.with_suffix(".json")
         if any(path.exists() for path in (artifact, Path(str(base) + ".existing.json"),
                                           Path(str(base) + ".judge-requests"), Path(str(base) + ".verdicts"),
@@ -205,11 +205,18 @@ def judge_with_system_retries(command, execute):
               help="Resume this saved full-plan PDE artifact without regenerating saved waves.")
 @click.option("--acknowledge-saved-system-failures", is_flag=True,
               help="Resume only: explicitly retain saved pre-judge system failures as failed attempts; never auto-retry them.")
+@click.option("--nightly-result", type=click.Path(dir_okay=False, path_type=Path),
+              help="Private typed continuation result for the nightly coordinator.")
 @click.option("--write", is_flag=True,
               help="Coordinator authorization for resume DRAFT writes; resume is dry admission without this flag.")
 def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
-         acknowledge_saved_system_failures, write):
+         acknowledge_saved_system_failures, write, nightly_result):
     """Run SECTION (e.g. 1. or all) as one artifact; all uses the weighted cert plan."""
+    from scripts.nightly_outcome import ordinary_failure, write_result, NightlyHardStop
+    if nightly_result is not None:
+        if nightly_result.exists() or nightly_result.is_symlink():
+            raise click.ClickException("Existing nightly result requires manual reconciliation")
+        write_result(nightly_result, "hard_stop")  # Interrupted/unknown work stays stopped.
     try:
         if acknowledge_saved_system_failures and resume is None:
             raise ValueError("Saved system-failure acknowledgment requires --resume")
@@ -229,8 +236,13 @@ def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
         judged_cohorts = set()
 
         def launch(command):
-            subprocess.run(command, cwd=PIPELINE, check=True, stdin=subprocess.DEVNULL,
-                           env={**os.environ, "PYTHON_DOTENV_DISABLED": "1"})
+            try:
+                subprocess.run(command, cwd=PIPELINE, check=True, stdin=subprocess.DEVNULL,
+                               env={**os.environ, "PYTHON_DOTENV_DISABLED": "1"})
+            except subprocess.CalledProcessError:
+                if nightly_result is not None and not ordinary_failure(command):
+                    raise NightlyHardStop("Unclassified or hard nightly failure") from None
+                raise
 
         def execute(command):
             if not plan_only and command[1] == "scripts/judge_requests.py":
@@ -303,8 +315,11 @@ def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
                 Path(str(artifact.with_suffix("")) + ".accepted-ids").write_text("\n".join(ids))
                 click.echo(f"Stored {len(ids)} DRAFT questions; publication is not authorized")
         if stage_failures:
+            if nightly_result is not None and "ingest" not in stage_failures:
+                write_result(nightly_result, "partial")
             raise click.ClickException("Batch incomplete after judging and ingestion; inspect private artifacts ("
                                        + ", ".join(sorted(set(stage_failures))) + ")")
+        write_result(nightly_result, "complete")
     except (ValueError, OSError, subprocess.CalledProcessError):
         # Do not print exceptions from HTTP/transport clients or credential-bearing environments.
         raise click.ClickException("Batch stopped; check registry inputs, injected credentials and private batch artifacts. Completed stages remain recorded; no publication is authorized.") from None
