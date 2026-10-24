@@ -14,7 +14,7 @@ const itemId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const paid = { hasPaidAccess: true, isLegacySubscriber: false, accessUntil: null, pass: null };
 const free = { ...paid, hasPaidAccess: false };
 const session = { id, user_id: user, question_count: 50, created_at: "2026-10-24T10:00:00Z", deadline_at: "2026-10-24T12:00:00Z", completed_at: null as string | null, timed_out: false, allocation_notice: null, server_now: "2026-10-24T10:30:00Z", answered_count: 0 };
-function rows() { return Array.from({ length: 50 }, (_, n) => ({ id: n ? `item-${n}` : itemId, question_id: `bank-${n}`, ordinal: n + 1, stem: `Question ${n}`, domain_code: PMLE_BLUEPRINT[n % 6].domainCode, domain_name: `Domain ${n % 6}`, options: [{ label: "A", text: "Correct", explanation: "private injected" }, { label: "B", text: "Wrong" }], correct_label: "A", selected_label: null as string | null, is_correct: null as boolean | null, answered_at: null as string | null, explanation: "private injected" })); }
+function rows() { return Array.from({ length: 50 }, (_, n) => ({ questions: { status: "ACTIVE", review_status: "GOOD" }, id: n ? `item-${n}` : itemId, question_id: `bank-${n}`, ordinal: n + 1, stem: `Question ${n}`, domain_code: PMLE_BLUEPRINT[n % 6].domainCode, domain_name: `Domain ${n % 6}`, options: [{ label: "A", text: "Correct", explanation: "private injected" }, { label: "B", text: "Wrong" }], correct_label: "A", selected_label: null as string | null, is_correct: null as boolean | null, answered_at: null as string | null, explanation: "private injected" })); }
 function bank() { return PMLE_BLUEPRINT.flatMap((domain, i) => Array.from({ length: 15 }, (_, n) => ({ id: `${i}-${n}`, parent_question_id: null, stem: `Question ${i}-${n}`, exam_domains: { code: domain.domainCode, name: domain.displayName }, answers: [{ choice_label: "A", choice_text: "Correct", is_correct: true }, { choice_label: "B", choice_text: "Wrong", is_correct: false }] }))); }
 interface Options { session?: unknown; rows?: unknown; bank?: unknown; history?: unknown; rpcError?: { code: string }; errorTable?: string; expired?: boolean; foreign?: boolean }
 function db(options: Options = {}) {
@@ -170,5 +170,57 @@ describe("mock persistence, deadlines and no early reveal", () => {
     expect(snapshots).toHaveLength(50); expect(args).not.toHaveProperty("p_deadline_at");
     expect(snapshots.every(row => row.options.find(option => option.label === row.correct_label)?.text === "Correct")).toBe(true);
     expect(loadAnswerHistory).toHaveBeenCalledWith(database.client, user);
+  });
+});
+
+
+describe("withdrawn mock snapshots", () => {
+  it("removes withdrawn saved questions and choices from in-progress reads", async () => {
+    const items = rows(); items[0].questions.review_status = "QUARANTINED"; items[0].selected_label = "B";
+    const result = await readMock(db({ rows: items }).client, id, user);
+    expect(result).toMatchObject({ totalQuestions: 49, withdrawnCount: 1, answeredCount: 0 }); expect(result.questions).toHaveLength(49);
+    expect(JSON.stringify(result)).not.toContain('"Question 0"');
+  });
+  it("excludes withdrawn items rather than marking them wrong or revealing their keys", async () => {
+    const items = rows().map(row => ({ ...row, is_correct: true, selected_label: "A" }));
+    items[0].questions.status = "RETIRED"; items[0].is_correct = false;
+    const result = await mockResults(db({ rows: items, session: { completed_at: session.server_now } }).client, id, user);
+    expect(result).toMatchObject({ totalQuestions: 49, correctAnswers: 49, score: 100, withdrawnCount: 1 });
+    expect(result.review).toHaveLength(49); expect(JSON.stringify(result)).not.toContain('"Question 0"');
+    expect(vi.mocked(loadPaidExplanations).mock.calls[0][1]).toHaveLength(49);
+  });
+});
+
+
+it("fences mock answer keys after withdrawal during explanation loading", async () => {
+  const items = rows().map(row => ({ ...row, is_correct: true, selected_label: "A" }));
+  vi.mocked(loadPaidExplanations).mockImplementationOnce(async () => { items[0].questions = { status: "RETIRED", review_status: "GOOD" }; return new Map(); });
+  const result = await mockResults(db({ rows: items, session: { completed_at: session.server_now } }).client, id, user);
+  expect(result).toMatchObject({ score: 100, totalQuestions: 49, withdrawnCount: 1 }); expect(JSON.stringify(result)).not.toContain('"Question 0"');
+});
+
+
+it("fences learner mock content after withdrawal during the final paid lookup", async () => {
+  const items = rows();
+  vi.mocked(getPaidAccess).mockResolvedValueOnce(paid).mockImplementationOnce(async () => { items[0].questions = { status: "DRAFT", review_status: "QUARANTINED" }; return paid; });
+  const result = await readMock(db({ rows: items }).client, id, user);
+  expect(result).toMatchObject({ totalQuestions: 49, withdrawnCount: 1 }); expect(JSON.stringify(result)).not.toContain('"Question 0"');
+});
+
+describe("completed withdrawal snapshots", () => {
+  it("does not resurrect an excluded unanswered item after restore", async () => {
+    const items = rows().map(row => ({ ...row, withdrawn_at: null as string | null, selected_label: "A" as string | null, answered_at: session.server_now as string | null, is_correct: true as boolean | null }));
+    Object.assign(items[0], { withdrawn_at: session.server_now, selected_label: null, answered_at: null, is_correct: null });
+    const database = db({ session: { completed_at: session.server_now }, rows: items, history: [{ ...session, completed_at: session.server_now, score: 100 }] });
+    const result = await mockResults(database.client, id, user);
+    expect(result).toMatchObject({ totalQuestions: 49, correctAnswers: 49, score: 100, withdrawnCount: 1 });
+    expect(result.review.some(row => row.itemId === itemId)).toBe(false);
+    expect(await mockHistory(database.client, user)).toMatchObject([{ score: 100 }]);
+  });
+  it("keeps completed scores when a different item is withdrawn later, without revealing it", async () => {
+    const items = rows().map(row => ({ ...row, withdrawn_at: null, selected_label: "A", answered_at: session.server_now, is_correct: true }));
+    items[0].questions.status = "DRAFT";
+    const result = await mockResults(db({ session: { completed_at: session.server_now }, rows: items }).client, id, user);
+    expect(result).toMatchObject({ totalQuestions: 50, score: 100 }); expect(result.review).toHaveLength(49);
   });
 });

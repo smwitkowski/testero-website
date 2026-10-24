@@ -1,4 +1,5 @@
 """Offline runner contracts; commands are inspected, never executed."""
+from pathlib import Path
 import pytest
 
 from scripts import run_domain_batch as batch
@@ -307,3 +308,45 @@ def test_resume_requires_artifact_owning_pipeline_for_future_generation(monkeypa
     monkeypatch.setattr(batch, "PIPELINE", tmp_path / "other-checkout")
     with pytest.raises(ValueError, match="artifact-owning"):
         batch.batch_commands("all", "saved", "data-engineer", 40, 2, resume=artifact)
+
+
+@pytest.mark.parametrize("error_class,partial", [("CandidateRejected", True), ("CLIAuthError", False),
+                                               ("CLIUsageLimitError", False), ("BudgetError", False),
+                                               ("RateLimitError", False), ("UnrecognizedError", False)])
+def test_nightly_typed_result_only_ordinary_failures_can_continue(monkeypatch, tmp_path, error_class, partial):
+    import json
+    import subprocess
+    from click.testing import CliRunner
+    monkeypatch.setattr(batch, "PIPELINE", tmp_path)
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "fixture")
+    monkeypatch.delenv("N", raising=False)
+    monkeypatch.setattr(batch, "export_questions", lambda *_: 0)
+    seen = []
+    def launch(command, **kwargs):
+        seen.append(command)
+        if command[1] == "scripts/generate_all_domains.py":
+            artifact = Path(command[command.index("--artifact") + 1])
+            artifact.write_text(json.dumps({"candidates": [{"error_class": error_class, "failure_stage": "generation", "accepted": False}]}))
+            requests = artifact.with_suffix(".judge-requests")
+            requests.mkdir()
+            (requests / "candidate.json").write_text("{}")
+            raise subprocess.CalledProcessError(1, command)
+        if command[1] == "scripts/judge_requests.py":
+            verdicts = Path(command[command.index("--verdicts") + 1])
+            verdicts.mkdir()
+            (verdicts / "candidate.json").write_text("{}")
+    monkeypatch.setattr(batch.subprocess, "run", launch)
+    result_path = tmp_path / "result.json"
+    result = CliRunner().invoke(batch.main, ["1.", "night", "machine-learning-engineer", "--nightly-result", str(result_path)])
+    assert result.exit_code != 0
+    assert json.loads(result_path.read_text()) == {"schema": "nightly-stage-v1", "status": "partial" if partial else "hard_stop"}
+    assert len(seen) == (3 if partial else 1)
+
+
+def test_nightly_outcome_unknown_persistence_never_ordinary(tmp_path):
+    import json
+    from scripts.nightly_outcome import ordinary_failure
+    artifact = tmp_path / "artifact.json"
+    artifact.write_text(json.dumps({"candidates": [{"error_class": "CandidateRejected", "failure_stage": "persistence"}]}))
+    assert not ordinary_failure(["python", "scripts/generate_all_domains.py", "--artifact", str(artifact)])

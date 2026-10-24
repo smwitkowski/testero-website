@@ -1,3 +1,4 @@
+import { resultsEmailText, resultsEmailHtml } from "@/lib/diagnostic/results-email";
 import { loadPaidExplanations } from "@/lib/billing/explanations";
 import { getPaidAccess } from "@/lib/billing/paid-access";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -35,7 +36,7 @@ function session(overrides = {}) {
 }
 function items() {
   return Array.from({ length: 20 }, (_, index) => ({
-    id: index === 0 ? itemId : `item-${index}`, ordinal: index + 1, stem: `Secret stem ${index}`,
+    questions: { status: "ACTIVE", review_status: "GOOD" }, id: index === 0 ? itemId : `item-${index}`, ordinal: index + 1, stem: `Secret stem ${index}`,
     options: [{ label: "A", text: "Display only", is_correct: true, explanation: "secret" }, { label: "B", text: "Other" }],
     domain_code: "A", domain_name: "Domain A", is_correct: null as boolean | null,
     answered_at: null as string | null, selected_label: "A", correct_label: "A", explanation: "secret explanation",
@@ -200,10 +201,10 @@ describe("ownership-first reads and results", () => {
     expect(result).toEqual({ sessionId, status: "completed", totalQuestions: 20, answeredCount: 20, answeredQuestions: [], currentQuestion: null });
     expect(JSON.stringify(result)).not.toMatch(/stem|options|correct_label|is_correct|explanation/);
   });
-  it("returns 409 without reading items for an incomplete result", async () => {
+  it("returns 409 after checking active-item completion for an incomplete result", async () => {
     const db = database();
     await expect(diagnosticResults(db.client, sessionId, credentials, now)).rejects.toMatchObject({ status: 409 });
-    expect(db.from.mock.calls).toEqual([["study_sessions"]]);
+    expect(db.from.mock.calls).toEqual([["study_sessions"], ["session_items"]]);
   });
   it("returns completed aggregates only, including after session expiry", async () => {
     const rows = items().map((i, index) => ({ ...i, answered_at: "done", is_correct: index < 17 }));
@@ -309,7 +310,7 @@ describe("account-owned diagnostic review", () => {
     expect(result.review).toHaveLength(20);
     expect(result.review?.[0]).toEqual({ itemId, ordinal: 1, stem: "Secret stem 0", options: [{ label: "A", text: "Display only" }, { label: "B", text: "Other" }], selectedLabel: "B", correctLabel: "A", isCorrect: false, domainCode: "A", domainName: "Domain A" });
     expect(JSON.stringify(result)).not.toMatch(/explanation|is_correct|correct_label|source|document_url|question_id|secret bank/);
-    expect(db.from.mock.results[1].value.select).toHaveBeenCalledWith(expect.stringContaining("correct_label,selected_label"));
+    expect(db.from.mock.results[1].value.select).toHaveBeenCalledWith(expect.stringContaining("correct_label"));
   });
   it("signed-in visitors to anonymous-owned sessions still receive exactly six aggregate fields", async () => {
     const db = database({ session: session({ completed_at: "done" }), items: completedItems() });
@@ -329,10 +330,11 @@ describe("account-owned diagnostic review", () => {
     expect(JSON.stringify(progress)).not.toMatch(/review|correctLabel|isCorrect|correct_label|selected_label|explanation/);
     expect(db.from.mock.results[1].value.select).not.toHaveBeenCalledWith(expect.stringContaining("correct_label"));
   });
-  it("does not read question review before completion", async () => {
+  it("checks completion against active snapshots without loading bank explanations", async () => {
     const db = database({ session: accountSession({ completed_at: null }) });
     await expect(diagnosticResults(db.client, sessionId, signedIn, now)).rejects.toMatchObject({ status: 409 });
-    expect(db.from.mock.calls).toEqual([["study_sessions"]]);
+    expect(db.from.mock.calls).toEqual([["study_sessions"], ["session_items"]]);
+    expect(loadPaidExplanations).not.toHaveBeenCalled();
   });
   it.each([null, "Z"])('fails closed for missing or invalid review labels: %s', async label => {
     const rows = completedItems().map(item => ({ ...item, selected_label: label }));
@@ -448,7 +450,7 @@ describe("one server-selected free explanation", () => {
     const db = database({ session: session({ completed_at: mode === "incomplete" ? null : "done" }) });
     await expect(diagnosticFreeExplanation(db.client, mode === "invalid" ? "bad" : sessionId, mode === "foreign" ? foreign : credentials, now)).rejects.toMatchObject({ status: mode === "incomplete" ? 409 : 404 });
     expect(loadPaidExplanations).not.toHaveBeenCalled();
-    expect(db.from.mock.calls).not.toContainEqual(["session_items"]);
+    if (mode !== "incomplete") expect(db.from.mock.calls).not.toContainEqual(["session_items"]);
   });
   it.each(["missing rows", "unanswered", "missing label", "missing rationale"])('fails closed without substituting another question: %s', async mode => {
     const rows = completedRows();
@@ -556,4 +558,60 @@ it("does not treat a failed resume query as no unfinished session", async () => 
   const query = { select: vi.fn(() => query), eq: vi.fn(() => query), is: vi.fn(() => query), gt: vi.fn(() => query), order: vi.fn(() => query), limit: vi.fn(() => query), maybeSingle: vi.fn(async () => ({ data: null, error: { message: "database unavailable" } })) };
   const client = { from: vi.fn(() => query) } as unknown as SupabaseClient;
   await expect(findOpenDiagnostic(client, credentials, now)).rejects.toMatchObject({ status: 503 });
+});
+
+
+describe("withdrawn diagnostic snapshots", () => {
+  it.each(["QUARANTINED", "NEEDS_ANSWER_FIX"])("skips ACTIVE but %s questions without revealing saved content", async review_status => {
+    const rows = items(); rows[0].questions.review_status = review_status;
+    const result = await readDiagnostic(database({ items: rows }).client, sessionId, credentials, now);
+    expect(result).toMatchObject({ totalQuestions: 19, withdrawnCount: 1, answeredCount: 0, currentQuestion: { ordinal: 1 } });
+    expect(JSON.stringify(result)).not.toContain("Secret stem 0");
+  });
+  it("skips a withdrawn answer race and emits no key or correctness", async () => {
+    const rows = items(); rows[0].questions.status = "RETIRED";
+    const result = await answerDiagnostic(database({ items: rows, rpcData: { answeredCount: 0, totalQuestions: 19, completed: false, withdrawn: true } }).client, sessionId, credentials, itemId, "A", now);
+    expect(result.feedback).toBeNull(); expect(result.progress.currentQuestion?.id).toBe("item-1");
+  });
+  it("completes and scores active items even when the last pending question was withdrawn", async () => {
+    const rows = items().map(row => ({ ...row, answered_at: "done", is_correct: true }));
+    rows[0].questions = { status: "RETIRED", review_status: "GOOD" }; rows[0].answered_at = "";
+    const result = await diagnosticResults(database({ items: rows }).client, sessionId, credentials, now);
+    expect(result).toMatchObject({ totalQuestions: 19, score: 100, withdrawnCount: 1 });
+    expect(await readDiagnostic(database({ items: rows }).client, sessionId, credentials, now)).toMatchObject({ status: "completed" });
+  });
+  it("allows an all-withdrawn session to finish without showing an explanation", async () => {
+    const rows = items().map(row => ({ ...row, questions: null }));
+    const client = database({ items: rows }).client;
+    expect(await readDiagnostic(client, sessionId, credentials, now)).toMatchObject({ status: "completed", totalQuestions: 0, withdrawnCount: 20 });
+    expect(await diagnosticResults(client, sessionId, credentials, now)).toMatchObject({ totalQuestions: 0, score: 0 });
+    await expect(diagnosticFreeExplanation(client, sessionId, credentials, now)).rejects.toMatchObject({ status: 410 });
+  });
+});
+
+
+it("fences diagnostic review after a question is withdrawn during paid-access lookup", async () => {
+  const rows = items().map(row => ({ ...row, answered_at: "done", is_correct: true }));
+  vi.mocked(getPaidAccess).mockImplementationOnce(async () => { rows[0].questions = { status: "DRAFT", review_status: "QUARANTINED" }; return freeAccess; });
+  const result = await diagnosticResults(database({ session: session({ user_id: userId, anonymous_owner_hash: null, completed_at: "done" }), items: rows }).client, sessionId, signedIn, now);
+  expect(result).toMatchObject({ totalQuestions: 19, withdrawnCount: 1 }); expect(JSON.stringify(result)).not.toContain("Secret stem 0");
+});
+
+it("fences the server-selected free explanation after a concurrent withdrawal", async () => {
+  const rows = items().map(row => ({ ...row, answered_at: "done", is_correct: true }));
+  vi.mocked(loadPaidExplanations).mockImplementationOnce(async () => { rows[0].questions = { status: "RETIRED", review_status: "GOOD" }; return new Map(); });
+  await expect(diagnosticFreeExplanation(database({ session: session({ completed_at: "done" }), items: rows }).client, sessionId, credentials, now)).rejects.toMatchObject({ status: 410 });
+});
+
+describe("completed withdrawal snapshots", () => {
+  it("keeps a skipped restored question excluded from results and results email", async () => {
+    const saved = items().map(row => ({ ...row, withdrawn_at: null as string | null, answered_at: "done" as string | null, is_correct: true as boolean | null }));
+    Object.assign(saved[0], { withdrawn_at: "2026-10-03T10:00:00Z", answered_at: null, is_correct: null });
+    const db = database({ session: session({ completed_at: "done" }), items: saved });
+    const result = await diagnosticResults(db.client, sessionId, credentials, now);
+    expect(result).toMatchObject({ totalQuestions: 19, correctAnswers: 19, score: 100, withdrawnCount: 1 });
+    expect(resultsEmailText(result, now)).toContain("19/19 correct (100%)");
+    expect(resultsEmailHtml(result, now)).toContain("19/19 correct (100%)");
+    expect(JSON.stringify(result)).not.toContain(saved[0].stem);
+  });
 });

@@ -138,7 +138,7 @@ def test_persistence_stays_draft_and_keeps_evidence_even_when_judge_rejects(gene
     assert result.exit_code == (0 if passed else 1), result.output
     row = client.insert_question.call_args.args[0]
     assert row["status"] == "DRAFT" and row["generation_run_id"] == RUN_ID
-    assert row["review_status"] == ("UNREVIEWED" if passed else "NEEDS_ANSWER_FIX")
+    assert row["review_status"] == "UNREVIEWED"
     notes = json.loads(row["review_notes"])
     assert notes["content_pipeline_judge"]["passed"] is passed
     assert notes["grounding"]["mechanical_check"]["passed"] is True
@@ -211,15 +211,50 @@ def test_insert_requires_generation_run():
     client.client.table.assert_not_called()
 
 
-def test_review_finalization_scopes_draft_and_run():
+def test_review_finalization_uses_guarded_rpc_and_never_raw_update():
     client = SupabaseClient.__new__(SupabaseClient)
     client.client = Mock()
-    chain = client.client.table.return_value
-    chain.update.return_value = chain
-    chain.eq.return_value = chain
-    chain.execute.return_value.data = [{"id": "question"}]
+    client.client.rpc.return_value.execute.return_value.data = {
+        "question_id": "question", "changed": True, "outcome": "changed",
+        "revision": 5, "content_sha256": "a" * 64,
+    }
     assert client.update_question_review("question", RUN_ID, "GOOD", "notes")
-    assert chain.eq.call_args_list == [(("id", "question"),), (("generation_run_id", RUN_ID),), (("status", "DRAFT"),)]
+    client.client.rpc.assert_called_once_with("finalize_question_review", {
+        "p_question_id": "question", "p_generation_run_id": RUN_ID,
+        "p_review_status": "GOOD", "p_review_notes": "notes",
+    })
+    client.client.table.assert_not_called()
+
+
+@pytest.mark.parametrize("response", [None, [], {},
+    {"question_id":"wrong","changed":True,"outcome":"changed","revision":1,"content_sha256":"a"*64},
+    {"question_id":"question","changed":True,"outcome":"changed","revision":True,"content_sha256":"a"*64},
+    {"question_id":"question","changed":False,"outcome":"noop","revision":1,"content_sha256":"a"*64},
+    {"question_id":"question","changed":True,"outcome":"changed","revision":1,"content_sha256":"z"*64},
+])
+def test_review_finalization_unknown_response_never_counts_as_success(response):
+    client = SupabaseClient.__new__(SupabaseClient)
+    client.client = Mock()
+    client.client.rpc.return_value.execute.return_value.data=response
+    assert client.update_question_review("question", RUN_ID, "GOOD", "notes") is False
+    client.client.table.assert_not_called()
+
+
+def test_review_finalization_transport_error_does_not_echo_secrets(capsys):
+    client = SupabaseClient.__new__(SupabaseClient)
+    client.client = Mock()
+    client.client.rpc.return_value.execute.side_effect=RuntimeError("PRIVATE fake secret")
+    assert client.update_question_review("question", RUN_ID, "GOOD", "notes") is False
+    assert "PRIVATE" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("status", ["QUARANTINED","RETIRED","UNREVIEWED","ACTIVE",None])
+def test_review_finalization_rejects_unsupported_transitions_before_rpc(status):
+    client = SupabaseClient.__new__(SupabaseClient)
+    client.client = Mock()
+    with pytest.raises(ValueError):
+        client.update_question_review("question", RUN_ID, status, "notes")
+    assert not client.client.mock_calls
 
 
 def test_identical_redirect_aliases_do_not_create_ambiguous_source_receipts(monkeypatch):

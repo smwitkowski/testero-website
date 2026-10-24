@@ -1,3 +1,4 @@
+import { includedSessionItem, liveSessionItem, readWithdrawalSnapshot } from "@/lib/questions/session-snapshot";
 import type { ServerTiming } from "@/lib/server-timing";
 import "server-only";
 import { getPaidAccess } from "@/lib/billing/paid-access";
@@ -18,9 +19,10 @@ export const PRACTICE_SESSION_LENGTH = 5;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const unavailable = () => new DiagnosticError(503, "Practice is unavailable. Please try again.");
 interface Session { id: string; user_id: string | null; anonymous_owner_hash: string | null; question_count: number; completed_at: string | null; expires_at: string; practice_selection?: unknown }
-interface Item extends Omit<QuestionReviewSource, "selected_label" | "is_correct"> { question_id?: string; selected_label: string | null; is_correct: boolean | null; answered_at: string | null; questions?: { parent_question_id: string | null } | null }
+interface Item extends Omit<QuestionReviewSource, "selected_label" | "is_correct"> { withdrawn_at?: string | null; question_id?: string; selected_label: string | null; is_correct: boolean | null; answered_at: string | null; questions: { parent_question_id: string | null; status: string; review_status: string } | null }
 interface Question { id: string; parent_question_id: string | null; stem: string; answers: CanonicalAnswer[]; exam_domains: { code: string; name: string } }
-const ITEM_FIELDS = "id,question_id,ordinal,stem,options,domain_code,domain_name,selected_label,correct_label,is_correct,answered_at,questions(parent_question_id)";
+const ITEM_FIELDS = "id,question_id,ordinal,stem,options,domain_code,domain_name,selected_label,correct_label,is_correct,answered_at,questions(parent_question_id,status,review_status)";
+const activeItem = liveSessionItem;
 function validAnsweredItem(row: Pick<Item, "options" | "selected_label" | "correct_label" | "is_correct">): boolean {
   if (!Array.isArray(row.options) || row.options.length < 2 || row.options.some(option => !option || typeof option.label !== "string" || !option.label.trim() || typeof option.text !== "string" || !option.text.trim())) return false;
   const labels = row.options.map(option => option.label);
@@ -99,7 +101,7 @@ async function ownedPractice(client: SupabaseClient, id: string, userId: string,
   return session;
 }
 async function items(client: SupabaseClient, id: string): Promise<Item[]> {
-  const { data, error } = await client.from("session_items").select(ITEM_FIELDS).eq("session_id", id).order("ordinal");
+  const { data, error } = await readWithdrawalSnapshot(marker => client.from("session_items").select(`${ITEM_FIELDS}${marker ? ",withdrawn_at" : ""}`).eq("session_id", id).order("ordinal"));
   if (error || !Array.isArray(data)) throw unavailable();
   // session_items.question_id is a to-one FK; the untyped client infers joins as arrays.
   return data as unknown as Item[];
@@ -111,14 +113,16 @@ export async function readPractice(client: SupabaseClient, id: string, userId: s
 }
 function practiceProgress(session: Session, rows: Item[]): PracticeProgress {
   if (rows.length !== session.question_count) throw unavailable();
+  const withdrawnCount = rows.filter(row => !includedSessionItem(row, !!session.completed_at)).length;
+  rows = rows.filter(row => includedSessionItem(row, !!session.completed_at));
   const answeredCount = rows.filter(row => row.answered_at !== null).length;
-  const completed = !!session.completed_at || answeredCount === session.question_count;
+  const completed = !!session.completed_at || answeredCount === rows.length;
   const current = completed ? null : rows.find(row => row.answered_at === null);
   if (!completed && !current) throw unavailable();
   const selection = restorePracticeSelection(session.practice_selection);
   if (session.practice_selection != null && !selection) throw unavailable();
-  return { ...(selection ? { selection } : {}), sessionId: session.id, status: completed ? "completed" : "in_progress", totalQuestions: session.question_count, answeredCount,
-    currentQuestion: current ? { id: current.id, ordinal: current.ordinal, domainCode: current.domain_code, stem: current.stem, ...(current.questions?.parent_question_id ? { isVariant: true } : {}), options: current.options.map(option => ({ label: option.label, text: option.text })) } : null };
+  return { ...(selection ? { selection } : {}), sessionId: session.id, status: completed ? "completed" : "in_progress", totalQuestions: rows.length, answeredCount, ...(withdrawnCount ? { withdrawnCount } : {}),
+    currentQuestion: current ? { id: current.id, ordinal: rows.indexOf(current) + 1, domainCode: current.domain_code, stem: current.stem, ...(current.questions?.parent_question_id ? { isVariant: true } : {}), options: current.options.map(option => ({ label: option.label, text: option.text })) } : null };
 }
 export async function answerPractice(client: SupabaseClient, id: string, userId: string, itemId: string, selectedLabel: string, now = Date.now(), timing?: ServerTiming): Promise<PracticeAnswerResponse> {
   const measure = <T>(name: string, task: () => Promise<T>) => timing ? timing.measure(name, task) : task();
@@ -129,29 +133,39 @@ export async function answerPractice(client: SupabaseClient, id: string, userId:
     if (error.code === "22023") throw new DiagnosticError(error.message === "Session expired" ? 410 : 409, "The answer could not be saved. Reload your saved progress.");
     throw unavailable();
   }
-  const progress = data as { answeredCount: number; totalQuestions: number; completed: boolean } | null;
-  if (!progress || !Number.isInteger(progress.answeredCount) || progress.answeredCount < 1 || progress.answeredCount > session.question_count || progress.totalQuestions !== session.question_count || progress.completed !== (progress.answeredCount === session.question_count)) throw unavailable();
+  const progress = data as { answeredCount: number; totalQuestions: number; completed: boolean; withdrawn?: boolean } | null;
+  if (!progress || !Number.isInteger(progress.answeredCount) || progress.answeredCount < 0 || (progress.answeredCount === 0 && !progress.withdrawn) || progress.answeredCount > session.question_count || !Number.isInteger(progress.totalQuestions) || progress.totalQuestions < 0 || progress.totalQuestions > session.question_count || progress.completed !== (progress.answeredCount === progress.totalQuestions)) throw unavailable();
   // Both reads start only after the answer commit; paid access remains fresh on retries.
   const [rows, access] = await Promise.all([
     measure("progress_read", () => items(client, id)),
     measure("paid_access", () => getPaidAccess(userId, client, now)),
   ]);
-  const row = rows.find(item => item.id === itemId);
-  if (!row || !row.answered_at || row.selected_label !== selectedLabel || typeof row.is_correct !== "boolean" || !validAnsweredItem(row)) throw unavailable();
   const updated = practiceProgress(session, rows);
-  if (updated.answeredCount < progress.answeredCount) throw unavailable();
+  const row = rows.find(item => item.id === itemId);
+  if (progress.withdrawn || (row && !activeItem(row))) return { answeredCount: updated.answeredCount, totalQuestions: updated.totalQuestions, completed: updated.status === "completed", progress: updated, feedback: null };
+  if (!row || !row.answered_at || row.selected_label !== selectedLabel || typeof row.is_correct !== "boolean" || !validAnsweredItem(row)) throw unavailable();
+  if ((!updated.withdrawnCount && updated.totalQuestions !== progress.totalQuestions) || updated.answeredCount < progress.answeredCount) throw unavailable();
   // A refund must redact retries immediately.
   const explanations = access.hasPaidAccess ? await loadPaidExplanations(client, [row]) : null;
-  return { answeredCount: updated.answeredCount, totalQuestions: updated.totalQuestions, completed: updated.status === "completed", progress: updated,
+  const final = await items(client, id);
+  const finalProgress = practiceProgress(session, final);
+  if (!final.some(item => item.id === itemId && activeItem(item))) return { answeredCount: finalProgress.answeredCount, totalQuestions: finalProgress.totalQuestions, completed: finalProgress.status === "completed", progress: finalProgress, feedback: null };
+  return { answeredCount: finalProgress.answeredCount, totalQuestions: finalProgress.totalQuestions, completed: finalProgress.status === "completed", progress: finalProgress,
     feedback: { itemId: row.id, selectedLabel, correctLabel: row.correct_label, isCorrect: row.is_correct, ...explanations?.get(row.id) } };
 }
 export async function practiceSummary(client: SupabaseClient, id: string, userId: string, now = Date.now()): Promise<PracticeSummary> {
   const session = await ownedPractice(client, id, userId, now);
-  if (!session.completed_at) throw new DiagnosticError(409, "Finish practice to see your summary");
-  const rows = await items(client, id);
-  if (rows.length !== session.question_count || rows.some(row => !row.answered_at || !validAnsweredItem(row))) throw unavailable();
+  const saved = await items(client, id);
+  if (saved.length !== session.question_count) throw unavailable();
+  let rows = saved.filter(item => includedSessionItem(item, !!session.completed_at));
+  if (!session.completed_at && rows.some(row => !row.answered_at)) throw new DiagnosticError(409, "Finish practice to see your summary");
+  if (rows.some(row => !row.answered_at || !validAnsweredItem(row))) throw unavailable();
   const access = await getPaidAccess(userId, client, now);
   const explanations = access.hasPaidAccess ? await loadPaidExplanations(client, rows) : null;
-  return { ...computeResult(id, rows),
-    review: rows.map(row => addPaidReview(mapReview(row as QuestionReviewSource), explanations?.get(row.id))) };
+  const final = await items(client, id);
+  if (final.length !== session.question_count) throw unavailable();
+  rows = final.filter(item => includedSessionItem(item, !!session.completed_at));
+  if (rows.some(row => !row.answered_at || !validAnsweredItem(row))) throw unavailable();
+  return { ...computeResult(id, rows), ...(rows.length < saved.length ? { withdrawnCount: saved.length - rows.length } : {}),
+    review: rows.filter(activeItem).map(row => addPaidReview(mapReview(row as QuestionReviewSource), explanations?.get(row.id))) };
 }

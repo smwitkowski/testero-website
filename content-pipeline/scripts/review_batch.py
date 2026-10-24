@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Export a founder spotcheck, then explicitly approve that reviewed candidate pool.
+"""Export a read-only founder spotcheck; legacy approval is disabled.
 
-Approval is deliberately a separate invocation. --yes explicitly attests that a
-human reviewed the existing exported sample; it never bypasses the export gate.
+Publication requires the strict publish_batch.py council and content-hash gates.
+A spotcheck report is diagnostic only and never authorizes a status change.
 """
 
 from __future__ import annotations
@@ -31,6 +31,12 @@ ANSWER_CHUNK_SIZE = 100
 MANIFEST_PREFIX = "<!-- content-pipeline-spotcheck: "
 QUESTION_FIELDS = "id,generation_run_id,stem,exam,domain_id,difficulty,status,review_status,review_notes"
 ANSWER_FIELDS = "id,question_id,choice_label,choice_text,is_correct,explanation_text"
+APPROVAL_DISABLED = (
+    "Legacy approval is disabled: review_batch.py --approve cannot publish questions. "
+    "Use scripts/publish_batch.py with the full council verdicts and content-hash gates "
+    "(dry-run first; coordinator-approved --apply requires PUBLISH_LIVE). "
+    "review_batch.py without --approve remains a read-only spotcheck export."
+)
 
 
 def get_client():
@@ -217,8 +223,9 @@ def safe_text(value):
 def render_report(run_id, candidates, sample):
     lines = [f"# Founder spotcheck: {run_id}", "",
              f"Eligible candidates: {len(candidates)}. Uniform random sample: {len(sample)} (ceil(10%)).", "",
-             "Review every sampled question, correct flag, explanation, judge verdict and A/B/C/D source quote before approval.",
-             "If any sample fails, fix or reject it and export a new spotcheck before approving.",
+             "Review every sampled question, correct flag, explanation, judge verdict and A/B/C/D source quote.",
+             "Diagnostic only: this report does not authorize publication; use the strict publish_batch.py gates.",
+             "If any sample fails, fix or reject it and export a new spotcheck.",
              f"Candidates blocked from approval by missing/invalid grounding: {sum(bool(grounding_errors(q)) for q in candidates)}.", ""]
     for question in sample:
         v = verdict(question)
@@ -305,66 +312,37 @@ def verify_report(path, run_id, candidates):
 
 
 def approve_candidates(wrapper, run_id, candidates):
-    # Check the entire pool before the first write; never partly approve a legacy pool.
-    require_grounded_candidates(candidates)
-    promoted = 0
-    for question in candidates:
-        # Recheck the judge immediately before constructing each guarded update.
-        if not is_judge_passed(question.get("review_notes")):
-            continue
-        result = (wrapper.client.table("questions").update({"status": "ACTIVE"})
-                  .eq("id", question["id"]).eq("generation_run_id", run_id)
-                  .eq("status", "DRAFT").eq("review_status", "GOOD")
-                  .eq("review_notes", question["review_notes"]).eq("stem", question["stem"])
-                  .execute())
-        if not isinstance(result.data, list):
-            raise click.ClickException(f"Approval result unknown after {promoted} promotions; inspect the run before retrying.")
-        promoted += len(result.data)
-    return promoted
+    """Reject legacy direct callers before reading the client or candidate pool."""
+    raise click.ClickException(APPROVAL_DISABLED)
 
 
 @click.command()
 @click.argument("generation_run_id", type=click.UUID)
-@click.option("--output", "-o", type=click.Path(path_type=Path), help="Spotcheck .md path (also read during approval).")
-@click.option("--approve", is_flag=True, help="Promote the previously exported, human-reviewed pool to ACTIVE.")
-@click.option("--yes", is_flag=True, help="Attest that you personally reviewed every sampled question in the existing export, and confirm promotion.")
+@click.option("--output", "-o", type=click.Path(path_type=Path), help="Read-only spotcheck .md output path.")
+@click.option("--approve", is_flag=True, help="Disabled legacy write option; use scripts/publish_batch.py.")
+@click.option("--yes", is_flag=True, help="Retired approval flag; cannot authorize publication.")
 def main(generation_run_id, output, approve, yes):
-    """Export a 10% founder spotcheck for GENERATION_RUN_ID, or approve its reviewed pool."""
+    """Export a read-only 10% founder spotcheck for GENERATION_RUN_ID."""
+    # Refuse before path access, connection imports, or credential access.
+    if approve:
+        raise click.ClickException(APPROVAL_DISABLED)
+    if yes:
+        raise click.UsageError("--yes requires --approve, but legacy approval is disabled.")
     run_id = str(generation_run_id)
     path = safe_report_path(output or PIPELINE_ROOT / "review" / f"{run_id}.md")
-    if not approve and yes:
-        raise click.UsageError("--yes requires --approve and attests human spotcheck review.")
     try:
         wrapper = get_client()
         candidates, excluded = load_candidates(wrapper, run_id)
         click.echo(f"Eligible: {len(candidates)}; incomplete excluded: {excluded}.")
-        if not approve:
-            size = export_report(path, run_id, candidates)
-            click.echo(f"Exported {size} sampled questions to {path}.")
-            return
-        if not candidates:
-            click.echo("Promoted: 0.")
-            return
-        verify_report(path, run_id, candidates)
-        require_grounded_candidates(candidates)
-        if not yes:
-            click.confirm(f"I personally reviewed all sampled questions in {path} and accept their quality. "
-                          f"Promote all {len(candidates)} candidates for run {run_id} to ACTIVE?", abort=True)
-        # Refuse content or pool changes that happened while the founder confirmed.
-        fresh, _ = load_candidates(wrapper, run_id)
-        if fingerprint(fresh) != fingerprint(candidates):
-            raise click.ClickException("Candidates changed during confirmation; export and review again.")
-        promoted = approve_candidates(wrapper, run_id, fresh)
-        click.echo(f"Promoted: {promoted}.")
+        size = export_report(path, run_id, candidates)
+        click.echo(f"Exported {size} sampled questions to {path}.")
     except click.ClickException:
-        raise
-    except click.Abort:
         raise
     except OSError as exc:
         raise click.ClickException("Cannot read or write the spotcheck file.") from exc
     except Exception as exc:
         # Do not echo API errors, which can contain endpoints or credential details.
-        raise click.ClickException("Review database operation failed; no further approvals performed.") from exc
+        raise click.ClickException("Review database operation failed; no spotcheck exported.") from exc
 
 
 if __name__ == "__main__":

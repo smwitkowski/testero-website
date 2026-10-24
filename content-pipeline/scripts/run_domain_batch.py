@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Coordinator-only cert batch runner. Importing or --plan-only never contacts services."""
+"""Coordinator-only cert batch runner. Importing or --plan-only never contacts services.
+
+Ready requests are judged after incomplete generation, then ordinary batches
+attempt ingestion and report partial DRAFT writes even on a nonzero final exit.
+Full-plan PDE keeps its frozen-slot, whole-wave admission safeguards: exhausted
+system failures can still block admission, but never skip judging ready requests.
+Nothing here authorizes ACTIVE publication.
+"""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -95,7 +103,7 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resu
         count = len(saved["plan"])
         base = artifact.with_suffix("")
     else:
-        base = PIPELINE / ".cache/generation" / (cert + "-v5-" + tag)
+        base = (PIPELINE / ".cache/generation").resolve() / (cert + "-v5-" + tag)
         artifact = base.with_suffix(".json")
         if any(path.exists() for path in (artifact, Path(str(base) + ".existing.json"),
                                           Path(str(base) + ".judge-requests"), Path(str(base) + ".verdicts"),
@@ -116,12 +124,71 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resu
             generate += ["--objective", objective["objective_id"]]
     if plan_only:
         return artifact, export, [generate + ["--plan-only"]]
-    generate += ["--existing-questions", str(export)]
+    generate += ["--existing-questions", str(export), "--continue-quality-rejections"]
     judge = [sys.executable, "scripts/judge_requests.py", "--requests", str(base) + ".judge-requests",
              "--verdicts", str(base) + ".verdicts", "--judge-model", "claude", "--parallel", str(parallel), "--argon-gate"]
     ingest = [sys.executable, "scripts/ingest_external_verdicts.py", "--artifact", str(artifact),
               "--verdicts", str(base) + ".verdicts"]
     return artifact, export, [generate, judge, ingest]
+
+
+def retryable_judge_ids(requests, verdicts):
+    """Select only frozen, failed system calls, never a completed quality verdict.
+
+    New failure records must explicitly say no seat rejected the candidate. Old
+    records without that assertion require manual review, not automatic rerolls.
+    """
+    failures = verdicts / ".failures"
+    if failures.is_symlink():
+        raise ValueError("Unsafe judge failure directory")
+    selected = []
+    hard_stop = {"CLIUsageLimitError", "CLIAuthError", "CodexModelRejectedError",
+                 "AuthenticationError", "PermissionDeniedError", "RateLimitError"}
+    for path in sorted(failures.glob("*.json")):
+        if path.is_symlink():
+            raise ValueError("Unsafe judge failure record")
+        record = json.loads(path.read_text())
+        if not isinstance(record, dict):
+            raise ValueError("Malformed judge failure record")
+        if record.get("error_class") in hard_stop:
+            return []  # Quota/auth stops apply to the whole batch.
+        ident = path.stem
+        request = requests / path.name
+        if (not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", ident)
+                or (verdicts / path.name).exists() or (verdicts / path.name).is_symlink()
+                or record.get("candidate_id") != ident
+                or record.get("quality_rejected") is not False
+                or not isinstance(record.get("sub_call"), str)
+                or not record["sub_call"].startswith(("claude.", "argon."))
+                or record["sub_call"] == "argon.validation"
+                or request.is_symlink() or not request.is_file()):
+            continue
+        if record.get("request_sha256") != hashlib.sha256(request.read_bytes()).hexdigest():
+            raise ValueError("Judge failure does not match frozen request")
+        selected.append(ident)
+    return selected
+
+
+def judge_with_system_retries(command, execute):
+    """Judge once, then at most twice per failed candidate in the same cohort."""
+    requests = Path(command[command.index("--requests") + 1])
+    verdicts = Path(command[command.index("--verdicts") + 1])
+    attempts = {}
+    pending = command
+    while True:
+        try:
+            execute(pending)
+            return all((verdicts / path.name).is_file() and not (verdicts / path.name).is_symlink()
+                       for path in requests.glob("*.json") if path.name != ".verdict-directories.json")
+        except subprocess.CalledProcessError:
+            ids = [ident for ident in retryable_judge_ids(requests, verdicts)
+                   if attempts.get(ident, 0) < 2]
+            if not ids:
+                return False
+            pending = list(command)
+            for ident in ids:
+                attempts[ident] = attempts.get(ident, 0) + 1
+                pending += ["--candidate-id", ident]
 
 
 @click.command()
@@ -138,11 +205,18 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resu
               help="Resume this saved full-plan PDE artifact without regenerating saved waves.")
 @click.option("--acknowledge-saved-system-failures", is_flag=True,
               help="Resume only: explicitly retain saved pre-judge system failures as failed attempts; never auto-retry them.")
+@click.option("--nightly-result", type=click.Path(dir_okay=False, path_type=Path),
+              help="Private typed continuation result for the nightly coordinator.")
 @click.option("--write", is_flag=True,
               help="Coordinator authorization for resume DRAFT writes; resume is dry admission without this flag.")
 def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
-         acknowledge_saved_system_failures, write):
+         acknowledge_saved_system_failures, write, nightly_result):
     """Run SECTION (e.g. 1. or all) as one artifact; all uses the weighted cert plan."""
+    from scripts.nightly_outcome import ordinary_failure, write_result, NightlyHardStop
+    if nightly_result is not None:
+        if nightly_result.exists() or nightly_result.is_symlink():
+            raise click.ClickException("Existing nightly result requires manual reconciliation")
+        write_result(nightly_result, "hard_stop")  # Interrupted/unknown work stays stopped.
     try:
         if acknowledge_saved_system_failures and resume is None:
             raise ValueError("Saved system-failure acknowledgment requires --resume")
@@ -158,9 +232,46 @@ def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
             if resume is None:
                 exam = "GCP_PM_ML_ENG" if cert == DEFAULT_CERT else cert
                 click.echo(f"Exported {export_questions(url, key, exam, export)} existing {cert} questions")
+        stage_failures = []
+        judged_cohorts = set()
+
+        def launch(command):
+            try:
+                subprocess.run(command, cwd=PIPELINE, check=True, stdin=subprocess.DEVNULL,
+                               env={**os.environ, "PYTHON_DOTENV_DISABLED": "1"})
+            except subprocess.CalledProcessError:
+                if nightly_result is not None and not ordinary_failure(command):
+                    raise NightlyHardStop("Unclassified or hard nightly failure") from None
+                raise
+
         def execute(command):
-            subprocess.run(command, cwd=PIPELINE, check=True, stdin=subprocess.DEVNULL,
-                           env={**os.environ, "PYTHON_DOTENV_DISABLED": "1"})
+            if not plan_only and command[1] == "scripts/judge_requests.py":
+                cohort = (command[command.index("--requests") + 1],
+                          command[command.index("--verdicts") + 1])
+                if cohort not in judged_cohorts:
+                    if not judge_with_system_retries(command, launch):
+                        stage_failures.append("judge")
+                    judged_cohorts.add(cohort)
+                return
+            try:
+                launch(command)
+            except subprocess.CalledProcessError:
+                if not plan_only and command[1] == "scripts/generate_all_domains.py":
+                    target = Path(command[command.index("--artifact") + 1])
+                    requests = target.with_suffix(".judge-requests")
+                    if requests.is_dir() and not requests.is_symlink():
+                        stage_failures.append("generate")
+                        click.echo("Generation incomplete; judging frozen requests before ingestion")
+                        if section == "all" and cert == "data-engineer":
+                            # PDE validates complete frozen slots before admission.
+                            # Judge ready requests even if that validation stops a
+                            # partial wave; never bypass its admission safeguards.
+                            judge = list(commands[1])
+                            judge[judge.index("--requests") + 1] = str(requests)
+                            judge[judge.index("--verdicts") + 1] = str(target.with_suffix(".verdicts"))
+                            execute(judge)
+                        return
+                raise
         if not plan_only and section == "all" and cert == "data-engineer":
             from scripts.pde_retry import run_retry_batch
             from scripts import ingest_external_verdicts as ingestion
@@ -186,7 +297,13 @@ def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
             click.echo("PDE planned vs accepted sections: " + json.dumps(report["sections"]))
         else:
             for command in commands:
-                execute(command)
+                try:
+                    execute(command)
+                except subprocess.CalledProcessError:
+                    if not plan_only and command[1] == "scripts/ingest_external_verdicts.py":
+                        stage_failures.append("ingest")
+                    else:
+                        raise
             ids = []
             if not plan_only:
                 payload = json.loads(artifact.read_text())
@@ -197,9 +314,15 @@ def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
             else:
                 Path(str(artifact.with_suffix("")) + ".accepted-ids").write_text("\n".join(ids))
                 click.echo(f"Stored {len(ids)} DRAFT questions; publication is not authorized")
+        if stage_failures:
+            if nightly_result is not None and "ingest" not in stage_failures:
+                write_result(nightly_result, "partial")
+            raise click.ClickException("Batch incomplete after judging and ingestion; inspect private artifacts ("
+                                       + ", ".join(sorted(set(stage_failures))) + ")")
+        write_result(nightly_result, "complete")
     except (ValueError, OSError, subprocess.CalledProcessError):
         # Do not print exceptions from HTTP/transport clients or credential-bearing environments.
-        raise click.ClickException("Batch stopped; check registry inputs, injected credentials and private batch artifacts. No later stage was run.") from None
+        raise click.ClickException("Batch stopped; check registry inputs, injected credentials and private batch artifacts. Completed stages remain recorded; no publication is authorized.") from None
 
 
 if __name__ == "__main__":

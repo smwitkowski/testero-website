@@ -7,12 +7,19 @@ export async function submitQuestionReport(client: SupabaseClient, input: Questi
   const parsed = questionReportBody.safeParse(input);
   if (!parsed.success) throw new DiagnosticError(400, "Invalid report");
   const body = parsed.data;
-  const { data: session, error } = await client.from("study_sessions").select("user_id,anonymous_owner_hash,expires_at,completed_at").eq("id", body.sessionId).eq("kind", body.kind).maybeSingle();
-  if (error) throw new DiagnosticError(503, "Reporting is unavailable. Please try again.");
-  if (!session || !canAccessSession(session, credentials)) throw new DiagnosticError(404, "Question not found");
+  if (body.kind === "mock") {
+    // The report RPC repeats ownership and item membership checks atomically.
+    const { data: session, error } = await client.from("mock_exam_sessions").select("user_id,completed_at").eq("id", body.sessionId).maybeSingle();
+    if (error) throw new DiagnosticError(503, "Reporting is unavailable. Please try again.");
+    if (!credentials.userId || !session || session.user_id !== credentials.userId || !session.completed_at) throw new DiagnosticError(404, "Question not found");
+  } else {
+    const { data: session, error } = await client.from("study_sessions").select("user_id,anonymous_owner_hash,expires_at,completed_at").eq("id", body.sessionId).eq("kind", body.kind).maybeSingle();
+    if (error) throw new DiagnosticError(503, "Reporting is unavailable. Please try again.");
+    if (!session || !canAccessSession(session, credentials)) throw new DiagnosticError(404, "Question not found");
+  }
   const { error: reportError } = await client.rpc("submit_question_report", {
     p_session_id: body.sessionId, p_item_id: body.itemId, p_kind: body.kind,
-    p_user_id: credentials.userId, p_anonymous_owner_hash: hashAnonymousToken(credentials.anonymousToken),
+    p_user_id: credentials.userId, p_anonymous_owner_hash: body.kind === "mock" ? null : hashAnonymousToken(credentials.anonymousToken),
     p_reason: body.reason, p_note: body.note, p_email: body.email,
   });
   if (reportError?.code === "42501") throw new DiagnosticError(404, "Question not found");

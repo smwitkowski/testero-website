@@ -13,6 +13,7 @@ export interface DiagnosticQuestion {
 export interface DiagnosticProgress {
   sessionId: string;
   certId?: string;
+  withdrawnCount?: number;
   status: "in_progress" | "completed";
   totalQuestions: number;
   answeredCount: number;
@@ -23,6 +24,7 @@ export interface DiagnosticProgress {
 export interface DiagnosticResult {
   sessionId: string;
   certId?: string;
+  withdrawnCount?: number;
   score: number;
   totalQuestions: number;
   correctAnswers: number;
@@ -49,7 +51,7 @@ export interface DiagnosticAnswerResponse {
   totalQuestions: number;
   completed: boolean;
   /** Only the item just answered: no explanation, never other items. */
-  feedback: { itemId: string; selectedLabel: string; correctLabel: string; isCorrect: boolean };
+  feedback: { itemId: string; selectedLabel: string; correctLabel: string; isCorrect: boolean } | null;
 }
 
 /** Completed, account-owned question review. Explanations are never included. */

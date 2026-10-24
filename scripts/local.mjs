@@ -3,7 +3,7 @@ import { promisify } from "node:util";
 import { readFileSync, readdirSync } from "node:fs";
 import { LOCAL_STRIPE_ENV, startStripeFixtureServer } from "./stripe-fixture.mjs";
 const execute = promisify(execFile);
-const commands = { "verify-taxonomy-db": ["node", ["tests/question-taxonomy-db.mjs"]], dev: ["npm", ["run", "dev"]], e2e: ["npm", ["run", "test:e2e"]], "verify-db": ["node", ["tests/schema-db-integration.mjs"]], "verify-cert-db": ["node", ["tests/cert-waitlist-db.mjs"]], "verify-results-email-db": ["node", ["tests/results-email-db.mjs"]], "verify-report-db": ["node", ["tests/question-reports-db.mjs"]] };
+const commands = { "verify-taxonomy-db": ["node", ["tests/question-taxonomy-db.mjs"]], dev: ["npm", ["run", "dev"]], e2e: ["npm", ["run", "test:e2e"]], "verify-db": ["node", ["tests/all-db-integration.mjs"]], "verify-cert-db": ["node", ["tests/cert-waitlist-db.mjs"]], "verify-results-email-db": ["node", ["tests/results-email-db.mjs"]], "verify-report-db": ["node", ["tests/question-reports-db.mjs"]] };
 const requested = process.argv[2];
 const prodCommand = ["e2e:prod", "verify-db:prod"].includes(requested);
 const name = prodCommand ? requested.replace(":prod", "") : requested;

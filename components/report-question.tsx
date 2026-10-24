@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { reportReasons } from "@/lib/question-reports/schema";
-export function ReportQuestion({ sessionId, itemId, kind }: { sessionId: string; itemId: string; kind: "diagnostic" | "practice" }) {
+export function ReportQuestion({ sessionId, itemId, kind }: { sessionId: string; itemId: string; kind: "diagnostic" | "practice" | "mock" }) {
   const [open, setOpen] = useState(false);
   const reportForm = useRef<HTMLFormElement>(null);
   useEffect(() => { if (open) reportForm.current?.scrollIntoView({ block: "nearest" }); }, [open]);

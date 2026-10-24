@@ -71,7 +71,7 @@ def cli_usage(text, *, provider):
 
 
 @contextmanager
-def model_call(model):
+def model_call(model, *, provider=None):
     """Record one transport attempt, including exceptions, when a sink is set."""
     context = dict(_CONTEXT.get())
     path = context.pop("calls_path", None)
@@ -87,9 +87,11 @@ def model_call(model):
         if path is not None:
             record = {"ts": datetime.now(timezone.utc).isoformat(),
                       **{key: context.get(key) for key in ("stage", "candidate_id", "index", "attempt", "escalation", "verify_context")},
-                      "model": model, **{key: _count(usage.get(key)) for key in TOKEN_FIELDS},
+                      "model": model, **({"provider": provider} if provider else {}),
+                      **{key: _count(usage.get(key)) for key in TOKEN_FIELDS},
                       "seconds": time.monotonic() - started,
-                      "ok": error_class is None, "error_class": error_class}
+                      "ok": error_class is None, "error_class": error_class,
+                      **{key: usage[key] for key in ("budget_call_id", "cost_usd", "cost_kind") if key in usage}}
             with _LOCK:
                 destination = Path(path)
                 destination.parent.mkdir(parents=True, exist_ok=True)
@@ -105,6 +107,7 @@ def log_lm_calls(lm, model):
     had_forward = "forward" in lm.__dict__
     had_check = "_check_truncation" in lm.__dict__
     active = None
+    original_retries = getattr(lm, "num_retries", None)
 
     def check(response):
         if active is not None:
@@ -116,7 +119,11 @@ def log_lm_calls(lm, model):
 
     def forward(*args, **kwargs):
         nonlocal active
+        from shared.nightly_budget import reserve_model, enabled
+        reservation = reserve_model(model, args, kwargs, lm, stage=_CONTEXT.get().get("stage")) if enabled() else None
         with model_call(model) as usage:
+            if reservation is not None:
+                usage.update({key: reservation[key] for key in ("budget_call_id", "cost_usd", "cost_kind")})
             active = usage
             try:
                 return original_forward(*args, **kwargs)
@@ -129,6 +136,8 @@ def log_lm_calls(lm, model):
     try:
         yield
     finally:
+        if original_retries is not None:
+            lm.num_retries = original_retries
         if had_forward:
             lm.forward = original_forward
         else:

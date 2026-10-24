@@ -52,6 +52,7 @@ def inputs():
 def test_codex_command_schema_stdin_empty_cwd_and_cleanup(monkeypatch,tmp_path,model):
     monkeypatch.setattr(cli,"CLI_TEMP_ROOT",tmp_path)
     monkeypatch.setenv("OPENAI_API_KEY","secret-must-not-reach-child")
+    monkeypatch.setenv("RESEND_API_KEY", "fake-mail-key-must-not-reach-child")
     seen = {}
     def fake(command,**kwargs):
         cwd = Path(kwargs["cwd"])
@@ -65,6 +66,7 @@ def test_codex_command_schema_stdin_empty_cwd_and_cleanup(monkeypatch,tmp_path,m
         assert "S1 Purpose first" in kwargs["input"]
         assert "Frozen official source text" in kwargs["input"]
         assert "OPENAI_API_KEY" not in kwargs["env"]
+        assert "RESEND_API_KEY" not in kwargs["env"]
         assert kwargs["timeout"] == 10
         assert kwargs["capture_output"] and kwargs["text"] and not kwargs["check"]
         assert command[command.index("-m") + 1] == "gpt-6.1-sol"
@@ -84,6 +86,7 @@ def test_codex_command_schema_stdin_empty_cwd_and_cleanup(monkeypatch,tmp_path,m
 def test_claude_command_no_tools_no_persistence_and_structured_envelope(monkeypatch,tmp_path):
     monkeypatch.setattr(cli,"CLI_TEMP_ROOT",tmp_path)
     monkeypatch.setenv("ANTHROPIC_API_KEY","secret")
+    monkeypatch.setenv("RESEND_API_KEY", "fake-mail-key-must-not-reach-child")
     for name in ("CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY", "ANTHROPIC_BASE_URL"):
         monkeypatch.setenv(name, "external-provider")
     def fake(command,**kwargs):
@@ -94,6 +97,7 @@ def test_claude_command_no_tools_no_persistence_and_structured_envelope(monkeypa
         assert "--strict-mcp-config" in command
         assert command[command.index("--mcp-config")+1] == '{"mcpServers":{}}'
         assert "ANTHROPIC_API_KEY" not in kwargs["env"]
+        assert "RESEND_API_KEY" not in kwargs["env"]
         for name in ("CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY", "ANTHROPIC_BASE_URL"):
             assert name not in kwargs["env"]
         assert list(Path(kwargs["cwd"]).iterdir()) == []

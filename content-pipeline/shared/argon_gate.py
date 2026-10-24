@@ -36,15 +36,22 @@ SIGNATURES = {"blind": BlindSolverSignature, "review": ArgonReviewSignature}
 class ArgonCallError(RuntimeError):
     """Identify the failed call without copying a provider exception body."""
 
-    def __init__(self, call, error):
+    def __init__(self, call, error, *, quality_rejected=False):
         self.call, self.error = call, error
+        self.quality_rejected = quality_rejected
         super().__init__(f"Argon {call} call failed ({type(error).__name__})")
 
 
-def build_argon_request(question, scope, context, evidence, *, review_only=False):
-    inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence)
+def build_argon_request(question, scope, context, evidence, *, review_only=False, version=None):
+    if version is None:
+        version = 2 if review_only else 1
+    if type(version) is not int or version not in (1, 2, 3) or review_only != (version == 2):
+        raise ValueError("Invalid Argon request version or mode")
+    # Frozen v1/v2 requests predate objective-scoped Argon style references.
+    inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence,
+                               **({"style_policy": scope.get("style_policy")} if version == 3 else {}))
     full = {**inputs["evidence"], "style_reference": inputs["style"]["style_reference"]}
-    return {"model": MODEL, "version": 2 if review_only else 1,
+    return {"model": MODEL, "version": version,
             "calls": {name: {"judge_prompt": signature_prompt(signature, data),
                              "verdict_schema": output_model(signature).model_json_schema()}
                       for name, signature, data in (("blind", BlindSolverSignature, inputs["blind_solver"]),
@@ -70,7 +77,7 @@ def run_call(name, gate):
 
 def validate_request(request):
     if (not isinstance(request, dict) or set(request) != {"model", "version", "calls"}
-            or request["model"] != MODEL or type(request["version"]) is not int or request["version"] not in (1, 2)
+            or request["model"] != MODEL or type(request["version"]) is not int or request["version"] not in (1, 2, 3)
             or not isinstance(request["calls"], dict) or set(request["calls"]) != ({"review"} if request["version"] == 2 else set(SIGNATURES))):
         raise CLISchemaError("Invalid Argon request")
     for name in request["calls"]:
@@ -82,10 +89,18 @@ def validate_request(request):
             raise CLISchemaError("Invalid Argon call schema")
 
 
-def run_argon(request):
+def run_argon(request, *, question=None, full_review=True):
+    """Run blind before review; only v3 may skip review after a blind veto."""
     validate_request(request)
+    if type(full_review) is not bool or (not full_review and (request["version"] != 3 or question is None)):
+        raise ValueError("Short circuit requires a v3 request and canonical question")
     outputs = {}
-    for name in request["calls"]:
+    quality_rejected = False
+    # JSON object order is not a call-order contract. Never run review first.
+    for name in (name for name in SIGNATURES if name in request["calls"]):
+        if name == "review" and not full_review and not evaluate_gate("blind_solver", outputs["blind"], question)[0]:
+            outputs[name] = {"status": "skipped", "reason": "prior_gate_failed", "gate": "argon.blind"}
+            continue
         signature = SIGNATURES[name]
         try:
             from shared.call_logging import call_context
@@ -95,10 +110,11 @@ def run_argon(request):
             if name == "blind":
                 from shared.gates import parse_gate_output
                 parse_gate_output("blind_solver", outputs[name])
+                quality_rejected = question is not None and not evaluate_gate("blind_solver", outputs[name], question)[0]
             elif not outputs[name]["fix"].strip() or any(not issue.strip() for issue in outputs[name]["issues"]):
                 raise CLISchemaError("Empty Argon issue or fix")
         except Exception as error:
-            raise ArgonCallError(name, error) from None
+            raise ArgonCallError(name, error, quality_rejected=quality_rejected) from None
     return {"model": MODEL, "version": request["version"], "request_sha256": canonical_sha256(request), **outputs}
 
 
@@ -109,7 +125,11 @@ def evaluate_argon(question, raw, request):
             or raw["request_sha256"] != canonical_sha256(request)):
         raise CLISchemaError("Missing or mismatched Argon provenance")
     blind, reason = (evaluate_gate("blind_solver", raw["blind"], question)
-                     if request["version"] == 1 else (True, "Claude blind required separately"))
+                     if request["version"] in (1, 3) else (True, "Claude blind required separately"))
+    if raw["review"] == {"status": "skipped", "reason": "prior_gate_failed", "gate": "argon.blind"}:
+        if request["version"] != 3 or blind:
+            raise CLISchemaError("Argon review skip cannot approve content")
+        return False, reason
     review = parse_output(json.dumps(raw["review"], allow_nan=False), ArgonReviewSignature)
     if not review["fix"].strip() or any(not issue.strip() for issue in review["issues"]):
         raise CLISchemaError("Empty Argon issue or fix")

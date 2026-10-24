@@ -17,7 +17,7 @@ const now = Date.parse("2026-10-03T12:00:00Z");
 const domain = PMLE_BLUEPRINT[0].domainCode;
 const session = { id: sessionId, kind: "practice", user_id: userId, anonymous_owner_hash: null, question_count: 5, completed_at: null, expires_at: "2026-10-04T12:00:00Z" };
 function bank() { return Array.from({ length: 6 }, (_, index) => ({ id: `bank-${index}`, parent_question_id: null as string | null, stem: `Question ${index}`, exam_domains: { code: domain, name: "Domain A" }, answers: [{ choice_label: "A", choice_text: "Correct", is_correct: true }, { choice_label: "B", choice_text: "Wrong", is_correct: false }] })); }
-function rows() { return Array.from({ length: 5 }, (_, index) => ({ id: index === 0 ? itemId : `item-${index}`, ordinal: index + 1, stem: `Question ${index}`, options: [{ label: "A", text: "Correct", explanation: "secret" }, { label: "B", text: "Wrong" }], selected_label: null as string | null, correct_label: "A", is_correct: null as boolean | null, answered_at: null as string | null, domain_code: domain, domain_name: "Domain A", explanation: "secret", source_url: "secret", question_id: "secret bank" })); }
+function rows() { return Array.from({ length: 5 }, (_, index) => ({ questions: { status: "ACTIVE", review_status: "GOOD", parent_question_id: null as string | null }, id: index === 0 ? itemId : `item-${index}`, ordinal: index + 1, stem: `Question ${index}`, options: [{ label: "A", text: "Correct", explanation: "secret" }, { label: "B", text: "Wrong" }], selected_label: null as string | null, correct_label: "A", is_correct: null as boolean | null, answered_at: null as string | null, domain_code: domain, domain_name: "Domain A", explanation: "secret", source_url: "secret", question_id: "secret bank" })); }
 interface Options { history?: unknown[]; mockHistory?: unknown[]; session?: unknown; items?: unknown; bank?: unknown; used?: unknown; errorTable?: string; rpcData?: unknown; rpcError?: { code: string; message: string }; feedback?: unknown; rpc?: () => Promise<{ data: unknown; error: unknown }> }
 function db(options: Options = {}) {
   const queries: { table: string; filters: [string, unknown][]; selected: string }[] = [];
@@ -126,15 +126,15 @@ describe("practice ownership and no early correctness", () => {
     expect(JSON.stringify(progress)).not.toMatch(/correctLabel|selectedLabel|isCorrect|correct_label|selected_label|explanation|source|question_id/);
   });
   it("exposes only a variant boolean, not the parent ID, on saved practice progress", async () => {
-    const items = rows().map(row => ({ ...row, questions: { parent_question_id: "private-parent-id" } }));
+    const items = rows().map(row => ({ ...row, questions: { ...row.questions, parent_question_id: "private-parent-id" } }));
     const database = db({ items });
     const progress = await readPractice(database.client, sessionId, userId, now);
     expect(progress.currentQuestion).toMatchObject({ isVariant: true });
-    expect(database.queries[1].selected).toContain("questions(parent_question_id)");
+    expect(database.queries[1].selected).toContain("questions(parent_question_id,status,review_status)");
     expect(JSON.stringify(progress)).not.toMatch(/private-parent-id|parent_question_id|questions":/);
   });
   it("infers completed progress when final answer arrives after session read", async () => { const result = await readPractice(db({ items: rows().map(row => ({ ...row, answered_at: "done", is_correct: true })) }).client, sessionId, userId, now); expect(result).toEqual({ sessionId, status: "completed", totalQuestions: 5, answeredCount: 5, currentQuestion: null }); });
-  it("blocks incomplete summaries before item reads", async () => { const database = db(); await expect(practiceSummary(database.client, sessionId, userId, now)).rejects.toMatchObject({ status: 409 }); expect(database.from.mock.calls).toEqual([["study_sessions"]]); });
+  it("checks active-item completion for incomplete summaries", async () => { const database = db(); await expect(practiceSummary(database.client, sessionId, userId, now)).rejects.toMatchObject({ status: 409 }); expect(database.from.mock.calls).toEqual([["study_sessions"], ["session_items"]]); expect(loadPaidExplanations).not.toHaveBeenCalled(); });
   it("returns completed scoring and review without explanations even after expiry", async () => {
     const result = await practiceSummary(db({ session: { ...session, completed_at: "done", expires_at: "2026-10-01T00:00:00Z" }, items: rows().map((row, index) => ({ ...row, answered_at: "done", selected_label: index === 0 ? "B" : "A", is_correct: index !== 0 })) }).client, sessionId, userId, now);
     expect(result).toMatchObject({ totalQuestions: 5, score: 80, correctAnswers: 4 });
@@ -364,5 +364,47 @@ describe("stored practice selection", () => {
   });
   it.each([{ reason:"history",domainCode:domain,message:"forged prose" },{ reason:"forged",domainCode:domain },{ reason:"general",domainCode:"foreign" }])("rejects malformed stored metadata %#", async selection => {
     await expect(readPractice(db({ session: { ...session, practice_selection: selection } }).client,sessionId,userId,now)).rejects.toMatchObject({status:503});
+  });
+});
+
+
+describe("withdrawn practice snapshots", () => {
+  it("skips a withdrawn next item without serving its snapshot", async () => {
+    const items = rows(); items[0].questions.review_status = "QUARANTINED";
+    const result = await readPractice(db({ items }).client, sessionId, userId, now);
+    expect(result).toMatchObject({ totalQuestions: 4, withdrawnCount: 1, currentQuestion: { ordinal: 1 } });
+    expect(JSON.stringify(result)).not.toContain("Question 0");
+  });
+  it("returns progress, not feedback, when a displayed item is withdrawn before answer", async () => {
+    const items = rows(); items[0].questions.status = "RETIRED";
+    const result = await answerPractice(db({ items, rpcData: { answeredCount: 0, totalQuestions: 4, completed: false, withdrawn: true } }).client, sessionId, userId, itemId, "A", now);
+    expect(result.feedback).toBeNull(); expect(result.progress.currentQuestion?.id).toBe("item-1");
+    expect(loadPaidExplanations).not.toHaveBeenCalled();
+  });
+  it("omits withdrawn completed items from score, keys and review", async () => {
+    const items = rows().map(row => ({ ...row, selected_label: "A", answered_at: "done", is_correct: true }));
+    items[0].questions.status = "RETIRED";
+    const result = await practiceSummary(db({ items, session: { ...session, completed_at: "done" } }).client, sessionId, userId, now);
+    expect(result).toMatchObject({ totalQuestions: 4, score: 100, withdrawnCount: 1 }); expect(result.review).toHaveLength(4);
+    expect(JSON.stringify(result)).not.toContain("Question 0");
+  });
+});
+
+
+it("fences practice feedback after withdrawal during explanation loading", async () => {
+  const items = rows().map(row => ({ ...row, answered_at: "done", is_correct: true, selected_label: "A" }));
+  vi.mocked(getPaidAccess).mockResolvedValue({ ...freeAccess, hasPaidAccess: true });
+  vi.mocked(loadPaidExplanations).mockImplementationOnce(async () => { items[0].questions = { ...items[0].questions, status: "RETIRED" }; return new Map(); });
+  const result = await answerPractice(db({ items, rpcData: { answeredCount: 5, totalQuestions: 5, completed: true } }).client, sessionId, userId, itemId, "A", now);
+  expect(result.feedback).toBeNull(); expect(result.progress).toMatchObject({ totalQuestions: 4, withdrawnCount: 1 });
+});
+
+describe("completed withdrawal snapshots", () => {
+  it("keeps a skipped restored question excluded from summary and review", async () => {
+    const saved = rows().map(row => ({ ...row, withdrawn_at: null as string | null, selected_label: "A" as string | null, answered_at: "done" as string | null, is_correct: true as boolean | null }));
+    Object.assign(saved[0], { withdrawn_at: "2026-10-03T10:00:00Z", selected_label: null, answered_at: null, is_correct: null });
+    const result = await practiceSummary(db({ session: { ...session, completed_at: "done" }, items: saved }).client, sessionId, userId, now);
+    expect(result).toMatchObject({ totalQuestions: 4, correctAnswers: 4, score: 100, withdrawnCount: 1 });
+    expect(result.review).toHaveLength(4); expect(JSON.stringify(result)).not.toContain(saved[0].stem);
   });
 });

@@ -163,7 +163,7 @@ def test_short_stem_name_normalization_generator_request_scope_rebuild_and_expor
     original = path.parent / entry["external_judge_request"]["path"]
     request = json.loads(original.read_text())
     rebuilt = build_request(entry["candidate_id"], scope, q, entry["sources"], canonical_evidence(entry),
-                            execution_policy="short_circuit_v1",
+                            execution_policy=payload["execution_policy"],
                             doc_context_chars=documentation_context_limit(payload, entry))
     assert rebuilt == request
     assert {"inference_required", "options_no_goal_restatement"} <= set(request["gates"]["style"]["verdict_schema"]["required"])
@@ -344,7 +344,7 @@ def test_repair_publishes_frozen_child_despite_unrelated_failed_placeholder(harn
                             execution_policy=saved["execution_policy"],
                             doc_context_chars=documentation_context_limit(saved, child))
     assert request == rebuilt
-    assert request["execution_policy"] == "short_circuit_v1"
+    assert request["execution_policy"] == "short_circuit_v2"
     _, validated, _ = ingest._validate_candidate(path, saved, child)
     assert validated == revised
     db.assert_not_called()
@@ -401,7 +401,7 @@ def test_valid_alternate_topic_coverage_is_bound_to_frozen_request_hash(harness,
         entry["topic_coverage_scope"]["eligible_topic_ids"] = ["dataflow-streaming"]
     assert ingest._scope(payload, entry) == scope
     changed = build_request(entry["candidate_id"], scope, candidate_question(entry), entry["sources"],
-                            canonical_evidence(entry), execution_policy="short_circuit_v1")
+                            canonical_evidence(entry), execution_policy=payload["execution_policy"])
     assert changed["decision_provenance_sha256"] != original["decision_provenance_sha256"]
     assert set(changed) == set(original)
     with pytest.raises(ingest.CandidateValidationError, match="External request differs") as error:

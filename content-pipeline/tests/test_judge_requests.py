@@ -89,7 +89,8 @@ def test_safe_failure_classes_no_retry_and_resumable_success(monkeypatch, dirs, 
     assert summary.failed == 1 and len(calls) == 1
     assert not (results / "candidate-1.json").exists()
     record = json.loads((results / ".failures/candidate-1.json").read_text())
-    assert set(record) == {"candidate_id", "error_class", "message", "sub_call", "request_sha256", "judge_model", "ts"}
+    assert set(record) == {"candidate_id", "error_class", "message", "sub_call", "request_sha256", "judge_model", "ts", "quality_rejected"}
+    assert record["quality_rejected"] is False
     assert record["sub_call"] == "claude.quality" and len(record["request_sha256"]) == 64
     assert record["candidate_id"] == "candidate-1" and record["judge_model"] == "claude"
     assert record["error_class"] == failure.__name__

@@ -202,10 +202,10 @@ test("local account confirmation claims only owned diagnostics, practices past s
       const answer = await accepted.json() as PracticeAnswerResponse;
       if (ordinal <= 3) await assertTransition(page, `/api/practice/${practiceId}`, "feedback");
       expect(answer.answeredCount).toBe(ordinal);
-      expect(answer.feedback.itemId).toBe(progress.currentQuestion!.id);
-      expect(answer.feedback.correctLabel).toMatch(/^[A-D]$/);
+      expect(answer.feedback!.itemId).toBe(progress.currentQuestion!.id);
+      expect(answer.feedback!.correctLabel).toMatch(/^[A-D]$/);
       noExplanations(answer);
-      await expect(page.getByRole("status")).toContainText(`the correct answer is ${answer.feedback.correctLabel}.`);
+      await expect(page.getByRole("status")).toContainText(`the correct answer is ${answer.feedback!.correctLabel}.`);
       if (ordinal < 5) {
         if (ordinal > 1) await armTransition(page, { path: `/api/practice/${practiceId}`, ordinal: ordinal + 1, total: 5 });
         const next = page.getByRole("button", { name: "Next question", exact: true });

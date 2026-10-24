@@ -115,6 +115,26 @@ def is_quality_rejection(entry):
                 and entry.get("failure_stage") == "decision_veto"))
 
 
+def retry_system_call(entry, stage, function, *args, **kwargs):
+    """Retry a failed pre-publication call, with two extra calls per candidate.
+
+    Returned quality vetoes are not exceptions and are never rerolled. Auth,
+    quota, model-policy failures and explicit decision vetoes stop immediately.
+    Record only safe metadata, not exception bodies or credential-bearing args.
+    """
+    while True:
+        try:
+            return function(*args, **kwargs)
+        except (DecisionVetoError, CLIUsageLimitError, CLIAuthError, CodexModelRejectedError):
+            raise
+        except Exception as exc:
+            retries = entry.setdefault("system_retries", [])
+            if len(retries) >= 2:
+                raise
+            retries.append({"failure_stage": stage, "error_class": type(exc).__name__,
+                            "retry": len(retries) + 1})
+
+
 def is_acknowledgeable_system_failure(entry):
     """Identify the saved pre-judge documentation timeout, not a quality veto.
 
@@ -192,7 +212,7 @@ def persist_candidate(client, scope, question, judge, grounding, exam, domain_id
         before_insert()
     saved = client.insert_question({
         "exam": exam, "domain_id": domain_id, "stem": question["stem"], "difficulty": difficulty,
-        "status": "DRAFT", "review_status": "UNREVIEWED" if judge.passed else final_review,
+        "status": "DRAFT", "review_status": "UNREVIEWED",
         "review_notes": review_notes, "generation_run_id": run_id,
         **({"id": question_id} if question_id is not None else {}),
     })
@@ -253,7 +273,7 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--difficulty", type=click.Choice(["EASY", "MEDIUM", "HARD"]), default="MEDIUM", show_default=True)
 @click.option("--emit-taxonomy", is_flag=True, help="Opt in to one additional plan-tagging call; freeze tags for ingestion. No quality prompt or threshold changes.")
 @click.option("--frozen-plan", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Replacement scopes derived from a SHA256-bound original full-plan artifact.")
-@click.option("--continue-quality-rejections", is_flag=True, help="External PDE orchestration only: finish all requests despite ordinary candidate quality vetoes; system errors still stop.")
+@click.option("--continue-quality-rejections", is_flag=True, help="External orchestration for every cert: continue quality vetoes; retry system calls twice per candidate, never quality decisions.")
 @click.option("--plan-only", is_flag=True, help="Write the frozen cert plan offline; no model, docs or DB calls.")
 @click.option("--dry-run", is_flag=True, help="Generate and judge locally; never access/write the DB.")
 @click.option("--artifact", type=click.Path(path_type=Path), help="JSON review artifact. Defaults to .cache/generation/<cert>-<UTC>.json.")
@@ -294,8 +314,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         else:
             plan = plan_questions(cert, n_questions, domain_code=domain_code, subsection=subsection, seed=seed,
                                   objective_ids=objective_ids, section_allocation=allocation)
-        if continue_quality_rejections and (cert != "data-engineer" or judge_model != "external"):
-            raise ValueError("Quality-only continuation requires external PDE generation")
+        if continue_quality_rejections and judge_model != "external":
+            raise ValueError("Quality-only continuation requires external generation")
     except ValueError as exc:
         raise click.ClickException(str(exc)) from None
     for scope in plan:
@@ -320,7 +340,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                "rules_version": 5, "style_policy_version": plan[0]["style_policy"]["version"], "section_allocation": allocation, "decision_first": True,
                "distractor_evidence": frozen_evidence,
                "documentation_context_policy": {"version": 1, "max_chars": doc_context_chars},
-               "existing_questions": bank, "argon_gate": argon_gate, "execution_policy": "short_circuit_v1",
+               "existing_questions": bank, "argon_gate": argon_gate, "execution_policy": "short_circuit_v2",
                "retrieval_experiment": {"version": 1, "disk_cache": doc_cache,
                                          "per_option_retrieval": verify_retrieval,
                                          "stable_prefix": verify_stable_prefix,
@@ -434,6 +454,12 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         if external:
             entry["candidate_id"] = candidate_id(index, scope, {})
         stage = "decision_plan"
+
+        def system_call(function, *args, **kwargs):
+            if external and continue_quality_rejections:
+                return retry_system_call(entry, stage, function, *args, **kwargs)
+            return function(*args, **kwargs)
+
         try:
             entry["decision_attempts"] = []
             feedback = ""
@@ -447,7 +473,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                         [decision for earlier, decision in sorted(planning_history.items()) if earlier < index])
                 with call_context(stage="plan", candidate_id=entry.get("candidate_id"), index=index,
                                   attempt=decision_attempt + 1, calls_path=str(artifact) + ".calls.jsonl"):
-                    decision = plan_decision(scope, model=model, difficulty=difficulty,
+                    decision = system_call(plan_decision, scope, model=model, difficulty=difficulty,
                         replacement_feedback=feedback, existing_scenarios=summaries, reasoning_effort=gen_effort,
                         **({"stable_prefix": True} if verify_stable_prefix else {}))
                 attempt = {"attempt": decision_attempt + 1, "replacement_feedback": feedback,
@@ -482,7 +508,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                         products = check_product_share(decision, bank_actions + earlier_plans, product_budget)
                         attempt["product_share_check"] = entry["product_share_plan_check"] = products
                 stage = "documentation"
-                sources = search_objective_docs(scope["objective_text"], scope["services"],
+                sources = system_call(search_objective_docs, scope["objective_text"], scope["services"],
                     cache=docs_cache, objective_id=scope["objective_id"], decision_plan=decision)
                 if not sources:
                     attempt["sources"] = []
@@ -508,7 +534,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                         verify_options["retrieval"] = retrieval
                     if verify_stable_prefix:
                         verify_options["stable_prefix"] = True
-                    proof = verify_decision(scope, decision, sources, model=model, reasoning_effort=cite_effort, **verify_options)
+                    proof = system_call(verify_decision, scope, decision, sources, model=model, reasoning_effort=cite_effort, **verify_options)
                 if retrieval is not None and not escalated and evidence_missing_veto(proof):
                     escalated = True
                     attempt["cheap_proof"] = proof
@@ -519,7 +545,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                                       attempt=decision_attempt + 1, calls_path=str(artifact) + ".calls.jsonl",
                                       escalation=True, verify_context="full"):
                         attempt["documentation_contexts"]["escalation"] = {}
-                        proof = verify_decision(scope, decision, full_sources, model=model, reasoning_effort=cite_effort,
+                        proof = system_call(verify_decision, scope, decision, full_sources, model=model, reasoning_effort=cite_effort,
                             doc_context_chars=doc_context_chars,
                             budget_metadata=attempt["documentation_contexts"]["escalation"])
                     sources = full_sources
@@ -544,14 +570,14 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 from shared.question_taxonomy import generation_receipt
                 with call_context(stage="taxonomy", candidate_id=entry.get("candidate_id"), index=index,
                                   attempt=1, calls_path=str(artifact) + ".calls.jsonl"):
-                    entry["taxonomy"] = generation_receipt(scope)
+                    entry["taxonomy"] = system_call(generation_receipt, scope)
             stage = "generation"
             entry["documentation_contexts"] = {"writer": {}}
             writer_context = writer_documentation_context(sources, proof, doc_context_chars=doc_context_chars,
                 budget_metadata=entry["documentation_contexts"]["writer"])
             with call_context(stage="write", candidate_id=entry.get("candidate_id"), index=index,
                               attempt=1, calls_path=str(artifact) + ".calls.jsonl"):
-                raw = generate_question(writer_decision_context(scope, decision, proof), writer_context, model=model,
+                raw = system_call(generate_question, writer_decision_context(scope, decision, proof), writer_context, model=model,
                                         difficulty=difficulty, exam_subsection=scope["subsection"], include_evidence=True, cert_id=cert,
                                          doc_context_chars=doc_context_chars,
                                         **({"reasoning_effort": gen_effort} if codex else {}))
@@ -579,7 +605,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     entry["documentation_contexts"]["citation"] = citation_bundle["metadata"]
                     with call_context(stage="cite", candidate_id=entry["candidate_id"], index=index,
                                       attempt=1, calls_path=str(artifact) + ".calls.jsonl"):
-                        citation = cite_question(question, sources, model=model,
+                        citation = system_call(cite_question, question, sources, model=model,
                             check_errors=checked["errors"], fetched_context=citation_bundle["context"], doc_context_chars=doc_context_chars,
                             **({"reasoning_effort": cite_effort} if codex else {}))
                 checked = check_evidence(citation.get("evidence"), sources)
@@ -627,7 +653,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 stage = "external_request"
                 entry["candidate_id"] = candidate_id(index, scope, question)
                 request = build_request(entry["candidate_id"], scope, question, sources, checked["options"], argon_gate=argon_gate,
-                    execution_policy="short_circuit_v1", doc_context_chars=doc_context_chars)
+                    execution_policy="short_circuit_v2", doc_context_chars=doc_context_chars)
                 entry["documentation_contexts"]["external_judge"] = request["trimming"]["documentation_context_budget"]
                 return  # Publish in plan order under the shared write lock.
             stage = "judge"

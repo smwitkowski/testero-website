@@ -30,3 +30,18 @@ it.each([["42501",404],["P0001",429],["unknown",503]])("sanitizes RPC %s failure
   rpc.mockResolvedValue({ error: { code, message: "private bank details" } });
   await expect(submitQuestionReport(client,input,{ userId:null,anonymousToken:token })).rejects.toMatchObject({ status });
 });
+
+
+it("allows reports only for the signed-in owner's completed mock review", async () => {
+  const mock = { ...input, kind: "mock" as const };
+  expect(questionReportBody.safeParse(mock).success).toBe(true);
+  for (const value of [null, { user_id: input.sessionId, completed_at: null }, { user_id: input.itemId, completed_at: "done" }]) {
+    session = value;
+    await expect(submitQuestionReport(client, mock, { userId: input.sessionId, anonymousToken: null })).rejects.toMatchObject({ status: 404 });
+  }
+  expect(rpc).not.toHaveBeenCalled();
+  session = { user_id: input.sessionId, completed_at: "done" };
+  await submitQuestionReport(client, mock, { userId: input.sessionId, anonymousToken: null });
+  expect(client.from).toHaveBeenCalledWith("mock_exam_sessions");
+  expect(rpc).toHaveBeenCalledWith("submit_question_report", expect.objectContaining({ p_kind: "mock", p_user_id: input.sessionId, p_anonymous_owner_hash: null }));
+});

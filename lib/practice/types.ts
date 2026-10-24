@@ -15,7 +15,7 @@ export interface PracticeAnswerResponse {
     isCorrect: boolean;
     explanation?: string;
     optionExplanations?: { label: string; text: string; explanation: string }[];
-  };
+  } | null;
 }
 export type PracticeSummary = DiagnosticResult & { review: PaidQuestionReview[] };
 export interface PracticeStartResponse {

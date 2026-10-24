@@ -191,10 +191,12 @@ def _discover_urls(objective_text: str, services: list[str], num_results: int) -
         raise DocumentationError("EXA_API_KEY must be supplied in the environment")
     from exa_py import Exa  # Lazy: imports and pure operations never initialize Exa.
     query = _product_aliases(_discovery_query(objective_text, services))
-    results = Exa(api_key=api_key).search(
-        query=query, type="neural", num_results=num_results * DISCOVERY_RESERVE_FACTOR,
-        include_domains=[DISCOVERY_HOST],
-    )
+    from shared.nightly_budget import exa_call
+    with exa_call(num_results=num_results * DISCOVERY_RESERVE_FACTOR):
+        results = Exa(api_key=api_key).search(
+            query=query, type="neural", num_results=num_results * DISCOVERY_RESERVE_FACTOR,
+            include_domains=[DISCOVERY_HOST],
+        )
     urls = []
     for result in results.results[:num_results * DISCOVERY_RESERVE_FACTOR]:
         url = getattr(result, "url", None)

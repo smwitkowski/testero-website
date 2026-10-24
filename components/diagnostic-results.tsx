@@ -37,6 +37,7 @@ export function DiagnosticResults({ sessionId, aboveFoldCta, emailCard }: { sess
     return <div data-beta-diagnostic-results className="mx-auto max-w-[696px] space-y-8">
       <style>{'body:has([data-beta-diagnostic-results]) header a[href="/pricing"] { display: none; }'}</style>
       <header className="space-y-3"><p className="text-sm font-medium text-muted-foreground">Beta diagnostic</p><h1 className="text-3xl font-semibold tracking-tight">{certName} readiness report</h1><p className="text-sm text-muted-foreground">{data.totalQuestions} questions</p></header>
+      {!!data.withdrawnCount && <p role="status">{data.withdrawnCount} withdrawn question(s) were excluded from your result.</p>}
       <Card aria-label="Readiness tier">
         <CardHeader><CardTitle>Your readiness tier</CardTitle></CardHeader>
         <CardContent><p className="text-3xl font-semibold">Tier: {data.readiness?.label ?? getExamReadinessTier(data.score).label}</p></CardContent>
@@ -58,6 +59,7 @@ export function DiagnosticResults({ sessionId, aboveFoldCta, emailCard }: { sess
 
   return <div className="mx-auto max-w-[896px] space-y-8">
     <header className="space-y-3"><h1 className="text-3xl font-semibold tracking-tight">{quickCheck ? "Your 5-question PMLE check" : "PMLE readiness report"}</h1><p className="text-sm text-muted-foreground">{data.totalQuestions} questions</p></header>
+    {!!data.withdrawnCount && <p role="status">{data.withdrawnCount} withdrawn question(s) were excluded from your score and review.</p>}
     <div className="grid gap-6 md:grid-cols-2">
       <ScoreReport score={data.score} correctAnswers={data.correctAnswers} totalQuestions={data.totalQuestions} />
       {weakest && <Card aria-labelledby="next-step" className="flex flex-col">
@@ -71,7 +73,7 @@ export function DiagnosticResults({ sessionId, aboveFoldCta, emailCard }: { sess
       <DomainScores domains={orderedDomains} sampled={quickCheck} />
       <p className="text-sm leading-relaxed text-muted-foreground">{quickCheck ? "Only the domains sampled are shown. One question cannot measure a domain: use these reads to choose what to review, not as domain scores. Ties follow exam-guide order." : "Each domain has only a few questions, so these results are an early signal of where to look, not a full measure of your knowledge. Domains with the same score are listed in exam-guide order."}</p>
     </section>
-    {!data.review && <FreeDiagnosticExplanation key={data.sessionId} result={data} />}
+    {!data.review && data.totalQuestions > 0 && <FreeDiagnosticExplanation key={data.sessionId} result={data} />}
     {data.review && <QuestionReviewList review={data.review} sessionId={sessionId} kind="diagnostic" />}
     {aboveFoldCta}
     <section aria-labelledby="keep-going-heading" className="space-y-4 rounded-lg border border-border bg-card p-5 sm:p-7">

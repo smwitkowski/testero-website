@@ -152,7 +152,8 @@ describe("local educational seed", () => {
     expect(seed.match(/INSERT INTO public.answers /g)).toHaveLength(120);
     expect(seed.match(/INSERT INTO public.explanations /g)).toHaveLength(30);
     expect(seed.match(/INSERT INTO public.exam_domains /g)).toHaveLength(6);
-    expect(seed.match(/,'ACTIVE','GOOD'\)/g)).toHaveLength(30);
+    expect(seed.match(/,'DRAFT','GOOD'\)/g)).toHaveLength(30);
+    expect(seed).toContain("UPDATE public.questions SET status='ACTIVE' WHERE source_ref LIKE 'local-educational-seed-%' AND status='DRAFT' AND review_status='GOOD';");
     expect(seed.match(/,true,/g)).toHaveLength(30);
     expect(seed.match(/ON CONFLICT DO NOTHING;/g)).toHaveLength(186);
     expect(seed).not.toMatch(/INSERT INTO (auth\.users|public\.(payment_history|user_subscriptions|pmle_passes))/);

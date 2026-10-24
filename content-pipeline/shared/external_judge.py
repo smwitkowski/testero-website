@@ -17,6 +17,8 @@ EXTERNAL_POLICY_MODEL = "anthropic/claude-sonnet-5.5"
 REQUEST_CHARACTER_LIMIT = 150000
 QUOTE_WINDOW_MARGIN = 8000
 ARGON_QUOTE_WINDOW_MARGIN = 4000
+BLIND_ARGON_POLICY = "short_circuit_v2"
+EXECUTION_POLICIES = ("short_circuit_v1", BLIND_ARGON_POLICY)
 
 
 def request_directory(artifact_path):
@@ -315,7 +317,7 @@ def documentation_context_limit(payload, entry=None):
 def build_request(candidate_id, scope, question, sources, evidence, *, signature=None, gate_version=5,
                   argon_gate=False, execution_policy=None, doc_context_chars=None):
     """Keep the rubric/schema intact; trim only fetched text around verified quotes."""
-    if execution_policy not in (None, "short_circuit_v1"):
+    if execution_policy is not None and execution_policy not in EXECUTION_POLICIES:
         raise ValueError("Unsupported execution policy")
     if doc_context_chars is not None and (type(doc_context_chars) is not int or doc_context_chars <= 0):
         raise ValueError("Documentation budget must be a positive integer")
@@ -394,10 +396,50 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
             if signature is not None or gate_version != 5:
                 raise ValueError("Argon requires rules-v5 independent gate requests")
             from shared.argon_gate import build_argon_request
-            request["argon"] = build_argon_request(question, scope, context, evidence, review_only=execution_policy is not None)
+            request["argon"] = build_argon_request(
+                question, scope, context, evidence,
+                review_only=execution_policy == "short_circuit_v1",
+                version=3 if execution_policy == BLIND_ARGON_POLICY else None)
         if len(json.dumps(request, indent=2, ensure_ascii=False, allow_nan=False)) + 1 <= REQUEST_CHARACTER_LIMIT:
             return request
     raise ValueError("External request exceeds the character bound even with wide quote-centered excerpts")
+
+
+def require_publishable_request(request):
+    """Require the v6 blind-Argon request policy, not a passing verdict.
+
+    Publishers must also rebuild/hash-bind the frozen request and strictly
+    evaluate every raw verdict. Legacy requests remain valid for DRAFT ingest.
+
+    Raises:
+        ValueError: The request lacks the versioned v6 council contract.
+    """
+    from shared.argon_gate import validate_request
+    from shared.cli_models import CLISchemaError
+    from shared.gates import gate_signatures
+    try:
+        if (not isinstance(request, dict)
+                or request.get("execution_policy") != BLIND_ARGON_POLICY
+                or type(request.get("gate_version")) is not int or request["gate_version"] != 5
+                or request.get("council_canary") is True
+                or not isinstance(request.get("gates"), dict)):
+            raise ValueError()
+        argon = request["argon"]
+        validate_request(argon)
+        if argon["version"] != 3:
+            raise ValueError()
+        signatures = gate_signatures(5, distractor_evidence=request.get("distractor_evidence"),
+            cert_id=request["objective_id"].split(":", 1)[0], style_policy=request.get("style_policy"))
+        if set(request["gates"]) != set(signatures):
+            raise ValueError()
+        for name, signature in signatures.items():
+            gate = request["gates"][name]
+            if (not isinstance(gate, dict) or set(gate) != {"judge_prompt", "verdict_schema"}
+                    or not isinstance(gate["judge_prompt"], str) or not gate["judge_prompt"].strip()
+                    or gate["verdict_schema"] != output_model(signature).model_json_schema()):
+                raise ValueError()
+    except (KeyError, TypeError, ValueError, AttributeError, CLISchemaError):
+        raise ValueError("Publishing requires short_circuit_v2 with separate blind Argon v3 and all strict gate schemas") from None
 
 
 def _validate_retrieval_metadata(metadata, plan):

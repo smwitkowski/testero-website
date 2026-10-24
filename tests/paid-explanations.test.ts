@@ -9,7 +9,8 @@ const explanations = [{ question_id: questionId, explanation_text: "Whole questi
 function db(answerRows: unknown = answers, explanationRows: unknown = explanations, errorTable?: string, thrown = false) {
   const from = vi.fn((table: string) => {
     if (thrown) throw new Error("secret");
-    const query = { select: vi.fn(() => query), in: vi.fn(async () => ({ data: table === "answers" ? answerRows : explanationRows, error: table === errorTable ? { message: "secret" } : null })) };
+    const query = { select: vi.fn(() => query), in: vi.fn(() => query), eq: vi.fn(() => query),
+      then: (resolve: (value: { data: unknown; error: unknown }) => unknown) => Promise.resolve({ data: table === "answers" ? answerRows : table === "questions" ? [{ id: questionId }] : explanationRows, error: table === errorTable ? { message: "secret" } : null }).then(resolve) };
     return query;
   });
   return { client: { from } as unknown as SupabaseClient, from };
@@ -19,7 +20,7 @@ describe("server-only explanation whitelist and shuffled snapshot mapping", () =
     const database = db(); const result = await loadPaidExplanations(database.client, [item, { ...item, id: "second" }]);
     expect(result.get("item")).toEqual({ explanation: "Whole question", optionExplanations: [{ label: "A", text: "Wrong", explanation: "Why wrong" }, { label: "B", text: "Correct", explanation: "Why correct" }] });
     expect(result.get("second")).toEqual(result.get("item"));
-    expect(database.from.mock.calls).toEqual([["answers"], ["explanations"]]);
+    expect(database.from.mock.calls).toEqual([["answers"], ["explanations"], ["questions"]]);
     expect(database.from.mock.results[0].value.in).toHaveBeenCalledWith("question_id", [questionId]);
     expect(database.from.mock.results[0].value.select).toHaveBeenCalledWith("question_id,choice_label,choice_text,explanation_text");
     expect(database.from.mock.results[1].value.select).toHaveBeenCalledWith("question_id,explanation_text");
@@ -37,7 +38,7 @@ describe("server-only explanation whitelist and shuffled snapshot mapping", () =
   it("does not expose blank or nonstring explanation values", async () => {
     expect((await loadPaidExplanations(db([{ ...answers[0], explanation_text: " " }, { ...answers[1], explanation_text: 123 }], [{ question_id: questionId, explanation_text: {} }]).client, [item])).size).toBe(0);
   });
-  it.each(["answers", "explanations"])("any source error redacts %s", async table => { expect((await loadPaidExplanations(db(answers, explanations, table).client, [item])).size).toBe(0); });
+  it.each(["answers", "explanations", "questions"])("any source error redacts %s", async table => { expect((await loadPaidExplanations(db(answers, explanations, table).client, [item])).size).toBe(0); });
   it.each([null, {}])("malformed lookup data redacts %#", async data => { expect((await loadPaidExplanations(db(data).client, [item])).size).toBe(0); expect((await loadPaidExplanations(db(answers, data).client, [item])).size).toBe(0); });
   it("throws no SDK errors and makes no bank request for missing trusted ids", async () => {
     expect((await loadPaidExplanations(db(answers, explanations, undefined, true).client, [item])).size).toBe(0);
@@ -55,4 +56,14 @@ describe("explanation letters follow the displayed order", () => {
     expect(result.optionExplanations).toEqual([{ label: "A", text: "Wrong", explanation: "Correct Answer (B) beats B." }, { label: "B", text: "Correct", explanation: "Distractor A: see A." }]);
     expect(bankExplanation[0].explanation_text).toBe("Correct Answer (A): fits.\nDistractor B: fails.\n\nA: Fits.\n\nB: Fails.");
   });
+});
+
+
+it("redacts explanations when the active bank lookup omits the withdrawn question", async () => {
+  const from = vi.fn((table: string) => {
+    const query = { select: vi.fn(() => query), in: vi.fn(() => query), eq: vi.fn(() => query),
+      then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: table === "questions" ? [] : table === "answers" ? answers : explanations, error: null }).then(resolve) };
+    return query;
+  });
+  expect((await loadPaidExplanations({ from } as unknown as SupabaseClient, [item])).size).toBe(0);
 });

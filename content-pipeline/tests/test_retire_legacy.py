@@ -1,4 +1,9 @@
-"""Offline D-025 coverage and guarded retirement tests; all clients are fakes."""
+"""Offline read-only D-025 coverage and disabled-retirement regression tests.
+
+Guarded-update, partial-write, and concurrent-write tests were removed because
+legacy retirement no longer writes. Fail-before-client tests replace that flow;
+receipt classification, replacement thresholds and snapshot validation stay tested.
+"""
 import copy
 import importlib.util
 import json
@@ -58,11 +63,6 @@ class Query:
         self.filters.append(("eq", key, value))
         return self
 
-    def is_(self, key, value):
-        assert value == "null"
-        self.filters.append(("is", key, value))
-        return self
-
     def in_(self, key, values):
         self.filters.append(("in", key, values))
         return self
@@ -76,43 +76,20 @@ class Query:
         return self
 
     def update(self, updates):
-        assert self.name == "questions" and updates == {"status": "RETIRED"}
-        self.updates = updates
-        return self
+        raise AssertionError("Read-only coverage must never issue raw updates")
 
     def execute(self):
         self.client.calls.append(self)
-        if self.client.hook:
-            self.client.hook(self)
         if self.client.read_failure and not self.updates and self.name == "questions":
             raise RuntimeError("secret endpoint must not be echoed")
         rows = [row for row in self.client.rows[self.name] if all(
-            row.get(key) == value if op == "eq" else
-            row.get(key) is None if op == "is" else row.get(key) in value
+            row.get(key) == value if op == "eq" else row.get(key) in value
             for op, key, value in self.filters)]
         if self.order_key:
             rows.sort(key=lambda row: row[self.order_key])
         if self.bounds is not None:
             start, end = self.bounds
             rows = rows[start:min(end + 1, start + self.client.cap)]
-        if self.updates:
-            self.client.writes.append(copy.deepcopy(self.filters))
-            if self.client.write_mode == "conflict":
-                return SimpleNamespace(data=[])
-            if self.client.write_mode == "failure":
-                raise RuntimeError("secret endpoint must not be echoed")
-            for row in rows:
-                row.update(self.updates)
-            if self.client.write_mode == "unknown":
-                return SimpleNamespace(data=None)
-            if self.client.write_mode == "wrong":
-                return SimpleNamespace(data=[{"id": "wrong", "status": "RETIRED"}])
-            if self.client.write_mode == "multiple":
-                return SimpleNamespace(data=copy.deepcopy(rows * 2))
-            if self.client.write_mode == "incomplete":
-                return SimpleNamespace(data=[{key: value for key, value in row.items()
-                                              if key != "generation_run_id"} for row in rows])
-            return SimpleNamespace(data=copy.deepcopy(rows))
         return SimpleNamespace(data=[{key: row[key] for key in self.fields if key in row}
                                      for row in copy.deepcopy(rows)])
 
@@ -122,11 +99,14 @@ class Client:
         self.rows = {"exam_domains": [{"id": "d1", "code": CODE}, {"id": "d6", "code": OTHER_CODE}],
                      "questions": copy.deepcopy(list(rows))}
         self.cap, self.calls, self.writes = cap, [], []
-        self.hook, self.write_mode, self.read_failure = None, None, False
+        self.read_failure = False
 
     def table(self, name):
         assert name in self.rows
         return Query(self, name)
+
+    def rpc(self, *args, **kwargs):
+        raise AssertionError("Legacy retirement must never issue RPCs")
 
 
 @pytest.fixture
@@ -136,10 +116,6 @@ def cli(monkeypatch):
     monkeypatch.setattr(retire, "load_cert_context", lambda cert: context())
     runner = CliRunner()
     return client, lambda *args: runner.invoke(retire.main, list(args))
-
-
-def selected_query(q):
-    return q.name == "questions" and not q.updates and q.bounds[0] == 0 and ("eq", "domain_id", "d1") in q.filters
 
 
 def test_default_dry_run_counts_every_objective_including_zero(cli):
@@ -165,47 +141,49 @@ def test_registry_current_context_is_used_without_network():
         assert retire.classification(question(1, True, review_notes=json.dumps(data)), ctx, code) == "grounded"
 
 
-@pytest.mark.parametrize("args", [("--apply",), ("--apply", "--domain", "UNKNOWN")])
-def test_apply_requires_valid_selected_domain_before_client(cli, monkeypatch, args):
+@pytest.mark.parametrize("args", [("--apply",), ("--apply", "--domain", "UNKNOWN"),
+                                   ("--apply", "--domain", CODE)])
+def test_apply_disabled_before_registry_client_or_credentials(cli, monkeypatch, args):
     client, invoke = cli
     monkeypatch.setattr(retire, "get_client", lambda: pytest.fail("Client should not be created"))
+    monkeypatch.setattr(retire, "load_cert_context", lambda *a: pytest.fail("Registry should not be loaded"))
+    class UnreadableEnvironment:
+        def get(self, *args):
+            pytest.fail("Credentials should not be read")
+    monkeypatch.setattr(retire, "os", SimpleNamespace(environ=UnreadableEnvironment()))
     result = invoke(*args)
     assert result.exit_code != 0
+    assert "Legacy retirement is disabled" in result.output
+    assert "retire_question RPC" in result.output
+    assert "domain floor" in result.output
+    assert "question_events" in result.output
+    assert client.calls == []
     assert client.writes == []
 
 
-def test_shortfall_fails_before_any_write_and_prints_after(cli):
+def test_shortfall_remains_a_pure_replacement_safety_check(cli):
     client, invoke = cli
-    client.rows["questions"] = [question(1), question(2), question(3, True)]
-    result = invoke("--apply", "--domain", CODE)
-    assert result.exit_code != 0
-    assert "shortfall=1" in result.output
-    assert "Before PMLE" in result.output and "After PMLE" in result.output
+    rows = [question(1), question(2), question(3, True)]
+    with pytest.raises(retire.click.ClickException, match="shortfall=1"):
+        retire.require_threshold(rows, context(), CODE)
+    assert client.calls == []
     assert client.writes == []
 
 
-def test_exact_threshold_scoped_status_only_updates_and_idempotence(cli):
-    client, invoke = cli
-    client.rows["questions"] = [question(1), question(2, True), question(3, domain_id="d6"),
-                               question(4, exam="OTHER"), question(5, status="DRAFT"),
-                               question(6, status="RETIRED")]
-    before = copy.deepcopy(client.rows["questions"])
-    result = invoke("--apply", "--domain", CODE)
-    assert result.exit_code == 0, result.output
-    assert "Retired: 1" in result.output
-    assert "Before PMLE" in result.output and "After PMLE" in result.output
-    assert "not atomic" in result.output
-    assert "legacy ACTIVE=0" in result.output.split("After PMLE")[1]
-    assert client.rows["questions"][0] == {**before[0], "status": "RETIRED"}
-    assert client.rows["questions"][1:] == before[1:]
-    assert client.writes == [[("eq", "id", before[0]["id"]), ("eq", "exam", retire.EXAM),
-                              ("eq", "domain_id", "d1"), ("eq", "status", "ACTIVE"),
-                              ("is", "review_notes", "null"), ("is", "generation_run_id", "null"),
-                              ("eq", "review_status", "GOOD")]]
-    result = invoke("--apply", "--domain", CODE)
-    assert result.exit_code == 0, result.output
-    assert "Retired: 0" in result.output
-    assert len(client.writes) == 1
+def test_exact_threshold_returns_only_legacy_rows_without_writes():
+    rows = [question(1), question(2, True)]
+    assert retire.require_threshold(rows, context(), CODE) == [rows[0]]
+    assert rows[0]["status"] == "ACTIVE"
+
+
+def test_direct_retirement_helper_is_disabled_before_any_argument_access():
+    class Unreadable:
+        def __getattribute__(self, name):
+            raise AssertionError("Legacy helper must not inspect arguments")
+        def __iter__(self):
+            raise AssertionError("Legacy helper must not inspect snapshots")
+    with pytest.raises(retire.click.ClickException, match="Legacy retirement is disabled"):
+        retire.retire(Unreadable(), Unreadable(), Unreadable(), CODE, "d1")
 
 
 def test_all_pages_use_stable_id_order_and_actual_server_cap(cli):
@@ -224,15 +202,17 @@ def test_all_pages_use_stable_id_order_and_actual_server_cap(cli):
 
 @pytest.mark.parametrize("notes", [None, "", "  ", "Founder reviewed; seems fine", "not JSON", "{}",
                                     '{"content_pipeline_judge": {"passed": true}}'])
-def test_no_grounding_envelope_is_legacy_and_guarded_by_original_notes(cli, notes):
+def test_no_grounding_envelope_is_legacy_in_read_only_coverage(cli, notes):
     client, invoke = cli
-    client.rows["questions"] = [question(1, review_notes=notes), question(2, True)]
-    result = invoke("--apply", "--domain", CODE)
+    row = question(1, review_notes=notes)
+    assert retire.classification(row, context(), CODE) == "legacy"
+    client.rows["questions"] = [row, question(2, True)]
+    before = copy.deepcopy(client.rows)
+    result = invoke()
     assert result.exit_code == 0, result.output
-    assert client.rows["questions"][0]["status"] == "RETIRED"
-    operation = "is" if notes is None else "eq"
-    value = "null" if notes is None else notes
-    assert (operation, "review_notes", value) in client.writes[0]
+    assert "grounded ACTIVE=1; legacy ACTIVE=1; invalid ACTIVE=0" in result.output
+    assert client.rows == before
+    assert client.writes == []
 
 
 @pytest.mark.parametrize("notes", ['{bad JSON', '{"grounding":', '[]', 'null', '"text"',
@@ -242,10 +222,15 @@ def test_no_grounding_envelope_is_legacy_and_guarded_by_original_notes(cli, note
 def test_malformed_or_duplicate_json_is_invalid_and_never_retired(cli, notes):
     client, invoke = cli
     client.rows["questions"] = [question(1, review_notes=notes), question(2), question(3, True)]
-    result = invoke("--apply", "--domain", CODE)
-    assert result.exit_code != 0
+    result = invoke()
+    assert result.exit_code == 0, result.output
     assert "invalid ACTIVE=1" in result.output
-    assert "Invalid receipts" in result.output
+    invalid = [row for row in client.rows["questions"]
+               if retire.classification(row, context(), CODE) == "invalid"]
+    assert len(invalid) == 1
+    with pytest.raises(retire.click.ClickException, match="Invalid receipts"):
+        retire.require_threshold(client.rows["questions"], context(), CODE)
+    assert all(row["status"] == "ACTIVE" for row in client.rows["questions"])
     assert client.writes == []
 
 
@@ -265,9 +250,16 @@ def test_independent_judge_and_current_registry_receipt_required(cli, field, val
     data = envelope()
     data["grounding"][field] = value
     client.rows["questions"] = [question(1), question(2, True, review_notes=json.dumps(data))]
-    result = invoke("--apply", "--domain", CODE)
-    assert result.exit_code != 0
+    result = invoke()
+    assert result.exit_code == 0, result.output
     assert "grounded ACTIVE=0; legacy ACTIVE=1; invalid ACTIVE=1" in result.output
+    assert "invalid ACTIVE=1" in result.output
+    invalid = [row for row in client.rows["questions"]
+               if retire.classification(row, context(), CODE) == "invalid"]
+    assert len(invalid) == 1
+    with pytest.raises(retire.click.ClickException, match="Invalid receipts"):
+        retire.require_threshold(client.rows["questions"], context(), CODE)
+    assert all(row["status"] == "ACTIVE" for row in client.rows["questions"])
     assert client.writes == []
 
 
@@ -279,9 +271,15 @@ def test_grounding_cannot_replace_strict_judge_pass(cli, field, value):
     data = envelope()
     data["content_pipeline_judge"][field] = value
     client.rows["questions"] = [question(1), question(2, True, review_notes=json.dumps(data))]
-    result = invoke("--apply", "--domain", CODE)
-    assert result.exit_code != 0
+    result = invoke()
+    assert result.exit_code == 0, result.output
     assert "invalid ACTIVE=1" in result.output
+    invalid = [row for row in client.rows["questions"]
+               if retire.classification(row, context(), CODE) == "invalid"]
+    assert len(invalid) == 1
+    with pytest.raises(retire.click.ClickException, match="Invalid receipts"):
+        retire.require_threshold(client.rows["questions"], context(), CODE)
+    assert all(row["status"] == "ACTIVE" for row in client.rows["questions"])
     assert client.writes == []
 
 
@@ -295,8 +293,15 @@ def test_every_option_needs_strict_evidence_receipt(cli, field, value):
     data = envelope()
     data["grounding"]["evidence"][0][field] = value
     client.rows["questions"] = [question(1), question(2, True, review_notes=json.dumps(data))]
-    result = invoke("--apply", "--domain", CODE)
-    assert result.exit_code != 0
+    result = invoke()
+    assert result.exit_code == 0, result.output
+    assert "invalid ACTIVE=1" in result.output
+    invalid = [row for row in client.rows["questions"]
+               if retire.classification(row, context(), CODE) == "invalid"]
+    assert len(invalid) == 1
+    with pytest.raises(retire.click.ClickException, match="Invalid receipts"):
+        retire.require_threshold(client.rows["questions"], context(), CODE)
+    assert all(row["status"] == "ACTIVE" for row in client.rows["questions"])
     assert client.writes == []
 
 
@@ -305,9 +310,15 @@ def test_every_option_needs_strict_evidence_receipt(cli, field, value):
 def test_new_active_requires_phase2_run_and_review_status(cli, field, value):
     client, invoke = cli
     client.rows["questions"] = [question(1), question(2, True, **{field: value})]
-    result = invoke("--apply", "--domain", CODE)
-    assert result.exit_code != 0
+    result = invoke()
+    assert result.exit_code == 0, result.output
     assert "invalid ACTIVE=1" in result.output
+    invalid = [row for row in client.rows["questions"]
+               if retire.classification(row, context(), CODE) == "invalid"]
+    assert len(invalid) == 1
+    with pytest.raises(retire.click.ClickException, match="Invalid receipts"):
+        retire.require_threshold(client.rows["questions"], context(), CODE)
+    assert all(row["status"] == "ACTIVE" for row in client.rows["questions"])
     assert client.writes == []
 
 
@@ -316,28 +327,39 @@ def test_duplicate_nested_json_keys_fail_closed(cli):
     raw = json.dumps(envelope()).replace('"cert_id": "machine-learning-engineer"',
                                         '"cert_id": "wrong", "cert_id": "machine-learning-engineer"')
     client.rows["questions"] = [question(1), question(2, True, review_notes=raw)]
-    result = invoke("--apply", "--domain", CODE)
-    assert result.exit_code != 0
-    assert "grounded ACTIVE=0" in result.output and "Invalid receipts" in result.output
+    result = invoke()
+    assert result.exit_code == 0, result.output
+    assert "grounded ACTIVE=0" in result.output
+    assert "invalid ACTIVE=1" in result.output
+    invalid = [row for row in client.rows["questions"]
+               if retire.classification(row, context(), CODE) == "invalid"]
+    assert len(invalid) == 1
+    with pytest.raises(retire.click.ClickException, match="Invalid receipts"):
+        retire.require_threshold(client.rows["questions"], context(), CODE)
+    assert all(row["status"] == "ACTIVE" for row in client.rows["questions"])
     assert client.writes == []
 
 
-def test_invalid_other_domain_receipt_does_not_block_selected_domain(cli):
+def test_invalid_other_domain_receipt_is_reported_separately(cli):
     client, invoke = cli
     client.rows["questions"] = [question(1), question(2, True),
                                question(3, domain_id="d6", review_notes='{"grounding": null}')]
-    result = invoke("--apply", "--domain", CODE)
+    result = invoke("--domain", CODE)
     assert result.exit_code == 0, result.output
+    assert CODE + ": grounded ACTIVE=1; legacy ACTIVE=1; invalid ACTIVE=0" in result.output
+    assert OTHER_CODE + ": grounded ACTIVE=0; legacy ACTIVE=0; invalid ACTIVE=1" in result.output
     assert client.rows["questions"][2]["status"] == "ACTIVE"
+    assert client.writes == []
 
 
-def test_missing_or_ambiguous_seed_mapping_refuses_apply(cli):
+def test_missing_seed_has_no_mapped_coverage_and_ambiguous_seed_fails(cli):
     client, invoke = cli
     client.rows["exam_domains"] = [{"id": "d6", "code": OTHER_CODE}]
-    result = invoke("--apply", "--domain", CODE)
-    assert result.exit_code != 0 and "not seeded" in result.output
+    result = invoke("--domain", CODE)
+    assert result.exit_code == 0, result.output
+    assert CODE + ": grounded ACTIVE=0; legacy ACTIVE=0; invalid ACTIVE=0" in result.output
     client.rows["exam_domains"] += [{"id": "d6", "code": CODE}]
-    result = invoke("--apply", "--domain", CODE)
+    result = invoke()
     assert result.exit_code != 0 and "ambiguous" in result.output
     assert client.writes == []
 
@@ -345,101 +367,16 @@ def test_missing_or_ambiguous_seed_mapping_refuses_apply(cli):
 def test_unknown_domain_active_rows_reported_and_never_written(cli):
     client, invoke = cli
     client.rows["questions"] = [question(1), question(2, True), question(3, domain_id="unknown")]
-    result = invoke("--apply", "--domain", CODE)
+    result = invoke("--domain", CODE)
     assert result.exit_code == 0, result.output
     assert "Unmapped PMLE ACTIVE rows=1" in result.output
     assert client.rows["questions"][2]["status"] == "ACTIVE"
 
 
-@pytest.mark.parametrize("change", ["count", "notes", "lost_replacement"])
-def test_selected_domain_reread_detects_changes_before_writes(cli, change):
-    client, invoke = cli
-    client.rows["questions"] = [question(1), question(2, True)]
-    def hook(q):
-        if selected_query(q):
-            client.hook = None
-            if change == "count":
-                client.rows["questions"].append(question(3))
-            elif change == "notes":
-                client.rows["questions"][0]["review_notes"] = "Edited by founder"
-            else:
-                client.rows["questions"][1]["status"] = "RETIRED"
-    client.hook = hook
-    result = invoke("--apply", "--domain", CODE)
-    assert result.exit_code != 0
-    assert "changed before retirement" in result.output
-    assert client.writes == []
-
-
-def test_race_between_read_and_write_cannot_retire_promoted_row(cli):
-    client, invoke = cli
-    client.rows["questions"] = [question(1), question(2, True)]
-    def hook(q):
-        if q.updates:
-            client.hook = None
-            client.rows["questions"][0].update(question(1, True))
-    client.hook = hook
-    result = invoke("--apply", "--domain", CODE)
-    assert result.exit_code != 0 and "conflict" in result.output
-    assert client.rows["questions"][0]["status"] == "ACTIVE"
-    assert len(client.writes) == 1
-    assert "After PMLE" in result.output
-
-
-@pytest.mark.parametrize("change", ["count", "notes", "grounded_notes"])
-def test_count_or_note_changes_stop_after_first_write_without_rollback(cli, change):
-    client, invoke = cli
-    client.rows["questions"] = [question(1), question(2), question(3, True), question(4, True)]
-    def hook(q):
-        if selected_query(q) and client.writes:
-            client.hook = None
-            if change == "count":
-                client.rows["questions"].append(question(5))
-            elif change == "notes":
-                client.rows["questions"][1]["review_notes"] = "Edited by founder"
-            else:
-                client.rows["questions"][2]["review_notes"] = json.dumps(envelope("pmle:1:2"))
-    client.hook = hook
-    result = invoke("--apply", "--domain", CODE)
-    assert result.exit_code != 0 and "snapshots changed" in result.output
-    assert len(client.writes) == 1
-    assert client.rows["questions"][0]["status"] == "RETIRED"
-    assert client.rows["questions"][1]["status"] == "ACTIVE"
-    assert "After PMLE" in result.output
-
-
-@pytest.mark.parametrize("mode", ["conflict", "failure", "unknown", "wrong", "multiple", "incomplete"])
-def test_conflicts_unknown_results_and_failures_stop_further_writes(cli, mode):
-    client, invoke = cli
-    client.rows["questions"] = [question(1), question(2), question(3, True), question(4, True)]
-    client.write_mode = mode
-    result = invoke("--apply", "--domain", CODE)
-    assert result.exit_code != 0
-    assert len(client.writes) == 1
-    assert client.rows["questions"][1]["status"] == "ACTIVE"
-    assert "After PMLE" in result.output
-    assert "secret endpoint" not in result.output
-    assert "Retired:" not in result.output
-
-
-def test_after_read_failure_is_explicit_and_not_success(cli):
-    client, invoke = cli
-    client.rows["questions"] = [question(1), question(2, True)]
-    def hook(q):
-        if not q.updates and client.writes:
-            client.read_failure = True
-    client.hook = hook
-    result = invoke("--apply", "--domain", CODE)
-    assert result.exit_code != 0
-    assert "coverage: unavailable" in result.output and "After snapshot failed" in result.output
-    assert len(client.writes) == 1
-    assert "secret endpoint" not in result.output
-
-
 def test_duplicate_rows_from_unstable_pagination_fail_before_writes(cli):
     client, invoke = cli
     client.rows["questions"] = [question(1), question(1)]
-    result = invoke("--apply", "--domain", CODE)
+    result = invoke("--domain", CODE)
     assert result.exit_code != 0 and "unstable ACTIVE snapshot" in result.output
     assert client.writes == []
 
@@ -464,7 +401,7 @@ def test_client_uses_only_environment_and_direct_factory(monkeypatch):
 def test_domain_mapping_requires_nonempty_string_id(cli, domain_id):
     client, invoke = cli
     client.rows["exam_domains"] = [{"id": domain_id, "code": CODE}]
-    result = invoke("--apply", "--domain", CODE)
+    result = invoke("--domain", CODE)
     assert result.exit_code != 0
     assert "Invalid or ambiguous canonical domain mapping" in result.output
     assert client.writes == []
@@ -491,7 +428,7 @@ def test_actual_phase2_persisted_receipt_counts_as_replacement(cli, monkeypatch)
                                       retire.EXAM, "d1", "run1", "MEDIUM")
     inserted = copy.deepcopy(persistence.insert_question.call_args.args[0])
     assert inserted["status"] == "DRAFT" and inserted["review_status"] == "UNREVIEWED"
-    # Simulate only the existing final review and founder promotion statuses;
+    # Simulate already-reviewed ACTIVE data solely for receipt classification;
     # the exact notes emitted by persist_candidate remain untouched.
     final_review = persistence.update_question_review.call_args.args
     assert final_review == ("q00002", "run1", "GOOD", inserted["review_notes"])
@@ -500,8 +437,29 @@ def test_actual_phase2_persisted_receipt_counts_as_replacement(cli, monkeypatch)
     client, invoke = cli
     client.rows["questions"] = [question(1), promoted]
     monkeypatch.setattr(retire, "load_cert_context", lambda cert: ctx)
-    result = invoke("--apply", "--domain", CODE)
+    result = invoke("--domain", CODE)
     assert result.exit_code == 0, result.output
     assert "grounded ACTIVE=1; legacy ACTIVE=1; invalid ACTIVE=0" in result.output
-    assert "Retired: 1" in result.output
+    assert "Dry run; no writes." in result.output
+    assert client.writes == []
     assert client.rows["questions"][1] == promoted
+
+
+def test_coverage_read_failure_redacts_sensitive_details(cli):
+    client, invoke = cli
+    client.read_failure = True
+    result = invoke()
+    assert result.exit_code != 0
+    assert "Coverage database or registry operation failed" in result.output
+    assert "secret endpoint" not in result.output
+    assert "Dry run; no writes." not in result.output
+    assert client.writes == []
+
+
+def test_unknown_read_only_domain_fails_before_client(cli, monkeypatch):
+    client, invoke = cli
+    monkeypatch.setattr(retire, "get_client", lambda: pytest.fail("Client should not be created"))
+    result = invoke("--domain", "UNKNOWN")
+    assert result.exit_code != 0
+    assert "Unknown canonical PMLE domain" in result.output
+    assert client.calls == []

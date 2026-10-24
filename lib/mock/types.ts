@@ -8,6 +8,7 @@ export interface MockProgress {
   totalQuestions: number;
   answeredCount: number;
   allocationNotice: string | null;
+  withdrawnCount?: number;
   questions: (DiagnosticQuestion & { selectedLabel: string | null })[];
 }
 export interface MockAttempt {

@@ -84,8 +84,7 @@ class Query:
         return self
 
     def update(self, updates):
-        self.updates = updates
-        return self
+        raise AssertionError("Read-only review must never issue raw updates")
 
     def execute(self):
         self.client.calls.append((self.table, self.bounds, self.updates))
@@ -98,10 +97,6 @@ class Query:
         if self.bounds:
             start, end = self.bounds
             rows = rows[start:min(end + 1, start + self.client.cap)]
-        if self.updates:
-            self.client.writes.append(self.filters)
-            for row in rows:
-                row.update(self.updates)
         return SimpleNamespace(data=copy.deepcopy(rows))
 
 
@@ -119,6 +114,14 @@ class FakeClient:
 
     def table(self, name):
         return Query(self, name)
+
+    def rpc(self, *args, **kwargs):
+        raise AssertionError("Legacy review must never issue RPCs")
+
+
+# Retired-flow tests for interactive confirmation, guarded updates and concurrent
+# promotions were removed: the entry point cannot write. Their replacement is
+# fail-before-client coverage above; report integrity and receipt checks stay pure.
 
 
 class ReviewBatchTests(unittest.TestCase):
@@ -160,18 +163,15 @@ class ReviewBatchTests(unittest.TestCase):
             self.assertIn(f"Official supporting quote for option {label}.", section)
             self.assertIn(f"https://cloud.google.com/vertex-ai/docs/option-{label.lower()}", section)
 
-    def test_legacy_good_reports_display_missing_evidence_but_cannot_approve(self):
+    def test_legacy_good_report_displays_missing_evidence(self):
         self.client = FakeClient([question(review_notes=notes(grounded=False))])
         text = self.export()
         self.assertIn("MISSING EVIDENCE", text)
         self.assertEqual(text.count("MISSING quote and official URL"), 4)
-        with patch.object(review.click, "confirm") as confirm:
-            result = self.invoke("--approve")
-        self.assertIn("Approval denied", result.output)
-        confirm.assert_not_called()
+        candidates, _ = review.load_candidates(self.client, RUN)
+        self.assertEqual(review.grounding_errors(candidates[0]), ["Missing grounding evidence"])
         self.assertEqual(self.client.writes, [])
-
-    def test_official_documentation_hosts_and_https_443_can_approve(self):
+    def test_official_documentation_hosts_and_https_443_validate_read_only(self):
         for base in ["https://docs.cloud.google.com/vertex-ai/docs", "https://cloud.google.com/vertex-ai/docs",
                      "https://docs.cloud.google.com:443/vertex-ai/docs"]:
             with self.subTest(base=base):
@@ -180,29 +180,31 @@ class ReviewBatchTests(unittest.TestCase):
                     item["url"] = base + "/" + item["option_label"].lower()
                 self.client = FakeClient([question(review_notes=json.dumps(envelope))])
                 self.export()
-                result = self.invoke("--approve", "--yes")
-                self.assertEqual(result.exit_code, 0, result.output)
-                self.assertEqual(self.client.rows["questions"][0]["status"], "ACTIVE")
-
-    def test_unsampled_legacy_candidate_blocks_entire_pool(self):
+                candidates, _ = review.load_candidates(self.client, RUN)
+                self.assertEqual(review.grounding_errors(candidates[0]), [])
+                self.assertEqual(self.client.rows["questions"][0]["status"], "DRAFT")
+                self.assertEqual(self.client.writes, [])
+    def test_unsampled_legacy_candidate_is_counted_in_read_only_report(self):
         self.client = FakeClient([question(), question(11, review_notes=notes(grounded=False))])
         with patch.object(review.random, "sample", side_effect=lambda pool, count: pool[:count]):
             text = self.export()
         self.assertNotIn("Question 11", text)
         self.assertIn("missing/invalid grounding: 1", text)
-        result = self.invoke("--approve", "--yes")
-        self.assertNotEqual(result.exit_code, 0)
-        self.assertIn("Approval denied", result.output)
-        self.assertEqual(self.client.writes, [])
-
-    def test_direct_approval_checks_entire_pool_before_any_write(self):
-        self.client = FakeClient([question(), question(11, review_notes=notes(grounded=False))])
         candidates, _ = review.load_candidates(self.client, RUN)
-        with self.assertRaises(review.click.ClickException):
-            review.approve_candidates(self.client, RUN, candidates)
+        with self.assertRaisesRegex(review.click.ClickException, "Approval denied"):
+            review.require_grounded_candidates(candidates)
         self.assertEqual(self.client.writes, [])
-
-    def test_malformed_grounding_receipts_deny_approval(self):
+    def test_direct_approval_is_disabled_before_any_client_or_candidate_access(self):
+        class Unreadable:
+            def __getattribute__(self, name):
+                raise AssertionError("Legacy helper must not inspect arguments")
+            def __iter__(self):
+                raise AssertionError("Legacy helper must not inspect candidates")
+        with self.assertRaisesRegex(review.click.ClickException, "Legacy approval is disabled"):
+            review.approve_candidates(Unreadable(), RUN, Unreadable())
+        self.assertEqual(self.client.calls, [])
+        self.assertEqual(self.client.writes, [])
+    def test_malformed_grounding_receipts_fail_pure_validation_and_show_in_export(self):
         invalid = [None, {}, "not an object"]
         mutations = [
             ("cert_id", ""), ("objective_id", None), ("guide_sha256", "invalid"),
@@ -245,10 +247,17 @@ class ReviewBatchTests(unittest.TestCase):
                 envelope["grounding"] = data
                 self.client = FakeClient([question(review_notes=json.dumps(envelope))])
                 self.export()
-                result = self.invoke("--approve", "--yes")
-                self.assertNotEqual(result.exit_code, 0, result.output)
-                self.assertIn("Approval denied", result.output)
+                candidates, _ = review.load_candidates(self.client, RUN)
+                self.assertTrue(review.grounding_errors(candidates[0]))
+                with self.assertRaisesRegex(review.click.ClickException, "Approval denied"):
+                    review.require_grounded_candidates(candidates)
+                self.assertIn("Approval denied", self.output.read_text())
                 self.assertEqual(self.client.writes, [])
+
+    def assert_invalid_report(self, message):
+        candidates, _ = review.load_candidates(self.client, RUN)
+        with self.assertRaisesRegex(review.click.ClickException, message):
+            review.verify_report(self.output, RUN, candidates)
 
     def test_every_grounding_metadata_change_invalidates_export(self):
         mutations = [("cert_id", "another-cert"), ("objective_id", "6.2"),
@@ -263,7 +272,7 @@ class ReviewBatchTests(unittest.TestCase):
                 envelope = json.loads(self.client.rows["questions"][0]["review_notes"])
                 envelope["grounding"][key] = value
                 self.client.rows["questions"][0]["review_notes"] = json.dumps(envelope)
-                self.assertIn("stale", self.invoke("--approve", "--yes").output)
+                self.assert_invalid_report("stale")
                 self.assertEqual(self.client.writes, [])
         for key, value in [("quote", "Different quote"),
                            ("url", "https://cloud.google.com/changed"),
@@ -274,29 +283,18 @@ class ReviewBatchTests(unittest.TestCase):
                 envelope = json.loads(self.client.rows["questions"][0]["review_notes"])
                 envelope["grounding"]["evidence"][0][key] = value
                 self.client.rows["questions"][0]["review_notes"] = json.dumps(envelope)
-                self.assertIn("stale", self.invoke("--approve", "--yes").output)
+                self.assert_invalid_report("stale")
                 self.assertEqual(self.client.writes, [])
 
-    def test_grounding_change_during_confirmation_blocks_approval(self):
-        self.export()
-        def change_receipt(*args, **kwargs):
-            envelope = json.loads(self.client.rows["questions"][0]["review_notes"])
-            envelope["grounding"]["evidence"][0]["quote"] = "Different quote"
-            self.client.rows["questions"][0]["review_notes"] = json.dumps(envelope)
-            return True
-        with patch.object(review.click, "confirm", side_effect=change_receipt):
-            result = self.invoke("--approve")
-        self.assertIn("changed during confirmation", result.output)
-        self.assertEqual(self.client.writes, [])
 
-    def test_altered_quote_with_rehashed_report_body_still_blocks_approval(self):
+    def test_altered_quote_with_rehashed_report_body_fails_pure_verification(self):
         self.export()
         first, body = self.output.read_text().split("\n", 1)
         body = body.replace("Official supporting quote for option A.", "Invented quote")
         manifest = json.loads(first[len(review.MANIFEST_PREFIX):-4])
         manifest["body_sha256"] = review.digest(body)
         self.output.write_text(review.MANIFEST_PREFIX + json.dumps(manifest) + " -->\n" + body)
-        self.assertIn("altered", self.invoke("--approve", "--yes").output)
+        self.assert_invalid_report("altered")
         self.assertEqual(self.client.writes, [])
 
     def test_grounding_quotes_escape_html_markdown_and_manifest_text(self):
@@ -308,7 +306,8 @@ class ReviewBatchTests(unittest.TestCase):
         self.assertIn("&lt;script&gt;", text)
         self.assertIn(r"\*\*claim\*\*", text)
         self.assertEqual(text.count(review.MANIFEST_PREFIX), 1)
-        self.assertEqual(self.invoke("--approve", "--yes").exit_code, 0)
+        candidates, _ = review.load_candidates(self.client, RUN)
+        review.verify_report(self.output, RUN, candidates)
 
     def test_only_run_draft_good_and_strict_pass_are_eligible(self):
         self.client = FakeClient([question(), question(11, generation_run_id=OTHER_RUN),
@@ -351,7 +350,7 @@ class ReviewBatchTests(unittest.TestCase):
 
     def test_incomplete_run_rejected_without_export_or_update(self):
         self.client.rows["question_generation_runs"][0]["completed_at"] = None
-        result = self.invoke("--approve", "--yes")
+        result = self.invoke()
         self.assertNotEqual(result.exit_code, 0)
         self.assertIn("incomplete", result.output)
         self.assertFalse(self.output.exists())
@@ -394,12 +393,13 @@ class ReviewBatchTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 0, result.output)
         self.assertTrue((self.pipeline_root / "review" / f"{upper.lower()}.md").exists())
 
-    def test_custom_output_export_and_approve(self):
+    def test_custom_output_export_and_pure_verification(self):
         path = self.pipeline_root / "custom.md"
         self.assertEqual(self.invoke("--output", str(path)).exit_code, 0)
-        self.assertEqual(self.invoke("--output", str(path), "--approve", "--yes").exit_code, 0)
-        self.assertEqual(self.client.rows["questions"][0]["status"], "ACTIVE")
-
+        candidates, _ = review.load_candidates(self.client, RUN)
+        review.verify_report(path, RUN, candidates)
+        self.assertEqual(self.client.rows["questions"][0]["status"], "DRAFT")
+        self.assertEqual(self.client.writes, [])
     def test_env_output_rejected_without_read_or_write(self):
         result = self.invoke("--output", str(self.pipeline_root / ".env.example.md"))
         self.assertIn("forbidden", result.output)
@@ -416,107 +416,81 @@ class ReviewBatchTests(unittest.TestCase):
     def test_non_markdown_path_rejected(self):
         self.assertIn(".md", self.invoke("--output", str(self.pipeline_root / "report.json")).output)
 
-    def test_yes_never_bypasses_export_gate(self):
-        result = self.invoke("--approve", "--yes")
-        self.assertNotEqual(result.exit_code, 0)
-        self.assertIn("spotcheck first", result.output)
-        self.assertEqual(self.client.writes, [])
-        self.assertFalse(self.output.exists())
-
-    def test_yes_help_explicitly_attests_review(self):
+    def test_legacy_approve_fails_before_client_credentials_paths_or_confirmation(self):
+        for args in [("--approve",), ("--approve", "--yes"),
+                     ("--approve", "--output", str(self.pipeline_root / ".env.forbidden"))]:
+            with self.subTest(args=args), \
+                    patch.object(review, "get_client") as factory, \
+                    patch.object(review, "safe_report_path") as path_check, \
+                    patch.object(review.click, "confirm") as confirm:
+                result = self.invoke(*args)
+                self.assertNotEqual(result.exit_code, 0)
+                self.assertIn("Legacy approval is disabled", result.output)
+                self.assertIn("scripts/publish_batch.py", result.output)
+                self.assertIn("content-hash", result.output)
+                factory.assert_not_called()
+                path_check.assert_not_called()
+                confirm.assert_not_called()
+                self.assertEqual(self.client.calls, [])
+                self.assertEqual(self.client.writes, [])
+                self.assertFalse(self.output.exists())
+    def test_help_marks_legacy_write_options_disabled(self):
         result = self.runner.invoke(review.main, ["--help"])
-        self.assertIn("personally reviewed every sampled", result.output)
+        self.assertIn("Disabled legacy write option", result.output)
+        self.assertIn("scripts/publish_batch.py", result.output)
+        self.assertIn("cannot authorize publication", result.output)
 
-    def test_approve_scope_and_idempotent_counts(self):
-        self.client = FakeClient([question(), question(11), question(12, generation_run_id=OTHER_RUN),
-                                  question(13, review_notes=notes(False)), question(14, review_status="UNREVIEWED")])
-        self.export()
-        result = self.invoke("--approve", "--yes")
-        self.assertEqual(result.exit_code, 0, result.output)
-        self.assertIn("Promoted: 2", result.output)
-        self.assertEqual([q["status"] for q in self.client.rows["questions"]],
-                         ["ACTIVE", "ACTIVE", "DRAFT", "DRAFT", "DRAFT"])
-        for filters in self.client.writes:
-            self.assertTrue({"id", "generation_run_id", "status", "review_status", "review_notes", "stem"}
-                            <= {key for key, _ in filters})
-        result = self.invoke("--approve", "--yes")
-        self.assertEqual(result.exit_code, 0, result.output)
-        self.assertIn("Promoted: 0", result.output)
 
-    def test_interactive_confirmation_attests_human_review(self):
-        self.export()
-        result = self.invoke("--approve", input="y\n")
-        self.assertIn("personally reviewed all sampled", result.output)
-        self.assertIn("Promoted: 1", result.output)
-
-    def test_interactive_decline_performs_no_writes(self):
-        self.export()
-        result = self.invoke("--approve", input="n\n")
-        self.assertNotEqual(result.exit_code, 0)
-        self.assertEqual(self.client.writes, [])
-
-    def test_approve_without_confirmation_aborts(self):
-        self.export()
-        self.assertNotEqual(self.invoke("--approve").exit_code, 0)
-        self.assertEqual(self.client.writes, [])
-
-    def test_empty_pool_exports_zero_and_approves_zero_without_gate(self):
+    def test_empty_pool_exports_zero_but_does_not_reenable_approval(self):
         self.client = FakeClient([])
         self.assertIn("Uniform random sample: 0", self.export())
-        self.output.unlink()
-        result = self.invoke("--approve")
-        self.assertEqual(result.exit_code, 0, result.output)
-        self.assertIn("Promoted: 0", result.output)
+        self.client.calls.clear()
+        with patch.object(review, "get_client") as factory:
+            result = self.invoke("--approve")
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("Legacy approval is disabled", result.output)
+        factory.assert_not_called()
+        self.assertEqual(self.client.calls, [])
         self.assertEqual(self.client.writes, [])
-
-    def test_stale_question_content_blocks_approval(self):
+    def test_stale_question_content_invalidates_report(self):
         self.export()
         self.client.rows["questions"][0]["stem"] += " changed"
-        self.assertIn("stale", self.invoke("--approve", "--yes").output)
+        self.assert_invalid_report("stale")
         self.assertEqual(self.client.writes, [])
 
-    def test_stale_answer_content_blocks_approval(self):
+    def test_stale_answer_content_invalidates_report(self):
         self.export()
         self.client.rows["answers"][0]["explanation_text"] += " changed"
-        self.assertIn("stale", self.invoke("--approve", "--yes").output)
+        self.assert_invalid_report("stale")
         self.assertEqual(self.client.writes, [])
 
-    def test_new_pool_candidate_blocks_approval(self):
+    def test_new_pool_candidate_invalidates_report(self):
         self.export()
         q = question(11)
         self.client.rows["questions"].append(q)
         self.client.rows["answers"].extend(answers(q))
-        self.assertIn("stale", self.invoke("--approve", "--yes").output)
+        self.assert_invalid_report("stale")
         self.assertEqual(self.client.writes, [])
 
-    def test_wrong_run_manifest_blocks_approval(self):
+    def test_wrong_run_manifest_invalidates_report(self):
         self.export()
         text = self.output.read_text().replace(RUN, OTHER_RUN)
         self.output.write_text(text)
-        self.assertIn("different run", self.invoke("--approve", "--yes").output)
+        self.assert_invalid_report("different run")
         self.assertEqual(self.client.writes, [])
 
-    def test_changed_report_body_blocks_approval(self):
+    def test_changed_report_body_invalidates_report(self):
         self.export()
         self.output.write_text(self.output.read_text().replace("Option A", "Altered option A"))
-        self.assertIn("altered", self.invoke("--approve", "--yes").output)
+        self.assert_invalid_report("altered")
         self.assertEqual(self.client.writes, [])
 
-    def test_plain_markdown_without_manifest_blocks_approval(self):
+    def test_plain_markdown_without_manifest_fails_pure_verification(self):
         self.output.parent.mkdir()
         self.output.write_text("# Reviewed!")
-        self.assertIn("stale", self.invoke("--approve", "--yes").output)
+        self.assert_invalid_report("stale")
         self.assertEqual(self.client.writes, [])
 
-    def test_pool_change_during_confirmation_blocks_approval(self):
-        self.export()
-        def change_pool(*args, **kwargs):
-            self.client.rows["answers"][0]["explanation_text"] += " changed"
-            return True
-        with patch.object(review.click, "confirm", side_effect=change_pool):
-            result = self.invoke("--approve")
-        self.assertIn("changed during confirmation", result.output)
-        self.assertEqual(self.client.writes, [])
 
     def test_database_error_does_not_echo_sensitive_details(self):
         self.client.failure = True
@@ -541,22 +515,6 @@ class ReviewBatchTests(unittest.TestCase):
         self.client.rows["answers"][0]["choice_text"] = None
         self.assertEqual(review.load_candidates(self.client, RUN)[0], [])
 
-    def test_approval_guard_rejects_concurrent_review_note_change(self):
-        candidates, _ = review.load_candidates(self.client, RUN)
-        self.client.rows["questions"][0]["review_notes"] = notes(False, 0.9)
-        self.assertEqual(review.approve_candidates(self.client, RUN, candidates), 0)
-        self.assertEqual(self.client.rows["questions"][0]["status"], "DRAFT")
-
-    def test_approval_guard_is_idempotent_with_concurrent_promotion(self):
-        candidates, _ = review.load_candidates(self.client, RUN)
-        self.client.rows["questions"][0]["status"] = "ACTIVE"
-        self.assertEqual(review.approve_candidates(self.client, RUN, candidates), 0)
-
-    def test_approval_guard_rejects_concurrent_run_change(self):
-        candidates, _ = review.load_candidates(self.client, RUN)
-        self.client.rows["questions"][0]["generation_run_id"] = OTHER_RUN
-        self.assertEqual(review.approve_candidates(self.client, RUN, candidates), 0)
-        self.assertEqual(self.client.rows["questions"][0]["status"], "DRAFT")
 
     def test_old_version_and_unknown_envelope_rejected(self):
         self.client = FakeClient([question(10, review_notes=notes(version=2)),
@@ -572,7 +530,7 @@ class ReviewBatchTests(unittest.TestCase):
         manifest = json.loads(first[len(review.MANIFEST_PREFIX):-4])
         manifest["sample_ids"] = [manifest["sample_ids"][0]] * 3
         self.output.write_text(review.MANIFEST_PREFIX + json.dumps(manifest) + " -->\n" + body)
-        self.assertIn("altered", self.invoke("--approve", "--yes").output)
+        self.assert_invalid_report("altered")
         self.assertEqual(self.client.writes, [])
 
     def test_report_escapes_manifest_like_content(self):

@@ -1,5 +1,49 @@
 # Docs-grounded question process
 
+## Pipeline v6 week 1 (D-045; coordinator-operated live rollout)
+
+New generation freezes `execution_policy: short_circuit_v2` and Argon request
+version 3. Its independent learner-only blind solve is restored before full
+Argon review. Historical review-only version-2 requests remain DRAFT-ingestible,
+but are **never publishable** under v6. The frozen v5 instructions below are
+historical for those existing requests, not permission to omit blind Argon.
+
+The never-stop runner finishes ready candidates after ordinary quality vetoes
+and retries system failures at most twice per candidate. It never retries an
+unchanged quality rejection. Existing PDE frozen slot/retry/resume admission
+rules remain strict; ready requests are judged even when a partial system cohort
+cannot be admitted safely. Generation and ingestion still write **DRAFT only**.
+
+Publication uses `scripts/publish_batch.py`, not `verify_batch.py` or the old
+human `review_batch.py` flow. Legacy `review_batch.py --approve` and
+`retire_legacy.py --apply` are disabled before client or credential access,
+including their direct Python helpers. Spotcheck export and replacement coverage
+remain read-only. Retirement needs a coordinator-reviewed `retire_question` RPC
+workflow with revision/race guards, the domain floor and durable event receipts.
+Defaults are offline shadow reports with a local
+`--questions` export. Explicit `--read-db` permits a coordinator shadow query;
+`--apply` reads current rows and calls atomic `publish_question`. Every seat must
+supply its complete schema and PASS. Both blind solvers must select the exact key
+with confidence >=0.8. Registry, receipts, all explanations, deterministic product
+freshness and canonical content hash must pass. Partial/unknown write checkpoints
+require event reconciliation, never blind retries.
+
+Canaries use normal request shapes in a separate `.council-canaries` tree, which
+cannot reach ingest or publication. Council health requires rolling windows of
+at least 20 observations per defect; missing/malformed judgments are system errors,
+not catches. Critical escapes or full-window catch rate below95% pause publishing.
+Gold below80% pages only. First two defects ship; semantic second-defensible-option
+mutation is deferred. Re-council never retires on missing/error/UNCERTAIN evidence.
+
+Apply migrations A–C in order and complete two coordinator-run shadow nights before
+creating the `PUBLISH_LIVE` flag. Do not edit the scheduled task from this worker.
+Exact commands, queue shape, caps, scheduler diff and deferrals are documented in
+[`../docs/pipeline-v6-week1.md`](../docs/pipeline-v6-week1.md),
+[`../docs/pipeline-v6-nightly.md`](../docs/pipeline-v6-nightly.md),
+[`docs/council-health-v6.md`](docs/council-health-v6.md), and
+[`docs/recouncil.md`](docs/recouncil.md). No live/paid/model calls or production
+writes were used to build or verify this implementation.
+
 ## PDE saved-wave resume (2026-10-20)
 
 The full-plan PDE runner accepts `--resume /absolute/path/to/<cert>-v5-<tag>.json`.
@@ -1160,12 +1204,14 @@ PYTHON_DOTENV_DISABLED=1 uv run python /Users/switkowski/Projects/Testero/fronte
 ```
 
 Ingestion never publishes. Inspect each actual domain run UUID; export a fresh
-founder sample per run with `review_batch.py RUN_UUID`. Only founder review of
-the unchanged eligible pool can authorize `review_batch.py RUN_UUID --approve --yes`.
-Pool changes need a new export and repeated review. Never edit hashed
-review files. Legacy retirement remains separately approved, domain by domain,
-only after grounded ACTIVE count and receipt gates pass. Unknown/partial DB
-writes require reconciliation, not retry through a copied artifact.
+founder sample per run with `review_batch.py RUN_UUID` (read-only). The old
+`--approve` path is disabled; founder review does not replace the v6 strict
+`publish_batch.py` council, blind-solve and hash gates. Historical review-only
+requests cannot publish. Pool changes need a new export and repeated review.
+Never edit hashed review files. Legacy retirement needs a separately approved,
+domain-by-domain lifecycle RPC workflow with replacement coverage, the domain
+floor, revision/race guards and durable event receipts; `retire_legacy.py --apply`
+is disabled. Unknown/partial DB writes require reconciliation, not blind retries.
 
 ### Historical round-3 inline-judge style regeneration: 45 DRAFT candidates
 
@@ -1555,9 +1601,10 @@ PYTHON_DOTENV_DISABLED=1 uv run python scripts/ingest_external_verdicts.py \
    Ingestion creates separate runs per existing domain and writes only passing
    candidates as **DRAFT/GOOD**, never ACTIVE. Use each actual domain run UUID
    saved in the artifact and printed by ingestion for the founder sample and
-   approval commands in steps 2–3 of the historical review sequence below.
-   `review_batch.py` founder approval is still required; no subagent verdict or
-   ingestion command replaces it. Retirement remains a separate approved step.
+   read-only export in step 2 of the historical review sequence below.
+   `review_batch.py --approve` is disabled. Founder inspection and ingestion do
+   not replace the v6 `publish_batch.py` council, blind-solve and hash gates.
+   Retirement remains a separate approved lifecycle RPC workflow.
 
 ```sh
 PYTHON_DOTENV_DISABLED=1 uv run python scripts/ingest_external_verdicts.py \
@@ -1604,8 +1651,9 @@ PYTHON_DOTENV_DISABLED=1 uv run python scripts/generate_all_domains.py \
 
 This batch creates six domain-specific generation runs. Their UUIDs are printed
 and saved in the artifact's `generation_runs` mapping. Use each actual run UUID
-in steps 2–3; do not treat the entire batch as one run. Inspect failed candidate
-records and complete the founder review before approval.
+for the read-only export; do not treat the entire batch as one run. Inspect
+failed candidate records and complete founder review before requesting strict
+v6 publication.
 
 2. **Export the ceil(10%) founder sample for each completed run (read-only DB;
    needs `SUPABASE_URL` and the service-role key).** Replace `RUN_UUID` with a
@@ -1615,13 +1663,14 @@ records and complete the founder review before approval.
 PYTHON_DOTENV_DISABLED=1 uv run python scripts/review_batch.py RUN_UUID
 ```
 
-3. **After the founder personally reviews and approves that sample, promote the
-   unchanged eligible pool (writes; same DB/service-role keys).** `--yes` attests
-   human review; it does not bypass the saved-report/receipt/fingerprint gates:
-
-```sh
-PYTHON_DOTENV_DISABLED=1 uv run python scripts/review_batch.py RUN_UUID --approve --yes
-```
+3. **Inspect the sample; do not use the retired promotion command.**
+   `review_batch.py RUN_UUID --approve` (with or without `--yes`) fails before
+   connecting to the database. The report is diagnostic, not publication authority.
+   Use the v6 strict `scripts/publish_batch.py` workflow documented above: full
+   council verdicts, blind solves, freshness and matching content hashes are
+   required. Start with its shadow report; live publication remains coordinator
+   approved and requires `PUBLISH_LIVE`. Historical review-only requests cannot
+   publish merely because the founder inspected their sample.
 
 4. **Inspect replacements versus legacy ACTIVE (read-only; DB/service-role keys):**
 
@@ -1629,30 +1678,29 @@ PYTHON_DOTENV_DISABLED=1 uv run python scripts/review_batch.py RUN_UUID --approv
 PYTHON_DOTENV_DISABLED=1 uv run python scripts/retire_legacy.py
 ```
 
-5. **Retire one replaced domain only (writes; DB/service-role keys):**
+5. **Request a reviewed retirement workflow; do not use the retired apply flag.**
+   `retire_legacy.py --apply` fails before registry, client or credential access.
+   It no longer performs per-row updates. A separately coordinator-reviewed
+   workflow must call `retire_question`, preserving the revision/race guards,
+   domain floor and durable `question_events` receipts. Do not replace the
+   disabled command with direct status updates. Unknown RPC results require
+   event reconciliation before another attempt.
 
-```sh
-PYTHON_DOTENV_DISABLED=1 uv run python scripts/retire_legacy.py --apply --domain ARCHITECTING_LOW_CODE_ML_SOLUTIONS
-```
+Repeat the read-only sample export for each run and coverage report for each
+replaced domain. D-025 replacement policy still requires new grounded ACTIVE
+count to at least match legacy ACTIVE before requesting retirement. The coverage
+report is not a v6 publishability check or authorization to retire. `RETIRED`
+means a lifecycle status change, never deletion.
 
-Repeat steps 2–3 for every approved run and step 5 for each replaced domain. If
-new grounded ACTIVE is below legacy ACTIVE, retirement refuses and prints the
-shortfall: generate/review/approve more replacements first. The first gap batch
-alone will usually not satisfy every domain's replacement count. `RETIRED` is a
-status change, never deletion; repeat application is a no-op after replacement.
-
-Receipt detection reuses the approval gate. Phase-2 `persist_candidate` writes
-`review_notes.grounding` alongside the independent judge verdict. A replacement
-must be ACTIVE, run-linked, judge-passed, and have complete A-D official-source
-receipts and a passing mechanical check; the current PMLE cert, guide hash,
-objective ID and objective's owning domain must match. Plain legacy notes with
-no grounding receipt remain legacy. Corrupt or invalid receipt-bearing rows do
-not count as replacements and block apply. No docs/LLM fetching occurs here.
-
-Pause concurrent content approval/edit/retirement while applying a domain. The
-script uses fresh reads and per-row snapshot guards, not a cross-row transaction;
-a conflict or unknown update result stops further writes. Inspect the printed
-before/after counts before retrying any partial run.
+Receipt detection reuses the grounding validator. Phase-2 `persist_candidate`
+writes `review_notes.grounding` alongside the independent judge verdict. A row
+counts as grounded only if ACTIVE, run-linked, judge-passed, and carrying complete
+A-D official-source receipts and a passing mechanical check; the current PMLE
+cert, guide hash, objective ID and objective's owning domain must match. Plain
+legacy notes with no grounding receipt remain legacy. Corrupt or invalid
+receipt-bearing rows do not count as replacements and are reported separately.
+No docs/LLM fetching occurs here. These read-only checks do not establish the
+full v6 council or blind-Argon gates.
 
 **Judge failure `f4d2e283`:** the recorded artifact contains only the generic
 `Judge failed or returned invalid output` verdict, not a raw judge completion,

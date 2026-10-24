@@ -1,3 +1,4 @@
+import { readWithdrawalSnapshot } from "@/lib/questions/session-snapshot";
 import "server-only";
 import { getPaidAccess } from "@/lib/billing/paid-access";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -13,9 +14,12 @@ export async function loadDashboard(client: SupabaseClient, userId: string, now 
   if (error) throw unavailable();
   let diagnostic: DashboardData["diagnostic"] = null;
   if (latest) {
-    const { data: rows, error: itemError } = await client.from("session_items").select("domain_code,domain_name,is_correct,answered_at").eq("session_id", latest.id).order("ordinal");
-    if (itemError || !Array.isArray(rows) || rows.length !== latest.question_count || rows.some(row => !row.answered_at || typeof row.is_correct !== "boolean")) throw unavailable();
-    diagnostic = computeResult(latest.id, rows);
+    const { data: rows, error: itemError } = await readWithdrawalSnapshot(marker => client.from("session_items").select(`domain_code,domain_name,is_correct,answered_at${marker ? ",withdrawn_at" : ""}`).eq("session_id", latest.id).order("ordinal"));
+    if (itemError || !Array.isArray(rows) || rows.length !== latest.question_count) throw unavailable();
+    const included = (rows as unknown as ProgressRow[]).filter(row => row.withdrawn_at == null);
+    if (included.some(row => !row.answered_at || typeof row.is_correct !== "boolean")) throw unavailable();
+    diagnostic = computeResult(latest.id, included);
+    if (included.length < rows.length) diagnostic.withdrawnCount = rows.length - included.length;
   }
   const { data: pending, error: pendingError } = await client.from("study_sessions").select("id,domain_codes").eq("user_id", userId).eq("kind", "practice").is("completed_at", null).gt("expires_at", new Date(now).toISOString()).order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (pendingError) throw unavailable();
@@ -33,6 +37,7 @@ export async function loadDashboard(client: SupabaseClient, userId: string, now 
 }
 
 interface ProgressRow {
+  withdrawn_at?: string | null;
   session_id: string;
   domain_code: string;
   domain_name: string;
@@ -46,15 +51,15 @@ async function loadProgress(client: SupabaseClient, userId: string): Promise<Pic
   const rows: ProgressRow[] = [];
   const pageSize = 1000;
   for (let offset = 0; ; offset += pageSize) {
-    const { data, error } = await client.from("session_items")
-      .select("session_id,domain_code,domain_name,is_correct,answered_at,study_sessions!inner(kind,completed_at)")
+    const { data, error } = await readWithdrawalSnapshot(marker => client.from("session_items")
+      .select(`session_id,domain_code,domain_name,is_correct,answered_at,study_sessions!inner(kind,completed_at)${marker ? ",withdrawn_at" : ""}`)
       .eq("study_sessions.user_id", userId).eq("study_sessions.exam", "GCP_PM_ML_ENG")
       .in("study_sessions.kind", ["diagnostic", "practice"]).not("answered_at", "is", null)
-      .order("answered_at").order("id").range(offset, offset + pageSize - 1);
-    if (error || !Array.isArray(data) || data.some(row => !row.answered_at || typeof row.is_correct !== "boolean" || !row.study_sessions)) {
+      .order("answered_at").order("id").range(offset, offset + pageSize - 1));
+    if (error || !Array.isArray(data) || (data as unknown as ProgressRow[]).some(row => row.withdrawn_at == null && (!row.answered_at || typeof row.is_correct !== "boolean" || !row.study_sessions))) {
       throw new DiagnosticError(503, "Your dashboard is unavailable. Please try again.");
     }
-    rows.push(...data as unknown as ProgressRow[]);
+    rows.push(...(data as unknown as ProgressRow[]).filter(row => row.withdrawn_at == null));
     if (data.length < pageSize) break;
   }
   const { sessionId: _sessionId, readiness: _readiness, ...progress } = computeResult("history", rows);
