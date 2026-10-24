@@ -22,6 +22,7 @@ import uuid
 PIPELINE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PIPELINE_ROOT))
 from shared.council_safety import CANARY_MARKER
+from shared.cli_models import CLISchemaError
 from shared.external_judge import (build_request, candidate_question, canonical_sha256,
                                    documentation_context_limit)
 from shared.option_order import (OPTION_FIELDS, RATIONALE_FIELDS, canonical_evidence,
@@ -234,7 +235,7 @@ def evaluate(root, *, state=DEFAULT_STATE, pause=None, window=20, verdicts=None)
                                  "candidate_id": ident, "defect": row["defect"],
                                  "would_publish": not reasons, "reasons": reasons,
                                  "verdict_sha256": canonical_sha256(raw)})
-        except (OSError, ValueError, KeyError, TypeError) as error:
+        except (OSError, ValueError, KeyError, TypeError, CLISchemaError) as error:
             # System/schema failures neither prove a catch nor a gold rejection.
             errors.append({"candidate_id": ident, "error_class": type(error).__name__})
     # End slow validation with fresh request/manifest and verdict fences.

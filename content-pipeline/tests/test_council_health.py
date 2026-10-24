@@ -344,3 +344,22 @@ def test_changed_frozen_verdict_does_not_add_a_catch(tmp_path, accepted_artifact
     assert not report["complete"]
     assert report["errors"][0]["error_class"] == "FrozenVerdictChanged"
     assert report["canaries"]["swapped_key"]["count"] == 1
+
+
+def test_escape_then_malformed_seat_still_writes_pause(tmp_path, accepted_artifact):
+    root, manifest = cohort(tmp_path, accepted_artifact, per_type=1)
+    (root / "verdicts").mkdir()
+    for index, row in enumerate(manifest["rows"]):
+        request = json.loads((root / "requests" / (row["candidate_id"] + ".json")).read_text())
+        raw = synthetic_full_verdict(row, request)
+        if index == 1:
+            # parse_gate_output raises CLISchemaError (RuntimeError), not ValueError.
+            raw["style"].pop("decision_level")
+        (root / "verdicts" / (row["candidate_id"] + ".json")).write_text(json.dumps(raw))
+    assert manifest["rows"][0]["defect"] == "swapped_key"
+    report = health.evaluate(root, state=tmp_path / "state.json")
+    assert report["paused"] and (tmp_path / "PIPELINE_PAUSED").is_file()
+    assert not report["complete"] and len(report["errors"]) == 1
+    assert report["errors"][0]["error_class"] == "CLISchemaError"
+    assert report["canaries"]["swapped_key"]["count"] == 1
+    assert report["canaries"]["retired_name"]["count"] == 0
