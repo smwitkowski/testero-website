@@ -68,9 +68,18 @@ uv run --frozen --offline python scripts/council_health.py live \
   --root .cache/council-health/week-01-canaries --coordinator-approved
 ```
 
-This runs every council seat (`full_gate_sample=1`). A short-circuited/incomplete
-verdict is an observation error, not a proven catch. Auth, provider, quota,
-missing-file and schema failures cannot inflate the catch rate.
+This runs every council seat (`full_gate_sample=1`). Failed schema/transport
+calls get at most two additional attempts using the same frozen requests and
+normal per-call budget reservations. A completed quality verdict, or a failure
+record showing a seat already rejected the candidate, is never retried. Auth,
+quota, budget, invalid-request and unknown failures remain hard stops. Failure
+record write errors are latched in the runner result, so a stale schema-error
+file cannot hide a newer safety failure.
+
+A short-circuited/incomplete verdict is an observation error, not a proven
+catch. Missing-file and schema failures cannot inflate the catch rate. Canary
+errors still exit nonzero after retries. Gold-only system-error exhaustion
+allows evaluation to report incomplete replay and the night to continue.
 
 ## Evaluate frozen verdicts (offline)
 
@@ -101,7 +110,8 @@ A catch rate below 95% pauses once a type's window fills. Exactly 19/20 catches
 is 95% and does not itself pause, but any newly observed escape already pauses.
 Both defect types keep separate rolling windows. A pause is sticky: the monitor
 never deletes an existing pause file. Only the coordinator can clear it after
-investigation. Exit 1 means paused or incomplete; exit 2 means invalid input.
+investigation. Exit 1 means paused or incomplete canaries; incomplete gold is
+monitor-only and exits 0 unless paused. Exit 2 means invalid input.
 The JSON report includes counts, rates, pause reasons, incomplete observations,
 and page reasons. No reports are sent externally by this script.
 
@@ -127,7 +137,10 @@ Gold uses newly exported current full council requests, not review-only v5
 requests. It uses the same strict helper. Gold pass rate below 80% creates a
 page reason in the report, never a pause. Existing canary pauses remain in
 force. Missing/malformed results are incomplete observations, not gold fails.
-The nightly coordinator dispatches report page reasons through its alert path.
+They add a `gold replay incomplete: N of M judged` page reason without blocking
+generation or publication. `N` counts valid current-cohort verdicts, not rolling
+history. The nightly coordinator dispatches report page reasons through its
+alert path.
 
 ## Offline evidence
 

@@ -298,9 +298,11 @@ def test_changed_replay_escape_still_pauses(tmp_path, accepted_artifact, monkeyp
 
 def test_coordinator_live_only_dispatches_full_judging(tmp_path, accepted_artifact, monkeypatch):
     root, _ = cohort(tmp_path, accepted_artifact, per_type=1)
-    runner = Mock(return_value="unit-only")
+    from scripts.judge_requests import Summary
+    summary = Summary(completed=2)
+    runner = Mock(return_value=summary)
     monkeypatch.setattr("scripts.judge_requests.run_requests", runner)
-    assert health.live(root, coordinator_approved=True) == "unit-only"
+    assert health.live(root, coordinator_approved=True) is summary
     runner.assert_called_once_with(root / "requests", root / "verdicts", judge_model="claude", parallel=2,
                                    argon_gate=True, full_gate_sample=1)
 
@@ -329,7 +331,8 @@ def test_gold_exact_80_percent_does_not_page(tmp_path, accepted_artifact):
     health.write_json(state, {"version": 1, "windows": {d: [] for d in health.DEFECTS},
                               "gold": [{"would_publish": n < 16} for n in range(20)], "seen": []})
     report = health.evaluate(root, state=state)
-    assert report["gold"]["pass_rate"] == .8 and report["pages"] == []
+    assert report["gold"]["pass_rate"] == .8
+    assert report["pages"] == ["gold replay incomplete: 0 of 1 judged"]
     assert not report["paused"]
 
 
@@ -363,3 +366,200 @@ def test_escape_then_malformed_seat_still_writes_pause(tmp_path, accepted_artifa
     assert report["errors"][0]["error_class"] == "CLISchemaError"
     assert report["canaries"]["swapped_key"]["count"] == 1
     assert report["canaries"]["retired_name"]["count"] == 0
+
+
+def install_health_replay(monkeypatch, root, manifest, *, blind_failures=1, quality_rejected=False,
+                          error_class=health.CLISchemaError, reserve=False):
+    """Replay minimal malformed Argon output through the real request runner."""
+    from shared import argon_gate, cli_models
+    from shared import nightly_budget as guard
+    from types import SimpleNamespace
+    raw_by_prompt = {}
+    blind_attempts = []
+    for row in manifest["rows"]:
+        request = health.read_json(root / "requests" / (row["candidate_id"] + ".json"))
+        raw = synthetic_full_verdict(row, request)
+        if quality_rejected:
+            raw["style"]["score"] = 0
+        for name, gate in request["gates"].items():
+            raw_by_prompt[gate["judge_prompt"]] = raw[name]
+        for name, gate in request["argon"]["calls"].items():
+            raw_by_prompt[gate["judge_prompt"]] = raw["argon"][name]
+    monkeypatch.setattr(cli_models, "run_claude_request", lambda model, prompt, schema: raw_by_prompt[prompt])
+    def replay(name, gate):
+        if reserve:
+            guard.reserve_model(argon_gate.MODEL, (), {"prompt": gate["judge_prompt"]},
+                                SimpleNamespace(kwargs={"max_tokens": 4000}, num_retries=0), stage="argon_" + name)
+        if name == "blind":
+            blind_attempts.append(gate["judge_prompt"])
+            if len(blind_attempts) <= blind_failures:
+                if error_class is health.CLISchemaError:
+                    # Minimal shape of the live malformed structured output, no private data.
+                    return {"choice": "A"}  # Missing confidence/reason; parse_output raises CLISchemaError.
+                raise error_class("synthetic private provider body")
+        return raw_by_prompt[gate["judge_prompt"]]
+    monkeypatch.setattr(argon_gate, "run_call", replay)
+    return blind_attempts
+
+
+@pytest.mark.parametrize("error_name", ["CLISchemaError", "CLITimeoutError"])
+def test_gold_system_error_retries_same_frozen_request_then_succeeds_with_budget(tmp_path, accepted_artifact, monkeypatch, error_name):
+    from shared.argon_gate import MODEL
+    from shared import cli_models
+    from scripts.nightly_budget import load_calls
+    root, manifest = cohort(tmp_path, accepted_artifact, gold=True)
+    config = tmp_path / "runtime-config.json"
+    calls_root = tmp_path / "calls"
+    config.write_text(json.dumps({"calls_root": str(calls_root),
+                                 "rates": {MODEL: {"input_tokens": "0.1", "output_tokens": "0.2"}}}))
+    monkeypatch.setenv("TESTERO_NIGHTLY_CONFIG", str(config))
+    before = {p.name: p.read_bytes() for p in (root / "requests").glob("*.json")}
+    attempts = install_health_replay(monkeypatch, root, manifest, blind_failures=2, reserve=True,
+                                      error_class=getattr(cli_models, error_name))
+    result = health.live(root, coordinator_approved=True, parallel=1)
+    assert result.completed == 1 and result.failed == result.remaining == 0
+    assert len(attempts) == 3 and len(set(attempts)) == 1
+    assert before == {name: (root / "requests" / name).read_bytes() for name in before}
+    assert not list((root / "verdicts/.failures").glob("*.json"))
+    reservations = load_calls(calls_root)
+    assert len(reservations) == 4  # Three blind attempts and one successful review.
+    assert len({row["budget_call_id"] for row in reservations}) == 4
+    report = health.evaluate(root, state=tmp_path / "state.json")
+    assert report["complete"] and report["gold"]["pass_rate"] == 1
+
+
+@pytest.mark.parametrize("gold", [True, False])
+def test_exhausted_health_schema_errors_gold_pages_canary_still_stops(tmp_path, accepted_artifact, monkeypatch, gold, capsys):
+    root, manifest = cohort(tmp_path, accepted_artifact, gold=gold, per_type=1)
+    attempts = install_health_replay(monkeypatch, root, manifest, blind_failures=100)
+    code = health.main(["live", "--root", str(root), "--coordinator-approved", "--parallel", "1"])
+    assert code == (0 if gold else 1)
+    assert len(attempts) == 3 * len(manifest["rows"])
+    for row in manifest["rows"]:
+        record = health.read_json(root / "verdicts/.failures" / (row["candidate_id"] + ".json"))
+        assert record["error_class"] == "CLISchemaError" and record["sub_call"] == "argon.blind"
+        assert record["quality_rejected"] is False  # Synthetic seats have no completed veto.
+        assert record["message"] == "argon.blind: structured output does not match the current schema"
+    capsys.readouterr()
+    code = health.main(["evaluate", "--root", str(root), "--state", str(tmp_path / "state.json")])
+    report = json.loads(capsys.readouterr().out)
+    assert code == (0 if gold else 1)
+    assert not report["complete"] and not report["paused"]
+    assert report["observed"] == 0 and len(report["errors"]) == len(manifest["rows"])
+    if gold:
+        assert report["pages"] == ["gold replay incomplete: 0 of 1 judged"]
+    else:
+        assert all(row["count"] == 0 for row in report["canaries"].values())
+
+
+@pytest.mark.parametrize("quality_rejected", [True, False])
+def test_gold_quality_rejections_never_rerolled(tmp_path, accepted_artifact, monkeypatch, quality_rejected):
+    root, manifest = cohort(tmp_path, accepted_artifact, gold=True)
+    attempts = install_health_replay(monkeypatch, root, manifest, blind_failures=100 if quality_rejected else 0,
+                                      quality_rejected=True)
+    result = health.live(root, coordinator_approved=True, parallel=1)
+    assert len(attempts) == 1
+    assert not health.live_failed(root, result)
+    if quality_rejected:
+        record = health.read_json(root / "verdicts/.failures" / (manifest["rows"][0]["candidate_id"] + ".json"))
+        assert record["quality_rejected"] is True and result.failed == 1
+    else:
+        assert result.completed == 1 and result.failed == 0
+        assert health.evaluate(root, state=tmp_path / "state.json")["gold"]["pass_rate"] == 0
+
+
+@pytest.mark.parametrize("error_name", ["CLIAuthError", "CLIUsageLimitError", "BudgetError", "RuntimeError"])
+def test_gold_auth_quota_budget_unknown_errors_remain_hard_stops(tmp_path, accepted_artifact, monkeypatch, error_name):
+    from shared import cli_models
+    from scripts.nightly_budget import BudgetError
+    root, manifest = cohort(tmp_path, accepted_artifact, gold=True)
+    error = BudgetError if error_name == "BudgetError" else RuntimeError if error_name == "RuntimeError" else getattr(cli_models, error_name)
+    attempts = install_health_replay(monkeypatch, root, manifest, blind_failures=100, error_class=error)
+    assert health.main(["live", "--root", str(root), "--coordinator-approved"]) == 1
+    assert len(attempts) == 1
+
+
+@pytest.mark.parametrize("failing_kind,publish_live", [("gold", False), ("gold", True), ("canaries", False)])
+def test_replay_night_incomplete_gold_continues_but_canary_stops(
+        tmp_path, accepted_artifact, monkeypatch, failing_kind, publish_live):
+    from contextlib import redirect_stdout
+    from io import StringIO
+    from scripts import pipeline_nightly as nightly, nightly_metrics
+    from test_pipeline_nightly import NOW, config, snapshot
+    artifact, _ = accepted_artifact
+    _, value = config(tmp_path)
+    value.update(health_artifacts=[str(artifact)], gold_artifacts=[str(artifact)])
+    tools, state = tmp_path / "tools", tmp_path / "state"
+    tools.mkdir()
+    if publish_live:
+        (tools / "PUBLISH_LIVE").touch()
+    monkeypatch.setattr(nightly, "preflight", lambda **_: None)
+    monkeypatch.setattr(nightly, "export_snapshot", lambda *_: snapshot())
+    monkeypatch.setattr(nightly, "publications_today", lambda *_: 0)
+    monkeypatch.setattr(nightly_metrics, "batch_metrics", lambda *_: {"published": 0})
+    pages = []
+    monkeypatch.setattr(nightly, "notify", lambda report, *_a, **_k: pages.extend(report["pages"]))
+    seen, attempts = [], {}
+    def execute(command, output=None):
+        seen.append(command)
+        if "scripts.council_health" in command:
+            args = command[command.index("scripts.council_health") + 1:]
+            if args[0] == "live":
+                monitor = Path(args[args.index("--root") + 1])
+                _, manifest = health.load_cohort(monitor)
+                failing = manifest["kind"] == failing_kind
+                attempts[manifest["kind"]] = install_health_replay(
+                    monkeypatch, monitor, manifest, blind_failures=100 if failing else 0,
+                    quality_rejected=not failing and manifest["kind"] == "canaries")
+            buffer = StringIO()
+            with redirect_stdout(buffer):
+                code = health.main(args)
+            if output:
+                Path(output).write_text(buffer.getvalue())
+            return code
+        if "scripts.publish_batch" in command:
+            Path(command[command.index("--report") + 1]).write_text(json.dumps({"published": 0, "would_publish": 1}))
+        return 0
+    result = nightly.nightly(value, coverage=snapshot(), tools=tools, state_dir=state, now=NOW,
+                             live=True, execute=execute, client=object())
+    publishes = [cmd for cmd in seen if "scripts.publish_batch" in cmd]
+    if failing_kind == "gold":
+        assert result["status"] == "complete" and len(publishes) == 2
+        assert all(("--apply" in cmd) is publish_live for cmd in publishes)
+        assert not result["health"]["gold-evaluate"]["complete"]
+        assert pages == ["gold replay incomplete: 0 of 1 judged"]
+        assert len(attempts["gold"]) == 3
+    else:
+        assert result["status"] == "checkpointed_stop" and not publishes
+        assert not any("scripts.run_domain_batch" in cmd for cmd in seen)
+        assert len(attempts["canaries"]) == 12  # Four candidates, three attempts each.
+        assert not (tools / "PIPELINE_PAUSED").exists()  # Errors are not catches or escapes.
+
+
+@pytest.mark.parametrize("error_name", ["BudgetError", "CLIAuthError", "CLISchemaError"])
+def test_stale_schema_record_cannot_hide_current_retry_persistence_failure(
+        tmp_path, accepted_artifact, monkeypatch, error_name):
+    from scripts import judge_requests as judge
+    from scripts.nightly_budget import BudgetError
+    from shared import argon_gate, cli_models
+    root, manifest = cohort(tmp_path, accepted_artifact, gold=True)
+    attempts = install_health_replay(monkeypatch, root, manifest, blind_failures=100)
+    original_run, original_publish = argon_gate.run_call, judge._publish
+    current_calls = []
+    error = BudgetError if error_name == "BudgetError" else getattr(cli_models, error_name)
+    def replay(name, gate):
+        current_calls.append(name)
+        if name == "blind" and attempts:
+            raise error("synthetic private error after first schema failure")
+        return original_run(name, gate)
+    def publish(path, payload, *, exclusive):
+        if path.parent.name == ".failures" and path.exists():
+            raise OSError("synthetic failure-record replacement error")
+        return original_publish(path, payload, exclusive=exclusive)
+    monkeypatch.setattr(argon_gate, "run_call", replay)
+    monkeypatch.setattr(judge, "_publish", publish)
+    summary = health.live(root, coordinator_approved=True, parallel=1)
+    assert summary.persistence_failed and health.live_failed(root, summary)
+    assert current_calls == ["blind", "blind"]  # No third attempt after persistence fails.
+    stale = health.read_json(root / "verdicts/.failures" / (manifest["rows"][0]["candidate_id"] + ".json"))
+    assert stale["error_class"] == "CLISchemaError"  # Stale file is not current safety proof.
