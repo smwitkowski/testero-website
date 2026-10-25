@@ -36,7 +36,7 @@ def frozen_decision_rules():
     from shared.question_style import STYLE_RULES
     blocks = []
     for name in ("O3", "O5", "O6"):
-        match = re.search(rf"(?m)^{name} .*?(?=\n(?:[SO]\d+ |Rules v)|\Z)", STYLE_RULES, re.S)
+        match = re.search(rf"(?m)^{name} .*?(?=\n(?:[SO]\d+ [A-Z]|Rules v)|\Z)", STYLE_RULES, re.S)
         if match is None:
             raise ValueError(f"Frozen Style rule missing: {name}")
         blocks.append(match.group(0).rstrip("\n"))
