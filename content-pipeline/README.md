@@ -189,161 +189,239 @@ Use `/admin/questions` to inspect the run; successful generation alone never mak
 its questions available to learners. The founder review command above is the
 publication step. Do not use the stub generator as reviewed production content.
 
-## Writer prompt optimization (offline harness; coordinator runs live work)
+## Writer prompt optimization v2 (offline implementation; coordinator runs live work)
 
-Only writer instructions and train-only demos can change. Proof/veto, Style,
-Evidence, Blind Solver and Argon signatures are frozen. A pack is versioned JSON
-with stage, canonical base-signature hash, policy, source run and metric scores.
-Unknown/judge targets, stale hashes and invalid typed demos fail closed.
-`--prompt-pack PATH` works on Codex and OpenRouter; no flag (or an empty pack)
-keeps today's prompts byte-identical. Practitioner, v6 and repair guards still
-apply after optimized base instructions. A pack's declared runtime policy must
-match the generator. This branch is stacked on doccheck PR #314; choose `v5` or
-`v6` explicitly and do not use optimization to decide that A/B test.
+Only generation changes. Proof signatures, schemas, objective policy, rename
+lexicon, practitioner rules, five council seats and publishing gates stay frozen.
+No pack keeps today's production prompts byte-identical. Plan packs expose:
 
-**Production facts:** doccheck uses the selected **writer model**, not Claude.
-`--checker-model` can override its transport without changing the proof rubric.
-There are **five downstream council seats** in this checkout: Claude
-blind/style/evidence and Gemini Argon blind/review. The upstream proof is a sixth
-check overall, not a sixth council seat. Evaluation uses every real seat and
-`full_gate_sample=1`; it does not invent a new judge. Historical Argon v1/v3
-records qualify as demos only when all five seats pass and recorded provenance
-validates. Review-only v2 and missing/skipped seats do not qualify.
+- `plan.instructions` ≤3,000 characters;
+- `plan.distractor_guidance` ≤1,200 characters;
+- `plan.repair_guidance` ≤1,200 characters;
+- selected, never evolved `exemplars`: at most three accepted **train plans** per
+  certification/domain, filtered to the current domain and other objectives.
 
-Run from the worktree's `content-pipeline` folder. All paths below are absolute.
-No command reads `.env` files. Supply approved credentials in the process
-environment only for explicitly approved live commands; never store them in
-packs, datasets, prices or reports. Keep outputs local and uncommitted.
+No full draft/documentation demonstrations are exported. Draft bootstrap is
+explicitly retired; use the compact plan arm below. Draft GEPA remains a later,
+separate experiment and does not bootstrap full drafts.
+
+`PlanProgram` has named `plan` and `repair` predictors. Only an isolated v6 B–D
+veto activates surgical repair. The production guard preserves scenario, key and
+passing options. GEPA uses round-robin, minibatch 6, merge off, a guarded custom
+proposal function, and a configurable Claude Sonnet reflector. Reflection sees
+frozen schemas, names, rules, objective style policies and selected exemplars
+read-only. Caps, required positive-fact/stated-constraint reasoning and anti-gaming
+lint reject unsafe proposals. Defaults themselves are trusted frozen text, not
+new proposals.
+
+### Metric and admission gates
+
+The dataset freezes every saved fetched page per objective, including rejected
+attempts, in hash-bound `corpora.json`. Rows use references; loaders validate and
+share immutable corpus objects. Ranking recomputes production discovery queries
+for each candidate, then uses the production bounded context builder. No live
+retrieval or saved proof is substituted for checking a new plan.
+
+The optimization checker uses temperature zero on configurable OpenRouter
+transports. Production still defaults to 0.7. Codex exposes no temperature flag;
+it uses the unchanged subscription CLI, serial pacing and retry/backoff. Codex
+students preserve DSPy's predictor traces, so real GEPA sees plan and repair.
+
+The critic reads the frozen Style decision-design and Argon O3/S13 contract on
+an **off-council family**. Anthropic/Claude and Google/Gemini/Argon are refused.
+A model/rules/dataset-bound calibration needs ≥200 historical train plans, both
+outcome classes and balanced accuracy ≥0.75. Missing, stale, fixture-only or
+weaker calibrations fail before calls. Unknown historical outcomes are not labels.
+The score is 1.0 when docs and critic pass, 0.4 for docs only, otherwise ≤0.15.
+Feedback names failed checks/options and successes, routed to `plan` or `repair`;
+reflection reuses cached verdicts rather than buying another check.
+
+Production has **five downstream council seats**: Claude blind/style/evidence
+and Argon blind/review. Upstream doccheck is a sixth overall check, not a sixth
+council seat. Critic feedback never changes these judges.
+
+### Exact coordinator commands
+
+These are instructions, **not evidence that live calls or gains were measured**.
+Run one experiment at a time, after the separate v5/v6 A/B. Never merge or publish
+from an optimizer command. Keep private outputs in the ignored cache. No command
+below loads `.env`; supply approved credentials only in the process environment.
 
 ```sh
 cd /Users/switkowski/Projects/Testero/frontend.prime-optimize/content-pipeline
 export PYTHON_DOTENV_DISABLED=1
 export LANGSMITH_TRACING=false
 export LANGCHAIN_TRACING_V2=false
-DATA="$PWD/.cache/optimize/datasets"
-PACKS="$PWD/.cache/optimize/packs"
-PRICES="$PWD/scripts/optimize/prices.example.json"
-STUDENT=deepseek/deepseek-v4.1-flash-1017
+ROOT=/Users/switkowski/Projects/Testero/frontend.prime-optimize/content-pipeline
+DATA="$ROOT/.cache/optimize/datasets-v2"
+PACKS="$ROOT/.cache/optimize/packs"
+REPORTS="$ROOT/.cache/optimize/reports-v2"
+# Create and approve this local file from scripts/optimize/prices.example.json.
+# Its values must upper-bound the actual selected OpenRouter model prices.
+PRICES="$ROOT/.cache/optimize/prices-approved.json"
+CRITIC=openrouter/deepseek/deepseek-v4.1-flash-1017
 REFLECTION=anthropic/claude-sonnet-5.5
+mkdir -p "$PACKS" "$REPORTS"
 ```
 
-`prices.example.json` contains **illustrative conservative values, not verified
-provider prices**. Before live work, copy it to an approved local prices file,
-verify that each value upper-bounds the applicable model price, and set `PRICES`
-to that file. Add a row for every override model. Both input/output rates must
-be finite and strictly positive, including subscription CLI quota valuations;
-missing prices stop before the call. Never assume a free or zero-cost model.
-Each rate is USD per **1,000,000** tokens. Reservations use UTF-8 byte input
-bounds plus 4,096 framing tokens and the configured output cap. Reflection,
-judges and each explicit CLI retry share the same durable local ledger. Opaque
-provider retries are disabled. Reservations are not refunded on failure.
-CLI output uses a configurable 131,072-token **estimate**, because the existing
-subscription transport has no enforceable output-token flag. The cap is a hard
-cap on the local conservative estimate, not an invoice guarantee.
-
-### Exact coordinator commands
-
-Build deterministic objective-disjoint splits and a hashed manifest. Whole
-canary/gold objectives are held out of train. Pass `--cohort /ABS/COHORT` for
-separate council-health gold/canary roots. Test stems and prior-scenario text
-cannot enter demos, even when copied under another objective. Malformed or
-unverifiable records are counted and excluded, never repaired into positives.
+**1. Rebuild frozen datasets.** Thirteen dev objectives per canonical
+certification leave disjoint train/test objectives. Canary/gold objectives always
+stay in test; add `--cohort /ABS/COHORT` for separate protected roots. The builder
+refuses insufficient objective counts instead of inventing data. Input paths
+below are saved artifact directories, read-only.
 
 ```sh
-PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.build_datasets   /Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline/.cache/generation   /Users/switkowski/Projects/Testero/frontend.pipeline-pilot/content-pipeline/.cache/generation   --output-dir "$DATA" --seed 42
+PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.build_datasets \
+  /Users/switkowski/Projects/Testero/frontend.prime-testero-pipeline/content-pipeline/.cache/generation \
+  /Users/switkowski/Projects/Testero/frontend.pipeline-pilot/content-pipeline/.cache/generation \
+  --output-dir "$DATA" --seed 42 --dev-objectives-per-cert 13
 ```
 
-Bootstrap a draft pack with **zero model calls** (DSPy `LabeledFewShot`). Select
-four diverse fully accepted train demos per domain, or all available when fewer
-exist. An empty positive set stops the command. Inspect the manifest/counts;
-there is no invented minimum sample size or automatic leakage fallback.
+**2. Fidelity: 40 recorded replays plus 40 unchanged seed rollouts.** This is
+approximately 120 serial Codex calls, $0 marginal API spend. Require ≥85% verdict
+agreement; inspect seed pass rate against the approximate 40% PMLE dev target.
+A low seed rate is a fidelity investigation, not permission to optimize artifacts.
 
 ```sh
-PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.run_optimizer   --stage draft --method bootstrap --bootstrap-mode labeled   --dataset-dir "$DATA" --output "$PACKS/draft-bootstrap-v1.json"   --student-model "$STUDENT" --cert-id machine-learning-engineer --demos-per-domain 4 --seed 42   --doccheck-policy v5 --budget-usd 5 --prices "$PRICES"
+PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.fidelity \
+  --datasets "$DATA" --out "$REPORTS/fidelity-pmle-v6.json" --count 40 \
+  --split dev --cert-id machine-learning-engineer \
+  --student-model codex --checker-model codex --seed 42 --coordinator-approved
 ```
 
-For generated `BootstrapFewShot` demos, replace `--bootstrap-mode labeled` with
-`--bootstrap-mode generate --allow-live` and approve its spend cap. It uses the
-same frozen metric and strict writer adapter as GEPA, not self-judged answers.
-
-GEPA plan and draft runs require separate explicit approval. The default plan
-metric gives partial credit for the four production semantic flags, with full
-credit only after mechanical receipts and all production checks pass. Draft
-feedback comes from unchanged Claude Style; `--include-evidence-metric` also
-requires unchanged Evidence and caps any failed required critic below pass.
+**3. Calibrate the off-council critic.** Labels come only from matched historical
+plans with known complete council outcomes on train objectives. The command
+refuses fewer than 200 usable plans or missing classes. An offline fixture report
+cannot authorize the critic.
 
 ```sh
-PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.run_optimizer   --stage plan --method gepa --dataset-dir "$DATA"   --output "$PACKS/plan-gepa-v1.json" --student-model "$STUDENT" --cert-id machine-learning-engineer   --reflection-model "$REFLECTION" --auto light --max-metric-calls 50   --doccheck-policy v5 --seed 42 --budget-usd 50 --prices "$PRICES" --allow-live
-
-PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.run_optimizer   --stage draft --method gepa --dataset-dir "$DATA"   --output "$PACKS/draft-gepa-v1.json" --student-model "$STUDENT" --cert-id machine-learning-engineer   --reflection-model "$REFLECTION" --include-evidence-metric   --auto medium --max-metric-calls 100 --doccheck-policy v5 --seed 42   --budget-usd 100 --prices "$PRICES" --allow-live
+PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.calibrate_critic \
+  --datasets "$DATA" --out "$REPORTS/critic-deepseek-v2.json" --count 200 \
+  --cert-id machine-learning-engineer --critic-model "$CRITIC" --seed 42 \
+  --prices "$PRICES" --budget-usd 2 --coordinator-approved
 ```
 
-`--auto light|medium` resolves to 50/150 metric calls unless the explicit
-`--max-metric-calls` wins. DSPy 3.0.4 receives exactly one concrete cap, never
-both its incompatible `auto` and cap settings. A second local limiter stops
-before excess calls. DSPy evaluation runs inline (no queued workers can outlive
-a cap stop). Each run uses one certification and recorded proof policy;
-practitioner/v6 guards are applied per call, not tuned or duplicated in a pack.
-The spend cap applies to all transports, independently of
-the metric count. A stopped run writes `PACK.run/run.json`, exits nonzero and
-does **not** emit a partially optimized pack. Optimizer test objectives are never
-scored, reflected on or used as demos. GEPA uses a deterministic objective-balanced
-dev slice (default `min(12, max_metric_calls // 5)`; override `--dev-examples` up
-to half the cap), leaving room for baseline and candidate comparisons. Duplicate
-reflection requests reuse the same cached score/feedback, not another paid judge
-call. Existing optimizer run directories are refused, including stopped runs,
-so GEPA cannot resume state from a different dataset under a new manifest.
-
-Paired held-out evaluation runs production plan → proof → draft → full council
-on each held-out objective, with/without a single pack. Each pair uses the same
-writer selector, seed and **frozen saved documentation**; model output itself
-is not guaranteed deterministic. The CLI validates the universal objective
-manifest, then selects test objectives for the pack’s declared certification.
-Use new output directories for each run.
-OpenRouter evaluation and the Codex transfer check:
+**4. Zero-cost rubric + exemplar challenger.** This command makes no model,
+retrieval or database calls. O3/O5/O6 are copied verbatim from frozen Style rules,
+not paraphrased. It selects up to three other-objective accepted train plans per
+domain. Empty positive sets and existing output files are refused.
 
 ```sh
-PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.evaluate_pack   --datasets "$DATA" --prompt-pack "$PACKS/plan-gepa-v1.json"   --model "openrouter/$STUDENT" --seed 42 --doccheck-policy v5   --out "$PWD/.cache/optimize/eval-openrouter-v1"   --prices "$PRICES" --budget-usd 1500 --coordinator-approved
-
-PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.evaluate_pack   --datasets "$DATA" --prompt-pack "$PACKS/plan-gepa-v1.json"   --model codex --seed 42 --doccheck-policy v5   --out "$PWD/.cache/optimize/eval-codex-transfer-v1"   --prices "$PRICES" --budget-usd 3000 --coordinator-approved
+PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.zero_cost \
+  --dataset-dir "$DATA" --cert-id machine-learning-engineer \
+  --output "$PACKS/zero-cost-pmle-v6.json" --doccheck-policy v6 --seed 42
 ```
 
-Repeat with a draft pack to test its effect; do not silently combine independently
-tuned stages. JSON/Markdown reports show doccheck attempt/candidate pass rates,
-all-council and per-seat pass rates, and accepted questions per **1M actual writer
-input+output tokens**, including proof and failed attempts. Missing token counts
-stay unknown and block promotion. Use `--canary-artifact /ABS/ACCEPTED-FROZEN-ARTIFACT.json` to supply a genuinely
-accepted artifact for the exact isolated `council_health prepare/live/evaluate`
-commands printed in every report (evaluation artifacts are not marked accepted).
-After an approved canary run,
-pass its complete report through `--canary-report /ABS/REPORT.json` on a new
-paired evaluation. No promotion is allowed without a complete 100% canary catch.
-Promotion also requires improved held-out all-council pass rate and **no seat
-regression greater than 5 percentage points**. A local report never deploys or
-publishes anything.
+**5. Production A/B, generation only.** This is a coordinator-approved production
+workflow, **not an instruction to run it during implementation**. Example: domain
+1, 40 candidates, frozen adjacent control/challenger pairs within each objective.
+Pair order is seeded/randomized; every pair has one candidate per arm. The
+challenger changes only generation. All judging and publishing rules are unchanged.
 
-### Cost planning (not live measurements)
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.run_domain_batch \
+  1. optimize-rubric-v2 machine-learning-engineer --count 40 \
+  --doccheck-policy v6 --prompt-pack "$PACKS/zero-cost-pmle-v6.json" \
+  --ab-interleaved --ab-experiment pmle-rubric-v2 --ab-seed 45
+```
 
-| Command | Calls / expected local estimate | Hard estimate cap in commands above |
-| --- | --- | ---: |
-| Dataset build | none, $0 | not applicable |
-| Labeled draft bootstrap | none, $0 | $5 (unused) |
-| GEPA plan | student + proof + reflection; token/data dependent | $50 |
-| GEPA draft | student + Claude Style/Evidence + reflection; quota valued | $100 |
-| Paired OpenRouter held-out eval | both arms, all real council seats | $1,500 |
-| Paired Codex transfer | both arms; Codex/Claude quota valued, Argon paid | $3,000 |
+For the existing nightly configuration, the equivalent additional flags are:
+`--prompt-pack "$PACKS/zero-cost-pmle-v6.json" --ab-interleaved
+--ab-experiment pmle-rubric-v2 --ab-seed 45 --doccheck-policy v6` on
+`scripts.pipeline_nightly`.
+A/B mode fixes the objective schedule before outcomes; non-A/B behavior is
+unchanged. Full-plan PDE retry/resume A/B is explicitly refused; single-section
+PDE and PMLE are supported. Artifacts and digests record candidate arm, objective,
+pair, experiment and challenger hash, including failures.
 
-Concrete planning example using the illustrative rates and a **20,000-token
-input upper bound**: a 32,000-output student reservation is $1.48; a same-sized
-reflection reservation is $4.50; one Claude/Codex CLI call with the default
-131,072 output estimate is $16.884. These are deliberately conservative per-call
-reservations, not likely invoices. Actual corpus size, proof retries and prompt
-length set the run estimate. The CLI cap can stop well before the metric cap;
-review the durable spend ledger and approve a new cap deliberately rather than
-resetting it. No live optimization/evaluation was run to create this harness.
+Report a complete chronological prefix (repeat `--artifact` for later batches):
 
-Offline proof:
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.ab_report \
+  --artifact "$ROOT/.cache/generation/optimize-rubric-v2.json" \
+  --canary "$REPORTS/canaries.json" --spot-check "$REPORTS/blind-10-pairs.json" \
+  --held-out "$REPORTS/fresh-panel-30.json" --schedule "$REPORTS/ab-schedule.json" \
+  --output "$REPORTS/rubric-ab.json"
+```
+
+Use the **actual artifact path** printed by `run_domain_batch` in the report
+command and schedule; the example name is not an automatically created fixture.
+`schedule` is predeclared JSON with `experiment`, `challenger_sha256`, ordered
+absolute `artifacts`, and `independent_objectives_no_interference: true`.
+Do not assert this certificate unless it is justified: production histories and
+dedup can couple objectives. Without it the report stays descriptive and cannot
+promote. `spot-check` binds the same experiment/hash and requires `complete:true`,
+`pairs:10`, `losses:<7`, `factual_defects:0`. `held-out` binds experiment/hash and
+requires `complete:true`, `count:30`, `gain_persists:true` from fresh model families.
+A canary report must prove 100% catch with ≥20 examples per defect type.
+
+The report gives per-arm yield, P(council pass | doccheck pass), seat/guardrail
+rates and equal-weight paired objective differences with clustered standard
+errors. Its always-valid decision uses conservative objective-cluster Hoeffding
+bounds with alpha spending across predeclared pair prefixes, **not** repeated
+fixed-look z tests. Few objective clusters give wide bounds. Argon
+literal-elimination/evidence-gap screens are explicitly issue-text diagnostics,
+not new semantic judges. Generic keys must remain ≤20%; conditional council rate
+cannot drop >5pp; literal/evidence/echo/duplicate rates cannot rise. Missing
+telemetry, votes, pairs, assumptions or audits blocks promotion through the reused
+`promotion_decision` gate. Reports never publish.
+
+**6. GEPA plan: 250 metric calls, 13 PMLE dev objectives ×3 inputs.**
+`--dev-examples 39 --dev-objectives 13` enforces the requested slice. If saved
+history lacks enough records, rebuild/inspect it; never duplicate examples to
+fake a larger validation set. Minibatch is 6, merge is off, and student/checker
+are serial Codex. Sonnet reflects; the calibrated off-council critic scores.
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.run_optimizer \
+  --stage plan --method gepa --dataset-dir "$DATA" \
+  --output "$PACKS/plan-gepa-v2.json" --cert-id machine-learning-engineer \
+  --student-model codex --checker-model codex --checker-temperature 0 \
+  --critic-model "$CRITIC" --critic-calibration "$REPORTS/critic-deepseek-v2.json" \
+  --reflection-model "$REFLECTION" --max-metric-calls 250 \
+  --dev-examples 39 --dev-objectives 13 --minibatch-size 6 --seed 42 \
+  --doccheck-policy v6 --budget-usd 10 --prices "$PRICES" \
+  --subscription-call-cap 600 --allow-live
+```
+
+GEPA's own cap is **199**, leaving 39 validation +12 minibatch calls below the
+250-call hard limiter. Without explicit `--max-metric-calls`, legacy
+`--auto light|medium` resolves to 50/150; the headroom rule can reject undersized
+combinations. Optimizer execution is inline: no queued transport outlives a cap.
+Test objectives never enter training, reflection, exemplars or the dev slice.
+
+`--subscription-call-cap 600` explicitly separates durable Codex/Claude quota
+attempts from the **paid OpenRouter** dollar cap. Every retry consumes an attempt.
+Token bounds are logged as quota estimates, not dollar invoices. Without this
+flag, legacy nonzero CLI quota valuations still share the monetary ledger.
+Paid transport admission uses approved nonzero per-million-token upper bounds,
+UTF-8-byte input bounds plus framing, and configured output limits. Provider
+retries are disabled. Reservations survive failures and are not refunds or
+invoices. The $2/$10 examples are hard local estimate caps, not price promises;
+conservative rates may stop sooner. Inspect the ledger before approving more.
+
+**7. Resume.** Repeat the exact GEPA command above with `--resume` appended.
+The same output name reuses `plan-gepa-v2.run/run.json`, metric cache/accounting,
+GEPA state, paid reservations and subscription attempts. Dataset, selected
+exemplars, models, proof policy, calibration hash, signatures, seed, dev slice and
+metric settings must match. A changed or foreign manifest is refused. Legacy
+v1 stopped runs lack the v2 binding and cannot be safely resumed into v2.
+A deliberate paid-cap increase may accompany resume; accounting never resets.
+A monetary/quota interruption writes a stopped manifest and no misleading partial
+pack. A normally metric-capped GEPA run has reserved headroom and emits its pack.
+
+### Offline evidence
 
 ```sh
 PYTHON_DOTENV_DISABLED=1 uv run pytest -q
+env -i PATH="$PATH" HOME="$HOME" CI=true npm test   # from frontend root
+npm run lint                                      # from frontend root
 ```
+
+Tests use mocks and block network calls. Fidelity fixture mode
+`--replay-results PATH` and calibration fixture mode `--predictions PATH` are
+marked offline and never count as live calibration or gain evidence. No live
+optimization, calibration, fidelity replay or A/B run is required to verify this
+implementation. The held-out `scripts.optimize.evaluate_pack` command remains
+available for approved full-council paired evaluation; supply a deliberate small
+local cap and complete canary evidence, never a blanket multi-thousand-dollar cap.
