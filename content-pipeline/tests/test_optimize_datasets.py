@@ -33,10 +33,10 @@ def offline(monkeypatch):
     monkeypatch.setattr("shared.doc_search.search_objective_docs", forbidden)
 
 
-def artifact(folder, number=1, *, version=3, passing=True, cohort=None, stem=None):
-    ident = f"machine-learning-engineer:standard:1.1:{number}"
-    scope = {"objective_id": ident, "domain_code": "machine-learning-engineer:standard:1",
-             "cert_id": "machine-learning-engineer", "subsection": "1.1", "guide_sha256": "a" * 64,
+def artifact(folder, number=1, *, version=3, passing=True, cohort=None, stem=None, cert_id="machine-learning-engineer"):
+    ident = f"{cert_id}:standard:1.1:{number}"
+    scope = {"objective_id": ident, "domain_code": f"{cert_id}:standard:1",
+             "cert_id": cert_id, "subsection": "1.1", "guide_sha256": "a" * 64,
              "objective_text": f"Synthetic objective {number}", "domain_prompt": f"Synthetic scope {number}"}
     plan = {"objective_id": ident, "engineering_decision": "Choose synthetic action",
             "business_consequence": "A synthetic business need", "existing_system": "Synthetic system",
@@ -100,7 +100,9 @@ def save(path, payload):
 
 
 def records(folder, stage):
-    return [row for split in datasets.SPLITS for row in json.loads((folder / f"{stage}.{split}.json").read_text())]
+    from scripts.optimize.corpus import hydrate_record_corpora
+    rows = [row for split in datasets.SPLITS for row in json.loads((folder / f"{stage}.{split}.json").read_text())]
+    return hydrate_record_corpora(rows, folder, json.loads((folder / "manifest.json").read_text()))
 
 
 def test_splits_deterministic_objective_disjoint_and_production_fields(tmp_path):
@@ -306,3 +308,24 @@ def test_accepted_false_without_actual_verdict_does_not_invent_calibration_negat
     save(path, payload)
     datasets.build_datasets([path], tmp_path / "out")
     assert records(tmp_path / "out", "plan")[0]["council_outcome"] is None
+
+
+def test_fixed_thirteen_dev_objectives_per_cert_are_deterministic_and_cohort_safe(tmp_path):
+    paths = []
+    for cert in ("machine-learning-engineer", "data-engineer"):
+        folder = tmp_path / cert
+        folder.mkdir()
+        paths.extend(artifact(folder, n, cert_id=cert)[0] for n in range(1, 18))
+    protected = "machine-learning-engineer:standard:1.1:1"
+    first = datasets.build_datasets(paths, tmp_path / "first", seed=9,
+                                   excluded_objectives=[protected], dev_objectives_per_cert=13)
+    second = datasets.build_datasets(list(reversed(paths)), tmp_path / "second", seed=9,
+                                    excluded_objectives=[protected], dev_objectives_per_cert=13)
+    assert first == second
+    assert protected in first["splits"]["test"]
+    for cert in ("machine-learning-engineer", "data-engineer"):
+        assert sum(i.startswith(cert + ":") for i in first["splits"]["dev"]) == 13
+        assert any(i.startswith(cert + ":") for i in first["splits"]["train"])
+        assert any(i.startswith(cert + ":") for i in first["splits"]["test"])
+    with pytest.raises(ValueError, match="Not enough ordinary"):
+        datasets.build_datasets(paths[:3], tmp_path / "impossible", dev_objectives_per_cert=13)

@@ -298,3 +298,13 @@ def test_production_runner_calls_real_seams_with_safe_flags_and_all_seats(tmp_pa
     for flag in ("--dry-run", "--argon-gate", "--prompt-pack"):
         assert flag in seen["args"]
     assert seen["args"][seen["args"].index("--judge-model") + 1] == "external"
+
+
+def test_each_canary_defect_needs_at_least_twenty_not_only_forty_total():
+    baseline = summarize_arm(arm([candidate(), candidate("y", passed=False)]))
+    challenger = deepcopy(baseline)
+    challenger["council_pass_rate"] = .6
+    cohort = canaries()
+    cohort["canaries"]["swapped_key"]["count"] = 1
+    cohort["canaries"]["retired_name"]["count"] = 39
+    assert not promotion_decision(baseline, challenger, cohort)["promote"]

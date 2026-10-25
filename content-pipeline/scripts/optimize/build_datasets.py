@@ -242,7 +242,8 @@ def _text_hash(text):
 
 
 def build_datasets(paths: Iterable[str | Path], output_dir: str | Path, seed: int = 42, *,
-                   excluded_objectives: Iterable[str] = (), cohort_paths: Iterable[str | Path] = ()) -> dict:
+                   excluded_objectives: Iterable[str] = (), cohort_paths: Iterable[str | Path] = (),
+                   dev_objectives_per_cert: int | None = None) -> dict:
     """Write deterministic JSON arrays and return their objective-disjoint manifest.
 
     Canary/gold objectives, including originals in monitor manifests, are held in
@@ -253,6 +254,8 @@ def build_datasets(paths: Iterable[str | Path], output_dir: str | Path, seed: in
     """
     if type(seed) is not int:
         raise ValueError("Seed must be an integer")
+    if dev_objectives_per_cert is not None and (type(dev_objectives_per_cert) is not int or dev_objectives_per_cert < 1):
+        raise ValueError("Fixed per-cert development objective count must be positive")
     files = _files(paths)
     cohort_files = _files(cohort_paths)
     heldout = set(excluded_objectives)
@@ -291,6 +294,20 @@ def build_datasets(paths: Iterable[str | Path], output_dir: str | Path, seed: in
     ntrain, ndev = int(len(ordinary) * .7), int(len(ordinary) * .15)
     assignment = {i: "train" if n < ntrain else "dev" if n < ntrain + ndev else "test"
                   for n, i in enumerate(ordinary)}
+    if dev_objectives_per_cert is not None:
+        # Canonical objective IDs start with cert_id. Split each certification
+        # independently; leave at least one ordinary train and test objective.
+        by_cert = {}
+        for ident in ordinary:
+            by_cert.setdefault(ident.split(":", 1)[0], []).append(ident)
+        assignment = {}
+        for cert, group in sorted(by_cert.items()):
+            if len(group) < dev_objectives_per_cert + 2:
+                raise ValueError("Not enough ordinary objectives for fixed dev count plus train/test: " + cert)
+            train_count = min(max(1, int(len(group) * .7)), len(group) - dev_objectives_per_cert - 1)
+            for index, ident in enumerate(group):
+                assignment[ident] = ("train" if index < train_count else "dev"
+                                     if index < train_count + dev_objectives_per_cert else "test")
     assignment.update({i: "test" for i in heldout})
     heldout_stems = {text for i, texts in stems.items() if assignment.get(i) != "train" for text in texts}
     heldout_hashes = {_text_hash(text) for text in heldout_stems}
@@ -360,7 +377,8 @@ def build_datasets(paths: Iterable[str | Path], output_dir: str | Path, seed: in
             source = {"artifact": str(path), "artifact_sha256": digest, "candidate_id": candidate,
                       "stem_sha256": _text_hash(entry["stem"]) if isinstance(entry.get("stem"), str) else None}
             base = {"objective_id": ident, "domain": scope["domain_code"], "scope": scope, "source": source,
-                    "objective_corpus": corpora.get(ident)}
+                    "objective_corpus": ({"corpus_file": "corpora.json", "objective_id": ident,
+                                          "sha256": corpora[ident]["sha256"]} if ident in corpora else None)}
             council_outcome = _historical_council_outcome(path, entry, scope)
             attempts = entry.get("decision_attempts", [])
             if not isinstance(attempts, list):
@@ -425,6 +443,9 @@ def build_datasets(paths: Iterable[str | Path], output_dir: str | Path, seed: in
         raise ValueError("Output directory cannot contain input artifacts")
     out.mkdir(parents=True, exist_ok=True)
     counts, hashes = {}, {}
+    corpus_text = json.dumps(corpora, sort_keys=True, ensure_ascii=False, allow_nan=False, indent=2) + "\n"
+    (out / "corpora.json").write_text(corpus_text)
+    hashes["corpora.json"] = hashlib.sha256(corpus_text.encode()).hexdigest()
     for stage, splits in datasets.items():
         counts[stage] = {}
         for split, rows in splits.items():
@@ -434,7 +455,7 @@ def build_datasets(paths: Iterable[str | Path], output_dir: str | Path, seed: in
             (out / name).write_text(text)
             counts[stage][split] = len(rows)
             hashes[name] = hashlib.sha256(text.encode()).hexdigest()
-    manifest = {"version": 2, "seed": seed,
+    manifest = {"version": 2, "seed": seed, "dev_objectives_per_cert": dev_objectives_per_cert,
                 "objective_corpora": {ident: {"sha256": value["sha256"], "pages": len(value["sources"]),
                                              "snapshots": len(value["snapshots"])} for ident, value in sorted(corpora.items())}, "splits": {s: sorted(i for i, v in assignment.items() if v == s) for s in SPLITS},
                 "objective_splits": dict(sorted(assignment.items())), "excluded_train_objectives": sorted(heldout),
@@ -477,12 +498,15 @@ def main(argv=None):
     parser.add_argument("paths", nargs="+", type=Path, help="Saved artifact JSON paths or generation directories")
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--dev-objectives-per-cert", type=int,
+                        help="Fixed dev objectives per certification, preserving at least one train/test objective")
     parser.add_argument("--exclude-objective", action="append", default=[])
     parser.add_argument("--cohort", action="append", default=[], type=Path,
                         help="Gold/canary manifest or directory; originals held out as whole objectives")
     args = parser.parse_args(argv)
     result = build_datasets(args.paths, args.output_dir, args.seed,
-                            excluded_objectives=args.exclude_objective, cohort_paths=args.cohort)
+                            excluded_objectives=args.exclude_objective, cohort_paths=args.cohort,
+                            dev_objectives_per_cert=args.dev_objectives_per_cert)
     print(json.dumps({"counts": result["counts"], "filters": result["filters"]}, sort_keys=True))
 
 

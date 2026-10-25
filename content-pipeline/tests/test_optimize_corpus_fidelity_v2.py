@@ -124,3 +124,23 @@ def test_openrouter_temperature_changes_only_explicit_checker_calls(monkeypatch)
     for bad in (True, -1, float("nan"), 3):
         with pytest.raises(ValueError):
             _generation_lm("openrouter/deepseek/test", temperature=bad)
+
+
+def test_sidecar_hydration_hash_binding_paths_and_shared_immutable_contract(tmp_path):
+    import json
+    from scripts.optimize.corpus import hydrate_record_corpora
+    corpus = example()["objective_corpus"]
+    data = json.dumps({"x": corpus}).encode()
+    (tmp_path / "corpora.json").write_bytes(data)
+    manifest = {"files": {"corpora.json": hashlib.sha256(data).hexdigest()}}
+    ref = {"corpus_file": "corpora.json", "objective_id": "x", "sha256": corpus["sha256"]}
+    rows = [{"objective_id": "x", "objective_corpus": dict(ref)} for _ in range(2)]
+    assert hydrate_record_corpora(rows, tmp_path, manifest) is rows
+    assert rows[0]["objective_corpus"] is rows[1]["objective_corpus"]
+    assert rows[0]["objective_corpus"] == corpus
+    bad = [{"objective_id": "x", "objective_corpus": {**ref, "corpus_file": "../arbitrary.json"}}]
+    with pytest.raises(ValueError, match="sidecar path"):
+        hydrate_record_corpora(bad, tmp_path, manifest)
+    (tmp_path / "corpora.json").write_bytes(data + b" ")
+    with pytest.raises(ValueError, match="manifest hash"):
+        hydrate_record_corpora([{"objective_id": "x", "objective_corpus": ref}], tmp_path, manifest)

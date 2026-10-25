@@ -103,7 +103,7 @@ def promotion_decision(baseline, packed, canary=None):
             or canary.get("complete") is not True or canary.get("errors")
             or not isinstance(canary.get("canaries"), dict) or not set(CANARY_DEFECTS) <= set(canary["canaries"])
             or type(canary.get("observed")) is not int or canary["observed"] < 40
-            or any(type(row.get("count")) is not int or row["count"] <= 0 or row.get("catch_rate") != 1
+            or any(type(row.get("count")) is not int or row["count"] < 20 or row.get("catch_rate") != 1
                    or row.get("full") is not True for row in canary["canaries"].values())):
         reasons.append("Canary catch is not proven 100% for a complete current cohort")
     return {"promote": not reasons, "rule": PROMOTION_RULE, "reasons": reasons}
@@ -346,6 +346,8 @@ def load_heldout_records(dataset_dir):
     if declared_hash is not None and declared_hash != hashlib.sha256(raw).hexdigest():
         raise ValueError("Held-out dataset file does not match manifest hash")
     records = json.loads(raw)
+    from scripts.optimize.corpus import hydrate_record_corpora
+    hydrate_record_corpora(records, dataset_dir, manifest)
     if {row["objective_id"] for row in records} != allowed:
         raise ValueError("Eligible held-out objective manifest is incomplete")
     return records, hashlib.sha256(manifest_bytes).hexdigest()

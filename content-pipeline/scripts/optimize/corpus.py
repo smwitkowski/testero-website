@@ -33,7 +33,12 @@ def freeze_corpus(objective_id, sources):
         documentation_context([original])
         source = {key: deepcopy(value) for key, value in original.items()
                   if key not in ("discovery_options", "discovery_kind")}
-        snapshots[digest(source)] = source
+        # A refetch of identical URL/body content is the same snapshot, not a
+        # second copy of a potentially huge public page. Keep its latest fetch.
+        identity = (source["url"], source["requested_url"], source["text_sha256"])
+        previous = snapshots.get(identity)
+        if previous is None or (source["retrieved_at"], digest(source)) > (previous["retrieved_at"], digest(previous)):
+            snapshots[identity] = source
     if not snapshots:
         raise ValueError("Corpus requires fetched documentation")
     ordered = sorted(snapshots.values(), key=lambda s: (s["retrieved_at"], s["url"], s["text_sha256"], digest(s)), reverse=True)
@@ -128,3 +133,39 @@ def sources_for_record(record, plan=None):
     if plan is None:
         return deepcopy(validate_corpus(corpus, scope["objective_id"])["sources"])
     return ranked_corpus_sources(scope, plan, corpus)
+
+
+def hydrate_record_corpora(records, dataset_dir, manifest):
+    """Resolve hash-bound sidecar references, sharing one corpus per objective.
+
+    Returned corpora are read-only by contract. Ranking always deep-copies its
+    source view. The caller must not mutate corpus snapshots. No path from a row
+    is followed: the sole permitted sidecar is dataset_dir/corpora.json.
+    """
+    from pathlib import Path
+    refs = [row.get("objective_corpus") for row in records
+            if isinstance(row.get("objective_corpus"), dict) and "corpus_file" in row["objective_corpus"]]
+    if not refs:
+        return records
+    if any(ref.get("corpus_file") != "corpora.json" for ref in refs):
+        raise ValueError("Unapproved objective corpus sidecar path")
+    raw = (Path(dataset_dir) / "corpora.json").read_bytes()
+    expected = manifest.get("files", {}).get("corpora.json")
+    if not isinstance(expected, str) or hashlib.sha256(raw).hexdigest() != expected:
+        raise ValueError("Objective corpus sidecar does not match manifest hash")
+    corpora = json.loads(raw)
+    validated = {}
+    for row in records:
+        ref = row.get("objective_corpus")
+        if not isinstance(ref, dict) or "corpus_file" not in ref:
+            continue
+        ident = row["objective_id"]
+        if ref.get("objective_id") != ident:
+            raise ValueError("Corpus reference objective mismatch")
+        if ident not in validated:
+            validated[ident] = validate_corpus(corpora[ident], ident)
+        corpus = validated[ident]
+        if ref.get("sha256") != corpus["sha256"]:
+            raise ValueError("Corpus reference hash mismatch")
+        row["objective_corpus"] = corpus
+    return records
