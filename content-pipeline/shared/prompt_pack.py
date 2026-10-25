@@ -28,6 +28,9 @@ class _Writer(BaseModel):
     base_signature_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     instructions: str | None = None
     demos: list[dict[str, Any]] = Field(default_factory=list)
+    components: dict[str, str] | None = None
+    exemplars: list[dict[str, Any]] | None = None
+    frozen_rubric: str | None = None
 
 
 class _Pack(BaseModel):
@@ -109,6 +112,23 @@ def validate_pack(pack):
             if writer["instructions"] is not None and not writer["instructions"].strip():
                 raise PromptPackError("Optimized instructions must be nonempty, or null for unchanged")
             writer["demos"] = [_demo(base, demo) for demo in writer["demos"]]
+            additions = ("components", "exemplars", "frozen_rubric")
+            if any(writer[key] is not None for key in additions):
+                from shared.plan_components import validate_components, frozen_decision_rules
+                if stage != "plan":
+                    raise PromptPackError("Named plan components require a plan writer")
+                if writer["components"] is not None:
+                    writer["components"] = validate_components(writer["components"])
+                    if writer["instructions"] is not None and "plan.instructions" in writer["components"]:
+                        raise PromptPackError("Use either instructions or plan.instructions, not both")
+                if writer["exemplars"] is not None:
+                    writer["exemplars"] = _compact_exemplars(writer["exemplars"])
+                if writer["frozen_rubric"] is not None and writer["frozen_rubric"] != frozen_decision_rules():
+                    raise PromptPackError("Frozen decision rubric must be verbatim")
+            # Old v1 packs must retain their content hashes and normalized shape.
+            for key in additions:
+                if writer[key] is None:
+                    del writer[key]
         return parsed
     except PromptPackError:
         raise
@@ -116,7 +136,8 @@ def validate_pack(pack):
         raise PromptPackError("Invalid prompt pack schema or typed demo") from None
 
 
-def create_pack(*, stage, signature=None, instructions=None, demos=(), policy, source_run, scores):
+def create_pack(*, stage, signature=None, instructions=None, demos=(), policy, source_run, scores,
+                components=None, exemplars=None, frozen_rubric=None):
     """Create one writer entry (or an empty identity pack with signature=None).
 
     Demos are complete dictionaries or DSPy Examples, with no optimizer metadata.
@@ -130,8 +151,9 @@ def create_pack(*, stage, signature=None, instructions=None, demos=(), policy, s
             values = demo.toDict() if isinstance(demo, dspy.Example) else dict(demo)
             normalized.append(_demo(base, values))
         writers = [{"signature": base.__name__, "base_signature_hash": signature_hash(base),
-                    "instructions": instructions, "demos": normalized}]
-    elif instructions is not None or demos:
+                    "instructions": instructions, "demos": normalized,
+                    "components": components, "exemplars": exemplars, "frozen_rubric": frozen_rubric}]
+    elif instructions is not None or demos or components is not None or exemplars is not None or frozen_rubric is not None:
         raise PromptPackError("Instructions/demos require a writer signature")
     return validate_pack({"version": 1, "stage": stage, "policy": policy, "source_run": source_run,
                           "scores": scores, "writers": writers})
@@ -185,9 +207,12 @@ def _entry(signature):
 def writer_signature(signature):
     """Patch trusted base instructions before practitioner/policy/order transforms."""
     entry = _entry(signature)
-    if entry is None or entry["instructions"] is None:
+    if entry is None:
         return signature
-    selected = signature.with_instructions(entry["instructions"])
+    instructions = entry.get("components", {}).get("plan.instructions", entry["instructions"])
+    if instructions is None:
+        return signature
+    selected = signature.with_instructions(instructions)
     selected.__name__ = signature.__name__
     return selected
 
@@ -199,3 +224,36 @@ def writer_demos(signature):
         return []
     return [dspy.Example(**deepcopy(values)).with_inputs(*signature.input_fields)
             for values in entry["demos"]]
+
+
+def _compact_exemplars(records):
+    from shared.decision_planner import DecisionPlan
+    if len(records) > 3:
+        raise PromptPackError("At most three compact plan exemplars are allowed")
+    normalized = []
+    seen = set()
+    for record in records:
+        if set(record) != {"domain", "cert_id", "objective_id", "plan"}:
+            raise PromptPackError("Exemplars contain only domain, cert_id, objective_id and plan; no docs")
+        if any(not isinstance(record[key], str) or not record[key].strip()
+               for key in ("domain", "cert_id", "objective_id")):
+            raise PromptPackError("Exemplar domain, cert_id and objective are required")
+        plan = DecisionPlan.model_validate(record["plan"]).model_dump(mode="json")
+        if plan["objective_id"] != record["objective_id"] or record["objective_id"] in seen:
+            raise PromptPackError("Exemplars need distinct, matching objectives")
+        if len(_canonical(plan)) > 8000:
+            raise PromptPackError("Compact exemplar plan exceeds 8000 characters")
+        seen.add(record["objective_id"])
+        normalized.append({**record, "plan": plan})
+    return normalized
+
+
+def writer_component(name):
+    """Return a named plan override, otherwise its byte-identical default."""
+    from shared.decision_planner import DecisionPlanSignature
+    from shared.plan_components import default_components
+    defaults = default_components()
+    if name not in defaults:
+        raise PromptPackError("Unknown plan component")
+    entry = _entry(DecisionPlanSignature)
+    return defaults[name] if entry is None else entry.get("components", {}).get(name, defaults[name])

@@ -189,7 +189,7 @@ class DecisionVetoError(ValueError):
     """The replacement decision still lacks support; discard the candidate."""
 
 
-def _predict(signature, inputs, model, reasoning_effort, *, max_tokens=None, demos=None):
+def _predict(signature, inputs, model, reasoning_effort, *, max_tokens=None, demos=None, temperature=None):
     if model == "codex" or model.startswith("codex/"):
         from shared.cli_models import run_signature
         return run_signature(model, signature, inputs, reasoning_effort=reasoning_effort,
@@ -197,7 +197,8 @@ def _predict(signature, inputs, model, reasoning_effort, *, max_tokens=None, dem
     from shared.llm_generator import _predict_writer, GENERATION_MAX_TOKENS
     return _predict_writer(signature, inputs, model,
                            max_tokens=GENERATION_MAX_TOKENS if max_tokens is None else max_tokens,
-                           **({"demos": demos} if demos else {}))
+                           **({"demos": demos} if demos else {}),
+                           **({"temperature": temperature} if temperature is not None else {}))
 
 
 def ordered_signature(signature, names):
@@ -220,24 +221,14 @@ def planning_prompt(scope, *, difficulty="MEDIUM", replacement_feedback="", exis
     if doccheck_policy_for(scope) == "v6":
         from shared.doccheck_names import current_name_instructions
         signature = signature.with_instructions(signature.instructions + "\n" + current_name_instructions())
+        from shared.prompt_pack import writer_component
         signature = signature.with_instructions(signature.instructions + "\n" +
-            "For each wrong option, combine a documented POSITIVE fact about what "
-            "the option does with a stated scenario constraint (cost, latency, minimal "
-            "change, current workflow/team skills, or compliance). Its losing reason "
-            "must require product knowledge, not a literal prohibition. Avoid negative "
-            "comparative claims requiring explicit negative evidence, such as 'X is "
-            "slower than Y' or 'Y requires redevelopment'. Do not invent positive "
-            "claims or constraints; all proposals still need the full documentation veto.")
+            writer_component("plan.distractor_guidance"))
         if repair_options:
             if any(label not in ("B", "C", "D") for label in repair_options):
                 raise ValueError("Surgical repair can change only wrong options")
-            signature = signature.with_instructions(signature.instructions +
-                "\nThis attempt is an OPTION-LOCAL REPAIR, not a full replacement. "
-                "The full-replacement rule does not apply to this attempt. Return "
-                "the complete frozen plan from replacement_feedback byte-identically "
-                "except for actions/losing reasons of options " + ", ".join(repair_options) +
-                ". Keep the scenario, constraints, key A and passing options unchanged. "
-                "The repaired plan must pass a fresh full proof.")
+            signature = signature.with_instructions(signature.instructions + "\n" +
+                writer_component("plan.repair_guidance").replace("{repair_options}", ", ".join(repair_options)))
     elif repair_options:
         raise ValueError("Surgical repair requires doccheck v6")
     if stable_prefix:
@@ -329,13 +320,14 @@ def verification_prompt(scope, plan, sources, *, retrieval=None, stable_prefix=F
 
 def verify_decision(scope, plan, sources, *, model, reasoning_effort="medium", predictor=None,
                     retrieval=None, stable_prefix=False, doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS,
-                    budget_metadata=None, max_tokens=None):
+                    budget_metadata=None, max_tokens=None, temperature=None):
     from shared.cli_models import output_model
     metadata = budget_metadata if budget_metadata is not None else {}
     signature, inputs = verification_prompt(scope, plan, sources, retrieval=retrieval,
         stable_prefix=stable_prefix, doc_context_chars=doc_context_chars, budget_metadata=metadata)
     budget = {} if max_tokens is None else {"max_tokens": max_tokens}
-    raw = predictor(**inputs) if predictor else _predict(signature, inputs, model, reasoning_effort, **budget)
+    raw = predictor(**inputs) if predictor else _predict(signature, inputs, model, reasoning_effort, **budget,
+        **({"temperature": temperature} if temperature is not None else {}))
     proof = output_model(signature).model_validate(raw).model_dump()
     if "distractor_evidence" in scope:
         proof["distractor_evidence"] = dict(scope["distractor_evidence"])
