@@ -530,7 +530,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                         attempt["product_share_check"] = entry["product_share_plan_check"] = products
                 stage = "documentation"
                 sources = system_call(search_objective_docs, scope["objective_text"], scope["services"],
-                    cache=docs_cache, objective_id=scope["objective_id"], decision_plan=decision)
+                    cache=docs_cache, objective_id=scope["objective_id"], decision_plan=decision,
+                    **({"doccheck_policy": "v6"} if doccheck_policy == "v6" else {}))
                 if not sources:
                     attempt["sources"] = []
                     attempt["documentation_check"] = {"passed": False, "reason": "No fetched official documentation"}
