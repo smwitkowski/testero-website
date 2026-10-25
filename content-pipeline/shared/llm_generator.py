@@ -792,7 +792,7 @@ class CitationSignature(dspy.Signature):
     evidence: list[OptionEvidence] = dspy.OutputField(desc="One required option_label, url and quote receipt per A-D option")
 
 
-GENERATION_MAX_TOKENS = 16000
+GENERATION_MAX_TOKENS = 32000
 
 
 class GenerationOutputError(ValueError):
@@ -804,7 +804,9 @@ class GenerationOutputError(ValueError):
         self.diagnostics = diagnostics
 
 
-def _generation_lm(model: str, max_tokens: int = 8000):
+def _generation_lm(model: str, max_tokens: int = GENERATION_MAX_TOKENS):
+    if type(max_tokens) is not int or max_tokens <= 0:
+        raise ValueError("Writer token budget must be a positive integer")
     api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
         raise ValueError("OPENROUTER_API_KEY must be supplied in the environment")
@@ -815,6 +817,36 @@ def _generation_lm(model: str, max_tokens: int = 8000):
         )
     except Exception:
         raise RuntimeError("Generation model initialization failed") from None
+
+
+def _predict_writer(signature, inputs, model, *, max_tokens=GENERATION_MAX_TOKENS,
+                    chain_of_thought=False):
+    """Run one OpenRouter writer call with strict output validation."""
+    from dspy.utils.exceptions import AdapterParseError
+    from shared.openrouter_writer import (WriterChatAdapter, WriterJSONAdapter,
+        WriterOutputError, supports_structured_output, validate_writer_output)
+    structured = supports_structured_output(model)
+    adapter = WriterJSONAdapter() if structured else WriterChatAdapter()
+    lm = _generation_lm(model, max_tokens=max_tokens)
+    # The writer owns candidate retries; do not add opaque transport attempts.
+    # Keep the separate citation-repair LM behavior unchanged.
+    if hasattr(lm, "num_retries"):
+        lm.num_retries = 0
+    predictor = (dspy.ChainOfThought(signature) if chain_of_thought and not structured
+                 else dspy.Predict(signature))
+    try:
+        with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
+            result = predictor(**inputs, lm=lm,
+                               config={"rollout_id": time.time_ns(), "temperature": 0.7})
+            raw = {key: getattr(result, key) for key in signature.output_fields}
+            return validate_writer_output(raw, signature, adapter.capture)
+    except MaxTokensTruncation:
+        raise
+    except (AdapterParseError, WriterOutputError):
+        raise GenerationOutputError(adapter.raw_response, adapter.capture.failure()) from None
+    except Exception:
+        # Never expose provider bodies or prompt/answer text in exception messages.
+        raise RuntimeError("Question generation request failed") from None
 
 
 def _validate_documentation_context(context: str, max_chars: int) -> None:
@@ -834,6 +866,7 @@ def generate_question(
     prompt_version: Optional[str] = None,
     *, reasoning_effort: str = "high", include_evidence: bool = False, cert_id: str | None = None,
     doc_context_chars: int = DEFAULT_DOC_CONTEXT_CHARS,
+    max_tokens: int = GENERATION_MAX_TOKENS,
 ) -> Dict[str, Any]:
     """Generate a question, optionally including receipts in the writer call."""
     _validate_documentation_context(documentation_context, doc_context_chars)
@@ -841,8 +874,7 @@ def generate_question(
         return generate_question_with_evidence(
             domain_context, documentation_context, model, difficulty, exam_subsection,
             prompt_version, reasoning_effort=reasoning_effort, cert_id=cert_id,
-            doc_context_chars=doc_context_chars)
-    from dspy.utils.exceptions import AdapterParseError
+            doc_context_chars=doc_context_chars, max_tokens=max_tokens)
     if (not isinstance(domain_context, str) or not domain_context.strip()
             or not isinstance(documentation_context, str) or not documentation_context.strip()):
         raise ValueError("Registry objective scope and fetched documentation are required")
@@ -855,28 +887,12 @@ def generate_question(
             "difficulty": difficulty, "exam_subsection": exam_subsection or "",
             "gap_analysis_guidance": "",
         }, reasoning_effort=reasoning_effort)
-    lm = _generation_lm(model, max_tokens=GENERATION_MAX_TOKENS)
-    adapter = CompletionCaptureAdapter()
-    predictor = dspy.ChainOfThought(signature)
-    try:
-        with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
-            result = predictor(
-                domain_context=domain_context,
-                documentation_context=documentation_context,
-                difficulty=difficulty,
-                exam_subsection=exam_subsection or "",
-                gap_analysis_guidance="",
-                lm=lm,
-                config={"rollout_id": time.time_ns(), "temperature": 0.7},
-            )
-        return _question_data(result)
-    except MaxTokensTruncation:
-        raise
-    except AdapterParseError:
-        raise GenerationOutputError(adapter.raw_response, adapter.capture.failure()) from None
-    except Exception:
-        # Never expose a provider exception body, which may contain credentials.
-        raise RuntimeError("Question generation request failed") from None
+    data = _predict_writer(signature, {
+        "domain_context": domain_context, "documentation_context": documentation_context,
+        "difficulty": difficulty, "exam_subsection": exam_subsection or "",
+        "gap_analysis_guidance": "",
+    }, model, max_tokens=max_tokens, chain_of_thought=True)
+    return {key: data[key].strip() for key in QUESTION_FIELDS}
 
 
 def cite_question(
@@ -969,6 +985,7 @@ def generate_question_with_evidence(
     exam_subsection: str = "", prompt_version: Optional[str] = None,
     *, reasoning_effort: str = "high", predictor=None, cert_id: str | None = None,
     doc_context_chars: int = DEFAULT_DOC_CONTEXT_CHARS,
+    max_tokens: int = GENERATION_MAX_TOKENS,
 ) -> Dict[str, Any]:
     """Write question and receipts once; the caller checks them against full docs.
 
@@ -976,7 +993,6 @@ def generate_question_with_evidence(
     All attempts and the immutable full sources remain the caller's artifacts.
     """
     from shared.cli_models import output_model, run_signature
-    from dspy.utils.exceptions import AdapterParseError
     _validate_documentation_context(documentation_context, doc_context_chars)
     if (not isinstance(domain_context, str) or not domain_context.strip()
             or not isinstance(documentation_context, str) or not documentation_context.strip()):
@@ -991,19 +1007,7 @@ def generate_question_with_evidence(
     elif model == "codex" or model.startswith("codex/"):
         raw = run_signature(model, signature, inputs, reasoning_effort=reasoning_effort)
     else:
-        adapter = CompletionCaptureAdapter(preserve_receipts=True)
-        lm = _generation_lm(model, max_tokens=GENERATION_MAX_TOKENS)
-        try:
-            with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
-                result = dspy.Predict(signature)(
-                    **inputs, lm=lm, config={"rollout_id": time.time_ns(), "temperature": 0.7})
-            raw = {key: getattr(result, key) for key in signature.output_fields}
-        except MaxTokensTruncation:
-            raise
-        except AdapterParseError:
-            raise GenerationOutputError(adapter.raw_response, adapter.capture.failure()) from None
-        except Exception:
-            raise RuntimeError("Question generation request failed") from None
+        raw = _predict_writer(signature, inputs, model, max_tokens=max_tokens)
     data = output_model(signature).model_validate(raw).model_dump()
     return {**{key: data[key].strip() for key in QUESTION_FIELDS},
             "evidence": data["evidence"]}

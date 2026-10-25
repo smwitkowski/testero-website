@@ -106,6 +106,8 @@ class CompletionCaptureAdapter(dspy.ChatAdapter):
         self.capture.raw_response = _safe_completion(completion)
         # Preserve existing generator/citation marker behavior.
         if self.normalize_markers:
+            completion = re.sub(r"\[\[\s*##\s*(\w+)\s*##\s*\]\]",
+                                lambda match: f"[[ ## {match[1]} ## ]]", completion)
             completion = re.sub(r"(?<=\S)[ \t]*(\[\[ ## \w+ ## \]\])", r"\n\1", completion)
         score_header = None
         judge_fields = (
