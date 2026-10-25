@@ -15,7 +15,7 @@ import dspy
 from scripts.optimize.budget import (BudgetExceeded, MetricLimitExceeded, MetricLimiter,
                                      SpendBudget, budgeted_calls, serial_dspy_execution)
 
-DEFAULT_STUDENT = "deepseek/deepseek-v4.1-flash-1017"
+DEFAULT_STUDENT = "codex"
 AUTO_METRIC_CALLS = {"light": 50, "medium": 150}
 
 
@@ -26,6 +26,14 @@ def openrouter_model(value):
     if len(ident.split("/")) != 2 or not all(ident.split("/")):
         raise ValueError("Expected an OpenRouter vendor/model ID")
     return "openrouter/" + ident
+
+
+def student_model(value):
+    if value == "codex" or value.startswith("codex/"):
+        if value == "codex/":
+            raise ValueError("Codex model suffix must be nonempty")
+        return value
+    return openrouter_model(value)
 
 
 def stage_signature(stage):
@@ -62,6 +70,11 @@ class WriterPredict(dspy.Predict):
         return effective
 
     def forward(self, **kwargs):
+        if self.writer_model == "codex" or self.writer_model.startswith("codex/"):
+            from shared.cli_models import run_signature
+            result = run_signature(self.writer_model, self.effective_signature(), kwargs,
+                                   reasoning_effort="high", demos=self.demos)
+            return dspy.Prediction(**result)
         from shared.call_logging import log_lm_calls
         from shared.llm_generator import _generation_lm
         from shared.llm_limits import reject_token_limit
@@ -130,7 +143,8 @@ def to_example(row, signature):
     validated = output_model(signature).model_validate(outputs).model_dump()
     return dspy.Example(**inputs, **validated, scope=row["scope"], sources=row.get("sources", []),
                         objective_id=row["objective_id"], domain=row.get("domain", ""),
-                        proof=row.get("proof", {})).with_inputs(*signature.input_fields)
+                        proof=row.get("proof", {}), objective_corpus=row.get("objective_corpus"),
+                        council_outcome=row.get("council_outcome")).with_inputs(*signature.input_fields)
 
 
 def select_diverse_demos(rows, *, stage, per_domain=4, seed=0):
@@ -302,7 +316,7 @@ def main(argv=None):
     from shared.prompt_pack import create_pack, save_pack
     if args.output.exists():
         raise SystemExit("Refusing to overwrite an existing prompt pack")
-    model = openrouter_model(args.student_model)
+    model = student_model(args.student_model)
     signature = stage_signature(args.stage)
     splits = load_splits(args.dataset_dir, args.stage)
     certifications = {row["scope"].get("cert_id") for rows in splits.values() for row in rows}

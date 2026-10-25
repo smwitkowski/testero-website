@@ -95,3 +95,22 @@ def test_missing_metric_accounting_cannot_reset_resume(tmp_path):
     (tmp_path / "run.json").write_text(json.dumps({"status": "stopped", "resume_binding": "one"}))
     with pytest.raises(SystemExit, match="accounting"):
         opt.prepare_run_directory(tmp_path, resume=True, binding="one")
+
+
+def test_codex_student_reuses_shared_serial_cli_path(monkeypatch):
+    from shared import cli_models
+    from test_optimize_runner import plan_row
+    row = plan_row()
+    calls = []
+    def run(model, signature, inputs, **kwargs):
+        calls.append((model, signature, inputs, kwargs))
+        return row["outputs"]
+    monkeypatch.setattr(cli_models, "run_signature", run)
+    program = opt.StageProgram("plan", "codex")
+    result = program(**row["inputs"])
+    assert result.plan == row["outputs"]["plan"]
+    assert calls[0][0] == "codex" and calls[0][3]["reasoning_effort"] == "high"
+    assert opt.student_model("codex") == "codex"
+    assert opt.student_model("codex/gpt-6.1-sol") == "codex/gpt-6.1-sol"
+    with pytest.raises(ValueError):
+        opt.openrouter_model("codex")
