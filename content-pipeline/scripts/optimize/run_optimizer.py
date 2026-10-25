@@ -163,6 +163,16 @@ def select_diverse_demos(rows, *, stage, per_domain=4, seed=0):
     return selected
 
 
+def filter_rows(splits, *, cert_id, policy, method):
+    """Bind rows to one certification. Bootstrap reuses recorded outcomes as demos,
+    so it also requires the recorded doc-check policy; GEPA uses rows only as inputs
+    and re-scores every rollout live under `policy`, so any recorded policy is valid."""
+    return {split: [row for row in rows
+                    if row["scope"].get("cert_id") == cert_id
+                    and (method == "gepa" or row["scope"].get("doccheck_policy", "v5") == policy)]
+            for split, rows in splits.items()}
+
+
 def development_subset(rows, count, seed):
     """Fixed-seed objective-balanced dev slice; full test is never consulted."""
     if type(count) is not int or count < 1:
@@ -255,10 +265,7 @@ def main(argv=None):
         cert_id = next(iter(certifications), None)
     # A run binds one certification and recorded production proof policy. Do not
     # relabel accepted v6 demos as if they had passed v5, or vice versa.
-    splits = {split: [row for row in rows
-                       if row["scope"].get("cert_id") == cert_id
-                       and row["scope"].get("doccheck_policy", "v5") == args.doccheck_policy]
-              for split, rows in splits.items()}
+    splits = filter_rows(splits, cert_id=cert_id, policy=args.doccheck_policy, method=args.method)
     train_rows = (select_diverse_demos(splits["train"], stage=args.stage,
                                      per_domain=args.demos_per_domain, seed=args.seed)
                   if args.method == "bootstrap" else splits["train"])

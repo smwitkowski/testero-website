@@ -288,3 +288,15 @@ def test_failed_compile_records_safe_failure_without_partial_pack(monkeypatch, t
     assert json.loads(report)["status"] == "failed"
     assert json.loads(report)["error_class"] == "RuntimeError"
     assert "raw synthetic" not in report and not output.exists()
+
+
+def test_filter_rows_gepa_reuses_inputs_across_policies_bootstrap_does_not():
+    from scripts.optimize.run_optimizer import filter_rows
+    rows = [{"scope": {"cert_id": "machine-learning-engineer"}},
+            {"scope": {"cert_id": "machine-learning-engineer", "doccheck_policy": "v6"}},
+            {"scope": {"cert_id": "data-engineer"}}]
+    splits = {"train": rows, "dev": rows}
+    gepa = filter_rows(splits, cert_id="machine-learning-engineer", policy="v6", method="gepa")
+    boot = filter_rows(splits, cert_id="machine-learning-engineer", policy="v6", method="bootstrap")
+    assert len(gepa["train"]) == 2 and len(gepa["dev"]) == 2
+    assert boot["train"] == [rows[1]]
