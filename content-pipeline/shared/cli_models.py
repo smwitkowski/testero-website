@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import errno as errno_codes
+import fcntl
 import json
 import os
 from pathlib import Path
 import re
 import subprocess
 import tempfile
+import time
 from typing import Any
 
 import dspy
@@ -51,6 +53,10 @@ class CLIAuthError(CLIExitError):
 
 class CodexModelRejectedError(CLIExitError):
     """The requested Codex model is unsupported; never retry another model silently."""
+
+
+class CLIRateLimitError(CLIModelError):
+    """Transient Codex throttling (HTTP 429); retried with backoff, never a batch stop by itself."""
 
 
 class CLIUsageLimitError(CLIModelError):
@@ -117,6 +123,43 @@ _LIMIT = re.compile(r"usage_limit_reached|rate_limit_exceeded|rate_limit_error|y
 
 def _limit(text):
     return bool(_LIMIT.search(text or ""))
+
+
+# A shared ChatGPT account throttles bursts (429) long before its usage allowance runs out.
+_USAGE = re.compile(r"usage_limit_reached|you(?:'|’)?ve hit your usage limit|you have (?:hit|exceeded) your usage limit|"
+                    r"usage limit (?:reached|exceeded)", re.I)
+_RATE = re.compile(r"\b429\b|too many requests|rate_limit_exceeded|rate limit (?:reached|exceeded)", re.I)
+CODEX_MIN_INTERVAL_SECONDS = float(os.environ.get("TESTERO_CODEX_MIN_INTERVAL", "3"))
+CODEX_RATE_BACKOFF_SECONDS = tuple(float(x) for x in
+                                   os.environ.get("TESTERO_CODEX_RATE_BACKOFF", "30,60,120,240,480").split(",") if x)
+CODEX_PACE_FILE = Path.home() / ".cache/testero/codex-pace"
+
+
+def _codex_limit(text):
+    """Real usage exhaustion stops the batch; burst throttling is retried by _run_cli."""
+    if _USAGE.search(text or ""):
+        raise CLIUsageLimitError("Codex subscription usage limit reached; batch stopped")
+    if _RATE.search(text or "") or _limit(text):
+        raise CLIRateLimitError("Codex rate limited (429); backing off")
+
+
+def _pace_codex():
+    """Space Codex call starts across processes so parallel writers don't burst the account."""
+    CODEX_PACE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with CODEX_PACE_FILE.open("a+") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        handle.seek(0)
+        try:
+            last = float(handle.read() or 0)
+        except ValueError:
+            last = 0.0
+        wait = last + CODEX_MIN_INTERVAL_SECONDS - time.time()
+        if wait > 0:
+            time.sleep(wait)
+        handle.seek(0)
+        handle.truncate()
+        handle.write(str(time.time()))
+        handle.flush()
 
 
 _AUTH = re.compile(r"failed to authenticate|authentication_error|invalid_api_key|"
@@ -337,9 +380,18 @@ def _run_cli(model, prompt, schema, signature, *, timeout, reasoning_effort="hig
     from shared.call_logging import model_call
     resolved = (DEFAULT_CODEX_MODEL if model == "codex" else
                 DEFAULT_CLAUDE_MODEL if model == "claude" else model.split("/", 1)[-1])
-    with model_call(resolved, provider="codex" if model == "codex" or model.startswith("codex/") else "claude") as usage:
-        return _run_cli_transport(model, prompt, schema, signature, timeout=timeout,
-                                  reasoning_effort=reasoning_effort, usage=usage)
+    codex = model == "codex" or model.startswith("codex/")
+    for delay in (*CODEX_RATE_BACKOFF_SECONDS, None) if codex else (None,):
+        if codex:
+            _pace_codex()
+        try:
+            with model_call(resolved, provider="codex" if codex else "claude") as usage:
+                return _run_cli_transport(model, prompt, schema, signature, timeout=timeout,
+                                          reasoning_effort=reasoning_effort, usage=usage)
+        except CLIRateLimitError:
+            if delay is None:
+                raise CLIUsageLimitError("Codex still rate limited after backoff; batch stopped") from None
+            time.sleep(delay)
 
 
 def _run_cli_transport(model, prompt, schema, signature, *, timeout, reasoning_effort="high", usage):
@@ -406,6 +458,8 @@ def _run_cli_transport(model, prompt, schema, signature, *, timeout, reasoning_e
                 rejection = _codex_model_rejection(model, codex_errors)
                 if rejection:
                     raise rejection
+            if codex:
+                _codex_limit(codex_errors + "\n" + result.stdout + "\n" + result.stderr)
             if _limit(result.stdout + "\n" + result.stderr):
                 raise CLIUsageLimitError("CLI subscription usage or rate limit reached; batch stopped")
             if _auth(result.stdout + "\n" + result.stderr):
@@ -423,8 +477,7 @@ def _run_cli_transport(model, prompt, schema, signature, *, timeout, reasoning_e
             rejection = _codex_model_rejection(model, codex_errors)
             if rejection:
                 raise rejection
-            if _limit(result.stdout + "\n" + result.stderr):
-                raise CLIUsageLimitError("Codex subscription usage or rate limit reached; batch stopped")
+            _codex_limit(codex_errors + "\n" + result.stdout + "\n" + result.stderr)
             if _auth(result.stdout + "\n" + result.stderr):
                 raise CLIAuthError("Codex subscription authentication failed; restore CLI login")
             raise CLISchemaError("Codex CLI did not write its structured output")

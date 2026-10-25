@@ -159,6 +159,10 @@ def test_codex_json_error_events(monkeypatch, tmp_path, code, kind):
     path = tmp_path / "calls.jsonl"
     with call_context(calls_path=path), pytest.raises(getattr(cli, kind)):
         cli._run_cli("codex", "fixture", cli.output_model(Output).model_json_schema(), Output, timeout=1)
-    record = json.loads(path.read_text())
-    assert record["ok"] is False and record["error_class"] == kind
+    records = [json.loads(line) for line in path.read_text().splitlines()]
+    # Throttling (429) is retried with backoff; each attempt is logged, then the batch stops.
+    expected = "CLIRateLimitError" if code == "rate_limit_exceeded" else kind
+    assert len(records) == (3 if code == "rate_limit_exceeded" else 1)
+    record = records[-1]
+    assert record["ok"] is False and record["error_class"] == expected
     assert record["input_tokens"] is None
