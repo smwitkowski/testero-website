@@ -231,6 +231,10 @@ def planning_prompt(scope, *, difficulty="MEDIUM", replacement_feedback="", exis
                 writer_component("plan.repair_guidance").replace("{repair_options}", ", ".join(repair_options)))
     elif repair_options:
         raise ValueError("Surgical repair requires doccheck v6")
+    from shared.prompt_pack import writer_plan_additions
+    additions = writer_plan_additions(scope)
+    if additions:
+        signature = signature.with_instructions(signature.instructions + "\n\n" + additions)
     if stable_prefix:
         signature = ordered_signature(signature, ["objective_scope", "difficulty", "existing_scenarios", "replacement_feedback"])
     return signature, inputs

@@ -10,7 +10,7 @@ from shared.plan_components import (COMPONENT_CAPS, default_components,
 
 PLAN_KEYS = ("plan.instructions", "plan.distractor_guidance")
 REPAIR_KEY = "plan.repair_guidance"
-DEFAULT_REFLECTION_MODEL = "openrouter/anthropic/claude-sonnet-4.6"
+DEFAULT_REFLECTION_MODEL = "openrouter/anthropic/claude-sonnet-5.5"
 
 
 def encode_plan_components(components=None):

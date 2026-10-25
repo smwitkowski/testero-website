@@ -228,10 +228,9 @@ def writer_demos(signature):
 
 def _compact_exemplars(records):
     from shared.decision_planner import DecisionPlan
-    if len(records) > 3:
-        raise PromptPackError("At most three compact plan exemplars are allowed")
     normalized = []
     seen = set()
+    groups = {}
     for record in records:
         if set(record) != {"domain", "cert_id", "objective_id", "plan"}:
             raise PromptPackError("Exemplars contain only domain, cert_id, objective_id and plan; no docs")
@@ -239,11 +238,16 @@ def _compact_exemplars(records):
                for key in ("domain", "cert_id", "objective_id")):
             raise PromptPackError("Exemplar domain, cert_id and objective are required")
         plan = DecisionPlan.model_validate(record["plan"]).model_dump(mode="json")
-        if plan["objective_id"] != record["objective_id"] or record["objective_id"] in seen:
+        identity = (record["cert_id"], record["objective_id"])
+        if plan["objective_id"] != record["objective_id"] or identity in seen:
             raise PromptPackError("Exemplars need distinct, matching objectives")
+        group = (record["cert_id"], record["domain"])
+        groups[group] = groups.get(group, 0) + 1
+        if groups[group] > 3:
+            raise PromptPackError("At most three compact plan exemplars per domain/certification are allowed")
         if len(_canonical(plan)) > 8000:
             raise PromptPackError("Compact exemplar plan exceeds 8000 characters")
-        seen.add(record["objective_id"])
+        seen.add(identity)
         normalized.append({**record, "plan": plan})
     return normalized
 
@@ -257,3 +261,33 @@ def writer_component(name):
         raise PromptPackError("Unknown plan component")
     entry = _entry(DecisionPlanSignature)
     return defaults[name] if entry is None else entry.get("components", {}).get(name, defaults[name])
+
+
+def writer_exemplars(scope):
+    """Select frozen examples for this domain/certification, never this objective."""
+    from shared.decision_planner import DecisionPlanSignature
+    entry = _entry(DecisionPlanSignature)
+    if entry is None:
+        return []
+    domain = scope.get("domain_code", scope.get("domain"))
+    return deepcopy([record for record in entry.get("exemplars", [])
+        if record["domain"] == domain and record["cert_id"] == scope.get("cert_id")
+        and record["objective_id"] != scope.get("objective_id")])
+
+
+def writer_plan_additions(scope):
+    """Render only explicitly selected frozen rubric and compact plan examples."""
+    from shared.decision_planner import DecisionPlanSignature
+    entry = _entry(DecisionPlanSignature)
+    if entry is None:
+        return ""
+    sections = []
+    if entry.get("frozen_rubric"):
+        sections.append(entry["frozen_rubric"])
+    examples = writer_exemplars(scope)
+    if examples:
+        sections.append("Accepted same-domain plans from other training objectives. "
+            "Use only as decision-design examples, never as documentation or factual evidence. "
+            "Do not copy their scenarios; all new claims require the unchanged documentation veto.\n"
+            + "\n".join(_canonical(record["plan"]) for record in examples))
+    return "\n\n".join(sections)
