@@ -1,0 +1,91 @@
+{
+  "date": "2026-10-25T20:04:44.128810+00:00",
+  "branch": "prime/prompt-optimization",
+  "stacked_on_pr": 314,
+  "target": "main",
+  "offline_only": true,
+  "live_model_calls": 0,
+  "merged": false,
+  "pipeline": {
+    "command": "cd content-pipeline && PYTHON_DOTENV_DISABLED=1 uv run pytest -q",
+    "exit_code": 0,
+    "passed": 3718,
+    "skipped": 3,
+    "subtests_passed": 51,
+    "seconds": 104.24
+  },
+  "app": {
+    "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm test",
+    "exit_code": 0,
+    "passed": 1952,
+    "files_passed": 109
+  },
+  "lint": {
+    "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run lint",
+    "exit_code": 0
+  },
+  "typecheck": {
+    "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run typecheck",
+    "exit_code": 0
+  },
+  "docker": {
+    "command": "docker build .",
+    "exit_code": 0,
+    "cached_layers": true,
+    "existing_warning": "SecretsUsedInArgOrEnv Dockerfile ENV SUPABASE_SERVICE_ROLE_KEY"
+  },
+  "datasets": {
+    "seed": 42,
+    "manifest_sha256": "1fa6a57146d6c5959470bdd4f9d171e32b0ecd12526c35f64653e2176235c821",
+    "plan": {
+      "train": 1412,
+      "dev": 409,
+      "test": 373
+    },
+    "draft": {
+      "train": 87,
+      "dev": 39,
+      "test": 16
+    },
+    "typed_examples_validated": 2336,
+    "excluded_review_only_argon": 130
+  },
+  "offline_bootstrap": {
+    "demos": 24,
+    "domains": 6,
+    "metric_calls": 0,
+    "transport_attempts": 0,
+    "reserved_usd": "0"
+  },
+  "council_seats": [
+    "claude.blind_solver",
+    "claude.style",
+    "claude.evidence",
+    "argon.blind",
+    "argon.review"
+  ],
+  "proof_model": "writer model by default; separately configurable",
+  "source_sha256": {
+    "content-pipeline/.gitignore": "df9606df11127494a700033e354027bd2d00ce0c7228216f4dac00aadaf4c43d",
+    "content-pipeline/README.md": "bdf4722dc270ebd85ef1b8dad50e989e17885aee1f2bc0ba295ec9289e0848a6",
+    "content-pipeline/scripts/generate_pmle_questions.py": "2a7c3a081ae090fe9ada505afb66b67460deecfac30b703bc57a06dc1047f501",
+    "content-pipeline/shared/cli_models.py": "a86a395feba36a8cd1f9be7dfb0a8a5fa68c0409a2efe0ce7acab5a1c3dcc212",
+    "content-pipeline/shared/decision_planner.py": "c535999b8b4816cc11e5651dd1bed6a53b88b80cbd27afb65fac82fad4723211",
+    "content-pipeline/shared/llm_generator.py": "2a926142692984b9fb14e957a7ecbb8198c5e6eb165a3d4d9f3b31848acc7b6c",
+    "content-pipeline/shared/prompt_pack.py": "ea2573fd0fac0fcd22bd7525ddc93c197c87433f45cdb2da9ecaabf2967865a1",
+    "content-pipeline/scripts/optimize/__init__.py": "70b30ab0dc8871df88fbe562889284e48b5e403c2e4d97c7c42f1826db6422cb",
+    "content-pipeline/scripts/optimize/budget.py": "7b18414ea5b7530fb07fe3762b234553c9144f0946b528e84d4db44fa18ec894",
+    "content-pipeline/scripts/optimize/build_datasets.py": "9f3f6577b0e4582c1df4f3fc21bf71efc522211e1ffd9068d2041b1027ee0067",
+    "content-pipeline/scripts/optimize/evaluate_pack.py": "90c47553f00cccb8dbf90740a37524a4236c21ece5b538835c5876dee4c2ad61",
+    "content-pipeline/scripts/optimize/metrics.py": "67613e924e16bc059315524ca347d8e969d691933753389b03d159aaa3aeeeb4",
+    "content-pipeline/scripts/optimize/run_optimizer.py": "50bae8d324a71392d5dffc33d29b4675c99ba4a0269ab549ec14c067b8c06edf",
+    "content-pipeline/scripts/optimize/prices.example.json": "7c9e11bc994fdc4793b3bd215820c0d1aac357cb231332f249418e0e89380c11",
+    "content-pipeline/tests/test_optimize_async_safety.py": "ba0e2c86f0c682e6bc8738be89246ed10fe0840dc253a5cc6975c9390767c82f",
+    "content-pipeline/tests/test_optimize_datasets.py": "3da46c2bc42b5e3f9739bf9287016d828eccd623bde7df335a6c2b079690c617",
+    "content-pipeline/tests/test_optimize_evaluate.py": "22e206bae8d250c4ce486f79d6c9f075eb54844627b9ad2b0f70f8d613c1faa2",
+    "content-pipeline/tests/test_optimize_metrics.py": "1e7e7b68816950aeeb77afc82a92e0d74deb03329e7c637f6c3e012688e9e330",
+    "content-pipeline/tests/test_optimize_runner.py": "29b1904bec1c8ae42de170083a03134b444e087a19ac63ec29fc21ea6170975b",
+    "content-pipeline/tests/test_prompt_pack.py": "a3808cf95bafedb4718eaed141a8bcebc6a24e42ed2a699c18bca64f55d0cd62",
+    "content-pipeline/docs/prompt-optimization-offline-proof.md": "291816ec5d538bba1ae82b59dc8f2ea1827c625374da52b2aa7fee6c62ebfa45"
+  }
+}

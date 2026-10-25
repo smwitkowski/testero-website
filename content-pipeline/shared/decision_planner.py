@@ -189,13 +189,15 @@ class DecisionVetoError(ValueError):
     """The replacement decision still lacks support; discard the candidate."""
 
 
-def _predict(signature, inputs, model, reasoning_effort, *, max_tokens=None):
+def _predict(signature, inputs, model, reasoning_effort, *, max_tokens=None, demos=None):
     if model == "codex" or model.startswith("codex/"):
         from shared.cli_models import run_signature
-        return run_signature(model, signature, inputs, reasoning_effort=reasoning_effort)
+        return run_signature(model, signature, inputs, reasoning_effort=reasoning_effort,
+                             **({"demos": demos} if demos else {}))
     from shared.llm_generator import _predict_writer, GENERATION_MAX_TOKENS
     return _predict_writer(signature, inputs, model,
-                           max_tokens=GENERATION_MAX_TOKENS if max_tokens is None else max_tokens)
+                           max_tokens=GENERATION_MAX_TOKENS if max_tokens is None else max_tokens,
+                           **({"demos": demos} if demos else {}))
 
 
 def ordered_signature(signature, names):
@@ -213,7 +215,8 @@ def planning_prompt(scope, *, difficulty="MEDIUM", replacement_feedback="", exis
     inputs = {"objective_scope": scope["domain_prompt"] + policy_instructions(scope.get("style_policy")), "difficulty": difficulty,
               "replacement_feedback": replacement_feedback,
               "existing_scenarios": json.dumps(existing_scenarios, ensure_ascii=False)}
-    signature = practitioner_signature(DecisionPlanSignature, scope.get("cert_id"))
+    from shared.prompt_pack import writer_signature
+    signature = practitioner_signature(writer_signature(DecisionPlanSignature), scope.get("cert_id"))
     if doccheck_policy_for(scope) == "v6":
         from shared.doccheck_names import current_name_instructions
         signature = signature.with_instructions(signature.instructions + "\n" + current_name_instructions())
@@ -248,7 +251,10 @@ def plan_decision(scope, *, model, difficulty="MEDIUM", replacement_feedback="",
                                         existing_scenarios=existing_scenarios, stable_prefix=stable_prefix,
                                         repair_options=repair_options)
     budget = {} if max_tokens is None else {"max_tokens": max_tokens}
-    output = predictor(**inputs) if predictor else _predict(signature, inputs, model, reasoning_effort, **budget)
+    from shared.prompt_pack import writer_demos
+    demos = writer_demos(DecisionPlanSignature)
+    output = predictor(**inputs) if predictor else _predict(signature, inputs, model, reasoning_effort,
+        **budget, **({"demos": demos} if demos else {}))
     plan = output_model(DecisionPlanSignature).model_validate(output).model_dump()["plan"]
     if plan["objective_id"] != scope["objective_id"]:
         raise ValueError("Decision plan changed the selected objective")

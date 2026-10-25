@@ -820,7 +820,7 @@ def _generation_lm(model: str, max_tokens: int = GENERATION_MAX_TOKENS):
 
 
 def _predict_writer(signature, inputs, model, *, max_tokens=GENERATION_MAX_TOKENS,
-                    chain_of_thought=False):
+                    chain_of_thought=False, demos=None):
     """Run one OpenRouter writer call with strict output validation."""
     from dspy.utils.exceptions import AdapterParseError
     from shared.openrouter_writer import (WriterChatAdapter, WriterJSONAdapter,
@@ -834,6 +834,10 @@ def _predict_writer(signature, inputs, model, *, max_tokens=GENERATION_MAX_TOKEN
         lm.num_retries = 0
     predictor = (dspy.ChainOfThought(signature) if chain_of_thought and not structured
                  else dspy.Predict(signature))
+    if demos:
+        # ChainOfThought is a wrapper; demos belong to its inner Predict.
+        target = predictor.predict if chain_of_thought and not structured else predictor
+        target.demos = demos
     try:
         with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
             result = predictor(**inputs, lm=lm,
@@ -879,19 +883,22 @@ def generate_question(
             or not isinstance(documentation_context, str) or not documentation_context.strip()):
         raise ValueError("Registry objective scope and fetched documentation are required")
     from shared.question_style import practitioner_signature
-    signature = practitioner_signature(PmleQuestionSignature, cert_id)
+    from shared.prompt_pack import writer_signature, writer_demos
+    signature = practitioner_signature(writer_signature(PmleQuestionSignature), cert_id)
+    demos = writer_demos(PmleQuestionSignature)
     if model == "codex" or model.startswith("codex/"):
         from shared.cli_models import run_signature
         return run_signature(model, signature, {
             "domain_context": domain_context, "documentation_context": documentation_context,
             "difficulty": difficulty, "exam_subsection": exam_subsection or "",
             "gap_analysis_guidance": "",
-        }, reasoning_effort=reasoning_effort)
+        }, reasoning_effort=reasoning_effort, **({"demos": demos} if demos else {}))
     data = _predict_writer(signature, {
         "domain_context": domain_context, "documentation_context": documentation_context,
         "difficulty": difficulty, "exam_subsection": exam_subsection or "",
         "gap_analysis_guidance": "",
-    }, model, max_tokens=max_tokens, chain_of_thought=True)
+    }, model, max_tokens=max_tokens, chain_of_thought=True,
+       **({"demos": demos} if demos else {}))
     return {key: data[key].strip() for key in QUESTION_FIELDS}
 
 
@@ -937,18 +944,24 @@ def cite_question(
 
     def with_budget(result):
         return {**result, "documentation_context_budget": budget_metadata}
+    from shared.prompt_pack import writer_signature, writer_demos
+    signature = writer_signature(CitationSignature)
+    demos = writer_demos(CitationSignature)
     if model == "codex" or model.startswith("codex/"):
         from shared.cli_models import run_signature
-        return with_budget(run_signature(model, CitationSignature, {
+        return with_budget(run_signature(model, signature, {
             "finished_question": json.dumps(question, ensure_ascii=False),
             "fetched_sources": fetched_text,
             "check_errors": "\n".join(check_errors or []),
-        }, reasoning_effort=reasoning_effort))
+        }, reasoning_effort=reasoning_effort, **({"demos": demos} if demos else {})))
     adapter = CompletionCaptureAdapter(preserve_receipts=True)
     try:
         lm = _generation_lm(model, max_tokens=max_tokens)
         with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
-            result = dspy.Predict(CitationSignature)(
+            predictor = dspy.Predict(signature)
+            if demos:
+                predictor.demos = demos
+            result = predictor(
                 finished_question=json.dumps(question, ensure_ascii=False),
                 fetched_sources=fetched_text,
                 check_errors="\n".join(check_errors or []),
@@ -1001,13 +1014,17 @@ def generate_question_with_evidence(
                   difficulty=difficulty, exam_subsection=exam_subsection or "",
                   gap_analysis_guidance="")
     from shared.question_style import practitioner_signature
-    signature = practitioner_signature(QuestionWithEvidenceSignature, cert_id)
+    from shared.prompt_pack import writer_signature, writer_demos
+    signature = practitioner_signature(writer_signature(QuestionWithEvidenceSignature), cert_id)
+    demos = writer_demos(QuestionWithEvidenceSignature)
     if predictor is not None:
         raw = predictor(**inputs)
     elif model == "codex" or model.startswith("codex/"):
-        raw = run_signature(model, signature, inputs, reasoning_effort=reasoning_effort)
+        raw = run_signature(model, signature, inputs, reasoning_effort=reasoning_effort,
+                            **({"demos": demos} if demos else {}))
     else:
-        raw = _predict_writer(signature, inputs, model, max_tokens=max_tokens)
+        raw = _predict_writer(signature, inputs, model, max_tokens=max_tokens,
+                              **({"demos": demos} if demos else {}))
     data = output_model(signature).model_validate(raw).model_dump()
     return {**{key: data[key].strip() for key in QUESTION_FIELDS},
             "evidence": data["evidence"]}

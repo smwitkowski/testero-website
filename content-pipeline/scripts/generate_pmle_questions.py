@@ -269,6 +269,7 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--argon-gate", is_flag=True, help="Freeze mandatory independent Gemini 4 Argon blind/full review requests.")
 @click.option("--existing-questions", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Local ACTIVE/DRAFT question export for near-duplicate veto; no DB access.")
 @click.option("--section-allocation", default=None, help="Comma-separated counts in included guide section order, summing to N; pilot: 4,5,6,6,5,4. Cannot combine with scope filters.")
+@click.option("--prompt-pack", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Validated writer-only prompt pack; judges/proofs are frozen. Default: unchanged prompts.")
 @click.option("--model", default=DEFAULT_GENERATOR_MODEL, show_default=True)
 @click.option("--judge-model", default=DEFAULT_JUDGE_MODEL, show_default=True, help="Use external to export judge requests and never write the DB.")
 @click.option("--difficulty", type=click.Choice(["EASY", "MEDIUM", "HARD"]), default="MEDIUM", show_default=True)
@@ -287,9 +288,22 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
          parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None, existing_questions=None, argon_gate=False,
          target_accepted=None, expected_yield=0.29, distractor_evidence="strict", plan_only=False, emit_taxonomy=False,
          doc_cache=True, verify_retrieval=False, verify_stable_prefix=True, decision_attempts=3,
-         doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS, frozen_plan=None, continue_quality_rejections=False, doccheck_policy="v5"):
+         doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS, frozen_plan=None, continue_quality_rejections=False, doccheck_policy="v5",
+         prompt_pack=None):
     retry_manifest = None
+    loaded_prompt_pack = None
     try:
+        if prompt_pack is not None:
+            from shared.prompt_pack import load_pack
+            loaded_prompt_pack = load_pack(prompt_pack)
+            policy = loaded_prompt_pack["policy"]
+            # Metadata may include other optimizer settings, but declared runtime
+            # policy bindings must agree before any generation or database calls.
+            expected = {"cert_id": cert, "doccheck_policy": doccheck_policy,
+                        "distractor_evidence": distractor_evidence}
+            for key, value in expected.items():
+                if key in policy and policy[key] != value:
+                    raise ValueError("Prompt pack policy differs from generator " + key)
         from shared.distractor_evidence import evidence_policy
         frozen_evidence = evidence_policy(distractor_evidence)
         if doccheck_policy not in ("v5", "v6"):
@@ -352,6 +366,12 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                                          "per_option_retrieval": verify_retrieval,
                                          "stable_prefix": verify_stable_prefix,
                                          "decision_attempts": decision_attempts}}
+    if loaded_prompt_pack is not None:
+        from shared.prompt_pack import pack_hash
+        payload["prompt_pack"] = {"sha256": pack_hash(loaded_prompt_pack),
+                                  "stage": loaded_prompt_pack["stage"],
+                                  "source_run": loaded_prompt_pack["source_run"],
+                                  "policy": loaded_prompt_pack["policy"]}
     if doccheck_policy == "v6":
         payload["doccheck_policy"] = doccheck_policy
     tuned = uses_pde_style(plan[0]["style_policy"])
@@ -469,9 +489,17 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         stage = "decision_plan"
 
         def system_call(function, *args, **kwargs):
-            if external and continue_quality_rejections:
-                return retry_system_call(entry, stage, function, *args, **kwargs)
-            return function(*args, **kwargs)
+            def invoke():
+                if external and continue_quality_rejections:
+                    return retry_system_call(entry, stage, function, *args, **kwargs)
+                return function(*args, **kwargs)
+            # ContextVars do not cross worker threads. Activate only here, around
+            # explicit writers, never verification, retrieval, taxonomy or council.
+            if loaded_prompt_pack is not None and function in (plan_decision, generate_question, cite_question):
+                from shared.prompt_pack import use_prompt_pack
+                with use_prompt_pack(loaded_prompt_pack):
+                    return invoke()
+            return invoke()
 
         try:
             entry["decision_attempts"] = []
