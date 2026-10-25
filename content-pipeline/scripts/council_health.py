@@ -284,6 +284,8 @@ def evaluate(root, *, state=DEFAULT_STATE, pause=None, window=20, verdicts=None)
         gold_rows = saved["gold"]
         gold_rate = sum(row["would_publish"] for row in gold_rows) / len(gold_rows) if gold_rows else None
         pages = ["Gold replay pass rate below 80%"] if gold_rate is not None and gold_rate < .8 else []
+        if manifest["kind"] == "gold" and errors:
+            pages.append(f"gold replay incomplete: {len(observations)} of {len(manifest['rows'])} judged")
         if reasons:
             # Write pause first: a later state write failure must not permit publishing.
             write_json(pause, {"at": datetime.now(timezone.utc).isoformat(), "reasons": reasons})
@@ -296,14 +298,73 @@ def evaluate(root, *, state=DEFAULT_STATE, pause=None, window=20, verdicts=None)
         return report
 
 
+# Bounded schema/transport failures only. Budget, auth, quota, invalid frozen
+# requests, persistence failures and unknown exceptions remain hard stops.
+SYSTEM_ERRORS = {"CLISchemaError", "CLITimeoutError", "CLIExitError", "APIConnectionError",
+                 "APITimeoutError", "TimeoutError", "ReadTimeout", "ConnectionError",
+                 "MaxTokensTruncation", "ValidationError", "ValueError", "TypeError", "OSError"}
+
+
+def system_error_ids(root):
+    """Return missing verdict IDs only if every failure is a frozen seat error."""
+    root, manifest = load_cohort(root)
+    missing = []
+    for row in manifest["rows"]:
+        ident = row["candidate_id"]
+        destination = no_symlinks(root / "verdicts" / (ident + ".json"))
+        if destination.is_file():
+            continue
+        try:
+            record = read_json(no_symlinks(root / "verdicts/.failures" / (ident + ".json")))
+            request = no_symlinks(root / "requests" / (ident + ".json"))
+            if (not isinstance(record, dict) or record.get("candidate_id") != ident
+                    or record.get("error_class") not in SYSTEM_ERRORS
+                    or not isinstance(record.get("sub_call"), str)
+                    or not record["sub_call"].startswith(("claude.", "argon."))
+                    or record["sub_call"] == "argon.validation"
+                    or record.get("request_sha256") != hashlib.sha256(request.read_bytes()).hexdigest()):
+                return None
+        except (OSError, ValueError, TypeError):
+            return None
+        missing.append(ident)
+    return missing
+
+
 def live(root, *, coordinator_approved=False, parallel=2):
-    """Explicit coordinator-only judge step; never ingest the isolated cohort."""
+    """Judge frozen health requests; retry only system failures twice at most."""
     if not coordinator_approved:
         raise ValueError("Live judging requires --coordinator-approved")
     root, _ = load_cohort(root)
     from scripts.judge_requests import run_requests
-    return run_requests(root / "requests", root / "verdicts", judge_model="claude",
-                        parallel=parallel, argon_gate=True, full_gate_sample=1)
+    from scripts.run_domain_batch import retryable_judge_ids
+    kwargs = {"judge_model": "claude", "parallel": parallel,
+              "argon_gate": True, "full_gate_sample": 1}
+    summary = run_requests(root / "requests", root / "verdicts", **kwargs)
+    for _ in range(2):
+        if summary.persistence_failed or summary.usage_stopped or summary.remaining or not summary.failed:
+            break
+        if system_error_ids(root) is None:
+            break
+        ids = retryable_judge_ids(root / "requests", root / "verdicts")
+        if not ids:
+            break
+        # The normal runner reuses frozen requests and reserves each paid call.
+        retried = run_requests(root / "requests", root / "verdicts", candidate_ids=ids, **kwargs)
+        summary.completed += retried.completed
+        summary.skipped += retried.skipped
+        summary.failed -= retried.completed + retried.skipped
+        summary.remaining = retried.remaining
+        summary.usage_stopped = retried.usage_stopped
+        summary.persistence_failed |= retried.persistence_failed
+    return summary
+
+
+def live_failed(root, summary):
+    """Gold system-error exhaustion is monitor-only; safety failures still stop."""
+    _, manifest = load_cohort(root)
+    if summary.persistence_failed or summary.usage_stopped or summary.remaining:
+        return True
+    return bool(summary.failed and (manifest["kind"] != "gold" or system_error_ids(root) is None))
 
 
 def main(argv=None):
@@ -332,9 +393,10 @@ def main(argv=None):
         result = {"prepare": prepare, "evaluate": evaluate, "live": live}[command](**(
             {"artifacts": args.pop("artifact"), **args} if command == "prepare" else args))
         if command == "live":
-            return int(bool(result.failed or result.usage_stopped or result.remaining))
+            return int(live_failed(args["root"], result))
         print(json.dumps(result, indent=2, allow_nan=False))
-        return int(command == "evaluate" and (not result["complete"] or result["paused"]))
+        return int(command == "evaluate" and (result["paused"] or
+                   (result["kind"] == "canaries" and not result["complete"])))
     except (OSError, ValueError, KeyError, TypeError) as error:
         parser.exit(2, "Council health failed: " + type(error).__name__ + "\n")
 

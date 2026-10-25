@@ -39,7 +39,8 @@ def send(text, config):
     if any(not isinstance(value, str) or "@" not in value or any(c in value for c in "\r\n") for value in (sender, recipient)):
         raise ValueError("Configured sender/recipient are required")
     request = Request("https://api.resend.com/emails", method="POST",
-                      headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
+                      headers={"Authorization": "Bearer " + key, "Content-Type": "application/json",
+                               "User-Agent": "testero-pipeline/1.0"},
                       data=json.dumps({"from": sender, "to": [recipient],
                                        "subject": "Testero pipeline v6", "text": text}).encode())
     with build_opener(NoRedirect()).open(request, timeout=30) as response:

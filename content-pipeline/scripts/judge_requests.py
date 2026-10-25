@@ -43,6 +43,7 @@ class Summary:
     failed: int = 0
     remaining: int = 0
     usage_stopped: bool = False
+    persistence_failed: bool = False
 
 
 def _pairs(pairs):
@@ -179,18 +180,19 @@ def _publish(path, payload, *, exclusive):
         Path(temporary).unlink(missing_ok=True)
 
 
-def _safe_failure(error):
+def _safe_failure(error, *, sub_call="claude.quality"):
     # Never copy arbitrary exception messages, CLI logs, prompts or environment data.
     if isinstance(error, RequestValidationError):
         return "RequestValidationError", _safe_completion(str(error))[:1000]
     if isinstance(error, MaxTokensTruncation):
         return "MaxTokensTruncation", "LM completion reached its token limit"
+    source = "" if sub_call.startswith("argon.") else "Claude CLI "
     for name, message in (
-        ("CLIUsageLimitError", "Claude subscription usage or rate limit reached; batch stopped"),
-        ("CLIAuthError", "Claude CLI authentication failed; authenticate before rerunning"),
-        ("CLITimeoutError", "Claude CLI request timed out"),
-        ("CLISchemaError", "Claude CLI structured output does not match the current schema"),
-        ("CLIExitError", "Claude CLI request failed or could not start"),
+        ("CLIUsageLimitError", source + "usage or rate limit reached; batch stopped"),
+        ("CLIAuthError", source + "authentication failed; authenticate before rerunning"),
+        ("CLITimeoutError", source + "request timed out"),
+        ("CLISchemaError", source + "structured output does not match the current schema"),
+        ("CLIExitError", source + "request failed or could not start"),
     ):
         error_type = getattr(cli_models, name, None)
         if error_type is not None and isinstance(error, error_type):
@@ -362,7 +364,7 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
             if isinstance(error, argon.ArgonCallError):
                 quality_rejected = quality_rejected or error.quality_rejected
                 sub_call, error = "argon." + error.call, error.error
-            error_class, message = _safe_failure(error)
+            error_class, message = _safe_failure(error, sub_call=sub_call)
             failure = error_class, f"{sub_call}: {message}"
             if failure[0] == "CLIUsageLimitError":
                 with submission_lock:
@@ -422,6 +424,8 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
                         setattr(summary, state, getattr(summary, state) + 1)
                         summary.remaining -= 1
                     if failure:
+                        # A stale on-disk failure must never stand in for this run.
+                        summary.persistence_failed |= failure[0] == "RequestRunnerError"
                         click.echo(f"{ident}: {failure[0]}: {failure[1]}")
                 if stopped.is_set():
                     for future in list(pending):
