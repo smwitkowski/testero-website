@@ -83,13 +83,25 @@ def publications_today(client, now):
     return len(all_pages(lambda: client.table("question_events").select("id").eq("action", "published").gte("at", start).order("id")))
 
 
-def commands_for_batch(batch, tag, *, state_dir, tools, live=False, limit=10):
+def commands_for_batch(batch, tag, *, state_dir, tools, live=False, limit=10,
+                       prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0, doccheck_policy="v5"):
     cert = batch["cert"]
     base = (PIPELINE / ".cache/generation").resolve() / (cert + "-v5-" + tag)
     report = Path(state_dir) / (tag + ".publish.json")
     generate = [sys.executable, "-m", "scripts.run_domain_batch", batch["section"], tag, cert,
                 "--count", str(batch["count"]), "--parallel", "2",
                 "--nightly-result", str(Path(state_dir) / (tag + ".batch.json"))]
+    if doccheck_policy not in ("v5", "v6"):
+        raise ValueError("Unsupported nightly doccheck policy")
+    if doccheck_policy != "v5":
+        generate += ["--doccheck-policy", doccheck_policy]
+    if prompt_pack is not None:
+        generate += ["--prompt-pack", str(prompt_pack)]
+    if ab_interleaved:
+        if prompt_pack is None or not ab_experiment or batch["count"] % 2:
+            raise ValueError("Nightly A/B requires a pack, experiment ID and even batch counts")
+        generate += ["--ab-interleaved", "--ab-experiment", ab_experiment,
+                     "--ab-seed", str(ab_seed)]
     publish = [sys.executable, "-m", "scripts.publish_batch", "--artifact", str(base) + ".json",
                "--verdicts", str(base) + ".verdicts", "--limit", str(limit), "--report", str(report)]
     publish += ["--apply"] if live else ["--read-db", "--dry-run"]
@@ -138,6 +150,8 @@ def notify(report, config, state, state_path, now, *, immediate=False, deliver=s
 def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run, client=None):
     state_dir, tools = Path(state_dir), Path(tools)
     report = {"status": "planned", "mode": "shadow", "batches": [], "at": now.isoformat()}
+    experiment = {key: config[key] for key in ("prompt_pack", "ab_interleaved", "ab_experiment", "ab_seed", "doccheck_policy") if key in config}
+    report["generation_experiment"] = experiment
     planned = plan(coverage, now, batches=config.get("batches", 2), count=config.get("count", 40))
     report["coverage"] = planned["coverage"]
     report["budget"] = {} if live else accounting(load_calls(config["calls_root"]), now, rates=config.get("rates"), cap_overrides=config.get("cap_overrides"))
@@ -147,7 +161,7 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
     preview = []
     for index, batch in enumerate(planned["batches"]):
         tag = now.strftime("night-%Y%m%d") + "-" + str(index + 1)
-        preview.extend(commands_for_batch(batch, tag, state_dir=run_dir, tools=tools, live=publication_live))
+        preview.extend(commands_for_batch(batch, tag, state_dir=run_dir, tools=tools, live=publication_live, **experiment))
     queue_dir = run_dir / "recouncil"
     common = [sys.executable, "-m", "scripts.recouncil", "--queue", str(run_dir / "quarantined.json"),
               "--output-dir", str(queue_dir), "--artifact-root", str((PIPELINE / ".cache/generation").resolve())]
@@ -247,7 +261,7 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
                 from shared.nightly_budget import daily_claim
                 daily_claim(config["calls_root"], datetime.now(timezone.utc))
                 commands = commands_for_batch(batch, tag, state_dir=run_dir, tools=tools,
-                                               live=publication_live, limit=remaining)
+                                               live=publication_live, limit=remaining, **experiment)
                 for name, command in commands:
                     if name == "publish":
                         if publication_live and not (tools / "PUBLISH_LIVE").is_file():
@@ -308,6 +322,22 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
             failed(error)
             report["recouncil"] = {"status": "held", "reason": "Queue read/preparation unavailable; no replay"}
 
+        if experiment.get("ab_interleaved"):
+            # Local artifact reads survive partial generation/judgment. A failed
+            # batch must not hide candidate arm assignments from the digest.
+            from shared.batch_report import ab_arm_report
+            report["ab_batches"] = []
+            for index, batch in enumerate(planned["batches"]):
+                tag = now.strftime("night-%Y%m%d") + "-" + str(index + 1)
+                artifact = (PIPELINE / ".cache/generation") / (batch["cert"] + "-v5-" + tag + ".json")
+                if artifact.is_file() and not artifact.is_symlink():
+                    try:
+                        saved = json.loads(artifact.read_text())
+                        report["ab_batches"].append({"artifact": str(artifact),
+                            "experiment": saved.get("ab_experiment"),
+                            "arms": ab_arm_report(saved.get("candidates", []))})
+                    except (OSError, ValueError, KeyError, TypeError):
+                        report["ab_batches"].append({"artifact": str(artifact), "status": "unreadable"})
         report["status"] = "checkpointed_stop" if hard_stop else ("partial" if stage_failed else "complete")
         try:
             report["budget"] = accounting(load_calls(config["calls_root"]), datetime.now(timezone.utc), rates=config.get("rates"), cap_overrides=config.get("cap_overrides"))
@@ -347,6 +377,11 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument("--prompt-pack", type=Path)
+    parser.add_argument("--ab-interleaved", action="store_true", default=None)
+    parser.add_argument("--ab-experiment")
+    parser.add_argument("--ab-seed", type=int)
+    parser.add_argument("--doccheck-policy", choices=("v5", "v6"))
     parser.add_argument("--coverage", type=Path, help="Required offline: local complete coverage export; live reads fresh DB after preflight")
     parser.add_argument("--tools-dir", type=Path, required=True)
     parser.add_argument("--state-dir", type=Path, required=True)
@@ -357,6 +392,10 @@ def main():
     args = parser.parse_args()
     try:
         config = json.loads(args.config.read_text())
+        for key in ("prompt_pack", "ab_interleaved", "ab_experiment", "ab_seed", "doccheck_policy"):
+            value = getattr(args, key)
+            if value is not None:
+                config[key] = str(value) if isinstance(value, Path) else value
         if not args.live and not args.coverage:
             parser.error("Offline print requires --coverage")
         if args.live:

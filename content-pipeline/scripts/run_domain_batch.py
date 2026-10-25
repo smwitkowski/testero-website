@@ -72,13 +72,19 @@ def export_questions(url, key, exam, path, *, fetch=None):
     return len(rows)
 
 
-def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resume=None, doccheck_policy="v5"):
+def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resume=None, doccheck_policy="v5",
+                   prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0):
     """Build one gated batch; ``all`` keeps the full weighted cert plan unfiltered."""
     if (section != "all" and not re.fullmatch(r"[0-9]+\.", section)
             or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", tag)):
         raise ValueError("Section must be all or like 1.; tag must contain only letters, digits, _ or -")
     if doccheck_policy not in ("v5", "v6"):
         raise ValueError("Unsupported doccheck policy")
+    if ab_interleaved and (prompt_pack is None or not ab_experiment or resume is not None
+                           or (section == "all" and cert == "data-engineer")):
+        raise ValueError("A/B requires a challenger and experiment ID; full-plan PDE retries/resume are not supported")
+    if not ab_interleaved and ab_experiment is not None:
+        raise ValueError("--ab-experiment requires --ab-interleaved")
     context = load_cert_context(cert)
     domain = None
     if section != "all":
@@ -123,6 +129,12 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resu
                 "--parallel", str(parallel), "--gen-effort", "high", "--cite-effort", "medium",
                 "--argon-gate", "--distractor-evidence", "consistent",
                 "--doc-cache", "--verify-stable-prefix", "--artifact", str(artifact)]
+    if prompt_pack is not None:
+        generate += ["--prompt-pack", str(prompt_pack)]
+    if ab_interleaved:
+        if count % 2:
+            raise ValueError("A/B candidate count must be even")
+        generate += ["--ab-interleaved", "--ab-experiment", ab_experiment, "--ab-seed", str(ab_seed)]
     if doccheck_policy == "v6":
         generate += ["--doccheck-policy", doccheck_policy]
     if domain is not None:
@@ -133,6 +145,8 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resu
     generate += ["--existing-questions", str(export), "--continue-quality-rejections"]
     judge = [sys.executable, "scripts/judge_requests.py", "--requests", str(base) + ".judge-requests",
              "--verdicts", str(base) + ".verdicts", "--judge-model", "claude", "--parallel", str(parallel), "--argon-gate"]
+    if ab_interleaved:
+        judge += ["--full-gate-sample", "1"]
     ingest = [sys.executable, "scripts/ingest_external_verdicts.py", "--artifact", str(artifact),
               "--verdicts", str(base) + ".verdicts", "--continue-quality-rejections"]
     return artifact, export, [generate, judge, ingest]
@@ -203,6 +217,10 @@ def judge_with_system_retries(command, execute):
 @click.argument("cert", default=DEFAULT_CERT)
 @click.option("--count", type=click.IntRange(min=1), default=None, envvar="N",
               help="Total candidates: 40 for all sections, 30 for a single section (overridden by N).")
+@click.option("--prompt-pack", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Writer-only challenger pack.")
+@click.option("--ab-interleaved", is_flag=True, help="Randomized objective-paired control/challenger generation.")
+@click.option("--ab-experiment", default=None)
+@click.option("--ab-seed", type=int, default=0, show_default=True)
 @click.option("--doccheck-policy", type=click.Choice(["v5", "v6"]), default="v5", show_default=True, help="Freeze decision documentation policy; council remains unchanged.")
 @click.option("--parallel", type=click.IntRange(1, 4), default=3, envvar="PARALLEL", show_default=True)
 @click.option("--retry-attempts", type=click.IntRange(min=0, max=10), default=2, show_default=True,
@@ -217,7 +235,8 @@ def judge_with_system_retries(command, execute):
 @click.option("--write", is_flag=True,
               help="Coordinator authorization for resume DRAFT writes; resume is dry admission without this flag.")
 def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
-         acknowledge_saved_system_failures, write, nightly_result, doccheck_policy="v5"):
+         acknowledge_saved_system_failures, write, nightly_result, doccheck_policy="v5",
+         prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0):
     """Run SECTION (e.g. 1. or all) as one artifact; all uses the weighted cert plan."""
     from scripts.nightly_outcome import ordinary_failure, write_result, NightlyHardStop
     if nightly_result is not None:
@@ -230,7 +249,9 @@ def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
         if write and (plan_only or section != "all" or cert != "data-engineer"):
             raise ValueError("--write requires a full-plan PDE run")
         artifact, export, commands = batch_commands(section, tag, cert, count, parallel,
-                                                   plan_only=plan_only, resume=resume, doccheck_policy=doccheck_policy)
+                                                   plan_only=plan_only, resume=resume, doccheck_policy=doccheck_policy,
+                                                   prompt_pack=prompt_pack, ab_interleaved=ab_interleaved,
+                                                   ab_experiment=ab_experiment, ab_seed=ab_seed)
         artifact.parent.mkdir(parents=True, exist_ok=True)
         if not plan_only and (resume is None or write):
             url, key = os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
