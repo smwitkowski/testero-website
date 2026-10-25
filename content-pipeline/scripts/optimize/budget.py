@@ -191,8 +191,44 @@ class MetricLimiter:
             return self._route(result, pred_name)
 
 
+class SubscriptionQuota:
+    """Durable subscription attempt cap, separate from paid API dollar spend.
+
+    Token bounds remain visible but are not mislabeled as per-token invoices.
+    The default transport guard still values CLI quota in SpendBudget unless a
+    caller explicitly supplies this separate admission policy.
+    """
+    def __init__(self, limit, ledger_path):
+        if type(limit) is not int or limit < 1:
+            raise ValueError("Subscription call cap must be positive")
+        self.limit, self.path = limit, Path(ledger_path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.lock = RLock()
+
+    def _records(self):
+        return [json.loads(line) for line in self.path.read_text().splitlines() if line.strip()] if self.path.exists() else []
+
+    def reserve(self, model, input_tokens, output_tokens):
+        with self.lock, self.path.with_suffix(".lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            rows = self._records()
+            if len(rows) >= self.limit:
+                raise BudgetExceeded("Subscription transport attempt cap reached")
+            row = {"model": model, "input_token_bound": input_tokens,
+                   "output_token_bound": output_tokens, "cost_kind": "subscription_quota_not_paid_api_spend"}
+            with self.path.open("a") as sink:
+                sink.write(json.dumps(row) + "\n")
+                sink.flush()
+                import os
+                os.fsync(sink.fileno())
+
+    def snapshot(self):
+        return {"call_cap": self.limit, "transport_attempts": len(self._records()),
+                "cost_kind": "subscription_quota_not_paid_api_spend"}
+
+
 @contextmanager
-def budgeted_calls(budget, *, cli_output_tokens=131072):
+def budgeted_calls(budget, *, cli_output_tokens=131072, subscription_quota=None):
     """Reserve before all DSPy and subscription transport attempts in this process.
 
     This process-scoped guard is for single optimizer/evaluator CLI runs, not a
@@ -220,7 +256,8 @@ def budgeted_calls(budget, *, cli_output_tokens=131072):
         return original_lm(lm, **kwargs)
 
     def cli_transport(model, prompt, schema, signature, **kwargs):
-        budget.reserve(model, input_token_bound(prompt), cli_output_tokens)
+        admission = budget if subscription_quota is None else subscription_quota
+        admission.reserve(model, input_token_bound(prompt), cli_output_tokens)
         return original_cli(model, prompt, schema, signature, **kwargs)
 
     with patch.object(dspy.LM, "forward", lm_forward), patch.object(cli_models, "_run_cli_transport", cli_transport):

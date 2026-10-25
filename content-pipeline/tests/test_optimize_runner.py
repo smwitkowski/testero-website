@@ -180,7 +180,8 @@ def test_bootstrap_cli_pack_roundtrip_without_model_calls(tmp_path):
                            "--prices", str(prices)]) == 0
     from shared.prompt_pack import load_pack
     pack = load_pack(output)
-    assert len(pack["writers"][0]["demos"]) == 4
+    assert pack["writers"][0]["demos"] == []
+    assert pack["writers"][0]["exemplars"] == []  # no accepted council records in this fixture
     run = json.loads((tmp_path / "pack.run/run.json").read_text())
     assert run["budget"]["transport_attempts"] == 0
     assert run["test_objectives"] == ["3.1:1"]

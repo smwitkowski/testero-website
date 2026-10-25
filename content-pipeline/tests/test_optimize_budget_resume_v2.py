@@ -114,3 +114,31 @@ def test_codex_student_reuses_shared_serial_cli_path(monkeypatch):
     assert opt.student_model("codex/gpt-6.1-sol") == "codex/gpt-6.1-sol"
     with pytest.raises(ValueError):
         opt.openrouter_model("codex")
+
+
+def test_explicit_subscription_quota_is_separate_durable_and_hard(monkeypatch, tmp_path):
+    from scripts.optimize.budget import SpendBudget, SubscriptionQuota, budgeted_calls, BudgetExceeded
+    from shared import cli_models
+    calls = []
+    monkeypatch.setattr(cli_models, "_run_cli_transport", lambda *a, **k: calls.append(1))
+    paid = SpendBudget("1", {"openrouter/offline/model": {
+        "input_usd_per_million": "1", "output_usd_per_million": "1"}}, tmp_path/"paid.jsonl")
+    quota = SubscriptionQuota(1, tmp_path/"quota.jsonl")
+    with budgeted_calls(paid, subscription_quota=quota):
+        cli_models._run_cli_transport("codex", "offline", {}, object())
+        with pytest.raises(BudgetExceeded, match="Subscription"):
+            cli_models._run_cli_transport("codex", "offline", {}, object())
+    assert len(calls) == 1 and paid.snapshot()["transport_attempts"] == 0
+    resumed = SubscriptionQuota(1, tmp_path/"quota.jsonl")
+    assert resumed.snapshot()["transport_attempts"] == 1
+    with pytest.raises(BudgetExceeded):
+        resumed.reserve("codex", 100, 100)
+
+
+def test_requested_dev_objectives_require_two_to_three_real_inputs_each():
+    rows = [{"objective_id": str(i)} for i in range(13) for _ in range(3)]
+    opt.validate_development_slice(rows, 13)
+    with pytest.raises(SystemExit, match="2-3"):
+        opt.validate_development_slice(rows + [{"objective_id": "0"}], 13)
+    with pytest.raises(SystemExit, match="2-3"):
+        opt.validate_development_slice([{ "objective_id": str(i)} for i in range(13)], 13)
