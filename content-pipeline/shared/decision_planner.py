@@ -208,6 +208,8 @@ def planning_prompt(scope, *, difficulty="MEDIUM", replacement_feedback="", exis
               "existing_scenarios": json.dumps(existing_scenarios, ensure_ascii=False)}
     signature = practitioner_signature(DecisionPlanSignature, scope.get("cert_id"))
     if doccheck_policy_for(scope) == "v6":
+        from shared.doccheck_names import current_name_instructions
+        signature = signature.with_instructions(signature.instructions + "\n" + current_name_instructions())
         signature = signature.with_instructions(signature.instructions + "\n" +
             "For each wrong option, combine a documented POSITIVE fact about what "
             "the option does with a stated scenario constraint (cost, latency, minimal "
