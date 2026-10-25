@@ -254,3 +254,22 @@ def test_option_local_repair_signature_not_silently_treated_as_normal_plan(tmp_p
     result = datasets.build_datasets([path], tmp_path / "out")
     assert sum(result["counts"]["plan"].values()) == 0
     assert result["filters"]["excluded_option_local_repairs"] == 1
+
+
+def test_objective_corpus_collects_pages_from_other_failed_attempts_and_artifacts(tmp_path):
+    path, payload = artifact(tmp_path)
+    entry = payload["candidates"][0]
+    extra = deepcopy(entry["sources"][0])
+    extra["url"] += "-another-page"
+    extra["requested_url"] = extra["url"]
+    extra["text"] = "Other failed attempt fetched this public page."
+    extra["text_sha256"] = hashlib.sha256(extra["text"].encode()).hexdigest()
+    # Even an incomplete attempt contributes actual fetched pages, not a demo.
+    entry["decision_attempts"].append({"sources": [extra]})
+    save(path, payload)
+    result = datasets.build_datasets([path], tmp_path / "out")
+    row = records(tmp_path / "out", "plan")[0]
+    assert len(row["sources"]) == 1
+    assert len(row["objective_corpus"]["sources"]) == 2
+    assert result["objective_corpora"][row["objective_id"]]["pages"] == 2
+    assert result["version"] == 2

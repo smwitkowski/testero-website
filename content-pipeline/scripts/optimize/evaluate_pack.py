@@ -144,13 +144,15 @@ class ProductionRunner:
         candidates, calls, artifacts = [], [], []
         complete = True
         for cert, selected in sorted(by_cert.items()):
-            docs = {row["objective_id"]: deepcopy(row["sources"]) for row in selected}
+            from scripts.optimize.corpus import sources_for_record
+            bound_records = {row["objective_id"]: row for row in selected}
+            docs = {row["objective_id"]: sources_for_record(row) for row in selected}
             if not all(docs.values()):
                 raise ValueError("Frozen official documents are required for every objective")
             def frozen_docs(*args, objective_id=None, **kwargs):
                 if objective_id not in docs:
                     raise ValueError("Unrecognized held-out objective in retrieval")
-                return deepcopy(docs[objective_id])
+                return sources_for_record(bound_records[objective_id], kwargs.get("decision_plan"))
             artifact = output_dir / (cert + ".json")
             args = ["--cert", cert, "--n-questions", str(len(selected)), "--model", model,
                     "--seed", str(seed), "--parallel", "1", "--dry-run", "--judge-model", "external",
@@ -238,7 +240,11 @@ def evaluate_pack(records, *, pack_path, model, seed, output_dir, doccheck_polic
             raise ValueError("Missing frozen held-out scope/sources")
         unique.setdefault(objective, row)
     # Strip saved candidate outputs before handing anything to live execution.
-    selected = [{key: deepcopy(row[key]) for key in ("objective_id", "scope", "sources")} for _, row in sorted(unique.items())]
+    from scripts.optimize.corpus import sources_for_record
+    selected = [{**{key: deepcopy(row[key]) for key in ("objective_id", "scope")},
+                 "sources": sources_for_record(row),
+                 **({"objective_corpus": deepcopy(row["objective_corpus"])} if row.get("objective_corpus") else {})}
+                for _, row in sorted(unique.items())]
     for row in selected:
         for key in ("decision_plan", "decision_proof", "decision_objective"):
             row["scope"].pop(key, None)

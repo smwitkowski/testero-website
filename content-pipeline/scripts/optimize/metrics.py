@@ -39,7 +39,7 @@ def proof_feedback(proof):
     return dspy.Prediction(score=score, feedback=reason + ("\n" + "; ".join(failures) if failures else ""))
 
 
-def make_plan_metric(*, writer_model, checker_model=None, verifier=None):
+def make_plan_metric(*, writer_model, checker_model=None, checker_temperature=0.0, verifier=None):
     """Use the unmodified production proof and mechanical receipt checks.
 
     ``verifier`` has the same interface as ``shared.decision_planner.verify_decision``.
@@ -59,11 +59,15 @@ def make_plan_metric(*, writer_model, checker_model=None, verifier=None):
         scope = _field(gold, "scope")
         sources = _field(gold, "sources")
         plan = _field(pred, "plan")
-        if not isinstance(scope, dict) or not isinstance(plan, dict) or not sources:
+        if not isinstance(scope, dict) or not isinstance(plan, dict) or not (sources or _field(gold, "objective_corpus")):
             return dspy.Prediction(score=0.0, feedback="Missing scope, candidate plan, or frozen documentation; rejected.")
         if plan.get("objective_id") != scope.get("objective_id"):
             return dspy.Prediction(score=0.0, feedback="Candidate plan changed the objective; rejected.")
-        proof = verifier(scope, plan, sources, model=model, reasoning_effort="medium", stable_prefix=True)
+        from scripts.optimize.corpus import sources_for_record
+        sources = sources_for_record({"scope": scope, "sources": sources,
+                                      "objective_corpus": _field(gold, "objective_corpus")}, plan)
+        proof = verifier(scope, plan, sources, model=model, reasoning_effort="medium", stable_prefix=True,
+                         temperature=checker_temperature)
         return proof_feedback(_mapping(proof))
 
     return metric

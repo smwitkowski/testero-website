@@ -26,6 +26,7 @@ from shared.external_judge import (
 from shared.gates import evaluate_gate
 from shared.llm_generator import QUESTION_FIELDS
 from shared.option_order import canonical_evidence
+from scripts.optimize.corpus import freeze_corpus
 
 SPLITS = ("train", "dev", "test")
 FLAGS = ("supported", "uniquely_best", "scenario_reasons_supported", "no_feature_gotchas")
@@ -254,6 +255,36 @@ def build_datasets(paths: Iterable[str | Path], output_dir: str | Path, seed: in
     heldout_stems = {text for i, texts in stems.items() if assignment.get(i) != "train" for text in texts}
     heldout_hashes = {_text_hash(text) for text in heldout_stems}
     datasets = {stage: {split: [] for split in SPLITS} for stage in ("plan", "draft")}
+    # Collect every fetched page for an objective, including failed attempts.
+    # Missing planning fields do not make a trustworthy fetched page disappear.
+    corpus_pages = {}
+    for metadata in source_files:
+        if metadata["monitor"] or Path(metadata["path"]) not in files:
+            continue
+        payload, digest = _read(metadata["path"])
+        if digest != metadata["sha256"]:
+            raise ValueError("Artifact changed during corpus build")
+        for entry in payload.get("candidates", []) if isinstance(payload, dict) else []:
+            if not isinstance(entry, dict) or _cohort(entry):
+                continue
+            try:
+                scope = _scope(payload, entry)
+            except (KeyError, TypeError, ValueError):
+                continue
+            groups = [entry.get("sources", [])]
+            attempts = entry.get("decision_attempts", [])
+            groups.extend(a.get("sources", []) for a in attempts if isinstance(a, dict)) if isinstance(attempts, list) else None
+            for group in groups:
+                if not isinstance(group, list):
+                    continue
+                for page in group:
+                    try:
+                        documentation_context([page])
+                    except (TypeError, AttributeError, ValueError):
+                        stats["invalid_corpus_pages"] += 1
+                    else:
+                        corpus_pages.setdefault(scope["objective_id"], []).append(page)
+    corpora = {ident: freeze_corpus(ident, pages) for ident, pages in corpus_pages.items()}
     seen = set()
     for metadata in source_files:
         if metadata["monitor"] or Path(metadata["path"]) not in files:
@@ -288,7 +319,8 @@ def build_datasets(paths: Iterable[str | Path], output_dir: str | Path, seed: in
                 continue
             source = {"artifact": str(path), "artifact_sha256": digest, "candidate_id": candidate,
                       "stem_sha256": _text_hash(entry["stem"]) if isinstance(entry.get("stem"), str) else None}
-            base = {"objective_id": ident, "domain": scope["domain_code"], "scope": scope, "source": source}
+            base = {"objective_id": ident, "domain": scope["domain_code"], "scope": scope, "source": source,
+                    "objective_corpus": corpora.get(ident)}
             attempts = entry.get("decision_attempts", [])
             if not isinstance(attempts, list):
                 attempts = []
@@ -357,7 +389,9 @@ def build_datasets(paths: Iterable[str | Path], output_dir: str | Path, seed: in
             (out / name).write_text(text)
             counts[stage][split] = len(rows)
             hashes[name] = hashlib.sha256(text.encode()).hexdigest()
-    manifest = {"version": 1, "seed": seed, "splits": {s: sorted(i for i, v in assignment.items() if v == s) for s in SPLITS},
+    manifest = {"version": 2, "seed": seed,
+                "objective_corpora": {ident: {"sha256": value["sha256"], "pages": len(value["sources"]),
+                                             "snapshots": len(value["snapshots"])} for ident, value in sorted(corpora.items())}, "splits": {s: sorted(i for i, v in assignment.items() if v == s) for s in SPLITS},
                 "objective_splits": dict(sorted(assignment.items())), "excluded_train_objectives": sorted(heldout),
                 "counts": counts, "filters": dict(sorted(stats.items())), "files": hashes,
                 "eligible_splits": {stage: {s: sorted({r["objective_id"] for r in rows}) for s, rows in splits.items()}
@@ -367,6 +401,7 @@ def build_datasets(paths: Iterable[str | Path], output_dir: str | Path, seed: in
                 "source_artifacts": source_files,
                 "policy": {"draft": "all five production seats PASS; Argon versions 1/3 only",
                            "plan_inputs": "production planning_prompt; missing recorded inputs and option-local repair signatures excluded",
+                           "corpus": "all fetched objective pages across ordinary artifacts; hash-bound snapshots; candidate-specific production query ranking",
                            "holdout": "whole canary/gold objectives held in test; monitor rows never demos",
                            "text_leakage": "NFKC/casefold/whitespace stem hashes plus prior-scenario substring guard"}}
     (out / "manifest.json").write_text(json.dumps(manifest, sort_keys=True, indent=2, ensure_ascii=False) + "\n")

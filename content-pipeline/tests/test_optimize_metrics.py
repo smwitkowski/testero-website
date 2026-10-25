@@ -24,7 +24,7 @@ def test_plan_metric_production_default_is_writer_and_has_gepa_feedback():
     assert isinstance(result, dspy.Prediction)
     assert result.score == .75
     assert "Second defensible option" in result.feedback
-    assert seen[0][3] == {"model": "codex", "reasoning_effort": "medium", "stable_prefix": True}
+    assert seen[0][3] == {"model": "codex", "reasoning_effort": "medium", "stable_prefix": True, "temperature": 0.0}
 
 
 def test_plan_checker_override_and_no_recorded_proof_substitution():
