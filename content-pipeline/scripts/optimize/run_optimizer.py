@@ -196,7 +196,8 @@ def development_subset(rows, count, seed):
 
 @serial_dspy_execution()
 def compile_program(program, *, method, trainset, devset, metric, reflection_lm=None,
-                    max_metric_calls=50, seed=0, bootstrap_mode="labeled", log_dir=None):
+                    max_metric_calls=250, seed=0, bootstrap_mode="labeled", log_dir=None,
+                    minibatch_size=6, instruction_proposer=None):
     """Small injectable boundary used by fake-LM offline tests."""
     if method == "bootstrap":
         if bootstrap_mode == "labeled":
@@ -209,12 +210,57 @@ def compile_program(program, *, method, trainset, devset, metric, reflection_lm=
         return optimizer.compile(program, trainset=trainset)
     if method != "gepa":
         raise ValueError("Unknown optimizer method")
-    # DSPy 3.0.4 forbids auto and max_metric_calls together. Resolve CLI auto to
-    # a concrete cap outside this API, and also enforce it in MetricLimiter.
+    # GEPA checks its budget only between iterations. Reserve a complete
+    # validation pass and two reflection minibatches below the hard limiter.
+    gepa_cap = optimizer_metric_budget(max_metric_calls, len(devset), minibatch_size)
     optimizer = dspy.GEPA(metric=metric, reflection_lm=reflection_lm,
-                          max_metric_calls=max_metric_calls, num_threads=1,
+                          max_metric_calls=gepa_cap, num_threads=1,
+                          reflection_minibatch_size=minibatch_size, use_merge=False,
+                          component_selector="round_robin", instruction_proposer=instruction_proposer,
                           seed=seed, log_dir=log_dir, track_stats=True)
     return optimizer.compile(program, trainset=trainset, valset=devset)
+
+
+def optimizer_metric_budget(limit, validation_size, minibatch_size):
+    if any(type(n) is not int or n < 1 for n in (limit, validation_size, minibatch_size)):
+        raise ValueError("Positive metric cap, validation size and minibatch size are required")
+    cap = limit - validation_size - 2 * minibatch_size
+    if cap < validation_size:
+        raise ValueError("Metric cap cannot fit baseline plus validation and two minibatches of headroom")
+    return cap
+
+
+def resume_binding(args, *, model, cert_id, splits, dev_rows, limit):
+    """Bind private GEPA state to exact inputs and immutable runtime settings."""
+    data = {"version": 2, "stage": args.stage, "method": args.method,
+            "student_model": model, "checker_model": args.checker_model,
+            "reflection_model": args.reflection_model, "cert_id": cert_id,
+            "doccheck_policy": args.doccheck_policy, "seed": args.seed,
+            "metric_limit": limit, "minibatch_size": args.minibatch_size,
+            "max_output_tokens": args.max_output_tokens,
+            "bootstrap_mode": args.bootstrap_mode, "demos_per_domain": args.demos_per_domain,
+            "train": splits["train"], "dev": dev_rows,
+            "test_objectives": sorted({row["objective_id"] for row in splits["test"]})}
+    return hashlib.sha256(json.dumps(data, sort_keys=True, allow_nan=False).encode()).hexdigest()
+
+
+def prepare_run_directory(run_dir, *, resume, binding):
+    report_path = run_dir / "run.json"
+    if resume:
+        if not report_path.is_file():
+            raise SystemExit("Resume requires this run's manifest and persisted state")
+        prior = json.loads(report_path.read_text())
+        if prior.get("resume_binding") != binding:
+            raise SystemExit("Resume settings or dataset differ from the stopped run manifest")
+        if prior.get("status") not in ("stopped", "failed", "started"):
+            raise SystemExit("Only an unfinished optimizer run can resume")
+        if not (run_dir / "metric-state.json").is_file():
+            raise SystemExit("Resume requires persisted metric accounting")
+        return prior
+    if run_dir.exists():
+        raise SystemExit("Refusing an existing optimizer run directory; use --resume with the same manifest")
+    run_dir.mkdir(parents=True, exist_ok=False)
+    return None
 
 
 def parser():
@@ -225,7 +271,9 @@ def parser():
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--student-model", default=DEFAULT_STUDENT)
     p.add_argument("--cert-id", help="Filter one certification; required when a dataset contains multiple certifications")
-    p.add_argument("--reflection-model")
+    p.add_argument("--reflection-model", default="anthropic/claude-sonnet-5.5")
+    p.add_argument("--minibatch-size", type=int, default=6)
+    p.add_argument("--resume", action="store_true", help="Resume only this manifest-bound unfinished run")
     p.add_argument("--checker-model", help="Plan proof checker; omitted means production writer model")
     p.add_argument("--include-evidence-metric", action="store_true")
     p.add_argument("--max-metric-calls", type=int)
@@ -282,13 +330,17 @@ def main(argv=None):
         raise SystemExit("Nonempty training data and GEPA development data are required")
     metric_impl = (make_plan_metric(writer_model=model, checker_model=args.checker_model)
                    if args.stage == "plan" else make_draft_metric(include_evidence=args.include_evidence_metric))
-    metric = MetricLimiter(metric_impl, limit, cache=True)
+    if args.method == "gepa":
+        optimizer_metric_budget(limit, len(dev), args.minibatch_size)
     run_dir = args.output.parent / (args.output.stem + ".run")
-    if run_dir.exists():
-        raise SystemExit("Refusing an existing optimizer run directory; use a fresh output name, never resume foreign GEPA state")
-    run_dir.mkdir(parents=True, exist_ok=False)
-    # GEPA resumes state from its log directory automatically. Every optimizer
-    # run gets a fresh directory so a changed split cannot inherit old demos.
+    binding = resume_binding(args, model=model, cert_id=cert_id, splits=splits,
+                             dev_rows=dev_rows, limit=limit)
+    prior = prepare_run_directory(run_dir, resume=args.resume, binding=binding)
+    metric = MetricLimiter(metric_impl, limit, cache=True,
+                           state_path=run_dir / "metric-state.json", resume=args.resume)
+    metric._save()
+    # Native GEPA resumes its own state; the binding prevents foreign state or
+    # changed examples from inheriting old scores, demos or accounting.
     budget = SpendBudget(args.budget_usd, json.loads(args.prices.read_text()), run_dir / "spend.jsonl")
     program = StageProgram(args.stage, model, args.max_output_tokens,
                            cert_id=cert_id, doccheck_policy=args.doccheck_policy)
@@ -299,9 +351,14 @@ def main(argv=None):
               "training_objectives": sorted({row["objective_id"] for row in train_rows}),
               "test_objectives": sorted({row["objective_id"] for row in splits["test"]}),
               "status": "started", "max_metric_calls": limit,
+              "resume_binding": binding, "resumed": args.resume,
+              "previous_status": prior.get("status") if prior else None,
+              "minibatch_size": args.minibatch_size,
+              "gepa_metric_cap": optimizer_metric_budget(limit, len(dev), args.minibatch_size) if args.method == "gepa" else None,
               "cert_id": cert_id, "doccheck_policy": args.doccheck_policy,
               "dev_examples": len(dev_rows),
               "development_objectives": sorted({row["objective_id"] for row in dev_rows})}
+    (run_dir / "run.json").write_text(json.dumps(report, indent=2) + "\n")
     try:
         with budgeted_calls(budget, cli_output_tokens=args.cli_output_token_bound):
             reflection = None
@@ -312,7 +369,8 @@ def main(argv=None):
             optimized = compile_program(program, method=args.method, trainset=train, devset=dev,
                                         metric=metric, reflection_lm=reflection,
                                         max_metric_calls=limit, seed=args.seed,
-                                        bootstrap_mode=args.bootstrap_mode, log_dir=str(run_dir / "gepa"))
+                                        bootstrap_mode=args.bootstrap_mode, log_dir=str(run_dir / "gepa"),
+                                        minibatch_size=args.minibatch_size)
         fields = set(signature.fields)
         demos = [{key: value for key, value in dict(demo).items() if key in fields}
                  for demo in optimized.writer.demos]

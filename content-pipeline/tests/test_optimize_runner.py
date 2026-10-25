@@ -151,8 +151,10 @@ def test_gepa_configuration_only_sets_concrete_cap(monkeypatch):
     monkeypatch.setattr(dspy, "GEPA", FakeGEPA)
     student = optimizer.StageProgram("plan", MODEL)
     assert optimizer.compile_program(student, method="gepa", trainset=[1], devset=[2],
-                                     metric=lambda *a: None, reflection_lm=object(), max_metric_calls=7) is student
+                                     metric=lambda *a: None, reflection_lm=object(), max_metric_calls=20) is student
     assert captured["max_metric_calls"] == 7 and "auto" not in captured
+    assert captured["reflection_minibatch_size"] == 6
+    assert captured["use_merge"] is False and captured["component_selector"] == "round_robin"
     assert captured["num_threads"] == 1
 
 

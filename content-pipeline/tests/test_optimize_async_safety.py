@@ -69,7 +69,7 @@ def test_real_gepa_compile_cap_uses_inline_execution(monkeypatch):
         optimizer.compile_program(
             optimizer.StageProgram("plan", MODEL), method="gepa", trainset=[example],
             devset=[example, example, example], metric=metric,
-            reflection_lm=DummyLM([]), max_metric_calls=1,
+            reflection_lm=DummyLM([]), max_metric_calls=20,
         )
     assert metric.calls == 1
     assert len(lm.history) == 2
@@ -117,7 +117,7 @@ def test_real_gepa_mutation_completes_with_cached_feedback(monkeypatch):
         optimizer.StageProgram("plan", MODEL), method="gepa",
         trainset=[optimizer.to_example(train_row, signature)],
         devset=[optimizer.to_example(dev_row, signature)], metric=metric,
-        reflection_lm=reflection, max_metric_calls=8,
+        reflection_lm=reflection, max_metric_calls=8, minibatch_size=1,
     )
     assert compiled.writer is not None
     assert reflection.history  # At least one actual reflective mutation, not baseline-only.

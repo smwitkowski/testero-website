@@ -107,7 +107,7 @@ class SpendBudget:
 
 
 class MetricLimiter:
-    def __init__(self, metric, limit, *, cache=False):
+    def __init__(self, metric, limit, *, cache=False, state_path=None, resume=False):
         if type(limit) is not int or limit < 1:
             raise ValueError("Metric call limit must be positive")
         self.metric, self.limit, self.calls = metric, limit, 0
@@ -115,6 +115,42 @@ class MetricLimiter:
         self.cache_enabled, self.cache_hits = cache, 0
         self._cache = {}
         self.lock = RLock()
+        self.state_path = Path(state_path) if state_path is not None else None
+        if resume:
+            if self.state_path is None or not self.state_path.is_file():
+                raise ValueError("Resume requires persisted metric accounting")
+            state = json.loads(self.state_path.read_text())
+            if state.get("version") != 1 or state.get("limit") != limit:
+                raise ValueError("Metric resume state does not match this run")
+            calls = state.get("calls")
+            if type(calls) is not int or not 0 <= calls <= limit:
+                raise ValueError("Invalid persisted metric call count")
+            self.calls, self.scores = calls, state["scores"]
+            self.cache_hits = state["cache_hits"]
+            import dspy
+            self._cache = {key: dspy.Prediction(**value) for key, value in state["cache"].items()}
+
+    def _save(self):
+        if self.state_path is None:
+            return
+        state = {"version": 1, "limit": self.limit, "calls": self.calls,
+                 "scores": self.scores, "cache_hits": self.cache_hits,
+                 "cache": {key: dict(value) for key, value in self._cache.items()}}
+        temporary = self.state_path.with_suffix(".tmp")
+        temporary.write_text(json.dumps(state, allow_nan=False) + "\n")
+        temporary.replace(self.state_path)
+
+    @staticmethod
+    def _route(result, pred_name):
+        from copy import deepcopy
+        routed = deepcopy(result)
+        messages = getattr(routed, "feedback_by_predictor", {})
+        if pred_name and isinstance(messages, dict):
+            # DSPy may use a fully qualified predictor name.
+            name = pred_name.rsplit(".", 1)[-1]
+            if name in messages:
+                routed.feedback = messages[name]
+        return routed
 
     @staticmethod
     def _key(gold, pred):
@@ -130,18 +166,19 @@ class MetricLimiter:
         return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
     def __call__(self, gold, pred, trace=None, pred_name=None, pred_trace=None):
-        # These writer-stage metrics depend only on gold/candidate data, not
-        # trace or predictor names. GEPA asks again for reflection feedback;
-        # reuse the exact scored verdict instead of paying the judge twice.
+        # Cache the expensive verdict once, then route its component-specific
+        # feedback without paying the checker/critic again for reflection.
         from copy import deepcopy
         key = self._key(gold, pred) if self.cache_enabled else None
         with self.lock:
             if key is not None and key in self._cache:
                 self.cache_hits += 1
-                return deepcopy(self._cache[key])
+                self._save()
+                return self._route(self._cache[key], pred_name)
             if self.calls >= self.limit:
                 raise MetricLimitExceeded("Metric call cap reached")
             self.calls += 1
+            self._save()  # Admission survives a crash or failed checker call.
             result = self.metric(gold, pred, trace, pred_name, pred_trace)
             score = getattr(result, "score", result)
             if type(score) in (int, float):
@@ -150,7 +187,8 @@ class MetricLimiter:
                     self.scores.append(float(score))
             if key is not None:
                 self._cache[key] = deepcopy(result)
-            return result
+            self._save()
+            return self._route(result, pred_name)
 
 
 @contextmanager
