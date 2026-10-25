@@ -260,6 +260,7 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--subsection", default=None, help="Optional guide subsection filter.")
 @click.option("--objective", "objective_ids", multiple=True, help="Repeatable registry objective ID; overrides weights with round-robin targets in flag order.")
 @click.option("--distractor-evidence", type=click.Choice(["strict", "consistent"]), default="strict", show_default=True, help="Freeze decision/evidence review policy for this batch.")
+@click.option("--doccheck-policy", type=click.Choice(["v5", "v6"]), default="v5", show_default=True, help="Decision planning/proof policy; independent council gates are unchanged.")
 @click.option("--doc-context-chars", type=click.IntRange(min=1), default=DEFAULT_DOC_CONTEXT_CHARS, show_default=True, help="Maximum fetched-document context characters per stage; required receipts must fit or the stage fails closed.")
 @click.option("--doc-cache/--no-doc-cache", default=True, show_default=True, help="Reuse 7-day on-disk public official-document snapshots (IO only).")
 @click.option("--verify-retrieval", is_flag=True, help="Opt in to per-claim BM25 queries with adjacent spans and one evidence-missing full-doc escalation (cheap context at most about 45k estimated doc tokens; escalation uses the configured full-source budget).")
@@ -286,11 +287,13 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
          parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None, existing_questions=None, argon_gate=False,
          target_accepted=None, expected_yield=0.29, distractor_evidence="strict", plan_only=False, emit_taxonomy=False,
          doc_cache=True, verify_retrieval=False, verify_stable_prefix=True, decision_attempts=3,
-         doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS, frozen_plan=None, continue_quality_rejections=False):
+         doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS, frozen_plan=None, continue_quality_rejections=False, doccheck_policy="v5"):
     retry_manifest = None
     try:
         from shared.distractor_evidence import evidence_policy
         frozen_evidence = evidence_policy(distractor_evidence)
+        if doccheck_policy not in ("v5", "v6"):
+            raise ValueError("Unsupported doccheck policy")
         n_questions = candidate_budget(n_questions, target_accepted, expected_yield)
         if argon_gate:
             if judge_model != "external":
@@ -319,7 +322,11 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
     except ValueError as exc:
         raise click.ClickException(str(exc)) from None
     for scope in plan:
+        if frozen_plan is not None and scope.get("doccheck_policy", "v5") != doccheck_policy:
+            raise click.ClickException("Doccheck policy differs from frozen retry source")
         scope["distractor_evidence"] = dict(frozen_evidence)
+        if doccheck_policy == "v6":
+            scope["doccheck_policy"] = doccheck_policy
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     artifact = artifact or ARTIFACT_ROOT / f"{cert}-{stamp}.json"
     if not artifact.resolve().is_relative_to(ARTIFACT_ROOT.resolve()) or artifact.suffix != ".json":
@@ -345,6 +352,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                                          "per_option_retrieval": verify_retrieval,
                                          "stable_prefix": verify_stable_prefix,
                                          "decision_attempts": decision_attempts}}
+    if doccheck_policy == "v6":
+        payload["doccheck_policy"] = doccheck_policy
     tuned = uses_pde_style(plan[0]["style_policy"])
     bank_actions = [{"id": row["id"], "best_action": row["key"], "product_context": row["stem"]}
                     for row in bank["questions"]] if tuned else []
@@ -432,6 +441,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                         scope = tune_generation_scope(base, index - 1, coverage_scope=original["topic_coverage_scope"],
                                                       policy=payload["generation_policy"])
                     scope["distractor_evidence"] = dict(frozen_evidence)
+                    if doccheck_policy == "v6":
+                        scope["doccheck_policy"] = doccheck_policy
                     objective_rotations[index] = {"from": original["objective_id"], "to": selected,
                                                   "fair_share": fair_share}
                     plan[index - 1] = scope
@@ -447,6 +458,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                  "evidence": [], "citation_attempts": [], "mechanical_check": {"passed": False, "errors": ["No fetched evidence"]},
                  "judge_verdict": {"passed": False, "score": 0.0, "reason": "Not judged", "model": judge_model},
                  "accepted": False}
+        if doccheck_policy == "v6":
+            entry["doccheck_policy"] = doccheck_policy
         if tuned:
             entry.update({key: scope[key] for key in TUNING_SCOPE_FIELDS})
         if index in objective_rotations:

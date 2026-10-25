@@ -1,0 +1,117 @@
+{
+  "source_commit": "5c9814c",
+  "cases": [
+    {
+      "cert": "machine-learning-engineer",
+      "mode": "strict",
+      "stable": false,
+      "kind": "plan",
+      "sha256": "62aa0e5b2608df128b52fcd2ea06488826c47ba7738a2367c57c2f69a47cb551"
+    },
+    {
+      "cert": "machine-learning-engineer",
+      "mode": "strict",
+      "stable": false,
+      "kind": "verify",
+      "sha256": "e9da212c4fdd7e1f3761ed3fc9a8ea4bc4c36ed06797aa7265fa8a9c6f30bead"
+    },
+    {
+      "cert": "machine-learning-engineer",
+      "mode": "strict",
+      "stable": true,
+      "kind": "plan",
+      "sha256": "3921d47c8f2c48a182bb030612ba9511eb824f6892f1d9b4cc6ba7389bdaeb54"
+    },
+    {
+      "cert": "machine-learning-engineer",
+      "mode": "strict",
+      "stable": true,
+      "kind": "verify",
+      "sha256": "c116adcbe3b1a447f7083c56f028c71dfbe9403de96aa9a6e42178759f155a40"
+    },
+    {
+      "cert": "machine-learning-engineer",
+      "mode": "consistent",
+      "stable": false,
+      "kind": "plan",
+      "sha256": "62aa0e5b2608df128b52fcd2ea06488826c47ba7738a2367c57c2f69a47cb551"
+    },
+    {
+      "cert": "machine-learning-engineer",
+      "mode": "consistent",
+      "stable": false,
+      "kind": "verify",
+      "sha256": "ab42e17b06bfb8eedc78a86fa71f387816758d55b807c4c0858b07bab61b2411"
+    },
+    {
+      "cert": "machine-learning-engineer",
+      "mode": "consistent",
+      "stable": true,
+      "kind": "plan",
+      "sha256": "3921d47c8f2c48a182bb030612ba9511eb824f6892f1d9b4cc6ba7389bdaeb54"
+    },
+    {
+      "cert": "machine-learning-engineer",
+      "mode": "consistent",
+      "stable": true,
+      "kind": "verify",
+      "sha256": "62e5606559176d5c5062ed4885d95839fa30a92691987b08dd48189c13ec572e"
+    },
+    {
+      "cert": "data-engineer",
+      "mode": "strict",
+      "stable": false,
+      "kind": "plan",
+      "sha256": "e8a68f5689f3ad53e76ad762d04dc55ba811095536e610b33137cbc52c4b2345"
+    },
+    {
+      "cert": "data-engineer",
+      "mode": "strict",
+      "stable": false,
+      "kind": "verify",
+      "sha256": "681ff737b6b6fd616418df33ff3409f99e3c8f3c4e011ba096801b78b67bbed4"
+    },
+    {
+      "cert": "data-engineer",
+      "mode": "strict",
+      "stable": true,
+      "kind": "plan",
+      "sha256": "e29eb7136839e4f101ed2033f558c1441d663df9f573a37cbb355465764e889d"
+    },
+    {
+      "cert": "data-engineer",
+      "mode": "strict",
+      "stable": true,
+      "kind": "verify",
+      "sha256": "7b395cf4e1d33d7b8edf218272cfaae678698364004b4928e12130ee0c9a9cdc"
+    },
+    {
+      "cert": "data-engineer",
+      "mode": "consistent",
+      "stable": false,
+      "kind": "plan",
+      "sha256": "e8a68f5689f3ad53e76ad762d04dc55ba811095536e610b33137cbc52c4b2345"
+    },
+    {
+      "cert": "data-engineer",
+      "mode": "consistent",
+      "stable": false,
+      "kind": "verify",
+      "sha256": "1271fe01018d952f48e82c646446c374ae6d541765da6bace6b0e2323c026e42"
+    },
+    {
+      "cert": "data-engineer",
+      "mode": "consistent",
+      "stable": true,
+      "kind": "plan",
+      "sha256": "e29eb7136839e4f101ed2033f558c1441d663df9f573a37cbb355465764e889d"
+    },
+    {
+      "cert": "data-engineer",
+      "mode": "consistent",
+      "stable": true,
+      "kind": "verify",
+      "sha256": "0c82ebee2865c3b417b1ad8d9aafbebc02fa8f2e7700e067f97221f29697b606"
+    }
+  ]
+}

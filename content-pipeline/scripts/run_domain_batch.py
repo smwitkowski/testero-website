@@ -72,11 +72,13 @@ def export_questions(url, key, exam, path, *, fetch=None):
     return len(rows)
 
 
-def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resume=None):
+def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resume=None, doccheck_policy="v5"):
     """Build one gated batch; ``all`` keeps the full weighted cert plan unfiltered."""
     if (section != "all" and not re.fullmatch(r"[0-9]+\.", section)
             or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", tag)):
         raise ValueError("Section must be all or like 1.; tag must contain only letters, digits, _ or -")
+    if doccheck_policy not in ("v5", "v6"):
+        raise ValueError("Unsupported doccheck policy")
     context = load_cert_context(cert)
     domain = None
     if section != "all":
@@ -100,6 +102,8 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resu
                 or saved.get("planned_count") != len(saved["plan"])
                 or (count is not None and count != len(saved["plan"]))):
             raise ValueError("Resume count or scope differs from the saved full plan")
+        if saved.get("doccheck_policy", "v5") != doccheck_policy:
+            raise ValueError("Doccheck policy differs from saved batch")
         count = len(saved["plan"])
         base = artifact.with_suffix("")
     else:
@@ -119,6 +123,8 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resu
                 "--parallel", str(parallel), "--gen-effort", "high", "--cite-effort", "medium",
                 "--argon-gate", "--distractor-evidence", "consistent",
                 "--doc-cache", "--verify-stable-prefix", "--artifact", str(artifact)]
+    if doccheck_policy == "v6":
+        generate += ["--doccheck-policy", doccheck_policy]
     if domain is not None:
         for objective in domain["objectives"]:
             generate += ["--objective", objective["objective_id"]]
@@ -197,6 +203,7 @@ def judge_with_system_retries(command, execute):
 @click.argument("cert", default=DEFAULT_CERT)
 @click.option("--count", type=click.IntRange(min=1), default=None, envvar="N",
               help="Total candidates: 40 for all sections, 30 for a single section (overridden by N).")
+@click.option("--doccheck-policy", type=click.Choice(["v5", "v6"]), default="v5", show_default=True, help="Freeze decision documentation policy; council remains unchanged.")
 @click.option("--parallel", type=click.IntRange(1, 4), default=3, envvar="PARALLEL", show_default=True)
 @click.option("--retry-attempts", type=click.IntRange(min=0, max=10), default=2, show_default=True,
               help="Extra same-slot attempts for full-plan PDE; gates never change.")
@@ -210,7 +217,7 @@ def judge_with_system_retries(command, execute):
 @click.option("--write", is_flag=True,
               help="Coordinator authorization for resume DRAFT writes; resume is dry admission without this flag.")
 def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
-         acknowledge_saved_system_failures, write, nightly_result):
+         acknowledge_saved_system_failures, write, nightly_result, doccheck_policy="v5"):
     """Run SECTION (e.g. 1. or all) as one artifact; all uses the weighted cert plan."""
     from scripts.nightly_outcome import ordinary_failure, write_result, NightlyHardStop
     if nightly_result is not None:
@@ -223,7 +230,7 @@ def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
         if write and (plan_only or section != "all" or cert != "data-engineer"):
             raise ValueError("--write requires a full-plan PDE run")
         artifact, export, commands = batch_commands(section, tag, cert, count, parallel,
-                                                   plan_only=plan_only, resume=resume)
+                                                   plan_only=plan_only, resume=resume, doccheck_policy=doccheck_policy)
         artifact.parent.mkdir(parents=True, exist_ok=True)
         if not plan_only and (resume is None or write):
             url, key = os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_SERVICE_ROLE_KEY")

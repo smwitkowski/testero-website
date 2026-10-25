@@ -161,7 +161,14 @@ def _scope(payload, entry):
     elif "generation_policy" in payload or any(key in scope or key in entry for key in TUNING_SCOPE_FIELDS):
         raise ValueError("PDE generation hints require frozen rules-v5.2 provenance")
     # Deterministic registry scope stays exact; LLM decision/proof data is frozen separately.
-    provenance_fields = {"objective_offset", "decision_plan", "decision_proof", "decision_objective", "style_policy", "distractor_evidence"}
+    provenance_fields = {"objective_offset", "decision_plan", "decision_proof", "decision_objective", "style_policy", "distractor_evidence", "doccheck_policy"}
+    if "doccheck_policy" in payload:
+        if (payload["doccheck_policy"] not in ("v5", "v6")
+                or scope.get("doccheck_policy") != payload["doccheck_policy"]
+                or entry.get("doccheck_policy") != payload["doccheck_policy"]):
+            raise ValueError("Mixed frozen doccheck policies")
+    elif "doccheck_policy" in scope or "doccheck_policy" in entry:
+        raise ValueError("Doccheck policy requires frozen batch provenance")
     from shared.distractor_evidence import validate_policy
     if "distractor_evidence" in payload:
         validate_policy(payload["distractor_evidence"])
