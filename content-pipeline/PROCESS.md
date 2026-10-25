@@ -1,5 +1,14 @@
 # Docs-grounded question process
 
+## Opt-in decision doccheck policy (v5 default)
+
+`--doccheck-policy v6` opts new planning/proof into constraint-based losing reasons,
+option-local repairs, positive distractor discovery, upfront current names and
+literal A-D proof labels. V5 remains the default for the A/B. Independent council
+rubrics and all evidence gates remain unchanged. See [the offline evidence and
+coordinator-only 40-vs-40 generation/judging runbook](docs/doccheck-policy-v6.md).
+No live comparison or production writes were run for this change.
+
 ## Pipeline v6 week 1 (D-045; coordinator-operated live rollout)
 
 New generation freezes `execution_policy: short_circuit_v2` and Argon request
