@@ -14,7 +14,7 @@ DEFAULT_REFLECTION_MODEL = "openrouter/anthropic/claude-sonnet-5.5"
 
 
 def encode_plan_components(components=None):
-    values = {**default_components(), **validate_components(components or {})}
+    values = {**default_components(), **validate_components({} if components is None else components)}
     return json.dumps({name: values[name] for name in PLAN_KEYS}, ensure_ascii=False, sort_keys=True)
 
 
@@ -45,11 +45,14 @@ _FORBIDDEN = re.compile(
     r"scenario_reasons_supported|no_feature_gotchas|failing_options|literal_elimination|"
     r"evidence_supported|evidence_gap|mechanical_check)\b", re.I)
 _NEGATIVE_COMPARATIVE = re.compile(
-    r"\b(?:slower|worse|less efficient|more expensive|less capable|inferior)\s+than\b|"
+    r"\b(?:less|more|higher|lower|greater|fewer|smaller|larger|faster|cheaper|"
+    r"slower|costlier|safer|better|worse|inferior|superior)\b[^.!?\n]{0,60}\bthan\b|"
+    r"\bnot\s+as\b[^.!?\n]{0,60}\bas\b|"
     r"\brequires?\s+(?:a\s+)?(?:redevelopment|rewrit(?:e|ing))\b", re.I)
 _ASSERT_SUPPORT = re.compile(
-    r"\b(?:assert|declare|mark|report|return|set|label|output|pretend|claim)\b"
-    r".{0,80}\b(?:support(?:ed)?|true|verified|evidence)\b", re.I | re.S)
+    r"\b(?:assert|declare|mark|report|return|set|label|output|pretend|claim|"
+    r"assume|treat|consider|present|force|certify|fabricate)\b"
+    r".{0,80}\b(?:support(?:ed)?|true|verified|evidence|authoritative)\b", re.I | re.S)
 
 
 def lint_component(name, text):
