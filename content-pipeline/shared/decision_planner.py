@@ -2,11 +2,9 @@
 from __future__ import annotations
 
 import json
-import time
 from typing import Annotated
 
 import dspy
-from shared.call_logging import log_lm_calls
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from shared.doc_search import documentation_context
@@ -146,25 +144,13 @@ class DecisionVetoError(ValueError):
     """The replacement decision still lacks support; discard the candidate."""
 
 
-def _predict(signature, inputs, model, reasoning_effort):
+def _predict(signature, inputs, model, reasoning_effort, *, max_tokens=None):
     if model == "codex" or model.startswith("codex/"):
         from shared.cli_models import run_signature
         return run_signature(model, signature, inputs, reasoning_effort=reasoning_effort)
-    from shared.llm_generator import _generation_lm, GenerationOutputError
-    from shared.cli_models import output_model
-    from shared.completion_diagnostics import CompletionCaptureAdapter
-    from shared.llm_limits import reject_token_limit
-    from dspy.utils.exceptions import AdapterParseError
-    lm = _generation_lm(model)
-    adapter = CompletionCaptureAdapter(preserve_receipts=True)
-    try:
-        with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
-            result = dspy.Predict(signature)(**inputs, lm=lm, config={"rollout_id": time.time_ns()})
-        return output_model(signature).model_validate({
-            key: getattr(result, key) for key in signature.output_fields
-        }).model_dump()
-    except AdapterParseError:
-        raise GenerationOutputError(adapter.raw_response, adapter.capture.failure()) from None
+    from shared.llm_generator import _predict_writer, GENERATION_MAX_TOKENS
+    return _predict_writer(signature, inputs, model,
+                           max_tokens=GENERATION_MAX_TOKENS if max_tokens is None else max_tokens)
 
 
 def ordered_signature(signature, names):
@@ -188,11 +174,12 @@ def planning_prompt(scope, *, difficulty="MEDIUM", replacement_feedback="", exis
     return signature, inputs
 
 
-def plan_decision(scope, *, model, difficulty="MEDIUM", replacement_feedback="", existing_scenarios=(), reasoning_effort="high", predictor=None, stable_prefix=False):
+def plan_decision(scope, *, model, difficulty="MEDIUM", replacement_feedback="", existing_scenarios=(), reasoning_effort="high", predictor=None, stable_prefix=False, max_tokens=None):
     from shared.cli_models import output_model
     signature, inputs = planning_prompt(scope, difficulty=difficulty, replacement_feedback=replacement_feedback,
                                         existing_scenarios=existing_scenarios, stable_prefix=stable_prefix)
-    output = predictor(**inputs) if predictor else _predict(signature, inputs, model, reasoning_effort)
+    budget = {} if max_tokens is None else {"max_tokens": max_tokens}
+    output = predictor(**inputs) if predictor else _predict(signature, inputs, model, reasoning_effort, **budget)
     plan = output_model(DecisionPlanSignature).model_validate(output).model_dump()["plan"]
     if plan["objective_id"] != scope["objective_id"]:
         raise ValueError("Decision plan changed the selected objective")
@@ -267,12 +254,13 @@ def verification_prompt(scope, plan, sources, *, retrieval=None, stable_prefix=F
 
 def verify_decision(scope, plan, sources, *, model, reasoning_effort="medium", predictor=None,
                     retrieval=None, stable_prefix=False, doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS,
-                    budget_metadata=None):
+                    budget_metadata=None, max_tokens=None):
     from shared.cli_models import output_model
     metadata = budget_metadata if budget_metadata is not None else {}
     signature, inputs = verification_prompt(scope, plan, sources, retrieval=retrieval,
         stable_prefix=stable_prefix, doc_context_chars=doc_context_chars, budget_metadata=metadata)
-    raw = predictor(**inputs) if predictor else _predict(signature, inputs, model, reasoning_effort)
+    budget = {} if max_tokens is None else {"max_tokens": max_tokens}
+    raw = predictor(**inputs) if predictor else _predict(signature, inputs, model, reasoning_effort, **budget)
     proof = output_model(signature).model_validate(raw).model_dump()
     if "distractor_evidence" in scope:
         proof["distractor_evidence"] = dict(scope["distractor_evidence"])

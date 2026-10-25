@@ -138,6 +138,31 @@ an attestation, not a bypass. It promotes only that run's judge-passed DRAFT/GOO
 rows to `ACTIVE`, prints counts, and is idempotent. Re-running after successful
 approval prints `Promoted: 0`. Review markdown is local and gitignored.
 
+## OpenRouter writer output contract
+
+Decision planning, documentation veto, and question writing default to a 32,000
+output-token cap (including reasoning). The Python writer APIs accept a per-call
+`max_tokens` override. A provider `length`/`max_tokens` finish remains a terminal
+`MaxTokensTruncation`; a larger cap is not evidence that a model will finish.
+The separate citation-repair API keeps its existing budget and receipt behavior.
+
+Declare supported parameters explicitly from OpenRouter model metadata before a
+comparison run. No model discovery request is made by the writer. For example,
+**only after confirming support for your selected model**, supply this JSON map
+in the process environment (the name below is an illustrative placeholder):
+
+```bash
+export TESTERO_OPENROUTER_MODEL_PARAMETERS='{"vendor/model-id":["structured_outputs","response_format"]}'
+```
+
+Either supported parameter selects one schema-enforced JSON call, using the same
+strict output schema as Codex. Model keys may include the `openrouter/` prefix.
+Unconfigured models use one ChatAdapter call with whitespace-tolerant markers,
+then the same strict output model. There is no adapter retry or automatic model
+switch after a schema error. Validation failures record only field paths and error
+types under candidate `diagnostics.validation_errors`, not input/answer values.
+Codex, council judging, and nightly paid-generation prohibitions are unchanged.
+
 ## Offline tests
 
 ```bash

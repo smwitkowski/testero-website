@@ -1,0 +1,84 @@
+{
+  "provenance": {
+    "scope": "Minimal excerpts from allowed pilot artifacts; no provider calls in replay.",
+    "higher_cap_success": "Synthetic regression only; not a recovered live completion or live proof that a larger cap succeeds.",
+    "validation_paths": "Synthetic regression only: live ValidationError artifacts lost raw response, so no live field paths were recovered."
+  },
+  "recorded_token_limit": {
+    "artifact": "machine-learning-engineer-v5-mtest-inception-mercury-3-10251019.json",
+    "path": [
+      "candidates",
+      0
+    ],
+    "model": "openrouter/inception/mercury-3",
+    "error_class": "MaxTokensTruncation",
+    "max_tokens": 8000,
+    "max_tokens_provenance": "Historical writer cap; not inferred from provider usage.",
+    "diagnostics": {
+      "finish_reason": "length",
+      "usage": {
+        "prompt_tokens": 3813,
+        "completion_tokens": 7685,
+        "total_tokens": 11498,
+        "completion_tokens_details": {
+          "reasoning_tokens": 7685
+        }
+      }
+    }
+  },
+  "recorded_marker_slip": {
+    "artifact": "machine-learning-engineer-v5-mtest-openai-gpt-6-luna-10251033.json",
+    "path": [
+      "candidates",
+      1
+    ],
+    "model": "openrouter/openai/gpt-6-luna",
+    "signature": "DecisionProofSignature",
+    "error_class": "GenerationOutputError",
+    "raw_response": "[[ ## supported ## ]]\nFalse\n\n[[ ## uniquely_best ## ]]\nFalse\n\n[[ ## scenario_reasons_supported ## ]]\nFalse\n\n[[ ## no_feature_gotchas ## ]]\nFalse\n\n[[ ## reason ## ]]\nThe decisive recommendation to keep preprocessing in an in-memory Python framework is not directly supported by the fetched documentation, which does not establish that choice as suitable or uniquely best for this scenario. Replace the plan with one whose key action has direct documentation support.\n\n[[ ## reasons ## ]]\n[]\n\n[[ ## completed ##]]",
+    "diagnostics": {
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 48387,
+        "completion_tokens": 289,
+        "total_tokens": 48676,
+        "completion_tokens_details": {
+          "reasoning_tokens": 182
+        }
+      }
+    }
+  },
+  "synthetic_question": {
+    "stem": "A team needs managed online predictions. Which service fits?",
+    "correct_answer": "Vertex AI online prediction",
+    "distractor_1": "Cloud Storage object hosting",
+    "distractor_2": "BigQuery batch SQL queries",
+    "distractor_3": "Cloud Monitoring metric dashboards",
+    "correct_explanation": "Vertex AI serves deployed model predictions online.",
+    "distractor_1_explanation": "Object hosting does not run model inference.",
+    "distractor_2_explanation": "Batch SQL is not an online endpoint.",
+    "distractor_3_explanation": "Metric dashboards do not serve predictions."
+  },
+  "synthetic_receipts": [
+    {
+      "option_label": "A",
+      "url": "https://docs.cloud.google.com/vertex-ai/docs/predictions/overview",
+      "quote": "Vertex AI serves online predictions for deployed models."
+    },
+    {
+      "option_label": "B",
+      "url": "https://docs.cloud.google.com/vertex-ai/docs/predictions/overview",
+      "quote": "Vertex AI serves online predictions for deployed models."
+    },
+    {
+      "option_label": "C",
+      "url": "https://docs.cloud.google.com/vertex-ai/docs/predictions/overview",
+      "quote": "Vertex AI serves online predictions for deployed models."
+    },
+    {
+      "option_label": "D",
+      "url": "https://docs.cloud.google.com/vertex-ai/docs/predictions/overview",
+      "quote": "Vertex AI serves online predictions for deployed models."
+    }
+  ]
+}

@@ -13,6 +13,10 @@ VENDORS = {
     "deepseek": ("deepseek-",), "meta-llama": ("llama-",),
     "mistralai": ("mistral-", "ministral-", "magistral-", "codestral-", "devstral-", "pixtral-"),
     "qwen": ("qwen",),
+    "moonshotai": ("kimi-",), "minimax": ("minimax-",),
+    "reflection": ("beam-",), "inception": ("mercury-",),
+    "nvidia": ("nemotron-",), "cohere": ("command-",),
+    "xiaomi": ("mimo-",), "z-ai": ("glm-",), "meta": ("muse-",),
 }
 
 

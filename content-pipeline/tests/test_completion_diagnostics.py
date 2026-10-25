@@ -237,11 +237,11 @@ def test_reasoning_token_counter_is_allowlisted_without_hidden_text(reasoning):
     assert "PRIVATE" not in str(capture.failure())
 
 
-def test_generation_budget_is_16000_but_citation_default_unchanged(monkeypatch):
+def test_generation_budget_is_32000_but_citation_default_unchanged(monkeypatch):
     output = {name: name + " text" for name in generator.QUESTION_FIELDS}
     lm = DummyLM([{**output, "reasoning": "Short"}])
     factory = Mock(return_value=lm)
     monkeypatch.setattr(generator, "_generation_lm", factory)
     assert generator.generate_question("Objective", "Docs", model="offline/model") == output
-    factory.assert_called_once_with("offline/model", max_tokens=16000)
+    factory.assert_called_once_with("offline/model", max_tokens=32000)
     assert generator.cite_question.__kwdefaults__["max_tokens"] == 8000
