@@ -104,3 +104,10 @@ def test_checker_temperature_forwarded_only_when_set(monkeypatch):
     monkeypatch.setattr(cli_models, "run_signature", fake)
     planner.verify_decision(SCOPE, plan(), sources(), model="codex", temperature=0)
     assert "temperature" not in calls[2]
+
+
+def test_encoding_rejects_invalid_empty_container_and_duplicate_keys():
+    with pytest.raises(ValueError):
+        encode_plan_components([])
+    with pytest.raises(ValueError, match="Duplicate"):
+        decode_plan_components('{"plan.instructions":"One","plan.instructions":"Two","plan.distractor_guidance":"Three"}')
