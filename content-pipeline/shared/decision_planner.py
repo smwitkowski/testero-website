@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from typing import Annotated
+from typing import Annotated, Literal
 
 import dspy
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
@@ -150,7 +150,7 @@ class ConstraintDecisionProofSignature(DecisionProofSignature):
     confined to particular options. Include A for key, scenario, objective, global
     ambiguity or second-defensible-answer failures. Do not mark passing options.
     """
-    failing_options: list[Text] = dspy.OutputField()
+    failing_options: Annotated[list[Literal["A", "B", "C", "D"]], Field(max_length=4)] = dspy.OutputField()
 
 
 def doccheck_policy_for(scope):
@@ -200,7 +200,7 @@ def ordered_signature(signature, names):
     return dspy.Signature(fields, instructions=signature.instructions)
 
 
-def planning_prompt(scope, *, difficulty="MEDIUM", replacement_feedback="", existing_scenarios=(), stable_prefix=False):
+def planning_prompt(scope, *, difficulty="MEDIUM", replacement_feedback="", existing_scenarios=(), stable_prefix=False, repair_options=()):
     from shared.objective_style import policy_instructions
     from shared.question_style import practitioner_signature
     inputs = {"objective_scope": scope["domain_prompt"] + policy_instructions(scope.get("style_policy")), "difficulty": difficulty,
@@ -216,15 +216,28 @@ def planning_prompt(scope, *, difficulty="MEDIUM", replacement_feedback="", exis
             "comparative claims requiring explicit negative evidence, such as 'X is "
             "slower than Y' or 'Y requires redevelopment'. Do not invent positive "
             "claims or constraints; all proposals still need the full documentation veto.")
+        if repair_options:
+            if any(label not in ("B", "C", "D") for label in repair_options):
+                raise ValueError("Surgical repair can change only wrong options")
+            signature = signature.with_instructions(signature.instructions +
+                "\nThis attempt is an OPTION-LOCAL REPAIR, not a full replacement. "
+                "The full-replacement rule does not apply to this attempt. Return "
+                "the complete frozen plan from replacement_feedback byte-identically "
+                "except for actions/losing reasons of options " + ", ".join(repair_options) +
+                ". Keep the scenario, constraints, key A and passing options unchanged. "
+                "The repaired plan must pass a fresh full proof.")
+    elif repair_options:
+        raise ValueError("Surgical repair requires doccheck v6")
     if stable_prefix:
         signature = ordered_signature(signature, ["objective_scope", "difficulty", "existing_scenarios", "replacement_feedback"])
     return signature, inputs
 
 
-def plan_decision(scope, *, model, difficulty="MEDIUM", replacement_feedback="", existing_scenarios=(), reasoning_effort="high", predictor=None, stable_prefix=False, max_tokens=None):
+def plan_decision(scope, *, model, difficulty="MEDIUM", replacement_feedback="", existing_scenarios=(), reasoning_effort="high", predictor=None, stable_prefix=False, max_tokens=None, repair_options=()):
     from shared.cli_models import output_model
     signature, inputs = planning_prompt(scope, difficulty=difficulty, replacement_feedback=replacement_feedback,
-                                        existing_scenarios=existing_scenarios, stable_prefix=stable_prefix)
+                                        existing_scenarios=existing_scenarios, stable_prefix=stable_prefix,
+                                        repair_options=repair_options)
     budget = {} if max_tokens is None else {"max_tokens": max_tokens}
     output = predictor(**inputs) if predictor else _predict(signature, inputs, model, reasoning_effort, **budget)
     plan = output_model(DecisionPlanSignature).model_validate(output).model_dump()["plan"]

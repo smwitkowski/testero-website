@@ -479,6 +479,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             vetoed_decisions = []
             veto_feedback = []
             escalated = False  # At most one full-source budgeted verify per candidate.
+            repair_options = None
+            previous_decision = None
             for decision_attempt in range(decision_attempts):
                 stage = "decision_plan"
                 with write_lock:
@@ -488,9 +490,15 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                                   attempt=decision_attempt + 1, calls_path=str(artifact) + ".calls.jsonl"):
                     decision = system_call(plan_decision, scope, model=model, difficulty=difficulty,
                         replacement_feedback=feedback, existing_scenarios=summaries, reasoning_effort=gen_effort,
-                        **({"stable_prefix": True} if verify_stable_prefix else {}))
+                        **({"stable_prefix": True} if verify_stable_prefix else {}),
+                        **({"repair_options": repair_options} if repair_options else {}))
+                if repair_options is not None:
+                    from shared.doccheck_repair import validate_repair
+                    validate_repair(previous_decision, decision, repair_options)
                 attempt = {"attempt": decision_attempt + 1, "replacement_feedback": feedback,
                            "existing_scenarios": summaries, "plan": decision}
+                if repair_options is not None:
+                    attempt["repair_options"] = list(repair_options)
                 with write_lock:
                     planning_history[index] = decision
                 entry["decision_attempts"].append(attempt)
@@ -566,11 +574,18 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 attempt["proof"] = proof
                 if proof["passed"]:
                     break
-                vetoed_decisions.append(decision["engineering_decision"].casefold())
                 veto_feedback.append({"unsupported_decision": decision, "veto_reason": proof["reason"],
                                       "mechanical_errors": proof["mechanical_check"]["errors"]})
-                feedback = json.dumps({"previous_vetoes": veto_feedback,
-                    "instruction": "Replace the engineering decision, not the scenario with extra exceptions. Avoid the unverifiable claim and make each distractor clearly wrong on documented tradeoffs."})
+                if doccheck_policy == "v6":
+                    from shared.doccheck_repair import failing_distractors, repair_feedback
+                    repair_options = failing_distractors(proof)
+                if repair_options is not None:
+                    previous_decision = decision
+                    feedback = repair_feedback(decision, repair_options, veto_feedback)
+                else:
+                    vetoed_decisions.append(decision["engineering_decision"].casefold())
+                    feedback = json.dumps({"previous_vetoes": veto_feedback,
+                        "instruction": "Replace the engineering decision, not the scenario with extra exceptions. Avoid the unverifiable claim and make each distractor clearly wrong on documented tradeoffs."})
             else:
                 raise DecisionVetoError("Replacement decision vetoed; discard candidate: " + proof["reason"])
             # Objective text comes from the frozen reviewed registry, never the LM.
