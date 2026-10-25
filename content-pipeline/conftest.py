@@ -22,6 +22,10 @@ def block_network(monkeypatch):
     # Socket patches do not reach CLI child processes; block subscription calls too.
     from shared import cli_models
     monkeypatch.setattr(cli_models.subprocess, "run", forbidden)
+    # No real backoff waits or cross-process pacing in tests.
+    monkeypatch.setattr(cli_models, "CODEX_RATE_BACKOFF_SECONDS", (0.0, 0.0))
+    monkeypatch.setattr(cli_models, "CODEX_MIN_INTERVAL_SECONDS", 0.0)
+    monkeypatch.setattr(cli_models, "CODEX_PACE_FILE", cli_models.CLI_TEMP_ROOT.parent / "test-codex-pace")
 
 
 @pytest.fixture(autouse=True)
