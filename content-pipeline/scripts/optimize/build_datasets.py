@@ -181,6 +181,46 @@ def _council(path, payload, entry, scope, question):
             "distractor_evidence": scope.get("distractor_evidence"), "style_policy": scope.get("style_policy")}
 
 
+
+def _historical_council_outcome(path, entry, scope):
+    """Label only observed, request-bound council outcomes, never accepted=False.
+
+    A valid early seat veto is a known negative even when later seats were
+    skipped. Missing/malformed evidence is unknown, not a negative label.
+    """
+    from shared.argon_gate import evaluate_argon
+    from shared.distractor_evidence import verdict_gates
+    try:
+        question = candidate_question(entry)
+        candidate_storage_id(entry, scope, question)
+        request = _request(path, entry, scope)
+        raw = verdict_gates(entry.get("external_verdict"), scope.get("distractor_evidence"))
+        if not isinstance(raw, dict):
+            return None
+        observed = []
+        for name in ("style", "evidence", "blind_solver"):
+            seat = raw.get(name)
+            if not isinstance(seat, dict) or seat.get("status") == "skipped":
+                continue
+            passed, _ = evaluate_gate(name, seat, question, version=request["gate_version"],
+                                       style_policy=scope.get("style_policy"))
+            # UNCERTAIN is a council veto, not an invented FAIL label.
+            observed.append(passed)
+            if not passed:
+                return False
+        argon = raw.get("argon")
+        if isinstance(argon, dict) and argon.get("status") != "skipped":
+            if request["argon"].get("version") not in (1, 3):
+                return None  # Review-only historical Argon cannot establish all seats.
+            passed, _ = evaluate_argon(question, argon, request["argon"])
+            observed.append(passed)
+            if not passed:
+                return False
+        return True if len(observed) == 4 and all(observed) else None
+    except (KeyError, TypeError, ValueError, CLISchemaError):
+        return None
+
+
 def _normalize(text):
     import unicodedata
     return " ".join(unicodedata.normalize("NFKC", text).casefold().split())
@@ -321,6 +361,7 @@ def build_datasets(paths: Iterable[str | Path], output_dir: str | Path, seed: in
                       "stem_sha256": _text_hash(entry["stem"]) if isinstance(entry.get("stem"), str) else None}
             base = {"objective_id": ident, "domain": scope["domain_code"], "scope": scope, "source": source,
                     "objective_corpus": corpora.get(ident)}
+            council_outcome = _historical_council_outcome(path, entry, scope)
             attempts = entry.get("decision_attempts", [])
             if not isinstance(attempts, list):
                 attempts = []
@@ -345,7 +386,10 @@ def build_datasets(paths: Iterable[str | Path], output_dir: str | Path, seed: in
                         raise ValueError("Missing production planning fields")
                     _, inputs = planning_prompt(scope, difficulty=difficulty,
                                                  replacement_feedback=feedback, existing_scenarios=scenarios)
+                    # Council reviewed the final plan only, not earlier failed/repaired plans.
+                    matching_final = canonical_sha256(plan) == canonical_sha256(entry.get("decision_plan"))
                     row = {**base, "signature": "DecisionPlanSignature", "inputs": inputs,
+                           "council_outcome": council_outcome if matching_final else None,
                            "outputs": {"plan": plan}, "plan": plan, "proof": attempt["proof"],
                            "sources": attempt["sources"], "source": {**source, "attempt": ordinal},
                            "documentation_context_reference": {"artifact": str(path), "candidate_id": candidate,
@@ -371,7 +415,8 @@ def build_datasets(paths: Iterable[str | Path], output_dir: str | Path, seed: in
                           "exam_subsection": scope.get("subsection") or "", "gap_analysis_guidance": ""}
                 row = {**base, "signature": "QuestionWithEvidenceSignature", "inputs": inputs,
                        "outputs": {**question, "evidence": receipts}, "sources": entry["sources"],
-                       "plan": plan, "proof": entry["decision_proof"], "council": council}
+                       "plan": plan, "proof": entry["decision_proof"], "council": council,
+                       "council_outcome": True}
                 _append(datasets, "draft", split, row, seen, heldout_hashes, heldout_stems, stats)
             except (KeyError, TypeError, ValueError, CLISchemaError):
                 stats["excluded_drafts"] += 1

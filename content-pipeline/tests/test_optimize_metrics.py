@@ -2,9 +2,22 @@
 import dspy
 import pytest
 
-from scripts.optimize.metrics import PROOF_FLAGS, make_plan_metric, make_draft_metric, proof_feedback
+from scripts.optimize.metrics import PROOF_FLAGS, make_plan_metric as _make_plan_metric, make_draft_metric, proof_feedback
+from scripts.optimize.plan_critic import CRITIC_CHECKS, calibration_report
 from shared.gates import gate_signatures
 from shared.quality_gate import QUESTION_FIELDS
+
+
+
+def passing_critic(scope, plan):
+    return {**dict.fromkeys(CRITIC_CHECKS, True), "verdict": "PASS", "failing_options": [],
+            "reason": "Plausible approaches, meaningful product hinge"}
+
+
+def make_plan_metric(**kwargs):
+    records = [{"objective_id": str(i), "scope": {}, "plan": {}, "council_outcome": i % 2 == 0} for i in range(200)]
+    calibration = calibration_report(records, [row["council_outcome"] for row in records])
+    return _make_plan_metric(critic=passing_critic, critic_calibration=calibration, **kwargs)
 
 
 def proof(**changes):
@@ -22,7 +35,7 @@ def test_plan_metric_production_default_is_writer_and_has_gepa_feedback():
     pred = dspy.Prediction(plan={"objective_id": "x"})
     result = metric(gold, pred, None, "planner", None)
     assert isinstance(result, dspy.Prediction)
-    assert result.score == .75
+    assert result.score <= .15
     assert "Second defensible option" in result.feedback
     assert seen[0][3] == {"model": "codex", "reasoning_effort": "medium", "stable_prefix": True, "temperature": 0.0}
 
@@ -37,7 +50,7 @@ def test_plan_checker_override_and_no_recorded_proof_substitution():
 
 
 def test_proof_mechanical_and_malformed_vetoes_never_score_one():
-    assert proof_feedback(proof(passed=False, mechanical_check={"errors": ["quote absent"]})).score == .75
+    assert proof_feedback(proof(passed=False, mechanical_check={"errors": ["quote absent"]})).score <= .15
     assert "quote absent" in proof_feedback(proof(passed=False, mechanical_check={"errors": ["quote absent"]})).feedback
     assert proof_feedback(proof(supported="true")).score == 0
     assert proof_feedback(proof(reason="")).score == 0

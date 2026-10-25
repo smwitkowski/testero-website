@@ -273,3 +273,36 @@ def test_objective_corpus_collects_pages_from_other_failed_attempts_and_artifact
     assert len(row["objective_corpus"]["sources"]) == 2
     assert result["objective_corpora"][row["objective_id"]]["pages"] == 2
     assert result["version"] == 2
+
+
+def test_council_labels_match_only_final_plan_and_validate_frozen_requests(tmp_path):
+    path, payload = artifact(tmp_path)
+    entry = payload["candidates"][0]
+    earlier = deepcopy(entry["decision_attempts"][0])
+    earlier["plan"]["best_action"] = "An earlier distinct action"
+    entry["decision_attempts"].insert(0, earlier)
+    save(path, payload)
+    datasets.build_datasets([path], tmp_path / "out")
+    rows = records(tmp_path / "out", "plan")
+    assert rows[0]["council_outcome"] is None
+    assert rows[1]["council_outcome"] is True
+    entry["accepted"] = False
+    entry["external_verdict"]["style"]["verdict"] = "FAIL"
+    entry["external_verdict"]["style"]["distractors_plausible"] = False
+    save(path, payload)
+    datasets.build_datasets([path], tmp_path / "failed")
+    assert records(tmp_path / "failed", "plan")[1]["council_outcome"] is False
+    entry["external_judge_request"]["sha256"] = "0" * 64
+    save(path, payload)
+    datasets.build_datasets([path], tmp_path / "unbound")
+    assert all(row["council_outcome"] is None for row in records(tmp_path / "unbound", "plan"))
+
+
+def test_accepted_false_without_actual_verdict_does_not_invent_calibration_negative(tmp_path):
+    path, payload = artifact(tmp_path)
+    entry = payload["candidates"][0]
+    entry["accepted"] = False
+    entry.pop("external_verdict")
+    save(path, payload)
+    datasets.build_datasets([path], tmp_path / "out")
+    assert records(tmp_path / "out", "plan")[0]["council_outcome"] is None
