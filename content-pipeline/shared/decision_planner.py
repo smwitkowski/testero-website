@@ -127,6 +127,11 @@ class ConsistentDecisionProofSignature(DecisionProofSignature):
     """
 
 
+class ConstraintVerifiedReason(VerifiedReason):
+    option_label: Literal["A", "B", "C", "D"] = Field(
+        description="Exactly one literal label A, B, C or D; no descriptions or suffixes")
+
+
 class ConstraintDecisionProofSignature(DecisionProofSignature):
     """Verify the decision with documented positive facts and stated constraints.
 
@@ -150,6 +155,8 @@ class ConstraintDecisionProofSignature(DecisionProofSignature):
     confined to particular options. Include A for key, scenario, objective, global
     ambiguity or second-defensible-answer failures. Do not mark passing options.
     """
+    reasons: list[ConstraintVerifiedReason] = dspy.OutputField(
+        desc="Exactly A-D literal option_label values; never 'A - Best action' or other decorated labels")
     failing_options: Annotated[list[Literal["A", "B", "C", "D"]], Field(max_length=4)] = dspy.OutputField()
 
 
@@ -345,7 +352,24 @@ def verify_decision(scope, plan, sources, *, model, reasoning_effort="medium", p
     )) and checked["passed"]
     if not proof["reason"].strip():
         proof["passed"] = False
+    if doccheck_policy_for(scope) == "v6" and proof["failing_options"]:
+        proof["passed"] = False
     return proof
+
+
+def decision_veto_reason(proof):
+    """Report every failed check without replacing the raw semantic explanation."""
+    parts = [proof.get("reason", "").strip() or "Empty verifier explanation"]
+    failed = [key for key in ("supported", "uniquely_best", "scenario_reasons_supported", "no_feature_gotchas")
+              if proof.get(key) is not True]
+    if failed:
+        parts.append("Failed semantic checks: " + ", ".join(failed))
+    if proof.get("failing_options"):
+        parts.append("Flagged failing options: " + ", ".join(proof["failing_options"]))
+    mechanical = proof.get("mechanical_check", {})
+    if mechanical.get("passed") is not True:
+        parts.append("Failed mechanical receipts: " + "; ".join(mechanical.get("errors", [])))
+    return " | ".join(parts)
 
 
 def evidence_missing_veto(proof):

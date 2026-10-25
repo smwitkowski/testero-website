@@ -509,7 +509,11 @@ def validate_decision_provenance(scope, entry):
                 raise ValueError()
         elif "distractor_evidence" in proof or "distractor_evidence" in entry:
             raise ValueError()
-        signature = decision_proof_signature(policy)
+        from shared.decision_planner import doccheck_policy_for
+        doccheck_policy = doccheck_policy_for(scope)
+        if entry.get("doccheck_policy") != scope.get("doccheck_policy"):
+            raise ValueError()
+        signature = decision_proof_signature(policy, doccheck_policy=doccheck_policy)
         output_fields = set(signature.output_fields)
         if not isinstance(proof, dict) or set(proof) != output_fields | {"passed", "mechanical_check"} | ({"distractor_evidence"} if policy is not None else set()) | ({"retrieval"} if "retrieval" in proof else set()):
             raise ValueError()
@@ -519,6 +523,8 @@ def validate_decision_provenance(scope, entry):
         if (proof["passed"] is not True or not parsed["reason"].strip()
                 or any(parsed[name] is not True for name in
                        ("supported", "uniquely_best", "scenario_reasons_supported", "no_feature_gotchas"))):
+            raise ValueError()
+        if doccheck_policy == "v6" and parsed["failing_options"]:
             raise ValueError()
         receipts = [{name: row[name] for name in ("option_label", "url", "quote")} for row in parsed["reasons"]]
         checked = check_evidence(receipts, entry["sources"])

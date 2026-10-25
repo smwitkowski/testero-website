@@ -117,3 +117,10 @@ def test_v5_prompt_fingerprints_match_frozen_main():
                    "schema": signature.model_json_schema(), "fields": list(signature.fields)}
         actual = hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         assert actual == row["sha256"], row
+
+
+def test_v6_explicit_failing_options_cannot_be_a_pass():
+    value = {**proof(), "failing_options": ["D"]}
+    checked = verify_decision(v6_scope(), decision(), [source()], model="offline", predictor=lambda **_: value)
+    assert checked["mechanical_check"]["passed"] is True
+    assert checked["passed"] is False

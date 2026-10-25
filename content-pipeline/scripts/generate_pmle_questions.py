@@ -28,7 +28,7 @@ from shared.parallel import run_bounded
 from shared.evidence import check_evidence
 from shared.call_logging import call_context
 from shared.llm_generator import generate_question, cite_question, GenerationOutputError
-from shared.decision_planner import plan_decision, verify_decision, writer_decision_context, writer_documentation_context, DecisionVetoError, evidence_missing_veto
+from shared.decision_planner import plan_decision, verify_decision, writer_decision_context, writer_documentation_context, DecisionVetoError, evidence_missing_veto, decision_veto_reason
 from shared.llm_limits import MaxTokensTruncation
 from shared.cli_models import CLIModelError, CLIUsageLimitError, CLIAuthError, CodexModelRejectedError
 from shared.completion_diagnostics import _safe_completion
@@ -575,7 +575,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 attempt["proof"] = proof
                 if proof["passed"]:
                     break
-                veto_feedback.append({"unsupported_decision": decision, "veto_reason": proof["reason"],
+                veto_feedback.append({"unsupported_decision": decision,
+                                      "veto_reason": decision_veto_reason(proof) if doccheck_policy == "v6" else proof["reason"],
                                       "mechanical_errors": proof["mechanical_check"]["errors"]})
                 if doccheck_policy == "v6":
                     from shared.doccheck_repair import failing_distractors, repair_feedback
@@ -588,7 +589,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     feedback = json.dumps({"previous_vetoes": veto_feedback,
                         "instruction": "Replace the engineering decision, not the scenario with extra exceptions. Avoid the unverifiable claim and make each distractor clearly wrong on documented tradeoffs."})
             else:
-                raise DecisionVetoError("Replacement decision vetoed; discard candidate: " + proof["reason"])
+                raise DecisionVetoError("Replacement decision vetoed; discard candidate: " +
+                    (decision_veto_reason(proof) if doccheck_policy == "v6" else proof["reason"]))
             # Objective text comes from the frozen reviewed registry, never the LM.
             decision_objective = {"objective_id": scope["objective_id"], "objective_text": scope["objective_text"]}
             scope["decision_objective"] = entry["decision_objective"] = decision_objective
@@ -711,7 +713,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                               "decision_objective": decision_objective,
                               "decision_plan": decision, "decision_proof": proof,
                               "decision_attempt_count": len(entry["decision_attempts"]),
-                              "decision_veto_reasons": [attempt["proof"]["reason"] for attempt in entry["decision_attempts"]
+                              "decision_veto_reasons": [(decision_veto_reason(attempt["proof"]) if doccheck_policy == "v6" else attempt["proof"]["reason"]) for attempt in entry["decision_attempts"]
                                                         if not attempt.get("proof", {}).get("passed", True)],
                               "key_length_rank": scope["key_length_rank"]})
             if tuned:
@@ -796,7 +798,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                         reject_candidate(entry, stage, stage.capitalize() + " failed before acceptance")
                     planning_history.pop(index, None)
                     entry["decision_attempt_count"] = len(entry.get("decision_attempts", []))
-                    entry["decision_veto_reasons"] = [attempt["proof"]["reason"] for attempt in entry.get("decision_attempts", [])
+                    entry["decision_veto_reasons"] = [(decision_veto_reason(attempt["proof"]) if doccheck_policy == "v6" else attempt["proof"]["reason"]) for attempt in entry.get("decision_attempts", [])
                                                       if not attempt.get("proof", {}).get("passed", True)]
                     payload["candidates"].append(entry)
                     payload["all_candidate_key_position_report"] = key_position_report(payload["candidates"])
