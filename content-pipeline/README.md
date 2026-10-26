@@ -382,12 +382,15 @@ checks are off unless selected explicitly. Do not enable them mid-experiment.
 Cards enter only the matching objective's writer instructions, never
 `scope["domain_prompt"]` or documentation-check inputs.
 
-Prepare from the two historical generation directories and frozen corpus named
-in `scripts/optimize/build_planner_cards.py`, without model or search calls:
+Prepare into a fresh output directory from the two historical generation
+directories and frozen corpus named in `scripts/optimize/build_planner_cards.py`,
+without model or search calls. An existing `run-state.json` freezes its audit;
+`--prepare-only` refuses to overwrite it. A resumed run rejects changed inputs
+without changing the saved audit:
 
 ```sh
 PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.build_planner_cards \
-  --prepare-only --output-dir "$ROOT/.cache/optimize/cards"
+  --prepare-only --output-dir "$ROOT/.cache/optimize/cards-revision/build"
 ```
 
 The builder uses only pre-2026-10-26T00:00Z doc-check veto reasons and dated
@@ -400,24 +403,40 @@ and each selected coverage claim needs two distinct candidates. Shared product
 names alone do not establish repeated claims. The audit retains the exact
 associations, input hashes, and dated lifecycle sources.
 
-Remove `--prepare-only` to make at most one tool-disabled Claude CLI call per
-eligible objective. No OpenRouter, Exa, or Gemini calls are used. A durable
-started marker prevents re-calling an objective, including after failure. Inspect
-and freeze the output before an experiment; do not rebuild from its outcomes.
-Cards have three sections, at most 1,200 characters, and deterministic text lint.
-Coverage gaps describe the supplied pages, not product impossibility.
+Eligibility means at least three distinct pre-cutoff vetoed candidates, not
+passing a lexical claim filter. Every eligible PMLE objective receives a serial
+Claude CLI assessment and a recorded outcome: card, no-card with reason, or
+failed after retries. Claims bind full source spans from at least two distinct
+candidates; a common product name alone is not a repeated proposition.
 
-Emit a standalone v5 card challenger, or add cards to an existing plan pack:
+Remove `--prepare-only` for the authorized build. Calls run serially, with at
+most three attempts per objective and 30/60/120-second failure backoff. A durable
+attempt/outcome ledger supports resume without losing outcomes or repeating
+completed cards. No OpenRouter, Exa, or Gemini calls are used. Use the authorized
+subscription environment, not `env -i`; the child CLI strips nested-session
+markers and disables tools/customizations. Inspect and freeze the output before
+an experiment; do not rebuild from its outcomes. Cards have three sections,
+at most 1,200 characters, and deterministic text lint. Coverage gaps describe
+these pages, not product impossibility. A no-card is valid when no safe repeated
+coverage claim or dated lifecycle fact survives review.
+
+Runtime JSON is not committed, including files under ignored cache paths.
+Keep local build responses/audits under `.cache/optimize/cards-revision/` and
+publish the reviewed frozen cards to
+`/Users/switkowski/Projects/Testero/hq/pipeline-nightly-runtime/packs/pmle-planner-cards-v1.json`.
+The runtime A+card pack is built from the existing Experiment A base:
 
 ```sh
+PACKS=/Users/switkowski/Projects/Testero/hq/pipeline-nightly-runtime/packs
 PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.build_card_pack \
-  --cards "$ROOT/.cache/optimize/cards/pmle-planner-cards-v1.json" \
-  --output "$PACKS/pmle-cards-v1.json"
-# Add --base-pack "$PACKS/zero-cost-pmle-v5.json" for A+card.
+  --base-pack "$PACKS/zero-cost-pmle-v5.json" \
+  --cards "$PACKS/pmle-planner-cards-v1.json" \
+  --output "$PACKS/pmle-card-pack-v1.json"
 ```
 
-Use `--prompt-pack "$PACKS/pmle-cards-v1.json" --ab-interleaved` for card vs plain.
-For A+card vs A, emit with `--base-pack` and also pass
+Omit `--base-pack` to emit a separate plain-v5-plus-cards challenger for card vs
+plain. The named runtime pack above is A+card, so use it with
+`--prompt-pack "$PACKS/pmle-card-pack-v1.json" --ab-interleaved` and also pass
 `--ab-control-pack "$PACKS/zero-cost-pmle-v5.json"` to generation/batch/nightly.
 Without `--ab-control-pack`, the control remains the unchanged plain writer.
 Both pack hashes bind assignments and analysis; do not mix different control

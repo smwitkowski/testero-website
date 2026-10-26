@@ -1,67 +1,33 @@
-# Planner card delivery
+# Planner-card delivery — PR #317
 
-## Changes
+Opt-in analysis/planner changes only. No running Experiment A change, production writes, publisher/judge/gate changes, or OpenRouter/Exa/Gemini calls. Do not enable features mid-experiment.
 
-- Objective-clustered paired sign-flip yield decision: 80 pairs, alpha .005; 160 pairs, alpha .045. Other prefixes cannot decide. Bootstrap 95% and legacy non-deciding Hoeffding diagnostics remain visible.
-- Seat guardrails: one-sided clustered p<=.05 or a point drop>=10pp; canary 100%, factual/audit rules unchanged.
-- Offline PMLE doc-reality card builder, opt-in objective-only `lessons`, offline card-pack emitter, and explicit opt-in A control pack for A+card vs A.
-- Default-off pre-doc lifecycle/name lint and scenario-hint cap. Judges, gate signatures, publisher, doc-check policies/defaults unchanged. Legacy pack hashes and default A/B assignments verified identical.
+## Full PMLE card revision
+
+Eligibility means at least three distinct pre-cutoff vetoed candidates, not a lexical claim match. An independent parser confirmed all 50 eligible objectives and their source bindings. Filtered inputs contain 52 objectives with vetoes, 384 distinct candidates, and 859 reasons. Of 86 input artifacts, 82 were kept, one was excluded by tag/A/B metadata, and three by cutoff. No canary/gold items were found in the authorized inputs. Separately stored held-outs need explicit exclusions.
+
+Every eligible objective has a card, a no-card reason, or an exhausted-retry failure. Subscription Claude CLI calls run serially, with at most three tries per objective. Retry waits are 30 and 60 seconds. The recorded terminal backoff cap is 120 seconds; there is no pointless wait or fourth call. Persisted attempts consume interrupted calls and preserve outcomes. Frozen audit bytes cannot be overwritten by a changed-input resume. Diagnostics use static enums and bounded technical selections, not raw provider envelopes or arbitrary error text.
+
+Original CLI outcomes: 32 proposals, 2 no-card, 16 exhausted; 94 attempts, maximum 3 per objective. Final source-reviewed freeze: **32 cards, 11 no-card, 7 unrecovered; median 315 characters (170–700)**. Eight unsafe proposals became no-card. Nine captured failures were resolved offline: eight cards and one no-card. No extra calls were made. Seven early failures retain only generic source/format lint diagnostics. All 32 retained cards received full-source review. Three additional random samples passed an independent review.
+
+Final counts, per-objective outcomes and three additional random cards: `cards.md`. Independent full-source review: `revision-review.md`. Detailed audit, attempts and raw test logs stay local under ignored `.cache/optimize/cards-revision/`, not git.
+
+## Runtime files (outside git)
+
+`/Users/switkowski/Projects/Testero/hq/pipeline-nightly-runtime/packs/`:
+
+- `pmle-planner-cards-v1.json` — file SHA256 `4b491a7ff576451dccf43f5e3d4a76537f264adc70a8b8d3fb760e1c5599cdd1`
+- `pmle-card-pack-v1.json` — normalized pack hash `7a12f3ebdc28f9e716b435b1bdd5be8c3dfcbdd530ff84ac57c5717f83ac2dc1`
+- Base `zero-cost-pmle-v5.json` — normalized pack hash `c3d59c51f30a1ad3777ecfd6e39056e368b579727f88cce7777ef0d9f5dd2af4` (unchanged)
+
+Pack construction adds lessons to the real A base; it does not substitute a synthetic v5 pack. Use explicit `--ab-control-pack` for A+card versus A. Runtime files are not committed or force-added under ignored paths.
 
 ## Verification
 
-Required command, run from `content-pipeline`:
+Required gate: `cd content-pipeline && env -i PATH="$PATH" HOME="$HOME" CI=true uv run pytest -q`.
 
-```text
-env -i PATH="$PATH" HOME="$HOME" CI=true uv run pytest -q
-3968 passed, 3 skipped, 25 warnings, 51 subtests passed in 126.81s (0:02:06)
-```
+**3,994 passed, 3 skipped, 25 warnings, 51 subtests in 120.05s; exit 0.** Builder/test SHA256s remained unchanged after the run. Focused card tests: 55 passed. Offline emitter/runtime verification passed: all 32 cards pass lint, hashes and provenance checks; lessons equal frozen text; base writer/policy fields are unchanged except the added lessons/provenance; normalized pack/card hashes match. The base file SHA256 stayed `3a139c91fdd6f3c109ecec1a5c8122bb54b866d6077e55fcfbee477762b4bb52`. Current CI status is reported on PR #317.
 
-Full output: `final-pytest-gate.log`. Independent review: `review.md` (approved, no unresolved blockers).
+Compact evidence retains 40 unchanged legacy assignment parity scenarios and pack hash/render compatibility. The objective-cluster sign-flip looks remain 80/160 pairs, with alpha .005/.045. In 2,000 trials, +15pp power was 87.95% at final and 88.05% at either look; the null either-look rate was 2.95%. These 40 simulation/parity objectives are not the 50 eligible card objectives. See `statistics.md`, `statistics-simulation.json`, and `planner-checks.md`.
 
-Simulation: 2,000 seeded trials, 40 objectives x4 pairs, baseline mean 21%, challenger +15pp. Final power 1759/2000=87.95%; either declared look 1761/2000=88.05%. Null either-look false positives 59/2000=2.95% (conservative discrete exact test; Wilson 95% 2.29–3.79%). Full setup/seeds/caveats in `statistics.md` and `statistics-simulation.json`. These measure the yield decision, with other promotion conditions assumed clean; no live gain is claimed.
-
-## Frozen cards
-
-4 PMLE objectives; lengths 245, 203, 392, 294; median 269.5 characters; cap 1200. Canonical frozen source: `content-pipeline/.cache/optimize/cards/pmle-planner-cards-v1.json`. Ready standalone v5 pack: `content-pipeline/.cache/optimize/cards/pmle-card-pack-v1.json`, pack SHA256 `b060718ae85c644d6faf519012507b1b9c40f17d9d3c49c676853b675c5fd59e`.
-
-Six first CLI invocations: four frozen, one authentication failure, one interrupted. No objective retried. Conservative extraction and safety review leave sparse coverage. Original selections preserved; deterministic safety revision required zero model calls and records old/new hashes in `card-safety-revision.json`. The 1.2:3 card is lifecycle-only after dropping an entity-only pseudo-claim. The 5.1:3 lifecycle fact is sourced but may be incidental; no current name was extracted for that objective.
-
-### Required full sample cards
-
-#### `machine-learning-engineer:standard:3.3:2`
-
-```text
-Coverage: For proposed TensorFlow single-slice TPU training, the supplied scaling/Multislice pages did not establish the TPUStrategy synchronous-replication claims together with the proposed batch-splitting or gradient-aggregation behavior. Multislice's TensorFlow restriction does not rule out single-slice training.
-Lifecycle: No dated lifecycle fact selected.
-Current names: Agent Platform
-```
-
-#### `machine-learning-engineer:standard:1.2:3`
-
-```text
-Coverage: No reliable recurring coverage claim retained.
-Lifecycle: imagen-3.0-capability-001 is listed as discontinued; migration deadline 2026-06-30. As of 2026-10-14 (page-923d9e307349f370).
-Current names: Imagen; Agent Platform; Model Garden
-```
-
-#### `machine-learning-engineer:standard:5.1:3`
-
-```text
-Coverage: The docs here do not establish training-only augmentation behavior.
-Lifecycle: Feature Store Optimized online serving is deprecated; critical patches only from 2026-05-17; sunset 2027-02-17. As of 2026-10-25 (page-658e16541d9b7027).
-Current names: No objective-specific name selected.
-```
-
-## Explicit enablement (all generation additions default off)
-
-| Piece | CLI | Nightly JSON |
-|---|---|---|
-| Cards | `--prompt-pack /absolute/card-pack.json` | `"prompt_pack": "/absolute/card-pack.json"` |
-| Interleaving | `--ab-interleaved --ab-experiment NAME` | `"ab_interleaved": true, "ab_experiment": "NAME"` |
-| A+card vs A | Emit with `build_card_pack --base-pack /absolute/A.json`; run with `--ab-control-pack /absolute/A.json` | `"ab_control_pack": "/absolute/A.json"` |
-| Lifecycle/name lint | `--plan-freshness-lint` | `"plan_freshness_lint": true` |
-| Scenario-hint cap | `--scenario-hint-cap` | `"scenario_hint_cap": true` |
-
-Emitter: `uv run python -m scripts.optimize.build_card_pack --cards CARDS --output PACK [--base-pack BASE]`. Builder: `uv run python -m scripts.optimize.build_planner_cards --prepare-only` (offline); remove `--prepare-only` only for authorized first CLI calls. Do not use a stripped authentication environment for the real subscription CLI builder.
-
-Flags apply equally to both arms. Do not enable mid-Experiment A. Cards must stay out of `scope["domain_prompt"]`. Enabled control hashes/options must bind schedule and human/heldout audit JSON; see `content-pipeline/README.md` at Frozen doc-reality cards. Missing/default fields keep old generation behavior.
+Default-off flags, optional lessons omission and legacy hashes preserve unmodified commands. Cards enter writer instructions only, never domain_prompt or documentation-check inputs. No merge or auto-merge was requested.
