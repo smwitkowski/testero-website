@@ -5,7 +5,10 @@ from pathlib import Path
 
 # Only local validation and bounded per-candidate transport failures are ordinary.
 # Generic provider/CLI errors can hide quota/auth; they deliberately are not listed.
-ORDINARY = {"CandidateRejected", "DecisionVetoError", "GenerationOutputError",
+# BudgetError is ordinary: every later paid call re-reserves under the weekly cap and
+# fails closed, so judging already-ready candidates cannot overspend (Oct 26: an Exa
+# cap hit on 22 of 40 candidates discarded 9 that were awaiting the council).
+ORDINARY = {"BudgetError", "CandidateRejected", "DecisionVetoError", "GenerationOutputError",
             "MaxTokensTruncation", "ReadTimeout", "TimeoutError", "ValidationError"}
 
 
@@ -45,4 +48,4 @@ def write_result(path, status):
 
 
 class NightlyHardStop(ValueError):
-    """Unknown, quota/auth, budget or persistence failure; no later paid stage."""
+    """Unknown, quota/auth or persistence failure; no later paid stage."""
