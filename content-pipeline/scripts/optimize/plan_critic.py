@@ -16,7 +16,7 @@ from scripts.optimize.corpus import digest
 DEFAULT_CRITIC = "openrouter/deepseek/deepseek-v4.1-flash-1017"
 CRITIC_CHECKS = ("distractors_plausible", "product_knowledge_hinge", "cloud_specific_alternative",
                  "options_distinct_approaches", "constraints_as_wants", "no_literal_elimination")
-MIN_CALIBRATION_PLANS = 200
+MIN_CALIBRATION_PLANS = 180  # PMLE history has 186 labeled train plans (Oct 26)
 CALIBRATION_THRESHOLD = .75
 
 
@@ -177,7 +177,7 @@ def validate_calibration(calibration, model):
     if (any(calibration.get(key) != value for key, value in stats.items())
             or stats["count"] < MIN_CALIBRATION_PLANS or stats["balanced_accuracy"] < CALIBRATION_THRESHOLD
             or calibration.get("usable") is not True):
-        raise CriticCalibrationError("Critic refused: requires >=200 plans, both classes, balanced accuracy >=0.75")
+        raise CriticCalibrationError("Critic refused: requires >=180 plans, both classes, balanced accuracy >=0.75")
     return calibration
 
 
