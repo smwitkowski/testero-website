@@ -840,12 +840,20 @@ def _predict_writer(signature, inputs, model, *, max_tokens=GENERATION_MAX_TOKEN
         # ChainOfThought is a wrapper; demos belong to its inner Predict.
         target = predictor.predict if chain_of_thought and not structured else predictor
         target.demos = demos
+    from litellm.exceptions import RateLimitError
     try:
-        with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
-            result = predictor(**inputs, lm=lm,
-                               config={"rollout_id": time.time_ns(), "temperature": temperature})
-            raw = {key: getattr(result, key) for key in signature.output_fields}
-            return validate_writer_output(raw, signature, adapter.capture)
+        # Shared upstream pools return transient 429s; back off instead of failing the candidate.
+        for delay in (10, 30, 60, None):
+            try:
+                with log_lm_calls(lm, model), reject_token_limit(lm, capture=adapter.capture), dspy.context(adapter=adapter):
+                    result = predictor(**inputs, lm=lm,
+                                       config={"rollout_id": time.time_ns(), "temperature": temperature})
+                    raw = {key: getattr(result, key) for key in signature.output_fields}
+                    return validate_writer_output(raw, signature, adapter.capture)
+            except RateLimitError:
+                if delay is None:
+                    raise
+                time.sleep(delay)
     except MaxTokensTruncation:
         raise
     except (AdapterParseError, WriterOutputError):
