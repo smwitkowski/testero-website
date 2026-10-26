@@ -266,7 +266,8 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--verify-retrieval", is_flag=True, help="Opt in to per-claim BM25 queries with adjacent spans and one evidence-missing full-doc escalation (cheap context at most about 45k estimated doc tokens; escalation uses the configured full-source budget).")
 @click.option("--verify-stable-prefix/--no-verify-stable-prefix", default=True, show_default=True, help="Reorder existing plan and verifier fields only; provider cache hits must be measured.")
 @click.option("--decision-attempts", type=click.IntRange(min=1, max=3), default=3, show_default=True, help="Total decision plans including initial attempt; lower caps are experimental.")
-@click.option("--argon-gate", is_flag=True, help="Freeze mandatory independent Gemini 4 Argon blind/full review requests.")
+@click.option("--argon-gate", is_flag=True, help="Freeze mandatory second-seat blind/full review requests.")
+@click.option("--second-seat-transport", type=click.Choice(["openrouter", "codex"]), default="openrouter", show_default=True)
 @click.option("--existing-questions", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Local ACTIVE/DRAFT question export for near-duplicate veto; no DB access.")
 @click.option("--section-allocation", default=None, help="Comma-separated counts in included guide section order, summing to N; pilot: 4,5,6,6,5,4. Cannot combine with scope filters.")
 @click.option("--prompt-pack", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Validated writer-only prompt pack; judges/proofs are frozen. Default: unchanged prompts.")
@@ -292,7 +293,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
          target_accepted=None, expected_yield=0.29, distractor_evidence="strict", plan_only=False, emit_taxonomy=False,
          doc_cache=True, verify_retrieval=False, verify_stable_prefix=True, decision_attempts=3,
          doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS, frozen_plan=None, continue_quality_rejections=False, doccheck_policy="v5",
-         prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0):
+         prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0, second_seat_transport="openrouter"):
     retry_manifest = None
     loaded_prompt_pack = None
     try:
@@ -321,10 +322,16 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 raise ValueError("A/B does not support explicit section allocations")
         elif ab_experiment is not None:
             raise ValueError("--ab-experiment requires --ab-interleaved")
+        from shared.argon_gate import model_for_transport
+        second_seat_model = model_for_transport(second_seat_transport)
+        if second_seat_transport != "openrouter" and not argon_gate:
+            raise ValueError("Codex second seats require --argon-gate")
         if argon_gate:
             if judge_model != "external":
                 raise ValueError("Argon gate requires external judging")
-            require_independent_models(model, "openrouter/google/gemini-4-argon")
+            # Claude remains independent; Codex second seats deliberately share the writer family.
+            if second_seat_transport == "openrouter":
+                require_independent_models(model, second_seat_model)
         bank = load_export(existing_questions, cert_id=cert) if existing_questions else {"sha256": None, "questions": []}
         allocation = None
         if section_allocation is not None:
@@ -385,6 +392,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                                          "per_option_retrieval": verify_retrieval,
                                          "stable_prefix": verify_stable_prefix,
                                          "decision_attempts": decision_attempts}}
+    if second_seat_transport != "openrouter":
+        payload["second_seat_transport"] = second_seat_transport
     if loaded_prompt_pack is not None:
         from shared.prompt_pack import pack_hash
         payload["prompt_pack"] = {"sha256": pack_hash(loaded_prompt_pack),
@@ -741,7 +750,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 stage = "external_request"
                 entry["candidate_id"] = candidate_id(index, scope, question)
                 request = build_request(entry["candidate_id"], scope, question, sources, checked["options"], argon_gate=argon_gate,
-                    execution_policy="short_circuit_v2", doc_context_chars=doc_context_chars)
+                    execution_policy="short_circuit_v2", doc_context_chars=doc_context_chars,
+                    second_seat_transport=second_seat_transport)
                 entry["documentation_contexts"]["external_judge"] = request["trimming"]["documentation_context_budget"]
                 return  # Publish in plan order under the shared write lock.
             stage = "judge"

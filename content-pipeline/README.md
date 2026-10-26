@@ -425,3 +425,89 @@ optimization, calibration, fidelity replay or A/B run is required to verify this
 implementation. The held-out `scripts.optimize.evaluate_pack` command remains
 available for approved full-council paired evaluation; supply a deliberate small
 local cap and complete canary evidence, never a blanket multi-thousand-dollar cap.
+
+
+## Codex second-seat council transport
+
+The default stays `second_seat_transport: "openrouter"`. Omitting the setting
+keeps the existing Argon requests, prompts, schemas and pass rules unchanged.
+To move both `argon.blind` and `argon.review` seats to the subscription CLI, set
+this key in the nightly JSON configuration:
+
+```json
+{"second_seat_transport": "codex"}
+```
+
+The equivalent override is `--second-seat-transport codex` on
+`scripts.pipeline_nightly`, `scripts.run_domain_batch`,
+`scripts.generate_all_domains`, `scripts.judge_requests`, `scripts.recouncil`
+and each `scripts.council_health` subcommand. Use the same setting for generation
+and judging; a mismatch with the frozen request is refused before model calls.
+Use fresh artifacts/cohorts when switching. A resumed batch cannot change its
+saved transport. Re-export preserves the artifact's transport. Automatic repair
+remains unsupported for council-enabled artifacts.
+
+The Codex model is fixed as `codex/gpt-6.1-sol`. Both seats use the exact frozen
+Argon prompts and strict output schemas. Requests and verdicts bind that actual
+model and the request hash; the two transports cannot be mixed within a
+candidate. Codex calls reuse the existing pacing lock, 429 backoff and
+usage-limit batch stop. They never reserve paid OpenRouter budget and need no
+`OPENROUTER_API_KEY`. Other nightly services still need their own injected
+credentials. There is no provider fallback.
+
+### Establish Codex health before enabling the nightly switch
+
+These are **coordinator-only model calls**, not implementation/test commands.
+From `content-pipeline`, choose fresh private output directories, an accepted
+frozen source artifact, and the coordinator's existing tools directory:
+
+```sh
+ACCEPTED=/absolute/path/to/accepted-artifact.json
+MONITORS=/absolute/path/to/private/codex-health-first-run
+TOOLS=/absolute/path/to/hq/tools
+
+PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.council_health prepare \
+  --artifact "$ACCEPTED" --out "$MONITORS/canaries" --seed 45 --per-type 20 \
+  --second-seat-transport codex
+PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.council_health live \
+  --root "$MONITORS/canaries" --second-seat-transport codex \
+  --coordinator-approved --parallel 1
+PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.council_health evaluate \
+  --root "$MONITORS/canaries" --second-seat-transport codex \
+  --state "$TOOLS/council-health.json" --pause "$TOOLS/PIPELINE_PAUSED"
+
+PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.council_health prepare \
+  --artifact "$ACCEPTED" --out "$MONITORS/gold" --seed 45 --gold \
+  --second-seat-transport codex
+PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.council_health live \
+  --root "$MONITORS/gold" --second-seat-transport codex \
+  --coordinator-approved --parallel 1
+PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.council_health evaluate \
+  --root "$MONITORS/gold" --second-seat-transport codex \
+  --state "$TOOLS/council-health.json" --pause "$TOOLS/PIPELINE_PAUSED"
+```
+
+Repeat `--artifact` to include more accepted source artifacts. Require a complete
+canary cohort with **100% catch for at least 20 examples of each defect type**,
+and a complete gold cohort with **at least 80% pass**, before enabling the
+nightly setting. Missing or partial runs cannot establish readiness. The normal
+nightly's two canaries per type monitor health; they do not bootstrap a new
+configuration. Publishing and re-council restoration recheck Codex readiness
+before each database write. For standalone publication with a custom tools
+folder, pass `--health-state "$TOOLS/council-health.json" --health-pause
+"$TOOLS/PIPELINE_PAUSED"`; re-council accepts `--health-state` and uses its
+neighboring pause file.
+
+Health state migrates in code to version 2, keyed by the declared seat model.
+Legacy health belongs only to Argon. Do not edit `council-health.json` by hand.
+A Codex health pause uses `PIPELINE_PAUSED.codex-gpt-6.1-sol`; an Argon health
+pause stays on the original path. Health pauses do not authorize or pause a
+different configuration. A manual `PIPELINE_PAUSED` sentinel still stops both.
+A passing replay does not automatically clear an existing pause; the
+coordinator must reconcile the failure first.
+
+**Trade-off:** Codex now writes questions and holds two judge seats. It is not
+an independent model family from the writer. Claude still holds the other three
+seats. Monitor **P(council pass | doccheck pass)** and **Codex-seat agreement with
+Claude seats**, using complete verdicts and explicit denominators. A subscription
+transport saves paid-seat spend; it does not prove equal judgment quality.

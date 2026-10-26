@@ -22,7 +22,8 @@ from shared.content_hash import content_sha256, question_content_sha256
 from shared.product_freshness import freshness_errors
 from shared.cli_models import parse_output, output_model
 from shared.gates import gate_signatures, evaluate_gate
-from shared.argon_gate import evaluate_argon
+from shared.argon_gate import evaluate_argon, transport_for_model
+from shared.council_configuration import (DEFAULT_STATE, readiness_errors, require_ready)
 from shared.near_duplicates import check_near_duplicate, comparison_row
 
 
@@ -160,7 +161,7 @@ def _row_errors(row, question, scope, expected_hash):
     return errors
 
 
-def plan_publication(artifact, verdicts, rows, *, limit=10):
+def plan_publication(artifact, verdicts, rows, *, limit=10, health_state=DEFAULT_STATE, health_pause=None):
     """Validate frozen provenance and current rows without changing any input."""
     artifact, verdicts = Path(artifact), Path(verdicts)
     payload, artifact_digest = _bound_read(artifact)
@@ -197,6 +198,11 @@ def plan_publication(artifact, verdicts, rows, *, limit=10):
         if request_digest != entry["external_judge_request"]["sha256"]:
             raise ValueError("Request changed during publication validation")
         errors = publication_errors(question, scope, request, raw, rules_version=payload["rules_version"])
+        transport = transport_for_model(request["argon"]["model"])
+        if transport == "codex":
+            errors.extend(readiness_errors(state=health_state,
+                pause=health_pause or Path(health_state).with_name("PIPELINE_PAUSED"),
+                second_seat_transport=transport))
         expected_hash = question_content_sha256(question)
         storage_id = candidate_storage_id(entry, scope, question)
         row = row_by_id.get(storage_id)
@@ -234,7 +240,8 @@ def plan_publication(artifact, verdicts, rows, *, limit=10):
         "candidates": results}, bindings
 
 
-def apply_publication(client, report, bindings, *, actor="pipeline-v6", checkpoint=None):
+def apply_publication(client, report, bindings, *, actor="pipeline-v6", checkpoint=None,
+                      health_state=DEFAULT_STATE, health_pause=None):
     """Final local fences precede each atomic DB recomputation and event write."""
     from shared.council_safety import refuse_canary_paths
     for row in report["candidates"]:
@@ -244,11 +251,26 @@ def apply_publication(client, report, bindings, *, actor="pipeline-v6", checkpoi
             refuse_canary_paths(path)
             if _sha(path) != digest:
                 raise ValueError("Frozen publication inputs changed")
+        # Inspect frozen requests, never a caller-supplied report model label.
+        transports = set()
+        for path, _ in bindings:
+            frozen = _read(path)
+            if isinstance(frozen, dict) and "gates" in frozen and "argon" in frozen:
+                transports.add(transport_for_model(frozen["argon"]["model"]))
+        if "codex" in transports:
+            require_ready(state=health_state,
+                pause=health_pause or Path(health_state).with_name("PIPELINE_PAUSED"),
+                second_seat_transport="codex")
         row["write_status"] = "unknown"
         report["mode"] = "apply"
         if checkpoint:
             checkpoint(report)  # Durable intent before an ambiguous transport failure.
         try:
+            if "codex" in transports:
+                # The durable checkpoint is an IO boundary: recheck its effects.
+                require_ready(state=health_state,
+                    pause=health_pause or Path(health_state).with_name("PIPELINE_PAUSED"),
+                    second_seat_transport="codex")
             result = client.rpc("publish_question", {"p_question_id": row["question_id"],
                 "p_expected_sha256": row["content_sha256"], "p_actor": actor,
                 "p_payload": {"artifact_sha256": report["artifact_sha256"],
@@ -299,7 +321,10 @@ def write_report(path, report):
 @click.option("--apply", is_flag=True, help="Explicit coordinator-only atomic publication")
 @click.option("--limit", default=10, type=click.IntRange(0, 10))
 @click.option("--report", "report_path", required=True, type=click.Path(path_type=Path))
-def main(artifact, verdicts, questions, read_db, dry_run, apply, limit, report_path):
+@click.option("--health-state", default=DEFAULT_STATE, type=click.Path(path_type=Path))
+@click.option("--health-pause", type=click.Path(path_type=Path), help="Base manual/configuration pause path")
+def main(artifact, verdicts, questions, read_db, dry_run, apply, limit, report_path,
+         health_state, health_pause):
     if dry_run and apply:
         raise click.ClickException("--dry-run and --apply are mutually exclusive")
     if questions and (read_db or apply):
@@ -322,7 +347,8 @@ def main(artifact, verdicts, questions, read_db, dry_run, apply, limit, report_p
         else:
             exported = _read(questions)
             rows = exported["questions"] if isinstance(exported, dict) else exported
-        report, bindings = plan_publication(artifact, verdicts, rows, limit=limit)
+        report, bindings = plan_publication(artifact, verdicts, rows, limit=limit,
+                                            health_state=health_state, health_pause=health_pause)
         if report_path.resolve() in {p.resolve() for p, _ in bindings}:
             raise ValueError("Report must not overwrite a frozen input")
         if report_path.exists():
@@ -333,7 +359,8 @@ def main(artifact, verdicts, questions, read_db, dry_run, apply, limit, report_p
         write_report(report_path, report)
         if apply:
             apply_publication(client, report, bindings,
-                checkpoint=lambda current: write_report(report_path, current))
+                checkpoint=lambda current: write_report(report_path, current),
+                health_state=health_state, health_pause=health_pause)
         write_report(report_path, report)
         click.echo(json.dumps({k: report[k] for k in ("mode", "would_publish", "published")}))
     except Exception as error:

@@ -337,10 +337,16 @@ def _cli_env():
     return env
 
 
-def run_signature(model: str, signature, inputs: dict[str, Any], *, timeout=CLI_TIMEOUT_SECONDS, reasoning_effort="high", demos=None):
-    """Run one DSPy signature; demos are explicit and never read from global state."""
-    return _run_cli(model, signature_prompt(signature, inputs, demos=demos),
-                    output_model(signature).model_json_schema(), signature, timeout=timeout, reasoning_effort=reasoning_effort)
+def run_signature(model: str, signature, inputs: dict[str, Any], *, timeout=CLI_TIMEOUT_SECONDS, reasoning_effort="high", demos=None, frozen_prompt=None):
+    """Run a signature or its explicit frozen prompt through shared CLI controls."""
+    if frozen_prompt is not None:
+        if not isinstance(frozen_prompt, str) or not frozen_prompt.strip():
+            raise CLISchemaError("Frozen judge prompt is missing")
+        if inputs or demos is not None:
+            raise ValueError("Frozen prompt cannot be combined with inputs or demos")
+    prompt = signature_prompt(signature, inputs, demos=demos) if frozen_prompt is None else frozen_prompt
+    return _run_cli(model, prompt, output_model(signature).model_json_schema(), signature,
+                    timeout=timeout, reasoning_effort=reasoning_effort)
 
 
 def run_claude_request(model: str, prompt: str, schema: dict, *, timeout=CLI_TIMEOUT_SECONDS):

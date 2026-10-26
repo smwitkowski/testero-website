@@ -65,6 +65,12 @@ def _validate_payload(payload):
         raise click.ClickException("Artifact must use a supported external judge version")
     try:
         require_independent_models(payload["model"], EXTERNAL_POLICY_MODEL)
+        from shared.argon_gate import model_for_transport
+        transport = payload.get("second_seat_transport", "openrouter")
+        model_for_transport(transport)
+        if transport != "openrouter" and (payload.get("argon_gate") is not True
+                or payload["external_judge_version"] != 2 or payload.get("rules_version") != 5):
+            raise ValueError("Codex second seats require the current external council")
     except (KeyError, ValueError, TypeError):
         raise click.ClickException("Invalid generator/judge vendor independence") from None
     if payload["generation_runs"] or payload.get("external_run_journal"):
@@ -125,7 +131,8 @@ def _build_outputs(artifact, out, payload, *, force):
             from shared.quality_gate import QuestionQualitySignature
             request = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"],
                                     doc_context_chars=documentation_context_limit(payload, entry),
-                                    **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False), "execution_policy": payload.get("execution_policy")} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
+                                    **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False), "execution_policy": payload.get("execution_policy"),
+                                        "second_seat_transport": payload.get("second_seat_transport", "openrouter")} if payload["external_judge_version"] == 2 else {"signature": QuestionQualitySignature}))
             raw = _encode(request)
             if len(raw.decode("utf-8")) > REQUEST_CHARACTER_LIMIT:
                 raise ValueError()

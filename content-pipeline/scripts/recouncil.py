@@ -216,7 +216,7 @@ def repeat_report_pages(events):
     return pages
 
 
-def _receipt_request(ident, scope, question, evidence):
+def _receipt_request(ident, scope, question, evidence, *, second_seat_transport="openrouter"):
     context = ("Stored documentation receipts only; full fetched source bodies are unavailable. "
                "Do not infer missing context or current document availability. Return UNCERTAIN "
                "if these receipts do not support every decisive claim.\n" + json.dumps(evidence, ensure_ascii=False))
@@ -230,7 +230,8 @@ def _receipt_request(ident, scope, question, evidence):
             "gates": {name: {"judge_prompt": signature_prompt(signature, inputs[name]),
                              "verdict_schema": output_model(signature).model_json_schema()}
                       for name, signature in signatures.items()},
-            "argon": build_argon_request(question, scope, context, evidence, version=3),
+            "argon": build_argon_request(question, scope, context, evidence, version=3,
+                                         second_seat_transport=second_seat_transport),
             "trimming": {"enabled": False, "method": "stored receipts only", "sources": []}}
     for name in ("style_policy", "distractor_evidence"):
         if name in scope:
@@ -238,10 +239,12 @@ def _receipt_request(ident, scope, question, evidence):
     return request
 
 
-def prepare_question(row, artifact=None):
+def prepare_question(row, artifact=None, *, second_seat_transport="openrouter"):
     """Build a fresh hash-bound request; invalid inputs stay quarantined."""
     result = {"question_id": row.get("id"), "outcome": "quarantined", "reasons": []}
     try:
+        from shared.argon_gate import model_for_transport
+        model_for_transport(second_seat_transport)
         uuid.UUID(row["id"])
         if row.get("review_status") != "QUARANTINED" or row.get("status") != "DRAFT":
             raise ValueError("Question is not quarantined")
@@ -294,9 +297,11 @@ def prepare_question(row, artifact=None):
             raise ValueError(errors[0])
         if sources:
             request = build_request(ident, scope, question, sources, evidence,
-                                    gate_version=5, argon_gate=True, execution_policy=BLIND_ARGON_POLICY)
+                                    gate_version=5, argon_gate=True, execution_policy=BLIND_ARGON_POLICY,
+                                    second_seat_transport=second_seat_transport)
         else:
-            request = _receipt_request(ident, scope, question, evidence)
+            request = _receipt_request(ident, scope, question, evidence,
+                                       second_seat_transport=second_seat_transport)
         if len(json.dumps(request, indent=2, ensure_ascii=False, allow_nan=False)) + 1 > REQUEST_CHARACTER_LIMIT:
             raise ValueError("Re-council request exceeds bound")
         result.update(request=request, question=question, scope=scope, content_sha256=digest,
@@ -403,7 +408,10 @@ def get_client():
     return create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_ROLE_KEY"])
 
 
-def run_recouncil(rows, output_dir, *, artifact_root=None, verdict_dir=None, apply=False, client=None, now=None):
+def run_recouncil(rows, output_dir, *, artifact_root=None, verdict_dir=None, apply=False, client=None, now=None,
+                  second_seat_transport="openrouter", health_state=None):
+    from shared.argon_gate import model_for_transport
+    model_for_transport(second_seat_transport)
     output_dir = _path(output_dir)
     now = datetime.now(timezone.utc) if now is None else now
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
@@ -414,7 +422,8 @@ def run_recouncil(rows, output_dir, *, artifact_root=None, verdict_dir=None, app
         events.extend([{**e, "question_id": row["id"]} for e in row.get("question_events", [])])
         preparation_complete = False
         try:
-            prepared = prepare_question(row, find_artifact(row, artifact_root))
+            prepared = prepare_question(row, find_artifact(row, artifact_root),
+                                        second_seat_transport=second_seat_transport)
             preparation_complete = "request" in prepared
             if preparation_complete:
                 request = prepared["request"]
@@ -440,6 +449,12 @@ def run_recouncil(rows, output_dir, *, artifact_root=None, verdict_dir=None, app
                 # Last local fences follow all slow preparation and client setup.
                 if read_json(path) != request or read_json(verdict_path) != verdict:
                     raise ValueError("Frozen council inputs changed before apply")
+                if result["outcome"] == "restore" and second_seat_transport == "codex":
+                    from shared.council_configuration import DEFAULT_STATE, DEFAULT_PAUSE, require_ready
+                    state_path = _path(health_state) if health_state is not None else DEFAULT_STATE
+                    require_ready(state=state_path,
+                                  pause=state_path.with_name("PIPELINE_PAUSED") if health_state is not None else DEFAULT_PAUSE,
+                                  second_seat_transport=second_seat_transport)
                 response = client.rpc(result["outcome"] + "_question", params).execute()
                 if not isinstance(response.data, dict) or response.data.get("changed") is not True:
                     raise ValueError("RPC refused transition")
@@ -461,9 +476,12 @@ def run_recouncil(rows, output_dir, *, artifact_root=None, verdict_dir=None, app
 @click.option("--artifact-root", type=click.Path(path_type=Path))
 @click.option("--verdict-dir", type=click.Path(path_type=Path))
 @click.option("--report", type=click.Path(path_type=Path))
+@click.option("--second-seat-transport", type=click.Choice(["openrouter", "codex"]), default="openrouter", show_default=True)
+@click.option("--health-state", type=click.Path(path_type=Path), help="Scoped council health state for Codex restores; defaults to the coordinator state.")
 @click.option("--dry-run", is_flag=True, help="Offline prepare/evaluate (the default).")
 @click.option("--apply", "apply_changes", is_flag=True, help="Coordinator only: apply restore/retire RPCs.")
-def main(questions, output_dir, artifact_root, verdict_dir, report, dry_run, apply_changes):
+def main(questions, output_dir, artifact_root, verdict_dir, report, dry_run, apply_changes,
+         second_seat_transport="openrouter", health_state=None):
     """Prepare requests and evaluate existing verdicts; never invoke models."""
     if dry_run and apply_changes:
         raise click.UsageError("--dry-run and --apply are mutually exclusive")
@@ -478,7 +496,8 @@ def main(questions, output_dir, artifact_root, verdict_dir, report, dry_run, app
             rows = [{**r, "question_events": [e for e in payload["question_events"] if e.get("question_id") == r["id"]]}
                     for r in rows]
         output_dir = output_dir or (report.parent / "recouncil" if report else questions.parent / "recouncil")
-        result = run_recouncil(rows, output_dir, artifact_root=artifact_root, verdict_dir=verdict_dir, apply=apply_changes)
+        result = run_recouncil(rows, output_dir, artifact_root=artifact_root, verdict_dir=verdict_dir, apply=apply_changes,
+                               second_seat_transport=second_seat_transport, health_state=health_state)
         _write(report or output_dir / "recouncil-report.json", result)
         click.echo(json.dumps({"questions": len(result["questions"]), "pages": len(result["pages"]), "mode": result["mode"]}))
     except (OSError, ValueError, KeyError, TypeError, UnicodeError):

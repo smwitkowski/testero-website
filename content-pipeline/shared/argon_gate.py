@@ -1,4 +1,4 @@
-"""Optional independent OpenRouter blind and full review, with strict offline replay."""
+"""Independent second-family blind and full review, with strict offline replay."""
 import json
 from typing import Literal
 import dspy
@@ -7,6 +7,21 @@ from shared.cli_models import output_model, parse_output, signature_prompt, CLIS
 from shared.external_judge import canonical_sha256
 
 MODEL = "openrouter/google/gemini-4-argon"
+CODEX_MODEL = "codex/gpt-6.1-sol"
+
+
+def model_for_transport(transport="openrouter"):
+    """Resolve only the two declared council configurations."""
+    if not isinstance(transport, str) or transport not in ("openrouter", "codex"):
+        raise ValueError("Second seat transport must be openrouter or codex")
+    return MODEL if transport == "openrouter" else CODEX_MODEL
+
+
+def transport_for_model(model):
+    """Reject unknown provenance rather than selecting a fallback transport."""
+    if not isinstance(model, str) or model not in (MODEL, CODEX_MODEL):
+        raise ValueError("Unsupported second seat model")
+    return "openrouter" if model == MODEL else "codex"
 
 
 class ArgonReviewSignature(dspy.Signature):
@@ -33,6 +48,10 @@ class ArgonReviewSignature(dspy.Signature):
 SIGNATURES = {"blind": BlindSolverSignature, "review": ArgonReviewSignature}
 
 
+class ArgonNotAttempted(RuntimeError):
+    """A batch stop refused a new seat; partial outputs must not be published."""
+
+
 class ArgonCallError(RuntimeError):
     """Identify the failed call without copying a provider exception body."""
 
@@ -42,7 +61,8 @@ class ArgonCallError(RuntimeError):
         super().__init__(f"Argon {call} call failed ({type(error).__name__})")
 
 
-def build_argon_request(question, scope, context, evidence, *, review_only=False, version=None):
+def build_argon_request(question, scope, context, evidence, *, review_only=False, version=None, second_seat_transport="openrouter"):
+    model = model_for_transport(second_seat_transport)
     if version is None:
         version = 2 if review_only else 1
     if type(version) is not int or version not in (1, 2, 3) or review_only != (version == 2):
@@ -51,15 +71,18 @@ def build_argon_request(question, scope, context, evidence, *, review_only=False
     inputs = build_gate_inputs(question, scope["domain_prompt"], context, evidence,
                                **({"style_policy": scope.get("style_policy")} if version == 3 else {}))
     full = {**inputs["evidence"], "style_reference": inputs["style"]["style_reference"]}
-    return {"model": MODEL, "version": version,
+    return {"model": model, "version": version,
             "calls": {name: {"judge_prompt": signature_prompt(signature, data),
                              "verdict_schema": output_model(signature).model_json_schema()}
                       for name, signature, data in (("blind", BlindSolverSignature, inputs["blind_solver"]),
                                                     ("review", ArgonReviewSignature, full)) if not review_only or name == "review"}}
 
 
-def run_call(name, gate):
-    """Use the pipeline's existing OpenRouter LM path with typed DSPy outputs."""
+def run_call(name, gate, *, model=MODEL):
+    """Run the exact frozen request through its declared transport."""
+    if transport_for_model(model) == "codex":
+        from shared.cli_models import run_signature
+        return run_signature(model, SIGNATURES[name], {}, frozen_prompt=gate["judge_prompt"])
     from shared.llm_generator import _generation_lm
     from shared.llm_limits import reject_token_limit
     # Frozen prompts, not a reconstructed question, are the model input.
@@ -77,7 +100,7 @@ def run_call(name, gate):
 
 def validate_request(request):
     if (not isinstance(request, dict) or set(request) != {"model", "version", "calls"}
-            or request["model"] != MODEL or type(request["version"]) is not int or request["version"] not in (1, 2, 3)
+            or request["model"] not in (MODEL, CODEX_MODEL) or type(request["version"]) is not int or request["version"] not in (1, 2, 3)
             or not isinstance(request["calls"], dict) or set(request["calls"]) != ({"review"} if request["version"] == 2 else set(SIGNATURES))):
         raise CLISchemaError("Invalid Argon request")
     for name in request["calls"]:
@@ -89,7 +112,7 @@ def validate_request(request):
             raise CLISchemaError("Invalid Argon call schema")
 
 
-def run_argon(request, *, question=None, full_review=True):
+def run_argon(request, *, question=None, full_review=True, call_runner=None):
     """Run blind before review; only v3 may skip review after a blind veto."""
     validate_request(request)
     if type(full_review) is not bool or (not full_review and (request["version"] != 3 or question is None)):
@@ -105,7 +128,9 @@ def run_argon(request, *, question=None, full_review=True):
         try:
             from shared.call_logging import call_context
             with call_context(stage="argon_" + name):
-                raw = run_call(name, request["calls"][name])
+                call = run_call if call_runner is None else call_runner
+                raw = (call(name, request["calls"][name]) if request["model"] == MODEL else
+                       call(name, request["calls"][name], model=request["model"]))
             outputs[name] = parse_output(json.dumps(raw, allow_nan=False), signature)
             if name == "blind":
                 from shared.gates import parse_gate_output
@@ -113,15 +138,17 @@ def run_argon(request, *, question=None, full_review=True):
                 quality_rejected = question is not None and not evaluate_gate("blind_solver", outputs[name], question)[0]
             elif not outputs[name]["fix"].strip() or any(not issue.strip() for issue in outputs[name]["issues"]):
                 raise CLISchemaError("Empty Argon issue or fix")
+        except ArgonNotAttempted:
+            raise
         except Exception as error:
             raise ArgonCallError(name, error, quality_rejected=quality_rejected) from None
-    return {"model": MODEL, "version": request["version"], "request_sha256": canonical_sha256(request), **outputs}
+    return {"model": request["model"], "version": request["version"], "request_sha256": canonical_sha256(request), **outputs}
 
 
 def evaluate_argon(question, raw, request):
     validate_request(request)
     if (not isinstance(raw, dict) or set(raw) != {"model", "version", "request_sha256", *request["calls"]}
-            or raw["model"] != MODEL or type(raw["version"]) is not int or raw["version"] != request["version"]
+            or raw["model"] != request["model"] or type(raw["version"]) is not int or raw["version"] != request["version"]
             or raw["request_sha256"] != canonical_sha256(request)):
         raise CLISchemaError("Missing or mismatched Argon provenance")
     blind, reason = (evaluate_gate("blind_solver", raw["blind"], question)
