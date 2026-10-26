@@ -134,7 +134,7 @@ def test_critic_low_temperature_and_budget_failures_propagate(monkeypatch):
     seen = []
     monkeypatch.setattr("shared.llm_generator._predict_writer", lambda *a, **k: seen.append(k) or raw_critic())
     run_critic(DEFAULT_CRITIC, PlanCriticSignature, {})
-    assert seen == [{"max_tokens": 4000, "temperature": 0.0}]
+    assert seen == [{"max_tokens": 16000, "temperature": 0.0}]
     class BudgetStop(BaseException):
         pass
     def stopped(*args):

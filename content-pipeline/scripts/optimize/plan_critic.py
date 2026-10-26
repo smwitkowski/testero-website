@@ -116,7 +116,7 @@ def parse_critic(raw, scope=None):
 def run_critic(model, signature, inputs):
     """One strict OpenRouter transport; caller owns the hard spend guard."""
     from shared.llm_generator import _predict_writer
-    return _predict_writer(signature, inputs, model, max_tokens=4000, temperature=0.0)
+    return _predict_writer(signature, inputs, model, max_tokens=16000, temperature=0.0)
 
 
 def balanced_accuracy(labels, predictions):
